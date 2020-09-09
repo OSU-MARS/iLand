@@ -1,0 +1,7 @@
+# build results
+bin/
+obj/
+PerformanceResults/
+
+# Visual Studio cache/options directory
+.vs/

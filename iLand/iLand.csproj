@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>iLand</RootNamespace>
+    <Version>1.0.0</Version>
+    <Company>Oregon State University</Company>
+    <Authors>Management, Algorithms, and Remote Sensing Lab</Authors>
+    <RepositoryUrl>https://github.com/OSU-MARS/iLand</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>GPLv3</PackageLicenseExpression>
+    <Copyright>Copyright © 2020 Oregon State University</Copyright>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Platforms>x64</Platforms>
+    <LangVersion>8.0</LangVersion>
+    <Description>A C# port of the iLand 1.0 (2016) spatial growth and yield model created by Rupert Seidl and Werner Rammer.</Description>
+    <AssemblyName>iLand</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <PlatformTarget>x64</PlatformTarget>
+    <OutputPath></OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <PlatformTarget>x64</PlatformTarget>
+    <OutputPath></OutputPath>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>iLand.UnitTests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MersenneTwister" Version="1.0.6" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.8" />
+    <PackageReference Include="Microsoft.Experimental.Collections" Version="1.0.6-e190117-3" />
+  </ItemGroup>
+  
+</Project>
