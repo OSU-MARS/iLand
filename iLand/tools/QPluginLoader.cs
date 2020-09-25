@@ -4,6 +4,6 @@ namespace iLand.tools
 {
     internal class QPluginLoader
     {
-        public static readonly List<object> staticInstances = new List<object>();
+        public static readonly List<object> StaticInstances = new List<object>();
     }
 }

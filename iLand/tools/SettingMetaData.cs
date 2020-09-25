@@ -11,25 +11,19 @@ namespace iLand.tools
         */
     internal class SettingMetaData
     {
-        private static readonly List<string> mTypeNames = new List<string>() { "invalid", "species", "model" };
-
-        private Type mType;
-        private string mName;
-        private string mDescription;
-        private string mUrl;
-        private object mDefaultValue;
+        private static readonly List<string> TypeNames = new List<string>() { "invalid", "species", "model" };
 
         public enum Type { SettingInvalid, SpeciesSetting, ModelSetting };
+        private Type mType;
 
-        // getters
-        public object defaultValue() { return mDefaultValue; }
-        public string url() { return mUrl; }
-        public string name() { return mName; }
-        public string description() { return mDescription; }
+        public object DefaultValue { get; private set; }
+        public string Description { get; private set; }
+        public string Name { get; private set; }
+        public string Url { get; private set; }
 
-        public static Type typeFromName(string settingName)
+        public static Type TypeFromName(string settingName)
         {
-            Type retType = (Type)mTypeNames.IndexOf(settingName);
+            Type retType = (Type)TypeNames.IndexOf(settingName);
             if ((int)(retType) < 0)
             {
                 retType = Type.SettingInvalid;
@@ -37,29 +31,29 @@ namespace iLand.tools
             return retType;
         }
 
-        public string typeName(Type type)
+        public string TypeName(Type type)
         {
-            return mTypeNames[(int)type];
+            return TypeNames[(int)type];
         }
 
         public SettingMetaData(Type type, string name, string description, string url, object defaultValue)
         {
-            setValues(type, name, description, url, defaultValue);
+            SetValues(type, name, description, url, defaultValue);
         }
 
-        public void setValues(Type type, string name, string description, string url, object defaultValue)
+        public void SetValues(Type type, string name, string description, string url, object defaultValue)
         {
             mType = type;
-            mName = name;
-            mDescription = description;
-            mUrl = url;
-            mDefaultValue = defaultValue;
+            Name = name;
+            Description = description;
+            Url = url;
+            DefaultValue = defaultValue;
         }
 
-        public string dump()
+        public string Dump()
         {
             string res = String.Format("Name: {0}{5}Type: {1} *** Default Value: {4} *** Url: {2} *** {5}Description: {3}",
-                                       mName, mType, mUrl, mDescription, mDefaultValue, Environment.NewLine);
+                                       Name, mType, Url, Description, DefaultValue, Environment.NewLine);
             return res;
         }
     }

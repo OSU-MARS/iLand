@@ -9,7 +9,9 @@ namespace iLand.output
     {
         private bool mIncludeDeadTrees;
         private bool mIncludeHarvestTrees;
-        private Expression mCondition;
+        // unused in C++
+        // private Expression mCondition;
+
         private class LROdata
         {
             public double volume;
@@ -18,36 +20,41 @@ namespace iLand.output
 
             public LROdata()
             {
-                clear();
+                Clear();
             }
-            public void clear()
-            {
-                volume = 0.0; basal_area = 0.0; n = 0.0;
-            }
-        };
 
-        private Dictionary<int, LROdata> mLandscapeRemoval;
+            public void Clear()
+            {
+                volume = 0.0;
+                basal_area = 0.0; 
+                n = 0.0;
+            }
+        }
+
+        private readonly Dictionary<int, LROdata> mLandscapeRemoval;
 
         public LandscapeRemovedOut()
         {
+            this.mLandscapeRemoval = new Dictionary<int, LROdata>();
+
             mIncludeDeadTrees = false;
             mIncludeHarvestTrees = true;
 
-            setName("Aggregates of removed trees due to death, harvest, and disturbances per species", "landscape_removed");
-            setDescription("Aggregates of all removed trees due to 'natural' death, harvest, or disturbance per species and reason. All values are totals for the whole landscape." +
-                       "The user can select with options whether to include 'natural' death and harvested trees (which may slow down the processing). " +
-                       "Set the setting in the XML project file 'includeNatural' to 'true' to include trees that died due to natural mortality, " +
-                       "the setting 'includeHarvest' controls whether to include ('true') or exclude ('false') harvested trees. ");
-            columns().Add(OutputColumn.year());
-            columns().Add(OutputColumn.species());
-            columns().Add(new OutputColumn("reason", "Resaon for tree death: 'N': Natural mortality, 'H': Harvest (removed from the forest), 'D': Disturbance (not salvage-harvested), 'S': Salvage harvesting (i.e. disturbed trees which are harvested), 'C': killed/cut down by management", OutputDatatype.OutString));
-            columns().Add(new OutputColumn("count", "number of died trees (living, >4m height) ", OutputDatatype.OutInteger));
-            columns().Add(new OutputColumn("volume_m3", "sum of volume (geomery, taper factor) in m3", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.OutDouble));
-
+            Name = "Aggregates of removed trees due to death, harvest, and disturbances per species";
+            TableName = "landscape_removed";
+            Description = "Aggregates of all removed trees due to 'natural' death, harvest, or disturbance per species and reason. All values are totals for the whole landscape." +
+                          "The user can select with options whether to include 'natural' death and harvested trees (which may slow down the processing). " +
+                          "Set the setting in the XML project file 'includeNatural' to 'true' to include trees that died due to natural mortality, " +
+                          "the setting 'includeHarvest' controls whether to include ('true') or exclude ('false') harvested trees.";
+            Columns.Add(OutputColumn.CreateYear());
+            Columns.Add(OutputColumn.CreateSpecies());
+            Columns.Add(new OutputColumn("reason", "Resaon for tree death: 'N': Natural mortality, 'H': Harvest (removed from the forest), 'D': Disturbance (not salvage-harvested), 'S': Salvage harvesting (i.e. disturbed trees which are harvested), 'C': killed/cut down by management", OutputDatatype.OutString));
+            Columns.Add(new OutputColumn("count", "number of died trees (living, >4m height) ", OutputDatatype.OutInteger));
+            Columns.Add(new OutputColumn("volume_m3", "sum of volume (geomery, taper factor) in m3", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.OutDouble));
         }
 
-        public void execRemovedTree(Tree t, int reason)
+        public void ExecRemovedTree(Tree t, int reason)
         {
             TreeRemovalType rem_type = (TreeRemovalType)reason;
             if (rem_type == TreeRemovalType.TreeDeath && !mIncludeDeadTrees)
@@ -59,16 +66,14 @@ namespace iLand.output
                 return;
             }
 
-            int key = reason * 10000 + t.species().index();
+            int key = reason * 10000 + t.Species.Index;
             LROdata d = mLandscapeRemoval[key];
-            d.basal_area += t.basalArea();
-            d.volume += t.volume();
+            d.basal_area += t.BasalArea();
+            d.volume += t.Volume();
             d.n++;
-
-
         }
 
-        public void exec()
+        public override void Exec()
         {
             foreach (KeyValuePair<int, LROdata> i in mLandscapeRemoval)
             {
@@ -76,32 +81,32 @@ namespace iLand.output
                 {
                     TreeRemovalType rem_type = (TreeRemovalType)(i.Key / 10000);
                     int species_index = i.Key % 10000;
-                    this.add(currentYear());
-                    this.add(GlobalSettings.instance().model().speciesSet().species(species_index).id());
-                    if (rem_type == TreeRemovalType.TreeDeath) this.add("N");
-                    if (rem_type == TreeRemovalType.TreeHarvest) this.add("H");
-                    if (rem_type == TreeRemovalType.TreeDisturbance) this.add("D");
-                    if (rem_type == TreeRemovalType.TreeSalavaged) this.add("S");
-                    if (rem_type == TreeRemovalType.TreeCutDown) this.add("C");
-                    this.add(i.Value.n);
-                    this.add(i.Value.volume);
-                    this.add(i.Value.basal_area);
-                    writeRow();
+                    this.Add(CurrentYear());
+                    this.Add(GlobalSettings.Instance.Model.SpeciesSet().Species(species_index).ID);
+                    if (rem_type == TreeRemovalType.TreeDeath) this.Add("N");
+                    if (rem_type == TreeRemovalType.TreeHarvest) this.Add("H");
+                    if (rem_type == TreeRemovalType.TreeDisturbance) this.Add("D");
+                    if (rem_type == TreeRemovalType.TreeSalavaged) this.Add("S");
+                    if (rem_type == TreeRemovalType.TreeCutDown) this.Add("C");
+                    this.Add(i.Value.n);
+                    this.Add(i.Value.volume);
+                    this.Add(i.Value.basal_area);
+                    WriteRow();
                 }
             }
 
             // clear data (no need to clear the hash table, right?)
             foreach (LROdata i in mLandscapeRemoval.Values)
             {
-                i.clear();
+                i.Clear();
             }
         }
 
-        public void setup()
+        public override void Setup()
         {
-            mIncludeHarvestTrees = settings().valueBool(".includeHarvest", true);
-            mIncludeDeadTrees = settings().valueBool(".includeNatural", false);
-            Tree.setLandscapeRemovalOutput(this);
+            mIncludeHarvestTrees = Settings().ValueBool(".includeHarvest", true);
+            mIncludeDeadTrees = Settings().ValueBool(".includeNatural", false);
+            Tree.LandscapeRemovalOutput = this;
         }
     }
 }

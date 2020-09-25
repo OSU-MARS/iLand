@@ -12,75 +12,76 @@ namespace iLand.tools
     internal class StatData
     {
         private List<double> mData; // to allow late calculation of percentiles (e.g. a call to "median()".)
-        private double mSum;
-        private double mMean;
-        private double mMin;
-        private double mMax;
         private double mP25;
         private double mP75;
         private double mMedian;
         private double mSD; // standard deviation
 
-        public double sum() { return mSum; } ///< sum of values
-        public double mean() { return mMean; } ///< arithmetic mean
-        public double min() { return mMin; } ///< minimum value
-        public double max() { return mMax; } ///< maximum value
-        public double median() { if (mP25 == Double.MaxValue) calculatePercentiles(); return mMedian; } ///< 2nd quartil = median
-        public double percentile25() { if (mP25 == Double.MaxValue) calculatePercentiles(); return mP25; } ///< 1st quartil
-        public double percentile75() { if (mP25 == Double.MaxValue) calculatePercentiles(); return mP75; } ///< 3rd quartil
-        public double standardDev() { if (mSD == Double.MaxValue) calculateSD(); return mSD; } ///< get the standard deviation (of the population)
+        public double Sum { get; private set; } ///< sum of values
+        public double Mean { get; private set; } ///< arithmetic mean
+        public double Min { get; private set; } ///< minimum value
+        public double Max { get; private set; } ///< maximum value
+
+        public double Median() { if (Double.IsNaN(mP25)) CalculatePercentiles(); return mMedian; } ///< 2nd quartil = median
+        public double Percentile25() { if (Double.IsNaN(mP25)) CalculatePercentiles(); return mP25; } ///< 1st quartil
+        public double Percentile75() { if (Double.IsNaN(mP75)) CalculatePercentiles(); return mP75; } ///< 3rd quartil
+        public double StandardDev() { if (Double.IsNaN(mSD)) CalculateSD(); return mSD; } ///< get the standard deviation (of the population)
 
         public StatData() 
         {
             this.mData = new List<double>();
-            calculate(); 
+            this.mMedian = Double.NaN;
+            this.mP25 = Double.NaN;
+            this.mP75 = Double.NaN;
+            this.mSD = Double.NaN;
+            Calculate(); 
         }
 
         public StatData(List<double> data)
         {
             mData = data;
-            calculate();
+            Calculate();
         }
 
-        public void setData(List<double> data) 
+        public void SetData(List<double> data) 
         { 
             mData = data; 
-            calculate(); 
+            Calculate(); 
         }
 
-        private void calculatePercentiles()
+        private void CalculatePercentiles()
         {
-            mP25 = percentile(25);
-            mP75 = percentile(75);
-            mMedian = percentile(50);
+            mP25 = Percentile(25);
+            mP75 = Percentile(75);
+            mMedian = Percentile(50);
         }
 
-        public void calculate()
+        public void Calculate()
         {
             if (mData.Count == 0)
             {
-                mSum = mMedian = mP25 = mP75 = mMean = mMin = mMax = 0.0;
+                Sum = mMedian = mP25 = mP75 = Mean = Min = Max = 0.0;
                 return;
             }
             mP25 = Double.MaxValue;
             mP75 = Double.MaxValue;
             mMedian = Double.MaxValue;
-            mMin = Double.MaxValue;
-            mMax = -Double.MaxValue;
+            Min = Double.MaxValue;
+            Max = -Double.MaxValue;
             mSD = Double.MaxValue;
 
-            mSum = 0.0;
+            Sum = 0.0;
             foreach (double i in mData)
             {
-                mSum += i;
-                mMin = Math.Min(i, mMin);
-                mMax = Math.Max(i, mMax);
+                Sum += i;
+                Min = Math.Min(i, Min);
+                Max = Math.Max(i, Max);
             }
-            mMean = mSum / (double)mData.Count;
+            Mean = Sum / (double)mData.Count;
             //qDebug() << QString("p25: %1 Median: %2 p75: %3 min: %4 max: %5").arg(mP25).arg(mMedian).arg(mP75).arg(mMin).arg(mMax);
         }
 
-        public double calculateSD()
+        public double CalculateSD()
         {
             if (mData.Count == 0)
             {
@@ -91,24 +92,27 @@ namespace iLand.tools
             double sum = 0.0;
             foreach (double i in mData)
             {
-                sum += (i - mMean) * (i - mMean);
+                sum += (i - Mean) * (i - Mean);
             }
             mSD = Math.Sqrt(sum / (double)mData.Count);
             return mSD;
         }
 
-        public double percentile(int percent)
+        public double Percentile(int percent)
         {
             // double *Values, int ValueCount,
             // code von: Fast median search: an ANSI C implementation, Nicolas Devillard, http://ndevilla.free.fr/median/median/index.html
             // algo. kommt von Wirth, hier nur an c++ angepasst.
 
-            int perc = Global.limit(percent, 1, 99);
+            int perc = Global.Limit(percent, 1, 99);
             int ValueCount = mData.Count;
             int i, j, l, m, n, k;
             double x, temp;
             if (ValueCount == 0)
+            {
                 return 0;
+            }
+
             n = ValueCount;
             // k ist der "Index" des gesuchten wertes
             if (perc != 50)
@@ -163,7 +167,7 @@ namespace iLand.tools
           Example: in: {5, 2, 7, 5}
                    out: {2, 1, 4, 2}
           */
-        public List<int> calculateRanks(List<double> data, bool descending)
+        public List<int> CalculateRanks(List<double> data, bool descending)
         {
             // simple ranking algorithm.
             // we have "N" data-values.
@@ -200,7 +204,7 @@ namespace iLand.tools
 
         /** scale the data in such a way that the sum of all data items is "targetSum"
           */
-        public void normalize(List<double> data, double targetSum)
+        public void Normalize(List<double> data, double targetSum)
         {
             double sum = 0.0;
             foreach (double i in data)

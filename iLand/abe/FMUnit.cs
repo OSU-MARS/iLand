@@ -16,14 +16,13 @@ namespace iLand.abe
     internal class FMUnit
     {
         private string mId;
-        private Agent mAgent;
-        private Scheduler mScheduler;
+        private readonly Agent mAgent;
+        private readonly Scheduler mScheduler;
         private int mNumberOfStands; ///< the number of stands
         public double mAnnualHarvestTarget; ///< planned annual harvest (final harvests) (m3)
         private double mAnnualThinningTarget; ///< planned annual harvests (thinnings and tendings) (m3)
         private double mRealizedHarvest; ///< sum of realized harvest in the current planning period (final harvests) (m3)
         private double mRealizedHarvestLastYear; ///< the sum of harvests up to the last year (final harvests) (m3)
-        private double mAnnualHarvest; ///< suf of the harvest of the current year (final harvests)
         public double mMAI; ///< mean annual increment (m3/ha)
         private double mHDZ; ///< mean "haubarer" annual increment (m3/ha)
         public double mMeanAge; ///< mean age of the planning unit
@@ -39,6 +38,7 @@ namespace iLand.abe
         private double mAverageMAI; ///< reference value for mean annual increment
 
         public string id() { return mId; }
+        public void setId(string id) { mId = id; }
         public Scheduler scheduler() { return mScheduler; }
         public Scheduler constScheduler() { return mScheduler; }
         public Agent agent() { return mAgent; }
@@ -63,18 +63,38 @@ namespace iLand.abe
 
         public void setAverageMAI(double avg_mai) { mAverageMAI = avg_mai; }
         public double averageMAI() { return mAverageMAI; }
+
+        public FMUnit(Agent agent)
+        {
+            mAgent = agent;
+            mScheduler = null;
+            mAnnualHarvestTarget = -1.0;
+            mRealizedHarvest = 0.0;
+            mMAI = 0.0; mHDZ = 0.0; mMeanAge = 0.0;
+            mTotalArea = 0.0; mTotalPlanDeviation = 0.0;
+            mTotalVolume = 0.0;
+            mNumberOfStands = 0;
+            mU = 100;
+            mThinningIntensityClass = 2;
+            mSpeciesCompositionIndex = 0;
+            mAverageMAI = 0.0;
+
+            //if (agent.type().schedulerOptions().useScheduler)
+            // explicit scheduler only for stands/units that include more than one stand
+            mScheduler = new Scheduler(this);
+        }
+
         /// record realized harvests on the unit (all harvests)
-        public void addRealizedHarvest(double harvest_m3) { mRealizedHarvest += harvest_m3; }
+        public void AddRealizedHarvest(double harvest_m3) { mRealizedHarvest += harvest_m3; }
 
-        public double annualTotalHarvest() { return mRealizedHarvest - mRealizedHarvestLastYear; } ///< total m3 produced in final harvests in this year
+        public double GetAnnualTotalHarvest() { return mRealizedHarvest - mRealizedHarvestLastYear; } ///< total m3 produced in final harvests in this year
 
-        public void aggregate()
+        public void Aggregate()
         {
             // loop over all stands
             // collect some data....
             double age = 0.0;
             double volume = 0.0;
-            double harvest = 0.0;
             double totalarea = 0.0;
             MultiValueDictionary<FMUnit, FMStand> stands = ForestManagementEngine.instance().stands();
             foreach (KeyValuePair<FMUnit, IReadOnlyCollection<FMStand>> it in stands)
@@ -94,12 +114,11 @@ namespace iLand.abe
             {
                 age /= totalarea;
                 volume /= totalarea;
-                harvest /= totalarea;
             }
             Debug.WriteLine("unit " + id() + " volume (m3/ha) " + volume + " age " + age + " planned harvest: todo");
         }
         
-        public List<string> info()
+        public List<string> Info()
         {
             return new List<string>() { String.Format("(accumulated) harvest: {0}", mRealizedHarvest),
                                         String.Format("MAI: {0}", mMAI),
@@ -109,7 +128,7 @@ namespace iLand.abe
                                         String.Format("current plan: {0}", constScheduler() != null ? constScheduler().harvestTarget() : 0.0) };
         }
 
-        public double annualThinningHarvest()
+        public double AnnualThinningHarvest()
         {
             MultiValueDictionary<FMUnit, FMStand> stands = ForestManagementEngine.instance().stands();
             double harvested = 0.0;
@@ -127,47 +146,20 @@ namespace iLand.abe
             return harvested;
         }
 
-        public FMUnit(Agent agent)
-        {
-            mAgent = agent;
-            mScheduler = null;
-            mAnnualHarvestTarget = -1.0;
-            mRealizedHarvest = 0.0;
-            mMAI = 0.0; mHDZ = 0.0; mMeanAge = 0.0;
-            mTotalArea = 0.0; mTotalPlanDeviation = 0.0;
-            mTotalVolume = 0.0;
-            mAnnualHarvest = 0.0;
-            mNumberOfStands = 0;
-            mU = 100;
-            mThinningIntensityClass = 2;
-            mSpeciesCompositionIndex = 0;
-            mAverageMAI = 0.0;
-
-
-            //if (agent.type().schedulerOptions().useScheduler)
-            // explicit scheduler only for stands/units that include more than one stand
-            mScheduler = new Scheduler(this);
-        }
-
-        public void setId(string id)
-        {
-            mId = id;
-        }
-
-        public void resetHarvestCounter()
+        public void ResetHarvestCounter()
         {
             if (scheduler() != null)
             {
-                scheduler().resetHarvestCounter();
+                scheduler().ResetHarvestCounter();
             }
         }
 
-        public void managementPlanUpdate()
+        public void ManagementPlanUpdate()
         {
             double period_length = 10.0;
             // calculate the planned harvest in the next planning period (i.e., 10yrs).
             // this is the sum of planned operations that are already in the scheduler.
-            mScheduler.plannedHarvests(out double plan_final, out double plan_thinning);
+            mScheduler.GetPlannedHarvests(out double plan_final, out double plan_thinning);
             // the actual harvests of the last planning period
             //double realized = mRealizedHarvest;
 
@@ -186,23 +178,23 @@ namespace iLand.abe
             {
                 foreach (FMStand stand in it.Value)
                 {
-                    stand.reload();
-                    stand.calculateMAI();
+                    stand.Reload();
+                    stand.CalculateMeanAnnualIncrement();
                     // calculate sustainable total harvest (following Breymann)
                     double area = stand.area();
                     mai += stand.meanAnnualIncrementTotal() * area; // m3/yr
-                    age += stand.absoluteAge() * area;
+                    age += stand.AbsoluteAge() * area;
                     volume += stand.volume() * area;
                     // HDZ: "haubarer" average increment: timber that is ready for final harvest
-                    if (stand.readyForFinalHarvest())
+                    if (stand.IsReadyForFinalHarvest())
                     {
-                        hdz += stand.volume() / stand.absoluteAge() * area; //(0.1* stand.U()) * area; // note: changed!!!! was: volume/age * area
+                        hdz += stand.volume() / stand.AbsoluteAge() * area; //(0.1* stand.U()) * area; // note: changed!!!! was: volume/age * area
                     }
                     total_area += area;
                 }
             }
             // reset
-            ForestManagementEngine.instance().scriptBridge().treesObj().setStand(null);
+            ForestManagementEngine.instance().scriptBridge().treesObj().SetStand(null);
             mTotalArea = total_area;
             if (total_area == 0.0)
             {
@@ -220,15 +212,15 @@ namespace iLand.abe
             mTotalVolume = volume;
 
             double rotation_length = U();
-            double h_tot = mai * 2.0 * age / rotation_length;  //
-            double h_reg = hdz * 2.0 * age / rotation_length;
-            h_reg = h_tot * 0.85; // hack!
+            double h_tot = mai * 2.0 * age / rotation_length;
+            // double h_reg = hdz * 2.0 * age / rotation_length;
+            double h_reg = h_tot * 0.85; // hack!
             h_reg *= agent().schedulerOptions().harvestIntensity;
             h_tot *= agent().schedulerOptions().harvestIntensity;
             double h_thi = Math.Max(h_tot - h_reg, 0.0);
 
             Debug.WriteLine("plan-update for unit " + id() + ": h-tot: " + h_tot + " h_reg: " + h_reg + " h_thi: " + h_thi + " of total volume: " + volume);
-            double sf = mAgent.useSustainableHarvest();
+            double sf = mAgent.UseSustainableHarvest();
             // we do not calculate sustainable harvest levels.
             // do a pure bottom up calculation
             double bottom_up_harvest = (plan_final / period_length) / total_area; // m3/ha*yr
@@ -247,11 +239,11 @@ namespace iLand.abe
 
             if (scheduler() != null)
             {
-                scheduler().setHarvestTarget(mAnnualHarvestTarget, mAnnualThinningTarget);
+                scheduler().SetHarvestTargets(mAnnualHarvestTarget, mAnnualThinningTarget);
             }
         }
 
-        public void runAgent()
+        public void RunAgent()
         {
             // we need to set an execution context
             // BUGBUG: what about other stands in this management unit?
@@ -264,14 +256,14 @@ namespace iLand.abe
             // avoid parallel execution of agent-code....
             lock (FomeScript.bridge())
             {
-                FomeScript.setExecutionContext(stand, true); // true: add also agent as 'agent'
+                FomeScript.SetExecutionContext(stand, true); // true: add also agent as 'agent'
 
                 QJSValue val;
                 QJSValue agent_type = agent().type().jsObject();
-                if (agent_type.property("run").isCallable())
+                if (agent_type.Property("run").IsCallable())
                 {
-                    val = agent_type.property("run").callWithInstance(agent_type);
-                    Debug.WriteLine("running agent-function 'run' for unit " + id() + ": " + val.toString());
+                    val = agent_type.Property("run").CallWithInstance(agent_type);
+                    Debug.WriteLine("running agent-function 'run' for unit " + id() + ": " + val.ToString());
                 }
                 else
                 {
@@ -280,7 +272,7 @@ namespace iLand.abe
             }
         }
 
-        public void updatePlanOfCurrentYear()
+        public void UpdatePlanOfCurrentYear()
         {
             if (scheduler() != null)
             {
@@ -293,7 +285,6 @@ namespace iLand.abe
             // compare the harvests of the last year to the plan:
             double harvests = mRealizedHarvest - mRealizedHarvestLastYear;
             mRealizedHarvestLastYear = mRealizedHarvest;
-            mAnnualHarvest = harvests;
 
             // difference in m3/ha
             double delta = harvests / mTotalArea - mAnnualHarvestTarget;
@@ -313,7 +304,7 @@ namespace iLand.abe
             // limit to minimum/maximum parameter
             new_harvest = Math.Max(new_harvest, mAgent.schedulerOptions().minScheduleHarvest);
             new_harvest = Math.Min(new_harvest, mAgent.schedulerOptions().maxScheduleHarvest);
-            scheduler().setHarvestTarget(new_harvest, mAnnualThinningTarget);
+            scheduler().SetHarvestTargets(new_harvest, mAnnualThinningTarget);
         }
     }
 }

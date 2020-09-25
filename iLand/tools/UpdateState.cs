@@ -7,9 +7,8 @@ namespace iLand.tools
     {
         private int mCurrentVal; // state of last explicit "update"
         private int mVal; // current state
-        private List<UpdateState> mChilds;
-        private Dictionary<UpdateState, int> mSavedStates;
-        private int value() { return mVal; } // return current value
+        private readonly List<UpdateState> mChilds;
+        private readonly Dictionary<UpdateState, int> mSavedStates;
 
         public UpdateState()
         {
@@ -19,9 +18,12 @@ namespace iLand.tools
             mVal = 0;
         }
 
-        public void addChild(UpdateState state) { mChilds.Add(state); }
+        public void AddChild(UpdateState state) 
+        {
+            mChilds.Add(state); 
+        }
 
-        public void invalidate(bool self)
+        public void Invalidate(bool self)
         {
             if (self)
             {
@@ -29,16 +31,16 @@ namespace iLand.tools
             }
             foreach (UpdateState s in mChilds)
             {
-                s.invalidate(true);
+                s.Invalidate(true);
             }
         }
 
-        public void saveState(UpdateState state)
+        public void SaveState(UpdateState state)
         {
             mSavedStates[state] = state.mVal;
         }
 
-        public bool hasChanged(UpdateState state)
+        public bool HasChanged(UpdateState state)
         {
             if (!mSavedStates.ContainsKey(state))
             {
@@ -49,13 +51,13 @@ namespace iLand.tools
         }
 
         // set internal state to the current state
-        public void update()
+        public void Update()
         {
             mCurrentVal = mVal;
         }
 
         // check if state needs update
-        public bool needsUpdate()
+        public bool NeedsUpdate()
         {
             return mVal > mCurrentVal;
         }

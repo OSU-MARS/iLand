@@ -14,19 +14,19 @@ namespace iLand.abe
         */
     internal class FMTreeList
     {
-        private List<MutableTuple<Tree, double>> mTrees; ///< store a Tree-pointer and a value (e.g. for sorting)
-        private bool mResourceUnitsLocked;
-        private int mRemoved;
+        private readonly List<MutableTuple<Tree, double>> mTrees; ///< store a Tree-pointer and a value (e.g. for sorting)
+        // unused in C++
+        //private bool mResourceUnitsLocked;
+        //private int mRemoved;
         private FMStand mStand; /// the stand the list is currently connected
         private int mStandId; ///< link to active stand
         private int mNumberOfStems; ///< estimate for the number of trees in the stand
         private bool mOnlySimulate; ///< mode
         private RectangleF mStandRect;
-        private Grid<float> mStandGrid; ///< local stand grid (10m pixel)
-        private Grid<int> mTreeCountGrid; ///< tree counts on local stand grid (10m)
-        private Grid<float> mLocalGrid; ///< 2m grid of the stand
+        private readonly Grid<float> mStandGrid; ///< local stand grid (10m pixel)
+        private readonly Grid<int> mTreeCountGrid; ///< tree counts on local stand grid (10m)
+        private readonly Grid<float> mLocalGrid; ///< 2m grid of the stand
         private Expression mRunGridCustom;
-        private double mRunGridCustomCell;
 
         public int standId() { return mStandId; }
         public bool simulate() { return mOnlySimulate; }
@@ -37,15 +37,10 @@ namespace iLand.abe
         public List<MutableTuple<Tree, double>> trees() { return mTrees; }
 
         /// access to local grid (setup if necessary)
-        public Grid<float> localGrid() { prepareGrids(); return mLocalGrid; }
+        public Grid<float> localGrid() { PrepareGrids(); return mLocalGrid; }
 
         /// load all trees of the stand, return number of trees (living trees)
-        public int loadAll() { return load(null); }
-
-        /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
-        public double mean(string expression, string filter = null) { return aggregate_function(expression, filter, "mean"); }
-        /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
-        public double sum(string expression, string filter = null) { return aggregate_function(expression, filter, "sum"); }
+        public int loadAll() { return Load(null); }
 
         public Grid<float> standGrid() { return mStandGrid; }
 
@@ -54,28 +49,36 @@ namespace iLand.abe
         public double removeStem() { return 1.0; }
         public double removeBranch() { return 0.0; }
 
-        public FMTreeList(object parent = null)
+        public FMTreeList()
         {
-            mStand = null;
-            setStand(null); // clear stand link
-            mResourceUnitsLocked = false;
+            this.mLocalGrid = new Grid<float>();
+            this.mStandGrid = new Grid<float>();
+            this.mTreeCountGrid = new Grid<int>();
+            this.mTrees = new List<MutableTuple<Tree, double>>();
+
+            SetStand(null); // clear stand link, sets mStand
         }
 
-        public FMTreeList(FMStand stand, object parent)
-            : this(parent)
+        public FMTreeList(FMStand stand)
+            : this()
         {
-            setStand(stand);
+            SetStand(stand);
         }
 
-        public void setStand(FMStand stand)
+        /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
+        public double GetMean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
+        /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
+        public double Sum(string expression, string filter = null) { return AggregateFunction(expression, filter, "sum"); }
+
+        public void SetStand(FMStand stand)
         {
-            check_locks();
+            CheckLocks();
             mStand = stand;
             if (stand != null)
             {
                 mStandId = stand.id();
                 mNumberOfStems = (int)(stand.stems() * stand.area());
-                mOnlySimulate = stand.currentActivity() != null ? stand.currentFlags().isScheduled() : false;
+                mOnlySimulate = stand.CurrentActivity() != null && stand.currentFlags().IsScheduled();
                 mStandRect = new RectangleF(); // BUGBUG: why isn't size set?
             }
             else
@@ -86,16 +89,16 @@ namespace iLand.abe
             }
         }
 
-        public int load(string filter)
+        public int Load(string filter)
         {
             if (standId() > -1)
             {
                 // load all trees of the current stand
-                MapGrid map = ForestManagementEngine.standGrid();
-                if (map.isValid())
+                MapGrid map = ForestManagementEngine.StandGrid();
+                if (map.IsValid())
                 {
-                    map.loadTrees(mStandId, mTrees, filter, mNumberOfStems);
-                    mResourceUnitsLocked = true;
+                    map.LoadTrees(mStandId, mTrees, filter, mNumberOfStems);
+                    // mResourceUnitsLocked = true;
                 }
                 else
                 {
@@ -107,14 +110,14 @@ namespace iLand.abe
             {
                 Debug.WriteLine("load: loading *all* trees, because stand id is -1");
                 TreeWrapper tw = new TreeWrapper();
-                Model m = GlobalSettings.instance().model();
+                Model m = GlobalSettings.Instance.Model;
                 mTrees.Clear();
                 AllTreeIterator at = new AllTreeIterator(m);
                 if (String.IsNullOrEmpty(filter))
                 {
-                    for (Tree t = at.nextLiving(); t != null; t = at.nextLiving())
+                    for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
                     {
-                        if (!t.isDead())
+                        if (!t.IsDead())
                         {
                             mTrees.Add(new MutableTuple<Tree, double>(t, 0.0));
                         }
@@ -123,12 +126,12 @@ namespace iLand.abe
                 else
                 {
                     Expression expr = new Expression(filter, tw);
-                    expr.enableIncSum();
+                    expr.EnableIncrementalSum();
                     Debug.WriteLine("filtering with " + filter);
-                    for (Tree t = at.nextLiving(); t != null; t = at.nextLiving())
+                    for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
                     {
-                        tw.setTree(t);
-                        if (!t.isDead() && expr.execute() != 0.0)
+                        tw.Tree = t;
+                        if (!t.IsDead() && expr.Execute() != 0.0)
                         {
                             mTrees.Add(new MutableTuple<Tree, double>(t, 0.0));
                         }
@@ -138,164 +141,166 @@ namespace iLand.abe
             }
         }
 
-        public int removeMarkedTrees()
+        public int RemoveMarkedTrees()
         {
             loadAll();
             int n_removed = 0;
             for (int it = 0; it < mTrees.Count; ++it)
             {
                 Tree t = mTrees[it].Item1;
-                if (t.isMarkedForCut())
+                if (t.IsMarkedForCut())
                 {
-                    t.remove();
+                    t.Remove();
                     n_removed++;
                 }
-                else if (t.isMarkedForHarvest())
+                else if (t.IsMarkedForHarvest())
                 {
-                    t.remove(removeFoliage(), removeBranch(), removeStem());
+                    t.Remove(removeFoliage(), removeBranch(), removeStem());
                     n_removed++;
                 }
             }
-            if (mStand.trace())
+            if (mStand.TracingEnabled())
             {
                 Debug.WriteLine(mStand.context() + " removeMarkedTrees: n=" + n_removed);
             }
             return n_removed;
         }
 
-        public int kill(string filter)
+        public int Kill(string filter)
         {
-            return remove_trees(filter, 1.0, false);
+            return RemoveTrees(filter, 1.0, false);
         }
 
-        public int harvest(string filter, double fraction)
+        public int Harvest(string filter, double fraction)
         {
-            return remove_trees(filter, fraction, true);
+            return RemoveTrees(filter, fraction, true);
         }
 
-        private bool trace()
-        {
-            return FomeScript.bridge().standObj().trace();
-        }
+        // unused in C++
+        //private bool trace()
+        //{
+        //    return FomeScript.bridge().standObj().trace();
+        //}
 
-        private int remove_percentiles(int pctfrom, int pctto, int number, bool management)
-        {
-            if (mTrees.Count == 0)
-            {
-                return 0;
-            }
-            int index_from = Global.limit((int)(pctfrom / 100.0 * mTrees.Count), 0, mTrees.Count);
-            int index_to = Global.limit((int)(pctto / 100.0 * mTrees.Count), 0, mTrees.Count - 1);
-            if (index_from >= index_to)
-            {
-                return 0;
-            }
+        // unused in C++
+        //private int remove_percentiles(int pctfrom, int pctto, int number, bool management)
+        //{
+        //    if (mTrees.Count == 0)
+        //    {
+        //        return 0;
+        //    }
+        //    int index_from = Global.limit((int)(pctfrom / 100.0 * mTrees.Count), 0, mTrees.Count);
+        //    int index_to = Global.limit((int)(pctto / 100.0 * mTrees.Count), 0, mTrees.Count - 1);
+        //    if (index_from >= index_to)
+        //    {
+        //        return 0;
+        //    }
 
-            //Debug.WriteLine("attempting to remove" + number + "trees between indices" + index_from + "and" + index_to;
-            int count = number;
-            if (index_to - index_from <= number)
-            {
-                // kill all
-                if (management)
-                {
-                    // management
-                    for (int i = index_from; i < index_to; i++)
-                    {
-                        if (simulate())
-                        {
-                            mTrees[i].Item1.markForHarvest(true);
-                            mStand.addScheduledHarvest(mTrees[i].Item1.volume());
-                        }
-                        else
-                        {
-                            mTrees[i].Item1.remove(removeFoliage(), removeBranch(), removeStem());
-                        }
-                    }
-                }
-                else
-                {
-                    // just kill...
-                    for (int i = index_from; i < index_to; i++)
-                    {
-                        if (simulate())
-                        {
-                            mTrees[i].Item1.markForCut(true);
-                            mStand.addScheduledHarvest(mTrees[i].Item1.volume());
-                        }
-                        else
-                        {
-                            mTrees[i].Item1.remove();
-                        }
-                    }
-                }
-                count = index_to - index_from;
-            }
-            else
-            {
-                // kill randomly the provided number
-                int cancel = 1000;
-                while (number >= 0)
-                {
-                    int rnd_index = RandomGenerator.irandom(index_from, index_to);
-                    Tree tree = mTrees[rnd_index].Item1;
-                    if (tree.isDead() || tree.isMarkedForHarvest() || tree.isMarkedForCut())
-                    {
-                        if (--cancel < 0)
-                        {
-                            Debug.WriteLine("Management::kill: canceling search. " + number + " trees left.");
-                            count -= number; // not all trees were killed
-                            break;
-                        }
-                        continue;
-                    }
-                    cancel = 1000;
-                    number--;
-                    if (management)
-                    {
-                        if (simulate())
-                        {
-                            tree.markForHarvest(true);
-                            mStand.addScheduledHarvest(tree.volume());
-                        }
-                        else
-                        {
-                            tree.remove(removeFoliage(), removeBranch(), removeStem());
-                        }
-                    }
-                    else
-                    {
-                        if (simulate())
-                        {
-                            tree.markForCut(true);
-                            mStand.addScheduledHarvest(tree.volume());
-                        }
-                        else
-                        {
-                            tree.remove();
-                        }
-                    }
-                }
-            }
-            if (mStand != null && mStand.trace())
-            {
-                Debug.WriteLine("remove_percentiles: " + count + " removed.");
-            }
+        //    //Debug.WriteLine("attempting to remove" + number + "trees between indices" + index_from + "and" + index_to;
+        //    int count = number;
+        //    if (index_to - index_from <= number)
+        //    {
+        //        // kill all
+        //        if (management)
+        //        {
+        //            // management
+        //            for (int i = index_from; i < index_to; i++)
+        //            {
+        //                if (simulate())
+        //                {
+        //                    mTrees[i].Item1.markForHarvest(true);
+        //                    mStand.addScheduledHarvest(mTrees[i].Item1.volume());
+        //                }
+        //                else
+        //                {
+        //                    mTrees[i].Item1.remove(removeFoliage(), removeBranch(), removeStem());
+        //                }
+        //            }
+        //        }
+        //        else
+        //        {
+        //            // just kill...
+        //            for (int i = index_from; i < index_to; i++)
+        //            {
+        //                if (simulate())
+        //                {
+        //                    mTrees[i].Item1.markForCut(true);
+        //                    mStand.addScheduledHarvest(mTrees[i].Item1.volume());
+        //                }
+        //                else
+        //                {
+        //                    mTrees[i].Item1.remove();
+        //                }
+        //            }
+        //        }
+        //        count = index_to - index_from;
+        //    }
+        //    else
+        //    {
+        //        // kill randomly the provided number
+        //        int cancel = 1000;
+        //        while (number >= 0)
+        //        {
+        //            int rnd_index = RandomGenerator.irandom(index_from, index_to);
+        //            Tree tree = mTrees[rnd_index].Item1;
+        //            if (tree.isDead() || tree.isMarkedForHarvest() || tree.isMarkedForCut())
+        //            {
+        //                if (--cancel < 0)
+        //                {
+        //                    Debug.WriteLine("Management::kill: canceling search. " + number + " trees left.");
+        //                    count -= number; // not all trees were killed
+        //                    break;
+        //                }
+        //                continue;
+        //            }
+        //            cancel = 1000;
+        //            number--;
+        //            if (management)
+        //            {
+        //                if (simulate())
+        //                {
+        //                    tree.markForHarvest(true);
+        //                    mStand.addScheduledHarvest(tree.volume());
+        //                }
+        //                else
+        //                {
+        //                    tree.remove(removeFoliage(), removeBranch(), removeStem());
+        //                }
+        //            }
+        //            else
+        //            {
+        //                if (simulate())
+        //                {
+        //                    tree.markForCut(true);
+        //                    mStand.addScheduledHarvest(tree.volume());
+        //                }
+        //                else
+        //                {
+        //                    tree.remove();
+        //                }
+        //            }
+        //        }
+        //    }
+        //    if (mStand != null && mStand.trace())
+        //    {
+        //        Debug.WriteLine("remove_percentiles: " + count + " removed.");
+        //    }
 
-            // clean up the tree list...
-            for (int i = mTrees.Count - 1; i >= 0; --i)
-            {
-                if (mTrees[i].Item1.isDead())
-                {
-                    mTrees.RemoveAt(i);
-                }
-            }
+        //    // clean up the tree list...
+        //    for (int i = mTrees.Count - 1; i >= 0; --i)
+        //    {
+        //        if (mTrees[i].Item1.isDead())
+        //        {
+        //            mTrees.RemoveAt(i);
+        //        }
+        //    }
 
-            return count; // killed or cut
-        }
+        //    return count; // killed or cut
+        //}
 
         /** remove trees from a list and reduce the list.
           */
-        private int remove_trees(string expression, double fraction, bool management)
+        private int RemoveTrees(string expression, double fraction, bool management)
         {
             if (String.IsNullOrEmpty(expression))
             {
@@ -304,42 +309,42 @@ namespace iLand.abe
 
             TreeWrapper tw = new TreeWrapper();
             Expression expr = new Expression(expression, tw);
-            expr.enableIncSum();
+            expr.EnableIncrementalSum();
             int n = 0;
             for (int index = 0; index < mTrees.Count; ++index)
             {
                 MutableTuple<Tree, double> tp = mTrees[index];
-                tw.setTree(tp.Item1);
+                tw.Tree = tp.Item1;
                 // if expression evaluates to true and if random number below threshold...
-                if (expr.calculate(tw) != 0.0 && RandomGenerator.drandom() <= fraction)
+                if (expr.Calculate(tw) != 0.0 && RandomGenerator.Random() <= fraction)
                 {
                     // remove from system
                     if (management)
                     {
                         if (simulate())
                         {
-                            tp.Item1.markForHarvest(true);
-                            mStand.addScheduledHarvest(tp.Item1.volume());
+                            tp.Item1.MarkForHarvest(true);
+                            mStand.AddScheduledHarvest(tp.Item1.Volume());
                         }
                         else
                         {
-                            tp.Item1.markForHarvest(true);
-                            tp.Item1.remove(removeFoliage(), removeBranch(), removeStem()); // management with removal fractions
+                            tp.Item1.MarkForHarvest(true);
+                            tp.Item1.Remove(removeFoliage(), removeBranch(), removeStem()); // management with removal fractions
                         }
                     }
                     else
                     {
                         if (simulate())
                         {
-                            tp.Item1.markForCut(true);
-                            tp.Item1.setDeathCutdown();
-                            mStand.addScheduledHarvest(tp.Item1.volume());
+                            tp.Item1.MarkForCut(true);
+                            tp.Item1.SetDeathReasonCutdown();
+                            mStand.AddScheduledHarvest(tp.Item1.Volume());
                         }
                         else
                         {
-                            tp.Item1.markForCut(true);
-                            tp.Item1.setDeathCutdown();
-                            tp.Item1.remove(); // kill
+                            tp.Item1.MarkForCut(true);
+                            tp.Item1.SetDeathReasonCutdown();
+                            tp.Item1.Remove(); // kill
                         }
                     }
 
@@ -352,7 +357,7 @@ namespace iLand.abe
             return n;
         }
 
-        private double aggregate_function(string expression, string filter, string type)
+        private double AggregateFunction(string expression, string filter, string type)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression expr = new Expression(expression, tw);
@@ -364,8 +369,8 @@ namespace iLand.abe
                 // without filtering
                 foreach (MutableTuple<Tree, double> tp in mTrees)
                 {
-                    tw.setTree(tp.Item1);
-                    sum += expr.calculate();
+                    tw.Tree = tp.Item1;
+                    sum += expr.Calculate();
                     ++n;
                 }
             }
@@ -373,13 +378,13 @@ namespace iLand.abe
             {
                 // with filtering
                 Expression filter_expr = new Expression(filter, tw);
-                filter_expr.enableIncSum();
+                filter_expr.EnableIncrementalSum();
                 foreach (MutableTuple<Tree, double> tp in mTrees)
                 {
-                    tw.setTree(tp.Item1);
-                    if (filter_expr.calculate() != 0.0)
+                    tw.Tree = tp.Item1;
+                    if (filter_expr.Calculate() != 0.0)
                     {
-                        sum += expr.calculate();
+                        sum += expr.Calculate();
                         ++n;
                     }
                 }
@@ -396,7 +401,7 @@ namespace iLand.abe
             return 0.0;
         }
 
-        public bool remove_single_tree(int index, bool harvest)
+        public bool RemoveSingleTree(int index, bool harvest)
         {
             if (mStand == null || index < 0 || index >= mTrees.Count)
             {
@@ -408,30 +413,30 @@ namespace iLand.abe
             {
                 if (simulate())
                 {
-                    tree.markForHarvest(true);
-                    mStand.addScheduledHarvest(tree.volume());
+                    tree.MarkForHarvest(true);
+                    mStand.AddScheduledHarvest(tree.Volume());
                 }
                 else
                 {
-                    tree.remove(removeFoliage(), removeBranch(), removeStem());
+                    tree.Remove(removeFoliage(), removeBranch(), removeStem());
                 }
             }
             else
             {
                 if (simulate())
                 {
-                    tree.markForCut(true);
-                    mStand.addScheduledHarvest(tree.volume());
+                    tree.MarkForCut(true);
+                    mStand.AddScheduledHarvest(tree.Volume());
                 }
                 else
                 {
-                    tree.remove();
+                    tree.Remove();
                 }
             }
             return true;
         }
 
-        private int treePairValue(MutableTuple<Tree, double> p1, MutableTuple<Tree, double> p2)
+        private int CompareTreePairValue(MutableTuple<Tree, double> p1, MutableTuple<Tree, double> p2)
         {
             if (p1.Item2 < p2.Item2)
             {
@@ -444,7 +449,7 @@ namespace iLand.abe
             return 0;
         }
 
-        public void sort(string statement)
+        public void Sort(string statement)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression sorter = new Expression(statement, tw);
@@ -452,14 +457,14 @@ namespace iLand.abe
             for (int i = 0; i < mTrees.Count; ++i)
             {
                 MutableTuple<Tree, double> it =  mTrees[i];
-                tw.setTree(it.Item1);
-                it.Item2 = sorter.execute();
+                tw.Tree = it.Item1;
+                it.Item2 = sorter.Execute();
             }
             // now sort the list....
-            mTrees.Sort(treePairValue);
+            mTrees.Sort(CompareTreePairValue);
         }
 
-        public double percentile(int pct)
+        public double Percentile(int pct)
         {
             if (mTrees.Count == 0)
             {
@@ -477,76 +482,81 @@ namespace iLand.abe
         }
 
         /// random shuffle of all trees in the list
-        public void randomize()
+        public void Randomize()
         {
             // fill the "value" part of the tree storage with a random value for each tree
             for (int i = 0; i < mTrees.Count; ++i)
             {
                 MutableTuple<Tree, double> it = mTrees[i];
-                it.Item2 = RandomGenerator.drandom();
+                it.Item2 = RandomGenerator.Random();
             }
 
             // now sort the list....
-            mTrees.Sort(treePairValue);
+            mTrees.Sort(CompareTreePairValue);
         }
 
-        private void prepareGrids()
+        private void PrepareGrids()
         {
-            RectangleF box = ForestManagementEngine.standGrid().boundingBox(mStand.id());
+            RectangleF box = ForestManagementEngine.StandGrid().BoundingBox(mStand.id());
             if (mStandRect == box)
             {
                 return;
             }
             mStandRect = box;
             // the memory of the grids is only reallocated if the current box is larger then the previous...
-            mStandGrid.setup(box, Constant.cHeightSize);
-            mTreeCountGrid.setup(box, Constant.cHeightSize);
-            mLocalGrid.setup(box, Constant.cPxSize);
+            mStandGrid.Setup(box, Constant.HeightSize);
+            mTreeCountGrid.Setup(box, Constant.HeightSize);
+            mLocalGrid.Setup(box, Constant.LightSize);
             // mark areas outside of the grid...
-            GridRunner<int> runner = new GridRunner<int>(ForestManagementEngine.standGrid().grid(), box);
-            for (runner.next(); runner.isValid(); runner.next())
+            GridRunner<int> runner = new GridRunner<int>(ForestManagementEngine.StandGrid().Grid, box);
+            for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
             {
-                int p = runner.current();
-                if (runner.current() != mStand.id())
+                int p = runner.Current;
+                if (runner.Current != mStand.id())
                 {
                     p = -1;
                 }
-                runner.setCurrent(++p);
+                runner.Current = ++p;
             }
             // copy stand limits to the grid
-            for (int iy = 0; iy < mLocalGrid.sizeY(); ++iy)
+            for (int iy = 0; iy < mLocalGrid.SizeY; ++iy)
             {
-                for (int ix = 0; ix < mLocalGrid.sizeX(); ++ix)
+                for (int ix = 0; ix < mLocalGrid.SizeX; ++ix)
                 {
-                    mLocalGrid[ix, iy] = mStandGrid.valueAtIndex(ix / Constant.cPxPerHeight, iy / Constant.cPxPerHeight) == -1.0F ? -1.0F : 0.0F;
+                    mLocalGrid[ix, iy] = mStandGrid[ix / Constant.LightPerHeightSize, iy / Constant.LightPerHeightSize] == -1.0F ? -1.0F : 0.0F;
                 }
             }
         }
 
-        private void runGrid(Action<float, int, Tree, FMTreeList> func)
+        private delegate void GridAction(ref float cell, ref int n, Tree tree, FMTreeList list);
+        private void RunGrid(GridAction func)
         {
             if (mStandRect == null)
             {
-                prepareGrids();
+                PrepareGrids();
             }
 
             // set all values to 0 (within the limits of the stand grid)
-            for (int p = 0; p < mStandGrid.count(); ++p)
+            for (int p = 0; p < mStandGrid.Count; ++p)
             {
                 if (mStandGrid[p] != -1.0F)
                 {
                     mStandGrid[p] = 0.0F;
                 }
             }
-            mTreeCountGrid.initialize(0);
+            mTreeCountGrid.Initialize(0);
             int invalid_index = 0;
             foreach (MutableTuple<Tree, double> it in mTrees)
             {
                 Tree tree = it.Item1;
-                Point p = mStandGrid.indexAt(tree.position());
-                if (mStandGrid.isIndexValid(p))
+                Point p = mStandGrid.IndexAt(tree.GetCellCenterPoint());
+                if (mStandGrid.Contains(p))
                 {
-                    func.Invoke(mStandGrid.valueAtIndex(p), mTreeCountGrid.valueAtIndex(p), tree, this);
+                    float cell = mStandGrid[p];
+                    int n = mTreeCountGrid[p];
+                    func.Invoke(ref cell, ref n, tree, this);
+                    mStandGrid[p] = cell;
+                    mTreeCountGrid[p] = n;
                 }
                 else
                 {
@@ -559,27 +569,29 @@ namespace iLand.abe
             }
 
             // finalization: call again for each *cell*
-            for (int i = 0; i < mStandGrid.count(); ++i)
+            for (int i = 0; i < mStandGrid.Count; ++i)
             {
-                func.Invoke(mStandGrid.valueAtIndex(i), mTreeCountGrid.valueAtIndex(i), null, this);
+                float cell = mStandGrid[i];
+                int n = mTreeCountGrid[i];
+                func.Invoke(ref cell, ref n, null, this);
+                mStandGrid[i] = cell;
+                mTreeCountGrid[i] = n;
             }
         }
 
-        public void rungrid_heightmax(float cell, int n, Tree tree, FMTreeList list)
+        public void RunGridHeightMax(ref float cell, ref int n, Tree tree, FMTreeList list)
         {
-            // Q_UNUSED(n); Q_UNUSED(list);
             if (tree != null)
             {
-                cell = Math.Max(cell, tree.height());
+                cell = Math.Max(cell, tree.Height);
             }
         }
 
-        public void rungrid_basalarea(float cell, int n, Tree tree, FMTreeList list)
+        public void RunGridBasalArea(ref float cell, ref int n, Tree tree, FMTreeList list)
         {
-            // Q_UNUSED(list);
             if (tree != null)
             {
-                cell += (float)tree.basalArea();
+                cell += (float)tree.BasalArea();
                 ++n;
             }
             else
@@ -591,12 +603,11 @@ namespace iLand.abe
             }
         }
 
-        public void rungrid_volume(float cell, int n, Tree tree, FMTreeList list)
+        public void RunGridVolume(ref float cell, ref int n, Tree tree, FMTreeList list)
         {
-            // Q_UNUSED(list);
             if (tree != null)
             {
-                cell += (float)tree.volume();
+                cell += (float)tree.Volume();
                 ++n;
             }
             else
@@ -608,18 +619,17 @@ namespace iLand.abe
             }
         }
 
-        public void rungrid_custom(float cell, int n, Tree tree, FMTreeList list)
+        public void RunGridCustom(ref float cell, ref int n, Tree tree, FMTreeList list)
         {
             if (tree != null)
             {
-                list.mRunGridCustomCell = cell;
                 TreeWrapper tw = new TreeWrapper(tree);
-                cell = (float)list.mRunGridCustom.calculate(tw);
+                cell = (float)list.mRunGridCustom.Calculate(tw);
                 ++n;
             }
         }
 
-        public void prepareStandGrid(string type, string custom_expression)
+        public void PrepareStandGrid(string type, string custom_expression)
         {
             if (mStand != null)
             {
@@ -629,21 +639,20 @@ namespace iLand.abe
 
             if (type == "height")
             {
-                runGrid(rungrid_heightmax);
+                RunGrid(RunGridHeightMax);
             }
             else if (type == "basalArea")
             {
-                runGrid(rungrid_basalarea);
+                RunGrid(RunGridBasalArea);
             }
             else if (type == "volume")
             {
-                runGrid(rungrid_volume);
+                RunGrid(RunGridVolume);
             }
             else if (type == "custom")
             {
                 mRunGridCustom = new Expression(custom_expression);
-                mRunGridCustomCell = mRunGridCustom.addVar("cell");
-                runGrid(rungrid_custom);
+                RunGrid(RunGridCustom);
                 mRunGridCustom = null;
             }
             else
@@ -652,14 +661,14 @@ namespace iLand.abe
             }
         }
 
-        public void exportStandGrid(string file_name)
+        public void ExportStandGrid(string file_name)
         {
-            file_name = GlobalSettings.instance().path(file_name);
-            Helper.saveToTextFile(file_name, Grid.gridToESRIRaster(mStandGrid));
+            file_name = GlobalSettings.Instance.Path(file_name);
+            Helper.SaveToTextFile(file_name, Grid.ToEsriRaster(mStandGrid));
             Debug.WriteLine("saved grid to file " + file_name);
         }
 
-        private void check_locks()
+        private void CheckLocks()
         {
             // removed the locking code again, WR20140821
             //    if (mStand && mResourceUnitsLocked) {

@@ -7,154 +7,147 @@ namespace iLand.tools
 {
     internal class ScriptGrid
     {
-        private Grid<double> mGrid;
-        private string mVariableName;
-        private static int mDeleted = 0;
         private static int mCreated = 0;
 
-        public ScriptGrid(object parent = null)
+        public Grid<double> Grid { get; set; }
+        public string VariableName { get; private set; }
+
+        public ScriptGrid()
         {
-            mGrid = null;
-            mVariableName = "x"; // default name
+            Grid = null;
+            VariableName = "x"; // default name
             mCreated++;
         }
 
         public ScriptGrid(Grid<double> grid)
             : this()
         {
-            mGrid = grid;
+            Grid = grid;
         }
 
-        public string name() { return mVariableName; }
-        public Grid<double> grid() { return mGrid; }
-        void setGrid(Grid<double> grid) { mGrid = grid; }
-
-        public int width() { return mGrid != null ? mGrid.sizeX() : -1; }
-        public int height() { return mGrid != null ? mGrid.sizeY() : -1; }
-        public int count() { return mGrid != null ? mGrid.count() : -1; }
-        public int cellsize() { return mGrid != null ? (int)mGrid.cellsize() : -1; } // BUGBUG: why truncate float cellsize to integer?
-        public bool isValid() { return mGrid != null ? !mGrid.isEmpty() : false; }
-
-        public void setName(string arg) { mVariableName = arg; }
+        public int CellSize() { return Grid != null ? (int)Grid.CellSize : -1; } // BUGBUG: why truncate float cellsize to integer?
+        public int Count() { return Grid != null ? Grid.Count : -1; }
+        public int Height() { return Grid != null ? Grid.SizeY : -1; }
+        public bool IsValid() { return Grid != null && !Grid.IsEmpty(); }
+        public int Width() { return Grid != null ? Grid.SizeX : -1; }
 
         /// access values of the grid
-        public double value(int x, int y)
+        public double Value(int x, int y)
         {
-            return (isValid() && mGrid.isIndexValid(x, y)) ? mGrid.valueAtIndex(x, y) : -1.0;
+            return (IsValid() && Grid.Contains(x, y)) ? Grid[x, y] : -1.0;
         }
 
         /// write values to the grid
-        public void setValue(int x, int y, double value)
+        public void SetValue(int x, int y, double value)
         {
-            if (isValid() && mGrid.isIndexValid(x, y))
+            if (IsValid() && Grid.Contains(x, y))
             {
-                mGrid[x, y] = value;
+                Grid[x, y] = value;
             }
         }
 
         // create a ScriptGrid-Wrapper around "grid". Note: destructing the 'grid' is done via the JS-garbage-collector.
-        public static QJSValue createGrid(Grid<double> grid, string name)
+        public static QJSValue CreateGrid(Grid<double> grid, string name)
         {
             ScriptGrid g = new ScriptGrid(grid);
             if (String.IsNullOrEmpty(name))
             {
-                g.setName(name);
+                g.VariableName = name;
             }
-            QJSValue jsgrid = GlobalSettings.instance().scriptEngine().newQObject(g);
+            QJSValue jsgrid = GlobalSettings.Instance.ScriptEngine.NewQObject(g);
             return jsgrid;
         }
 
-        public QJSValue copy()
+        public QJSValue Copy()
         {
-            if (mGrid == null)
+            if (Grid == null)
             {
                 return new QJSValue();
             }
 
-            ScriptGrid newgrid = new ScriptGrid();
-            // copy the data
-            Grid<double> copy_grid = new Grid<double>(mGrid);
-            newgrid.setGrid(copy_grid);
+            ScriptGrid newgrid = new ScriptGrid()
+            {
+                Grid = new Grid<double>(Grid)
+            };
 
-            QJSValue jsgrid = GlobalSettings.instance().scriptEngine().newQObject(newgrid);
+            QJSValue jsgrid = GlobalSettings.Instance.ScriptEngine.NewQObject(newgrid);
             return jsgrid;
         }
 
-        public void clear()
+        public void Clear()
         {
-            if (mGrid != null && !mGrid.isEmpty())
+            if (Grid != null && !Grid.IsEmpty())
             {
-                mGrid.wipe();
+                Grid.ClearDefault();
             }
         }
 
-        public void paint(double min_val, double max_val)
-        {
-            // BUGBUG: no op in C++
-            //if (GlobalSettings.instance().controller())
-            //    GlobalSettings.instance().controller().addGrid(mGrid, mVariableName, GridViewRainbow, min_val, max_val);
-        }
+        // unused in C++
+        //public void paint(double min_val, double max_val)
+        //{
+        //    //if (GlobalSettings.instance().controller())
+        //    //    GlobalSettings.instance().controller().addGrid(mGrid, mVariableName, GridViewRainbow, min_val, max_val);
+        //}
 
-        public string info()
+        public string Info()
         {
-            if (mGrid == null || mGrid.isEmpty())
+            if (Grid == null || Grid.IsEmpty())
             {
                 return "not valid / empty.";
             }
-            return String.Format("grid-dimensions: {0}/{1} (cellsize: {4}, N cells: {2}), grid-name='{3}'", mGrid.sizeX(), mGrid.sizeY(), mGrid.count(), mVariableName, mGrid.cellsize());
+            return String.Format("grid-dimensions: {0}/{1} (cellsize: {4}, N cells: {2}), grid-name='{3}'", Grid.SizeX, Grid.SizeY, Grid.Count, VariableName, Grid.CellSize);
         }
 
-        public void save(string fileName)
+        public void Save(string fileName)
         {
-            if (mGrid != null || mGrid.isEmpty())
+            if (Grid != null || Grid.IsEmpty())
             {
                 return;
             }
-            fileName = GlobalSettings.instance().path(fileName);
-            string result = Grid.gridToESRIRaster(mGrid);
-            Helper.saveToTextFile(fileName, result);
-            Console.WriteLine("saved grid " + name() + " to " + fileName);
+            fileName = GlobalSettings.Instance.Path(fileName);
+            string result = core.Grid.ToEsriRaster(Grid);
+            Helper.SaveToTextFile(fileName, result);
+            Console.WriteLine("saved grid " + this.VariableName + " to " + fileName);
         }
 
-        public bool load(string fileName)
+        public bool Load(string fileName)
         {
-            fileName = GlobalSettings.instance().path(fileName);
+            fileName = GlobalSettings.Instance.Path(fileName);
             // load the grid from file
             MapGrid mg = new MapGrid(fileName, false);
-            if (!mg.isValid())
+            if (!mg.IsValid())
             {
                 Console.WriteLine("load(): load not successful of file: " + fileName);
                 return false;
             }
-            mGrid = mg.grid().toDouble(); // create a copy of the mapgrid-grid
-            mVariableName = Path.GetFileNameWithoutExtension(new FileInfo(fileName).Name);
-            return !mGrid.isEmpty();
-
+            Grid = mg.Grid.ToDouble(); // create a copy of the mapgrid-grid
+            VariableName = Path.GetFileNameWithoutExtension(new FileInfo(fileName).Name);
+            return !Grid.IsEmpty();
         }
 
-        public void apply(string expression)
+        public void Apply(string expression)
         {
-            if (mGrid == null || mGrid.isEmpty())
+            if (Grid == null || Grid.IsEmpty())
             {
                 return;
             }
 
             Expression expr = new Expression();
-            double varptr = expr.addVar(mVariableName);
-            expr.setExpression(expression);
-            expr.parse();
+            expr.AddVariable(VariableName);
+            expr.SetExpression(expression);
+            expr.Parse();
 
             // now apply function on grid
-            for (int p = 0; p != mGrid.count(); ++p)
+            for (int p = 0; p != Grid.Count; ++p)
             {
-                expr.setVar(mVariableName, mGrid[p]);
-                mGrid[p] = expr.execute();
+                expr.SetVariable(VariableName, Grid[p]);
+                Grid[p] = expr.Execute();
             }
         }
 
-        public void combine(string expression, QJSValue grid_object)
+        public void Combine(string expression, QJSValue grid_object)
         {
-            if (!grid_object.isObject())
+            if (!grid_object.IsObject())
             {
                 Console.WriteLine("ERROR: combine(): no valid grids object" + grid_object.ToString());
                 return;
@@ -163,23 +156,23 @@ namespace iLand.tools
             List<Grid<double>> grids = new List<Grid<double>>();
             List<string> names = new List<string>();
             QJSValueIterator it = new QJSValueIterator(grid_object);
-            while (it.hasNext())
+            while (it.HasNext())
             {
-                it.next();
-                names.Add(it.name());
-                ScriptGrid o = (ScriptGrid)it.value().toVariant();
+                it.Next();
+                names.Add(it.Name());
+                ScriptGrid o = (ScriptGrid)it.Value().ToVariant();
                 if (o != null)
                 {
-                    grids.Add(o.grid());
-                    if (grids[^1].isEmpty() || grids[^1].cellsize() != mGrid.cellsize() || grids[^1].rectangle() != mGrid.rectangle())
+                    grids.Add(o.Grid);
+                    if (grids[^1].IsEmpty() || grids[^1].CellSize != Grid.CellSize || grids[^1].Size() != Grid.Size())
                     {
-                        Console.WriteLine("ERROR: combine(): the grid " + it.name() + "is empty or has different dimensions:" + o.info());
+                        Console.WriteLine("ERROR: combine(): the grid " + it.Name() + "is empty or has different dimensions:" + o.Info());
                         return;
                     }
                 }
                 else
                 {
-                    Console.WriteLine("ERROR: combine(): no valid grid object with name:" + it.name());
+                    Console.WriteLine("ERROR: combine(): no valid grid object with name:" + it.Name());
                     return;
                 }
             }
@@ -188,42 +181,42 @@ namespace iLand.tools
             List<double> vars = new List<double>();
             for (int i = 0; i < names.Count; ++i)
             {
-                vars.Add(expr.addVar(names[i]));
+                vars.Add(expr.AddVariable(names[i]));
             }
-            expr.setExpression(expression);
-            expr.parse();
+            expr.SetExpression(expression);
+            expr.Parse();
 
             // now apply function on grid
-            for (int i = 0; i < mGrid.count(); ++i)
+            for (int i = 0; i < Grid.Count; ++i)
             {
                 // set variable values in the expression object
                 for (int v = 0; v < names.Count; ++v)
                 {
-                    vars[v] = grids[v].valueAtIndex(i);
+                    vars[v] = grids[v][i];
                 }
-                double result = expr.execute();
-                mGrid[i] = result; // write back value
+                double result = expr.Execute();
+                Grid[i] = result; // write back value
             }
         }
 
-        public double sum(string expression)
+        public double Sum(string expression)
         {
-            if (mGrid == null || mGrid.isEmpty())
+            if (Grid == null || Grid.IsEmpty())
             {
                 return -1.0;
             }
 
             Expression expr = new Expression();
-            expr.addVar(mVariableName);
-            expr.setExpression(expression);
-            expr.parse();
+            expr.AddVariable(VariableName);
+            expr.SetExpression(expression);
+            expr.Parse();
 
             // now apply function on grid
             double sum = 0.0;
-            for (int p = 0; p != mGrid.count(); ++p)
+            for (int p = 0; p != Grid.Count; ++p)
             {
-                expr.setVar(mVariableName, mGrid[p]);
-                sum += expr.execute();
+                expr.SetVariable(VariableName, Grid[p]);
+                sum += expr.Execute();
             }
             return sum;
         }

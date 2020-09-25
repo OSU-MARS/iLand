@@ -19,26 +19,24 @@ namespace iLand.tools
       */
     internal class MapGrid
     {
-        private static MapGridRULock mapGridLock;
+        private static readonly MapGridRULock mapGridLock;
 
-        private string mName; ///< file name of the grid
-        private Grid<int> mGrid;
-        private Dictionary<int, MutableTuple<RectangleF, double>> mRectIndex; ///< holds the extent and area for each map-id
-        private MultiValueDictionary<int, MutableTuple<ResourceUnit, double>> mRUIndex; ///< holds a list of resource units + areas per map-id
-        private MultiValueDictionary<int, int> mNeighborList; ///< a list of neighboring polygons; for each ID all neighboring IDs are stored.
+        private readonly Dictionary<int, MutableTuple<RectangleF, double>> mRectIndex; ///< holds the extent and area for each map-id
+        private readonly MultiValueDictionary<int, MutableTuple<ResourceUnit, double>> mRUIndex; ///< holds a list of resource units + areas per map-id
+        private readonly MultiValueDictionary<int, int> mNeighborList; ///< a list of neighboring polygons; for each ID all neighboring IDs are stored.
 
-        // access
-        public string name() { return mName; }
-        public bool isValid() { return !mGrid.isEmpty(); }
-        public Grid<int> grid() { return mGrid; }
+        public Grid<int> Grid { get; private set; }
+        ///< file name of the grid
+        public string Name { get; private set; }
+        // unused in C++
         /// extract a list of neighborhood relationships between all the polygons of the grid
-        public MultiValueDictionary<int, int> neighborList() { return mNeighborList; }
+        // public MultiValueDictionary<int, int> NeighborList { get; private set; }
 
-        // access
+        public double Area(int id) { return IsValid(id) ? mRectIndex[id].Item2 : 0.0; } ///< return the area (m2) covered by the polygon
+        public RectangleF BoundingBox(int id) { return IsValid(id) ? mRectIndex[id].Item1 : new RectangleF(); } ///< returns the bounding box of a polygon
+        public bool IsValid() { return !Grid.IsEmpty(); }
         /// returns true, if 'id' is a valid id in the grid, false otherwise.
-        public bool isValid(int id) { return mRectIndex.ContainsKey(id); }
-        public RectangleF boundingBox(int id) { return isValid(id) ? mRectIndex[id].Item1 : new RectangleF(); } ///< returns the bounding box of a polygon
-        public double area(int id) { return isValid(id) ? mRectIndex[id].Item2 : 0.0; } ///< return the area (m2) covered by the polygon
+        public bool IsValid(int id) { return mRectIndex.ContainsKey(id); }
 
         static MapGrid()
         {
@@ -47,7 +45,7 @@ namespace iLand.tools
 
         public MapGrid()
         {
-            this.mGrid = new Grid<int>();
+            this.Grid = new Grid<int>();
             this.mRectIndex = new Dictionary<int, MutableTuple<RectangleF, double>>();
             this.mRUIndex = new MultiValueDictionary<int, MutableTuple<ResourceUnit, double>>();
             this.mNeighborList = new MultiValueDictionary<int, int>();
@@ -55,55 +53,55 @@ namespace iLand.tools
 
         public MapGrid(GisGrid source_grid)
         {
-            loadFromGrid(source_grid);
+            LoadFromGrid(source_grid);
         }
 
         public MapGrid(string fileName, bool create_index = true)
         {
-            loadFromFile(fileName, create_index);
+            LoadFromFile(fileName, create_index);
         }
 
         /// return true, if the point 'lif_grid_coords' (x/y integer key within the LIF-Grid)
-        public bool hasValue(int id, Point lif_grid_coords)
+        public bool HasValue(int id, Point lif_grid_coords)
         {
-            return mGrid.constValueAtIndex(lif_grid_coords.X / Constant.cPxPerHeight, lif_grid_coords.Y / Constant.cPxPerHeight) == id;
+            return this.StandIDFromLifCoord(lif_grid_coords) == id;
         }
 
         /// return the stand-ID at the coordinates *from* the LIF-Grid (i.e., 2m grid).
-        public int standIDFromLIFCoord(Point lif_grid_coords)
+        public int StandIDFromLifCoord(Point lif_grid_coords)
         {
-            return mGrid.constValueAtIndex(lif_grid_coords.X / Constant.cPxPerHeight, lif_grid_coords.Y / Constant.cPxPerHeight);
+            return Grid[lif_grid_coords.X / Constant.LightPerHeightSize, lif_grid_coords.Y / Constant.LightPerHeightSize];
         }
 
         ///< load from an already present GisGrid
-        public bool loadFromGrid(GisGrid source_grid, bool create_index = true)
+        public bool LoadFromGrid(GisGrid source_grid, bool create_index = true)
         {
-            if (GlobalSettings.instance().model() == null)
+            if (GlobalSettings.Instance.Model == null)
             {
                 throw new NotSupportedException("GisGrid::create10mGrid: no valid model to retrieve height grid.");
             }
 
-            Grid<HeightGridValue> h_grid = GlobalSettings.instance().model().heightGrid();
-            if (h_grid == null || h_grid.isEmpty())
+            Grid<HeightGridValue> h_grid = GlobalSettings.Instance.Model.HeightGrid;
+            if (h_grid == null || h_grid.IsEmpty())
             {
                 throw new NotSupportedException("MapGrid.loadFromGrid(): no valid height grid to copy grid size.");
             }
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
-            mGrid.clear();
-            mGrid.setup(h_grid.metricRect(), h_grid.cellsize());
+            Grid.Clear();
+            Grid.Setup(h_grid.PhysicalSize, h_grid.CellSize);
 
-            RectangleF world = GlobalSettings.instance().model().extent();
-            for (int i = 0; i < mGrid.count(); i++)
+            RectangleF world = GlobalSettings.Instance.Model.PhysicalExtent;
+            for (int i = 0; i < Grid.Count; i++)
             {
-                PointF p = mGrid.cellCenterPoint(mGrid.indexOf(i));
-                if (source_grid.value(p) != source_grid.noDataValue() && world.Contains(p))
+                PointF p = Grid.GetCellCenterPoint(Grid.IndexOf(i));
+                if (source_grid.GetValue(p) != source_grid.NoDataValue && world.Contains(p))
                 {
-                    mGrid[i] = (int)source_grid.value(p);
+                    Grid[i] = (int)source_grid.GetValue(p);
                 }
                 else
                 {
-                    mGrid[i] = -1;
+                    Grid[i] = -1;
                 }
             }
 
@@ -113,27 +111,27 @@ namespace iLand.tools
 
             if (create_index)
             {
-                createIndex();
+                CreateIndex();
             }
             return true;
         }
 
-        public void createEmptyGrid()
+        public void CreateEmptyGrid()
         {
-            Grid<HeightGridValue> h_grid = GlobalSettings.instance().model().heightGrid();
-            if (h_grid == null || h_grid.isEmpty())
+            Grid<HeightGridValue> h_grid = GlobalSettings.Instance.Model.HeightGrid;
+            if (h_grid == null || h_grid.IsEmpty())
             {
                 throw new NotSupportedException("GisGrid::createEmptyGrid: 10mGrid: no valid height grid to copy grid size.");
             }
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
-            mGrid.clear();
-            mGrid.setup(h_grid.metricRect(), h_grid.cellsize());
+            Grid.Clear();
+            Grid.Setup(h_grid.PhysicalSize, h_grid.CellSize);
 
-            for (int i = 0; i < mGrid.count(); i++)
+            for (int i = 0; i < Grid.Count; i++)
             {
                 // PointF p = mGrid.cellCenterPoint(mGrid.indexOf(i)); // BUGBUG: why was this in C++ code?
-                mGrid[i] = 0;
+                Grid[i] = 0;
             }
 
             // reset spatial index
@@ -141,23 +139,23 @@ namespace iLand.tools
             mRUIndex.Clear();
         }
 
-        public void createIndex()
+        public void CreateIndex()
         {
             // reset spatial index
             mRectIndex.Clear();
             mRUIndex.Clear();
             // create new
-            for (int p = 0; p < mGrid.count(); ++p)
+            for (int p = 0; p < Grid.Count; ++p)
             {
-                if (mGrid[p] == -1)
+                if (Grid[p] == -1)
                 {
                     continue;
                 }
                 MutableTuple<RectangleF, double> data = mRectIndex[p];
-                data.Item1 = RectangleF.Union(data.Item1, mGrid.cellRect(mGrid.indexOf(p)));
-                data.Item2 += Constant.cPxSize * Constant.cPxPerHeight * Constant.cPxSize * Constant.cPxPerHeight; // 100m2
+                data.Item1 = RectangleF.Union(data.Item1, Grid.GetCellRect(Grid.IndexOf(p)));
+                data.Item2 += Constant.LightSize * Constant.LightPerHeightSize * Constant.LightSize * Constant.LightPerHeightSize; // 100m2
 
-                ResourceUnit ru = GlobalSettings.instance().model().ru(mGrid.cellCenterPoint(mGrid.indexOf(p)));
+                ResourceUnit ru = GlobalSettings.Instance.Model.GetResourceUnit(Grid.GetCellCenterPoint(Grid.IndexOf(p)));
                 if (ru == null)
                 {
                     continue;
@@ -185,24 +183,27 @@ namespace iLand.tools
         }
 
         ///< load ESRI style text file
-        public bool loadFromFile(string fileName, bool create_index)
+        public bool LoadFromFile(string fileName, bool create_index)
         {
             GisGrid gis_grid = new GisGrid();
-            mName = "invalid";
-            if (gis_grid.loadFromFile(fileName))
+            Name = "invalid";
+            if (gis_grid.LoadFromFile(fileName))
             {
-                mName = fileName;
-                return loadFromGrid(gis_grid, create_index);
+                Name = fileName;
+                return LoadFromGrid(gis_grid, create_index);
             }
             return false;
         }
 
         /// returns a list with resource units and area factors per 'id'.
         /// the area is '1' if the resource unit is fully covered by the grid-value.
-        public IReadOnlyCollection<MutableTuple<ResourceUnit, double>> resourceUnitAreas(int id) { return mRUIndex[id]; }
+        public IReadOnlyCollection<MutableTuple<ResourceUnit, double>> ResourceUnitAreas(int id)
+        {
+            return mRUIndex[id]; 
+        }
 
         /// returns the list of resource units with at least one pixel within the area designated by 'id'
-        public List<ResourceUnit> resourceUnits(int id)
+        public List<ResourceUnit> ResourceUnits(int id)
         {
             List<ResourceUnit> result = new List<ResourceUnit>();
             IReadOnlyCollection<MutableTuple<ResourceUnit, double>> list = mRUIndex[id];
@@ -214,15 +215,15 @@ namespace iLand.tools
         }
 
         /// return a list of all living trees on the area denoted by 'id'
-        public List<Tree> trees(int id)
+        public List<Tree> Trees(int id)
         {
             List<Tree> tree_list = new List<Tree>();
-            List<ResourceUnit> resource_units = resourceUnits(id);
+            List<ResourceUnit> resource_units = ResourceUnits(id);
             foreach (ResourceUnit ru in resource_units)
             {
-                foreach (Tree tree in ru.constTrees())
+                foreach (Tree tree in ru.Trees)
                 {
-                    if (standIDFromLIFCoord(tree.positionIndex()) == id && !tree.isDead())
+                    if (StandIDFromLifCoord(tree.LightCellIndex) == id && !tree.IsDead())
                     {
                         tree_list.Add(tree);
                     }
@@ -232,7 +233,7 @@ namespace iLand.tools
             return tree_list;
         }
 
-        public int loadTrees(int id, List<MutableTuple<Tree, double>> rList, string filter, int n_estimate)
+        public int LoadTrees(int id, List<MutableTuple<Tree, double>> rList, string filter, int n_estimate)
         {
             rList.Clear();
             if (n_estimate > 0)
@@ -244,29 +245,29 @@ namespace iLand.tools
             if (String.IsNullOrEmpty(filter) == false)
             {
                 expression = new Expression(filter, tw);
-                expression.enableIncSum();
+                expression.EnableIncrementalSum();
             }
-            List<ResourceUnit> resource_units = resourceUnits(id);
+            List<ResourceUnit> resource_units = ResourceUnits(id);
             // lock the resource units: removed again, WR20140821
             // mapGridLock.lock(id, resource_units);
 
             foreach (ResourceUnit ru in resource_units)
             {
-                foreach (Tree tree in ru.constTrees())
+                foreach (Tree tree in ru.Trees)
                 {
-                    if (standIDFromLIFCoord(tree.positionIndex()) == id && !tree.isDead())
+                    if (StandIDFromLifCoord(tree.LightCellIndex) == id && !tree.IsDead())
                     {
                         Tree t = tree;
-                        tw.setTree(t);
+                        tw.Tree = t;
                         if (expression != null)
                         {
-                            double value = expression.calculate(tw);
+                            double value = expression.Calculate(tw);
                             // keep if expression returns true (1)
                             bool keep = value == 1.0;
                             // if value is >0 (i.e. not "false"), then draw a random number
                             if (!keep && value > 0.0)
                             {
-                                keep = RandomGenerator.drandom() < value;
+                                keep = RandomGenerator.Random() < value;
                             }
                             if (!keep)
                             {
@@ -280,7 +281,7 @@ namespace iLand.tools
             return rList.Count;
         }
 
-        public void freeLocksForStand(int id)
+        public void FreeLocksForStand(int id)
         {
             if (id > -1)
             {
@@ -291,17 +292,17 @@ namespace iLand.tools
         /// return a list of grid-indices of a given stand-id (a grid-index
         /// is the index of 10m x 10m pixels within the internal storage)
         /// The selection is limited to pixels within the world's extent
-        public List<int> gridIndices(int id)
+        public List<int> GridIndices(int id)
         {
             List<int> result = new List<int>();
             RectangleF rect = mRectIndex[id].Item1;
-            GridRunner<int> runner = new GridRunner<int>(mGrid, rect);
-            for (runner.next(); runner.isValid(); runner.next())
+            GridRunner<int> runner = new GridRunner<int>(Grid, rect);
+            for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
             {
-                int cell = runner.current();
+                int cell = runner.Current;
                 if (cell == id)
                 {
-                    result.Add(cell - mGrid[0]);
+                    result.Add(cell - Grid[0]);
                 }
             }
             return result;
@@ -326,38 +327,38 @@ namespace iLand.tools
         //}
 
         /// retrieve a list of all stands that are neighbors of the stand with ID "index".
-        public List<int> neighborsOf(int index)
+        public List<int> NeighborsOf(int index)
         {
             if (mNeighborList.Count == 0)
             {
-                this.updateNeighborList(); // fill the list
+                this.UpdateNeighborList(); // fill the list
             }
             return mNeighborList[index].ToList();
         }
 
         /// scan the map and add neighborhood-relations to the mNeighborList
         /// the 4-neighborhood is used to identify neighbors.
-        public void updateNeighborList()
+        public void UpdateNeighborList()
         {
             mNeighborList.Clear();
-            GridRunner<int> gr = new GridRunner<int>(mGrid, mGrid.rectangle()); // the full grid
+            GridRunner<int> gr = new GridRunner<int>(Grid, Grid.Size()); // the full grid
             int[] n4 = new int[4];
-            for (gr.next(); gr.isValid(); gr.next())
+            for (gr.MoveNext(); gr.IsValid(); gr.MoveNext())
             {
-                gr.neighbors4(n4); // get the four-neighborhood (0-pointers possible)
+                gr.Neighbors4(n4); // get the four-neighborhood (0-pointers possible)
                 for (int i = 0; i < 4; ++i)
                 {
-                    if (n4[i] != 0 && gr.current() != n4[i])
+                    if (n4[i] != 0 && gr.Current != n4[i])
                     {
                         // look if we already have the pair
-                        if (mNeighborList.ContainsKey(gr.current()) == false)
+                        if (mNeighborList.ContainsKey(gr.Current) == false)
                         {
                             // add the "edge" two times in the hash
-                            mNeighborList.Add(gr.current(), n4[i]);
+                            mNeighborList.Add(gr.Current, n4[i]);
                         }
                         if (mNeighborList.ContainsKey(n4[i]) == false)
                         {
-                            mNeighborList.Add(n4[i], gr.current());
+                            mNeighborList.Add(n4[i], gr.Current);
                         }
                     }
                 }

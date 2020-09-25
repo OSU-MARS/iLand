@@ -12,129 +12,122 @@ namespace iLand.abe
     internal class ActPlanting : Activity
     {
         // Planting patterns
-        public static List<MutableTuple<string, int>> planting_patterns = new List<MutableTuple<string, int>>() {
-            new MutableTuple<string, int>("11" +
-                                          "11", 2),
-            new MutableTuple<string, int>("11111" +
-                                          "11111" +
-                                          "11111" +
-                                          "11111" +
-                                          "11111", 5),
-            new MutableTuple<string, int>("1111111111" +
-                                          "1111111111" +
-                                          "1111111111" +
-                                          "1111111111" +
-                                          "1111111111" +
-                                          "1111111111" +
-                                          "1111111111" +
-                                          "1111111111" +
-                                          "1111111111" +
-                                          "1111111111", 10),
-            new MutableTuple<string, int>("00110" +
-                                          "11110" +
-                                          "11111" +
-                                          "01111" +
-                                          "00110", 5),
-            new MutableTuple<string, int>("0000110000" +
-                                          "0011111100" +
-                                          "0111111110" +
-                                          "0111111110" +
-                                          "1111111111" +
-                                          "1111111111" +
-                                          "0111111110" +
-                                          "0011111110" +
-                                          "0011111100" +
-                                          "0000110000", 10) };
-        public static List<string> planting_pattern_names = new List<string>() { "rect2", "rect10", "rect20", "circle5", "circle10" };
-        private new static List<string> mAllowedProperties;
+        public static List<MutableTuple<string, int>> planting_patterns;
+        public static List<string> planting_pattern_names;
+        private new static readonly List<string> mAllowedProperties;
 
-        private List<SPlantingItem> mItems;
-        private bool mRequireLoading;
+        private readonly List<SPlantingItem> mItems;
 
-        public string type() { return "planting"; }
+        public override string Type() { return "planting"; }
 
-        public ActPlanting(FMSTP parent)
-            : base(parent)
+        static ActPlanting()
+        {
+            ActPlanting.mAllowedProperties = new List<string>(Activity.mAllowedProperties) { "species", "fraction", "height", "age", "clear",
+                                                                                             "pattern", "spacing", "offset", "random", "n" };
+            ActPlanting.planting_pattern_names = new List<string>() { "rect2", "rect10", "rect20", "circle5", "circle10" };
+            ActPlanting.planting_patterns = new List<MutableTuple<string, int>>() {
+                new MutableTuple<string, int>("11" +
+                                                "11", 2),
+                new MutableTuple<string, int>("11111" +
+                                                "11111" +
+                                                "11111" +
+                                                "11111" +
+                                                "11111", 5),
+                new MutableTuple<string, int>("1111111111" +
+                                                "1111111111" +
+                                                "1111111111" +
+                                                "1111111111" +
+                                                "1111111111" +
+                                                "1111111111" +
+                                                "1111111111" +
+                                                "1111111111" +
+                                                "1111111111" +
+                                                "1111111111", 10),
+                new MutableTuple<string, int>("00110" +
+                                                "11110" +
+                                                "11111" +
+                                                "01111" +
+                                                "00110", 5),
+                new MutableTuple<string, int>("0000110000" +
+                                                "0011111100" +
+                                                "0111111110" +
+                                                "0111111110" +
+                                                "1111111111" +
+                                                "1111111111" +
+                                                "0111111110" +
+                                                "0011111110" +
+                                                "0011111100" +
+                                                "0000110000", 10)
+            };
+        }
+
+        public ActPlanting()
         {
             //mBaseActivity.setIsScheduled(true); // use the scheduler
             //mBaseActivity.setDoSimulate(true); // simulate per default
-            if (mAllowedProperties.Count == 0)
-            {
-                mAllowedProperties = new List<string>(Activity.mAllowedProperties);
-                mAllowedProperties.AddRange(new string[] { "species", "fraction", "height", "age", "clear",
-                                                           "pattern", "spacing", "offset", "random", "n" });
-            }
+            this.mItems = new List<SPlantingItem>();
         }
 
-        public new void setup(QJSValue value)
+        public override void Setup(QJSValue value)
         {
             // check if regeneration is enabled
-            if (GlobalSettings.instance().model().settings().regenerationEnabled == false)
+            if (GlobalSettings.Instance.Model.Settings.RegenerationEnabled == false)
             {
                 throw new NotSupportedException("Cannot set up planting acitivities when iLand regeneration module is disabled.");
             }
-            base.setup(value); // setup base events
+            base.Setup(value); // setup base events
 
-            QJSValue items = FMSTP.valueFromJs(value, "items");
+            QJSValue items = FMSTP.ValueFromJS(value, "items");
             mItems.Clear();
             // iterate over array or over single object
-            if ((items.isArray() || items.isObject()) && !items.isCallable())
+            if ((items.IsArray() || items.IsObject()) && !items.IsCallable())
             {
                 QJSValueIterator it = new QJSValueIterator(items);
-                while (it.hasNext())
+                while (it.HasNext())
                 {
-                    it.next();
-                    if (it.name() == "length")
+                    it.Next();
+                    if (it.Name() == "length")
                     {
                         continue;
                     }
                     SPlantingItem item = new SPlantingItem();
                     mItems.Add(item);
-                    Debug.WriteLine(it.name() + ": " + FomeScript.JStoString(it.value()));
-                    FMSTP.checkObjectProperties(it.value(), mAllowedProperties, "setup of planting activity:" + name() + "; " + it.name());
+                    Debug.WriteLine(it.Name() + ": " + FomeScript.JStoString(it.Value()));
+                    FMSTP.CheckObjectProperties(it.Value(), mAllowedProperties, "setup of planting activity:" + name() + "; " + it.Name());
 
-                    item.setup(it.value());
+                    item.Setup(it.Value());
                 }
             }
             else
             {
                 SPlantingItem item = new SPlantingItem();
                 mItems.Add(item);
-                FMSTP.checkObjectProperties(items, mAllowedProperties, "setup of planting activity:" + name());
+                FMSTP.CheckObjectProperties(items, mAllowedProperties, "setup of planting activity:" + name());
 
-                item.setup(items);
-            }
-            mRequireLoading = false;
-            foreach (SPlantingItem it in mItems)
-            {
-                if (it.clear == true)
-                {
-                    mRequireLoading = true;
-                    break;
-                }
+                item.Setup(items);
             }
         }
 
-        public override bool execute(FMStand stand)
+        public override bool Execute(FMStand stand)
         {
             Debug.WriteLine(stand.context() + " execute of planting activity....");
             using DebugTimer time = new DebugTimer("ABE:ActPlanting:execute");
 
             for (int s = 0; s < mItems.Count; ++s)
             {
-                mItems[s].run(stand);
+                mItems[s].Run(stand);
             }
 
             return true;
         }
 
-        public override List<string> info()
+        public override List<string> Info()
         {
-            List<string> lines = base.info();
+            List<string> lines = base.Info();
             foreach (SPlantingItem item in mItems) 
             {
                 lines.Add("-");
-                lines.Add(String.Format("species: {0}", item.species.id()));
+                lines.Add(String.Format("species: {0}", item.species.ID));
                 lines.Add(String.Format("fraction: {0}", item.fraction));
                 lines.Add(String.Format("clear: {0}", item.clear));
                 lines.Add(String.Format("pattern: {0}", item.group_type > -1 ? planting_pattern_names[item.group_type] : ""));
@@ -146,7 +139,7 @@ namespace iLand.abe
             return lines;
         }
 
-        public static void runSinglePlantingItem(FMStand stand, QJSValue value)
+        public static void RunSinglePlantingItem(FMStand stand, QJSValue value)
         {
             if (stand == null)
             {
@@ -158,8 +151,8 @@ namespace iLand.abe
             }
             using DebugTimer time = new DebugTimer("ABE:runSinglePlantingItem");
             SPlantingItem item = new SPlantingItem();
-            item.setup(value);
-            item.run(stand);
+            item.Setup(value);
+            item.Run(stand);
         }
     }
 }

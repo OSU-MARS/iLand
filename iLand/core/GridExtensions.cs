@@ -11,27 +11,27 @@ namespace iLand.core
             6  7  8  9  10 11
             12 13 14 15 16 17
             Note: north and south are reversed, thus the item with index 0 is located in the south-western edge of the grid! */
-        public static Point indexOf<T>(this Grid<T> grid, T element) where T : class
+        public static Point IndexOf<T>(this Grid<T> grid, T element) where T : class
         {
             //    Point result(-1,-1);
             if (element != null)
             {
-                for (int idx = 0; idx < grid.count(); ++idx)
+                for (int idx = 0; idx < grid.Count; ++idx)
                 {
                     if (grid[idx] == element)
                     {
-                        return grid.indexOf(idx);
+                        return grid.IndexOf(idx);
                     }
                 }
             }
             return new Point(-1, -1);
         }
 
-        public static void limit(this Grid<int> grid, int min_value, int max_value)
+        public static void Limit(this Grid<int> grid, int min_value, int max_value)
         {
-            for (int xIndex = 0; xIndex < grid.sizeX(); ++xIndex)
+            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.sizeY(); ++yIndex)
+                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
                 {
                     int value = grid[xIndex, yIndex];
                     if (value > max_value)
@@ -46,12 +46,12 @@ namespace iLand.core
             }
         }
 
-        public static float max(this Grid<float> grid)
+        public static float Max(this Grid<float> grid)
         {
             float maxv = float.MinValue;
-            for (int xIndex = 0; xIndex < grid.sizeX(); ++xIndex)
+            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.sizeY(); ++yIndex)
+                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
                 {
                     maxv = Math.Max(maxv, grid[xIndex, yIndex]);
                 }
@@ -59,23 +59,23 @@ namespace iLand.core
             return maxv;
         }
 
-        public static void multiply(this Grid<float> grid, float factor)
+        public static void Multiply(this Grid<float> grid, float factor)
         {
-            for (int xIndex = 0; xIndex < grid.sizeX(); ++xIndex)
+            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.sizeY(); ++yIndex)
+                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
                 {
                     grid[xIndex, yIndex] *= factor;
                 }
             }
         }
 
-        public static float sum(this Grid<float> grid)
+        public static float Sum(this Grid<float> grid)
         {
             float total = 0;
-            for (int xIndex = 0; xIndex < grid.sizeX(); ++xIndex)
+            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.sizeY(); ++yIndex)
+                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
                 {
                     total += grid[xIndex, yIndex];
                 }
@@ -83,18 +83,18 @@ namespace iLand.core
             return total;
         }
 
-        public static Grid<double> toDouble(this Grid<int> grid)
+        public static Grid<double> ToDouble(this Grid<int> grid)
         {
             Grid<double> g = new Grid<double>();
-            g.setup(grid.metricRect(), grid.cellsize());
-            if (g.isEmpty())
+            g.Setup(grid.PhysicalSize, grid.CellSize);
+            if (g.IsEmpty())
             {
                 return g;
             }
 
-            for (int xIndex = 0; xIndex < grid.sizeX(); ++xIndex)
+            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.sizeY(); ++yIndex)
+                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
                 {
                     g[xIndex, yIndex] = grid[xIndex, yIndex];
                 }

@@ -48,134 +48,128 @@ namespace iLand.tools
     */
     internal class Expression
     {
-        enum Operation
+        private const string MathFuncList = " sin cos tan exp ln sqrt min max if incsum polygon mod sigmoid rnd rndg in round "; // a space at the end is important!
+
+        private static readonly Dictionary<string, double> Constants;
+        private static readonly int[] MaxArgCount = new int[] { 1, 1, 1, 1, 1, 1, -1, -1, 3, 1, -1, 2, 4, 2, 2, -1, 1 };
+
+        public static bool LinearizationEnabled { get; set; }
+
+        private enum Operation
         {
-            opEqual = 1,
-            opGreaterThen = 2,
-            opLowerThen = 3,
-            opNotEqual = 4,
-            opLowerOrEqual = 5,
-            opGreaterOrEqual = 6,
-            opAnd = 7,
-            opOr = 8
+            Equal = 1,
+            GreaterThen = 2,
+            LessThan = 3,
+            NotEqual = 4,
+            LessThanOrEqual = 5,
+            GreaterThanOrEqual = 6,
+            And = 7,
+            Or = 8
         }
 
-        private const string mathFuncList = " sin cos tan exp ln sqrt min max if incsum polygon mod sigmoid rnd rndg in round "; // a space at the end is important!
-        private static readonly int[] MaxArgCount = new int[] { 1, 1, 1, 1, 1, 1, -1, -1, 3, 1, -1, 2, 4, 2, 2, -1, 1 };
-        private static readonly string[] AggFuncList = new string[] { "sum", "avg", "max", "min", "stddev", "variance" };
-
-        // space for constants
-        private static Dictionary<string, double> mConstants;
-
-        private enum ETokType { etNumber, etOperator, etVariable, etFunction, etLogical, etCompare, etStop, etUnknown, etDelimeter };
-        private enum EValueClasses { evcBHD, evcHoehe, evcAlter };
+        private enum Datatype { Info, Number, String, Object, Void, ObjVar, Reference, ObjectReference };
+        private enum TokenType { Number, Operator, Variable, Function, Logical, Compare, Stop, Unknown, Delimeter };
 
         private struct ExtExecListItem
         {
-            public ETokType Type;
+            public TokenType Type;
             public double Value;
             public int Index;
         }
 
-        private enum EDatatype { edtInfo, edtNumber, edtString, edtObject, edtVoid, edtObjVar, edtReference, edtObjectReference };
-        private bool m_catchExceptions;
-        private string m_errorMsg;
-
         // inc-sum
         private double m_incSumVar;
-        private bool m_incSumEnabled;
 
         private bool m_parsed;
-        private bool m_strict;
-        private bool m_empty; // empty expression
-        private bool m_constExpression;
-        private string m_tokString;
-        private string m_expression;
         private ExtExecListItem[] m_execList;
         private int m_execListSize; // size of buffer
         private int m_execIndex;
-        private double[] m_varSpace;
-        private List<string> m_varList;
+        private readonly double[] m_varSpace;
         private List<string> m_externVarNames;
         private double[] m_externVarSpace;
-        private ETokType m_state;
-        private ETokType m_lastState;
+        private TokenType m_state;
+        private TokenType m_lastState;
         private int m_pos;
         private string m_expr;
         private string m_token;
-        private string m_prepStr;
         private int m_tokCount;
+        private readonly List<string> m_varList;
 
-        // link to external model variable
-        private ExpressionWrapper mModelObject;
+        // unused in C++
+        //private string m_prepStr;
+        //private bool m_incSumEnabled;
 
-        private object m_execMutex;
+        private readonly object m_execMutex;
         // linearization
         private int mLinearizeMode;
-        private List<double> mLinearized;
+        private readonly List<double> mLinearized;
         private double mLinearLow, mLinearHigh;
         private double mLinearStep;
         private double mLinearLowY, mLinearHighY;
         private double mLinearStepY;
         private int mLinearStepCountY;
-        private static bool mLinearizationAllowed;
 
         // mutex used to serialize expression parsing.
-        private object mutex;
+        private readonly object mutex;
 
-        public void setModelObject(ExpressionWrapper wrapper) { mModelObject = wrapper; }
-        public string expression() { return m_expression; }
-        public static void setLinearizationEnabled(bool enable) { mLinearizationAllowed = enable; }
+        public bool CatchExceptions { get; set; }
+        public string ExpressionString { get; set; }
+        public ExpressionWrapper Wrapper { get; set; }
 
-        public bool isConstExpression() { return m_constExpression; } ///< returns true if current expression is a constant.
-        public bool isEmpty() { return m_empty; } ///< returns true if expression is empty
-        public string lastError() { return m_errorMsg; }
+        public bool IsConstant { get; private set; } ///< returns true if current expression is a constant.
+        public bool IsEmpty { get; private set; } ///< returns true if expression is empty
         /** strict property: if true, variables must be named before execution.
           When strict=true, all variables in the expression must be added by setVar or addVar.
           if false, variable values are assigned depending on occurence. strict is false by default for calls to "calculate()".
         */
-        public bool isStrict() { return m_strict; }
-        public void setStrict(bool str) { m_strict = str; }
-        public void setCatchExceptions(bool docatch = true) { m_catchExceptions = docatch; }
+        public bool IsStrict { get; set; }
+        public string LastError { get; private set; }
+
+        static Expression()
+        {
+            Expression.Constants = new Dictionary<string, double>();
+            Expression.LinearizationEnabled = false;
+        }
 
         public Expression()
         {
-            m_expr = null;
-            m_execList = default;
-            m_execMutex = new object();
-            m_externVarSpace = null;
-            mLinearizationAllowed = false;
-            mModelObject = null;
-            mutex = new object();
-            m_varSpace = new double[10];
+            this.m_execList = default;
+            this.m_execMutex = new object();
+            this.m_expr = null;
+            this.m_externVarSpace = null;
+            this.mLinearized = new List<double>();
+            this.m_varList = new List<string>();
+            this.m_varSpace = new double[10];
+            this.Wrapper = null;
+            this.mutex = new object();
         }
 
         public Expression(string expression)
             : this()
         {
-            setExpression(expression);
+            SetExpression(expression);
         }
 
         public Expression(string expression, ExpressionWrapper wrapper)
             : this(expression)
         {
-            mModelObject = wrapper;
+            Wrapper = wrapper;
         }
 
-        public double executeLocked() ///< thread safe version
+        public double ExecuteLocked() ///< thread safe version
         {
             lock (m_execMutex)
             {
-                return execute();
+                return Execute();
             }
         }
 
-        public static void addConstant(string const_name, double const_value)
+        public static void AddConstant(string const_name, double const_value)
         {
-            mConstants[const_name] = const_value;
+            Constants[const_name] = const_value;
         }
 
-        private ETokType next_token()
+        private TokenType NextToken()
         {
             m_tokCount++;
             m_lastState = m_state;
@@ -188,9 +182,9 @@ namespace iLand.tools
 
             if (m_pos >= m_expr.Length)
             {
-                m_state = ETokType.etStop;
+                m_state = TokenType.Stop;
                 m_token = "";
-                return ETokType.etStop; // Ende der Vorstellung
+                return TokenType.Stop; // Ende der Vorstellung
             }
 
             // whitespaces eliminieren...
@@ -201,14 +195,14 @@ namespace iLand.tools
             if (m_expr[m_pos] == ',')
             {
                 m_token = new string(m_expr[m_pos++], 1);
-                m_state = ETokType.etDelimeter;
-                return ETokType.etDelimeter;
+                m_state = TokenType.Delimeter;
+                return TokenType.Delimeter;
             }
             if ("+-*/(){}^".Contains(m_expr[m_pos]))
             {
                 m_token = new string(m_expr[m_pos++], 1);
-                m_state = ETokType.etOperator;
-                return ETokType.etOperator;
+                m_state = TokenType.Operator;
+                return TokenType.Operator;
             }
             if ("=<>".Contains(m_expr[m_pos]))
             {
@@ -217,8 +211,8 @@ namespace iLand.tools
                 {
                     m_token += m_expr[m_pos++];
                 }
-                m_state = ETokType.etCompare;
-                return ETokType.etCompare;
+                m_state = TokenType.Compare;
+                return TokenType.Compare;
             }
             if (m_expr[m_pos] >= '0' && m_expr[m_pos] <= '9')
             {
@@ -229,8 +223,8 @@ namespace iLand.tools
                     m_pos++;  // nchstes Zeichen suchen...
                 }
                 m_token = m_expr.Substring(startPosition, m_pos - startPosition + 1);
-                m_state = ETokType.etNumber;
-                return ETokType.etNumber;
+                m_state = TokenType.Number;
+                return TokenType.Number;
             }
 
             if ((m_expr[m_pos] >= 'a' && m_expr[m_pos] <= 'z') || (m_expr[m_pos] >= 'A' && m_expr[m_pos] <= 'Z'))
@@ -246,55 +240,55 @@ namespace iLand.tools
                 if (m_expr[m_pos] == '(' || m_expr[m_pos] == '{')
                 {
                     m_pos++; // skip brace
-                    m_state = ETokType.etFunction;
-                    return ETokType.etFunction;
+                    m_state = TokenType.Function;
+                    return TokenType.Function;
                 }
                 else
                 {
                     if (m_token.ToLowerInvariant() == "and" || m_token.ToLowerInvariant() == "or")
                     {
-                        m_state = ETokType.etLogical;
-                        return ETokType.etLogical;
+                        m_state = TokenType.Logical;
+                        return TokenType.Logical;
                     }
                     else
                     {
-                        m_state = ETokType.etVariable;
+                        m_state = TokenType.Variable;
                         if (m_token == "true")
                         {
-                            m_state = ETokType.etNumber;
+                            m_state = TokenType.Number;
                             m_token = "1";
-                            return ETokType.etNumber;
+                            return TokenType.Number;
                         }
                         if (m_token == "false")
                         {
-                            m_state = ETokType.etNumber;
+                            m_state = TokenType.Number;
                             m_token = "0";
-                            return ETokType.etNumber;
+                            return TokenType.Number;
                         }
-                        return ETokType.etVariable;
+                        return TokenType.Variable;
                     }
                 }
             }
-            m_state = ETokType.etUnknown;
-            return ETokType.etUnknown; // in case no match was found
+            m_state = TokenType.Unknown;
+            return TokenType.Unknown; // in case no match was found
         }
 
         /** sets expression @p expr and checks the syntax (parse).
             Expressions are setup with strict = false, i.e. no fixed binding of variable names.
           */
-        public void setAndParse(string expr)
+        public void SetAndParse(string expr)
         {
-            setExpression(expr);
-            m_strict = false;
-            parse();
+            SetExpression(expr);
+            IsStrict = false;
+            Parse();
         }
 
         /// set the current expression.
         /// do some preprocessing (e.g. handle the different use of ",", ".", ";")
-        public void setExpression(string aExpression)
+        public void SetExpression(string aExpression)
         {
-            m_expression = String.Join(' ', aExpression.Trim().Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries));
-            m_expr = m_expression; // TODO: remove m_expr
+            ExpressionString = String.Join(' ', aExpression.Trim().Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries));
+            m_expr = ExpressionString; // TODO: remove m_expr
             m_pos = 0;  // set starting point...
 
             for (int i = 0; i < m_varSpace.Length; i++)
@@ -302,15 +296,15 @@ namespace iLand.tools
                 m_varSpace[i] = 0.0;
             }
             m_parsed = false;
-            m_catchExceptions = false;
-            m_errorMsg = "";
+            CatchExceptions = false;
+            LastError = "";
 
-            mModelObject = null;
+            Wrapper = null;
             m_externVarSpace = null;
 
-            m_strict = true; // default....
-            m_incSumEnabled = false;
-            m_empty = String.Equals(aExpression.Trim(), String.Empty, StringComparison.OrdinalIgnoreCase);
+            IsStrict = true; // default....
+            // m_incSumEnabled = false;
+            IsEmpty = String.Equals(aExpression.Trim(), String.Empty, StringComparison.OrdinalIgnoreCase);
             // Buffer:
             m_execListSize = 5; // inital value...
             if (m_execList == null)
@@ -321,7 +315,7 @@ namespace iLand.tools
             mLinearizeMode = 0; // linearization is switched off
         }
 
-        public void parse(ExpressionWrapper wrapper = null)
+        public void Parse(ExpressionWrapper wrapper = null)
         {
             lock (mutex)
             {
@@ -330,258 +324,239 @@ namespace iLand.tools
                     return;
                 }
 
-                try
+                if (wrapper != null)
                 {
-                    if (wrapper != null)
-                    {
-                        mModelObject = wrapper;
-                    }
-                    m_tokString = "";
-                    m_state = ETokType.etUnknown;
-                    m_lastState = ETokType.etUnknown;
-                    m_constExpression = true;
-                    m_execIndex = 0;
-                    m_tokCount = 0;
-                    int aktTok;
-                    next_token();
-                    while (m_state != ETokType.etStop)
-                    {
-                        m_tokString += "\n" + m_token;
-                        aktTok = m_tokCount;
-                        parse_levelL0();  // start with logical level 0
-                        if (aktTok == m_tokCount)
-                        {
-                            throw new NotSupportedException("parse(): Unbalanced Braces.");
-                        }
-                        if (m_state == ETokType.etUnknown)
-                        {
-                            m_tokString += "\n***Error***";
-                            throw new NotSupportedException("parse(): Syntax error, token: " + m_token);
-                        }
-                    }
-                    m_empty = (m_execIndex == 0);
-                    m_execList[m_execIndex].Type = ETokType.etStop;
-                    m_execList[m_execIndex].Value = 0;
-                    m_execList[m_execIndex++].Index = 0;
-                    checkBuffer(m_execIndex);
-                    m_parsed = true;
-
+                    Wrapper = wrapper;
                 }
-                catch (Exception e)
+                m_state = TokenType.Unknown;
+                m_lastState = TokenType.Unknown;
+                IsConstant = true;
+                m_execIndex = 0;
+                m_tokCount = 0;
+                int aktTok;
+                NextToken();
+                while (m_state != TokenType.Stop)
                 {
-                    m_errorMsg = String.Format("parse: error in '{0}'", m_expression);
-                    if (m_catchExceptions)
+                    aktTok = m_tokCount;
+                    ParseLevelL0();  // start with logical level 0
+                    if (aktTok == m_tokCount)
                     {
-                        Helper.msg(m_errorMsg, e);
+                        throw new NotSupportedException("parse(): Unbalanced Braces.");
                     }
-                    else
+                    if (m_state == TokenType.Unknown)
                     {
-                        throw new NotSupportedException(m_errorMsg, e);
+                        throw new NotSupportedException("parse(): Syntax error, token: " + m_token);
                     }
                 }
+                IsEmpty = (m_execIndex == 0);
+                m_execList[m_execIndex].Type = TokenType.Stop;
+                m_execList[m_execIndex].Value = 0;
+                m_execList[m_execIndex++].Index = 0;
+                CheckBuffer(m_execIndex);
+                m_parsed = true;
             }
         }
 
-        private void parse_levelL0()
+        private void ParseLevelL0()
         {
             // logical operations  (and, or, not)
             string op;
-            parse_levelL1();
+            ParseLevelL1();
 
-            while (m_state == ETokType.etLogical)
+            while (m_state == TokenType.Logical)
             {
                 op = m_token.ToLowerInvariant();
-                next_token();
-                parse_levelL1();
+                NextToken();
+                ParseLevelL1();
                 Operation logicaltok = 0;
                 if (op == "and")
                 {
-                    logicaltok = Operation.opAnd;
+                    logicaltok = Operation.And;
                 }
                 if (op == "or")
                 {
-                    logicaltok = Operation.opOr;
+                    logicaltok = Operation.Or;
                 }
 
-                m_execList[m_execIndex].Type = ETokType.etLogical;
+                m_execList[m_execIndex].Type = TokenType.Logical;
                 m_execList[m_execIndex].Value = 0;
                 m_execList[m_execIndex++].Index = (int)logicaltok;
-                checkBuffer(m_execIndex);
+                CheckBuffer(m_execIndex);
             }
         }
 
-        private void parse_levelL1()
+        private void ParseLevelL1()
         {
             // logische operationen (<,>,=,...)
             string op;
-            parse_level0();
+            ParseLevel0();
             //double temp=FResult;
-            if (m_state == ETokType.etCompare)
+            if (m_state == TokenType.Compare)
             {
                 op = m_token;
-                next_token();
-                parse_level0();
+                NextToken();
+                ParseLevel0();
                 Operation logicaltok = 0;
-                if (op == "<") logicaltok = Operation.opLowerThen;
-                if (op == ">") logicaltok = Operation.opGreaterThen;
-                if (op == "<>") logicaltok = Operation.opNotEqual;
-                if (op == "<=") logicaltok = Operation.opLowerOrEqual;
-                if (op == ">=") logicaltok = Operation.opGreaterOrEqual;
-                if (op == "=") logicaltok = Operation.opEqual;
+                if (op == "<") logicaltok = Operation.LessThan;
+                if (op == ">") logicaltok = Operation.GreaterThen;
+                if (op == "<>") logicaltok = Operation.NotEqual;
+                if (op == "<=") logicaltok = Operation.LessThanOrEqual;
+                if (op == ">=") logicaltok = Operation.GreaterThanOrEqual;
+                if (op == "=") logicaltok = Operation.Equal;
 
-                m_execList[m_execIndex].Type = ETokType.etCompare;
+                m_execList[m_execIndex].Type = TokenType.Compare;
                 m_execList[m_execIndex].Value = 0;
                 m_execList[m_execIndex++].Index = (int)logicaltok;
-                checkBuffer(m_execIndex);
+                CheckBuffer(m_execIndex);
             }
         }
 
-        private void parse_level0()
+        private void ParseLevel0()
         {
             // plus und minus
-            parse_level1();
+            ParseLevel1();
 
             while (m_token == "+" || m_token == "-")
             {
-                next_token();
-                parse_level1();
-                m_execList[m_execIndex].Type = ETokType.etOperator;
+                NextToken();
+                ParseLevel1();
+                m_execList[m_execIndex].Type = TokenType.Operator;
                 m_execList[m_execIndex].Value = 0;
                 m_execList[m_execIndex++].Index = (int)m_token[0];///op.constData()[0];
-                checkBuffer(m_execIndex);
+                CheckBuffer(m_execIndex);
             }
         }
 
-        private void parse_level1()
+        private void ParseLevel1()
         {
             // mal und division
-            parse_level2();
+            ParseLevel2();
             //double temp=FResult;
             // alt:        if (m_token=="*" || m_token=="/") {
             while (m_token == "*" || m_token == "/")
             {
-                next_token();
-                parse_level2();
-                m_execList[m_execIndex].Type = ETokType.etOperator;
+                NextToken();
+                ParseLevel2();
+                m_execList[m_execIndex].Type = TokenType.Operator;
                 m_execList[m_execIndex].Value = 0;
                 m_execList[m_execIndex++].Index = (int)m_token[0];
-                checkBuffer(m_execIndex);
+                CheckBuffer(m_execIndex);
             }
         }
 
-        private void atom()
+        private void Atom()
         {
-            if (m_state == ETokType.etVariable || m_state == ETokType.etNumber)
+            if (m_state == TokenType.Variable || m_state == TokenType.Number)
             {
-                if (m_state == ETokType.etNumber)
+                if (m_state == TokenType.Number)
                 {
                     double result = double.Parse(m_token);
-                    m_execList[m_execIndex].Type = ETokType.etNumber;
+                    m_execList[m_execIndex].Type = TokenType.Number;
                     m_execList[m_execIndex].Value = result;
                     m_execList[m_execIndex++].Index = -1;
-                    checkBuffer(m_execIndex);
+                    CheckBuffer(m_execIndex);
                 }
-                if (m_state == ETokType.etVariable)
+                if (m_state == TokenType.Variable)
                 {
-                    if (mConstants.ContainsKey(m_token))
+                    if (Constants.ContainsKey(m_token))
                     {
                         // constant
-                        double result = mConstants[m_token];
-                        m_execList[m_execIndex].Type = ETokType.etNumber;
+                        double result = Constants[m_token];
+                        m_execList[m_execIndex].Type = TokenType.Number;
                         m_execList[m_execIndex].Value = result;
                         m_execList[m_execIndex++].Index = -1;
-                        checkBuffer(m_execIndex);
+                        CheckBuffer(m_execIndex);
 
                     }
                     else
                     {
                         // 'real' variable
-                        if (!m_strict) // in strict mode, the variable must be available by external bindings. in "lax" mode, the variable is added when encountered first.
+                        if (!IsStrict) // in strict mode, the variable must be available by external bindings. in "lax" mode, the variable is added when encountered first.
                         {
-                            addVar(m_token);
+                            AddVariable(m_token);
                         }
-                        m_execList[m_execIndex].Type = ETokType.etVariable;
+                        m_execList[m_execIndex].Type = TokenType.Variable;
                         m_execList[m_execIndex].Value = 0;
-                        m_execList[m_execIndex++].Index = getVarIndex(m_token);
-                        checkBuffer(m_execIndex);
-                        m_constExpression = false;
+                        m_execList[m_execIndex++].Index = GetVariableIndex(m_token);
+                        CheckBuffer(m_execIndex);
+                        IsConstant = false;
                     }
                 }
-                next_token();
+                NextToken();
             }
-            else if (m_state == ETokType.etStop || m_state == ETokType.etUnknown)
+            else if (m_state == TokenType.Stop || m_state == TokenType.Unknown)
             {
                 throw new NotSupportedException("Unexpected end of m_expression.");
             }
         }
 
-        private void parse_level2()
+        private void ParseLevel2()
         {
             // x^y
-            parse_level3();
+            ParseLevel3();
             //double temp=FResult;
             while (m_token == "^")
             {
-                next_token();
-                parse_level3();
+                NextToken();
+                ParseLevel3();
                 //FResult=pow(temp,FResult);
-                m_execList[m_execIndex].Type = ETokType.etOperator;
+                m_execList[m_execIndex].Type = TokenType.Operator;
                 m_execList[m_execIndex].Value = 0;
                 m_execList[m_execIndex++].Index = '^';
-                checkBuffer(m_execIndex);
+                CheckBuffer(m_execIndex);
             }
         }
 
-        private void parse_level3()
+        private void ParseLevel3()
         {
             // unary operator (- bzw. +)
             string op;
             op = m_token;
             bool Unary = false;
-            if (op == "-" && (m_lastState == ETokType.etOperator || m_lastState == ETokType.etUnknown || m_lastState == ETokType.etCompare || m_lastState == ETokType.etLogical || m_lastState == ETokType.etFunction))
+            if (op == "-" && (m_lastState == TokenType.Operator || m_lastState == TokenType.Unknown || m_lastState == TokenType.Compare || m_lastState == TokenType.Logical || m_lastState == TokenType.Function))
             {
-                next_token();
+                NextToken();
                 Unary = true;
             }
-            parse_level4();
+            ParseLevel4();
             if (Unary && op == "-")
             {
                 //FResult=-FResult;
-                m_execList[m_execIndex].Type = ETokType.etOperator;
+                m_execList[m_execIndex].Type = TokenType.Operator;
                 m_execList[m_execIndex].Value = 0;
                 m_execList[m_execIndex++].Index = '_';
-                checkBuffer(m_execIndex);
+                CheckBuffer(m_execIndex);
             }
         }
 
-        private void parse_level4()
+        private void ParseLevel4()
         {
             // Klammer und Funktionen
             string func;
-            atom();
+            Atom();
             //double temp=FResult;
-            if (m_token == "(" || m_state == ETokType.etFunction)
+            if (m_token == "(" || m_state == TokenType.Function)
             {
                 func = m_token;
                 if (func == "(")   // klammerausdruck
                 {
-                    next_token();
-                    parse_levelL0();
+                    NextToken();
+                    ParseLevelL0();
                 }
                 else        // funktion...
                 {
                     int argcount = 0;
-                    int idx = getFuncIndex(func);
-                    next_token();
+                    int idx = GetFunctionIndex(func);
+                    NextToken();
                     //m_token="{";
                     // bei funktionen mit mehreren Parametern
                     while (m_token != ")")
                     {
                         argcount++;
-                        parse_levelL0();
-                        if (m_state == ETokType.etDelimeter)
+                        ParseLevelL0();
+                        if (m_state == TokenType.Delimeter)
                         {
-                            next_token();
+                            NextToken();
                         }
                     }
                     if (MaxArgCount[idx] > 0 && MaxArgCount[idx] != argcount)
@@ -589,65 +564,65 @@ namespace iLand.tools
                         throw new NotSupportedException(String.Format("Function {0} assumes {1} arguments!", func, MaxArgCount[idx]));
                     }
                     //throw std::logic_error("Funktion " + func + " erwartet " + std::string(MaxArgCount[idx]) + " Parameter!");
-                    m_execList[m_execIndex].Type = ETokType.etFunction;
+                    m_execList[m_execIndex].Type = TokenType.Function;
                     m_execList[m_execIndex].Value = argcount;
                     m_execList[m_execIndex++].Index = idx;
-                    checkBuffer(m_execIndex);
+                    CheckBuffer(m_execIndex);
                 }
                 if (m_token != "}" && m_token != ")") // Fehler
                 {
-                    throw new NotSupportedException(String.Format("unbalanced number of parentheses in [%1].", m_expression));
+                    throw new NotSupportedException(String.Format("unbalanced number of parentheses in [%1].", ExpressionString));
                 }
-                next_token();
+                NextToken();
             }
         }
 
-        public void setVar(string Var, double Value)
+        public void SetVariable(string name, double value)
         {
             if (!m_parsed)
             {
-                parse();
+                Parse();
             }
-            int idx = getVarIndex(Var);
+            int idx = GetVariableIndex(name);
             if (idx >= 0 && idx < 10)
             {
-                m_varSpace[idx] = Value;
+                m_varSpace[idx] = value;
             }
             else
             {
-                throw new NotSupportedException("Invalid variable " + Var);
+                throw new NotSupportedException("Invalid variable " + name);
             }
         }
 
-        public double calculate(double Val1 = 0.0, double Val2 = 0.0, bool forceExecution = false)
+        public double Calculate(double Val1 = 0.0, double Val2 = 0.0, bool forceExecution = false)
         {
             if (mLinearizeMode > 0 && !forceExecution)
             {
                 if (mLinearizeMode == 1)
                 {
-                    return linearizedValue(Val1);
+                    return GetLinearizedValue(Val1);
                 }
-                return linearizedValue2d(Val1, Val2); // matrix case
+                return GetLinearizedValue(Val1, Val2); // matrix case
             }
             double[] var_space = new double[10];
             var_space[0] = Val1;
             var_space[1] = Val2;
-            m_strict = false;
-            return execute(var_space); // execute with local variables on stack
+            IsStrict = false;
+            return Execute(var_space); // execute with local variables on stack
         }
 
-        public double calculate(ExpressionWrapper obj, double variable_value1 = 0.0, double variable_value2 = 0.0)
+        public double Calculate(ExpressionWrapper obj, double variable_value1 = 0.0, double variable_value2 = 0.0)
         {
             double[] var_space = new double[10];
             var_space[0] = variable_value1;
             var_space[1] = variable_value2;
-            m_strict = false;
-            return execute(var_space, obj); // execute with local variables on stack
+            IsStrict = false;
+            return Execute(var_space, obj); // execute with local variables on stack
         }
 
-        private int getFuncIndex(string functionName)
+        private int GetFunctionIndex(string functionName)
         {
-            int pos = mathFuncList.IndexOf(" " + functionName + " "); // check full names
+            int pos = MathFuncList.IndexOf(" " + functionName + " "); // check full names
             if (pos < 0)
             {
                 throw new NotSupportedException("Function " + functionName + " not defined!");
@@ -655,7 +630,7 @@ namespace iLand.tools
             int idx = 0;
             for (int i = 1; i <= pos; i++) // start at the first character (skip first space)
             {
-                if (mathFuncList[i] == ' ')
+                if (MathFuncList[i] == ' ')
                 {
                     ++idx;
                 }
@@ -663,37 +638,36 @@ namespace iLand.tools
             return idx;
         }
 
-        public double execute(double[] varlist = null, ExpressionWrapper obj = null)
+        public double Execute(double[] varlist = null, ExpressionWrapper obj = null)
         {
             if (!m_parsed)
             {
-                this.parse(obj);
+                this.Parse(obj);
                 if (!m_parsed)
                 {
                     return 0.0;
                 }
             }
-            double[] varSpace = varlist != null ? varlist : m_varSpace;
+            double[] varSpace = varlist ?? m_varSpace;
             int execIndex = 0;
             ExtExecListItem exec = m_execList[execIndex];
             int i;
-            double result = 0.0;
             double[] Stack = new double[200];
             bool[] LogicStack = new bool[200];
             int lp = 0;
             int p = 0;  // p=head pointer
             LogicStack[lp++] = true; // zumindest eins am anfang...
-            if (isEmpty())
+            if (IsEmpty)
             {
                 // leere expr.
                 //m_logicResult=false;
                 return 0.0;
             }
-            while (exec.Type != ETokType.etStop)
+            while (exec.Type != TokenType.Stop)
             {
                 switch (exec.Type)
                 {
-                    case ETokType.etOperator:
+                    case TokenType.Operator:
                         p--;
                         switch (exec.Index)
                         {
@@ -705,24 +679,24 @@ namespace iLand.tools
                             case '_': Stack[p] = -Stack[p]; p++; break;  // unary operator -
                         }
                         break;
-                    case ETokType.etVariable:
+                    case TokenType.Variable:
                         if (exec.Index < 100)
                         {
                             Stack[p++] = varSpace[exec.Index];
                         }
                         else if (exec.Index < 1000)
                         {
-                            Stack[p++] = getModelVar(exec.Index, obj);
+                            Stack[p++] = GetModelVariable(exec.Index, obj);
                         }
                         else
                         {
-                            Stack[p++] = getExternVar(exec.Index);
+                            Stack[p++] = GetExternVariable(exec.Index);
                         }
                         break;
-                    case ETokType.etNumber:
+                    case TokenType.Number:
                         Stack[p++] = exec.Value;
                         break;
-                    case ETokType.etFunction:
+                    case TokenType.Function:
                         p--;
                         switch (exec.Index)
                         {
@@ -761,7 +735,7 @@ namespace iLand.tools
                                 Stack[p] = m_incSumVar;
                                 break;
                             case 10: // Polygon-Funktion
-                                Stack[p - (int)(exec.Value - 1)] = udfPolygon(Stack[p - (int)(exec.Value - 1)], Stack, p, (int)exec.Value);
+                                Stack[p - (int)(exec.Value - 1)] = UserDefinedPolygon(Stack[p - (int)(exec.Value - 1)], Stack, p, (int)exec.Value);
                                 p -= (int)(exec.Value - 1);
                                 break;
                             case 11: // Modulo-Division: erg=rest von arg1/arg2
@@ -769,37 +743,37 @@ namespace iLand.tools
                                 Stack[p] = Stack[p] % Stack[p + 1];
                                 break;
                             case 12: // hilfsfunktion fr sigmoidie sachen.....
-                                Stack[p - 3] = udfSigmoid(Stack[p - 3], Stack[p - 2], Stack[p - 1], Stack[p]);
+                                Stack[p - 3] = UserDefinedSigmoid(Stack[p - 3], Stack[p - 2], Stack[p - 1], Stack[p]);
                                 p -= 3; // drei argumente (4-1) wegwerfen...
                                 break;
                             case 13:
                             case 14: // rnd(from, to) bzw. rndg(mean, stddev)
                                 p--;
                                 // index-13: 1 bei rnd, 0 bei rndg
-                                Stack[p] = udfRandom(exec.Index - 13, Stack[p], Stack[p + 1]);
+                                Stack[p] = UserDefinedRandom(exec.Index - 13, Stack[p], Stack[p + 1]);
                                 break;
                             case 15: // in-list in() operator
-                                Stack[p - (int)(exec.Value - 1)] = udfInList(Stack[p - (int)(exec.Value - 1)], Stack, p, (int)exec.Value);
+                                Stack[p - (int)(exec.Value - 1)] = UserDefinedFunctionInList(Stack[p - (int)(exec.Value - 1)], Stack, p, (int)exec.Value);
                                 p -= (int)(exec.Value - 1);
                                 break;
                             case 16: // round()
-                                Stack[p] = Stack[p] < 0.0 ? Math.Ceiling(Stack[p] - 0.5) : Math.Floor(Stack[p] + 0.5); 
+                                Stack[p] = Stack[p] < 0.0 ? Math.Ceiling(Stack[p] - 0.5) : Math.Floor(Stack[p] + 0.5);
                                 break;
                             default:
                                 throw new NotSupportedException();
                         }
                         p++;
                         break;
-                    case ETokType.etLogical:
+                    case TokenType.Logical:
                         p--;
                         lp--;
                         switch ((Operation)exec.Index)
                         {
-                            case Operation.opAnd: 
-                                LogicStack[p - 1] = (LogicStack[p - 1] && LogicStack[p]); 
+                            case Operation.And:
+                                LogicStack[p - 1] = (LogicStack[p - 1] && LogicStack[p]);
                                 break;
-                            case Operation.opOr: 
-                                LogicStack[p - 1] = (LogicStack[p - 1] || LogicStack[p]); 
+                            case Operation.Or:
+                                LogicStack[p - 1] = (LogicStack[p - 1] || LogicStack[p]);
                                 break;
                         }
                         if (LogicStack[p - 1])
@@ -811,18 +785,18 @@ namespace iLand.tools
                             Stack[p - 1] = 0;
                         }
                         break;
-                    case ETokType.etCompare:
+                    case TokenType.Compare:
                         {
                             p--;
                             bool LogicResult = false;
                             switch ((Operation)exec.Index)
                             {
-                                case Operation.opEqual: LogicResult = (Stack[p - 1] == Stack[p]); break;
-                                case Operation.opNotEqual: LogicResult = (Stack[p - 1] != Stack[p]); break;
-                                case Operation.opLowerThen: LogicResult = (Stack[p - 1] < Stack[p]); break;
-                                case Operation.opGreaterThen: LogicResult = (Stack[p - 1] > Stack[p]); break;
-                                case Operation.opGreaterOrEqual: LogicResult = (Stack[p - 1] >= Stack[p]); break;
-                                case Operation.opLowerOrEqual: LogicResult = (Stack[p - 1] <= Stack[p]); break;
+                                case Operation.Equal: LogicResult = (Stack[p - 1] == Stack[p]); break;
+                                case Operation.NotEqual: LogicResult = (Stack[p - 1] != Stack[p]); break;
+                                case Operation.LessThan: LogicResult = (Stack[p - 1] < Stack[p]); break;
+                                case Operation.GreaterThen: LogicResult = (Stack[p - 1] > Stack[p]); break;
+                                case Operation.GreaterThanOrEqual: LogicResult = (Stack[p - 1] >= Stack[p]); break;
+                                case Operation.LessThanOrEqual: LogicResult = (Stack[p - 1] <= Stack[p]); break;
                             }
                             if (LogicResult)
                             {
@@ -836,59 +810,58 @@ namespace iLand.tools
                             LogicStack[p++] = LogicResult;
                             break;
                         }
-                    case ETokType.etStop:
-                    case ETokType.etUnknown:
-                    case ETokType.etDelimeter:
+                    case TokenType.Stop:
+                    case TokenType.Unknown:
+                    case TokenType.Delimeter:
                     default:
-                        throw new NotSupportedException(String.Format("invalid token during execution: {0}", m_expression));
+                        throw new NotSupportedException(String.Format("invalid token during execution: {0}", ExpressionString));
                 } // switch()
 
                 exec = m_execList[execIndex++];
             }
             if (p != 1)
             {
-                throw new NotSupportedException(String.Format("execute: stack unbalanced: {0}", m_expression));
+                throw new NotSupportedException(String.Format("execute: stack unbalanced: {0}", ExpressionString));
             }
-            result = Stack[0];
             //m_logicResult=*(lp-1);
-            return result;
+            return Stack[0];
         }
 
-        public double addVar(string VarName)
+        public double AddVariable(string varName)
         {
             // add var
-            int idx = m_varList.IndexOf(VarName);
+            int idx = m_varList.IndexOf(varName);
             if (idx == -1)
             {
-                m_varList.Add(VarName);
-                idx = m_varList.Count - 1;
+                m_varList.Add(varName);
             }
-            return m_varSpace[getVarIndex(VarName)];
+            return m_varSpace[GetVariableIndex(varName)];
         }
 
-        public double getVarAdress(string VarName)
-        {
-            if (!m_parsed)
-            {
-                parse();
-            }
-            int idx = getVarIndex(VarName);
-            if (idx >= 0 && idx < 10)
-            {
-                return m_varSpace[idx];
-            }
-            else
-            {
-                throw new NotSupportedException(String.Format("getVarAdress: Invalid variable <{0}>.", VarName));
-            }
-        }
+        // unused in C++
+        //public double getVarAdress(string varName)
+        //{
+        //    if (!m_parsed)
+        //    {
+        //        parse();
+        //    }
+        //    int idx = getVarIndex(varName);
+        //    if (idx >= 0 && idx < 10)
+        //    {
+        //        return m_varSpace[idx];
+        //    }
+        //    else
+        //    {
+        //        throw new NotSupportedException(String.Format("getVarAdress: Invalid variable <{0}>.", varName));
+        //    }
+        //}
 
-        public int getVarIndex(string variableName)
+        public int GetVariableIndex(string variableName)
         {
             int idx;
-            if (mModelObject != null)
+            if (Wrapper != null)
             {
-                idx = mModelObject.variableIndex(variableName);
+                idx = Wrapper.GetVariableIndex(variableName);
                 if (idx > -1)
                 {
                     return 100 + idx;
@@ -919,38 +892,38 @@ namespace iLand.tools
                 return idx;
             }
             // if in strict mode, all variables must be already available at this stage.
-            if (m_strict)
+            if (IsStrict)
             {
-                m_errorMsg = String.Format("Variable '{0}' in (strict) expression '{1}' not available!", variableName, m_expression);
-                if (!m_catchExceptions)
+                LastError = String.Format("Variable '{0}' in (strict) expression '{1}' not available!", variableName, ExpressionString);
+                if (!CatchExceptions)
                 {
-                    throw new NotSupportedException(m_errorMsg);
+                    throw new NotSupportedException(LastError);
                 }
             }
             return -1;
         }
 
-        public double getModelVar(int varIdx, ExpressionWrapper obj = null)
+        public double GetModelVariable(int varIdx, ExpressionWrapper obj = null)
         {
             // der weg nach draussen....
-            ExpressionWrapper model_object = obj != null ? obj : mModelObject;
+            ExpressionWrapper model_object = obj ?? Wrapper;
             int idx = varIdx - 100; // intern als 100+x gespeichert...
             if (model_object != null)
             {
-                return model_object.value(idx);
+                return model_object.Value(idx);
             }
             // hier evtl. verschiedene objekte unterscheiden (Zahlenraum???)
             throw new NotSupportedException("getModelVar: invalid model variable!");
         }
 
-        public void setExternalVarSpace(List<string> ExternSpaceNames, double[] ExternSpace)
+        public void SetExternalVariableSpace(List<string> externalNames, double[] externalSpace)
         {
             // externe variablen (zB von Scripting-Engine) bekannt machen...
-            m_externVarSpace = ExternSpace;
-            m_externVarNames = ExternSpaceNames;
+            m_externVarSpace = externalSpace;
+            m_externVarNames = externalNames;
         }
 
-        public double getExternVar(int Index)
+        public double GetExternVariable(int Index)
         {
             //if (Script)
             //   return Script->GetNumVar(Index-1000);
@@ -958,16 +931,16 @@ namespace iLand.tools
             return m_externVarSpace[Index - 1000];
         }
 
-        public void enableIncSum()
+        public void EnableIncrementalSum()
         {
             // Funktion "inkrementelle summe" einschalten.
             // dabei wird der zhler zurckgesetzt und ein flag gesetzt.
-            m_incSumEnabled = true;
+            // m_incSumEnabled = true;
             m_incSumVar = 0.0;
         }
 
         // "Userdefined Function" Polygon
-        private double udfPolygon(double Value, double[] Stack, int position, int ArgCount)
+        private double UserDefinedPolygon(double value, double[] stack, int position, int ArgCount)
         {
             // Polygon-Funktion: auf dem Stack liegen (x/y) Paare, aus denen ein "Polygon"
             // aus Linien zusammengesetzt ist. return ist der y-Wert zu x (Value).
@@ -983,28 +956,28 @@ namespace iLand.tools
                 throw new NotSupportedException("polygon: falsche zahl parameter. polygon(<val>; x0; y0; x1; y1; ....)");
             }
             double x, y, xold, yold;
-            y = Stack[position--];   // 1. Argument: ganz rechts.
-            x = Stack[position--];
-            if (Value > x)   // rechts drauen: annahme gerade.
+            y = stack[position--];   // 1. Argument: ganz rechts.
+            x = stack[position--];
+            if (value > x)   // rechts drauen: annahme gerade.
                 return y;
             for (int i = 0; i < PointCnt - 1; i++)
             {
                 xold = x;
                 yold = y;
-                y = Stack[position--];   // x,y-Paar vom Stack....
-                x = Stack[position--];
-                if (Value > x)
+                y = stack[position--];   // x,y-Paar vom Stack....
+                x = stack[position--];
+                if (value > x)
                 {
                     // es geht los: Gerade zwischen (x,y) und (xold,yold)
                     // es geht vielleicht eleganter, aber auf die schnelle:
-                    return (yold - y) / (xold - x) * (Value - x) + y;
+                    return (yold - y) / (xold - x) * (value - x) + y;
                 }
             }
             // falls nichts gefunden: value < als linkester x-wert
             return y;
         }
 
-        private double udfInList(double value, double[] stack, int position, int argCount)
+        private double UserDefinedFunctionInList(double value, double[] stack, int position, int argCount)
         {
             for (int i = 0; i < argCount - 1; ++i)
             {
@@ -1017,14 +990,14 @@ namespace iLand.tools
         }
 
         // userdefined func sigmoid....
-        private double udfSigmoid(double Value, double sType, double p1, double p2)
+        private double UserDefinedSigmoid(double Value, double sType, double p1, double p2)
         {
             // sType: typ der Funktion:
             // 0: logistische f
             // 1: Hill-funktion
             // 2: 1 - logistisch (geht von 1 bis 0)
             // 3: 1- hill
-            double Result;
+            double result;
 
             double x = Math.Max(Math.Min(Value, 1.0), 0.0);  // limit auf [0..1]
             int typ = (int)sType;
@@ -1032,24 +1005,24 @@ namespace iLand.tools
             {
                 case 0:
                 case 2: // logistisch: f(x)=1 / (1 + p1 e^(-p2 * x))
-                    Result = 1.0 / (1.0 + p1 * Math.Exp(-p2 * x));
+                    result = 1.0 / (1.0 + p1 * Math.Exp(-p2 * x));
                     break;
                 case 1:
                 case 3:     // Hill-Funktion: f(x)=(x^p1)/(p2^p1+x^p1)
-                    Result = Math.Pow(x, p1) / (Math.Pow(p2, p1) + Math.Pow(x, p1));
+                    result = Math.Pow(x, p1) / (Math.Pow(p2, p1) + Math.Pow(x, p1));
                     break;
                 default:
                     throw new NotSupportedException("sigmoid-funktion: ungltiger kurventyp. erlaubt: 0..3");
             }
             if (typ == 2 || typ == 3)
             {
-                Result = 1.0 - Result;
+                result = 1.0 - result;
             }
 
-            return Result;
+            return result;
         }
 
-        private void checkBuffer(int Index)
+        private void CheckBuffer(int Index)
         {
             // um den Buffer fr Befehle kmmern.
             // wenn der Buffer zu klein wird, neuen Platz reservieren.
@@ -1070,16 +1043,16 @@ namespace iLand.tools
             m_execListSize = NewSize;
         }
 
-        private double udfRandom(int type, double p1, double p2)
+        private double UserDefinedRandom(int type, double p1, double p2)
         {
             // random / gleichverteilt - normalverteilt
             if (type == 0)
             {
-                return RandomGenerator.nrandom(p1, p2);
+                return RandomGenerator.Random(p1, p2);
             }
             else    // gaussverteilt
             {
-                return RandomGenerator.randNorm(p1, p2);
+                return RandomGenerator.RandNorm(p1, p2);
             }
         }
 
@@ -1089,9 +1062,9 @@ namespace iLand.tools
             high_value: upper limit
             steps: number of steps the function is split into
           */
-        public void linearize(double low_value, double high_value, int steps = 1000)
+        public void Linearize(double low_value, double high_value, int steps = 1000)
         {
-            if (!mLinearizationAllowed)
+            if (!LinearizationEnabled)
             {
                 return;
             }
@@ -1104,16 +1077,16 @@ namespace iLand.tools
             for (int i = 0; i <= steps + 1; i++)
             {
                 double x = mLinearLow + i * mLinearStep;
-                double r = calculate(x);
+                double r = Calculate(x);
                 mLinearized.Add(r);
             }
             mLinearizeMode = 1;
         }
 
         /// like 'linearize()' but for 2d-matrices
-        public void linearize2d(double low_x, double high_x, double low_y, double high_y, int stepsx = 50, int stepsy = 50)
+        public void Linearize(double low_x, double high_x, double low_y, double high_y, int stepsx = 50, int stepsy = 50)
         {
-            if (!mLinearizationAllowed)
+            if (!LinearizationEnabled)
             {
                 return;
             }
@@ -1131,7 +1104,7 @@ namespace iLand.tools
                 {
                     double x = mLinearLow + i * mLinearStep;
                     double y = mLinearLowY + j * mLinearStepY;
-                    double r = calculate(x, y);
+                    double r = Calculate(x, y);
                     mLinearized.Add(r);
                 }
             }
@@ -1140,11 +1113,11 @@ namespace iLand.tools
         }
 
         /// calculate the linear approximation of the result value
-        private double linearizedValue(double x)
+        private double GetLinearizedValue(double x)
         {
             if (x < mLinearLow || x > mLinearHigh)
             {
-                return calculate(x, 0.0, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
+                return Calculate(x, 0.0, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lower = (int)((x - mLinearLow) / mLinearStep); // the lower point
             if (lower + 1 >= mLinearized.Count())
@@ -1158,11 +1131,11 @@ namespace iLand.tools
         }
 
         /// calculate the linear approximation of the result value
-        private double linearizedValue2d(double x, double y)
+        private double GetLinearizedValue(double x, double y)
         {
             if (x < mLinearLow || x > mLinearHigh || y < mLinearLowY || y > mLinearHighY)
             {
-                return calculate(x, y, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
+                return Calculate(x, y, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lowerx = (int)((x - mLinearLow) / mLinearStep); // the lower point (x-axis)
             int lowery = (int)((y - mLinearLowY) / mLinearStepY); // the lower point (y-axis)

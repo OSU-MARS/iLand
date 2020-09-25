@@ -29,17 +29,16 @@ namespace iLand.tools
     */
     internal class DebugTimer : IDisposable
     {
-        private static Dictionary<string, double> mTimingList;
+        private static readonly Dictionary<string, double> mTimingList;
 
         private bool isDisposed;
-        private TickTack t;
-        private bool m_hideShort; // if true, hide messages for short operations (except an explicit call to showElapsed())
+        private readonly TickTack t;
         private bool m_shown;
-        private bool m_silent;
-        private string m_caption;
+        private readonly string m_caption;
 
-        public void setSilent() { m_silent = true; }
-        public void setHideShort(bool hide_short_messages) { m_hideShort = hide_short_messages; }
+        // if true, hide messages for short operations (except an explicit call to showElapsed())
+        public bool HideShort { get; set; }
+        public bool Silent { get; set; }
 
         static DebugTimer()
         {
@@ -49,18 +48,18 @@ namespace iLand.tools
         public DebugTimer()
         {
             isDisposed = false;
-            m_hideShort = false;
-            m_silent = false;
+            HideShort = false;
+            Silent = false;
             t = new TickTack();
-            start();
+            Start();
         }
 
         public DebugTimer(string caption, bool silent = false)
         {
             isDisposed = false;
             m_caption = caption;
-            m_silent = silent;
-            m_hideShort = true;
+            Silent = silent;
+            HideShort = true;
             t = new TickTack();
 
             if (!mTimingList.ContainsKey(caption))
@@ -70,10 +69,10 @@ namespace iLand.tools
                     mTimingList[caption] = 0.0;
                 }
             }
-            start();
+            Start();
         }
 
-        public static void clearAllTimers()
+        public static void ClearAllTimers()
         {
             foreach (string key in mTimingList.Keys)
             {
@@ -92,12 +91,12 @@ namespace iLand.tools
             {
                 if (disposing)
                 {
-                    double t = elapsed();
+                    double t = Elapsed();
                     mTimingList[m_caption] += t;
                     // show message if timer is not set to silent, and if time > 100ms (if timer is set to hideShort (which is the default))
-                    if (!m_silent && (!m_hideShort || t > 100.0))
+                    if (!Silent && (!HideShort || t > 100.0))
                     {
-                        showElapsed();
+                        ShowElapsed();
                     }
                 }
 
@@ -105,7 +104,7 @@ namespace iLand.tools
             }
         }
 
-        public static void printAllTimers()
+        public static void PrintAllTimers()
         {
             Debug.WriteLine("Total timers" + Environment.NewLine + "================");
             double total = 0.0;
@@ -113,7 +112,7 @@ namespace iLand.tools
             {
                 if (timer.Value > 0.0)
                 {
-                    Debug.WriteLine(timer.Key + ": " + timeStr(timer.Value));
+                    Debug.WriteLine(timer.Key + ": " + TimeStr(timer.Value));
                 }
                 total += timer.Value;
             }
@@ -121,7 +120,7 @@ namespace iLand.tools
         }
 
         // pretty formatting of timing information
-        public static string timeStr(double value_ms)
+        public static string TimeStr(double value_ms)
         {
             if (value_ms < 10000)
             {
@@ -141,30 +140,30 @@ namespace iLand.tools
                                                              Math.Round((value_ms % 60000) / 1000));    //s
         }
 
-        public void interval(string text)
+        public void Interval(string text)
         {
-            double elapsed_time = elapsed();
-            Debug.WriteLine("Timer " + text + timeStr(elapsed_time));
-            start();
+            double elapsed_time = Elapsed();
+            Debug.WriteLine("Timer " + text + TimeStr(elapsed_time));
+            Start();
         }
 
-        public void showElapsed()
+        public void ShowElapsed()
         {
             if (!m_shown)
             {
-                Debug.WriteLine("Timer " + m_caption + ": " + timeStr(elapsed()));
+                Debug.WriteLine("Timer " + m_caption + ": " + TimeStr(Elapsed()));
             }
             m_shown = true;
         }
 
-        public double elapsed()
+        public double Elapsed()
         {
-            return t.elapsed() * 1000;
+            return t.Elapsed() * 1000;
         }
 
-        public void start()
+        public void Start()
         {
-            t.start();
+            t.Start();
             m_shown = false;
         }
     }

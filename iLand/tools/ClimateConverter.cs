@@ -18,154 +18,140 @@ namespace iLand.tools
         */
     internal class ClimateConverter
     {
-        private double[] mVars;
-        private string mFileName;
-        private string mTableName;
-        private string mDatabase;
-        private bool mCaptions;
+        private readonly double[] mVars;
 
-        private string mYear;
-        private string mMonth;
-        private string mDay;
-        private string mTemp;
-        private string mMinTemp;
-        private string mPrec;
-        private string mRad;
-        private string mVpd;
-
-        private Expression mExpYear;
-        private Expression mExpMonth;
-        private Expression mExpDay;
-        private Expression mExpTemp;
-        private Expression mExpMinTemp;
-        private Expression mExpPrec;
-        private Expression mExpRad;
-        private Expression mExpVpd;
+        private readonly Expression mExpYear;
+        private readonly Expression mExpMonth;
+        private readonly Expression mExpDay;
+        private readonly Expression mExpTemp;
+        private readonly Expression mExpMinTemp;
+        private readonly Expression mExpPrec;
+        private readonly Expression mExpRad;
+        private readonly Expression mExpVpd;
 
         // getters
-        public string fileName() { return mFileName; }
-        public string tableName() { return mTableName; }
-        public string database() { return mDatabase; }
-        public bool captions() { return mCaptions; }
-        public string year() { return mYear; }
-        public string month() { return mMonth; }
-        public string day() { return mDay; }
-        public string temp() { return mTemp; }
-        public string minTemp() { return mMinTemp; }
-        public string prec() { return mPrec; }
-        public string rad() { return mRad; }
-        public string vpd() { return mVpd; }
+        public string FileName { get; set; }
+        public string TableName { get; set; }
+        public string Database { get; set; }
+        public bool Captions { get; set; }
+        public string Year { get; set; }
+        public string Month { get; set; }
+        public string Day { get; set; }
+        public string Temp { get; set; }
+        public string MinTemp { get; set; }
+        public string Prec { get; set; }
+        public string Rad { get; set; }
+        public string Vpd { get; set; }
 
-        // setters
-        public void setFileName(string fileName) { mFileName = fileName; }
-        public void setTableName(string tableName) { mTableName = tableName; }
-        public void setDatabase(string db) { mDatabase = db; }
-        public void setCaptions(bool on) { mCaptions = on; }
-        public void setYear(string value) { mYear = value; }
-        public void setMonth(string value) { mMonth = value; }
-        public void setDay(string value) { mDay = value; }
-        public void setTemp(string value) { mTemp = value; }
-        public void setMinTemp(string value) { mMinTemp = value; }
-        public void setPrec(string value) { mPrec = value; }
-        public void setRad(string value) { mRad = value; }
-        public void setVpd(string value) { mVpd = value; }
+        public ClimateConverter()
+        {
+            this.Captions = true;
+            this.mExpYear = new Expression();
+            this.mExpMonth = new Expression();
+            this.mExpDay = new Expression();
+            this.mExpTemp = new Expression();
+            this.mExpMinTemp = new Expression();
+            this.mExpPrec = new Expression();
+            this.mExpRad = new Expression();
+            this.mExpVpd = new Expression();
 
-        public static void addToScriptEngine(QJSEngine engine)
+            this.mVars = new double[100];
+
+            this.BindExpression(mExpYear, 0);
+            this.BindExpression(mExpMonth, 1);
+            this.BindExpression(mExpDay, 2);
+
+            this.BindExpression(mExpTemp, 3);
+            this.BindExpression(mExpMinTemp, 4);
+
+            this.BindExpression(mExpPrec, 5);
+            this.BindExpression(mExpRad, 6);
+            this.BindExpression(mExpVpd, 7);
+        }
+
+        public static void AddToScriptEngine(QJSEngine engine)
         {
             // about this kind of scripting magic see: http://qt.nokia.com/developer/faqs/faq.2007-06-25.9557303148
             //QJSValue cc_class = engine.scriptValueFromQMetaObject<ClimateConverter>();
             // the script name for the object is "ClimateConverter".
             ClimateConverter cc = new ClimateConverter();
-            QJSValue cc_class = engine.newQObject(cc);
-            engine.globalObject().setProperty("ClimateConverter", cc_class);
+            QJSValue cc_class = engine.NewQObject(cc);
+            engine.GlobalObject().SetProperty("ClimateConverter", cc_class);
         }
 
-        public ClimateConverter(object parent = null)
+        private void BindExpression(Expression expr, int index)
         {
-            mCaptions = true;
-            mVars = new double[100];
-
-            bindExpression(mExpYear, 0);
-            bindExpression(mExpMonth, 1);
-            bindExpression(mExpDay, 2);
-
-            bindExpression(mExpTemp, 3);
-            bindExpression(mExpMinTemp, 4);
-
-            bindExpression(mExpPrec, 5);
-            bindExpression(mExpRad, 6);
-            bindExpression(mExpVpd, 7);
-        }
-
-        private void bindExpression(Expression expr, int index)
-        {
-            expr.setExpression(index.ToString(CultureInfo.InvariantCulture)); // "cX" is the default expression
+            expr.SetExpression(index.ToString(CultureInfo.InvariantCulture)); // "cX" is the default expression
             for (int i = 0; i < 10; i++)
             {
-                mVars[index * 10 + i] = expr.addVar(i.ToString(CultureInfo.InvariantCulture));
+                mVars[index * 10 + i] = expr.AddVariable(i.ToString(CultureInfo.InvariantCulture));
             }
         }
 
-        public void run()
+        public void Run()
         {
-            mExpYear.setExpression(mYear);
-            mExpMonth.setExpression(mMonth);
-            mExpDay.setExpression(mDay);
+            mExpYear.SetExpression(Year);
+            mExpMonth.SetExpression(Month);
+            mExpDay.SetExpression(Day);
 
-            mExpTemp.setExpression(mTemp);
-            mExpMinTemp.setExpression(mMinTemp);
-            mExpPrec.setExpression(mPrec);
-            mExpRad.setExpression(mRad);
-            mExpVpd.setExpression(mVpd);
+            mExpTemp.SetExpression(Temp);
+            mExpMinTemp.SetExpression(MinTemp);
+            mExpPrec.SetExpression(Prec);
+            mExpRad.SetExpression(Rad);
+            mExpVpd.SetExpression(Vpd);
 
-            if (String.IsNullOrEmpty(mDatabase))
+            if (String.IsNullOrEmpty(Database))
             {
                 throw new NotSupportedException("ClimateConverter: database is empty!");
             }
-            if (String.IsNullOrWhiteSpace(mTableName))
+            if (String.IsNullOrWhiteSpace(TableName))
             {
                 throw new NotSupportedException("run: invalid table name.");
             }
-            if (String.IsNullOrEmpty(mFileName))
+            if (String.IsNullOrEmpty(FileName))
             {
                 Debug.WriteLine("run: empty filename.");
                 return;
             }
 
             // load file
-            CSVFile file = new CSVFile();
-            file.setHasCaptions(mCaptions);
-            file.loadFile(mFileName);
-            if (file.rowCount() == 0)
+            CsvFile file = new CsvFile()
             {
-                Debug.WriteLine("run: cannot load file: " + mFileName);
+                HasCaptions = Captions
+            };
+            file.LoadFile(FileName);
+            if (file.RowCount == 0)
+            {
+                Debug.WriteLine("run: cannot load file: " + FileName);
                 return;
             }
 
-            SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder();
-            connectionString.DataSource = mDatabase;
+            SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
+            {
+                DataSource = Database
+            };
             using SqliteConnection db = new SqliteConnection(connectionString.ConnectionString);
             db.Open();
             using (SqliteTransaction transaction = db.BeginTransaction())
             {
                 // prepare output database
-                SqliteCommand dropIfExists = new SqliteCommand(String.Format("drop table if exists {0}", mTableName), db, transaction);
+                SqliteCommand dropIfExists = new SqliteCommand(String.Format("drop table if exists {0}", TableName), db, transaction);
                 dropIfExists.ExecuteNonQuery();
                 SqliteCommand create = new SqliteCommand(String.Format("CREATE TABLE {0} ( year INTEGER, month INTEGER, day INTEGER, " +
-                                                                        "temp REAL, min_temp REAL, prec REAL, rad REAL, vpd REAL)", mTableName),
+                                                                        "temp REAL, min_temp REAL, prec REAL, rad REAL, vpd REAL)", TableName),
                                                          db, transaction);
                 create.ExecuteNonQuery();
 
                 // prepare insert statement
-                SqliteCommand insert = new SqliteCommand(String.Format("insert into {0} (year, month, day, temp, min_temp, prec, rad, vpd) values (?,?,?, ?,?,?,?,?)", mTableName),
+                SqliteCommand insert = new SqliteCommand(String.Format("insert into {0} (year, month, day, temp, min_temp, prec, rad, vpd) values (?,?,?, ?,?,?,?,?)", TableName),
                                                          db, transaction);
                 // do this for each row
-                for (int row = 0; row < file.rowCount(); row++)
+                for (int row = 0; row < file.RowCount; row++)
                 {
                     // fetch values from input file
-                    for (int col = 0; col < file.colCount(); col++)
+                    for (int col = 0; col < file.ColCount; col++)
                     {
-                        double value = Double.Parse(file.value(row, col));
+                        double value = Double.Parse(file.Value(row, col));
                         // store value in each of the expression variables
                         for (int j = 0; j < 8; j++)
                         {
@@ -174,14 +160,14 @@ namespace iLand.tools
                     }
 
                     // calculate new values....
-                    int year = (int)mExpYear.execute();
-                    int month = (int)mExpMonth.execute();
-                    int day = (int)mExpDay.execute();
-                    double temp = mExpTemp.execute();
-                    double min_temp = mExpMinTemp.execute();
-                    double prec = mExpPrec.execute();
-                    double rad = mExpRad.execute();
-                    double vpd = mExpVpd.execute();
+                    int year = (int)mExpYear.Execute();
+                    int month = (int)mExpMonth.Execute();
+                    int day = (int)mExpDay.Execute();
+                    double temp = mExpTemp.Execute();
+                    double min_temp = mExpMinTemp.Execute();
+                    double prec = mExpPrec.Execute();
+                    double rad = mExpRad.Execute();
+                    double vpd = mExpVpd.Execute();
 
                     // bind values
                     insert.Parameters[0].Value = year;
@@ -197,7 +183,7 @@ namespace iLand.tools
 
                 transaction.Commit();
             }
-            Debug.WriteLine("run: processing complete. " + file.rowCount() + " rows inserted.");
+            Debug.WriteLine("run: processing complete. " + file.RowCount + " rows inserted.");
         }
     }
 }

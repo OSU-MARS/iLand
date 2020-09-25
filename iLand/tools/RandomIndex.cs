@@ -10,12 +10,12 @@
         */
     internal class RandomIndex
     {
-        private int mCount;
-        private int mIndex; ///< currently selected
-        private char[] mField;
+        private readonly int mCount;
+        private readonly char[] mField;
         private int mRemaining;
 
-        public int index() { return mIndex; } ///< retrieve (random) index
+        ///< currently selected
+        public int Index { get; private set; } ///< retrieve (random) index
 
         public RandomIndex(int aCount)
         {
@@ -29,19 +29,19 @@
                     mField[i] = 'a';
                 }
             }
-            mIndex = -1;
+            Index = -1;
             mRemaining = mCount;
         }
 
-        public bool next()
+        public bool Next()
         {
             if (mRemaining == 0)
             {
-                mIndex = -1;
+                Index = -1;
                 return false;
             }
             mRemaining--;
-            int random_index = RandomGenerator.irandom(0, mRemaining + 1); //RandomRange(0,mRemaining+1);
+            int random_index = RandomGenerator.Random(0, mRemaining + 1); //RandomRange(0,mRemaining+1);
             int found = 0;
             for (int i = 0; i < mCount; i++)
             {
@@ -49,7 +49,7 @@
                 {
                     if (random_index == found)
                     {
-                        mIndex = i;
+                        Index = i;
                         mField[i] = 'b';
                         return true;
                     }

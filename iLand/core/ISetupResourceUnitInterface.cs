@@ -1,9 +1,9 @@
 ﻿namespace iLand.core
 {
-    internal interface SetupResourceUnitInterface
+    internal interface ISetupResourceUnitInterface
     {
         /// setup of parameters specific for resource unit.
         /// this allows using spatially explicit parmater values.
-        void setupResourceUnit(ResourceUnit ru);
+        void SetupResourceUnit(ResourceUnit ru);
     }
 }

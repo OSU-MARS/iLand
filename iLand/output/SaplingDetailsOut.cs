@@ -5,77 +5,78 @@ namespace iLand.output
 {
     internal class SaplingDetailsOut : Output
     {
-        private Expression mCondition;
-        private double mVarRu;
-        private double mVarYear;
+        private readonly Expression mCondition;
         private double mMinDbh;
 
         public SaplingDetailsOut()
         {
-            setName("Sapling Details Output", "saplingdetail");
-            setDescription("Detailed output on indidvidual sapling cohorts." + System.Environment.NewLine +
-                       "For each occupied and living 2x2m pixel, a row is generated, unless" +
-                       "the tree diameter is below the 'minDbh' threshold (cm). " +
-                       "You can further specify a 'condition' to limit execution for specific time/ area with the variables 'ru' (resource unit id) and 'year' (the current year).");
-            columns().Add(OutputColumn.year());
-            columns().Add(OutputColumn.ru());
-            columns().Add(OutputColumn.id());
-            columns().Add(OutputColumn.species());
-            columns().Add(new OutputColumn("n_represented", "number of trees that are represented by the cohort (Reineke function).", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("dbh", "diameter of the cohort (cm).", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("height", "height of the cohort (m).", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("age", "age of the cohort (years) ", OutputDatatype.OutInteger));
+            this.mCondition = new Expression();
+
+            Name = "Sapling Details Output";
+            TableName = "saplingdetail";
+            Description = "Detailed output on indidvidual sapling cohorts." + System.Environment.NewLine +
+                          "For each occupied and living 2x2m pixel, a row is generated, unless" +
+                          "the tree diameter is below the 'minDbh' threshold (cm). " +
+                          "You can further specify a 'condition' to limit execution for specific time/ area with the variables 'ru' (resource unit id) and 'year' (the current year).";
+            Columns.Add(OutputColumn.CreateYear());
+            Columns.Add(OutputColumn.CreateResourceUnit());
+            Columns.Add(OutputColumn.CreateID());
+            Columns.Add(OutputColumn.CreateSpecies());
+            Columns.Add(new OutputColumn("n_represented", "number of trees that are represented by the cohort (Reineke function).", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("dbh", "diameter of the cohort (cm).", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("height", "height of the cohort (m).", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("age", "age of the cohort (years) ", OutputDatatype.OutInteger));
         }
 
-        public override void exec()
+        public override void Exec()
         {
-            Model m = GlobalSettings.instance().model();
+            Model m = GlobalSettings.Instance.Model;
 
-            foreach (ResourceUnit ru in m.ruList())
+            foreach (ResourceUnit ru in m.ResourceUnits)
             {
-                if (ru.id() == -1)
+                if (ru.ID == -1)
+                {
                     continue; // do not include if out of project area
+                }
 
                 // exclude if a condition is specified and condition is not met
-                if (!mCondition.isEmpty())
+                if (!mCondition.IsEmpty)
                 {
-                    mVarRu = ru.id();
-                    mVarYear = GlobalSettings.instance().currentYear();
-                    if (mCondition.execute() == 0.0)
+                    if (mCondition.Execute() == 0.0)
                     {
                         continue;
                     }
                 }
-                SaplingCell[] saplingCells = ru.saplingCellArray();
-                for (int px = 0; px < Constant.cPxPerHectare; ++px)
+                SaplingCell[] saplingCells = ru.SaplingCells;
+                for (int px = 0; px < Constant.LightCellsPerHectare; ++px)
                 {
                     SaplingCell s = saplingCells[px];
-                    int n_on_px = s.n_occupied();
+                    int n_on_px = s.GetOccupiedSlotCount();
                     if (n_on_px > 0)
                     {
-                        for (int i = 0; i < SaplingCell.NSAPCELLS; ++i)
+                        for (int i = 0; i < SaplingCell.SaplingCells; ++i)
                         {
-                            if (s.saplings[i].is_occupied())
+                            if (s.Saplings[i].IsOccupied())
                             {
-                                ResourceUnitSpecies rus = s.saplings[i].resourceUnitSpecies(ru);
-                                Species species = rus.species();
-                                double dbh = s.saplings[i].height / species.saplingGrowthParameters().hdSapling * 100.0;
+                                ResourceUnitSpecies rus = s.Saplings[i].ResourceUnitSpecies(ru);
+                                Species species = rus.Species;
+                                double dbh = s.Saplings[i].Height / species.SaplingGrowthParameters.HdSapling * 100.0;
                                 // check minimum dbh
                                 if (dbh < mMinDbh)
                                 {
                                     continue;
                                 }
-                                double n_repr = species.saplingGrowthParameters().representedStemNumberH(s.saplings[i].height) / n_on_px;
+                                double n_repr = species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(s.Saplings[i].Height) / n_on_px;
 
-                                this.add(currentYear());
-                                this.add(ru.index());
-                                this.add(ru.id());
-                                this.add(rus.species().id());
-                                this.add(n_repr);
-                                this.add(dbh);
-                                this.add(s.saplings[i].height);
-                                this.add(s.saplings[i].age);
-                                writeRow();
+                                this.Add(CurrentYear());
+                                this.Add(ru.Index);
+                                this.Add(ru.ID);
+                                this.Add(rus.Species.ID);
+                                this.Add(n_repr);
+                                this.Add(dbh);
+                                this.Add(s.Saplings[i].Height);
+                                this.Add(s.Saplings[i].Age);
+                                WriteRow();
                             }
                         }
                     }
@@ -83,17 +84,12 @@ namespace iLand.output
             }
         }
 
-        public void setup()
+        public override void Setup()
         {
             // use a condition for to control execuation for the current year
-            string condition = settings().value(".condition", "");
-            mCondition.setExpression(condition);
-            if (!mCondition.isEmpty())
-            {
-                mVarRu = mCondition.addVar("ru");
-                mVarYear = mCondition.addVar("year");
-            }
-            mMinDbh = settings().valueDouble(".minDbh");
+            string condition = Settings().Value(".condition", "");
+            mCondition.SetExpression(condition);
+            mMinDbh = Settings().ValueDouble(".minDbh");
         }
     }
 }

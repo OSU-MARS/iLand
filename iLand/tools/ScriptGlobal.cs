@@ -32,198 +32,197 @@ namespace iLand.tools
     // Scripting Interface for MapGrid
     internal class ScriptGlobal
     {
-        private string mCurrentDir;
-        private Model mModel;
+        private readonly Model mModel;
 
-        public string currentDir() { return mCurrentDir; } ///< current execution directory (default is the Script execution directory)
-        public void setCurrentDir(string newDir) { mCurrentDir = newDir; } ///< set current working dir
+        public string CurrentDir { get; private set; } ///< current execution directory (default is the Script execution directory)
 
         public bool qt5() ///< is this the qt5-model? (changes in script object creation)
         {
             return true;
-        } 
+        }
 
-        public ScriptGlobal(object parent = null)
-            {
-                mModel = GlobalSettings.instance().model();
-                // current directory
-                if (mModel != null)
-                {
-                    mCurrentDir = GlobalSettings.instance().path(null, "script") + Path.DirectorySeparatorChar;
-                }
-            }
-
-        public object setting(string key)
+        public ScriptGlobal()
         {
-            XmlHelper xml = GlobalSettings.instance().settings();
-            if (!xml.hasNode(key))
+            mModel = GlobalSettings.Instance.Model;
+            if (mModel != null)
+            {
+                // BUGBUG: hard coded script path ignores <scripts> element of project file
+                CurrentDir = GlobalSettings.Instance.Path(null, "script") + System.IO.Path.DirectorySeparatorChar;
+            }
+        }
+
+        public object Setting(string key)
+        {
+            XmlHelper xml = GlobalSettings.Instance.Settings;
+            if (!xml.HasNode(key))
             {
                 Debug.WriteLine("scriptglobal: setting key " + key + "not valid.");
                 return new object(); // undefined???
             }
-            return xml.value(key);
+            return xml.Value(key);
         }
 
-        public void set(string key, string value)
+        public void Set(string key, string value)
         {
-            XmlHelper xml = GlobalSettings.instance().settings();
-            if (!xml.hasNode(key))
+            XmlHelper xml = GlobalSettings.Instance.Settings;
+            if (!xml.HasNode(key))
             {
                 Debug.WriteLine("scriptglobal: setting key " + key + "not valid.");
                 return;
             }
-            xml.setNodeValue(key, value);
+            xml.SetNodeValue(key, value);
         }
 
-        public void print(string message)
+        public void Print(string message)
         {
             Debug.WriteLine(message);
         }
 
-        public void alert(string message)
+        public void Alert(string message)
         {
-            Helper.msg(message); // nothing happens when not in GUI mode
+            Helper.Message(message); // nothing happens when not in GUI mode
         }
 
-        public void include(string filename)
+        public void Include(string filename)
         {
-            string path = GlobalSettings.instance().path(filename);
+            string path = GlobalSettings.Instance.Path(filename);
             if (!File.Exists(path))
             {
                 throw new NotSupportedException(String.Format("include(): The javascript source file '{0}' could not be found.", path));
             }
 
-            string includeFile = Helper.loadTextFile(path);
+            string includeFile = Helper.LoadTextFile(path);
 
-            QJSValue ret = GlobalSettings.instance().scriptEngine().evaluate(includeFile, path);
-            if (ret.isError())
+            QJSValue ret = GlobalSettings.Instance.ScriptEngine.Evaluate(includeFile, path);
+            if (ret.IsError())
             {
-                string error_message = formattedErrorMessage(ret, includeFile);
+                string error_message = FormattedErrorMessage(ret, includeFile);
                 Debug.WriteLine(error_message);
                 throw new NotSupportedException("Error in javascript-include(): " + error_message);
             }
         }
 
-        public string defaultDirectory(string dir)
+        public string DefaultDirectory(string dir)
         {
-            string result = GlobalSettings.instance().path(null, dir) + Path.DirectorySeparatorChar;
+            string result = GlobalSettings.Instance.Path(null, dir) + System.IO.Path.DirectorySeparatorChar;
             return result;
         }
 
-        public string path(string filename)
+        public string Path(string filename)
         {
-            return GlobalSettings.instance().path(filename);
+            return GlobalSettings.Instance.Path(filename);
         }
 
-        public int year()
+        public int Year()
         {
-            return GlobalSettings.instance().currentYear();
+            return GlobalSettings.Instance.CurrentYear;
         }
 
-        public int resourceUnitCount()
+        public int ResourceUnitCount()
         {
             Debug.Assert(mModel != null);
-            return mModel.ruList().Count;
+            return mModel.ResourceUnits.Count;
         }
 
-        public double worldX()
+        public double WorldWidth()
         {
-            return GlobalSettings.instance().model().extent().Width;
+            return GlobalSettings.Instance.Model.PhysicalExtent.Width;
         }
 
-        public double worldY()
+        public double WorldHeight()
         {
-            return GlobalSettings.instance().model().extent().Height;
+            return GlobalSettings.Instance.Model.PhysicalExtent.Height;
         }
 
         // wrapped helper functions
-        public string loadTextFile(string fileName)
+        public string LoadTextFile(string fileName)
         {
-            return Helper.loadTextFile(GlobalSettings.instance().path(fileName));
+            return Helper.LoadTextFile(GlobalSettings.Instance.Path(fileName));
         }
 
-        public void saveTextFile(string fileName, string content)
+        public void SaveTextFile(string fileName, string content)
         {
-            Helper.saveToTextFile(fileName, content);
+            Helper.SaveToTextFile(fileName, content);
         }
 
-        public bool fileExists(string fileName)
+        public bool FileExists(string fileName)
         {
             return File.Exists(fileName);
         }
 
-        public void systemCmd(string filePath, string arguments)
-        {
-            Debug.WriteLine("running system command:" + filePath + " " + arguments);
-            using Process process = new Process();
-            process.StartInfo.FileName = filePath;
-            process.StartInfo.Arguments = arguments;
-            process.Start();
-            process.WaitForExit(); // will wait forever until finished
+        // unused in C++
+        //public void systemCmd(string filePath, string arguments)
+        //{
+        //    Debug.WriteLine("running system command:" + filePath + " " + arguments);
+        //    using Process process = new Process();
+        //    process.StartInfo.FileName = filePath;
+        //    process.StartInfo.Arguments = arguments;
+        //    process.Start();
+        //    process.WaitForExit(); // will wait forever until finished
 
-            string res_stdout = process.StandardOutput.ReadToEnd();
-            string res_stderr = process.StandardError.ReadToEnd(); // BUGBUG: potential deadlock
-            Debug.WriteLine("result (stdout):" + res_stdout);
-            Debug.WriteLine("result (stderr):" + res_stderr);
-        }
+        //    string res_stdout = process.StandardOutput.ReadToEnd();
+        //    string res_stderr = process.StandardError.ReadToEnd(); // BUGBUG: potential deadlock
+        //    Debug.WriteLine("result (stdout):" + res_stdout);
+        //    Debug.WriteLine("result (stderr):" + res_stderr);
+        //}
 
         /// add trees on given resource unit
         /// @param content init file in a string (containing headers)
         /// @return number of trees added
-        public int addSingleTrees(int resourceIndex, string content)
+        public int AddSingleTrees(int resourceIndex, string content)
         {
             StandLoader loader = new StandLoader(mModel);
-            ResourceUnit ru = mModel.ru(resourceIndex);
+            ResourceUnit ru = mModel.GetResourceUnit(resourceIndex);
             if (ru == null)
             {
                 throw new NotSupportedException(String.Format("addSingleTrees: invalid resource unit (index: {0}", resourceIndex));
             }
-            int cnt = loader.loadSingleTreeList(content, ru, "called_from_script");
+            int cnt = loader.LoadSingleTreeList(content, ru, "called_from_script");
             Debug.WriteLine("script: addSingleTrees: " + cnt + " trees loaded.");
             return cnt;
         }
 
-        public int addTrees(int resourceIndex, string content)
+        public int AddTrees(int resourceIndex, string content)
         {
             StandLoader loader = new StandLoader(mModel);
-            ResourceUnit ru = mModel.ru(resourceIndex);
+            ResourceUnit ru = mModel.GetResourceUnit(resourceIndex);
             if (ru == null)
             {
                 throw new NotSupportedException(String.Format("addTrees: invalid resource unit (index: {0}", resourceIndex));
             }
-            return loader.loadDistributionList(content, ru, 0, "called_from_script");
+            return loader.LoadDistributionList(content, ru, 0, "called_from_script");
         }
 
-        public int addTreesOnMap(int standID, string content)
+        public int AddTreesOnMap(int standID, string content)
         {
             StandLoader loader = new StandLoader(mModel);
-            return loader.loadDistributionList(content, null, standID, "called_from_script");
+            return loader.LoadDistributionList(content, null, standID, "called_from_script");
         }
 
-        public bool startOutput(string table_name)
+        public bool StartOutput(string table_name)
         {
             if (table_name == "debug_dynamic")
             {
-                GlobalSettings.instance().controller().setDynamicOutputEnabled(true);
+                GlobalSettings.Instance.ModelController.DynamicOutputEnabled = true;
                 Debug.WriteLine("started dynamic debug output");
                 return true;
             }
             if (table_name.StartsWith("debug_"))
             {
-                DebugOutputs dbg = GlobalSettings.instance().debugOutputId(table_name.Substring(6));
+                DebugOutputs dbg = GlobalSettings.Instance.DebugOutputID(table_name.Substring(6));
                 if (dbg == 0)
                 {
                     Debug.WriteLine("cannot start debug output" + table_name + "because this is not a valid name.");
                 }
-                GlobalSettings.instance().setDebugOutput(dbg, true);
+                GlobalSettings.Instance.SetDebugOutput(dbg, true);
                 return true;
             }
-            OutputManager om = GlobalSettings.instance().outputManager();
+            OutputManager om = GlobalSettings.Instance.OutputManager;
             if (om == null)
             {
                 return false;
             }
-            Output output = om.find(table_name);
+            Output output = om.Find(table_name);
             if (output == null)
             {
                 string err = String.Format("startOutput: Output '{0}' is not a valid output.", table_name);
@@ -233,35 +232,35 @@ namespace iLand.tools
                 Trace.TraceWarning(err);
                 return false;
             }
-            output.setEnabled(true);
+            output.IsEnabled = true;
             Debug.WriteLine("started output " + table_name);
             return true;
         }
 
-        public bool stopOutput(string table_name)
+        public bool StopOutput(string table_name)
         {
             if (table_name == "debug_dynamic")
             {
-                GlobalSettings.instance().controller().setDynamicOutputEnabled(false);
+                GlobalSettings.Instance.ModelController.DynamicOutputEnabled = false;
                 Debug.WriteLine("stopped dynamic debug output.");
                 return true;
             }
             if (table_name.StartsWith("debug_"))
             {
-                DebugOutputs dbg = GlobalSettings.instance().debugOutputId(table_name.Substring(6));
+                DebugOutputs dbg = GlobalSettings.Instance.DebugOutputID(table_name.Substring(6));
                 if (dbg == 0)
                 {
                     Debug.WriteLine("cannot stop debug output" + table_name + "because this is not a valid name.");
                 }
-                GlobalSettings.instance().setDebugOutput(dbg, false);
+                GlobalSettings.Instance.SetDebugOutput(dbg, false);
                 return true;
             }
-            OutputManager om = GlobalSettings.instance().outputManager();
+            OutputManager om = GlobalSettings.Instance.OutputManager;
             if (om == null)
             {
                 return false;
             }
-            Output output = om.find(table_name);
+            Output output = om.Find(table_name);
             if (output == null)
             {
                 string err = String.Format("stopOutput: Output '{0}' is not a valid output.", table_name);
@@ -271,63 +270,63 @@ namespace iLand.tools
                 //           context().throwError(err);
                 return false;
             }
-            output.setEnabled(false);
+            output.IsEnabled = false;
             Debug.WriteLine("stopped output " + table_name);
             return true;
         }
 
-        public bool screenshot(string file_name)
+        public bool Screenshot(string file_name)
         {
-            if (GlobalSettings.instance().controller() != null)
+            if (GlobalSettings.Instance.ModelController != null)
             {
-                GlobalSettings.instance().controller().saveScreenshot(file_name);
+                GlobalSettings.Instance.ModelController.SaveScreenshot(file_name);
             }
             return true;
         }
 
-        public void repaint()
+        public void Repaint()
         {
-            if (GlobalSettings.instance().controller() != null)
+            if (GlobalSettings.Instance.ModelController != null)
             {
-                GlobalSettings.instance().controller().repaint();
+                GlobalSettings.Instance.ModelController.Repaint();
             }
         }
 
-        public void setViewport(double x, double y, double scale_px_per_m)
+        public void SetViewport(double x, double y, double scale_px_per_m)
         {
-            if (GlobalSettings.instance().controller() != null)
+            if (GlobalSettings.Instance.ModelController != null)
             {
-                GlobalSettings.instance().controller().setViewport(new PointF((float)x, (float)y), scale_px_per_m);
+                GlobalSettings.Instance.ModelController.SetViewport(new PointF((float)x, (float)y), scale_px_per_m);
             }
         }
 
         // helper function...
-        public string heightGrid_height(HeightGridValue hgv)
+        public string HeightGridHeight(HeightGridValue hgv)
         {
-            return hgv.height.ToString();
+            return hgv.Height.ToString();
         }
 
         /// write grid to a file...
-        public bool gridToFile(string grid_type, string file_name)
+        public bool GridToFile(string grid_type, string file_name)
         {
-            if (GlobalSettings.instance().model() == null)
+            if (GlobalSettings.Instance.Model == null)
             {
                 return false;
             }
             string result = null;
             if (grid_type == "height")
             {
-                result = Grid.gridToESRIRaster(GlobalSettings.instance().model().heightGrid(), heightGrid_height);
+                result = core.Grid.ToEsriRaster(GlobalSettings.Instance.Model.HeightGrid, this.HeightGridHeight);
             }
             if (grid_type == "lif")
             {
-                result = Grid.gridToESRIRaster(GlobalSettings.instance().model().grid());
+                result = core.Grid.ToEsriRaster(GlobalSettings.Instance.Model.LightGrid);
             }
 
             if (String.IsNullOrEmpty(result))
             {
-                file_name = GlobalSettings.instance().path(file_name);
-                Helper.saveToTextFile(file_name, result);
+                file_name = GlobalSettings.Instance.Path(file_name);
+                Helper.SaveToTextFile(file_name, result);
                 Debug.WriteLine("saved grid to " + file_name);
                 return true;
             }
@@ -335,7 +334,7 @@ namespace iLand.tools
             return false;
         }
 
-        public QJSValue grid(string type)
+        public QJSValue Grid(string type)
         {
             int index = -1;
             if (type == "height") index = 0;
@@ -347,62 +346,62 @@ namespace iLand.tools
                 Debug.WriteLine("grid(): error: invalid grid specified:" + type + ". valid options: 'height', 'valid', 'count', 'forestoutside'.");
             }
 
-            Grid<HeightGridValue> h = GlobalSettings.instance().model().heightGrid();
-            Grid<double> dgrid = new Grid<double>(h.cellsize(), h.sizeX(), h.sizeY());
+            Grid<HeightGridValue> h = GlobalSettings.Instance.Model.HeightGrid;
+            Grid<double> dgrid = new Grid<double>(h.CellSize, h.SizeX, h.SizeY);
             // fetch data from height grid
-            for (int hgv = 0; hgv < h.count(); ++hgv)
+            for (int hgv = 0; hgv < h.Count; ++hgv)
             {
                 switch (index)
                 {
-                    case 0: dgrid[hgv] = h[hgv].height; break;
-                    case 1: dgrid[hgv] = h[hgv].isValid() ? 1.0 : 0.0; break;
-                    case 2: dgrid[hgv] = h[hgv].count(); break;
-                    case 3: dgrid[hgv] = h[hgv].isForestOutside() ? 1.0 : 0.0; break;
+                    case 0: dgrid[hgv] = h[hgv].Height; break;
+                    case 1: dgrid[hgv] = h[hgv].IsValid() ? 1.0 : 0.0; break;
+                    case 2: dgrid[hgv] = h[hgv].Count(); break;
+                    case 3: dgrid[hgv] = h[hgv].IsForestOutside() ? 1.0 : 0.0; break;
                 }
             }
 
-            QJSValue g = ScriptGrid.createGrid(dgrid, type);
+            QJSValue g = ScriptGrid.CreateGrid(dgrid, type);
             return g;
         }
 
-        public QJSValue speciesShareGrid(string species)
+        public QJSValue SpeciesShareGrid(string species)
         {
-            Species s = GlobalSettings.instance().model().speciesSet().species(species);
+            Species s = GlobalSettings.Instance.Model.SpeciesSet().GetSpecies(species);
             if (s == null)
             {
                 Debug.WriteLine("speciesShareGrid: invalid species" + species);
                 return new QJSValue();
             }
-            Grid<ResourceUnit> rug = GlobalSettings.instance().model().RUgrid();
-            Grid<double> grid = new Grid<double>(rug.cellsize(), rug.sizeX(), rug.sizeY());
-            for (int ru = 0; ru < rug.count(); ++ru)
+            Grid<ResourceUnit> rug = GlobalSettings.Instance.Model.ResourceUnitGrid;
+            Grid<double> grid = new Grid<double>(rug.CellSize, rug.SizeX, rug.SizeY);
+            for (int ru = 0; ru < rug.Count; ++ru)
             {
-                if (rug[ru] != null && rug[ru].constResourceUnitSpecies(s) != null)
+                if (rug[ru] != null && rug[ru].ResourceUnitSpecies(s) != null)
                 {
-                    grid[ru] = rug[ru].resourceUnitSpecies(s).statistics().basalArea();
+                    grid[ru] = rug[ru].ResourceUnitSpecies(s).Statistics.BasalArea;
                 }
                 else
                 {
                     grid[ru] = 0.0;
                 }
             }
-            QJSValue g = ScriptGrid.createGrid(grid, species);
+            QJSValue g = ScriptGrid.CreateGrid(grid, species);
             return g;
         }
 
-        public QJSValue resourceUnitGrid(string expression)
+        public QJSValue ResourceUnitGrid(string expression)
         {
-            Grid<ResourceUnit> rug = GlobalSettings.instance().model().RUgrid();
-            Grid<double> grid = new Grid<double>(rug.cellsize(), rug.sizeX(), rug.sizeY());
+            Grid<ResourceUnit> rug = GlobalSettings.Instance.Model.ResourceUnitGrid;
+            Grid<double> grid = new Grid<double>(rug.CellSize, rug.SizeX, rug.SizeY);
             RUWrapper ru_wrap = new RUWrapper();
             Expression ru_value = new Expression(expression, ru_wrap);
 
-            for (int ru = 0; ru != rug.count(); ++ru)
+            for (int ru = 0; ru != rug.Count; ++ru)
             {
                 if (rug[ru] != null)
                 {
-                    ru_wrap.setResourceUnit(rug[ru]);
-                    double value = ru_value.execute();
+                    ru_wrap.ResourceUnit = rug[ru];
+                    double value = ru_value.Execute();
                     grid[ru] = value;
                 }
                 else
@@ -410,30 +409,30 @@ namespace iLand.tools
                     grid[ru] = 0.0;
                 }
             }
-            QJSValue g = ScriptGrid.createGrid(grid, "ru");
+            QJSValue g = ScriptGrid.CreateGrid(grid, "ru");
             return g;
         }
 
-        public bool seedMapToFile(string species, string file_name)
+        public bool SeedMapToFile(string species, string file_name)
         {
             // does not fully work:
             // Problem: after a full year cycle the seed maps are already cleared and prepared for the next round
             // -. this is now more an "occurence" map
-            if (GlobalSettings.instance().model() == null)
+            if (GlobalSettings.Instance.Model == null)
             {
                 return false;
             }
 
             // find species
-            Species s = GlobalSettings.instance().model().speciesSet().species(species);
+            Species s = GlobalSettings.Instance.Model.SpeciesSet().GetSpecies(species);
             if (s == null)
             {
                 Debug.WriteLine("invalid species " + species + ". No seed map saved.");
                 return false;
             }
 
-            s.seedDispersal().dumpMapNextYear(file_name);
-            Debug.WriteLine("creating raster in the next year cycle for species " + s.id());
+            s.SeedDispersal.DumpNextYearFileName = file_name;
+            Debug.WriteLine("creating raster in the next year cycle for species " + s.ID);
             return true;
 
             //gridToImage( s.seedDispersal().seedMap(), true, 0., 1.).save(GlobalSettings.instance().path(file_name));
@@ -448,75 +447,77 @@ namespace iLand.tools
             //    return false;
         }
 
-        public void wait(int milliseconds)
+        public void Wait(int milliseconds)
         {
             Thread.Sleep(milliseconds);
         }
 
-        public int addSaplingsOnMap(MapGridWrapper map, int mapID, string species, int px_per_hectare, double height, int age)
+        public int AddSaplingsOnMap(MapGridWrapper map, int mapID, string species, int px_per_hectare, double height, int age)
         {
             string csv_file = String.Format("species;count;height;age{4}{0};{1};{2};{3}", species, px_per_hectare, height, age, System.Environment.NewLine);
-            StandLoader loader = new StandLoader(mModel);
-            loader.setMap(map.map());
-            return loader.loadSaplings(csv_file, mapID, "called from script");
+            StandLoader loader = new StandLoader(mModel)
+            {
+                CurrentMap = map.Map
+            };
+            return loader.LoadSaplings(csv_file, mapID);
         }
 
         /// saves a snapshot of the current model state (trees, soil, etc.)
         /// to a dedicated SQLite database.
-        public bool saveModelSnapshot(string file_name)
+        public bool SaveModelSnapshot(string file_name)
         {
             Snapshot shot = new Snapshot();
-            string output_db = GlobalSettings.instance().path(file_name);
-            return shot.createSnapshot(output_db);
+            string output_db = GlobalSettings.Instance.Path(file_name);
+            return shot.CreateSnapshot(output_db);
         }
 
         /// loads a snapshot of the current model state (trees, soil, etc.)
         /// from a dedicated SQLite database.
-        public bool loadModelSnapshot(string file_name)
+        public bool LoadModelSnapshot(string file_name)
         {
             Snapshot shot = new Snapshot();
-            string input_db = GlobalSettings.instance().path(file_name);
-            return shot.loadSnapshot(input_db);
+            string input_db = GlobalSettings.Instance.Path(file_name);
+            return shot.LoadSnapshot(input_db);
         }
 
-        public bool saveStandSnapshot(int stand_id, string file_name)
+        public bool SaveStandSnapshot(int stand_id, string file_name)
         {
             Snapshot shot = new Snapshot();
-            MapGrid map_grid = GlobalSettings.instance().model().standGrid();
+            MapGrid map_grid = GlobalSettings.Instance.Model.StandGrid;
             if (map_grid == null)
             {
                 return false;
             }
-            return shot.saveStandSnapshot(stand_id, map_grid, GlobalSettings.instance().path(file_name));
+            return shot.SaveStandSnapshot(stand_id, map_grid, GlobalSettings.Instance.Path(file_name));
         }
 
-        public bool loadStandSnapshot(int stand_id, string file_name)
+        public bool LoadStandSnapshot(int stand_id, string file_name)
         {
             Snapshot shot = new Snapshot();
-            MapGrid map_grid = GlobalSettings.instance().model().standGrid();
+            MapGrid map_grid = GlobalSettings.Instance.Model.StandGrid;
             if (map_grid == null)
             {
                 return false;
             }
-            return shot.loadStandSnapshot(stand_id, map_grid, GlobalSettings.instance().path(file_name));
+            return shot.LoadStandSnapshot(stand_id, map_grid, GlobalSettings.Instance.Path(file_name));
         }
 
-        public void reloadABE()
+        public void ReloadAbe()
         {
             Debug.WriteLine("attempting to reload ABE");
-            GlobalSettings.instance().model().reloadABE();
+            GlobalSettings.Instance.Model.ReloadAbe();
         }
 
-        public void setUIshortcuts(QJSValue shortcuts)
+        public void SetUIshortcuts(QJSValue shortcuts)
         {
-            if (!shortcuts.isObject())
+            if (!shortcuts.IsObject())
             {
-                Debug.WriteLine("setUIShortcuts: expected a JS-object (name: javascript-call, value: description). Got: " + shortcuts.toString());
+                Debug.WriteLine("setUIShortcuts: expected a JS-object (name: javascript-call, value: description). Got: " + shortcuts.ToString());
             }
-            GlobalSettings.instance().controller().setUIShortcuts(shortcuts);
+            GlobalSettings.Instance.ModelController.SetUIShortcuts(shortcuts);
         }
 
-        public void test_tree_mortality(double thresh, int years, double p_death)
+        public void TestTreeMortality(double thresh, int years, double p_death)
         {
 #if ALT_TREE_MORTALITY
         Tree.mortalityParams(thresh, years, p_death);
@@ -525,53 +526,54 @@ namespace iLand.tools
 #endif
         }
 
-        private void throwError(string errormessage)
-        {
-            GlobalSettings.instance().scriptEngine().evaluate(String.Format("throw '{0}'", errormessage));
-            Trace.TraceWarning("Scripterror:" + errormessage);
-            // TODO: check if this works....
-            // BUGBUG: doesn't throw
-        }
+        // unused in C++
+        //private void throwError(string errormessage)
+        //{
+        //    GlobalSettings.instance().scriptEngine().evaluate(String.Format("throw '{0}'", errormessage));
+        //    Trace.TraceWarning("Scripterror:" + errormessage);
+        //    // TODO: check if this works....
+        //    // BUGBUG: doesn't throw
+        //}
 
-        public static void loadScript(string fileName)
+        public static void LoadScript(string fileName)
         {
-            QJSEngine engine = GlobalSettings.instance().scriptEngine();
+            QJSEngine engine = GlobalSettings.Instance.ScriptEngine;
 
-            string program = Helper.loadTextFile(fileName);
+            string program = Helper.LoadTextFile(fileName);
             if (String.IsNullOrEmpty(program))
             {
                 Debug.WriteLine("loading of Javascript file " + fileName + " failed because file is either missing or empty.");
                 return;
             }
 
-            QJSValue result = engine.evaluate(program);
+            QJSValue result = engine.Evaluate(program);
             Debug.WriteLine("javascript file loaded " + fileName);
-            if (result.isError())
+            if (result.IsError())
             {
-                int lineno = result.property("lineNumber").toInt();
+                int lineno = result.Property("lineNumber").ToInt();
                 List<string> code_lines = program.Replace("\r", "").Split('\n').ToList(); // remove CR, split by LF
                 StringBuilder code_part = new StringBuilder();
                 for (int i = Math.Max(0, lineno - 5); i < Math.Min(lineno + 5, code_lines.Count); ++i)
                 {
                     code_part.AppendFormat("{0}: {1} {2}{3}", i, code_lines[i], i == lineno ? "  <---- [ERROR]" : "", System.Environment.NewLine);
                 }
-                Debug.WriteLine("Javascript Error in file " + fileName + ": " + result.property("lineNumber") + " : " + result.toString() + " : " + System.Environment.NewLine + code_part);
+                Debug.WriteLine("Javascript Error in file " + fileName + ": " + result.Property("lineNumber") + " : " + result.ToString() + " : " + System.Environment.NewLine + code_part);
             }
         }
 
-        public static string executeScript(string cmd)
+        public static string ExecuteScript(string cmd)
         {
             using DebugTimer t = new DebugTimer("execute javascript");
-            QJSEngine engine = GlobalSettings.instance().scriptEngine();
+            QJSEngine engine = GlobalSettings.Instance.ScriptEngine;
             QJSValue result = new QJSValue();
             if (engine != null)
             {
-                result = engine.evaluate(cmd);
+                result = engine.Evaluate(cmd);
             }
-            if (result.isError())
+            if (result.IsError())
             {
                 //int line = mEngine.uncaughtExceptionLineNumber();
-                string msg = String.Format("Script Error occured: {0}\n", result.toString());
+                string msg = String.Format("Script Error occured: {0}\n", result.ToString());
                 Debug.WriteLine(msg);
                 //msg+=engine.uncaughtExceptionBacktrace().join("\n");
                 return msg;
@@ -582,22 +584,22 @@ namespace iLand.tools
             }
         }
 
-        public static string executeJSFunction(string function)
+        public static string ExecuteJSFunction(string function)
         {
             using DebugTimer t = new DebugTimer("execute javascript");
-            QJSEngine engine = GlobalSettings.instance().scriptEngine();
+            QJSEngine engine = GlobalSettings.Instance.ScriptEngine;
             if (engine == null)
             {
                 return "No valid javascript engine!";
             }
 
             QJSValue result;
-            if (engine.globalObject().property(function).isCallable())
+            if (engine.GlobalObject().Property(function).IsCallable())
             {
-                result = engine.globalObject().property(function).call();
-                if (result.isError())
+                result = engine.GlobalObject().Property(function).Call();
+                if (result.IsError())
                 {
-                    string msg = "Script Error occured: " + result.toString();
+                    string msg = "Script Error occured: " + result.ToString();
                     Debug.WriteLine(msg);
                     return msg;
                 }
@@ -605,11 +607,11 @@ namespace iLand.tools
             return String.Empty; // BUGBUG: should return result or be void?
         }
 
-        public string formattedErrorMessage(QJSValue error_value, string sourcecode)
+        public string FormattedErrorMessage(QJSValue error_value, string sourcecode)
         {
-            if (error_value.isError())
+            if (error_value.IsError())
             {
-                int lineno = error_value.property("lineNumber").toInt();
+                int lineno = error_value.Property("lineNumber").ToInt();
                 string code = sourcecode;
                 List<string> code_lines = code.Replace("\r", "").Split('\n').ToList(); // remove CR, split by LF
                 StringBuilder code_part = new StringBuilder();
@@ -618,26 +620,27 @@ namespace iLand.tools
                     code_part.AppendFormat("{0}: {1} {2}{3}", i, code_lines[i], i == lineno ? "  <---- [ERROR]" : "", System.Environment.NewLine);
                 }
                 string error_string = String.Format("Javascript Error in file '{0}:{1}':{2}{4}{3}",
-                        error_value.property("fileName"), error_value.property("lineNumber"), error_value.toString(), code_part, System.Environment.NewLine);
+                        error_value.Property("fileName"), error_value.Property("lineNumber"), error_value.ToString(), code_part, System.Environment.NewLine);
                 return error_string;
             }
             return String.Empty;
         }
 
-        public QJSValue viewOptions()
+        public QJSValue ViewOptions()
         {
             QJSValue res = new QJSValue();
             return res;
         }
 
-        public void setViewOptions(QJSValue opts)
-        {
-            // no non-GUI code
-        }
+        // unused in C++
+        //public void setViewOptions(QJSValue opts)
+        //{
+        //    // no non-GUI code
+        //}
 
-        public static void setupGlobalScripting()
+        public static void SetupGlobalScripting()
         {
-            QJSEngine engine = GlobalSettings.instance().scriptEngine();
+            QJSEngine engine = GlobalSettings.Instance.ScriptEngine;
             //    QJSValue dbgprint = engine.newFunction(script_debug);
             //    QJSValue sinclude = engine.newFunction(script_include);
             //    QJSValue alert = engine.newFunction(script_alert);
@@ -646,18 +649,18 @@ namespace iLand.tools
             //    engine.globalObject().setProperty("alert", alert);
 
             // check if update necessary
-            if (engine.globalObject().property("print").isCallable())
+            if (engine.GlobalObject().Property("print").IsCallable())
             {
                 return;
             }
 
             // wrapper functions for (former) stand-alone javascript functions
             // Qt5 - modification
-            engine.evaluate("function print(x) { Globals.print(x); } \n" +
+            engine.Evaluate("function print(x) { Globals.print(x); } \n" +
                              "function include(x) { Globals.include(x); } \n" +
                              "function alert(x) { Globals.alert(x); } \n");
             // add a (fake) console.log / console.print
-            engine.evaluate("var console = { log: function(x) {Globals.print(x); }, " +
+            engine.Evaluate("var console = { log: function(x) {Globals.print(x); }, " +
                              "                print: function(x) { for(var propertyName in x)  " +
                              "                                       console.log(propertyName + ': ' + x[propertyName]); " +
                              "                                   } " +
@@ -665,17 +668,17 @@ namespace iLand.tools
 
 
             ScriptObjectFactory factory = new ScriptObjectFactory();
-            QJSValue obj = GlobalSettings.instance().scriptEngine().newQObject(factory);
-            engine.globalObject().setProperty("Factory", obj);
+            QJSValue obj = GlobalSettings.Instance.ScriptEngine.NewQObject(factory);
+            engine.GlobalObject().SetProperty("Factory", obj);
 
             // other object types
-            ClimateConverter.addToScriptEngine(engine);
-            CSVFile.addToScriptEngine(engine);
-            MapGridWrapper.addToScriptEngine(engine);
-            SpatialAnalysis.addToScriptEngine();
+            ClimateConverter.AddToScriptEngine(engine);
+            CsvFile.AddToScriptEngine(engine);
+            MapGridWrapper.AddToScriptEngine(engine);
+            SpatialAnalysis.AddToScriptEngine();
         }
 
-        public int msec() // BUGBUG: naming
+        public int Milliseconds() // BUGBUG: naming
         {
             return (int)(DateTime.Now - DateTime.Today).TotalMilliseconds;
         }

@@ -1,62 +1,72 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace iLand.tools
 {
     internal class QJSEngine
     {
-        public void collectGarbage()
+        private readonly Dictionary<string, QJSValue> properties;
+
+        public QJSEngine()
+        {
+            this.properties = new Dictionary<string, QJSValue>();
+        }
+
+        public void CollectGarbage()
         {
             throw new NotImplementedException();
         }
 
-        public QJSValue evaluate(string command)
+        public QJSValue Evaluate(string command)
         {
             throw new NotImplementedException();
         }
 
-        public QJSValue evaluate(string includeFile, string path)
+        public QJSValue Evaluate(string includeFile, string path)
         {
             throw new NotImplementedException();
         }
 
-        public string executeScript(string command)
+        public string ExecuteScript(string command)
         {
             throw new NotImplementedException();
         }
 
-        public QJSEngine globalObject()
+        public QJSEngine GlobalObject()
+        {
+            return this;
+        }
+
+        public void LoadScript(string fileName)
         {
             throw new NotImplementedException();
         }
 
-        public void loadScript(string fileName)
+        public bool HasProperty(string name)
         {
-            throw new NotImplementedException();
+            return this.properties.ContainsKey(name);
         }
 
-        public bool hasProperty(string name)
+        public QJSValue Property(string name)
         {
-            throw new NotImplementedException();
+            return this.properties[name];
         }
 
-        public QJSValue property(string fileName)
+        public QJSValue NewQObject(object value)
         {
-            throw new NotImplementedException();
+            return new QJSValue(value);
         }
 
-        public QJSValue newQObject(object value)
+        public void SetProperty(string name, object value)
         {
-            throw new NotImplementedException();
-        }
-
-        public void setProperty(string fileName, string path)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void setProperty(string name, object value)
-        {
-            throw new NotImplementedException();
+            if (this.HasProperty(name))
+            {
+                this.properties[name] = new QJSValue(value);
+            }
+            else 
+            {
+                this.properties.Add(name, new QJSValue(value));
+            }
         }
     }
 }

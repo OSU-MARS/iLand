@@ -7,7 +7,7 @@ namespace iLand.tools
 {
     internal class MapGridRULock
     {
-        private Dictionary<ResourceUnit, int> mLockedElements;
+        private readonly Dictionary<ResourceUnit, int> mLockedElements;
 
         public MapGridRULock()
         {
@@ -56,7 +56,6 @@ namespace iLand.tools
 
         public void Unlock(int id)
         {
-            bool found = false;
             lock (mLockedElements)
             {
                 foreach (KeyValuePair<ResourceUnit, int> i in mLockedElements)
@@ -64,11 +63,11 @@ namespace iLand.tools
                     if (i.Value == id)
                     {
                         mLockedElements.Remove(i.Key);
-                        found = true;
-                        break;
+                        return;
                     }
                 }
             }
+            // BUGBUG: what if id couldn't be unlocked?
         }
     }
 }

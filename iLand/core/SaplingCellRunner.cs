@@ -6,45 +6,49 @@ namespace iLand.core
 {
     internal class SaplingCellRunner
     {
-        private MapGrid mStandGrid;
+        private readonly MapGrid mStandGrid;
 
-        private GridRunner<float> mRunner;
-        private ResourceUnit mRU;
-        private int mStandId;
+        private readonly GridRunner<float> mRunner;
+        private readonly int mStandId;
 
-        public ResourceUnit ru() { return mRU; }
+        public ResourceUnit RU { get; private set; }
 
         public SaplingCellRunner(int stand_id, MapGrid stand_grid)
         {
-            mRU = null;
+            RU = null;
             mStandId = stand_id;
-            mStandGrid = stand_grid != null ? stand_grid : GlobalSettings.instance().model().standGrid();
-            RectangleF box = mStandGrid.boundingBox(stand_id);
-            mRunner = new GridRunner<float>(GlobalSettings.instance().model().grid(), box);
+            mStandGrid = stand_grid ?? GlobalSettings.Instance.Model.StandGrid;
+            RectangleF box = mStandGrid.BoundingBox(stand_id);
+            mRunner = new GridRunner<float>(GlobalSettings.Instance.Model.LightGrid, box);
         }
 
-        public SaplingCell next()
+        public PointF CurrentCoordinate()
+        {
+            return mRunner.CurrentCoordinate();
+        }
+
+        public SaplingCell MoveNext()
         {
             if (mRunner == null)
             {
                 return null;
             }
-            for (mRunner.next(); mRunner.isValid(); mRunner.next())
+            for (mRunner.MoveNext(); mRunner.IsValid(); mRunner.MoveNext())
             {
-                float n = mRunner.current();
+                float n = mRunner.Current;
                 if (n == 0.0F)
                 {
                     return null; // end of the bounding box
                 }
-                if (mStandGrid.standIDFromLIFCoord(mRunner.currentIndex()) != mStandId)
+                if (mStandGrid.StandIDFromLifCoord(mRunner.CurrentIndex()) != mStandId)
                 {
                     continue; // pixel does not belong to the target stand
                 }
-                mRU = GlobalSettings.instance().model().ru(mRunner.currentCoord());
+                RU = GlobalSettings.Instance.Model.GetResourceUnit(mRunner.CurrentCoordinate());
                 SaplingCell sc = null;
-                if (mRU != null)
+                if (RU != null)
                 {
-                    sc = mRU.saplingCell(mRunner.currentIndex());
+                    sc = RU.SaplingCell(mRunner.CurrentIndex());
                 }
                 if (sc != null)
                 {
@@ -54,11 +58,6 @@ namespace iLand.core
                 return null; // TODO: is this correct?
             }
             return null;
-        }
-
-        public PointF currentCoord()
-        {
-            return mRunner.currentCoord();
         }
     }
 }

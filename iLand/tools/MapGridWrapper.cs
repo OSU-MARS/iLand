@@ -7,115 +7,108 @@ namespace iLand.tools
 {
     internal class MapGridWrapper
     {
-        private MapGrid mMap;
         private bool mCreated;
-        private object scriptOutput = null;
 
-        public MapGrid map() { return mMap; } ///< acccess for C++ classes
+        public MapGrid Map { get; private set; } ///< acccess for C++ classes
 
-        public static void addToScriptEngine(QJSEngine engine)
+        public static void AddToScriptEngine(QJSEngine engine)
         {
             // about this kind of scripting magic see: http://qt.nokia.com/developer/faqs/faq.2007-06-25.9557303148
             //QJSValue cc_class = engine.scriptValueFromQMetaObject<MapGridWrapper>();
             // the script name for the object is "Map".
             // TODO: solution for creating objects!!!
             MapGridWrapper mgw = new MapGridWrapper();
-            QJSValue mgw_cls = engine.newQObject(mgw);
-            engine.globalObject().setProperty("Map", mgw_cls);
+            QJSValue mgw_cls = engine.NewQObject(mgw);
+            engine.GlobalObject().SetProperty("Map", mgw_cls);
         }
 
-        public MapGridWrapper(object parent = null)
+        public MapGridWrapper()
         {
             mCreated = false;
-            if (GlobalSettings.instance().model() == null)
+            if (GlobalSettings.Instance.Model == null)
             {
                 return;
             }
-            mMap = GlobalSettings.instance().model().standGrid();
+            Map = GlobalSettings.Instance.Model.StandGrid;
         }
 
-        public void load(string file_name)
+        public void Load(string file_name)
         {
-            mMap = new MapGrid(file_name);
+            Map = new MapGrid(file_name);
             mCreated = true;
         }
 
-        public bool isValid()
+        public bool IsValid()
         {
-            return mMap.isValid();
+            return Map.IsValid();
         }
 
-        public void saveAsImage(string file)
-        {
-            Debug.WriteLine("not implemented"); // BUGBUG
-        }
-
-        public void paint(double min_value, double max_value)
+        public void Paint(double min_value, double max_value)
         {
             //gridToImage(mMap.grid(), false, min_value, max_value).save(file_name);
-            if (mMap != null)
+            if (Map != null)
             {
-                if (GlobalSettings.instance().controller() != null)
+                if (GlobalSettings.Instance.ModelController != null)
                 {
-                    GlobalSettings.instance().controller().paintMap(mMap, min_value, max_value);
+                    GlobalSettings.Instance.ModelController.PaintMap(Map, min_value, max_value);
                 }
             }
         }
 
-        public void clear()
+        public void Clear()
         {
             if (!mCreated)
             {
                 // create a empty map
-                mMap = new MapGrid();
-                mMap.createEmptyGrid();
+                Map = new MapGrid();
+                Map.CreateEmptyGrid();
                 mCreated = true;
             }
-            mMap.grid().initialize(0); // clear all data and set to 0
+            Map.Grid.Initialize(0); // clear all data and set to 0
         }
 
-        public void clearProjectArea()
+        public void ClearProjectArea()
         {
             if (!mCreated)
             {
                 // create a empty map
-                mMap = new MapGrid();
-                mMap.createEmptyGrid();
+                Map = new MapGrid();
+                Map.CreateEmptyGrid();
                 mCreated = true;
             }
-            MapGrid stand_grid = GlobalSettings.instance().model().standGrid();
+            MapGrid stand_grid = GlobalSettings.Instance.Model.StandGrid;
             if (stand_grid == null)
             {
                 Debug.WriteLine("clearProjectArea: no valid stand grid to copy from!");
                 return;
             }
-            for (int index = 0; index < stand_grid.grid().count(); ++index)
+            for (int index = 0; index < stand_grid.Grid.Count; ++index)
             {
-                mMap.grid()[index] = stand_grid.grid()[index] < 0 ? stand_grid.grid()[index] : 0;
+                Map.Grid[index] = stand_grid.Grid[index] < 0 ? stand_grid.Grid[index] : 0;
             }
         }
 
-        public void createStand(int stand_id, string paint_function, bool wrap_around)
+        public void CreateStand(int stand_id, string paint_function, bool wrap_around)
         {
-            if (mMap == null)
+            if (Map == null)
             {
                 throw new NotSupportedException("no valid map to paint on");
             }
             Expression expr = new Expression(paint_function);
-            expr.setCatchExceptions(true);
-            double x_var = expr.addVar("x");
-            double y_var = expr.addVar("y");
+            expr.AddVariable("x");
+            expr.AddVariable("y");
+            expr.CatchExceptions = true;
             if (!wrap_around)
             {
                 // now loop over all cells ...
-                for (int p = 0; p < mMap.grid().count(); ++p)
+                for (int p = 0; p < Map.Grid.Count; ++p)
                 {
-                    Point pt = mMap.grid().indexOf(p);
-                    PointF ptf = mMap.grid().cellCenterPoint(pt);
+                    Point pt = Map.Grid.IndexOf(p);
+                    PointF ptf = Map.Grid.GetCellCenterPoint(pt);
                     // set the variable values and evaluate the expression
-                    x_var = ptf.X;
-                    y_var = ptf.Y;
-                    if (expr.execute() != 0)
+                    expr.SetVariable("x", ptf.X);
+                    expr.SetVariable("y", ptf.Y);
+                    if (expr.Execute() != 0)
                     {
                         p = stand_id;
                     }
@@ -125,12 +118,12 @@ namespace iLand.tools
             {
                 // WRAP AROUND MODE
                 // now loop over all cells ...
-                double delta_x = GlobalSettings.instance().model().extent().Width;
-                double delta_y = GlobalSettings.instance().model().extent().Height;
-                for (int p = 0; p != mMap.grid().count(); ++p)
+                double delta_x = GlobalSettings.Instance.Model.PhysicalExtent.Width;
+                double delta_y = GlobalSettings.Instance.Model.PhysicalExtent.Height;
+                for (int p = 0; p != Map.Grid.Count; ++p)
                 {
-                    Point pt = mMap.grid().indexOf(p);
-                    PointF ptf = mMap.grid().cellCenterPoint(pt);
+                    Point pt = Map.Grid.IndexOf(p);
+                    PointF ptf = Map.Grid.GetCellCenterPoint(pt);
                     if (ptf.X < 0.0 || ptf.X > delta_x || ptf.Y < 0.0 || ptf.Y > delta_y)
                     {
                         continue;
@@ -141,9 +134,9 @@ namespace iLand.tools
                     {
                         for (int dy = -1; dy < 2; ++dy)
                         {
-                            x_var = ptf.X + dx * delta_x;
-                            y_var = ptf.Y + dy * delta_y;
-                            if (expr.execute() != 0)
+                            expr.SetVariable("x", ptf.X + dx * delta_x);
+                            expr.SetVariable("y", ptf.Y + dy * delta_y);
+                            if (expr.Execute() != 0)
                             {
                                 p = stand_id;
                             }
@@ -152,19 +145,19 @@ namespace iLand.tools
                 }
             }
             // after changing the map, recreate the index
-            mMap.createIndex();
+            Map.CreateIndex();
         }
 
-        public double copyPolygonFromRect(MapGridWrapper source, int id_in, int id, double destx, double desty, double x1, double y1, double x2, double y2)
+        public double CopyPolygonFromRect(MapGridWrapper source, int id_in, int id, double destx, double desty, double x1, double y1, double x2, double y2)
         {
-            Grid<int> src = source.map().grid();
-            Grid<int> dest = mMap.grid();
-            Rectangle destRectangle = dest.rectangle();
+            Grid<int> src = source.Map.Grid;
+            Grid<int> dest = this.Map.Grid;
+            Rectangle destRectangle = dest.Size();
             Rectangle r = new Rectangle(destRectangle.X, destRectangle.Y, destRectangle.Width, destRectangle.Height);
-            Point rsize = dest.indexAt(new PointF((float)(destx + (x2 - x1)), (float)(desty + (y2 - y1))));
-            r.Intersect(new Rectangle(dest.indexAt(new PointF((float)destx, (float)desty)), new Size(rsize)));
-            Point dest_coord = dest.indexAt(new PointF((float)destx, (float)desty));
-            Point offset = dest.indexAt(new PointF((float)x1, (float)y1));
+            Point rsize = dest.IndexAt(new PointF((float)(destx + (x2 - x1)), (float)(desty + (y2 - y1))));
+            r.Intersect(new Rectangle(dest.IndexAt(new PointF((float)destx, (float)desty)), new Size(rsize)));
+            Point dest_coord = dest.IndexAt(new PointF((float)destx, (float)desty));
+            Point offset = dest.IndexAt(new PointF((float)x1, (float)y1));
             offset.X -= dest_coord.X;
             offset.Y -= dest_coord.Y;
             Debug.WriteLine("Rectangle " + r + " offset " + offset + " from " + new PointF((float)x1, (float)y1) + " to " + new PointF((float)destx, (float)desty));
@@ -175,16 +168,16 @@ namespace iLand.tools
 
             GridRunner<int> gr = new GridRunner<int>(dest, r);
             int i = 0, j = 0;
-            for (gr.next(); gr.isValid(); gr.next())
+            for (gr.MoveNext(); gr.IsValid(); gr.MoveNext())
             {
                 //if (gr.current()>=0) {
-                Point dp = gr.currentIndex();
+                Point dp = gr.CurrentIndex();
                 dp.X += offset.X;
                 dp.Y += offset.Y;
                 i++;
-                if (src.isIndexValid(dp) && src.constValueAtIndex(dp) == id_in && gr.current() >= 0)
+                if (src.Contains(dp) && src[dp] == id_in && gr.Current >= 0)
                 {
-                    gr.setCurrent(id);
+                    gr.Current = id;
                     //if (j<100) Debug.WriteLine(dp + gr.currentIndex() + src.constValueAtIndex(dp) + *gr.current();
                     ++j;
                 }
@@ -197,19 +190,19 @@ namespace iLand.tools
             return (double)j / 100.0; // in ha
         }
 
-        public void createMapIndex()
+        public void CreateMapIndex()
         {
-            if (mMap != null)
+            if (Map != null)
             {
-                mMap.createIndex();
+                Map.CreateIndex();
             }
         }
 
-        public string name()
+        public string Name()
         {
-            if (mMap != null)
+            if (Map != null)
             {
-                return mMap.name();
+                return Map.Name;
             }
             else
             {
@@ -217,11 +210,11 @@ namespace iLand.tools
             }
         }
 
-        public double area(int id)
+        public double Area(int id)
         {
-            if (mMap != null && mMap.isValid())
+            if (Map != null && Map.IsValid())
             {
-                return mMap.area(id);
+                return Map.Area(id);
             }
             else
             {

@@ -7,39 +7,40 @@ namespace iLand.abe
 {
     internal class Constraints
     {
-        private List<DynamicExpression> mConstraints;
+        private readonly List<DynamicExpression> mConstraints;
 
         public Constraints()
         {
+            this.mConstraints = new List<DynamicExpression>();
         }
 
-        public void setup(QJSValue js_value)
+        public void Setup(QJSValue js_value)
         {
             mConstraints.Clear();
-            if ((js_value.isArray() || js_value.isObject()) && !js_value.isCallable())
+            if ((js_value.IsArray() || js_value.IsObject()) && !js_value.IsCallable())
             {
                 QJSValueIterator it = new QJSValueIterator(js_value);
-                while (it.hasNext())
+                while (it.HasNext())
                 {
-                    it.next();
-                    if (it.name() == "length")
+                    it.Next();
+                    if (it.Name() == "length")
                     {
                         continue;
                     }
                     DynamicExpression expression = new DynamicExpression();
-                    expression.setup(it.value());
+                    expression.Setup(it.Value());
                     mConstraints.Add(expression);
                 }
             }
             else
             {
                 DynamicExpression expression = new DynamicExpression();
-                expression.setup(js_value);
+                expression.Setup(js_value);
                 mConstraints.Add(expression);
             }
         }
 
-        public double evaluate(FMStand stand)
+        public double Evaluate(FMStand stand)
         {
             if (mConstraints.Count == 0)
             {
@@ -49,12 +50,12 @@ namespace iLand.abe
             double p_min = 1;
             for (int i = 0; i < mConstraints.Count; ++i)
             {
-                double p = mConstraints[i].evaluate(stand) ? 1.0 : 0.0;
+                double p = mConstraints[i].Evaluate(stand) ? 1.0 : 0.0;
                 if (p == 0.0)
                 {
-                    if (stand.trace())
+                    if (stand.TracingEnabled())
                     {
-                        Debug.WriteLine(stand.context() + " constraint " + mConstraints[i].dump() + " did not pass.");
+                        Debug.WriteLine(stand.context() + " constraint " + mConstraints[i].Dump() + " did not pass.");
                     }
                     return 0.0; // one constraint failed
                 }
@@ -67,12 +68,12 @@ namespace iLand.abe
             return p_min; // all constraints passed, return the lowest returned value...
         }
 
-        public List<string> dump()
+        public List<string> Dump()
         {
             List<string> info = new List<string>();
             for (int i = 0; i < mConstraints.Count; ++i)
             {
-                info.Add(String.Format("constraint: {0}", mConstraints[i].dump()));
+                info.Add(String.Format("constraint: {0}", mConstraints[i].Dump()));
             }
             return info;
         }

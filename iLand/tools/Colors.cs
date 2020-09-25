@@ -7,176 +7,163 @@ namespace iLand.tools
 {
     internal class Colors
     {
-        private List<Color> mBrewerDiv = new List<Color>() { ColorTranslator.FromHtml("#543005"), ColorTranslator.FromHtml("#8c510a"), ColorTranslator.FromHtml("#bf812d"), ColorTranslator.FromHtml("#dfc27d"),
-                                                             ColorTranslator.FromHtml("#f6e8c3"), ColorTranslator.FromHtml("#f5f5f5"), ColorTranslator.FromHtml("#fdbf6f"), ColorTranslator.FromHtml("##c7eae5"),
-                                                             ColorTranslator.FromHtml("#80cdc1"), ColorTranslator.FromHtml("#35978f"), ColorTranslator.FromHtml("#01665e"), ColorTranslator.FromHtml("#003c30") };
-        private List<Color> mBrewerQual = new List<Color>() { ColorTranslator.FromHtml("#a6cee3"), ColorTranslator.FromHtml("#1f78b4"), ColorTranslator.FromHtml("#b2df8a"), ColorTranslator.FromHtml("#33a02c"),
-                                                              ColorTranslator.FromHtml("#fb9a99"), ColorTranslator.FromHtml("#e31a1c"), ColorTranslator.FromHtml("#fdbf6f"), ColorTranslator.FromHtml("#ff7f00"),
-                                                              ColorTranslator.FromHtml("#cab2d6"), ColorTranslator.FromHtml("#6a3d9a"), ColorTranslator.FromHtml("#ffff99"), ColorTranslator.FromHtml("#b15928") };
-        private List<Color> mTerrainCol = new List<Color>() { ColorTranslator.FromHtml("#00A600"), ColorTranslator.FromHtml("#24B300"), ColorTranslator.FromHtml("#4CBF00"), ColorTranslator.FromHtml("#7ACC00"),
-                                                              ColorTranslator.FromHtml("#ADD900"), ColorTranslator.FromHtml("#E6E600"), ColorTranslator.FromHtml("#E8C727"), ColorTranslator.FromHtml("#EAB64E"),
-                                                              ColorTranslator.FromHtml("#ECB176"), ColorTranslator.FromHtml("#EEB99F"), ColorTranslator.FromHtml("#F0CFC8"), ColorTranslator.FromHtml("#F2F2F2") };
+        private static readonly List<Color> mBrewerDiv = new List<Color>() { ColorTranslator.FromHtml("#543005"), ColorTranslator.FromHtml("#8c510a"), ColorTranslator.FromHtml("#bf812d"), ColorTranslator.FromHtml("#dfc27d"),
+                                                                             ColorTranslator.FromHtml("#f6e8c3"), ColorTranslator.FromHtml("#f5f5f5"), ColorTranslator.FromHtml("#fdbf6f"), ColorTranslator.FromHtml("##c7eae5"),
+                                                                             ColorTranslator.FromHtml("#80cdc1"), ColorTranslator.FromHtml("#35978f"), ColorTranslator.FromHtml("#01665e"), ColorTranslator.FromHtml("#003c30") };
+        private static readonly List<Color> mBrewerQual = new List<Color>() { ColorTranslator.FromHtml("#a6cee3"), ColorTranslator.FromHtml("#1f78b4"), ColorTranslator.FromHtml("#b2df8a"), ColorTranslator.FromHtml("#33a02c"),
+                                                                              ColorTranslator.FromHtml("#fb9a99"), ColorTranslator.FromHtml("#e31a1c"), ColorTranslator.FromHtml("#fdbf6f"), ColorTranslator.FromHtml("#ff7f00"),
+                                                                              ColorTranslator.FromHtml("#cab2d6"), ColorTranslator.FromHtml("#6a3d9a"), ColorTranslator.FromHtml("#ffff99"), ColorTranslator.FromHtml("#b15928") };
+        private static readonly List<Color> mTerrainCol = new List<Color>() { ColorTranslator.FromHtml("#00A600"), ColorTranslator.FromHtml("#24B300"), ColorTranslator.FromHtml("#4CBF00"), ColorTranslator.FromHtml("#7ACC00"),
+                                                                              ColorTranslator.FromHtml("#ADD900"), ColorTranslator.FromHtml("#E6E600"), ColorTranslator.FromHtml("#E8C727"), ColorTranslator.FromHtml("#EAB64E"),
+                                                                              ColorTranslator.FromHtml("#ECB176"), ColorTranslator.FromHtml("#EEB99F"), ColorTranslator.FromHtml("#F0CFC8"), ColorTranslator.FromHtml("#F2F2F2") };
         
-        private List<string> mColors;
-        private List<string> mLabels;
-        private List<string> mFactorLabels;
-        private double mMinValue;
-        private double mMaxValue;
         private GridViewType mCurrentType;
-        private bool mAutoScale;
-        private bool mHasFactors;
         private bool mNeedsPaletteUpdate;
-        private string mCaption;
-        private string mDescription;
-        private double mMeterPerPixel;
 
-        // properties
-        public List<string> colors() { return mColors; }
-        public List<string> labels() { return mLabels; }
-        public List<string> factorLabels() { return mFactorLabels; }
-        public int colorCount() { return mColors.Count; }
-        public double minValue() { return mMinValue; }
-        public double maxValue() { return mMaxValue; }
+        public bool AutoScale { get; private set; }
+        public string Caption { get; private set; }
+        public string Description { get; private set; }
+        public bool HasFactors { get; private set; }
+        public List<string> Labels { get; private set; }
+        public List<string> FactorColors { get; set; }
+        public int FactorColorCount() { return this.FactorColors.Count; }
+        public List<string> FactorLabels { get; private set; }
+        public double MetersPerPixel { get; private set; }
+        public double MinValue { get; private set; }
+        public double MaxValue { get; private set; }
 
-        public void setMinValue(double val)
+        public void SetMinValue(double val)
         {
-            if (val == mMinValue)
+            if (val == MinValue)
             {
                 return;
             }
             mNeedsPaletteUpdate = true;
-            setPalette(mCurrentType, (float)val, (float)mMaxValue);
-            mMinValue = val;
+            SetPalette(mCurrentType, (float)val, (float)MaxValue);
+            MinValue = val;
         }
-        public void setMaxValue(double val)
+
+        public void SetMaxValue(double val)
         {
-            if (val == mMaxValue)
+            if (val == MaxValue)
             {
                 return;
             }
             mNeedsPaletteUpdate = true; 
-            setPalette(mCurrentType, (float)mMinValue, (float)val); 
-            mMaxValue = val;
+            SetPalette(mCurrentType, (float)MinValue, (float)val); 
+            MaxValue = val;
         }
 
-        public bool hasFactors() { return mHasFactors; }
-        public bool autoScale() { return mAutoScale; }
-        public void setAutoScale(bool value) 
+        public void SetAutoScale(bool value) 
         {
-            if (value == mAutoScale)
+            if (value == AutoScale)
             {
                 return;
             }
 
-            mAutoScale = value; 
+            AutoScale = value; 
             mNeedsPaletteUpdate = true; 
-            setPalette(mCurrentType, (float)mMinValue, (float)mMaxValue); 
+            SetPalette(mCurrentType, (float)MinValue, (float)MaxValue); 
         }
 
-        public string caption() { return mCaption; }
-        public string description() { return mDescription; }
+        public event Action OnColorsChanged;
+        public event Action OnScaleChanged;
 
-        public void setFactorColors(List<string> colors) { mColors = colors; }
-
-        public event Action colorsChanged;
-        public event Action scaleChanged;
-
-        public void setCaption(string caption, string description = "")
+        public void SetCaptionAndDescription(string caption, string description = "")
         {
-            if (mCaption == caption && mDescription == description)
+            if (Caption == caption && Description == description)
             {
                 return;
             }
-            mCaption = caption;
-            mDescription = description; 
+            Caption = caption;
+            Description = description; 
             mNeedsPaletteUpdate = true;
         }
 
         // scale
-        public double meterPerPixel() { return mMeterPerPixel; }
-        public void setScale(double meter_per_pixel)
+        public void SetScale(double meter_per_pixel)
         {
-            if (mMeterPerPixel == meter_per_pixel)
+            if (MetersPerPixel == meter_per_pixel)
             {
                 return;
             }
-            mMeterPerPixel = meter_per_pixel;
-            scaleChanged();
+            MetersPerPixel = meter_per_pixel;
+            OnScaleChanged();
         }
 
-        public void setPalette(GridViewType type, float min_val, float max_val)
+        public void SetPalette(GridViewType type, float min_val, float max_val)
         {
-            if (mNeedsPaletteUpdate == false && type == mCurrentType && (mAutoScale == false || (minValue() == min_val && maxValue() == max_val)))
+            if (mNeedsPaletteUpdate == false && type == mCurrentType && (AutoScale == false || (MinValue == min_val && MaxValue == max_val)))
             {
                 return;
             }
 
-            mHasFactors = false;
+            HasFactors = false;
             int n = 50;
             if (type >= GridViewType.GridViewBrewerDiv)
             {
                 // categorical values...
-                mHasFactors = true;
-                n = mFactorLabels.Count;
-                if (mFactorLabels.Count == 0)
+                HasFactors = true;
+                n = FactorLabels.Count;
+                if (FactorLabels.Count == 0)
                 {
                     n = (int)max_val;
                     for (int i = 0; i < n; ++i)
                     {
-                        mFactorLabels.Add("Label " + i);
+                        FactorLabels.Add("Label " + i);
                     }
                 }
             }
             if (type != GridViewType.GridViewCustom)
             {
-                mColors.Clear();
+                FactorColors.Clear();
                 for (int i = 0; i < n; ++i)
                 {
-                    if (mHasFactors)
+                    if (HasFactors)
                     {
-                        mColors.Add(colorFromValue(i, type, 0.0F, 1.0F).ToString());
+                        FactorColors.Add(ColorFromValue(i, type, 0.0F, 1.0F).ToString());
                     }
                     else
                     {
-                        mColors.Add(colorFromValue(1.0F - i / (float)n, type, 0.0F, 1.0F).ToString());
+                        FactorColors.Add(ColorFromValue(1.0F - i / (float)n, type, 0.0F, 1.0F).ToString());
                     }
                 }
             }
-            mLabels = new List<string>() { min_val.ToString(),
+            Labels = new List<string>() { min_val.ToString(),
                                            ((3.0 * min_val + max_val) / 4.0).ToString(),
                                            ((min_val + max_val) / 2.0).ToString(),
                                            ((min_val + 3.0 * max_val) / 4.0).ToString(),
                                            max_val.ToString() };
-            if (mAutoScale)
+            if (AutoScale)
             {
-                mMinValue = min_val;
-                mMaxValue = max_val;
+                MinValue = min_val;
+                MaxValue = max_val;
             }
             mCurrentType = type;
             mNeedsPaletteUpdate = false;
-            colorsChanged();
+            OnColorsChanged();
         }
 
-        public void setFactorLabels(List<string> labels)
+        public void SetFactorLabels(List<string> labels)
         {
-            mFactorLabels = labels;
+            FactorLabels = labels;
             mNeedsPaletteUpdate = true;
         }
 
-        public Colors(object parent)
+        public Colors()
         {
             mNeedsPaletteUpdate = true;
-            mAutoScale = true;
-            mHasFactors = false;
-            mMeterPerPixel = 1.0;
+            AutoScale = true;
+            HasFactors = false;
+            MetersPerPixel = 1.0;
             //default start palette
             //setPalette(GridViewType.GridViewRainbow, 0, 1);
             // factors test
-            setCaption(String.Empty);
-            setPalette(GridViewType.GridViewTerrain, 0, 4);
+            SetCaptionAndDescription(String.Empty);
+            SetPalette(GridViewType.GridViewTerrain, 0, 4);
         }
 
-        public Color colorFromPalette(int value, GridViewType view_type)
+        public Color ColorFromPalette(int value, GridViewType view_type)
         {
             if (value < 0)
             {
@@ -222,14 +209,14 @@ namespace iLand.tools
             return col.Lighter(200);
         }
 
-        public Color shadeColor(Color col, PointF coordinates, DEM dem)
+        public Color ShadeColor(Color col, PointF coordinates, DEM dem)
         {
             if (dem != null)
             {
-                float val = dem.viewGrid().constValueAt(coordinates); // scales from 0..1
+                float val = dem.EnsureViewGrid()[coordinates]; // scales from 0..1
                 col.ToHsv(out double h, out double s, out double v);
                 // we adjust the 'v', the lightness: if val=0.5 -> nothing changes
-                v = Global.limit(v - (1.0 - val) * 0.4, 0.1, 1.0);
+                v = Global.Limit(v - (1.0 - val) * 0.4, 0.1, 1.0);
                 return ColorExtensions.FromHsv(h, s, v);
             }
 
@@ -237,7 +224,7 @@ namespace iLand.tools
         }
 
         // colors
-        public Color colorFromValue(float value, float min_value, float max_value, bool reverse, bool black_white)
+        public Color ColorFromValue(float value, float min_value, float max_value, bool reverse, bool black_white)
         {
             float rval = value;
             rval = Math.Max(min_value, rval);
@@ -269,16 +256,16 @@ namespace iLand.tools
             return col;
         }
 
-        public Color colorFromValue(float value, GridViewType view_type, float min_value, float max_value)
+        public Color ColorFromValue(float value, GridViewType view_type, float min_value, float max_value)
         {
             if (view_type == GridViewType.GridViewGray || view_type == GridViewType.GridViewGrayReverse)
             {
-                return colorFromValue(value, min_value, max_value, view_type == GridViewType.GridViewGrayReverse, true);
+                return ColorFromValue(value, min_value, max_value, view_type == GridViewType.GridViewGrayReverse, true);
             }
 
             if (view_type == GridViewType.GridViewRainbow || view_type == GridViewType.GridViewRainbowReverse)
             {
-                return colorFromValue(value, min_value, max_value, view_type == GridViewType.GridViewRainbowReverse, false);
+                return ColorFromValue(value, min_value, max_value, view_type == GridViewType.GridViewRainbowReverse, false);
             }
 
             if (view_type == GridViewType.GridViewGreens || view_type == GridViewType.GridViewBlues || view_type == GridViewType.GridViewReds)
@@ -330,7 +317,7 @@ namespace iLand.tools
                 return Color.FromArgb(255, g, b);
             }
 
-            return colorFromPalette((int)value, view_type);
+            return ColorFromPalette((int)value, view_type);
         }
     }
 }

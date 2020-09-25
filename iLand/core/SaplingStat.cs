@@ -8,159 +8,147 @@ namespace iLand.core
       */
     internal class SaplingStat
     {
-        public int mAdded; ///< number of tree cohorts added
-        public int mRecruited; ///< number of cohorts recruited (i.e. grown out of regeneration layer)
-        private int mDied; ///< number of tree cohorts died
         private double mSumDbhDied; ///< running sum of dbh of died trees (used to calculate detritus)
-        public int mLiving; ///< number of trees (cohorts!!!) currently in the regeneration layer
-        public double mLivingSaplings; ///< number of individual trees in the regen layer (using Reinekes R), with h>1.3m
-        public double mLivingSmallSaplings; ///< number of individual trees of cohorts < 1.3m height
-        public double mAvgHeight; ///< average height of saplings (m)
-        public double mAvgAge; ///< average age of saplings (years)
-        public double mAvgDeltaHPot; ///< average height increment potential (m)
-        public double mAvgHRealized; ///< average realized height increment
-        private CNPair mCarbonLiving; ///< kg Carbon (kg/ru) of saplings
-        private CNPair mCarbonGain; ///< net growth (kg / ru) of saplings
+
+        public double AverageAge { get; set; } ///< average age of saplings (years)
+        public double AverageDeltaHPot { get; set; } ///< average height increment potential (m)
+        public double AverageDeltaHRealized { get; set; } ///< average realized height increment
+        public double AverageHeight { get; set; } ///< average height of saplings (m)
+        public CNPair CarbonLiving { get; private set; } ///< kg Carbon (kg/ru) of saplings
+        public CNPair CarbonGain { get; private set; } ///< net growth (kg / ru) of saplings
+        public int DeadSaplings { get; private set; } ///< number of tree cohorts died
+        public int LivingCohorts { get; set; } ///< get the number of cohorts
+        public double LivingSaplings { get; set; } ///< number of individual trees in the regen layer (using Reinekes R), with h>1.3m
+        public double LivingSaplingsSmall { get; set; } ///< number of individual trees of cohorts < 1.3m height
+        public int NewSaplings { get; set; } ///< number of tree cohorts added
+        public int RecruitedSaplings { get; set; } ///< number of cohorts recruited (i.e. grown out of regeneration layer)
 
         public SaplingStat()
         {
-            mCarbonGain = new CNPair();
-            mCarbonLiving = new CNPair();
-            clearStatistics();
+            CarbonGain = new CNPair();
+            CarbonLiving = new CNPair();
+            ClearStatistics();
         }
 
-        // actions
-        public void addCarbonOfDeadSapling(float dbh) { mDied++; mSumDbhDied += dbh; }
+        public void AddCarbonOfDeadSapling(float dbh)
+        { 
+            DeadSaplings++;
+            mSumDbhDied += dbh; 
+        }
 
-        // access to statistics
-        public int newSaplings() { return mAdded; }
-        public int diedSaplings() { return mDied; }
-        public int livingCohorts() { return mLiving; } ///< get the number of cohorts
-        public double livingSaplings() { return mLivingSaplings; }
-        public double livingSaplingsSmall() { return mLivingSmallSaplings; }
-        public int recruitedSaplings() { return mRecruited; }
-
-        public double averageHeight() { return mAvgHeight; }
-        public double averageAge() { return mAvgAge; }
-        public double averageDeltaHPot() { return mAvgDeltaHPot; }
-        public double averageDeltaHRealized() { return mAvgHRealized; }
-        // carbon and nitrogen
-        public CNPair carbonLiving() { return mCarbonLiving; } ///< state of the living
-        public CNPair carbonGain() { return mCarbonGain; } ///< state of the living
-
-        public void clearStatistics()
+        public void ClearStatistics()
         {
-            mRecruited = mDied = mLiving = 0;
-            mLivingSaplings = 0.0;
-            mLivingSmallSaplings = 0.0;
+            RecruitedSaplings = DeadSaplings = LivingCohorts = 0;
+            LivingSaplings = 0.0;
+            LivingSaplingsSmall = 0.0;
             mSumDbhDied = 0.0;
-            mAvgHeight = 0.0;
-            mAvgAge = 0.0;
-            mAvgDeltaHPot = mAvgHRealized = 0.0;
-            mAdded = 0;
+            AverageHeight = 0.0;
+            AverageAge = 0.0;
+            AverageDeltaHPot = AverageDeltaHRealized = 0.0;
+            NewSaplings = 0;
         }
 
-        public void calculate(Species species, ResourceUnit ru)
+        public void Calculate(Species species, ResourceUnit ru)
         {
-            if (mLiving != 0)
+            if (LivingCohorts != 0)
             {
-                mAvgHeight /= (double)mLiving;
-                mAvgAge /= (double)mLiving;
-                mAvgDeltaHPot /= (double)mLiving;
-                mAvgHRealized /= (double)mLiving;
+                AverageHeight /= (double)LivingCohorts;
+                AverageAge /= (double)LivingCohorts;
+                AverageDeltaHPot /= (double)LivingCohorts;
+                AverageDeltaHRealized /= (double)LivingCohorts;
             }
-            if (GlobalSettings.instance().currentYear() == 0)
+            if (GlobalSettings.Instance.CurrentYear == 0)
             {
                 return; // no need for carbon flows in initial run
             }
 
             // calculate carbon balance
-            CNPair old_state = mCarbonLiving;
-            mCarbonLiving.clear();
+            CNPair old_state = CarbonLiving;
+            CarbonLiving.Clear();
 
             CNPair dead_wood = new CNPair(); // pools for mortality
             CNPair dead_fine = new CNPair();
             // average dbh
-            if (mLiving > 0)
+            if (LivingCohorts > 0)
             {
                 // calculate the avg dbh and number of stems
-                double avg_dbh = mAvgHeight / species.saplingGrowthParameters().hdSapling * 100.0;
+                double avg_dbh = AverageHeight / species.SaplingGrowthParameters.HdSapling * 100.0;
                 // the number of "real" stems is given by the Reineke formula
-                double n = mLivingSaplings; // total number of saplings (>0.05m)
+                double n = LivingSaplings; // total number of saplings (>0.05m)
 
                 // woody parts: stem, branchse and coarse roots
-                double woody_bm = species.biomassWoody(avg_dbh) + species.biomassBranch(avg_dbh) + species.biomassRoot(avg_dbh);
-                double foliage = species.biomassFoliage(avg_dbh);
-                double fineroot = foliage * species.finerootFoliageRatio();
+                double woody_bm = species.GetBiomassWoody(avg_dbh) + species.GetBiomassBranch(avg_dbh) + species.GetBiomassRoot(avg_dbh);
+                double foliage = species.GetBiomassFoliage(avg_dbh);
+                double fineroot = foliage * species.FinerootFoliageRatio;
 
-                mCarbonLiving.addBiomass(woody_bm * n, species.cnWood());
-                mCarbonLiving.addBiomass(foliage * n, species.cnFoliage());
-                mCarbonLiving.addBiomass(fineroot * n, species.cnFineroot());
+                CarbonLiving.AddBiomass(woody_bm * n, species.CNRatioWood);
+                CarbonLiving.AddBiomass(foliage * n, species.CNRatioFoliage);
+                CarbonLiving.AddBiomass(fineroot * n, species.CNRatioFineroot);
 
-                Debug.WriteLineIf(Double.IsNaN(mCarbonLiving.C), "carbon NaN in calculate (living trees).");
+                Debug.WriteLineIf(Double.IsNaN(CarbonLiving.C), "carbon NaN in calculate (living trees).");
 
                 // turnover
-                if (ru.snag() != null)
+                if (ru.Snags != null)
                 {
-                    ru.snag().addTurnoverLitter(species, foliage * species.turnoverLeaf(), fineroot * species.turnoverRoot());
+                    ru.Snags.AddTurnoverLitter(species, foliage * species.TurnoverLeaf, fineroot * species.TurnoverRoot);
                 }
                 // calculate the "mortality from competition", i.e. carbon that stems from reduction of stem numbers
                 // from Reinekes formula.
                 //
                 if (avg_dbh > 1.0)
                 {
-                    double avg_dbh_before = (mAvgHeight - mAvgHRealized) / species.saplingGrowthParameters().hdSapling * 100.0;
-                    double n_before = mLiving * species.saplingGrowthParameters().representedStemNumber(Math.Max(1.0, avg_dbh_before));
+                    double avg_dbh_before = (AverageHeight - AverageDeltaHRealized) / species.SaplingGrowthParameters.HdSapling * 100.0;
+                    double n_before = LivingCohorts * species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(Math.Max(1.0, avg_dbh_before));
                     if (n < n_before)
                     {
-                        dead_wood.addBiomass(woody_bm * (n_before - n), species.cnWood());
-                        dead_fine.addBiomass(foliage * (n_before - n), species.cnFoliage());
-                        dead_fine.addBiomass(fineroot * (n_before - n), species.cnFineroot());
+                        dead_wood.AddBiomass(woody_bm * (n_before - n), species.CNRatioWood);
+                        dead_fine.AddBiomass(foliage * (n_before - n), species.CNRatioFoliage);
+                        dead_fine.AddBiomass(fineroot * (n_before - n), species.CNRatioFineroot);
                         Debug.WriteLineIf(Double.IsNaN(dead_fine.C), "carbon NaN in calculate (self thinning).");
                     }
                 }
 
             }
-            if (mDied != 0)
+            if (DeadSaplings != 0)
             {
-                double avg_dbh_dead = mSumDbhDied / (double)mDied;
-                double n = mDied * species.saplingGrowthParameters().representedStemNumber(avg_dbh_dead);
+                double avg_dbh_dead = mSumDbhDied / (double)DeadSaplings;
+                double n = DeadSaplings * species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(avg_dbh_dead);
                 // woody parts: stem, branchse and coarse roots
 
-                dead_wood.addBiomass((species.biomassWoody(avg_dbh_dead) + species.biomassBranch(avg_dbh_dead) + species.biomassRoot(avg_dbh_dead)) * n, species.cnWood());
-                double foliage = species.biomassFoliage(avg_dbh_dead) * n;
+                dead_wood.AddBiomass((species.GetBiomassWoody(avg_dbh_dead) + species.GetBiomassBranch(avg_dbh_dead) + species.GetBiomassRoot(avg_dbh_dead)) * n, species.CNRatioWood);
+                double foliage = species.GetBiomassFoliage(avg_dbh_dead) * n;
 
-                dead_fine.addBiomass(foliage, species.cnFoliage());
-                dead_fine.addBiomass(foliage * species.finerootFoliageRatio(), species.cnFineroot());
+                dead_fine.AddBiomass(foliage, species.CNRatioFoliage);
+                dead_fine.AddBiomass(foliage * species.FinerootFoliageRatio, species.CNRatioFineroot);
                 Debug.WriteLineIf(Double.IsNaN(dead_fine.C), "carbon NaN in calculate (died trees).");
             }
-            if (!dead_wood.isEmpty() || !dead_fine.isEmpty())
+            if (!dead_wood.IsEmpty() || !dead_fine.IsEmpty())
             {
-                if (ru.snag() != null)
+                if (ru.Snags != null)
                 {
-                    ru.snag().addToSoil(species, dead_wood, dead_fine);
+                    ru.Snags.AddToSoil(species, dead_wood, dead_fine);
                 }
             }
 
             // calculate net growth:
             // delta of stocks
-            mCarbonGain = mCarbonLiving + dead_fine + dead_wood - old_state;
-            if (mCarbonGain.C < 0)
+            CarbonGain = CarbonLiving + dead_fine + dead_wood - old_state;
+            if (CarbonGain.C < 0)
             {
-                mCarbonGain.clear();
+                CarbonGain.Clear();
             }
 
-            GlobalSettings.instance().systemStatistics().saplingCount += mLiving;
-            GlobalSettings.instance().systemStatistics().newSaplings += mAdded;
+            GlobalSettings.Instance.SystemStatistics.SaplingCount += LivingCohorts;
+            GlobalSettings.Instance.SystemStatistics.NewSaplings += NewSaplings;
         }
 
         ///  returns the *represented* (Reineke's Law) number of trees (N/ha) and the mean dbh/height (cm/m)
-        public double livingStemNumber(Species species, out double rAvgDbh, out double rAvgHeight, out double rAvgAge)
+        public double LivingStemNumber(Species species, out double rAvgDbh, out double rAvgHeight, out double rAvgAge)
         {
-            rAvgHeight = averageHeight();
-            rAvgDbh = rAvgHeight / species.saplingGrowthParameters().hdSapling * 100.0F;
-            rAvgAge = averageAge();
-            double n = species.saplingGrowthParameters().representedStemNumber(rAvgDbh);
+            rAvgHeight = AverageHeight;
+            rAvgDbh = rAvgHeight / species.SaplingGrowthParameters.HdSapling * 100.0F;
+            rAvgAge = AverageAge;
+            double n = species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(rAvgDbh);
             return n;
             // *** old code (sapling.cpp) ***
             //    double total = 0.0;

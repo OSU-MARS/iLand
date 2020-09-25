@@ -6,19 +6,20 @@ namespace iLand.abe
 {
     internal class FOMEWrapper : ExpressionWrapper
     {
-        private static List<string> allVarList;
-        private readonly static List<string> standVarList;
-        private readonly static List<string> siteVarList;
-        private readonly static int siteVarListOffset;
+        private static readonly List<string> allVarList;
+        private static readonly List<string> standVarList;
+        private static readonly List<string> siteVarList;
+        private static readonly int siteVarListOffset;
 
-        private FMStand mStand;
+        private readonly FMStand mStand;
 
         static FOMEWrapper()
         {
-            standVarList = new List<string>() { "basalArea", "age", "absoluteAge", "nspecies", "volume", "dbh", "height",
-                                                "annualIncrement", "elapsed", "topHeight", "area", "year" };
-            siteVarList = new List<string>() { "annualIncrement", "harvestMode", "U" };
-            siteVarListOffset = standVarList.Count; // stand vars start here...
+            FOMEWrapper.allVarList = new List<string>();
+            FOMEWrapper.standVarList = new List<string>() { "basalArea", "age", "absoluteAge", "nspecies", "volume", "dbh", "height",
+                                                            "annualIncrement", "elapsed", "topHeight", "area", "year" };
+            FOMEWrapper.siteVarList = new List<string>() { "annualIncrement", "harvestMode", "U" };
+            FOMEWrapper.siteVarListOffset = standVarList.Count; // stand vars start here...
         }
 
         public FOMEWrapper()
@@ -46,7 +47,7 @@ namespace iLand.abe
             }
         }
 
-        public override List<string> getVariablesList()
+        public override List<string> GetVariablesList()
         {
             if (allVarList.Count == 0)
             {
@@ -55,45 +56,45 @@ namespace iLand.abe
             return allVarList;
         }
 
-        public double value(int variableIndex)
+        public override double Value(int variableIndex)
         {
             // dispatch
             if (variableIndex > siteVarListOffset)
             {
-                return valueSite(variableIndex - siteVarListOffset);
+                return ValueSite(variableIndex - siteVarListOffset);
             }
-            return valueStand(variableIndex);
+            return ValueStand(variableIndex);
         }
 
-        private double valueStand(int variableIndex)
+        private double ValueStand(int variableIndex)
         {
             //"basalArea", "age" , "absoluteAge", "speciesCount", "volume", dbh, height
-            switch (variableIndex)
+            return variableIndex switch
             {
-                case 0: return mStand.basalArea(); // "basalArea"
-                case 1: return mStand.age(); // mean age, "age"
-                case 2: return mStand.absoluteAge(); // years since begin of rotation, "absoluteAge"
-                case 3: return mStand.nspecies(); // species richness, "nspecies"
-                case 4: return mStand.volume(); // total standing volume, m3/ha, "volume"
-                case 5: return mStand.dbh(); // mean dbh
-                case 6: return mStand.height(); // "height" (m)
-                case 7: return mStand.meanAnnualIncrementTotal(); // annual increment (since beginning of the rotation) m3/ha
-                case 8: return ForestManagementEngine.instance().currentYear() - mStand.lastExecution(); // years since last execution of an activity for the stand (yrs)
-                case 9: return mStand.topHeight(); // top height (m)
-                case 10: return mStand.area(); // stand area (ha)
-                case 11: return GlobalSettings.instance().currentYear(); // the current year
-                default: return 0;
-            }
+                0 => mStand.basalArea(),// "basalArea"
+                1 => mStand.age(),// mean age, "age"
+                2 => mStand.AbsoluteAge(),// years since begin of rotation, "absoluteAge"
+                3 => mStand.SpeciesCount(),// species richness, "nspecies"
+                4 => mStand.volume(),// total standing volume, m3/ha, "volume"
+                5 => mStand.dbh(),// mean dbh
+                6 => mStand.height(),// "height" (m)
+                7 => mStand.meanAnnualIncrementTotal(),// annual increment (since beginning of the rotation) m3/ha
+                8 => ForestManagementEngine.instance().currentYear() - mStand.lastExecution(),// years since last execution of an activity for the stand (yrs)
+                9 => mStand.topHeight(),// top height (m)
+                10 => mStand.area(),// stand area (ha)
+                11 => GlobalSettings.Instance.CurrentYear,// the current year
+                _ => 0,
+            };
         }
 
-        private double valueSite(int variableIndex)
+        private double ValueSite(int variableIndex)
         {
-            switch (variableIndex)
+            return variableIndex switch
             {
-                case 0: return mStand.unit().annualIncrement(); // annualIncrement
-                case 2: return mStand.U(); // just testing
-                default: return 0;
-            }
+                0 => mStand.unit().annualIncrement(),// annualIncrement
+                2 => mStand.U(),// just testing
+                _ => 0,
+            };
         }
     }
 }

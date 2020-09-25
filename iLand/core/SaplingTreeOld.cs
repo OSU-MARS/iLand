@@ -4,37 +4,38 @@ using System.Drawing;
 
 namespace iLand.core
 {
+    // TODO: consolidate into SaplingTree
     internal class SaplingTreeOld
     {
-        public struct AgeStressYears
+        public class AgeStressYears
         {
-            public UInt16 age;  // number of consectuive years the sapling suffers from dire conditions
-            public UInt16 stress_years; // (upper 16bits) + age of sapling (lower 16 bits)
+            public UInt16 Age { get; set; }  // number of consectuive years the sapling suffers from dire conditions
+            public UInt16 StressYears { get; set; } // (upper 16bits) + age of sapling (lower 16 bits)
         }
 
-        public AgeStressYears age;
-        public float height; // height of the sapling in meter
-        public int pixel; // pointer to the lifpixel the sapling lives on, set to 0 if sapling died/removed
+        public AgeStressYears Age { get; private set; }
+        public float Height { get; set; } // height of the sapling in meter
+        public int LightPixel { get; set; } // pointer to the lifpixel the sapling lives on, set to 0 if sapling died/removed
 
         public SaplingTreeOld()
         {
-            age = new AgeStressYears()
+            Age = new AgeStressYears()
             {
-                age = 0,
-                stress_years = 0
+                Age = 0,
+                StressYears = 0
             };
-            pixel = -1;
-            height = 0.05F;
+            LightPixel = -1;
+            Height = 0.05F;
         }
 
-        public Point coords()
+        public Point Coordinate()
         {
-            return GlobalSettings.instance().model().grid().indexOf(pixel);
+            return GlobalSettings.Instance.Model.LightGrid.IndexOf(LightPixel);
         }
 
-        public bool isValid()
+        public bool IsValid()
         {
-            return pixel != -1;
+            return LightPixel != -1;
         }
     }
 }

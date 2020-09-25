@@ -2,10 +2,10 @@
 {
     internal class SimulationObj
     {
-        public SimulationObj(object parent = null)
+        public double TimberPriceIndex() { return 1.010101; }
+
+        public SimulationObj()
         {
         }
-
-        public double timberPriceIndex() { return 1.010101; }
     }
 }

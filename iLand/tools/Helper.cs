@@ -11,67 +11,37 @@ namespace iLand.tools
       */
     internal class Helper
     {
-        private static bool m_quiet = true;
-        private static bool m_NoDebug = false;
-
-        public Helper()
-        {
-        }
-
-        public static string currentRevision()
+        public static string CurrentRevision()
         {
             return typeof(Helper).Assembly.GetName().Version.ToString(); //.section(" ",1,1);
         }
 
-        public static string loadTextFile(string fileName)
+        public static string LoadTextFile(string fileName)
         {
             return File.ReadAllText(fileName);
         }
 
-        public static void saveToTextFile(string fileName, string text)
+        public static void SaveToTextFile(string fileName, string text)
         {
             File.WriteAllText(fileName, text);
         }
 
-        public static byte[] loadFile(string fileName)
+        public static byte[] LoadFile(string fileName)
         {
             return File.ReadAllBytes(fileName);
         }
 
-        public static void saveToFile(string fileName, byte[] data)
+        public static void SaveToFile(string fileName, byte[] data)
         {
             File.WriteAllBytes(fileName, data);
         }
 
-        /// ask the user for a input value
-        public static string userValue(string message, string defaultValue, object parent = null)
+        public static void Message(string message)
         {
-            return "not availabile in non-gui-mode";
+            throw new NotImplementedException();
         }
 
-        public static void msg(string message, object parent = null)
-        {
-            // no op
-        }
-
-        public static bool question(string message, object parent = null)
-        {
-            // no op
-            return false;
-        }
-
-        public static string fileDialog(string title, string start_directory, string filter, object parent = null)
-        {
-            string fileName = "undefined";
-            return fileName;
-        }
-
-        public static void openHelp(string topic)
-        {
-            // no op
-        }
-
-        public static string stripHtml(string source)
+        public static string StripHtml(string source)
         {
             string str = String.Join(' ', source.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries));
             return Regex.Replace(str, "<[^>]+>", "");

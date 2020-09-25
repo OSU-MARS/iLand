@@ -17,11 +17,11 @@ namespace iLand.abe
 
         public Schedule(QJSValue js_value)
         {
-            clear();
-            setup(js_value);
+            Clear();
+            Setup(js_value);
         }
 
-        public void clear()
+        public void Clear()
         {
             tmin = tmax = topt = -1;
             tminrel = tmaxrel = toptrel = -1.0;
@@ -31,22 +31,22 @@ namespace iLand.abe
             absolute = false;
         }
 
-        public void setup(QJSValue js_value)
+        public void Setup(QJSValue js_value)
         {
-            clear();
-            if (js_value.isObject())
+            Clear();
+            if (js_value.IsObject())
             {
-                tmin = FMSTP.valueFromJs(js_value, "min", "-1").toInt();
-                tmax = FMSTP.valueFromJs(js_value, "max", "-1").toInt();
-                topt = FMSTP.valueFromJs(js_value, "opt", "-1").toInt();
-                tminrel = FMSTP.valueFromJs(js_value, "minRel", "-1").toNumber();
-                tmaxrel = FMSTP.valueFromJs(js_value, "maxRel", "-1").toNumber();
-                toptrel = FMSTP.valueFromJs(js_value, "optRel", "-1").toNumber();
-                repeat_interval = FMSTP.valueFromJs(js_value, "repeatInterval", "1").toInt();
+                tmin = FMSTP.ValueFromJS(js_value, "min", "-1").ToInt();
+                tmax = FMSTP.ValueFromJS(js_value, "max", "-1").ToInt();
+                topt = FMSTP.ValueFromJS(js_value, "opt", "-1").ToInt();
+                tminrel = FMSTP.ValueFromJS(js_value, "minRel", "-1").ToNumber();
+                tmaxrel = FMSTP.ValueFromJS(js_value, "maxRel", "-1").ToNumber();
+                toptrel = FMSTP.ValueFromJS(js_value, "optRel", "-1").ToNumber();
+                repeat_interval = FMSTP.ValueFromJS(js_value, "repeatInterval", "1").ToInt();
                 // switches
-                force_execution = FMSTP.boolValueFromJs(js_value, "force", false);
-                repeat = FMSTP.boolValueFromJs(js_value, "repeat", false);
-                absolute = FMSTP.boolValueFromJs(js_value, "absolute", false);
+                force_execution = FMSTP.BoolValueFromJS(js_value, "force", false);
+                repeat = FMSTP.BoolValueFromJS(js_value, "repeat", false);
+                absolute = FMSTP.BoolValueFromJS(js_value, "absolute", false);
                 if (!repeat)
                 {
                     if (tmin > -1 && tmax > -1 && topt == -1)
@@ -73,9 +73,9 @@ namespace iLand.abe
                 }
 
             }
-            else if (js_value.isNumber())
+            else if (js_value.IsNumber())
             {
-                topt = (int)js_value.toNumber();
+                topt = (int)js_value.ToNumber();
             }
             else
             {
@@ -83,7 +83,7 @@ namespace iLand.abe
             }
         }
 
-        public string dump()
+        public string Dump()
         {
             if (repeat)
             {
@@ -96,7 +96,7 @@ namespace iLand.abe
             }
         }
 
-        public double value(FMStand stand, int specific_year)
+        public double Value(FMStand stand, int specific_year)
         {
             double U = stand.U();
             double current;
@@ -106,7 +106,7 @@ namespace iLand.abe
                 current_year = specific_year;
             }
             // absolute age: years since the start of the rotation
-            current = stand.absoluteAge();
+            current = stand.AbsoluteAge();
 
             if (absolute)
             {
@@ -222,11 +222,11 @@ namespace iLand.abe
                 return 0.0;
             }
 
-            Debug.WriteLine("value: unexpected combination. U " + U + " age " + current + ", schedule:" + this.dump());
+            Debug.WriteLine("value: unexpected combination. U " + U + " age " + current + ", schedule:" + this.Dump());
             return 0.0;
         }
 
-        public double minValue(double U)
+        public double MinValue(double U)
         {
             if (absolute) return tmin;
             if (repeat) return 100000000.0;
@@ -237,7 +237,7 @@ namespace iLand.abe
             return toptrel * U;
         }
 
-        public double maxValue(double U)
+        public double MaxValue(double U)
         {
             if (absolute) return tmax;
             if (tmax > -1) return tmax;
@@ -247,7 +247,7 @@ namespace iLand.abe
             return toptrel * U;
         }
 
-        public double optimalValue(double U)
+        public double OptimalValue(double U)
         {
             if (topt > -1) return topt;
             if (toptrel > -1) return toptrel * U;

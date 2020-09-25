@@ -6,147 +6,142 @@ namespace iLand.tools
     // a new set of numbers is generated for every 5*500000 = 2.500.000 numbers
     internal class RandomGenerator
     {
-        private const int RANDOMGENERATORSIZE = 500000;
-        private const int RANDOMGENERATORROTATIONS = 0;
+        private const int RandomGeneratorSize = 500000;
+        private const int RandomGeneratorRotations = 0;
 
-        private static int[] mBuffer = new int[RANDOMGENERATORSIZE + 5];
+        private static readonly int[] mBuffer = new int[RandomGeneratorSize + 5];
         private static int mIndex = 0;
-        private static int mRotationCount = RANDOMGENERATORROTATIONS + 1;
+        private static int mRotationCount = RandomGeneratorRotations + 1;
         private static int mRefillCounter = 0;
-        private static ERandomGenerators mGeneratorType = ERandomGenerators.ergFastRandom;
+        private static RandomGenerators mGeneratorType = RandomGenerators.Fast;
 
-        public enum ERandomGenerators
+        public enum RandomGenerators
         {
-            ergMersenneTwister,
-            ergWellRNG512,
-            ergXORShift96,
-            ergFastRandom
+            MersenneTwister,
+            WellRng512,
+            XorShift96,
+            Fast
         }
 
         public RandomGenerator()
         {
-            seed(0);
-            setGeneratorType(ERandomGenerators.ergMersenneTwister);
-        }
-
-        private static int next()
-        {
-            ++mIndex;
-            if (mIndex > RANDOMGENERATORSIZE)
-            {
-                mRotationCount++;
-                mIndex = 0;
-                checkGenerator();
-            }
-            return mBuffer[mIndex];
+            Seed(0);
+            SetGeneratorType(RandomGenerators.MersenneTwister);
         }
 
         /// set the type of the random generator that should be used.
-        public static void setGeneratorType(ERandomGenerators gen)
+        public static void SetGeneratorType(RandomGenerators gen)
         {
             mGeneratorType = gen;
-            mRotationCount = RANDOMGENERATORROTATIONS + 1;
+            mRotationCount = RandomGeneratorRotations + 1;
             mIndex = 0;
             mRefillCounter = 0;
         }
 
-        public static void debugState(out int rIndex, out int rGeneration, out int rRefillCount)
+        public static void DebugState(out int rIndex, out int rGeneration, out int rRefillCount)
         {
             rIndex = mIndex;
             rGeneration = mRotationCount;
             rRefillCount = mRefillCounter;
         }
 
-        public static int debugNRandomNumbers()
+        public static int DebugNRandomNumbers()
         {
-            return mIndex + RANDOMGENERATORSIZE * mRotationCount + (RANDOMGENERATORROTATIONS + 1) * RANDOMGENERATORSIZE * mRefillCounter;
+            return mIndex + RandomGeneratorSize * mRotationCount + (RandomGeneratorRotations + 1) * RandomGeneratorSize * mRefillCounter;
         }
 
         /// call this function to check if we need to create new random numbers.
         /// this function is not reentrant! (e.g. call every year in the model)
-        public static void checkGenerator()
+        public static void CheckGenerator()
         {
-            if (mRotationCount > RANDOMGENERATORROTATIONS)
+            if (mRotationCount > RandomGeneratorRotations)
             {
-                RandomGenerator.refill();
+                RandomGenerator.Refill();
             }
         }
 
-        public static void setup(ERandomGenerators gen, int oneSeed)
+        public static void Setup(RandomGenerators gen, int oneSeed)
         {
-            setGeneratorType(gen);
-            seed(oneSeed);
-            checkGenerator();
+            SetGeneratorType(gen);
+            Seed(oneSeed);
+            CheckGenerator();
         }
 
-        /// get a random value from [0., 1.]
-        public static double rand() 
-        { 
-            return next() * (1.0 / 4294967295.0); 
+        /// returns a random number in [0,1] (i.e.="1" is a possible result!)
+        public static double Random() 
+        {
+            return ((double)RandomInteger() + Int32.MinValue) / (2.0 * Int32.MaxValue + 1);
         }
 
-        public static double rand(double max_value)
+        public static double Random(double max_value)
         { 
-            return max_value * rand(); 
+            return max_value * Random(); 
         }
 
         /// get a random integer in [0,2^32-1]
-        public static int randInt()
-        { 
-            return next(); 
+        public static int RandomInteger()
+        {
+            ++mIndex;
+            if (mIndex > RandomGeneratorSize)
+            {
+                mRotationCount++;
+                mIndex = 0;
+                CheckGenerator();
+            }
+            return mBuffer[mIndex];
         }
 
-        public static int randInt(int max_value) 
+        public static int Random(int max_value) 
         { 
-            return max_value > 0 ? randInt() % max_value : 0; 
+            return max_value > 0 ? RandomInteger() % max_value : 0; 
         }
 
-        public static void refill()
+        public static void Refill()
         {
             // BUGBUG: check mRotationCount < RANDOMGENERATORROTATIONS 
             lock (mBuffer) // serialize access
             {
-                if (mRotationCount < RANDOMGENERATORROTATIONS) // another thread might already succeeded in refilling....
+                if (mRotationCount < RandomGeneratorRotations) // another thread might already succeeded in refilling....
                 {
                     return;
                 }
 
                 RGenerators gen = new RGenerators();
-                gen.seed(mBuffer[RANDOMGENERATORSIZE + 4]); // use the last value as seed for the next round....
+                gen.Seed(mBuffer[RandomGeneratorSize + 4]); // use the last value as seed for the next round....
                 switch (mGeneratorType)
                 {
-                    case ERandomGenerators.ergMersenneTwister:
+                    case RandomGenerators.MersenneTwister:
                         {
-                            Random mersenne = MT64Random.Create(mBuffer[RANDOMGENERATORSIZE + 4]);
+                            Random mersenne = MT64Random.Create(mBuffer[RandomGeneratorSize + 4]);
                             // qDebug() << "refill random numbers. seed" <<mBuffer[RANDOMGENERATORSIZE+4];
-                            for (int i = 0; i < RANDOMGENERATORSIZE + 5; ++i)
+                            for (int i = 0; i < RandomGeneratorSize + 5; ++i)
                             {
                                 mBuffer[i] = mersenne.Next();
                             }
                             break;
                         }
-                    case ERandomGenerators.ergWellRNG512:
+                    case RandomGenerators.WellRng512:
                         {
 
-                            for (int i = 0; i < RANDOMGENERATORSIZE + 5; ++i)
+                            for (int i = 0; i < RandomGeneratorSize + 5; ++i)
                             {
-                                mBuffer[i] = gen.random_function(0);
+                                mBuffer[i] = gen.RandomFunction(0);
                             }
                             break;
                         }
-                    case ERandomGenerators.ergXORShift96:
+                    case RandomGenerators.XorShift96:
                         {
-                            for (int i = 0; i < RANDOMGENERATORSIZE + 5; ++i)
+                            for (int i = 0; i < RandomGeneratorSize + 5; ++i)
                             {
-                                mBuffer[i] = gen.random_function(1);
+                                mBuffer[i] = gen.RandomFunction(1);
                             }
                             break;
                         }
-                    case ERandomGenerators.ergFastRandom:
+                    case RandomGenerators.Fast:
                         {
-                            for (int i = 0; i < RANDOMGENERATORSIZE + 5; ++i)
+                            for (int i = 0; i < RandomGeneratorSize + 5; ++i)
                             {
-                                mBuffer[i] = gen.random_function(2);
+                                mBuffer[i] = gen.RandomFunction(2);
                             }
                             break;
                         }
@@ -158,49 +153,42 @@ namespace iLand.tools
             }
         }
 
-        public static void seed(int oneSeed)
+        public static void Seed(int oneSeed)
         {
             if (oneSeed == 0)
             {
                 Random random = new Random();
-                mBuffer[RANDOMGENERATORSIZE + 4] = random.Next();
+                mBuffer[RandomGeneratorSize + 4] = random.Next();
             }
             else
             {
-                mBuffer[RANDOMGENERATORSIZE + 4] = oneSeed; // set a specific seed as seed for the next round
+                mBuffer[RandomGeneratorSize + 4] = oneSeed; // set a specific seed as seed for the next round
             }
         }
 
         /// nrandom returns a random number from [p1, p2] -> p2 is a possible result!
-        public static double nrandom(double p1, double p2)
+        public static double Random(double p1, double p2)
         {
-            return p1 + rand(p2 - p1);
+            return p1 + Random(p2 - p1);
             //return p1 + (p2-p1)*(rand()/double(RAND_MAX));
         }
 
-        /// returns a random number in [0,1] (i.e.="1" is a possible result!)
-        public static double drandom()
-        {
-            return rand();
-            //return rand()/double(RAND_MAX);
-        }
-
         /// return a random number from "from" to "to" (excluding 'to'.), i.e. irandom(3,6) results in 3, 4 or 5.
-        public static int irandom(int from, int to)
+        public static int Random(int from, int to)
         {
-            return from + randInt(to - from);
+            return from + Random(to - from);
             //return from +  rand()%(to-from);
         }
 
-        public static double randNorm(double mean, double stddev)
+        public static double RandNorm(double mean, double stddev)
         {
             // Return a real number from a normal (Gaussian) distribution with given
             // mean and standard deviation by polar form of Box-Muller transformation
             double x, y, r;
             do
             {
-                x = 2.0 * rand() - 1.0;
-                y = 2.0 * rand() - 1.0;
+                x = 2.0 * Random() - 1.0;
+                y = 2.0 * Random() - 1.0;
                 r = x * x + y * y;
             }
             while (r >= 1.0 || r == 0.0);

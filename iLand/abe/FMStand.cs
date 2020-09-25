@@ -13,13 +13,13 @@ namespace iLand.abe
         */
     internal class FMStand
     {
-        private static Dictionary<FMStand, Dictionary<string, QJSValue>> mStandPropertyStorage = new Dictionary<FMStand, Dictionary<string, QJSValue>>();
-        private int mId; ///< the unique numeric ID of the stand
-        private FMUnit mUnit; ///< management unit that
+        private static readonly Dictionary<FMStand, Dictionary<string, QJSValue>> mStandPropertyStorage = new Dictionary<FMStand, Dictionary<string, QJSValue>>();
+        private readonly int mId; ///< the unique numeric ID of the stand
+        private readonly FMUnit mUnit; ///< management unit that
         private FMSTP mSTP; ///< the stand treatment program assigned to this stand
-        private Phase mPhase; ///< silvicultural phase
+        private readonly Phase mPhase; ///< silvicultural phase
         private int mInitialId; ///< stand-id that was assigned in the beginning (this Id is kept when stands are split)
-        private int mStandType; ///< enumeration of stand (compositional)
+        private readonly int mStandType; ///< enumeration of stand (compositional)
         private double mArea; ///< total stand area (ha)
         private double mTotalBasalArea; ///< basal area of the stand
         private double mAge; ///< average age (yrs) of the stand (basal area weighted)
@@ -53,7 +53,7 @@ namespace iLand.abe
         private int mThinningIntensityClass; ///< currently active thinning intensity level
 
         // storage for stand meta data (species level)
-        private List<SSpeciesStand> mSpeciesData;
+        private readonly List<SSpeciesStand> mSpeciesData;
         // storage for stand-specific management properties
         private List<ActivityFlags> mStandFlags;
         // additional property values for each stand
@@ -61,11 +61,6 @@ namespace iLand.abe
 
         /// set the stand to be managed by a given 'stp'
         public void setSTP(FMSTP stp) { mSTP = stp; }
-        /// returns true if tracing is enabled for the stand
-        public bool trace()
-        {
-            return property("trace").toBool();
-        }
         public string context() { return mContextStr; }
 
         public void setArea(double new_area_ha) { mArea = new_area_ha; } // area in ha
@@ -111,8 +106,6 @@ namespace iLand.abe
         public double topHeight() { return mTopHeight; }
         /// scheduled harvest (planned harvest by activities, m3)
         public double scheduledHarvest() { return mScheduledHarvest; }
-        /// total realized harvest (m3 on the full stand area) (note: salvage harvest ist part of final harvest)
-        public double totalHarvest() { return mFinalHarvested + mThinningHarvest; }
         /// total realized thinning/tending harvests (m3 on the full stand area)
         public double totalThinningHarvest() { return mThinningHarvest; }
         /// total disturbed timber volume, includes also disturbed trees *not* harvested, m3
@@ -123,17 +116,8 @@ namespace iLand.abe
         /// mean annual increment (MAI), m3 timber/ha for the full rotation period
         public double meanAnnualIncrementTotal() { return mMAItotal; }
 
-        public bool readyForFinalHarvest() { return absoluteAge() > 0.8 * U(); } // { return currentActivity()?(currentFlags().isFinalHarvest() && currentFlags().isScheduled()):false; }
-
-        public int nspecies() { return mSpeciesData.Count; }
         /// retrieve species-specific meta data by index (0: largest basal area share, up to nspecies()-1)
         public SSpeciesStand speciesData(int index) { return mSpeciesData[index]; }
-
-        /// add a (simulated) harvest to the amount of planned harvest (used by the scheduling)
-        public void addScheduledHarvest(double add_volume) { mScheduledHarvest += add_volume; }
-
-        /// resets the harvest counters
-        public void resetHarvestCounter() { mFinalHarvested = 0.0; mDisturbed = 0.0; mThinningHarvest = 0.0; }
 
         public int sleepYears() { return mYearsToWait; }
 
@@ -141,16 +125,6 @@ namespace iLand.abe
         public ActivityFlags flags(int index) { return mStandFlags[index]; }
         /// flags of currently active Activity
         public ActivityFlags currentFlags() { return flags(mCurrentIndex); }
-        /// get a pointer to the current activity; returns 0 if no activity is set.
-        public Activity currentActivity() { return mCurrentIndex > -1 ? mStandFlags[mCurrentIndex].activity() : null; }
-
-        /// get a pointer to the last executed activity; returns 0 if no activity has been executed before.
-        public Activity lastExecutedActivity() { return mLastExecutedIndex > -1 ? mStandFlags[mLastExecutedIndex].activity() : null; }
-
-        public int lastExecutionAge() { return absoluteAge() > 0 ? (int)absoluteAge() : mLastRotationAge; }
-
-        // custom property storage
-        public static void clearAllProperties() { mStandPropertyStorage.Clear(); }
 
         public FMStand(FMUnit unit, int id)
         {
@@ -165,9 +139,10 @@ namespace iLand.abe
 
             mU = 0;
             mSpeciesCompositionIndex = -1;
+            this.mSpeciesData = new List<SSpeciesStand>();
             mThinningIntensityClass = -1;
 
-            newRotatation();
+            NewRotatation();
             mSTP = null;
             mVolume = 0.0;
             mAge = 0.0;
@@ -187,10 +162,29 @@ namespace iLand.abe
             mLastExecutedIndex = -1;
             mLastRotationAge = -1;
 
-            mArea = ForestManagementEngine.standGrid().area(mId) / Constant.cRUArea;
+            mArea = ForestManagementEngine.StandGrid().Area(mId) / Constant.RUArea;
         }
 
-        public void initialize()
+        /// add a (simulated) harvest to the amount of planned harvest (used by the scheduling)
+        public void AddScheduledHarvest(double add_volume) { mScheduledHarvest += add_volume; }
+        // custom property storage
+        public static void ClearProperties() { mStandPropertyStorage.Clear(); }
+
+        /// get a pointer to the current activity; returns 0 if no activity is set.
+        public Activity CurrentActivity() { return mCurrentIndex > -1 ? mStandFlags[mCurrentIndex].activity() : null; }
+        public bool IsReadyForFinalHarvest() { return AbsoluteAge() > 0.8 * U(); } // { return currentActivity()?(currentFlags().isFinalHarvest() && currentFlags().isScheduled()):false; }
+
+        /// get a pointer to the last executed activity; returns 0 if no activity has been executed before.
+        public Activity LastExecutedActivity() { return mLastExecutedIndex > -1 ? mStandFlags[mLastExecutedIndex].activity() : null; }
+        public int LastExecutionAge() { return AbsoluteAge() > 0 ? (int)AbsoluteAge() : mLastRotationAge; }
+
+        /// resets the harvest counters
+        public void ResetHarvestCounter() { mFinalHarvested = 0.0; mDisturbed = 0.0; mThinningHarvest = 0.0; }
+        public int SpeciesCount() { return mSpeciesData.Count; }
+        /// total realized harvest (m3 on the full stand area) (note: salvage harvest ist part of final harvest)
+        public double TotalHarvest() { return mFinalHarvested + mThinningHarvest; }
+
+        public void Initialize()
         {
             if (mSTP == null)
             {
@@ -204,7 +198,7 @@ namespace iLand.abe
             mContextStr = String.Format("S{1}Y{0}:", ForestManagementEngine.instance().currentYear(), id()); // initialize...
 
             // load data and aggregate averages
-            reload();
+            Reload();
             if (mRotationStartYear == 0.0) // only set if not explicitely set previously.
             {
                 mRotationStartYear = ForestManagementEngine.instance().currentYear() - (int)age();
@@ -212,9 +206,9 @@ namespace iLand.abe
             // when a stand is initialized, we assume that 20% of the standing volume
             // have been removed already.
             mRemovedVolumeTotal = volume() * 0.2;
-            if (absoluteAge() > 0)
+            if (AbsoluteAge() > 0)
             {
-                mMAItotal = volume() * 1.2 / absoluteAge();
+                mMAItotal = volume() * 1.2 / AbsoluteAge();
             }
             else
             {
@@ -230,24 +224,24 @@ namespace iLand.abe
             {
                 // run the onSetup event
                 // specifically set 'i' as the activity to be evaluated.
-                FomeScript.setExecutionContext(this);
+                FomeScript.SetExecutionContext(this);
                 FomeScript.bridge().activityObj().setActivityIndex(i);
-                mStandFlags[i].activity().events().run("onSetup", null);
+                mStandFlags[i].activity().events().Run("onSetup", null);
 
-                if (!mStandFlags[i].enabled() || !mStandFlags[i].active())
+                if (!mStandFlags[i].IsEnabled() || !mStandFlags[i].IsActive())
                 {
                     continue;
                 }
                 // set active to false which have already passed
-                if (!mStandFlags[i].activity().isRepeatingActivity())
+                if (!mStandFlags[i].activity().IsRepeating())
                 {
-                    if (!mStandFlags[i].activity().schedule().absolute && mStandFlags[i].activity().latestSchedule(U()) < age())
+                    if (!mStandFlags[i].activity().schedule().absolute && mStandFlags[i].activity().GetLatestSchedule(U()) < age())
                     {
-                        mStandFlags[i].setActive(false);
+                        mStandFlags[i].SetIsActive(false);
                     }
                     else
                     {
-                        int delta = mStandFlags[i].activity().earlistSchedule(U()) - (int)age();
+                        int delta = mStandFlags[i].activity().GetEarlistSchedule(U()) - (int)age();
                         if (mStandFlags[i].activity().schedule().absolute)
                         {
                             delta += (int)age(); // absolute timing: starting from 0
@@ -266,7 +260,7 @@ namespace iLand.abe
                 // set the last activity with "force" = true as the active
                 for (int i = mStandFlags.Count - 1; i >= 0; --i)
                 {
-                    if (mStandFlags[i].enabled() && mStandFlags[i].activity().schedule().force_execution == true)
+                    if (mStandFlags[i].IsEnabled() && mStandFlags[i].activity().schedule().force_execution == true)
                     {
                         mCurrentIndex = i;
                         break;
@@ -276,35 +270,41 @@ namespace iLand.abe
 
             if (min_years_to_wait < 100000)
             {
-                sleep(min_years_to_wait);
+                Sleep(min_years_to_wait);
             }
             // call onInit handler on the level of the STP
-            mSTP.events().run("onInit", this);
+            mSTP.events().Run("onInit", this);
             if (mCurrentIndex > -1)
             {
-                mStandFlags[mCurrentIndex].activity().events().run("onEnter", this);
+                mStandFlags[mCurrentIndex].activity().events().Run("onEnter", this);
 
                 // if it is a scheduled activity, then execute (to get initial estimates for harvests)
-                if (currentFlags().isScheduled())
+                if (currentFlags().IsScheduled())
                 {
-                    executeActivity(currentActivity());
+                    ExecuteActivity(CurrentActivity());
                 }
             }
         }
 
-        public void reset(FMSTP stp)
+        public void Reset(FMSTP stp)
         {
             mSTP = stp;
-            newRotatation();
+            NewRotatation();
             mCurrentIndex = -1;
         }
 
-        public void checkArea()
+        /// returns true if tracing is enabled for the stand
+        public bool TracingEnabled()
         {
-            mArea = ForestManagementEngine.standGrid().area(mId) / Constant.cRUArea;
+            return Property("trace").ToBool();
         }
 
-        public int relBasalAreaIsHigher(SSpeciesStand a, SSpeciesStand b)
+        public void CheckArea()
+        {
+            mArea = ForestManagementEngine.StandGrid().Area(mId) / Constant.RUArea;
+        }
+
+        public int RelBasalAreaIsHigher(SSpeciesStand a, SSpeciesStand b)
         {
             if (a.relBasalArea < b.relBasalArea)
             {
@@ -317,7 +317,7 @@ namespace iLand.abe
             return 0;
         }
 
-        public void reload(bool force = false)
+        public void Reload(bool force = false)
         {
             if (!force && mLastUpdate == ForestManagementEngine.instance().currentYear())
             {
@@ -338,7 +338,7 @@ namespace iLand.abe
 
             // load all trees of the forest stand (use the treelist of the current execution context)
             FMTreeList trees = ForestManagementEngine.instance().scriptBridge().treesObj();
-            trees.setStand(this);
+            trees.SetStand(this);
             trees.loadAll();
 
             //Debug.WriteLine("fmstand-reload: load trees from map:" + t.elapsed();
@@ -350,7 +350,7 @@ namespace iLand.abe
             List<double> dbhvalues = new List<double>(trees.trees().Count);
             foreach (MutableTuple<Tree, double> it in treelist)
             {
-                dbhvalues.Add(it.Item1.dbh());
+                dbhvalues.Add(it.Item1.Dbh);
             }
 
             double topheight_threshhold = 0.0;
@@ -359,22 +359,22 @@ namespace iLand.abe
             if (treelist.Count > 0)
             {
                 StatData s = new StatData(dbhvalues);
-                topheight_threshhold = s.percentile((int)(100 * (1 - area() * 100 / treelist.Count))); // sorted ascending . thick trees at the end of the list
+                topheight_threshhold = s.Percentile((int)(100 * (1 - area() * 100 / treelist.Count))); // sorted ascending . thick trees at the end of the list
             }
             foreach (MutableTuple<Tree, double> it in treelist)
             {
-                double ba = it.Item1.basalArea() * area_factor;
+                double ba = it.Item1.BasalArea() * area_factor;
                 mTotalBasalArea += ba;
-                mVolume += it.Item1.volume() * area_factor;
-                mAge += it.Item1.age() * ba;
-                mDbh += it.Item1.dbh() * ba;
-                mHeight += it.Item1.height() * ba;
+                mVolume += it.Item1.Volume() * area_factor;
+                mAge += it.Item1.Age * ba;
+                mDbh += it.Item1.Dbh * ba;
+                mHeight += it.Item1.Height * ba;
                 mStems++;
-                SSpeciesStand sd = speciesData(it.Item1.species());
+                SSpeciesStand sd = SpeciesData(it.Item1.Species);
                 sd.basalArea += ba;
-                if (it.Item1.dbh() >= topheight_threshhold)
+                if (it.Item1.Dbh >= topheight_threshhold)
                 {
-                    topheight_height += it.Item1.height();
+                    topheight_height += it.Item1.Height;
                     ++topheight_trees;
                 }
             }
@@ -394,15 +394,15 @@ namespace iLand.abe
             }
             mStems *= area_factor; // convert to stems/ha
                                    // sort species data by relative share....
-            mSpeciesData.Sort(relBasalAreaIsHigher);
+            mSpeciesData.Sort(RelBasalAreaIsHigher);
         }
 
-        public double absoluteAge()
+        public double AbsoluteAge()
         {
             return ForestManagementEngine.instance().currentYear() - mRotationStartYear;
         }
 
-        public bool execute()
+        public bool Execute()
         {
             //  the age of the stand increases by one
             mAge++;
@@ -420,20 +420,20 @@ namespace iLand.abe
             // what to do if there is no active activity??
             if (mCurrentIndex == -1)
             {
-                if (trace())
+                if (TracingEnabled())
                 {
                     Debug.WriteLine(context() + " *** No action - no currently active activity ***");
                 }
                 return false;
             }
-            if (trace())
+            if (TracingEnabled())
             {
-                Debug.WriteLine(context() + " *** start evaulate activity:" + currentActivity().name());
+                Debug.WriteLine(context() + " *** start evaulate activity:" + CurrentActivity().name());
             }
             // do nothing if there is already an activity in the scheduler
-            if (currentFlags().isPending())
+            if (currentFlags().IsPending())
             {
-                if (trace())
+                if (TracingEnabled())
                 {
                     Debug.WriteLine(context() + " *** No action - stand in the scheduler. ***");
                 }
@@ -441,21 +441,21 @@ namespace iLand.abe
             }
 
             // do nothing if the the current year is not within the window of opportunity of the activity
-            double p_schedule = currentActivity().scheduleProbability(this);
+            double p_schedule = CurrentActivity().ScheduleProbability(this);
             if (p_schedule == -1.0)
             {
-                if (trace())
+                if (TracingEnabled())
                 {
                     Debug.WriteLine(context() + " *** Activity expired. ***");
                 }
                 // cancel the activity
-                currentFlags().setActive(false);
+                currentFlags().SetIsActive(false);
                 afterExecution(true);
                 return false;
             }
             if (p_schedule >= 0.0 && p_schedule < 0.00001)
             {
-                if (trace())
+                if (TracingEnabled())
                 {
                     Debug.WriteLine(context() + " *** No action - Schedule probability 0.0 ***");
                 }
@@ -463,13 +463,13 @@ namespace iLand.abe
             }
 
             // we need to renew the stand data
-            reload();
+            Reload();
 
             // check if there are some constraints that prevent execution....
-            double p_execute = currentActivity().execeuteProbability(this);
+            double p_execute = CurrentActivity().ExeceuteProbability(this);
             if (p_execute == 0.0)
             {
-                if (trace())
+                if (TracingEnabled())
                 {
                     Debug.WriteLine(context() + " *** No action - Constraints preventing execution. ***");
                 }
@@ -478,28 +478,28 @@ namespace iLand.abe
 
             // ok, we should execute the current activity.
             // if it is not scheduled, it is executed immediately, otherwise a ticket is created.
-            if (currentFlags().isScheduled())
+            if (currentFlags().IsScheduled())
             {
                 // ok, we schedule the current activity
-                if (trace())
+                if (TracingEnabled())
                 {
                     Debug.WriteLine(context() + " adding ticket for execution.");
                 }
 
                 mScheduledHarvest = 0.0;
-                bool should_schedule = currentActivity().evaluate(this);
-                if (trace())
+                bool should_schedule = CurrentActivity().Evaluate(this);
+                if (TracingEnabled())
                 {
                     Debug.WriteLine(context() + " evaluated stand. add a ticket: " + should_schedule);
                 }
                 if (should_schedule)
                 {
-                    mUnit.scheduler().addTicket(this, currentFlags(), p_schedule, p_execute);
+                    mUnit.scheduler().AddTicket(this, currentFlags(), p_schedule, p_execute);
                 }
                 else
                 {
                     // cancel the activity
-                    currentFlags().setActive(false);
+                    currentFlags().SetIsActive(false);
                     afterExecution(true);
                 }
                 return should_schedule;
@@ -507,37 +507,37 @@ namespace iLand.abe
             else
             {
                 // execute immediately
-                if (trace())
+                if (TracingEnabled())
                 {
-                    Debug.WriteLine(context() + " executing activty " + currentActivity().name());
+                    Debug.WriteLine(context() + " executing activty " + CurrentActivity().name());
                 }
                 mScheduledHarvest = 0.0;
-                bool executed = currentActivity().execute(this);
-                if (currentActivity() == null) // special case: the activity invalidated the active activtity
+                bool executed = CurrentActivity().Execute(this);
+                if (CurrentActivity() == null) // special case: the activity invalidated the active activtity
                 {
                     return executed;
                 }
-                if (!currentActivity().isRepeatingActivity())
+                if (!CurrentActivity().IsRepeating())
                 {
-                    currentFlags().setActive(false);
+                    currentFlags().SetIsActive(false);
                     afterExecution(!executed); // check what comes next for the stand
                 }
                 return executed;
             }
         }
 
-        public bool executeActivity(Activity act)
+        public bool ExecuteActivity(Activity act)
         {
             int old_activity_index = mCurrentIndex;
 
-            int new_index = stp().activityIndex(act);
+            int new_index = stp().GetIndexOf(act);
             bool result = false;
             if (new_index > -1)
             {
                 mCurrentIndex = new_index;
                 int old_years = mYearsToWait;
                 mYearsToWait = 0;
-                result = execute();
+                result = Execute();
                 mAge--; // undo modification of age
                 mYearsToWait = old_years; // undo...
             }
@@ -548,16 +548,16 @@ namespace iLand.abe
         public bool afterExecution(bool cancel)
         {
             // check if an agent update is necessary
-            unit().agent().type().agentUpdateForStand(this, currentFlags().activity().name(), -1);
+            unit().agent().type().AgentUpdateForStand(this, currentFlags().activity().name(), -1);
 
             // is called after an activity has run
             int tmin = 10000000;
             int indexmin = -1;
             for (int i = 0; i < mStandFlags.Count; ++i)
             {
-                if (mStandFlags[i].isForcedNext())
+                if (mStandFlags[i].IsForceNext())
                 {
-                    mStandFlags[i].setForceNext(false); // reset flag
+                    mStandFlags[i].SetIsForceNext(false); // reset flag
                     indexmin = i;
                     break; // we "jump" to this activity
                 }
@@ -567,25 +567,25 @@ namespace iLand.abe
             {
                 // check if a restart is needed
                 // TODO: find a better way!!
-                if (currentFlags().isFinalHarvest())
+                if (currentFlags().IsFinalHarvest())
                 {
                     // we have reached the last activity
                     for (int i = 0; i < mStandFlags.Count; ++i)
                     {
-                        mStandFlags[i].setActive(true);
+                        mStandFlags[i].SetIsActive(true);
                     }
-                    newRotatation();
-                    reload();
+                    NewRotatation();
+                    Reload();
                 }
 
                 // look for the next (enabled) activity.
                 for (int i = 0; i < mStandFlags.Count; ++i)
                 {
-                    if (mStandFlags[i].enabled() && mStandFlags[i].active() && !mStandFlags[i].isRepeating())
+                    if (mStandFlags[i].IsEnabled() && mStandFlags[i].IsActive() && !mStandFlags[i].IsRepeating())
                     {
-                        if (mStandFlags[i].activity().earlistSchedule() < tmin)
+                        if (mStandFlags[i].activity().GetEarlistSchedule() < tmin)
                         {
-                            tmin = mStandFlags[i].activity().earlistSchedule();
+                            tmin = mStandFlags[i].activity().GetEarlistSchedule();
                             indexmin = i;
                         }
                     }
@@ -594,20 +594,20 @@ namespace iLand.abe
 
             if (!cancel)
             {
-                currentActivity().events().run("onExecuted", this);
+                CurrentActivity().events().Run("onExecuted", this);
             }
             else
             {
-                currentActivity().events().run("onCancel", this);
+                CurrentActivity().events().Run("onCancel", this);
             }
 
             if (indexmin != mCurrentIndex)
             {
                 // call events:
-                currentActivity().events().run("onExit", this);
+                CurrentActivity().events().Run("onExit", this);
                 if (indexmin > -1 && indexmin < mStandFlags.Count)
                 {
-                    mStandFlags[indexmin].activity().events().run("onEnter", this);
+                    mStandFlags[indexmin].activity().events().Run("onEnter", this);
                 }
             }
             mLastExecutedIndex = mCurrentIndex;
@@ -615,10 +615,10 @@ namespace iLand.abe
             mCurrentIndex = indexmin;
             if (mCurrentIndex > -1)
             {
-                int to_sleep = tmin - (int)absoluteAge();
+                int to_sleep = tmin - (int)AbsoluteAge();
                 if (to_sleep > 0)
                 {
-                    sleep(to_sleep);
+                    Sleep(to_sleep);
                 }
             }
             mScheduledHarvest = 0.0; // reset
@@ -627,9 +627,9 @@ namespace iLand.abe
             return mCurrentIndex > -1;
         }
 
-        public void notifyTreeRemoval(Tree tree, int reason)
+        public void NotifyTreeRemoval(Tree tree, int reason)
         {
-            double removed_volume = tree.volume();
+            double removed_volume = tree.Volume();
             mVolume -= removed_volume / area();
 
             // for MAI calculations: store removal regardless of the reason
@@ -644,9 +644,9 @@ namespace iLand.abe
             else if (r == TreeRemovalType.TreeHarvest)
             {
                 // regular harvest
-                if (currentActivity() != null)
+                if (CurrentActivity() != null)
                 {
-                    if (currentFlags().isFinalHarvest())
+                    if (currentFlags().IsFinalHarvest())
                     {
                         mFinalHarvested += removed_volume;
                     }
@@ -661,12 +661,12 @@ namespace iLand.abe
                 // if we have an active salvage activity, then store
                 mDisturbed += removed_volume;
                 // check if we have an (active) salvage activity; both the activity flags and the stand flags need to be "enabled"
-                if (mSTP.salvageActivity() != null && mSTP.salvageActivity().standFlags().enabled() && mSTP.salvageActivity().standFlags(this).enabled())
+                if (mSTP.salvageActivity() != null && mSTP.salvageActivity().StandFlags().IsEnabled() && mSTP.salvageActivity().StandFlags(this).IsEnabled())
                 {
-                    if (mSTP.salvageActivity().evaluateRemove(tree))
+                    if (mSTP.salvageActivity().EvaluateRemove(tree))
                     {
                         mFinalHarvested += removed_volume;
-                        tree.setIsHarvested(); // set the flag that the tree is removed from the forest
+                        tree.SetDeathReasonHarvested(); // set the flag that the tree is removed from the forest
                     }
                 }
             }
@@ -676,29 +676,29 @@ namespace iLand.abe
             }
         }
 
-        public bool notifyBarkBeetleAttack(double generations, int infested_px_per_ha)
+        public bool NotifyBarkBeetleAttack(double generations, int infested_px_per_ha)
         {
             // check if we have an (active) salvage activity; both the activity flags and the stand flags need to be "enabled"
-            if (mSTP.salvageActivity() != null && mSTP.salvageActivity().standFlags().enabled() && mSTP.salvageActivity().standFlags(this).enabled())
+            if (mSTP.salvageActivity() != null && mSTP.salvageActivity().StandFlags().IsEnabled() && mSTP.salvageActivity().StandFlags(this).IsEnabled())
             {
-                return mSTP.salvageActivity().barkbeetleAttack(this, generations, infested_px_per_ha);
+                return mSTP.salvageActivity().BarkbeetleAttack(this, generations, infested_px_per_ha);
             }
             return false;
         }
 
-        public void sleep(int years_to_sleep)
+        public void Sleep(int years_to_sleep)
         {
             mYearsToWait = Math.Max(mYearsToWait, Math.Max(years_to_sleep, 0));
         }
 
-        public double calculateMAI()
+        public double CalculateMeanAnnualIncrement()
         {
             // MAI: delta standing volume + removed volume, per year
             // removed volume: mortality, management, disturbances
             mMAIdecade = ((mVolume - mLastMAIVolume) + mRemovedVolumeDecade) / 10.0;
-            if (absoluteAge() > 0)
+            if (AbsoluteAge() > 0)
             {
-                mMAItotal = (mVolume + mRemovedVolumeTotal) / absoluteAge();
+                mMAItotal = (mVolume + mRemovedVolumeTotal) / AbsoluteAge();
             }
             mLastMAIVolume = mVolume;
             // reset counters
@@ -706,11 +706,11 @@ namespace iLand.abe
             return meanAnnualIncrementTotal();
         }
 
-        public double basalArea(string species_id)
+        public double BasalArea(string species_id)
         {
             foreach (SSpeciesStand sd in mSpeciesData)
             {
-                if (sd.species.id() == species_id)
+                if (sd.species.ID == species_id)
                 {
                     return sd.basalArea;
                 }
@@ -718,11 +718,11 @@ namespace iLand.abe
             return 0.0;
         }
 
-        public double relBasalArea(string species_id)
+        public double RelBasalArea(string species_id)
         {
             foreach (SSpeciesStand sd in mSpeciesData)
             {
-                if (sd.species.id() == species_id)
+                if (sd.species.ID == species_id)
                 {
                     return sd.relBasalArea;
                 }
@@ -730,19 +730,19 @@ namespace iLand.abe
             return 0.0;
         }
 
-        public void setAbsoluteAge(double age)
+        public void SetAbsoluteAge(double age)
         {
             mRotationStartYear = ForestManagementEngine.instance().currentYear() - (int)age;
             mAge = age;
         }
 
-        public void setProperty(string name, QJSValue value)
+        public void SetProperty(string name, QJSValue value)
         {
             // save a property value for the current stand
             mStandPropertyStorage[this][name] = value;
         }
 
-        public QJSValue property(string name)
+        public QJSValue Property(string name)
         {
             // check if values are already stored for the current stand
             if (!mStandPropertyStorage.ContainsKey(this))
@@ -757,27 +757,29 @@ namespace iLand.abe
             return mStandPropertyStorage[this][name];
         }
 
-        public List<string> info()
+        public List<string> Info()
         {
-            List<string> lines = new List<string>();
-            lines.Add(String.Format("id: {0}", id()));
-            lines.Add(String.Format("unit: {0}", unit().id()));
-            lines.Add("-");
-            lines.AddRange(unit().info());
-            lines.Add("/-"); // sub sections
-            if (currentActivity() != null)
+            List<string> lines = new List<string>()
             {
-                lines.Add(String.Format("activity: {0}", currentActivity().name()));
+                String.Format("id: {0}", id()),
+                String.Format("unit: {0}", unit().id()),
+                "-"
+            };
+            lines.AddRange(unit().Info());
+            lines.Add("/-"); // sub sections
+            if (CurrentActivity() != null)
+            {
+                lines.Add(String.Format("activity: {0}", CurrentActivity().name()));
                 lines.Add("-");
-                lines.AddRange(currentActivity().info());
+                lines.AddRange(CurrentActivity().Info());
                 // activity properties
-                lines.Add(String.Format("active: {0}", currentFlags().active()));
-                lines.Add(String.Format("enabled: {0}", currentFlags().enabled()));
-                lines.Add(String.Format("simulate: {0}", currentFlags().isDoSimulate()));
-                lines.Add(String.Format("execute immediate: {0}", currentFlags().isExecuteImmediate()));
-                lines.Add(String.Format("final harvest: {0}", currentFlags().isFinalHarvest()));
-                lines.Add(String.Format("use scheduler: {0}", currentFlags().isScheduled()));
-                lines.Add(String.Format("in scheduler: {0}", currentFlags().isPending()));
+                lines.Add(String.Format("active: {0}", currentFlags().IsActive()));
+                lines.Add(String.Format("enabled: {0}", currentFlags().IsEnabled()));
+                lines.Add(String.Format("simulate: {0}", currentFlags().DoSimulate()));
+                lines.Add(String.Format("execute immediate: {0}", currentFlags().IsExecuteImmediate()));
+                lines.Add(String.Format("final harvest: {0}", currentFlags().IsFinalHarvest()));
+                lines.Add(String.Format("use scheduler: {0}", currentFlags().IsScheduled()));
+                lines.Add(String.Format("in scheduler: {0}", currentFlags().IsPending()));
                 lines.Add("/-");
             }
             lines.Add(String.Format("agent: {0}", unit().agent().type().name()));
@@ -790,21 +792,21 @@ namespace iLand.abe
             lines.Add(String.Format("basal area: {0}", basalArea()));
             lines.Add(String.Format("volume: {0}", volume()));
             lines.Add(String.Format("age: {0}", age()));
-            lines.Add(String.Format("absolute age: {0}", absoluteAge()));
+            lines.Add(String.Format("absolute age: {0}", AbsoluteAge()));
             lines.Add(String.Format("N/ha: {0}", stems()));
             lines.Add(String.Format("MAI (decadal) m3/ha*yr: {0}", meanAnnualIncrement()));
             lines.Add("Basal area per species");
-            for (int i = 0; i < nspecies(); ++i)
+            for (int i = 0; i < SpeciesCount(); ++i)
             {
-                lines.Add(String.Format("{0}: {1}", speciesData(i).species.id(), speciesData(i).basalArea));
+                lines.Add(String.Format("{0}: {1}", speciesData(i).species.ID, speciesData(i).basalArea));
             }
 
             lines.Add("All activities");
             lines.Add("-");
             foreach (ActivityFlags a in mStandFlags)
             {
-                lines.Add(String.Format("{0} (active): {1}", a.activity().name(), a.active()));
-                lines.Add(String.Format("{0} (enabled): {1}", a.activity().name(), a.enabled()));
+                lines.Add(String.Format("{0} (active): {1}", a.activity().name(), a.IsActive()));
+                lines.Add(String.Format("{0} (enabled): {1}", a.activity().name(), a.IsEnabled()));
             }
             lines.Add("/-");
 
@@ -822,14 +824,14 @@ namespace iLand.abe
             }
 
             // scheduler info
-            lines.AddRange(unit().constScheduler().info(id()));
+            lines.AddRange(unit().constScheduler().Info(id()));
 
             return lines;
         }
 
-        private void newRotatation()
+        private void NewRotatation()
         {
-            mLastRotationAge = (int)absoluteAge();
+            mLastRotationAge = (int)AbsoluteAge();
             mRotationStartYear = ForestManagementEngine.instance().currentYear(); // reset stand age to 0.
             mRemovedVolumeTotal = 0.0;
             mRemovedVolumeDecade = 0.0;
@@ -839,10 +841,10 @@ namespace iLand.abe
             // use default values
             setU(unit().U());
             setThinningIntensity(unit().thinningIntensity());
-            unit().agent().type().agentUpdateForStand(this, null, 0); // update at age 0? maybe switch to new STP?
+            unit().agent().type().AgentUpdateForStand(this, null, 0); // update at age 0? maybe switch to new STP?
         }
 
-        public SSpeciesStand speciesData(Species species)
+        public SSpeciesStand SpeciesData(Species species)
         {
             for (int i = 0; i < mSpeciesData.Count; ++i)
             {

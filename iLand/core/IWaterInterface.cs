@@ -2,8 +2,8 @@
 {
     /** WaterInterface allows accessing intermediate water variables (e.g. interception)
      */
-    internal interface WaterInterface
+    internal interface IWaterInterface
     {
-        void calculateWater(ResourceUnit resource_unit, WaterCycleData water_data);
+        void CalculateWater(ResourceUnit resource_unit, WaterCycleData water_data);
     }
 }

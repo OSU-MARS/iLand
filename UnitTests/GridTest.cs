@@ -37,20 +37,30 @@ namespace iLand.Test
         //}
 
         [TestMethod]
-        public void test()
+        public void Averaged()
         {
             // Test-funktion: braucht 1/3 time von readGrid()
             using DebugTimer t = new DebugTimer("test");
             Grid<float> averaged = null; // TODO: this.averaged(10);
             int count = 0;
-            for (float p = 0; p < averaged.count(); ++p)
+            for (float p = 0; p < averaged.Count; ++p)
             {
                 if (p > 0.9)
                 {
                     count++;
                 }
             }
-            this.TestContext.WriteLine(count + " LIF > 0.9 of " + averaged.count());
+            this.TestContext.WriteLine(count + " LIF > 0.9 of " + averaged.Count);
+        }
+
+        [TestMethod]
+        public void TriangleArea()
+        {
+            // check calculation: numbers for Jenness paper
+            RumpleIndex rumpleIndex = new RumpleIndex();
+            rumpleIndex.Calculate();
+            float[] hs = new float[] { 165, 170, 145, 160, 183, 155, 122, 175, 190 };
+            // double area = rumpleIndex.calculateSurfaceArea(hs, 100);
         }
     }
 }

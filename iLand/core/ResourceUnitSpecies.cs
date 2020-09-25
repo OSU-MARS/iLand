@@ -16,113 +16,103 @@ namespace iLand.core
       */
     internal class ResourceUnitSpecies
     {
-        private double mLAIfactor; ///< relative amount of this species' LAI on this resource unit (0..1). Is calculated once a year.
-        private double mRemovedGrowth; ///< m3 volume of trees removed/managed (to calculate GWL) (m3/ha)
-        private StandStatistics mStatistics; ///< statistics of a species on this resource unit
-        private StandStatistics mStatisticsDead; ///< statistics of died trees (this year) of a species on this resource unit
-        private StandStatistics mStatisticsMgmt; ///< statistics of removed trees (this year) of a species on this resource unit
-        private Production3PG m3PG; ///< NPP prodution unit of this species
-        private SpeciesResponse mResponse; ///< calculation and storage of species specific respones on this resource unit
-        private Establishment mEstablishment; ///< establishment for seedlings and sapling growth
-        private SaplingStat mSaplingStat; ///< statistics on saplings
-        private Species mSpecies; ///< link to speices
-        private ResourceUnit mRU; ///< link to resource unit
         private int mLastYear;
 
-        // access
-        public SpeciesResponse speciesResponse() { return mResponse; }
-        public Species species() { return mSpecies; } ///< return pointer to species
-        public ResourceUnit ru() { return mRU; } ///< return pointer to resource unit
-        public Production3PG prod3PG() { return m3PG; } ///< the 3pg production model of this speies x resourceunit
-
-        public SaplingStat saplingStat() { return mSaplingStat; } ///< statistics for the sapling sub module
-        public SaplingStat constSaplingStat() { return mSaplingStat; } ///< statistics for the sapling sub module
-
-        public Establishment establishment() { return mEstablishment; } ///< establishment submodel
-        public StandStatistics statistics() { return mStatistics; } ///< statistics of this species on the resourceunit
-        public StandStatistics statisticsDead() { return mStatisticsDead; } ///< statistics of died trees
-        public StandStatistics statisticsMgmt() { return mStatisticsMgmt; } ///< statistics of removed trees
-        public StandStatistics constStatistics() { return mStatistics; } ///< accessor
-        public StandStatistics constStatisticsDead() { return mStatisticsDead; } ///< accessor
-        public StandStatistics constStatisticsMgmt() { return mStatisticsMgmt; } ///< accessor
-
-        // actions
-        public double removedVolume() { return mRemovedGrowth; } ///< sum of volume with was remvoved because of death/management (m3/ha)
-                                                                 /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
-        public double LAIfactor() { return mLAIfactor; }
-        public void setLAIfactor(double newLAIfraction)
+        public Production3PG BiomassGrowth { get; private set; } ///< the 3pg production model of this species x resourceunit
+        public Establishment Establishment { get; private set; } ///< establishment submodel
+        /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
+        public double LaiFactor { get; private set; }
+        public double RemovedVolume { get; private set; } ///< sum of volume with was remvoved because of death/management (m3/ha)
+        public SpeciesResponse Response { get; private set; }
+        public ResourceUnit RU { get; private set; } ///< return pointer to resource unit
+        public SaplingStat SaplingStats { get; private set; } ///< statistics for the sapling sub module
+        public Species Species { get; private set; } ///< return pointer to species
+        public StandStatistics Statistics { get; private set; } ///< statistics of this species on the resourceunit
+        public StandStatistics StatisticsDead { get; private set; } ///< statistics of died trees
+        public StandStatistics StatisticsMgmt { get; private set; } ///< statistics of removed trees
+        
+        public void SetLaiFactor(double newLAIfraction)
         {
-            mLAIfactor = newLAIfraction;
-            if (mLAIfactor < 0 || mLAIfactor > 1.00001)
+            LaiFactor = newLAIfraction;
+            if (LaiFactor < 0 || LaiFactor > 1.00001)
             {
-                Debug.WriteLine("invalid LAIfactor " + mLAIfactor);
+                Debug.WriteLine("invalid LAIfactor " + LaiFactor);
             }
         }
 
-        public double leafArea()
+        public ResourceUnitSpecies(Species species, ResourceUnit ru)
         {
-            // Leaf area of the species:
-            // total leaf area on the RU * fraction of leafarea
-            return mLAIfactor * ru().leafAreaIndex();
+            this.BiomassGrowth = new Production3PG()
+            {
+                SpeciesResponse = Response
+            };
+            this.Establishment = new Establishment();
+            this.mLastYear = -1;
+            this.RemovedVolume = 0.0;
+            this.Response = new SpeciesResponse();
+            this.RU = ru;
+            this.SaplingStats = new SaplingStat();
+            this.Species = species;
+            this.Statistics = new StandStatistics();
+            this.StatisticsDead = new StandStatistics();
+            this.StatisticsMgmt = new StandStatistics();
+
+            this.Establishment.Setup(ru.Climate, this);
+            this.Response.Setup(this);
+            this.Statistics.ResourceUnitSpecies = this;
+            this.StatisticsDead.ResourceUnitSpecies = this;
+            this.StatisticsMgmt.ResourceUnitSpecies = this;
+
+            Debug.WriteLineIf(Species.Index > 1000 || Species.Index < 0, "suspicious species?? in RUS::setup()");
         }
 
-        public void setup(Species species, ResourceUnit ru)
-        {
-            mSpecies = species;
-            mRU = ru;
-            mResponse.setup(this);
-            m3PG.setResponse(mResponse);
-            mEstablishment.setup(ru.climate(), this);
-            mStatistics.setResourceUnitSpecies(this);
-            mStatisticsDead.setResourceUnitSpecies(this);
-            mStatisticsMgmt.setResourceUnitSpecies(this);
-
-            mRemovedGrowth = 0.0;
-            mLastYear = -1;
-
-            Debug.WriteLineIf(mSpecies.index() > 1000 || mSpecies.index() < 0, "suspicious species?? in RUS::setup()");
-        }
-
-        public void calculate(bool fromEstablishment = false)
+        public void Calculate(bool fromEstablishment = false)
         {
             // if *not* called from establishment, clear the species-level-stats
             if (!fromEstablishment)
             {
-                statistics().clear();
+                Statistics.Clear();
             }
 
             // if already processed in this year, do not repeat
-            if (mLastYear == GlobalSettings.instance().currentYear())
+            if (mLastYear == GlobalSettings.Instance.CurrentYear)
             {
                 return;
             }
 
-            if (mLAIfactor > 0.0 || fromEstablishment == true)
+            if (LaiFactor > 0.0 || fromEstablishment == true)
             {
                 // execute the water calculation...
                 if (fromEstablishment)
                 {
-                    mRU.waterCycle().run(); // run the water sub model (only if this has not be done already)
+                    RU.WaterCycle.Run(); // run the water sub model (only if this has not be done already)
                 }
                 using DebugTimer rst = new DebugTimer("response+3pg");
-                mResponse.calculate();// calculate environmental responses per species (vpd, temperature, ...)
-                m3PG.calculate();// production of NPP
-                mLastYear = GlobalSettings.instance().currentYear(); // mark this year as processed
+                Response.Calculate();// calculate environmental responses per species (vpd, temperature, ...)
+                BiomassGrowth.Calculate();// production of NPP
+                mLastYear = GlobalSettings.Instance.CurrentYear; // mark this year as processed
             }
             else
             {
                 // if no LAI is present, then just clear the respones.
-                mResponse.clear();
-                m3PG.clear();
+                Response.Clear();
+                BiomassGrowth.Clear();
             }
         }
 
-        public void updateGWL()
+        public double LeafArea()
+        {
+            // Leaf area of the species:
+            // total leaf area on the RU * fraction of leafarea
+            return LaiFactor * RU.LeafAreaIndex();
+        }
+
+        public void UpdateGwl()
         {
             // removed growth is the running sum of all removed
             // tree volume. the current "GWL" therefore is current volume (standing) + mRemovedGrowth.
             // important: statisticsDead() and statisticsMgmt() need to calculate() before -> volume() is already scaled to ha
-            mRemovedGrowth += statisticsDead().volume() + statisticsMgmt().volume();
+            RemovedVolume += StatisticsDead.Volume + StatisticsMgmt.Volume;
         }
     }
 }

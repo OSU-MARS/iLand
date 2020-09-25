@@ -4,13 +4,13 @@ namespace iLand.core
 {
     internal abstract class LayeredGrid<T> : LayeredGridBase
     {
-        protected Grid<T> mGrid;
+        protected Grid<T> Grid { get; set; }
 
-        public override RectangleF cellRect(Point p) { return mGrid.cellRect(p); }
-        public override RectangleF metricRect() { return mGrid.metricRect(); }
-        public float cellsize() { return mGrid.cellsize(); }
-        public override int sizeX() { return mGrid.sizeX(); }
-        public override int sizeY() { return mGrid.sizeY(); }
+        public override RectangleF CellRect(Point p) { return Grid.GetCellRect(p); }
+        public override RectangleF PhysicalSize() { return Grid.PhysicalSize; }
+        public float CellSize() { return Grid.CellSize; }
+        public override int SizeX() { return Grid.SizeX; }
+        public override int SizeY() { return Grid.SizeY; }
 
         // unused in C++
         //public virtual double value(T ptr, int index) { return value(mGrid.constValueAtIndex(mGrid.indexOf(ptr)), index); }
@@ -19,8 +19,15 @@ namespace iLand.core
         //public override double value(PointF world_coord, int index) { return mGrid.coordValid(world_coord) ? value(mGrid.constValueAt(world_coord), index) : 0.0; }
         //public override double value(int ix, int iy, int index) { return value(mGrid.constValueAtIndex(ix, iy), index); }
 
-        public LayeredGrid() { mGrid = null; }
-        public LayeredGrid(Grid<T> grid) { mGrid = grid; }
+        public LayeredGrid() 
+        { 
+            Grid = null; 
+        }
+        
+        public LayeredGrid(Grid<T> grid) 
+        { 
+            Grid = grid; 
+        }
 
         // unused in C++
         //public override void range(ref double rMin, ref double rMax, int index)
@@ -39,7 +46,7 @@ namespace iLand.core
         /// caller need to free memory!
         //public Grid<double> copyGrid(int index)
         //{
-        //    Grid<double> data_grid = new Grid<double>(mGrid.metricRect(), mGrid.cellsize());
+        //    Grid<double> data_grid = new Grid<double>(mGrid.MetricRect, mGrid.cellsize());
         //    for (int i = 0; i < mGrid.count(); ++i)
         //    {
         //        mGrid[i] = value(i, index);
@@ -55,7 +62,7 @@ namespace iLand.core
         //    {
         //        return null;
         //    }
-        //    Vector3D model = new Vector3D(grid.metricRect().Left, grid.metricRect().Top, 0.0);
+        //    Vector3D model = new Vector3D(grid.MetricRect.Left, grid.MetricRect.Top, 0.0);
         //    Vector3D world = new Vector3D();
         //    GisGrid.modelToWorld(model, world);
         //    string result = String.Format("ncols {0}\r\nnrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",

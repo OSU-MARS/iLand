@@ -13,31 +13,36 @@ namespace iLand.core
         */
     internal class ThreadRunner
     {
-        private static bool mMultithreaded = true; // static
+        public static bool IsMultithreaded { get; set; }
 
-        private List<ResourceUnit> mMap1, mMap2;
-        private List<Species> mSpeciesMap;
+        private readonly List<ResourceUnit> mMap1, mMap2;
+        
+        public List<Species> SpeciesMap { get; set; }
 
-        public bool multithreading() { return mMultithreaded; }
-        public void setMultithreading(bool do_multithreading) { mMultithreaded = do_multithreading; }
+        static ThreadRunner()
+        {
+            ThreadRunner.IsMultithreaded = true;
+        }
 
         public ThreadRunner()
         {
-            mMap1 = new List<ResourceUnit>();
-            mMap2 = new List<ResourceUnit>();
+            this.mMap1 = new List<ResourceUnit>();
+            this.mMap2 = new List<ResourceUnit>();
+            this.SpeciesMap = null;
         }
 
         public ThreadRunner(List<Species> speciesList)
+            : this()
         {
-            setup(speciesList);
+            this.SpeciesMap = speciesList;
         }
 
-        public void print()
+        public void Print()
         {
-            Debug.WriteLine("Multithreading enabled: " + mMultithreaded + "thread count: " + System.Environment.ProcessorCount);
+            Debug.WriteLine("Multithreading enabled: " + IsMultithreaded + "thread count: " + System.Environment.ProcessorCount);
         }
 
-        public void setup(List<ResourceUnit> resourceUnitList)
+        public void Setup(List<ResourceUnit> resourceUnitList)
         {
             mMap1.Clear();
             mMap2.Clear();
@@ -55,15 +60,12 @@ namespace iLand.core
 
                 map = !map;
             }
-
         }
 
-        public void setup(List<Species> speciesList) { mSpeciesMap = speciesList; }
-
         /// run a given function for each ressource unit either multithreaded or not.
-        public void run(Action<ResourceUnit> funcptr, bool forceSingleThreaded = false)
+        public void Run(Action<ResourceUnit> funcptr, bool forceSingleThreaded = false)
         {
-            if (mMultithreaded && mMap1.Count > 3 && forceSingleThreaded == false)
+            if (IsMultithreaded && mMap1.Count > 3 && forceSingleThreaded == false)
             {
                 Parallel.ForEach(mMap1, (ResourceUnit unit) =>
                 {
@@ -89,11 +91,11 @@ namespace iLand.core
         }
 
         /// run a given function for each species
-        public void run(Action<Species> funcptr, bool forceSingleThreaded = false)
+        public void Run(Action<Species> funcptr, bool forceSingleThreaded = false)
         {
-            if (mMultithreaded && mSpeciesMap.Count > 3 && forceSingleThreaded == false)
+            if (IsMultithreaded && SpeciesMap.Count > 3 && forceSingleThreaded == false)
             {
-                Parallel.ForEach(mSpeciesMap, (Species species) =>
+                Parallel.ForEach(SpeciesMap, (Species species) =>
                 {
                     funcptr.Invoke(species);
                 });
@@ -101,17 +103,17 @@ namespace iLand.core
             else
             {
                 // single threaded operation
-                foreach (Species species in mSpeciesMap)
+                foreach (Species species in SpeciesMap)
                 {
                     funcptr.Invoke(species);
                 }
             }
         }
 
-        public void runGrid(Action<int, int> funcptr, int begin, int end, bool forceSingleThreaded, int minsize, int maxchunks)
+        public void RunGrid(Action<int, int> funcptr, int begin, int end, bool forceSingleThreaded, int minsize, int maxchunks)
         {
             int length = end - begin; // # of elements
-            if (mMultithreaded && length > minsize * 3 && forceSingleThreaded == false)
+            if (IsMultithreaded && length > minsize * 3 && forceSingleThreaded == false)
             {
                 int chunksize = minsize;
                 if (length > chunksize * maxchunks)
@@ -142,9 +144,9 @@ namespace iLand.core
         }
 
         // multirunning function
-        public void run<T>(Action<T> funcptr, List<T> container, bool forceSingleThreaded = false)
+        public void Run<T>(Action<T> funcptr, List<T> container, bool forceSingleThreaded = false)
         {
-            if (mMultithreaded && container.Count > 3 && forceSingleThreaded == false)
+            if (IsMultithreaded && container.Count > 3 && forceSingleThreaded == false)
             {
                 Parallel.ForEach(container, (T element) =>
                 {

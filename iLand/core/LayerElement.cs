@@ -2,16 +2,19 @@
 {
     internal class LayerElement
     {
-        public string name;
-        public string description;
-        public GridViewType view_type;
+        public string Description { get; set; }
+        public string Name { get; set; }
+        public GridViewType ViewType { get; set; }
 
-        public LayerElement() { }
-        public LayerElement(string aname, string adesc, GridViewType type)
+        public LayerElement() 
         {
-            name = aname;
-            description = adesc;
-            view_type = type;
+        }
+
+        public LayerElement(string name, string desc, GridViewType type)
+        {
+            this.Name = name;
+            this.Description = desc;
+            this.ViewType = type;
         }
     }
 }

@@ -9,75 +9,75 @@ namespace iLand.abe
     internal class Events
     {
         private QJSValue mInstance; ///< object holding the events
-        private Dictionary<string, QJSValue> mEvents; ///< list of event names and javascript functions
+        private readonly Dictionary<string, QJSValue> mEvents; ///< list of event names and javascript functions
 
         public Events()
         {
             mEvents = new Dictionary<string, QJSValue>();
         }
 
-        public void clear()
+        public void Clear()
         {
             mEvents.Clear();
         }
 
-        public void setup(QJSValue js_value, List<string> event_names)
+        public void Setup(QJSValue js_value, List<string> event_names)
         {
             mInstance = js_value; // save the object that contains the events
             foreach (string eventName in event_names)
             {
-                QJSValue val = FMSTP.valueFromJs(js_value, eventName);
-                if (val.isCallable())
+                QJSValue val = FMSTP.ValueFromJS(js_value, eventName);
+                if (val.IsCallable())
                 {
                     mEvents.Add(eventName, js_value); // save the event functions (and the name of the property that the function is assigned to)
                 }
             }
         }
 
-        public QJSValue run(string eventName, FMStand stand, List<QJSValue> parameters = null)
+        public QJSValue Run(string eventName, FMStand stand, List<QJSValue> parameters = null)
         {
             if (mEvents.ContainsKey(eventName))
             {
                 if (stand != null)
                 {
-                    FomeScript.setExecutionContext(stand);
+                    FomeScript.SetExecutionContext(stand);
                 }
-                QJSValue func = mEvents[eventName].property(eventName);
+                QJSValue func = mEvents[eventName].Property(eventName);
                 QJSValue result = null;
-                if (func.isCallable())
+                if (func.IsCallable())
                 {
                     using DebugTimer t = new DebugTimer("ABE:JSEvents:run");
 
                     if (parameters != null)
                     {
-                        result = func.callWithParameters(mInstance, parameters);
+                        result = func.CallWithParameters(mInstance, parameters);
                     }
                     else
                     {
-                        result = func.callWithInstance(mInstance);
+                        result = func.CallWithInstance(mInstance);
                     }
-                    if (FMSTP.verbose() || (stand != null && stand.trace()))
+                    if (FMSTP.verbose() || (stand != null && stand.TracingEnabled()))
                     {
-                        Debug.WriteLine((stand != null ? stand.context() : "<no stand>") + "  invoking javascript event " + eventName + " result: " + result.toString());
+                        Debug.WriteLine((stand != null ? stand.context() : "<no stand>") + "  invoking javascript event " + eventName + " result: " + result.ToString());
                     }
                 }
 
                 //Debug.WriteLine("event called:" + eventName + "result:" + result.toString();
-                if (result.isError())
+                if (result.IsError())
                 {
-                    throw new NotSupportedException(String.Format("{2} Javascript error in event {0}: {1}", eventName, result.toString(), stand != null ? stand.context() : "----"));
+                    throw new NotSupportedException(String.Format("{2} Javascript error in event {0}: {1}", eventName, result.ToString(), stand != null ? stand.context() : "----"));
                 }
                 return result;
             }
             return new QJSValue();
         }
 
-        public bool hasEvent(string eventName)
+        public bool HasEvent(string eventName)
         {
             return mEvents.ContainsKey(eventName);
         }
 
-        public string dump()
+        public string Dump()
         {
             StringBuilder event_list = new StringBuilder("Registered events: ");
             foreach (string eventName in mEvents.Keys)

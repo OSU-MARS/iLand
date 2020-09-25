@@ -32,33 +32,33 @@ namespace iLand.abe
             spacing = 0;
         }
 
-        public bool setup(QJSValue value)
+        public bool Setup(QJSValue value)
         {
-            string species_id = FMSTP.valueFromJs(value, "species", null, "setup of planting item for planting activity.").toString();
-            species = GlobalSettings.instance().model().speciesSet().species(species_id);
+            string species_id = FMSTP.ValueFromJS(value, "species", null, "setup of planting item for planting activity.").ToString();
+            species = GlobalSettings.Instance.Model.SpeciesSet().GetSpecies(species_id);
             if (species == null)
             {
                 throw new NotSupportedException(String.Format("'{0}' is not a valid species id for setting up a planting item.", species_id));
             }
-            fraction = FMSTP.valueFromJs(value, "fraction", "0").toNumber();
-            height = FMSTP.valueFromJs(value, "height", "0.05").toNumber();
-            age = FMSTP.valueFromJs(value, "age", "1").toInt();
-            clear = FMSTP.valueFromJs(value, "clear", "false").toBool();
+            fraction = FMSTP.ValueFromJS(value, "fraction", "0").ToNumber();
+            height = FMSTP.ValueFromJS(value, "height", "0.05").ToNumber();
+            age = FMSTP.ValueFromJS(value, "age", "1").ToInt();
+            clear = FMSTP.ValueFromJS(value, "clear", "false").ToBool();
 
             // pattern
-            string group = FMSTP.valueFromJs(value, "pattern", "").toString();
+            string group = FMSTP.ValueFromJS(value, "pattern", "").ToString();
             group_type = ActPlanting.planting_pattern_names.IndexOf(group);
             if (String.IsNullOrEmpty(group) == false && group != "undefined" && group_type == -1)
             {
                 throw new NotSupportedException(String.Format("Planting-activity: the pattern '{0}' is not valid!", group));
             }
-            spacing = FMSTP.valueFromJs(value, "spacing", "0").toInt();
-            offset = FMSTP.valueFromJs(value, "offset", "0").toInt();
+            spacing = FMSTP.ValueFromJS(value, "spacing", "0").ToInt();
+            offset = FMSTP.ValueFromJS(value, "offset", "0").ToInt();
 
-            bool random = FMSTP.boolValueFromJs(value, "random", false);
+            bool random = FMSTP.BoolValueFromJS(value, "random", false);
             if (random)
             {
-                group_random_count = FMSTP.valueFromJs(value, "n", "0").toInt();
+                group_random_count = FMSTP.ValueFromJS(value, "n", "0").ToInt();
             }
             else
             {
@@ -68,26 +68,26 @@ namespace iLand.abe
             return true;
         }
 
-        public void run(FMStand stand)
+        public void Run(FMStand stand)
         {
-            RectangleF box = ForestManagementEngine.standGrid().boundingBox(stand.id());
-            MapGrid sgrid = ForestManagementEngine.standGrid();
-            Model model = GlobalSettings.instance().model();
-            GridRunner<float> runner = new GridRunner<float>(model.grid(), box);
+            RectangleF box = ForestManagementEngine.StandGrid().BoundingBox(stand.id());
+            MapGrid sgrid = ForestManagementEngine.StandGrid();
+            Model model = GlobalSettings.Instance.Model;
+            GridRunner<float> runner = new GridRunner<float>(model.LightGrid, box);
             if (!grouped)
             {
                 // distribute saplings randomly.
                 // this adds saplings to SaplingCell (only if enough slots are available)
-                for (runner.next(); runner.isValid(); runner.next())
+                for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
                 {
-                    if (sgrid.standIDFromLIFCoord(runner.currentIndex()) != stand.id())
+                    if (sgrid.StandIDFromLifCoord(runner.CurrentIndex()) != stand.id())
                     {
                         continue;
                     }
-                    if (RandomGenerator.drandom() < fraction)
+                    if (RandomGenerator.Random() < fraction)
                     {
-                        ResourceUnit ru = model.ru(runner.currentCoord());
-                        ru.saplingCell(runner.currentIndex()).addSapling((float)height, age, species.index());
+                        ResourceUnit ru = model.GetResourceUnit(runner.CurrentCoordinate());
+                        ru.SaplingCell(runner.CurrentIndex()).AddSapling((float)height, age, species.Index);
                     }
                 }
             }
@@ -100,11 +100,11 @@ namespace iLand.abe
                 if (spacing == 0 && group_random_count == 0)
                 {
                     // pattern based planting (filled)
-                    runner.reset();
-                    for (runner.next(); runner.isValid(); runner.next())
+                    runner.Reset();
+                    for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
                     {
-                        Point qp = runner.currentIndex();
-                        if (sgrid.standIDFromLIFCoord(qp) != stand.id())
+                        Point qp = runner.CurrentIndex();
+                        if (sgrid.StandIDFromLifCoord(qp) != stand.id())
                         {
                             continue;
                         }
@@ -112,25 +112,25 @@ namespace iLand.abe
                         int idx = (qp.X + offset) % n + n * ((qp.Y + offset) % n);
                         if (pp[idx] == '1')
                         {
-                            ResourceUnit ru = model.ru(runner.currentCoord());
-                            SaplingCell sc = ru.saplingCell(qp);
+                            ResourceUnit ru = model.GetResourceUnit(runner.CurrentCoordinate());
+                            SaplingCell sc = ru.SaplingCell(qp);
 
                             if (clear)
                             {
                                 // clear all sapling trees on the cell
-                                model.saplings().clearSaplings(sc, ru, true);
+                                model.Saplings.ClearSaplings(sc, ru, true);
                             }
-                            sc.addSapling((float)height, age, species.index());
+                            sc.AddSapling((float)height, age, species.Index);
                         }
                     }
                 }
                 else
                 {
                     // pattern based (with spacing / offset, random...)
-                    int ispacing = spacing / Constant.cPxSize;
-                    Point p = model.grid().indexAt(box.TopLeft()).Subtract(new Point(offset, offset));
+                    int ispacing = spacing / Constant.LightSize;
+                    Point p = model.LightGrid.IndexAt(box.TopLeft()).Subtract(new Point(offset, offset));
                     Point pstart = p;
-                    Point p_end = model.grid().indexAt(box.BottomRight());
+                    Point p_end = model.LightGrid.IndexAt(box.BottomRight());
                     Point po;
                     p.X = Math.Max(p.X, 0);
                     p.Y = Math.Max(p.Y, 0);
@@ -146,7 +146,7 @@ namespace iLand.abe
                             if (n_ha-- <= 0)
                                 break;
                             // select a random position (2m grid index)
-                            p = model.grid().indexAt(new PointF((float)RandomGenerator.nrandom(box.Left, box.Right), (float)RandomGenerator.nrandom(box.Top, box.Bottom)));
+                            p = model.LightGrid.IndexAt(new PointF((float)RandomGenerator.Random(box.Left, box.Right), (float)RandomGenerator.Random(box.Top, box.Bottom)));
                         }
 
                         // apply the pattern....
@@ -155,19 +155,19 @@ namespace iLand.abe
                             for (int x = 0; x < n; ++x)
                             {
                                 po = p.Add(new Point(x, y));
-                                if (sgrid.standIDFromLIFCoord(po) != stand.id())
+                                if (sgrid.StandIDFromLifCoord(po) != stand.id())
                                 {
                                     continue;
                                 }
-                                ResourceUnit ru = model.ru(model.grid().cellCenterPoint(po));
-                                SaplingCell sc = ru.saplingCell(po);
+                                ResourceUnit ru = model.GetResourceUnit(model.LightGrid.GetCellCenterPoint(po));
+                                SaplingCell sc = ru.SaplingCell(po);
 
                                 if (clear)
                                 {
                                     // clear all sapling trees
-                                    model.saplings().clearSaplings(sc, ru, true);
+                                    model.Saplings.ClearSaplings(sc, ru, true);
                                 }
-                                sc.addSapling((float)height, age, species.index());
+                                sc.AddSapling((float)height, age, species.Index);
                             }
                         }
                         if (!do_random)

@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection.Metadata.Ecma335;
 
 namespace iLand.abe
 {
@@ -10,15 +9,13 @@ namespace iLand.abe
     {
         protected static List<string> mAllowedProperties; // list of properties (e.g. 'schedule') that are parsed by the base activity
 
+        public ActivityFlags mBaseActivity; // base properties of the activity (that can be changed for each stand)
+        private readonly Constraints mConstraints; // constraining factors
+        private readonly DynamicExpression mEnabledIf; // enabledIf property (dynamically evaluated)
+        private readonly Events mEvents; // action handlers such as "onExecute"
         private int mIndex; ///< index of the activity within the STP
         private string mName; ///< the name of the activity;
-        private FMSTP mProgram; // link to the management programme the activity is part of
-        private Schedule mSchedule; // timing of activity
-        private Constraints mConstraints; // constraining factors
-        private Events mEvents; // action handlers such as "onExecute"
-        private DynamicExpression mEnabledIf; // enabledIf property (dynamically evaluated)
-
-        public ActivityFlags mBaseActivity; // base properties of the activity (that can be changed for each stand)
+        private readonly Schedule mSchedule; // timing of activity
 
         public Schedule schedule() { return mSchedule; }
         protected Constraints constraints() { return mConstraints; }
@@ -30,117 +27,121 @@ namespace iLand.abe
         public string name() { return mName; } ///< name of the activity as provided by JS
         public int index() { return mIndex; } ///< index of the activity within the STP
                                               /// get earlist possible scheduled year (relative to rotation begin)
-        public int earlistSchedule(double U = 100.0) { return (int)mSchedule.minValue(U); }
-        /// get latest possible scheduled year (relative to rotation begin)
-        public int latestSchedule(double U = 100.0) { return (int)mSchedule.maxValue(U); }
-        /// get optimal scheduled year (relative to rotation begin)
-        public int optimalSchedule(double U = 100.0) { return (int)mSchedule.optimalValue(U); }
-        public bool isRepeatingActivity() { return mSchedule.repeat; }
 
-        public Activity(FMSTP parent)
+        public Activity()
         {
-            mProgram = parent;
-            mIndex = 0;
-            mBaseActivity = new ActivityFlags(this);
-            mBaseActivity.setActive(true);
-            mBaseActivity.setEnabled(true);
+            this.mBaseActivity = new ActivityFlags(this);
+            this.mBaseActivity.SetIsActive(true);
+            this.mBaseActivity.SetIsEnabled(true);
+            this.mConstraints = new Constraints();
+            this.mEnabledIf = new DynamicExpression();
+            this.mEvents = new Events();
+            this.mIndex = 0;
+            this.mSchedule = new Schedule(new QJSValue());
         }
 
-        public static Activity createActivity(string type, FMSTP stp)
+        public int GetEarlistSchedule(double U = 100.0) { return (int)mSchedule.MinValue(U); }
+        /// get latest possible scheduled year (relative to rotation begin)
+        public int GetLatestSchedule(double U = 100.0) { return (int)mSchedule.MaxValue(U); }
+        /// get optimal scheduled year (relative to rotation begin)
+        public int GetOptimalSchedule(double U = 100.0) { return (int)mSchedule.OptimalValue(U); }
+        public bool IsRepeating() { return mSchedule.repeat; }
+
+        public static Activity CreateActivity(string type)
         {
             return type switch
             {
-                "general" => new ActGeneral(stp),
-                "scheduled" => new ActScheduled(stp),
-                "planting" => new ActPlanting(stp),
-                "salvage" => new ActSalvage(stp),
-                "thinning" => new ActThinning(stp),
+                "general" => new ActGeneral(),
+                "scheduled" => new ActScheduled(),
+                "planting" => new ActPlanting(),
+                "salvage" => new ActSalvage(),
+                "thinning" => new ActThinning(),
                 _ => throw new NotSupportedException(String.Format("Error: the activity type '{0}' is not a valid type.", type)),
             };
         }
 
-        public virtual string type()
+        public virtual string Type()
         {
             return "base";
         }
 
-        public void setup(QJSValue value)
+        public virtual void Setup(QJSValue value)
         {
-            mSchedule.setup(FMSTP.valueFromJs(value, "schedule", "", "setup activity"));
+            mSchedule.Setup(FMSTP.ValueFromJS(value, "schedule", "", "setup activity"));
             if (FMSTP.verbose())
             {
-                Debug.WriteLine(mSchedule.dump());
+                Debug.WriteLine(mSchedule.Dump());
             }
             // setup of events
-            mEvents.clear();
-            mEvents.setup(value, new List<string>() { "onCreate", "onSetup", "onEnter", "onExit", "onExecute", "onExecuted", "onCancel" });
+            mEvents.Clear();
+            mEvents.Setup(value, new List<string>() { "onCreate", "onSetup", "onEnter", "onExit", "onExecute", "onExecuted", "onCancel" });
             if (FMSTP.verbose())
             {
-                Debug.WriteLine("Events: " + mEvents.dump());
+                Debug.WriteLine("Events: " + mEvents.Dump());
             }
 
             // setup of constraints
-            QJSValue constraints = FMSTP.valueFromJs(value, "constraint");
-            if (!constraints.isUndefined())
+            QJSValue constraints = FMSTP.ValueFromJS(value, "constraint");
+            if (!constraints.IsUndefined())
             {
-                mConstraints.setup(constraints);
+                mConstraints.Setup(constraints);
             }
             // enabledIf property
-            QJSValue enabled_if = FMSTP.valueFromJs(value, "enabledIf");
-            if (!enabled_if.isUndefined())
+            QJSValue enabled_if = FMSTP.ValueFromJS(value, "enabledIf");
+            if (!enabled_if.IsUndefined())
             {
-                mEnabledIf.setup(enabled_if);
+                mEnabledIf.Setup(enabled_if);
             }
         }
 
-        public virtual double scheduleProbability(FMStand stand, int specific_year = -1)
+        public virtual double ScheduleProbability(FMStand stand, int specific_year = -1)
         {
             // return a value between 0 and 1; return -1 if the activity is expired.
-            return schedule().value(stand, specific_year);
+            return schedule().Value(stand, specific_year);
         }
 
-        public virtual double execeuteProbability(FMStand stand)
+        public virtual double ExeceuteProbability(FMStand stand)
         {
             // check the standard constraints and return true when all constraints are fulfilled (or no constraints set)
-            return constraints().evaluate(stand);
+            return constraints().Evaluate(stand);
         }
 
-        public virtual bool execute(FMStand stand)
+        public virtual bool Execute(FMStand stand)
         {
             // execute the "onExecute" event
-            events().run("onExecute", stand);
+            events().Run("onExecute", stand);
             return true;
         }
 
-        public virtual bool evaluate(FMStand stand)
+        public virtual bool Evaluate(FMStand stand)
         {
             // execute the "onEvaluate" event: the execution is canceled, if the function returns false.
-            bool cancel = events().run("onEvaluate", stand).toBool();
+            bool cancel = events().Run("onEvaluate", stand).ToBool();
             return !cancel;
         }
 
-        public virtual void evaluateDyanamicExpressions(FMStand stand)
+        public virtual void EvaluateDyanamicExpressions(FMStand stand)
         {
             // evaluate the enabled-if property and set the enabled flag of the stand (i.e. the ActivityFlags)
-            if (mEnabledIf.isValid())
+            if (mEnabledIf.IsValid())
             {
-                bool result = mEnabledIf.evaluate(stand);
-                stand.flags(mIndex).setEnabled(result);
+                bool result = mEnabledIf.Evaluate(stand);
+                stand.flags(mIndex).SetIsEnabled(result);
             }
         }
 
-        public virtual List<string> info()
+        public virtual List<string> Info()
         {
-            List<string> info = new List<string>() { String.Format("Activity '{0}': type '{1}'", name(), type()),
-                                                                   "Events", "-", events().dump(), "/-",
-                                                                   "Schedule", "-", schedule().dump(), "/-",
+            List<string> info = new List<string>() { String.Format("Activity '{0}': type '{1}'", name(), Type()),
+                                                                   "Events", "-", events().Dump(), "/-",
+                                                                   "Schedule", "-", schedule().Dump(), "/-",
                                                                    "Constraints", "-" };
-            info.AddRange(constraints().dump());
+            info.AddRange(constraints().Dump());
             info.Add("/-");
             return info;
         }
 
-        public ActivityFlags standFlags(FMStand stand = null)
+        public ActivityFlags StandFlags(FMStand stand = null)
         {
             // use the base data item if no specific stand is provided
             if (stand == null)

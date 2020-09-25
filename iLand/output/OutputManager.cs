@@ -11,7 +11,7 @@ namespace iLand.output
       */
     internal class OutputManager
     {
-        private List<Output> mOutputs; ///< list of outputs in system
+        private readonly List<Output> mOutputs; ///< list of outputs in system
 
         // on creation of the output manager
         // an instance of every iLand output
@@ -19,61 +19,63 @@ namespace iLand.output
         public OutputManager()
         {
             // add all the outputs
-            mOutputs.Add(new TreeOut());
-            mOutputs.Add(new TreeRemovedOut());
-            mOutputs.Add(new StandOut());
-            mOutputs.Add(new LandscapeOut());
-            mOutputs.Add(new LandscapeRemovedOut());
-            mOutputs.Add(new DynamicStandOut());
-            mOutputs.Add(new ProductionOut());
-            mOutputs.Add(new StandDeadOut());
-            mOutputs.Add(new ManagementOut());
-            mOutputs.Add(new SaplingOut());
-            mOutputs.Add(new SaplingDetailsOut());
-            mOutputs.Add(new CarbonOut());
-            mOutputs.Add(new CarbonFlowOut());
-            mOutputs.Add(new WaterOut());
+            mOutputs = new List<Output>() 
+            {
+                new TreeOut(),
+                new TreeRemovedOut(),
+                new StandOut(),
+                new LandscapeOut(),
+                new LandscapeRemovedOut(),
+                new DynamicStandOut(),
+                new ProductionOut(),
+                new StandDeadOut(),
+                new ManagementOut(),
+                new SaplingOut(),
+                new SaplingDetailsOut(),
+                new CarbonOut(),
+                new CarbonFlowOut(),
+                new WaterOut()
+            };
         }
 
-        public void addOutput(Output output)
+        public void AddOutput(Output output)
         {
             mOutputs.Add(output);
         }
 
-        public void removeOutput(string tableName)
+        public void RemoveOutput(string tableName)
         {
-            Output o = find(tableName);
+            Output o = Find(tableName);
             if (o != null)
             {
                 mOutputs.RemoveAt(mOutputs.IndexOf(o));
             }
         }
 
-        public void setup()
+        public void Setup()
         {
             //close();
-            XmlHelper xml = GlobalSettings.instance().settings();
+            XmlHelper xml = GlobalSettings.Instance.Settings;
             string nodepath;
             foreach (Output o in mOutputs)
             {
-                nodepath = String.Format("output.{0}", o.tableName());
-                xml.setCurrentNode(nodepath);
-                Debug.WriteLine("setup of output " + o.name());
-                o.setup();
-                bool enabled = xml.valueBool(".enabled", false);
-                o.setEnabled(enabled);
-                if (enabled)
+                nodepath = String.Format("output.{0}", o.TableName);
+                xml.SetCurrentNode(nodepath);
+                Debug.WriteLine("setup of output " + o.Name);
+                o.Setup();
+                o.IsEnabled = xml.ValueBool(".enabled", false);
+                if (o.IsEnabled)
                 {
-                    o.open();
+                    o.Open();
                 }
             }
         }
 
-        public Output find(string tableName)
+        public Output Find(string tableName)
         {
             foreach (Output p in mOutputs)
             {
-                if (p.tableName() == tableName)
+                if (p.TableName == tableName)
                 {
                     return p;
                 }
@@ -81,41 +83,40 @@ namespace iLand.output
             return null;
         }
 
-        public void save()
+        public void Save()
         {
         }
 
-        public void close()
+        public void Close()
         {
             Debug.WriteLine("outputs closed");
             foreach (Output p in mOutputs)
             {
-                p.close();
+                p.Close();
             }
         }
 
-        public bool execute(string tableName)
+        public bool Execute(string tableName)
         {
             using DebugTimer t = new DebugTimer("public execute()");
-            t.setSilent();
-            Output p = find(tableName);
+            Output p = Find(tableName);
             if (p != null)
             {
-                if (!p.isEnabled())
+                if (!p.IsEnabled)
                 {
                     return false;
                 }
-                if (!p.isOpen())
+                if (!p.IsOpen)
                 {
                     return false;
                 }
-                if (!p.isRowEmpty())
+                if (!p.IsRowEmpty())
                 {
-                    Trace.TraceWarning("Output " + p.name() + " invalid (not at new row)!!!");
+                    Trace.TraceWarning("Output " + p.Name + " invalid (not at new row)!!!");
                     return false;
                 }
 
-                p.exec();
+                p.Exec();
 
                 return true;
             }
@@ -123,12 +124,12 @@ namespace iLand.output
             return false; // no output found
         }
 
-        public string wikiFormat()
+        public string WikiFormat()
         {
             StringBuilder result = new StringBuilder();
             foreach (Output o in mOutputs)
             {
-                result.Append(o.wikiFormat() + System.Environment.NewLine);
+                result.Append(o.WikiFormat() + System.Environment.NewLine);
             }
             return result.ToString();
         }

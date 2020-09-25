@@ -4,33 +4,46 @@ namespace iLand.output
 {
     internal class OutputColumn
     {
-        private string mName;
-        private string mDescription;
         public OutputDatatype mDatatype;
-
-        public static OutputColumn year() { return new OutputColumn("year", "simulation year", OutputDatatype.OutInteger); }
-        public static OutputColumn species() { return new OutputColumn("species", "tree species", OutputDatatype.OutString); }
-        public static OutputColumn ru() { return new OutputColumn("ru", "index of ressource unit", OutputDatatype.OutInteger); }
-        public static OutputColumn id() { return new OutputColumn("rid", "id of ressource unit (-1: no ids set)", OutputDatatype.OutInteger); }
-        public string name() { return mName; }
-        public string description() { return mDescription; }
+        public string Name { get; private set; }
+        public string Description { get; private set; }
 
         public OutputColumn(string name, string description, OutputDatatype datatype)
         {
-            mName = name;
-            mDescription = description;
+            Name = name;
+            Description = description;
             mDatatype = datatype;
         }
 
-        public string datatype() 
+        public static OutputColumn CreateID()
+        {
+            return new OutputColumn("rid", "id of ressource unit (-1: no ids set)", OutputDatatype.OutInteger);
+        }
+
+        public static OutputColumn CreateResourceUnit()
+        {
+            return new OutputColumn("ru", "index of ressource unit", OutputDatatype.OutInteger);
+        }
+
+        public static OutputColumn CreateSpecies()
+        {
+            return new OutputColumn("species", "tree species", OutputDatatype.OutString);
+        }
+
+        public static OutputColumn CreateYear() 
         { 
-            switch (mDatatype) 
-            { 
-                case OutputDatatype.OutInteger: return "integer"; 
-                case OutputDatatype.OutDouble: return "double"; 
-                case OutputDatatype.OutString: return "string";
-                default: throw new NotSupportedException();
-            } 
+            return new OutputColumn("year", "simulation year", OutputDatatype.OutInteger); 
+        }
+
+        public string Datatype() 
+        {
+            return mDatatype switch
+            {
+                OutputDatatype.OutInteger => "integer",
+                OutputDatatype.OutDouble => "double",
+                OutputDatatype.OutString => "string",
+                _ => throw new NotSupportedException(),
+            };
         }
     }
 }

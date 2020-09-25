@@ -14,30 +14,26 @@ namespace iLand.abe
         private static bool mVerbose = false; ///< debug mode
 
         private string mName; ///< the name of the stand treatment program
-        private Events mEvents;
+        private readonly Events mEvents;
         private bool mHasRepeatingActivities; ///< true, if the STP contains repeating activities
-        private List<Activity> mActivities; ///< container for the activities of the STP
-        private List<ActivityFlags> mActivityStand; ///< base data for stand-specific STP info.
-        private List<string> mActivityNames;  ///< names of all available activities
+        private readonly List<Activity> mActivities; ///< container for the activities of the STP
+        private readonly List<ActivityFlags> mActivityStand; ///< base data for stand-specific STP info.
+        private readonly List<string> mActivityNames;  ///< names of all available activities
         // special activities
         private ActSalvage mSalvage;
 
         // STP-level properties
-        private int[] mRotationLength; ///< three levels (low, medium,high) of rotation length
+        private readonly int[] mRotationLength; ///< three levels (low, medium,high) of rotation length
 
         private QJSValue mOptions; ///< user-defined options of the STP
 
         public string name() { return mName; }
-        public int activityIndex(Activity act) { return mActivities.IndexOf(act); }
 
         /// defaultFlags() is used to initalized the flags for indiv. forest stands
         public List<ActivityFlags> defaultFlags() { return mActivityStand; }
         public Events events() { return mEvents; }
         public QJSValue JSoptions() { return mOptions; }
 
-        /// rotation length (years)
-        public int rotationLengthOfType(int type) { if (type > 0 && type < 4) return mRotationLength[type - 1]; return 0; }
-        public int rotationLengthType(int length) { for (int i = 0; i < 3; ++i) if (mRotationLength[i] == length) return i + 1; return -1; } // TODO: fix
         public ActSalvage salvageActivity() { return mSalvage; }
 
         /// if verbose is true, detailed debug information is provided.
@@ -46,15 +42,24 @@ namespace iLand.abe
 
         public FMSTP()
         {
-            mRotationLength = new int[3];
-            mSalvage = null;
-            mRotationLength[0] = 90; // sensible defaults
-            mRotationLength[1] = 100;
-            mRotationLength[2] = 110;
-            mOptions = new QJSValue(0);
+            this.mActivities = new List<Activity>();
+            this.mActivityNames = new List<string>();
+            this.mActivityStand = new List<ActivityFlags>();
+            this.mEvents = new Events();
+            this.mOptions = new QJSValue(0);
+            this.mRotationLength = new int[3];
+            this.mRotationLength[0] = 90; // sensible defaults
+            this.mRotationLength[1] = 100;
+            this.mRotationLength[2] = 110;
+            this.mSalvage = null;
         }
 
-        public Activity activity(string name)
+        public int GetIndexOf(Activity act) { return mActivities.IndexOf(act); }
+        /// rotation length (years)
+        public int GetRotationLength(int type) { if (type > 0 && type < 4) return mRotationLength[type - 1]; return 0; }
+        public int GetRotationType(int length) { for (int i = 0; i < 3; ++i) if (mRotationLength[i] == length) return i + 1; return -1; } // TODO: fix
+
+        public Activity GetActivity(string name)
         {
             int idx = mActivityNames.IndexOf(name);
             if (idx == -1)
@@ -64,22 +69,22 @@ namespace iLand.abe
             return mActivities[idx];
         }
 
-        public int activityScheduledEarlier(Activity a, Activity b)
+        public int ActivityScheduledEarlier(Activity a, Activity b)
         {
-            if (a.earlistSchedule() < b.earlistSchedule())
+            if (a.GetEarlistSchedule() < b.GetEarlistSchedule())
             {
                 return -1;
             }
-            if (a.earlistSchedule() > b.earlistSchedule())
+            if (a.GetEarlistSchedule() > b.GetEarlistSchedule())
             {
                 return 1;
             }
             return 0;
         }
 
-        public void setup(QJSValue js_value, string name)
+        public void Setup(QJSValue js_value, string name)
         {
-            clear();
+            Clear();
 
             if (String.IsNullOrEmpty(name) == false)
             {
@@ -88,24 +93,24 @@ namespace iLand.abe
 
             // (1) scan recursively the data structure and create
             //     all activites
-            internalSetup(js_value, 0);
+            InternalSetup(js_value, 0);
 
             // (2) create all other required meta information (such as ActivityStand)
             // sort activites based on the minimum execution time
-            mActivities.Sort(activityScheduledEarlier);
+            mActivities.Sort(ActivityScheduledEarlier);
 
             mActivityNames.Clear();
             mHasRepeatingActivities = false;
             for (int i = 0; i < mActivities.Count; ++i)
             {
                 mActivityNames.Add(mActivities[i].name());
-                mActivityStand.Add(mActivities[i].standFlags()); // stand = null: create a copy of the activities' base flags
+                mActivityStand.Add(mActivities[i].StandFlags()); // stand = null: create a copy of the activities' base flags
                 mActivities[i].setIndex(i);
-                if (mActivities[i].isRepeatingActivity())
+                if (mActivities[i].IsRepeating())
                 {
                     mHasRepeatingActivities = true;
                 }
-                if (mActivities[i].standFlags().isSalvage())
+                if (mActivities[i].StandFlags().IsSalvage())
                 {
                     mSalvage = (ActSalvage)mActivities[i];
                     mHasRepeatingActivities = false;
@@ -113,17 +118,17 @@ namespace iLand.abe
             }
 
             // (3) set up top-level events
-            mEvents.setup(js_value, new List<string>() { "onInit", "onExit" });
+            mEvents.Setup(js_value, new List<string>() { "onInit", "onExit" });
         }
 
-        public bool executeRepeatingActivities(FMStand stand)
+        public bool ExecuteRepeatingActivities(FMStand stand)
         {
             if (mSalvage != null)
             {
-                if (stand.totalHarvest() != 0.0 || stand.property("_run_salvage").toBool())
+                if (stand.TotalHarvest() != 0.0 || stand.Property("_run_salvage").ToBool())
                 {
                     // at this point totalHarvest is only disturbance related harvests.
-                    stand.executeActivity(mSalvage);
+                    stand.ExecuteActivity(mSalvage);
                 }
             }
             if (!mHasRepeatingActivities)
@@ -136,50 +141,50 @@ namespace iLand.abe
             {
                 if (mActivities[i].schedule().repeat)
                 {
-                    if (!stand.flags(i).active() || !stand.flags(i).enabled())
+                    if (!stand.flags(i).IsActive() || !stand.flags(i).IsEnabled())
                     {
                         continue;
                     }
-                    if (stand.trace())
+                    if (stand.TracingEnabled())
                     {
                         Debug.WriteLine("running repeating activity " + mActivities[i].name());
                     }
-                    result |= stand.executeActivity(mActivities[i]);
+                    result |= stand.ExecuteActivity(mActivities[i]);
                 }
             }
 
             return result; // return true if at least one repeating activity was executed.
         }
 
-        public void evaluateDynamicExpressions(FMStand stand)
+        public void EvaluateDynamicExpressions(FMStand stand)
         {
             foreach (Activity act in mActivities)
         {
-                act.evaluateDyanamicExpressions(stand);
+                act.EvaluateDyanamicExpressions(stand);
             }
         }
 
         // read the setting from the setup-javascript object
-        private void internalSetup(QJSValue js_value, int level)
+        private void InternalSetup(QJSValue js_value, int level)
         {
             // top-level
-            if (js_value.hasOwnProperty("schedule"))
+            if (js_value.HasOwnProperty("schedule"))
             {
-                setupActivity(js_value, "unnamed");
+                SetupActivity(js_value, "unnamed");
                 return;
             }
 
             // nested objects
-            if (js_value.isObject())
+            if (js_value.IsObject())
             {
                 QJSValueIterator it = new QJSValueIterator(js_value);
-                while (it.hasNext())
+                while (it.HasNext())
                 {
-                    it.next();
+                    it.Next();
                     // parse special properties
-                    if (it.name() == "U" && it.value().isArray())
+                    if (it.Name() == "U" && it.Value().IsArray())
                     {
-                        List<int> list = (List<int>)it.value().toVariant();
+                        List<int> list = (List<int>)it.Value().ToVariant();
                         if (list.Count != 3)
                         {
                             throw new NotSupportedException("STP: the 'U'-property needs to be an array with three elements!");
@@ -190,26 +195,26 @@ namespace iLand.abe
                         }
                         continue;
                     }
-                    if (it.name() == "options")
+                    if (it.Name() == "options")
                     {
-                        mOptions = it.value();
+                        mOptions = it.Value();
                         continue;
                     }
-                    if (it.value().hasOwnProperty("type"))
+                    if (it.Value().HasOwnProperty("type"))
                     {
                         // try to set up as activity
-                        setupActivity(it.value(), it.name());
+                        SetupActivity(it.Value(), it.Name());
                     }
-                    else if (it.value().isObject() && !it.value().isCallable())
+                    else if (it.Value().IsObject() && !it.Value().IsCallable())
                     {
                         // try to go one level deeper
                         if (verbose())
                         {
-                            Debug.WriteLine("entering " + it.name());
+                            Debug.WriteLine("entering " + it.Name());
                         }
                         if (level < 10)
                         {
-                            internalSetup(it.value(), ++level);
+                            InternalSetup(it.Value(), ++level);
                         }
                         else
                         {
@@ -224,9 +229,9 @@ namespace iLand.abe
             }
         }
 
-        public void dumpInfo()
+        public void DumpInfo()
         {
-            if (GlobalSettings.instance().logLevelDebug())
+            if (GlobalSettings.Instance.LogDebug())
             {
                 return;
             }
@@ -236,39 +241,39 @@ namespace iLand.abe
             foreach (Activity act in mActivities) 
             {
                 Debug.WriteLine("******* Activity *********");
-                string info = String.Join('\n', act.info());
+                string info = String.Join('\n', act.Info());
                 Debug.WriteLine(info);
             }
         }
 
-        private void setupActivity(QJSValue js_value, string name)
+        private void SetupActivity(QJSValue js_value, string name)
         {
-            string type = js_value.property("type").toString();
+            string type = js_value.Property("type").ToString();
             if (verbose())
             {
                 Debug.WriteLine("setting up activity of type " + type + " from JS");
             }
-            Activity act = Activity.createActivity(type, this);
+            Activity act = Activity.CreateActivity(type);
             if (act == null)
             {
                 return; // actually, an error is thrown in the previous call.
             }
 
             // use id-property if available, or the object-name otherwise
-            act.setName(valueFromJs(js_value, "id", name).toString());
+            act.setName(ValueFromJS(js_value, "id", name).ToString());
             // call the setup routine (overloaded version)
-            act.setup(js_value);
+            act.Setup(js_value);
 
             // call the onCreate handler:
-            FomeScript.setActivity(act);
-            act.events().run("onCreate", null);
+            FomeScript.SetActivity(act);
+            act.events().Run("onCreate", null);
             mActivities.Add(act);
         }
 
-        private void clear()
+        private void Clear()
         {
             mActivities.Clear();
-            mEvents.clear();
+            mEvents.Clear();
             mActivityStand.Clear();
             mActivityNames.Clear();
             mSalvage = null;
@@ -276,9 +281,9 @@ namespace iLand.abe
             mName = null;
         }
 
-        public static QJSValue valueFromJs(QJSValue js_value, string key, string default_value = null, string errorMessage = null)
+        public static QJSValue ValueFromJS(QJSValue js_value, string key, string default_value = null, string errorMessage = null)
         {
-            if (!js_value.hasOwnProperty(key))
+            if (!js_value.HasOwnProperty(key))
             {
                 if (String.IsNullOrEmpty(errorMessage) == false)
                 {
@@ -293,12 +298,12 @@ namespace iLand.abe
                     return new QJSValue(default_value);
                 }
             }
-            return (QJSValue)js_value.property(key);
+            return (QJSValue)js_value.Property(key);
         }
 
-        public static bool boolValueFromJs(QJSValue js_value, string key, bool default_bool_value, string errorMessage = null)
+        public static bool BoolValueFromJS(QJSValue js_value, string key, bool default_bool_value, string errorMessage = null)
         {
-            if (!js_value.hasOwnProperty(key))
+            if (!js_value.HasOwnProperty(key))
             {
                 if (String.IsNullOrEmpty(errorMessage) == false)
                 {
@@ -309,19 +314,19 @@ namespace iLand.abe
                     return default_bool_value;
                 }
             }
-            return js_value.property(key).toBool();
+            return js_value.Property(key).ToBool();
         }
 
-        public static bool checkObjectProperties(QJSValue js_value, List<string> allowed_properties, string errorMessage)
+        public static bool CheckObjectProperties(QJSValue js_value, List<string> allowed_properties, string errorMessage)
         {
             QJSValueIterator it = new QJSValueIterator(js_value);
             bool found_issues = false;
-            while (it.hasNext())
+            while (it.HasNext())
             {
-                it.next();
-                if (!allowed_properties.Contains(it.name()) && it.name() != "length")
+                it.Next();
+                if (!allowed_properties.Contains(it.Name()) && it.Name() != "length")
                 {
-                    Debug.WriteLine("Syntax-warning: The javascript property " + it.name() + " is not used! In: " + errorMessage);
+                    Debug.WriteLine("Syntax-warning: The javascript property " + it.Name() + " is not used! In: " + errorMessage);
                     found_issues = true;
                 }
             }

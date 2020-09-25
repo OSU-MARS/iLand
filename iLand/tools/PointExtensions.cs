@@ -9,12 +9,6 @@ namespace iLand.tools
             return new Point(point.X + offset.X, point.Y + offset.Y);
         }
 
-        public static uint qHash(Point key)
-        {
-            // TODO: improve hashing
-            return (uint)(key.X.GetHashCode() ^ key.Y.GetHashCode());
-        }
-
         public static Point Subtract(this Point point, int offset)
         {
             return new Point(point.X - offset, point.Y - offset);

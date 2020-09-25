@@ -33,35 +33,34 @@ namespace iLand.abe
 
         public static ForestManagementEngine instance()
         {
-            if (singleton_fome_engine != null)
+            if (singleton_fome_engine == null)
             {
-                return singleton_fome_engine;
+                singleton_fome_engine = new ForestManagementEngine();
             }
-            singleton_fome_engine = new ForestManagementEngine();
             return singleton_fome_engine;
         }
 
         private int mCurrentYear; ///< current year of the simulation (=year of the model)
 
-        private List<FMSTP> mSTP;
+        private readonly List<FMSTP> mSTP;
 
         // scripting bridge (accessing model properties from javascript)
         private FomeScript mScriptBridge;
 
         // forest management units
-        private List<FMUnit> mUnits; ///< container for forest management units
+        private readonly List<FMUnit> mUnits; ///< container for forest management units
         // mapping of stands to units
-        private MultiValueDictionary<FMUnit, FMStand> mUnitStandMap;
-        private List<FMStand> mStands;
-        private Dictionary<int, FMStand> mStandHash;
+        private readonly MultiValueDictionary<FMUnit, FMStand> mUnitStandMap;
+        private readonly List<FMStand> mStands;
+        private readonly Dictionary<int, FMStand> mStandHash;
 
         // agents
-        private List<AgentType> mAgentTypes; ///< collection of agent types
-        private List<Agent> mAgents; ///< collection of all agents (individuals)
+        private readonly List<AgentType> mAgentTypes; ///< collection of agent types
+        private readonly List<Agent> mAgents; ///< collection of all agents (individuals)
 
         // grids, visuals, etc.
-        private Grid<FMStand> mFMStandGrid;
-        private ABELayers mStandLayers;
+        private readonly Grid<FMStand> mFMStandGrid;
+        private readonly ABELayers mStandLayers;
 
         private bool mCancel;
         private bool mStandLayoutChanged;
@@ -72,73 +71,84 @@ namespace iLand.abe
         /// access to the "global" Javascript engine
         public FomeScript scriptBridge() { return mScriptBridge; }
 
-        /// add a stand treatment programme to the list of programs.
-        public void addSTP(FMSTP stp) { mSTP.Add(stp); }
-        /// add an agent type (called from JS)
-        public void addAgentType(AgentType at) { mAgentTypes.Add(at); }
-        public void addAgent(Agent agent) { mAgents.Add(agent); }
         public MultiValueDictionary<FMUnit, FMStand> stands() { return mUnitStandMap; }
         public List<FMUnit> units() { return mUnits; }
 
         public ForestManagementEngine()
         {
-            mScriptBridge = null;
-            singleton_fome_engine = this;
-            mCancel = false;
-            setupOutputs(); // add ABE output definitions
+            this.mAgents = new List<Agent>();
+            this.mAgentTypes = new List<AgentType>();
+            this.mCancel = false;
+            this.mFMStandGrid = new Grid<FMStand>();
+            this.mScriptBridge = null;
+            this.mStandHash = new Dictionary<int, FMStand>();
+            this.mStandLayers = new ABELayers();
+            this.mStands = new List<FMStand>();
+            this.mSTP = new List<FMSTP>();
+            this.mUnits = new List<FMUnit>();
+            this.mUnitStandMap = new MultiValueDictionary<FMUnit, FMStand>();
+
+            singleton_fome_engine = this; // BUGBUG: singleton pattern violation in C++
+            SetupOutputs(); // add ABE output definitions
         }
 
-        public static MapGrid standGrid()
+        public void AddAgent(Agent agent) { mAgents.Add(agent); }
+        /// add an agent type (called from JS)
+        public void AddAgentType(AgentType at) { mAgentTypes.Add(at); }
+        /// add a stand treatment programme to the list of programs.
+        public void AddStandTreatmentProgram(FMSTP stp) { mSTP.Add(stp); }
+
+        public static MapGrid StandGrid()
         {
-            return GlobalSettings.instance().model().standGrid();
+            return GlobalSettings.Instance.Model.StandGrid;
         }
 
-        private void setupScripting()
+        private void SetupScripting()
         {
             // setup the ABE system
-            XmlHelper xml = GlobalSettings.instance().settings();
+            XmlHelper xml = GlobalSettings.Instance.Settings;
 
-            ScriptGlobal.setupGlobalScripting(); // general iLand scripting helper functions and such
+            ScriptGlobal.SetupGlobalScripting(); // general iLand scripting helper functions and such
 
             // the link between the scripting and the C++ side of ABE
             mScriptBridge = new FomeScript();
-            mScriptBridge.setupScriptEnvironment();
+            mScriptBridge.SetupScriptEnvironment();
 
-            string file_name = GlobalSettings.instance().path(xml.value("model.management.abe.file"));
-            string code = Helper.loadTextFile(file_name);
+            string file_name = GlobalSettings.Instance.Path(xml.Value("model.management.abe.file"));
+            string code = Helper.LoadTextFile(file_name);
             Debug.WriteLine("Loading script file " + file_name);
-            QJSValue result = GlobalSettings.instance().scriptEngine().evaluate(code, file_name);
-            if (result.isError())
+            QJSValue result = GlobalSettings.Instance.ScriptEngine.Evaluate(code, file_name);
+            if (result.IsError())
             {
-                int lineno = result.property("lineNumber").toInt();
+                int lineno = result.Property("lineNumber").ToInt();
                 List<string> code_lines = code.Replace("\r", "").Split('\n').ToList(); // remove CR, split by LF
                 StringBuilder code_part = new StringBuilder();
                 for (int i = Math.Max(0, lineno - 5); i < Math.Min(lineno + 5, code_lines.Count); ++i)
                 {
                     code_part.AppendLine(String.Format("{0}: {1} {2}\n", i, code_lines[i], i == lineno ? "  <---- [ERROR]" : ""));
                 }
-                Debug.WriteLine("Javascript Error in file" + result.property("fileName").toString() + ":" + result.property("lineNumber").toInt() + ":" + result.toString() + ":\n" + code_part);
+                Debug.WriteLine("Javascript Error in file" + result.Property("fileName").ToString() + ":" + result.Property("lineNumber").ToInt() + ":" + result.ToString() + ":\n" + code_part);
             }
         }
 
-        private void prepareRun()
+        private void PrepareRun()
         {
             mStandLayoutChanged = false; // can be changed by salvage operations / stand polygon changes
         }
 
-        private void finalizeRun()
+        private void FinalizeRun()
         {
             // empty the harvest counter; it will be filled again
             // during the (next) year.
 
             foreach (FMStand stand in mStands)
             {
-                stand.resetHarvestCounter();
+                stand.ResetHarvestCounter();
             }
 
             foreach (FMUnit unit in mUnits)
             {
-                unit.resetHarvestCounter();
+                unit.ResetHarvestCounter();
             }
 
             //
@@ -146,69 +156,69 @@ namespace iLand.abe
             {
                 using DebugTimer timer = new DebugTimer("ABE:stand_layout_update");
                 // renew the internal stand grid
-                Grid<int> mapGrid = standGrid().grid();
-                for (int p = 0; p < mapGrid.count(); ++p)
+                Grid<int> mapGrid = StandGrid().Grid;
+                for (int p = 0; p < mapGrid.Count; ++p)
                 {
                     mFMStandGrid[p] = mapGrid[p] < 0 ? null : mStandHash[p];
                 }
                 // renew neigborhood information in the stand grid
-                standGrid().updateNeighborList();
+                StandGrid().UpdateNeighborList();
                 // renew the spatial indices
-                standGrid().createIndex();
+                StandGrid().CreateIndex();
                 mStandLayoutChanged = false;
 
                 // now check the stands
                 foreach (FMStand it in mStands)
                 {
                     // renew area
-                    it.checkArea();
+                    it.CheckArea();
                     // initial activity (if missing)
-                    if (it.currentActivity() != null)
+                    if (it.CurrentActivity() != null)
                     {
-                        it.initialize();
+                        it.Initialize();
                     }
                 }
             }
         }
 
-        private void setupOutputs()
+        private void SetupOutputs()
         {
-            if (GlobalSettings.instance().outputManager().find("abeUnit") != null)
+            if (GlobalSettings.Instance.OutputManager.Find("abeUnit") != null)
             {
                 return; // already set up
             }
-            GlobalSettings.instance().outputManager().addOutput(new UnitOut());
-            GlobalSettings.instance().outputManager().addOutput(new ABEStandOut());
-            GlobalSettings.instance().outputManager().addOutput(new ABEStandDetailsOut());
-            GlobalSettings.instance().outputManager().addOutput(new ABEStandRemovalOut());
+            GlobalSettings.Instance.OutputManager.AddOutput(new UnitOut());
+            GlobalSettings.Instance.OutputManager.AddOutput(new ABEStandOut());
+            GlobalSettings.Instance.OutputManager.AddOutput(new ABEStandDetailsOut());
+            GlobalSettings.Instance.OutputManager.AddOutput(new ABEStandRemovalOut());
         }
 
-        private void runJavascript()
+        private void RunJavascript()
         {
-            QJSValue handler = scriptEngine().globalObject().property("run");
-            if (handler.isCallable())
+            QJSValue handler = ScriptEngine().GlobalObject().Property("run");
+            if (handler.IsCallable())
             {
-                FomeScript.setExecutionContext(null, false);
-                QJSValue result = handler.call(new List<QJSValue>() { new QJSValue(mCurrentYear) });
+                FomeScript.SetExecutionContext(null, false);
+                QJSValue result = handler.Call(new List<QJSValue>() { new QJSValue(mCurrentYear) });
                 if (FMSTP.verbose())
                 {
-                    Debug.WriteLine("executing 'run' function for year " + mCurrentYear + ", result: " + result.toString());
+                    Debug.WriteLine("executing 'run' function for year " + mCurrentYear + ", result: " + result.ToString());
                 }
             }
 
-            handler = scriptEngine().globalObject().property("runStand");
-            if (handler.isCallable())
+            handler = ScriptEngine().GlobalObject().Property("runStand");
+            if (handler.IsCallable())
             {
                 Debug.WriteLine("running the 'runStand' javascript function for " + mStands.Count + " stands.");
                 foreach (FMStand stand in mStands)
                 {
-                    FomeScript.setExecutionContext(stand, true);
-                    handler.call(new List<QJSValue>() { new QJSValue(mCurrentYear) });
+                    FomeScript.SetExecutionContext(stand, true);
+                    handler.Call(new List<QJSValue>() { new QJSValue(mCurrentYear) });
                 }
             }
         }
 
-        public AgentType agentType(string name)
+        public AgentType GetAgentType(string name)
         {
             for (int i = 0; i < mAgentTypes.Count; ++i)
             {
@@ -220,7 +230,7 @@ namespace iLand.abe
             return null;
         }
 
-        public Agent agent(string name)
+        public Agent GetAgent(string name)
         {
             for (int i = 0; i < mAgents.Count; ++i)
             {
@@ -233,7 +243,7 @@ namespace iLand.abe
         }
 
         // multithreaded execution routines
-        private void nc_execute_unit(FMUnit unit)
+        private void ExecuteUnit(FMUnit unit)
         {
             if (instance().isCancel())
             {
@@ -253,8 +263,8 @@ namespace iLand.abe
 
                 foreach (FMStand stand in it.Value)
                 {
-                    stand.stp().executeRepeatingActivities(stand);
-                    if (stand.execute())
+                    stand.stp().ExecuteRepeatingActivities(stand);
+                    if (stand.Execute())
                     {
                         ++executed;
                     }
@@ -277,7 +287,7 @@ namespace iLand.abe
             }
 
             // now run the scheduler
-            unit.scheduler().run();
+            unit.scheduler().Run();
 
             // collect the harvests
             foreach (KeyValuePair<FMUnit, IReadOnlyCollection<FMStand>> it in stand_map)
@@ -289,12 +299,12 @@ namespace iLand.abe
 
                 foreach (FMStand stand in it.Value)
                 {
-                    unit.addRealizedHarvest(stand.totalHarvest());
+                    unit.AddRealizedHarvest(stand.TotalHarvest());
                 }
             }
         }
 
-        public void nc_plan_update_unit(FMUnit unit)
+        public void UpdateUnitPlan(FMUnit unit)
         {
             if (instance().isCancel())
             {
@@ -303,61 +313,61 @@ namespace iLand.abe
             if (instance().currentYear() % 10 == 0)
             {
                 Debug.WriteLine("*** execute decadal plan update ***");
-                unit.managementPlanUpdate();
-                unit.runAgent();
+                unit.ManagementPlanUpdate();
+                unit.RunAgent();
             }
 
             // first update happens *after* a full year of running ABE.
             if (instance().currentYear() > 1)
             {
-                unit.updatePlanOfCurrentYear();
+                unit.UpdatePlanOfCurrentYear();
             }
         }
 
-        public void setup()
+        public void Setup()
         {
             using DebugTimer time_setup = new DebugTimer("ABE:setupScripting");
-            clear();
+            Clear();
 
             // (1) setup the scripting environment and load all the javascript code
-            setupScripting();
+            SetupScripting();
             if (isCancel())
             {
                 throw new NotSupportedException(String.Format("ABE-Error (setup): {0}", mLastErrorMessage));
             }
 
-            if (GlobalSettings.instance().model() == null)
+            if (GlobalSettings.Instance.Model == null)
             {
                 throw new NotSupportedException("No model created.... invalid operation.");
             }
 
             // (2) spatial data (stands, units, ...)
-            MapGrid stand_grid = GlobalSettings.instance().model().standGrid();
+            MapGrid stand_grid = GlobalSettings.Instance.Model.StandGrid;
 
-            if (stand_grid == null || stand_grid.isValid() == false)
+            if (stand_grid == null || stand_grid.IsValid() == false)
             {
                 throw new NotSupportedException("The ABE management model requires a valid stand grid.");
             }
-            XmlHelper xml = GlobalSettings.instance().settings();
+            XmlHelper xml = GlobalSettings.Instance.Settings;
 
-            string data_file_name = GlobalSettings.instance().path(xml.value("model.management.abe.agentDataFile"));
+            string data_file_name = GlobalSettings.Instance.Path(xml.Value("model.management.abe.agentDataFile"));
             Debug.WriteLine("loading ABE agentDataFile " + data_file_name + "...");
-            CSVFile data_file = new CSVFile(data_file_name);
-            if (data_file.isEmpty())
+            CsvFile data_file = new CsvFile(data_file_name);
+            if (data_file.IsEmpty)
             {
                 throw new NotSupportedException(String.Format("Stand-Initialization: the standDataFile file {0} is empty or missing!", data_file_name));
             }
-            int ikey = data_file.columnIndex("id");
-            int iunit = data_file.columnIndex("unit");
-            int iagent = data_file.columnIndex("agent");
-            int iagent_type = data_file.columnIndex("agentType");
-            int istp = data_file.columnIndex("stp");
+            int ikey = data_file.GetColumnIndex("id");
+            int iunit = data_file.GetColumnIndex("unit");
+            int iagent = data_file.GetColumnIndex("agent");
+            int iagent_type = data_file.GetColumnIndex("agentType");
+            int istp = data_file.GetColumnIndex("stp");
             // unit properties
-            int ispeciescomp = data_file.columnIndex("speciesComposition");
-            int ithinning = data_file.columnIndex("thinningIntensity");
-            int irotation = data_file.columnIndex("U");
-            int iMAI = data_file.columnIndex("MAI");
-            int iharvest_mode = data_file.columnIndex("harvestMode");
+            int ispeciescomp = data_file.GetColumnIndex("speciesComposition");
+            int ithinning = data_file.GetColumnIndex("thinningIntensity");
+            int irotation = data_file.GetColumnIndex("U");
+            int iMAI = data_file.GetColumnIndex("MAI");
+            int iharvest_mode = data_file.GetColumnIndex("harvestMode");
 
             if (ikey < 0 || iunit < 0)
             {
@@ -370,10 +380,10 @@ namespace iLand.abe
 
             List<string> unit_codes = new List<string>();
             Dictionary<FMStand, string> initial_stps = new Dictionary<FMStand, string>();
-            for (int i = 0; i < data_file.rowCount(); ++i)
+            for (int i = 0; i < data_file.RowCount; ++i)
             {
-                int stand_id = Int32.Parse(data_file.value(i, ikey));
-                if (!stand_grid.isValid(stand_id))
+                int stand_id = Int32.Parse(data_file.Value(i, ikey));
+                if (!stand_grid.IsValid(stand_id))
                 {
                     continue; // skip stands that are not in the map (e.g. when a smaller extent is simulated)
                 }
@@ -383,9 +393,9 @@ namespace iLand.abe
                 }
 
                 // check agents
-                string agent_code = iagent > -1 ? (string)data_file.value(i, iagent) : null;
-                string agent_type_code = iagent_type > -1 ? (string)data_file.value(i, iagent_type) : null;
-                string unit_id = (string)data_file.value(i, iunit);
+                string agent_code = iagent > -1 ? (string)data_file.Value(i, iagent) : null;
+                string agent_type_code = iagent_type > -1 ? (string)data_file.Value(i, iagent_type) : null;
+                string unit_id = (string)data_file.Value(i, iunit);
 
                 Agent ag = null;
                 AgentType at = null;
@@ -397,7 +407,7 @@ namespace iLand.abe
                 if (String.IsNullOrEmpty(agent_code) == false)
                 {
                     // search for a specific agent
-                    ag = agent(agent_code);
+                    ag = GetAgent(agent_code);
                     if (ag != null)
                     {
                         throw new NotSupportedException(String.Format("Agent '{0}' is not set up (row '{1}')! Use the 'newAgent()' JS function of agent-types to add agent definitions.", agent_code, i));
@@ -408,7 +418,7 @@ namespace iLand.abe
                 {
                     // look up the agent type and create the agent on the fly
                     // create the agent / agent type
-                    at = agentType(agent_type_code);
+                    at = GetAgentType(agent_type_code);
                     if (at != null)
                     {
                         throw new NotSupportedException(String.Format("Agent type '{0}' is not set up (row '{1}')! Use the 'addAgentType()' JS function to add agent-type definitions.", agent_type_code, i));
@@ -416,7 +426,7 @@ namespace iLand.abe
                     if (!unit_codes.Contains(unit_id))
                     {
                         // we create an agent for the unit only once (per unit)
-                        ag = at.createAgent();
+                        ag = at.CreateAgent();
                     }
                 }
 
@@ -429,33 +439,33 @@ namespace iLand.abe
                     unit.setId(unit_id);
                     if (iharvest_mode > -1)
                     {
-                        unit.setHarvestMode(data_file.value(i, iharvest_mode));
+                        unit.setHarvestMode(data_file.Value(i, iharvest_mode));
                     }
                     if (ithinning > -1)
                     {
-                        unit.setThinningIntensity(Int32.Parse(data_file.value(i, ithinning)));
+                        unit.setThinningIntensity(Int32.Parse(data_file.Value(i, ithinning)));
                     }
                     if (irotation > -1)
                     {
-                        unit.setU(Double.Parse(data_file.value(i, irotation)));
+                        unit.setU(Double.Parse(data_file.Value(i, irotation)));
                     }
                     if (iMAI > -1)
                     {
-                        unit.setAverageMAI(Double.Parse(data_file.value(i, iMAI)));
+                        unit.setAverageMAI(Double.Parse(data_file.Value(i, iMAI)));
                     }
                     if (ispeciescomp > -1)
                     {
                         int index;
-                        index = at.speciesCompositionIndex((string)data_file.value(i, ispeciescomp));
+                        index = at.SpeciesCompositionIndex((string)data_file.Value(i, ispeciescomp));
                         if (index == -1)
                         {
-                            throw new NotSupportedException(String.Format("The species composition '{0}' for unit '{1}' is not a valid composition type (agent type: '{2}').", data_file.value(i, ispeciescomp), unit.id(), at.name()));
+                            throw new NotSupportedException(String.Format("The species composition '{0}' for unit '{1}' is not a valid composition type (agent type: '{2}').", data_file.Value(i, ispeciescomp), unit.id(), at.name()));
                         }
                         unit.setTargetSpeciesCompositionIndex(index);
                     }
                     mUnits.Add(unit);
                     unit_codes.Add(unit_id);
-                    ag.addUnit(unit); // add the unit to the list of managed units of the agent
+                    ag.AddUnit(unit); // add the unit to the list of managed units of the agent
                 }
                 else
                 {
@@ -467,7 +477,7 @@ namespace iLand.abe
                 FMStand stand = new FMStand(unit, stand_id);
                 if (istp > -1)
                 {
-                    string stp = data_file.value(i, istp);
+                    string stp = data_file.Value(i, istp);
                     initial_stps[stand] = stp;
                 }
                 mMaxStandId = Math.Max(mMaxStandId, stand_id);
@@ -490,22 +500,22 @@ namespace iLand.abe
                 mStandHash[mStands[i].id()] = mStands[i];
             }
 
-            mFMStandGrid.setup(standGrid().grid().metricRect(), standGrid().grid().cellsize());
-            mFMStandGrid.initialize(null);
-            for (int p = 0; p < standGrid().grid().count(); ++p)
+            mFMStandGrid.Setup(StandGrid().Grid.PhysicalSize, StandGrid().Grid.CellSize);
+            mFMStandGrid.Initialize(null);
+            for (int p = 0; p < StandGrid().Grid.Count; ++p)
             {
-                mFMStandGrid[p] = standGrid().grid()[p] < 0 ? null : mStandHash[standGrid().grid()[p]];
+                mFMStandGrid[p] = StandGrid().Grid[p] < 0 ? null : mStandHash[StandGrid().Grid[p]];
             }
 
             mStandLayers.setGrid(mFMStandGrid);
-            mStandLayers.clearClasses();
-            mStandLayers.registerLayers();
+            mStandLayers.ClearClasses();
+            mStandLayers.RegisterLayers();
 
             // now initialize STPs (if they are defined in the init file)
             foreach (KeyValuePair<FMStand, string> it in initial_stps)
             {
                 FMStand s = it.Key;
-                FMSTP stp = s.unit().agent().type().stpByName(it.Value);
+                FMSTP stp = s.unit().agent().type().StpByName(it.Value);
                 if (stp != null)
                 {
                     s.setSTP(stp);
@@ -518,7 +528,7 @@ namespace iLand.abe
             Debug.WriteLine("ABE setup completed.");
         }
 
-        public void initialize()
+        public void Initialize()
         {
             using DebugTimer time_setup = new DebugTimer("ABE:setup");
 
@@ -530,7 +540,7 @@ namespace iLand.abe
                     stand.setThinningIntensity(stand.unit().thinningIntensity());
                     stand.setTargetSpeciesIndex(stand.unit().targetSpeciesIndex());
 
-                    stand.initialize();
+                    stand.Initialize();
                     if (isCancel())
                     {
                         throw new NotSupportedException(String.Format("ABE-Error: init of stand {1}: {0}", mLastErrorMessage, stand.id()));
@@ -541,7 +551,7 @@ namespace iLand.abe
             // now initialize the agents....
             foreach (Agent ag in mAgents)
             {
-                ag.setup();
+                ag.Setup();
                 if (isCancel())
                 {
                     throw new NotSupportedException(String.Format("ABE-Error: setup of agent '{1}': {0}", mLastErrorMessage, ag.name()));
@@ -549,11 +559,11 @@ namespace iLand.abe
             }
 
             // run the initial planning unit setup
-            GlobalSettings.instance().model().threadExec().run(nc_plan_update_unit, mUnits);
+            GlobalSettings.Instance.Model.ThreadRunner.Run(UpdateUnitPlan, mUnits);
             Debug.WriteLine("ABE setup complete. " + mUnitStandMap.Count + " stands on " + mUnits.Count + " units, managed by " + mAgents.Count + " agents.");
         }
 
-        public void clear()
+        public void Clear()
         {
             mStands.Clear();
             mUnits.Clear();
@@ -567,28 +577,28 @@ namespace iLand.abe
             mLastErrorMessage = null;
         }
 
-        public void abortExecution(string message)
+        public void AbortExecution(string message)
         {
             mLastErrorMessage = message;
             mCancel = true;
         }
 
-        public void runOnInit(bool before_init)
+        public void RunOnInit(bool before_init)
         {
             string handler = before_init ? "onInit" : "onAfterInit";
-            if (GlobalSettings.instance().scriptEngine().globalObject().hasProperty(handler))
+            if (GlobalSettings.Instance.ScriptEngine.GlobalObject().HasProperty(handler))
             {
-                QJSValue result = GlobalSettings.instance().scriptEngine().evaluate(String.Format("{0}()", handler));
-                if (result.isError())
+                QJSValue result = GlobalSettings.Instance.ScriptEngine.Evaluate(String.Format("{0}()", handler));
+                if (result.IsError())
                 {
-                    Debug.WriteLine("Javascript Error in global " + handler + "-Handler: " + result.toString());
+                    Debug.WriteLine("Javascript Error in global " + handler + "-Handler: " + result.ToString());
                 }
             }
         }
 
         /// this is the main function of the forest management engine.
         /// the function is called every year.
-        public void run(int debug_year = -1)
+        public void Run(int debug_year = -1)
         {
             if (debug_year > -1)
             {
@@ -596,7 +606,7 @@ namespace iLand.abe
             }
             else
             {
-                mCurrentYear = GlobalSettings.instance().currentYear();
+                mCurrentYear = GlobalSettings.Instance.CurrentYear;
             }
             // now re-evaluate stands
             if (FMSTP.verbose())
@@ -604,17 +614,17 @@ namespace iLand.abe
                 Debug.WriteLine("ForestManagementEngine: run year " + mCurrentYear);
             }
 
-            prepareRun();
+            PrepareRun();
 
             // execute an event handler before invoking the ABE core
-            runJavascript();
+            RunJavascript();
             {
                 // launch the planning unit level update (annual and thorough analysis every ten years)
                 using DebugTimer plu = new DebugTimer("ABE:planUpdate");
-                GlobalSettings.instance().model().threadExec().run(nc_plan_update_unit, mUnits, true);
+                GlobalSettings.Instance.Model.ThreadRunner.Run(UpdateUnitPlan, mUnits, true);
             }
 
-            GlobalSettings.instance().model().threadExec().run(nc_execute_unit, mUnits, true); // force single thread operation for now
+            GlobalSettings.Instance.Model.ThreadRunner.Run(ExecuteUnit, mUnits, true); // force single thread operation for now
             if (isCancel())
             {
                 throw new NotSupportedException(String.Format("ABE-Error: {0}", mLastErrorMessage));
@@ -623,89 +633,22 @@ namespace iLand.abe
             // create outputs
             {
                 using DebugTimer plu = new DebugTimer("ABE:outputs");
-                GlobalSettings.instance().outputManager().execute("abeUnit");
-                GlobalSettings.instance().outputManager().execute("abeStand");
-                GlobalSettings.instance().outputManager().execute("abeStandDetail");
-                GlobalSettings.instance().outputManager().execute("abeStandRemoval");
+                GlobalSettings.Instance.OutputManager.Execute("abeUnit");
+                GlobalSettings.Instance.OutputManager.Execute("abeStand");
+                GlobalSettings.Instance.OutputManager.Execute("abeStandDetail");
+                GlobalSettings.Instance.OutputManager.Execute("abeStandRemoval");
             }
 
-            finalizeRun();
+            FinalizeRun();
         }
 
-        public void test()
-        {
-            // test code
-            //Activity::setVerbose(true);
-            // setup the activities and the javascript environment...
-            GlobalSettings.instance().resetScriptEngine(); // clear the script
-            ScriptGlobal.setupGlobalScripting(); // general iLand scripting helper functions and such
-            mScriptBridge = new FomeScript();
-            mScriptBridge.setupScriptEnvironment();
-
-            string file_name = "E:/Daten/iLand/modeling/abm/knowledge_base/test/test_stp.js";
-            string code = Helper.loadTextFile(file_name);
-            QJSValue result = GlobalSettings.instance().scriptEngine().evaluate(code, file_name);
-            if (result.isError())
-            {
-                int lineno = result.property("lineNumber").toInt();
-                List<string> code_lines = code.Replace("\r", String.Empty).Split('\n').ToList(); // remove CR, split by LF
-                StringBuilder code_part = new StringBuilder();
-                for (int i = Math.Max(0, lineno - 5); i < Math.Min(lineno + 5, code_lines.Count); ++i)
-                {
-                    code_part.AppendLine(String.Format("{0}: {1} {2}\n", i, code_lines[i], i == lineno ? "  <---- [ERROR]" : ""));
-                }
-                Debug.WriteLine("Javascript Error in file" + result.property("fileName") + ":" + result.property("lineNumber") + ":" + result + ":" + System.Environment.NewLine + code_part);
-            }
-
-            //    try {
-            //        Debug.WriteLine("*** test 1 ***";
-            //        FMSTP stp;
-            //        stp.setVerbose(true);
-            //        stp.setup(GlobalSettings.instance().scriptEngine().globalObject().property("stp"), "stp");
-            //        stp.dumpInfo();
-
-            //    } catch (IException &e) {
-            //        Debug.WriteLine("An error occured:" + e.message();
-            //    }
-            //    try {
-            //        Debug.WriteLine("*** test 2 ***";
-            //        FMSTP stp2;
-            //        stp2.setVerbose(true);
-            //        stp2.setup(GlobalSettings.instance().scriptEngine().globalObject().property("degenerated"), "degenerated");
-            //        stp2.dumpInfo();
-            //    } catch (IException &e) {
-            //        Debug.WriteLine("An error occured:" + e.message();
-            //    }
-
-            // dump all objects:
-            foreach (FMSTP stp in mSTP)
-            {
-                stp.dumpInfo();
-            }
-            setup();
-            Debug.WriteLine("finished");
-
-        }
-
-        public List<string> evaluateClick(PointF coord, string grid_name)
-        {
-            // Q_UNUSED(grid_name); // for the moment
-            // find the stand at coord.
-            FMStand stand = mFMStandGrid.constValueAt(coord);
-            if (stand != null)
-            {
-                return stand.info();
-            }
-            return null;
-        }
-
-        public static QJSEngine scriptEngine()
+        public static QJSEngine ScriptEngine()
         {
             // use global engine from iLand
-            return GlobalSettings.instance().scriptEngine();
+            return GlobalSettings.Instance.ScriptEngine;
         }
 
-        public FMSTP stp(string stp_name)
+        public FMSTP Stp(string stp_name)
         {
             foreach (FMSTP it in mSTP)
             {
@@ -717,7 +660,7 @@ namespace iLand.abe
             return null;
         }
 
-        public FMStand stand(int stand_id)
+        public FMStand Stand(int stand_id)
         {
             if (mStandHash.ContainsKey(stand_id))
             {
@@ -735,7 +678,7 @@ namespace iLand.abe
             return null;
         }
 
-        public List<string> standIds()
+        public List<string> StandIDs()
         {
             List<string> standids = new List<string>();
             foreach (FMStand s in mStands)
@@ -745,40 +688,40 @@ namespace iLand.abe
             return standids;
         }
 
-        public void notifyTreeRemoval(Tree tree, int reason)
+        public void NotifyTreeRemoval(Tree tree, int reason)
         {
             // we use an 'int' instead of Tree:TreeRemovalType because it does not work
             // with forward declaration (and I dont want to include the tree.h header in this class header).
-            FMStand stand = mFMStandGrid[tree.position()];
+            FMStand stand = mFMStandGrid[tree.GetCellCenterPoint()];
             if (stand != null)
             {
-                stand.notifyTreeRemoval(tree, reason);
+                stand.NotifyTreeRemoval(tree, reason);
             }
             else
             {
-                Debug.WriteLine("notifyTreeRemoval(): tree not on stand at (metric coords): " + tree.position() + " ID:" + tree.id());
+                Debug.WriteLine("notifyTreeRemoval(): tree not on stand at (metric coords): " + tree.GetCellCenterPoint() + " ID:" + tree.ID);
             }
         }
 
-        public bool notifyBarkbeetleAttack(ResourceUnit ru, double generations, int n_infested_px)
+        public bool NotifyBarkBeetleAttack(ResourceUnit ru, double generations, int n_infested_px)
         {
             // find out which stands are within the resource unit
-            GridRunner<FMStand> gr = new GridRunner<FMStand>(mFMStandGrid, ru.boundingBox());
+            GridRunner<FMStand> gr = new GridRunner<FMStand>(mFMStandGrid, ru.BoundingBox);
             Dictionary<FMStand, bool> processed_items = new Dictionary<FMStand, bool>();
             bool forest_changed = false;
-            for (gr.next(); gr.isValid(); gr.next())
+            for (gr.MoveNext(); gr.IsValid(); gr.MoveNext())
             {
-                FMStand s = gr.current();
+                FMStand s = gr.Current;
                 if (!processed_items.ContainsKey(s))
                 {
                     processed_items.Add(s, true);
-                    forest_changed |= s.notifyBarkBeetleAttack(generations, n_infested_px);
+                    forest_changed |= s.NotifyBarkBeetleAttack(generations, n_infested_px);
                 }
             }
             return forest_changed;
         }
 
-        public FMStand splitExistingStand(FMStand stand)
+        public FMStand SplitExistingStand(FMStand stand)
         {
             int new_stand_id = Interlocked.Increment(ref mMaxStandId);
 

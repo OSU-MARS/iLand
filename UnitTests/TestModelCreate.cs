@@ -14,26 +14,26 @@ namespace iLand.Test
         public TestContext TestContext { get; set; }
 
         [ClassInitialize]
-        public void initTestCase()
+        public static void ClassInitialize(TestContext testContext)
         {
-            //XmlHelper xml("E:\\dev\\iland\\src\\tests\\modelCreate\\test.xml");
             model = new Model();
-            GlobalSettings.instance().loadProjectFile(Path.Combine(this.TestContext.TestDir, "UnitTests", "test.xml"));
-            model.loadProject();
+            GlobalSettings.Instance.LoadProjectFile(Path.Combine(testContext.TestDir, "..", "..", "UnitTests", "testProject", "testProject.xml"));
+            model.LoadProject();
         }
 
         [TestMethod]
-        public void speciesFormula()
+        public void SpeciesFormula()
         {
-            Species species = model.ru().speciesSet().species("piab");
+            Species species = model.FirstResourceUnit().SpeciesSet.GetSpecies("piab");
             Assert.IsTrue(species != null);
             // equation: m = 1.2*d^1.5
-            Assert.IsTrue(Math.Round(species.biomassFoliage(2)) == 3.0);
-            Assert.IsTrue(Math.Round(species.biomassFoliage(20)) == 107.0);
-            Assert.IsTrue(Math.Round(species.biomassFoliage(50)) == 424.0);
-            Assert.IsTrue(Math.Round(species.biomassFoliage(100)) == 1200.0);
+            Assert.IsTrue(Math.Round(species.GetBiomassFoliage(2)) == 3.0);
+            Assert.IsTrue(Math.Round(species.GetBiomassFoliage(20)) == 107.0);
+            Assert.IsTrue(Math.Round(species.GetBiomassFoliage(50)) == 424.0);
+            Assert.IsTrue(Math.Round(species.GetBiomassFoliage(100)) == 1200.0);
 
-            double x = species.biomassFoliage(56.0);
+            double x = species.GetBiomassFoliage(56.0);
+            Assert.IsTrue(x >= 0.0);
         }
     }
 }

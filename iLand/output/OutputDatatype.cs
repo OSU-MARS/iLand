@@ -1,4 +1,9 @@
 ﻿namespace iLand.output
 {
-    internal enum OutputDatatype { OutInteger, OutDouble, OutString };
+    internal enum OutputDatatype
+    { 
+        OutInteger, 
+        OutDouble, 
+        OutString 
+    }
 }

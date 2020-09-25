@@ -13,11 +13,11 @@ namespace iLand.abe
       */
     internal class AgentType
     {
-        private string mName; // agent name
+        private readonly MultiValueDictionary<FMUnit, AgentUpdate> mAgentChanges;
         private QJSValue mJSObj; ///< javascript object
-        private Dictionary<string, FMSTP> mSTP; ///< list of all STP linked to this agent type
-        private List<string> mSpeciesCompositions; ///< list of available target species composition (objects)
-        private MultiValueDictionary<FMUnit, AgentUpdate> mAgentChanges;
+        private string mName; // agent name
+        private readonly List<string> mSpeciesCompositions; ///< list of available target species composition (objects)
+        private readonly Dictionary<string, FMSTP> mSTP; ///< list of all STP linked to this agent type
 
         public string name() { return mName; }
         /// access to the javascript object
@@ -25,32 +25,33 @@ namespace iLand.abe
 
         public AgentType()
         {
+            this.mAgentChanges = new MultiValueDictionary<FMUnit, AgentUpdate>();
+            this.mJSObj = null;
+            this.mName = null;
+            this.mSpeciesCompositions = new List<string>();
+            this.mSTP = new Dictionary<string, FMSTP>();
         }
 
-        public void setupSTP(QJSValue agent_code, string agent_name)
+        public void SetupStp(QJSValue agent_code, string agent_name)
         {
             mName = agent_name;
             mSTP.Clear();
             mJSObj = agent_code;
-            if (!agent_code.isObject())
+            if (!agent_code.IsObject())
             {
                 throw new NotSupportedException(String.Format("ABE:AgentType:setup: the javascript object for agent '{0}' could not be found.", agent_name));
             }
-            QJSValue stps = agent_code.property("stp");
-            if (!stps.isObject())
+            QJSValue stps = agent_code.Property("stp");
+            if (!stps.IsObject())
             {
                 throw new NotSupportedException(String.Format("ABE:AgentType:setup: the javascript definition of agent '{0}' does not have a section for 'stp'.", agent_name));
             }
             QJSValueIterator it = new QJSValueIterator(stps);
-            while (it.hasNext())
+            while (it.HasNext())
             {
-                it.next();
-                FMSTP stp = ForestManagementEngine.instance().stp(it.value().toString());
-                if (stp == null)
-                {
-                    throw new NotSupportedException(String.Format("ABE:AgentType:setup: definition of agent '{0}': the STP for mixture type '{1}': '{2}' is not available.", agent_name, it.name(), it.value().toString()));
-                }
-                mSTP[it.name()] = stp;
+                it.Next();
+                FMSTP stp = ForestManagementEngine.instance().Stp(it.Value().ToString());
+                mSTP[it.Name()] = stp ?? throw new NotSupportedException(String.Format("ABE:AgentType:setup: definition of agent '{0}': the STP for mixture type '{1}': '{2}' is not available.", agent_name, it.Name(), it.Value().ToString()));
             }
 
             if (FMSTP.verbose())
@@ -59,51 +60,47 @@ namespace iLand.abe
             }
         }
 
-        public void addSTP(string stp_name)
+        public void AddStp(string stp_name)
         {
-            FMSTP stp = ForestManagementEngine.instance().stp(stp_name);
-            if (stp == null)
-            {
-                throw new NotSupportedException(String.Format("addSTP: definition of agent '{0}': the STP  '{1}' is not available.", mName, stp_name));
-            }
-            mSTP[stp_name] = stp;
+            FMSTP stp = ForestManagementEngine.instance().Stp(stp_name);
+            mSTP[stp_name] = stp ?? throw new NotSupportedException(String.Format("addSTP: definition of agent '{0}': the STP  '{1}' is not available.", mName, stp_name));
         }
 
-        public Agent createAgent(string agent_name = null)
+        public Agent CreateAgent(string agent_name = null)
         {
             // call the newAgent function in the javascript object assigned to this agent type
-            QJSValue func = (QJSValue)mJSObj.property("newAgent");
-            if (!func.isCallable())
+            QJSValue func = (QJSValue)mJSObj.Property("newAgent");
+            if (!func.IsCallable())
             {
                 throw new NotSupportedException(String.Format("The agent type '{0}' does not have a valid 'newAgent' function.", name()));
             }
-            QJSValue result = func.callWithInstance(mJSObj);
-            if (result.isError())
+            QJSValue result = func.CallWithInstance(mJSObj);
+            if (result.IsError())
             {
-                throw new NotSupportedException(String.Format("calling the 'newAgent' function of agent type '{0}' returned with the following error: {1}", name(), result.toString()));
+                throw new NotSupportedException(String.Format("calling the 'newAgent' function of agent type '{0}' returned with the following error: {1}", name(), result.ToString()));
             }
             Agent agent = new Agent(this, result);
             if (String.IsNullOrEmpty(agent_name))
             {
-                agent.setName(agent_name);
+                agent.SetName(agent_name);
             }
             else
             {
-                if (result.property("name").isUndefined())
+                if (result.Property("name").IsUndefined())
                 {
-                    result.setProperty("name", agent.name()); //  set the auto-generated name also for the JS world
+                    result.SetProperty("name", agent.name()); //  set the auto-generated name also for the JS world
                 }
                 else
                 {
-                    agent.setName(result.property("name").toString()); // set the JS-name also internally
+                    agent.SetName(result.Property("name").ToString()); // set the JS-name also internally
                 }
             }
-            ForestManagementEngine.instance().addAgent(agent);
+            ForestManagementEngine.instance().AddAgent(agent);
 
             return agent;
         }
 
-        public void addAgentUpdate(AgentUpdate update, FMUnit unit)
+        public void AddAgentUpdate(AgentUpdate update, FMUnit unit)
         {
             // clear agent updates...
             List<KeyValuePair<FMUnit, AgentUpdate>> updatesToRemove = new List<KeyValuePair<FMUnit, AgentUpdate>>();
@@ -156,19 +153,19 @@ namespace iLand.abe
 
                 foreach (FMStand stand in it.Value)
                 {
-                    if (stand.trace())
+                    if (stand.TracingEnabled())
                     {
                         Debug.WriteLine(stand.context() + " Agent-update: update if stand-age: " + stand.age() + " < update-age: " + update.age());
                     }
                     if (stand.age() <= update.age())
                     {
-                        agentUpdateForStand(stand, null, (int)stand.age());
+                        AgentUpdateForStand(stand, null, (int)stand.age());
                     }
                 }
             }
         }
 
-        public bool agentUpdateForStand(FMStand stand, string after_activity, int age)
+        public bool AgentUpdateForStand(FMStand stand, string after_activity, int age)
         {
             IReadOnlyCollection<AgentUpdate> uit = mAgentChanges[stand.unit()];
             bool action = false;
@@ -203,7 +200,7 @@ namespace iLand.abe
                                 int new_u = Int32.Parse(update.value());
                                 if (current_u == new_u)
                                 {
-                                    if (stand.trace())
+                                    if (stand.TracingEnabled())
                                     {
                                         Debug.WriteLine(stand.context() + " AgentUpdate: update of U to " + new_u + " not done (value already set).");
                                     }
@@ -213,7 +210,7 @@ namespace iLand.abe
                                 // stand.setU( stand.stp().rotationLengthOfType(new_u) );
                                 Debug.WriteLine(stand.context() + " AgentUpdate: changed to U " + stand.U());
                                 // QML like dynamic expressions
-                                stand.stp().evaluateDynamicExpressions(stand);
+                                stand.stp().EvaluateDynamicExpressions(stand);
                                 break;
                             }
                         case UpdateType.UpdateThinning:
@@ -222,7 +219,7 @@ namespace iLand.abe
                                 int new_th = Int32.Parse(update.value());
                                 if (current_th == new_th)
                                 {
-                                    if (stand.trace())
+                                    if (stand.TracingEnabled())
                                     {
                                         Debug.WriteLine(stand.context() + "AgentUpdate: update of thinningIntensity class to " + new_th + " not done (value already set).");
                                     }
@@ -230,7 +227,7 @@ namespace iLand.abe
                                 }
                                 stand.setThinningIntensity(new_th);
                                 Debug.WriteLine(stand.context() + " AgentUpdate: changed to thinningIntensity class: " + stand.thinningIntensity());
-                                stand.stp().evaluateDynamicExpressions(stand);
+                                stand.stp().EvaluateDynamicExpressions(stand);
                                 break;
                             }
                         default: 
@@ -241,7 +238,7 @@ namespace iLand.abe
             return action;
         }
 
-        public FMSTP stpByName(string name)
+        public FMSTP StpByName(string name)
         {
             if (mSTP.ContainsKey(name))
             {
@@ -250,7 +247,7 @@ namespace iLand.abe
                 return null;
         }
 
-        public int speciesCompositionIndex(string key)
+        public int SpeciesCompositionIndex(string key)
         {
             for (int i = 0; i < mSpeciesCompositions.Count; ++i)
             {
@@ -262,7 +259,7 @@ namespace iLand.abe
             return -1;
         }
 
-        public string speciesCompositionName(int index)
+        public string SpeciesCompositionName(int index)
         {
             if (index >= 0 && index < mSpeciesCompositions.Count)
             {

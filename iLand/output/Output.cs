@@ -62,66 +62,70 @@ namespace iLand.output
         */
     internal class Output
     {
-        private static readonly GlobalSettings gl = GlobalSettings.instance();
+        private static readonly GlobalSettings gl = GlobalSettings.Instance;
 
-        private bool disposed;
-        private OutputMode mMode;
-        private bool mOpen;
-        private bool mEnabled;
-        private string mName; ///< name of the output
-        private string mTableName; ///< name of the table/output file
-        private string mDescription; ///< textual description of the content
-        private List<OutputColumn> mColumns; ///< list of columns of output
-        private List<object> mRow; ///< current row
+        private bool isDisposed;
+        private readonly OutputMode mMode;
+        private readonly List<object> mRow; ///< current row
         private SqliteCommand mInserter;
         private int mCount;
         private int mIndex;
 
-        public bool isOpen() { return mOpen; } ///< returns true if output is open, i.e. has a open database connection
-        public bool isEnabled() { return mEnabled; } ///< returns true if output is enabled, i.e. is "turned on"
-        public void setEnabled(bool enabled) { mEnabled = enabled; if (enabled) open(); }
-        public bool isRowEmpty() { return mIndex == 0; } ///< returns true if the buffer of the current row is empty
+        public bool IsOpen { get; private set; } ///< returns true if output is open, i.e. has a open database connection
+        public bool IsEnabled { get; set; } ///< returns true if output is enabled, i.e. is "turned on"
+        public bool IsRowEmpty() { return mIndex == 0; } ///< returns true if the buffer of the current row is empty
 
-        public List<OutputColumn> getColumns() { return mColumns; }
+        public List<OutputColumn> Columns { get; protected set; }
 
-        public string name() { return mName; } ///< descriptive name of the ouptut
-        public string description() { return mDescription; } ///< description of output
-        public string tableName() { return mTableName; } ///< internal output name (no spaces allowed)
+        public string Name { get; set; } ///< descriptive name of the ouptut
+        public string Description { get; protected set; } ///< description of output
+        public string TableName { get; protected set; } ///< internal output name (no spaces allowed)
 
-        protected void setName(string name, string tableName) { mName = name; mTableName = tableName; }
-        protected void setDescription(string description) { mDescription = description; }
-        protected List<OutputColumn> columns() { return mColumns; }
-        protected int currentYear() { return gl.currentYear(); }
-        protected XmlHelper settings() { return gl.settings(); } ///< access XML settings (see class description)
+        //protected void Name(string name, string tableName) { Name = name; TableName = tableName; }
+        protected int CurrentYear() { return gl.CurrentYear; }
+        protected XmlHelper Settings() { return gl.Settings; } ///< access XML settings (see class description)
 
-        protected void add(double value1, double value2) { add(value1); add(value2); }
-        protected void add(double value1, double value2, double value3) { add(value1, value2); add(value3); }
-        protected void add(double value1, double value2, double value3, double value4) { add(value1, value2); add(value3, value4); }
-        protected void add(double value1, double value2, double value3, double value4, double value5) { add(value1, value2); add(value3, value4, value5); }
+        protected void Add(double value1, double value2) { Add(value1); Add(value2); }
+        protected void Add(double value1, double value2, double value3) { Add(value1, value2); Add(value3); }
+        protected void Add(double value1, double value2, double value3, double value4) { Add(value1, value2); Add(value3, value4); }
+        protected void Add(double value1, double value2, double value3, double value4, double value5) { Add(value1, value2); Add(value3, value4, value5); }
 
-        public virtual void exec()
+        public Output()
+        {
+            this.Columns = new List<OutputColumn>();
+            this.mCount = 0;
+            this.IsEnabled = false;
+            this.mMode = OutputMode.OutDatabase;
+            this.IsOpen = false;
+            this.mRow = new List<object>();
+
+            NewRow();
+        }
+
+        public virtual void Exec()
         {
             Debug.WriteLine("exec() called! (should be overrided!)");
         }
 
-        public void add(double value)
+        public void Add(double value)
         {
             Debug.WriteLineIf(mIndex >= mCount || mIndex < 0, "add(double)", "output index out of range!");
             mRow[mIndex++] = value;
         }
 
-        public void add(string value)
+        public void Add(string value)
         {
             Debug.WriteLineIf(mIndex >= mCount || mIndex < 0, "add(string)", "output index out of range!");
             mRow[mIndex++] = value;
         }
-        public void add(int value)
+
+        public void Add(int value)
         {
             Debug.WriteLineIf(mIndex >= mCount || mIndex < 0, "add(int)", "output index out of range!");
             mRow[mIndex++] = value;
         }
 
-        public void setup()
+        public virtual void Setup()
         {
         }
 
@@ -132,120 +136,112 @@ namespace iLand.output
 
         protected virtual void Dispose(bool disposing)
         {
-            if (this.disposed)
+            if (this.isDisposed)
             {
                 return;
             }
             if (disposing)
             {
-                this.close();
+                this.Close();
             }
-        }
 
-        public Output()
-        {
-            mCount = 0;
-            mMode = OutputMode.OutDatabase;
-            mOpen = false;
-            mEnabled = false;
-            newRow();
+            this.isDisposed = true;
         }
-
 
         /** create the database table and opens up the output.
           */
-        private void openDatabase()
+        private void OpenDatabase()
         {
-            SqliteConnection db = GlobalSettings.instance().dbout();
+            SqliteConnection db = GlobalSettings.Instance.DatabaseOutput;
             // create the "create table" statement
-            StringBuilder sql = new StringBuilder("create table " + mTableName + "(");
-            StringBuilder insert = new StringBuilder("insert into " + mTableName + " (");
+            StringBuilder sql = new StringBuilder("create table " + TableName + "(");
+            StringBuilder insert = new StringBuilder("insert into " + TableName + " (");
             StringBuilder values = new StringBuilder();
-            foreach (OutputColumn col in columns())
+            foreach (OutputColumn col in Columns)
             {
                 switch (col.mDatatype)
                 {
-                    case OutputDatatype.OutInteger: sql.Append(col.name() + " integer"); break;
-                    case OutputDatatype.OutDouble: sql.Append(col.name() + " real"); break;
-                    case OutputDatatype.OutString: sql.Append(col.name() + " text"); break;
+                    case OutputDatatype.OutInteger: sql.Append(col.Name + " integer"); break;
+                    case OutputDatatype.OutDouble: sql.Append(col.Name + " real"); break;
+                    case OutputDatatype.OutString: sql.Append(col.Name + " text"); break;
                     default: throw new NotSupportedException();
                 }
-                insert.Append(col.name() + ",");
-                values.Append(":" + col.name() + ",");
+                insert.Append(col.Name + ",");
+                values.Append(":" + col.Name + ",");
                 sql.Append(",");
             }
-            sql[sql.Length - 1] = ')'; // replace last "," with )
+            sql[^1] = ')'; // replace last "," with )
                                        //qDebug()<< sql;
-            SqliteCommand drop = new SqliteCommand(String.Format("drop table if exists {0}", tableName()), db);
+            SqliteCommand drop = new SqliteCommand(String.Format("drop table if exists {0}", TableName), db);
             drop.ExecuteNonQuery(); // drop table (if exists)
             SqliteCommand creator = new SqliteCommand(sql.ToString(), db);
             creator.ExecuteNonQuery(); // (re-)create table
                                        //creator.exec("delete from " + tableName()); // clear table??? necessary?
 
-            insert[insert.Length - 1] = ')';
-            values[values.Length - 1] = ')';
+            insert[^1] = ')';
+            values[^1] = ')';
             insert.Append(" values (" + values);
             mInserter = new SqliteCommand(insert.ToString(), db);
-            for (int i = 0; i < columns().Count; i++)
+            for (int i = 0; i < Columns.Count; i++)
             {
-                mInserter.Parameters.AddWithValue(columns()[i].name(), mRow[i]);
+                mInserter.Parameters.AddWithValue(Columns[i].Name, mRow[i]);
             }
-            mOpen = true;
+            IsOpen = true;
         }
 
-        private void newRow()
+        private void NewRow()
         {
             mIndex = 0;
         }
 
-        public void writeRow()
+        public void WriteRow()
         {
             Debug.WriteLineIf(mIndex != mCount, "save()", "received invalid number of values!");
-            if (!isOpen())
+            if (!IsOpen)
             {
-                open();
+                Open();
             }
 
             switch (mMode)
             {
                 case OutputMode.OutDatabase:
-                    saveDatabase();
+                    SaveDatabase();
                     break;
                 default:
                     throw new NotSupportedException("Invalid output mode");
             }
         }
 
-        public void open()
+        public void Open()
         {
-            if (isOpen())
+            if (IsOpen)
             {
                 return;
             }
 
             // setup columns
-            mCount = columns().Count;
+            mCount = Columns.Count;
             mRow.Capacity = mCount;
-            mOpen = true;
-            newRow();
+            IsOpen = true;
+            NewRow();
             // setup output
             switch (mMode)
             {
                 case OutputMode.OutDatabase:
-                    openDatabase();
+                    OpenDatabase();
                     break;
                 default:
                     throw new NotSupportedException("Invalid output mode");
             }
         }
 
-        public void close()
+        public void Close()
         {
-            if (!isOpen())
+            if (!IsOpen)
             {
                 return;
             }
-            mOpen = false;
+            IsOpen = false;
             switch (mMode)
             {
                 case OutputMode.OutDatabase:
@@ -261,26 +257,26 @@ namespace iLand.output
             }
         }
 
-        private void saveDatabase()
+        private void SaveDatabase()
         {
             for (int i = 0; i < mCount; i++)
             {
                 mInserter.Parameters[i].Value = mRow[i];
             }
             mInserter.ExecuteNonQuery();
-            newRow();
+            NewRow();
         }
 
-        public string wikiFormat()
+        public string WikiFormat()
         {
             StringBuilder result = new StringBuilder();
-            result.AppendLine(name());
-            result.AppendLine(String.Format("Table Name: {0}{2}{1}", name(), tableName(), description(), Environment.NewLine));
+            result.AppendLine(Name);
+            result.AppendLine(String.Format("Table Name: {0}{2}{1}", Name, TableName, Description, Environment.NewLine));
             // loop over columns...
             result.AppendLine("||__caption__|__datatype__|__description__"); // table begin
-            foreach (OutputColumn col in mColumns)
+            foreach (OutputColumn col in Columns)
             {
-                result.AppendLine(String.Format("{0}|{1}|{2}", col.name(), col.datatype(), col.description()));
+                result.AppendLine(String.Format("{0}|{1}|{2}", col.Name, col.Datatype(), col.Description));
             }
             result.AppendLine("||");
             return result.ToString();

@@ -10,7 +10,7 @@ namespace iLand.tools
     {
         /** execute 'query' against database 'database'. The first column of the first row are returned.
           A Null-Variant is returned, if the query has no results. */
-        public static object queryValue(string query, SqliteConnection database)
+        public static object QueryValue(string query, SqliteConnection database)
         {
             SqliteCommand q = new SqliteCommand(query, database);
             return q.ExecuteScalar();
@@ -18,7 +18,7 @@ namespace iLand.tools
 
         /** execute 'query' against database 'database'.
             Use for insert, update, ... statements without return values. */
-        public static bool executeSql(string query, SqliteConnection database)
+        public static bool ExecuteSql(string query, SqliteConnection database)
         {
             SqliteCommand q = new SqliteCommand(query, database);
             q.ExecuteNonQuery();

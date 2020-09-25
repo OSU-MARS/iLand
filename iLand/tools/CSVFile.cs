@@ -22,53 +22,44 @@ namespace iLand.tools
         @endcode
         Planned is also a "streaming" mode for large files (loadFile(), while(file.next()) file.value(x) ), but not finsihed yet.
         */
-    internal class CSVFile
+    internal class CsvFile
     {
-        private bool mIsEmpty;
-        private bool mHasCaptions;
-        private bool mFixedWidth;
-        private bool mFlat;
-        private bool mStreamingMode;
-        private List<string> mCaptions;
-        private List<string> mRows;
+        private readonly List<string> mRows;
         private string mSeparator;
-        private int mRowCount;
-        private int mColCount;
 
         // properties
-        public bool streamingMode() { return mStreamingMode; } ///< return true, if in "streaming mode" (for large files)
-        public bool hasCaptions() { return mHasCaptions; } ///< true, if first line contains headers
-        public bool flat() { return mFlat; } ///< simple list, not multiple columns
-        public int rowCount() { return mRowCount; } ///< number or rows (excl. captions), or -1.
-        public int colCount() { return mColCount; } ///< number of columns, or -1
-        public bool isEmpty() { return mIsEmpty; } /// returns true when no valid file has been loaded (returns false when a file with 0 rows is loaded)
-        public List<string> captions() { return mCaptions; } ///< retrieve (a copy) of column headers
-        public void setHasCaptions(bool hasCaps) { mHasCaptions = hasCaps; }
-        public void setFixedWidth(bool hasFixedWidth) { mFixedWidth = hasFixedWidth; }
-        public void setFlat(bool isflat) { mFlat = isflat; }
+        public bool StreamingMode { get; private set; } ///< return true, if in "streaming mode" (for large files)
+        public bool HasCaptions { get; set; } ///< true, if first line contains headers
+        public bool Flat { get; set; } ///< simple list, not multiple columns
+        public int RowCount { get; private set; } ///< number or rows (excl. captions), or -1.
+        public int ColCount { get; private set; } ///< number of columns, or -1
+        public bool IsEmpty { get; private set; } /// returns true when no valid file has been loaded (returns false when a file with 0 rows is loaded)
+        public List<string> Captions { get; private set; } ///< retrieve (a copy) of column headers
+        public bool FixedWidth { get; set; }
+
         ///< get caption of ith column.
-        public string columnName(int col) 
+        public string GetColumnName(int col) 
         {
-            if (col < mColCount)
+            if (col < ColCount)
             {
-                return mCaptions[col];
+                return Captions[col];
             }
             return null; 
         }
 
         ///< index of column or -1 if not available
-        public int columnIndex(string columnName) 
+        public int GetColumnIndex(string columnName) 
         { 
-            return mCaptions.IndexOf(columnName); 
+            return Captions.IndexOf(columnName); 
         } 
 
         // value function with a column name
-        public string value(int row, string column_name) 
+        public string Value(int row, string column_name) 
         { 
-            return value(row, columnIndex(column_name)); 
+            return Value(row, GetColumnIndex(column_name)); 
         }
 
-        public static void addToScriptEngine(QJSEngine engine)
+        public static void AddToScriptEngine(QJSEngine engine)
         {
             // remove this code?
             // about this kind of scripting magic see: http://qt.nokia.com/developer/faqs/faq.2007-06-25.9557303148
@@ -81,35 +72,35 @@ namespace iLand.tools
         }
 
         ///< ctor, load @p fileName.
-        public CSVFile(string fileName)
+        public CsvFile(string fileName)
             : this()
         {
-            mHasCaptions = true;
-            loadFile(fileName);
+            HasCaptions = true;
+            LoadFile(fileName);
         }
 
-        public CSVFile(object parent = null)
+        public CsvFile()
         {
-            mCaptions = new List<string>();
-            mIsEmpty = true;
-            mHasCaptions = true;
-            mFlat = false;
-            mFixedWidth = false;
+            Captions = new List<string>();
+            IsEmpty = true;
+            HasCaptions = true;
+            Flat = false;
+            FixedWidth = false;
             mRows = new List<string>();
-            clear();
+            Clear();
         }
 
-        private void clear()
+        private void Clear()
         {
-            mColCount = mRowCount = -1;
-            mCaptions.Clear();
+            ColCount = RowCount = -1;
+            Captions.Clear();
             mRows.Clear();
-            mIsEmpty = true;
+            IsEmpty = true;
         }
 
-        public bool loadFromString(string content)
+        public bool LoadFromString(string content)
         {
-            clear();
+            Clear();
             // split into rows: use either with windows or unix style delimiter
             string[] rows;
             if (content.Substring(0, 1000).Contains("\r\n", StringComparison.Ordinal))
@@ -126,7 +117,7 @@ namespace iLand.tools
                 return false;
             }
 
-            mIsEmpty = false;
+            IsEmpty = false;
             // trimming of whitespaces is a problem
             // when having e.g. tabs as delimiters...
             //    if (!mFixedWidth) {
@@ -146,7 +137,7 @@ namespace iLand.tools
 
             mSeparator = ";"; // default
             string first = mRows[0];
-            if (!mFlat)
+            if (!Flat)
             {
                 // detect separator
                 int c_tab = first.IndexOf('\t');
@@ -175,9 +166,9 @@ namespace iLand.tools
             } // !mFlat
 
             // captions
-            if (mHasCaptions)
+            if (HasCaptions)
             {
-                mCaptions.AddRange(first.Replace("\"", "").Split(mSeparator, StringSplitOptions.None)); // drop \ characters
+                Captions.AddRange(first.Replace("\"", "").Split(mSeparator, StringSplitOptions.None)); // drop \ characters
             }
             else
             {
@@ -185,54 +176,54 @@ namespace iLand.tools
                 int columns = first.Split(mSeparator, StringSplitOptions.None).Length;
                 for (int i = 0; i < columns; i++)
                 {
-                    mCaptions.Add(i.ToString());
+                    Captions.Add(i.ToString());
                 }
             }
 
-            mColCount = mCaptions.Count;
-            mRowCount = mRows.Count;
-            mStreamingMode = false;
+            ColCount = Captions.Count;
+            RowCount = mRows.Count;
+            StreamingMode = false;
             return true;
         }
 
-        public bool loadFile(string fileName)
+        public bool LoadFile(string fileName)
         {
-            string content = Helper.loadTextFile(fileName);
+            string content = Helper.LoadTextFile(fileName);
             if (String.IsNullOrEmpty(content))
             {
                 Debug.WriteLine("loadFile: " + fileName + " does not exist or is empty.");
-                mIsEmpty = true;
+                IsEmpty = true;
                 return false;
             }
-            return loadFromString(content);
+            return LoadFromString(content);
         }
 
-        public List<object> values(int row)
+        public List<object> Values(int row)
         {
             List<object> line = new List<object>();
             line.AddRange(mRows[row].Split(mSeparator));
             return line;
         }
 
-        public string value(int row, int col)
+        public string Value(int row, int col)
         {
-            if (mStreamingMode)
+            if (StreamingMode)
             {
                 return null;
             }
 
-            if (row < 0 || row >= mRowCount || col < 0 || col >= mColCount)
+            if (row < 0 || row >= RowCount || col < 0 || col >= ColCount)
             {
-                Debug.WriteLine("value: invalid index: row col: " + row + col + ". Size is:" + mRowCount + mColCount);
+                Debug.WriteLine("value: invalid index: row col: " + row + col + ". Size is:" + RowCount + ColCount);
                 return null;
             }
 
-            if (mFixedWidth)
+            if (FixedWidth)
             {
                 // special case with space (1..n) as separator
                 string s = mRows[row];
                 char sep = mSeparator[0];
-                if (col == mColCount - 1)
+                if (col == ColCount - 1)
                 {
                     // last element:
                     return s.Substring(s.LastIndexOf(sep) + 1);
@@ -257,13 +248,13 @@ namespace iLand.tools
                              // count the separators up to the wanted column
                         if (sepcount == col)
                         {
-                            return s.Substring(lastsep, i - lastsep);
+                            return s[lastsep..i];
                         }
                         sepcount++;
                         lastsep = i + 1;
                     }
                 }
-                Debug.WriteLine("value: found no result: row " + row + " column " + col + ". Size is:" + mRowCount + mColCount);
+                Debug.WriteLine("value: found no result: row " + row + " column " + col + ". Size is:" + RowCount + ColCount);
                 return null;
             }
 
@@ -273,15 +264,15 @@ namespace iLand.tools
                 string s = mRows[row];
                 char sep = mSeparator[0];
                 string result = null;
-                if (col == mColCount - 1)
+                if (col == ColCount - 1)
                 {
                     // last element:
-                    if (s.Count(character => character == sep) == mColCount - 1)
+                    if (s.Count(character => character == sep) == ColCount - 1)
                     {
                         result = s.Substring(s.LastIndexOf(sep) + 1);
                         if (result.StartsWith('\"') && result.EndsWith('\"'))
                         {
-                            result = result.Substring(1, result.Length - 2);
+                            result = result[1..^1];
                         }
                     }
                     // if there are less than colcount-1 separators, then
@@ -304,7 +295,7 @@ namespace iLand.tools
                             }
                             else
                             {
-                                result = s.Substring(lastsep, i - lastsep);
+                                result = s[lastsep..i];
                             }
                             return result;
                         }
@@ -329,44 +320,37 @@ namespace iLand.tools
             return null;
         }
 
-        public string row(int row)
+        public string Row(int row)
         {
-            if (mStreamingMode)
+            if (StreamingMode)
             {
                 return null;
             }
 
-            if (row < 0 || row >= mRowCount)
+            if (row < 0 || row >= RowCount)
             {
-                Debug.WriteLine("row: invalid index: row " + row + ". Size is:" + mRowCount);
+                Debug.WriteLine("row: invalid index: row " + row + ". Size is:" + RowCount);
                 return null;
             }
 
             return mRows[row];
         }
 
-        public bool openFile(string fileName)
-        {
-            // TODO: the function makes no sense, nonetheless.
-            mStreamingMode = true;
-            return false;
-        }
-
-        public List<string> column(int col)
+        public List<string> Column(int col)
         {
             List<string> result = new List<string>();
-            for (int row = 0; row < rowCount(); row++)
+            for (int row = 0; row < RowCount; row++)
             {
-                result.Add(value(row, col));
+                result.Add(Value(row, col));
             }
             return result;
         }
 
-        public void setValue(int row, int col, object value)
+        public void SetValue(int row, int col, object value)
         {
-            if (row < 0 || row >= mRowCount || col < 0 || col > mColCount)
+            if (row < 0 || row >= RowCount || col < 0 || col > ColCount)
             {
-                Debug.WriteLine("setValue: invalid index: row col:" + row + col + ". Size is: " + mRowCount + " rows, " + mColCount + " columns");
+                Debug.WriteLine("setValue: invalid index: row col:" + row + col + ". Size is: " + RowCount + " rows, " + ColCount + " columns");
                 return;
             }
             string[] line = mRows[row].Split(mSeparator);
@@ -380,13 +364,13 @@ namespace iLand.tools
 
         /// save the contents of the CSVFile back to a file.
         /// this removes all comments and uses the system line-end
-        public void saveFile(string fileName)
+        public void SaveFile(string fileName)
         {
             using FileStream file = new FileStream(fileName, FileMode.Create, FileAccess.Write);
             using StreamWriter str = new StreamWriter(file);
-            if (mHasCaptions)
+            if (HasCaptions)
             {
-                str.WriteLine(String.Join(mSeparator, mCaptions));
+                str.WriteLine(String.Join(mSeparator, Captions));
             }
             foreach (string s in mRows)
             {

@@ -9,14 +9,14 @@
         public AllTreeIterator(Model model)
         {
             mModel = model;
-            this.reset();
+            this.Reset();
         }
 
-        public Tree current() { return mCurrent > 0 ? this.currentRU().trees()[mCurrent] : null; }
-        public ResourceUnit currentRU() { return mModel.ruList()[mRUIterator]; }
+        public Tree Current() { return mCurrent > 0 ? this.CurrentRU().Trees[mCurrent] : null; }
+        public ResourceUnit CurrentRU() { return mModel.ResourceUnits[mRUIterator]; }
         // public Tree operator *() { return current(); }
 
-        public void reset() 
+        public void Reset() 
         {
             mRUIterator = 0;
             mCurrent = -1;
@@ -30,36 +30,36 @@
              tree->something(); // do something
           }
           @endcode  */
-        public Tree next()
+        public Tree MoveNext()
         {
             if (mCurrent == -1)
             {
-                for (; mRUIterator < mModel.ruList().Count; ++ mRUIterator)
+                for (; mRUIterator < mModel.ResourceUnits.Count; ++ mRUIterator)
                 {
                     // move to first RU with trees
-                    if (this.currentRU().trees().Count > 0)
+                    if (this.CurrentRU().Trees.Count > 0)
                     {
                         break;
                     }
                 }
                 // finished if all RU processed
-                if (mRUIterator == mModel.ruList().Count)
+                if (mRUIterator == mModel.ResourceUnits.Count)
                 {
                     return null;
                 }
                 mCurrent = 0;
             }
-            if (mCurrent == this.currentRU().trees().Count)
+            if (mCurrent == this.CurrentRU().Trees.Count)
             {
                 // move to next RU with trees
-                for (++mRUIterator; mRUIterator < mModel.ruList().Count; ++mRUIterator)
+                for (++mRUIterator; mRUIterator < mModel.ResourceUnits.Count; ++mRUIterator)
                 {
-                    if (this.currentRU().trees().Count > 0)
+                    if (this.CurrentRU().Trees.Count > 0)
                     {
                         break;
                     }
                 }
-                if (mRUIterator == mModel.ruList().Count)
+                if (mRUIterator == mModel.ResourceUnits.Count)
                 {
                     mCurrent = -1;
                     return null; // finished!!
@@ -70,14 +70,14 @@
                 }
             }
 
-            return this.currentRU().trees()[mCurrent++];
+            return this.CurrentRU().Trees[mCurrent++];
         }
 
-        public Tree nextLiving()
+        public Tree MoveNextLiving()
         {
-            for (Tree t = next(); t != null; t = next())
+            for (Tree t = MoveNext(); t != null; t = MoveNext())
             {
-                if (!t.isDead())
+                if (!t.IsDead())
                 {
                     return t;
                 }

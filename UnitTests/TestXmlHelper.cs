@@ -1,51 +1,53 @@
 using iLand.tools;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.IO;
 
 namespace iLand.Test
 {
     [TestClass]
     public class TestXmlHelper
     {
-        private XmlHelper xml;
+        private static XmlHelper xml;
 
         [ClassInitialize]
-        public void initTestCase()
+        public static void ClassInitialize(TestContext testContext)
         {
-            xml.loadFromFile("E:\\dev\\iland\\src\\tests\\testXmlHelper\\xmlHelperTest.xml");
+            xml = new XmlHelper();
+            xml.LoadFromFile(Path.Combine(testContext.TestDir, "UnitTests", "test.xml"));
         }
 
         [TestMethod]
-        public void dump()
+        public void Dump()
         {
-            string test = xml.dump("test");
-            string path = xml.dump("path");
-            string species = xml.dump("species");
+            string test = xml.Dump("test");
+            string path = xml.Dump("path");
+            string species = xml.Dump("species");
         }
 
         [TestMethod]
-        public void filepath()
+        public void FilePath()
         {
             // setup file paths...
-            xml.dump("path");
-            GlobalSettings.instance().setupDirectories(xml.node("path"), null);
+            xml.Dump("path");
+            GlobalSettings.Instance.SetupDirectories(xml.Node("path"), null);
         }
 
         [TestMethod]
-        public void traverse()
+        public void Traverse()
         {
-            Assert.IsTrue(xml.node("") == null); // top node
-            Assert.IsTrue(xml.node("test.block.a") == null); // traverse
-            xml.setCurrentNode("test.block");
-            Assert.IsTrue(xml.node(".b") == null);
-            Assert.IsTrue(xml.node(".b.c") == null);
-            Assert.IsTrue(xml.node("test.block.b.c") == null);
-            Assert.IsTrue(xml.node(".b[0]") == null);
-            Assert.IsTrue(xml.node(".b[0].d") == null);
-            Assert.IsTrue(xml.node("test.block[1].n[2].o") == null);
+            Assert.IsTrue(xml.Node("") == null); // top node
+            Assert.IsTrue(xml.Node("test.block.a") == null); // traverse
+            xml.SetCurrentNode("test.block");
+            Assert.IsTrue(xml.Node(".b") == null);
+            Assert.IsTrue(xml.Node(".b.c") == null);
+            Assert.IsTrue(xml.Node("test.block.b.c") == null);
+            Assert.IsTrue(xml.Node(".b[0]") == null);
+            Assert.IsTrue(xml.Node(".b[0].d") == null);
+            Assert.IsTrue(xml.Node("test.block[1].n[2].o") == null);
 
-            Assert.IsTrue(xml.value("test.block.b.c") == "c");
-            Assert.IsTrue(xml.value("test.block.b.c.nonexistent", "0") == "0");
-            Assert.IsTrue(xml.value("test.block[1].n[2].o") == "o");
+            Assert.IsTrue(xml.Value("test.block.b.c") == "c");
+            Assert.IsTrue(xml.Value("test.block.b.c.nonexistent", "0") == "0");
+            Assert.IsTrue(xml.Value("test.block[1].n[2].o") == "o");
         }
     }
 }

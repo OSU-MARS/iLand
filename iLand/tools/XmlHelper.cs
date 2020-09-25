@@ -36,25 +36,28 @@ namespace iLand.tools
       */
     internal class XmlHelper
     {
-        private XmlDocument mDoc;
-        private XmlNode mCurrentTop;
-        private XmlNode mTopNode;
-        private Dictionary<string, string> mParamCache;
+        private readonly XmlDocument mDoc;
+        private readonly Dictionary<string, string> mParamCache;
 
-        // relative top nodes
-        public XmlNode top() { return mTopNode; }
-        public void setCurrentNode(string path) { mCurrentTop = node(path); } ///< sets @p path as the current (relative) node.
-        public void setCurrentNode(XmlNode node) { mCurrentTop = node; } ///< sets node as the current (relative) top node.
-                                                                          /// returns true if the current (relative!) node is valid (i.e. not null).
-        public bool isValid() { return mCurrentTop != null; }
+        public XmlNode CurrentNode { get; set; } ///< sets node as the current (relative) top node.
+        public XmlNode TopNode { get; private set; }
+
+        /// returns true if the current (relative!) node is valid (i.e. not null).
+        public bool IsValid() { return CurrentNode != null; }
+        public void SetCurrentNode(string path) { CurrentNode = Node(path); } ///< sets @p path as the current (relative) node.
 
         public XmlHelper()
         {
+            this.CurrentNode = null;
+            this.mDoc = new XmlDocument();
+            this.mParamCache = new Dictionary<string, string>();
+            this.TopNode = null;
         }
 
         public XmlHelper(string fileName)
+            : this()
         {
-            loadFromFile(fileName);
+            this.LoadFromFile(fileName);
         }
 
         /** Create a XmlHelper instance with @p topNode as top node.
@@ -62,14 +65,13 @@ namespace iLand.tools
             */
         public XmlHelper(XmlNode topNode)
         {
-            mTopNode = topNode;
-            mCurrentTop = topNode;
+            TopNode = topNode;
+            CurrentNode = topNode;
         }
 
-        public void loadFromFile(string fileName)
+        public void LoadFromFile(string fileName)
         {
-            string xmlFile = Helper.loadTextFile(fileName);
-
+            string xmlFile = Helper.LoadTextFile(fileName);
             if (String.IsNullOrEmpty(xmlFile) == false)
             {
                 mDoc.LoadXml(xmlFile);
@@ -78,24 +80,27 @@ namespace iLand.tools
             {
                 throw new FileNotFoundException("xmlfile does not exist or is empty!", fileName);
             }
-            mCurrentTop = mDoc.DocumentElement; // top element
-            mTopNode = mCurrentTop;
+            CurrentNode = mDoc.DocumentElement; // top element
+            TopNode = CurrentNode;
 
             // fill parameter cache
-            XmlNode e = node("model.parameter");
-            e = e.FirstChild;
+            XmlNode e = Node("model.parameter");
+            if (e == null)
+            {
+                throw new XmlException("/project/model/parameter element not found in project file '" + fileName + "'");
+            }
+            
             mParamCache.Clear();
-            while (e != null)
+            for (e = e.FirstChild; e != null; e = e.NextSibling)
             {
                 mParamCache[e.Name] = e.InnerText;
-                e = e.NextSibling;
             }
         }
 
         /** numeric values of elements in the section <parameter> are stored in a QHash structure for faster access.
             with paramValue() these data can be accessed.
           */
-        public double paramValue(string paramName, double defaultValue)
+        public double ParamValue(string paramName, double defaultValue)
         {
             if (mParamCache.ContainsKey(paramName))
             {
@@ -104,7 +109,7 @@ namespace iLand.tools
             return defaultValue;
         }
 
-        public string paramValueString(string paramName, string defaultValue = "")
+        public string GetStringParameter(string paramName, string defaultValue = "")
         {
             if (mParamCache.ContainsKey(paramName))
             {
@@ -113,7 +118,7 @@ namespace iLand.tools
             return defaultValue;
         }
 
-        public bool paramValueBool(string paramName, bool defaultValue = true)
+        public bool GetBooleanParameter(string paramName, bool defaultValue = true)
         {
             if (mParamCache.ContainsKey(paramName))
             {
@@ -124,14 +129,14 @@ namespace iLand.tools
             return defaultValue;
         }
 
-        public bool hasNode(string path)
+        public bool HasNode(string path)
         {
-            return node(path) != null;
+            return Node(path) != null;
         }
 
-        public string value(string path, string defaultValue = "")
+        public string Value(string path, string defaultValue = "")
         {
-            XmlNode e = node(path);
+            XmlNode e = Node(path);
             if (e == null)
             {
                 Debug.WriteLine("Warning: xml: node " + path + " is not present.");
@@ -150,9 +155,9 @@ namespace iLand.tools
             }
         }
 
-        public bool valueBool(string path, bool defaultValue = false)
+        public bool ValueBool(string path, bool defaultValue = false)
         {
-            XmlNode e = node(path);
+            XmlNode e = Node(path);
             if (e == null)
             {
                 Debug.WriteLine("Warning: xml: node " + path + " is not present.");
@@ -169,9 +174,9 @@ namespace iLand.tools
             }
         }
 
-        public double valueDouble(string path, double defaultValue = 0)
+        public double ValueDouble(string path, double defaultValue = 0)
         {
-            XmlNode e = node(path);
+            XmlNode e = Node(path);
             if (e == null)
             {
                 Debug.WriteLine("Warning: xml: node " + path + " is not present.");
@@ -190,23 +195,23 @@ namespace iLand.tools
             }
         }
 
-        public int valueInt(string path, int defaultValue)
+        public int ValueInt(string path, int defaultValue)
         {
-            return (int)valueDouble(path, defaultValue);
+            return (int)ValueDouble(path, defaultValue);
         }
 
         /// retrives node with given @p path and a element where isNull() is true if nothing is found.
-        public XmlNode node(string path)
+        public XmlNode Node(string path)
         {
             string[] elem = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
             XmlNode c;
             if (path.Length > 0 && path[0] == '.')
             {
-                c = mCurrentTop;
+                c = CurrentNode;
             }
             else
             {
-                c = mTopNode;
+                c = TopNode;
             }
             foreach (string level in elem)
             {
@@ -221,7 +226,7 @@ namespace iLand.tools
                 else
                 {
                     int pos = level.IndexOf('[');
-                    string levelWithoutClosingBracket = level.Substring(0, level.Length - 1); // drop closing bracket
+                    string levelWithoutClosingBracket = level[0..^1]; // drop closing bracket
                     int ind = Int32.Parse(level.Substring(levelWithoutClosingBracket.Length - pos - 1));
                     string name = levelWithoutClosingBracket.Substring(0, pos);
                     c = c.SelectSingleNode(name);
@@ -241,7 +246,7 @@ namespace iLand.tools
         }
 
         // writers
-        public bool setNodeValue(XmlNode node, string value)
+        public bool SetNodeValue(XmlNode node, string value)
         {
             if (node != null && node.FirstChild != null) // BUGBUG: silent no op
             {
@@ -251,19 +256,19 @@ namespace iLand.tools
             return false;
         }
 
-        public bool setNodeValue(string path, string value)
+        public bool SetNodeValue(string path, string value)
         {
-            XmlNode e = node(path);
+            XmlNode e = Node(path);
             if (e == null)
             {
                 Debug.WriteLine("XML: attempting to set value of " + path + ": node not present.");
                 return false;
             }
-            return setNodeValue(e, value);
+            return SetNodeValue(e, value);
         }
 
         // private recursive loop
-        private void dump_rec(XmlNode c, List<string> stack, List<string> dump)
+        private void DumpRecursive(XmlNode c, List<string> stack, List<string> dump)
         {
             if (c == null)
             {
@@ -284,7 +289,7 @@ namespace iLand.tools
                 {
                     stack.Add(ch.Name);
                 }
-                dump_rec(ch, stack, dump);
+                DumpRecursive(ch, stack, dump);
                 stack.RemoveAt(stack.Count - 1);
                 ch = ch.NextSibling;
             }
@@ -298,12 +303,12 @@ namespace iLand.tools
             dump.Add(self);
         }
 
-        public string dump(string path, int levels = -1)
+        public string Dump(string path)
         {
-            XmlNode c = node(path);
+            XmlNode c = Node(path);
             List<string> stack = new List<string>() { c.Name };
             List<string> result = new List<string>();
-            dump_rec(c, stack, result);
+            DumpRecursive(c, stack, result);
             return String.Join(Environment.NewLine, result);
         }
     }

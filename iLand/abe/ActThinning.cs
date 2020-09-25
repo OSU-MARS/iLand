@@ -13,8 +13,13 @@ namespace iLand.abe
         */
     internal class ActThinning : Activity
     {
-        private struct SCustomThinning
+        private static readonly List<string> mSyntaxCustom;
+
+        private class SCustomThinning
         {
+            public List<int> classPercentiles; ///< percentiles [0..100] for the classes (count = count(classValues) + 1
+            public List<double> classValues; ///< class values (the number of values defines the number of classes)
+
             public string filter; ///< additional filter
             public bool usePercentiles; ///< if true, classes relate to percentiles, if 'false' classes relate to relative dbh classes
             public bool removal; ///< if true, classes define removals, if false trees should *stay* in the class
@@ -22,10 +27,14 @@ namespace iLand.abe
             public double targetValue; ///< the number (per ha) that should be removed, see targetVariable
             public bool targetRelative; ///< if true, the target variable is relative to the stock, if false it is absolute
             public string targetVariable; ///< target variable ('volume', 'basalArea', 'stems') / ha
-            public List<double> classValues; ///< class values (the number of values defines the number of classes)
-            public List<int> classPercentiles; ///< percentiles [0..100] for the classes (count = count(classValues) + 1
             public double minDbh; ///< only trees with dbh > minDbh are considered (default: 0)
             public int remainingStems; ///< minimum remaining stems/ha (>minDbh)
+
+            public SCustomThinning()
+            {
+                this.classPercentiles = new List<int>();
+                this.classValues = new List<double>();
+            }
         };
 
         private struct SSelectiveThinning
@@ -33,54 +42,50 @@ namespace iLand.abe
             public int N; // stems per ha target
         };
 
+        private readonly List<SCustomThinning> mCustomThinnings;
         private SSelectiveThinning mSelectiveThinning;
-
-        private List<SCustomThinning> mCustomThinnings;
-
-        private Dictionary<Species, double> mSpeciesSelectivity;
+        private readonly Dictionary<Species, double> mSpeciesSelectivity;
         private ThinningType mThinningType;
 
-        // syntax checking
-        private static List<string> mSyntaxCustom;
-        private static List<string> mSyntaxSelective;
-
-
-        public ActThinning(FMSTP parent)
-            : base(parent)
+        static ActThinning()
         {
-            mBaseActivity.setIsScheduled(true); // use the scheduler
-            mBaseActivity.setDoSimulate(true); // simulate per default
-            mThinningType = ThinningType.Invalid;
-            if (mSyntaxCustom.Count == 0)
+            ActThinning.mSyntaxCustom = new List<string>(Activity.mAllowedProperties) 
             {
-                mSyntaxCustom = new List<string>(Activity.mAllowedProperties) { "percentile", "removal", "thinning",
-                                                                                "relative", "remainingStems", "minDbh",
-                                                                                "filter", "targetVariable", "targetRelative",
-                                                                                "targetValue", "classes", "onEvaluate" };
-            }
+                "percentile", "removal", "thinning", "relative", "remainingStems", "minDbh",
+                "filter", "targetVariable", "targetRelative", "targetValue", "classes", "onEvaluate" 
+            };
         }
 
-        public override string type()
+        public ActThinning()
         {
-            string th;
-            switch (mThinningType)
-            {
-                case ThinningType.Invalid: th = "Invalid"; break;
-                case ThinningType.FromBelow: th = "from below"; break;
-                case ThinningType.FromAbove: th = "from above"; break;
-                case ThinningType.Custom: th = "custom"; break;
-                case ThinningType.Selection: th = "selection"; break;
-                default: throw new NotSupportedException();
-            }
+            this.mCustomThinnings = new List<SCustomThinning>();
+            this.mSelectiveThinning = new SSelectiveThinning();
+            this.mSpeciesSelectivity = new Dictionary<Species, double>();
+            this.mThinningType = ThinningType.Invalid;
 
+            this.mBaseActivity.SetIsScheduled(true); // use the scheduler
+            this.mBaseActivity.SetDoSimulate(true); // simulate per default
+        }
+
+        public override string Type()
+        {
+            string th = mThinningType switch
+            {
+                ThinningType.Invalid => "Invalid",
+                ThinningType.FromBelow => "from below",
+                ThinningType.FromAbove => "from above",
+                ThinningType.Custom => "custom",
+                ThinningType.Selection => "selection",
+                _ => throw new NotSupportedException(),
+            };
             return String.Format("thinning ({0})", th);
         }
 
-        public new void setup(QJSValue value)
+        public override void Setup(QJSValue value)
         {
-            base.setup(value); // setup base events
+            base.Setup(value); // setup base events
             mThinningType = ThinningType.Invalid;
-            string th_type = FMSTP.valueFromJs(value, "thinning").toString();
+            string th_type = FMSTP.ValueFromJS(value, "thinning").ToString();
             if (th_type == "fromBelow")
             {
                 mThinningType = ThinningType.FromBelow;
@@ -104,13 +109,13 @@ namespace iLand.abe
 
             switch (mThinningType)
             {
-                case ThinningType.Custom: setupCustom(value); break;
-                case ThinningType.Selection: setupSelective(value); break;
+                case ThinningType.Custom: SetupCustom(value); break;
+                case ThinningType.Selection: SetupSelective(value); break;
                 default: throw new NotSupportedException("No setup defined for thinning type");
             }
         }
 
-        public override bool evaluate(FMStand stand)
+        public override bool Evaluate(FMStand stand)
         {
             bool return_value = true;
             switch (mThinningType)
@@ -118,120 +123,120 @@ namespace iLand.abe
                 case ThinningType.Custom:
                     for (int i = 0; i < mCustomThinnings.Count; ++i)
                     {
-                        return_value = return_value && evaluateCustom(stand, mCustomThinnings[i]);
+                        return_value = return_value && EvaluateCustom(stand, mCustomThinnings[i]);
                     }
                     return return_value; // false if one fails
                 case ThinningType.Selection:
-                    return evaluateSelective(stand);
+                    return EvaluateSelective(stand);
                 default:
                     throw new NotSupportedException("evaluate: not available for thinning type");
             }
         }
 
-        public override bool execute(FMStand stand)
+        public override bool Execute(FMStand stand)
         {
-            if (stand.trace()) Debug.WriteLine(stand.context() + " execute activity " + name() + ": " + type());
-            if (events().hasEvent("onExecute"))
+            if (stand.TracingEnabled()) Debug.WriteLine(stand.context() + " execute activity " + name() + ": " + Type());
+            if (events().HasEvent("onExecute"))
             {
                 // switch off simulation mode
-                stand.currentFlags().setDoSimulate(false);
+                stand.currentFlags().SetDoSimulate(false);
                 // execute this event
-                bool result = base.execute(stand);
-                stand.currentFlags().setDoSimulate(true);
+                bool result = base.Execute(stand);
+                stand.currentFlags().SetDoSimulate(true);
                 return result;
             }
             else
             {
                 // default behavior: process all marked trees (harvest / cut)
-                if (stand.trace())
+                if (stand.TracingEnabled())
                 {
                     Debug.WriteLine(stand.context() + " activity " + name() + " remove all marked trees.");
                 }
                 FMTreeList trees = new FMTreeList(stand);
-                trees.removeMarkedTrees();
+                trees.RemoveMarkedTrees();
                 return true;
             }
         }
 
-        private void setupCustom(QJSValue value)
+        private void SetupCustom(QJSValue value)
         {
-            events().setup(value, new List<string>() { "onEvaluate" });
+            events().Setup(value, new List<string>() { "onEvaluate" });
             mCustomThinnings.Clear();
-            if (value.hasProperty("thinnings") && value.property("thinnings").isArray())
+            if (value.HasProperty("thinnings") && value.Property("thinnings").IsArray())
             {
-                QJSValueIterator it = new QJSValueIterator(value.property("thinnings"));
-                while (it.hasNext())
+                QJSValueIterator it = new QJSValueIterator(value.Property("thinnings"));
+                while (it.HasNext())
                 {
-                    it.next();
-                    if (it.name() == "length")
+                    it.Next();
+                    if (it.Name() == "length")
                     {
                         continue;
                     }
                     SCustomThinning thinning = new SCustomThinning();
                     mCustomThinnings.Add(thinning);
-                    setupSingleCustom(it.value(), thinning);
+                    SetupSingleCustom(it.Value(), thinning);
                 }
             }
             else
             {
                 SCustomThinning thinning = new SCustomThinning();
                 mCustomThinnings.Add(thinning);
-                setupSingleCustom(value, thinning);
+                SetupSingleCustom(value, thinning);
             }
         }
 
-        private void setupSelective(QJSValue value)
+        private void SetupSelective(QJSValue value)
         {
-            mSelectiveThinning.N = FMSTP.valueFromJs(value, "N", "400").toInt();
+            mSelectiveThinning.N = FMSTP.ValueFromJS(value, "N", "400").ToInt();
         }
 
         // setup of the "custom" thinning operation
-        private void setupSingleCustom(QJSValue value, SCustomThinning custom)
+        private void SetupSingleCustom(QJSValue value, SCustomThinning custom)
         {
-            FMSTP.checkObjectProperties(value, mSyntaxCustom, "setup of 'custom' thinning:" + name());
+            FMSTP.CheckObjectProperties(value, mSyntaxCustom, "setup of 'custom' thinning:" + name());
 
-            custom.usePercentiles = FMSTP.boolValueFromJs(value, "percentile", true);
-            custom.removal = FMSTP.boolValueFromJs(value, "removal", true);
-            custom.relative = FMSTP.boolValueFromJs(value, "relative", true);
-            custom.remainingStems = FMSTP.valueFromJs(value, "remainingStems", "0").toInt();
-            custom.minDbh = FMSTP.valueFromJs(value, "minDbh", "0").toNumber();
-            QJSValue filter = FMSTP.valueFromJs(value, "filter", "");
-            if (filter.isString())
+            custom.usePercentiles = FMSTP.BoolValueFromJS(value, "percentile", true);
+            custom.removal = FMSTP.BoolValueFromJS(value, "removal", true);
+            custom.relative = FMSTP.BoolValueFromJS(value, "relative", true);
+            custom.remainingStems = FMSTP.ValueFromJS(value, "remainingStems", "0").ToInt();
+            custom.minDbh = FMSTP.ValueFromJS(value, "minDbh", "0").ToNumber();
+            QJSValue filter = FMSTP.ValueFromJS(value, "filter", "");
+            if (filter.IsString())
             {
-                custom.filter = filter.toString();
+                custom.filter = filter.ToString();
             }
             else
             {
                 custom.filter = null;
             }
-            custom.targetVariable = FMSTP.valueFromJs(value, "targetVariable", "stems").toString();
+            custom.targetVariable = FMSTP.ValueFromJS(value, "targetVariable", "stems").ToString();
             if (custom.targetVariable != "stems" && custom.targetVariable != "basalArea" && custom.targetVariable != "volume")
             {
                 throw new NotSupportedException(String.Format("setup of custom Activity: invalid targetVariable: {0}", custom.targetVariable));
             }
-            custom.targetRelative = FMSTP.boolValueFromJs(value, "targetRelative", true);
-            custom.targetValue = FMSTP.valueFromJs(value, "targetValue", "30").toNumber();
+            custom.targetRelative = FMSTP.BoolValueFromJS(value, "targetRelative", true);
+            custom.targetValue = FMSTP.ValueFromJS(value, "targetValue", "30").ToNumber();
             if (custom.targetRelative && (custom.targetValue > 100.0 || custom.targetValue < 0.0))
             {
                 throw new NotSupportedException(String.Format("setup of custom Activity: invalid relative targetValue (0-100): {0}", custom.targetValue));
             }
 
-            QJSValue values = FMSTP.valueFromJs(value, "classes", "", "setup custom acitvity");
-            if (!values.isArray())
+            QJSValue values = FMSTP.ValueFromJS(value, "classes", "", "setup custom acitvity");
+            if (!values.IsArray())
             {
                 throw new NotSupportedException("setup of custom activity: the 'classes' is not an array.");
             }
             custom.classValues.Clear();
             custom.classPercentiles.Clear();
             QJSValueIterator it = new QJSValueIterator(values);
-            while (it.hasNext())
+            while (it.HasNext())
             {
-                it.next();
-                if (it.name() == "length")
+                it.Next();
+                if (it.Name() == "length")
                 {
                     continue;
                 }
-                custom.classValues.Add(it.value().toNumber());
+                custom.classValues.Add(it.Value().ToNumber());
             }
             if (custom.classValues.Count == 0)
             {
@@ -262,32 +267,32 @@ namespace iLand.abe
             custom.classPercentiles.Add(100);
         }
 
-        private bool evaluateCustom(FMStand stand, SCustomThinning custom)
+        private bool EvaluateCustom(FMStand stand, SCustomThinning custom)
         {
             // fire onEvaluate event and collect probabilities
-            QJSValue eval_result = events().run("onEvaluate", stand);
-            if (eval_result.isBool() && eval_result.toBool() == false)
+            QJSValue eval_result = events().Run("onEvaluate", stand);
+            if (eval_result.IsBool() && eval_result.ToBool() == false)
             {
                 return false; // do nothing
             }
             bool species_selective = false;
 
-            if (eval_result.isObject())
+            if (eval_result.IsObject())
             {
                 // expecting a list of probabilities....
                 // create list if not present
                 if (mSpeciesSelectivity.Count == 0)
                 {
-                    foreach (Species s in GlobalSettings.instance().model().speciesSet().activeSpecies())
+                    foreach (Species s in GlobalSettings.Instance.Model.SpeciesSet().ActiveSpecies)
                     {
                         mSpeciesSelectivity[s] = 1.0;
                     }
                 }
                 // fetch from javascript
-                double rest_val = eval_result.property("rest").isNumber() ? eval_result.property("rest").toNumber() : 1.0;
+                double rest_val = eval_result.Property("rest").IsNumber() ? eval_result.Property("rest").ToNumber() : 1.0;
                 foreach (Species s in mSpeciesSelectivity.Keys)
                 {
-                    mSpeciesSelectivity[s] = Global.limit(eval_result.property(s.id()).isNumber() ? eval_result.property(s.id()).toNumber() : rest_val, 0.0, 1.0);
+                    mSpeciesSelectivity[s] = Global.Limit(eval_result.Property(s.ID).IsNumber() ? eval_result.Property(s.ID).ToNumber() : rest_val, 0.0, 1.0);
                 }
                 species_selective = true;
             }
@@ -305,7 +310,7 @@ namespace iLand.abe
 
             if (String.IsNullOrEmpty(filter) == false)
             {
-                trees.load(filter);
+                trees.Load(filter);
             }
             else
             {
@@ -323,17 +328,17 @@ namespace iLand.abe
             }
 
             // remove harvest flags.
-            clearTreeMarks(trees);
+            ClearTreeMarks(trees);
 
             // sort always by target variable (if it is stems, then simply by dbh)
             bool target_dbh = custom.targetVariable == "stems";
             if (target_dbh)
             {
-                trees.sort("dbh");
+                trees.Sort("dbh");
             }
             else
             {
-                trees.sort(custom.targetVariable);
+                trees.Sort(custom.targetVariable);
             }
 
             // count trees and values (e.g. volume) in the defined classes
@@ -367,7 +372,7 @@ namespace iLand.abe
                 percentiles[class_index] = n + 1;
             }
 
-            double target_value = 0.0;
+            double target_value;
             if (custom.targetRelative)
             {
                 target_value = custom.targetValue * total_value / 100.0;
@@ -431,7 +436,7 @@ namespace iLand.abe
             do
             {
                 // look up a random number: it decides in which class to select a tree:
-                p = RandomGenerator.nrandom(0, 100);
+                p = RandomGenerator.Random(0, (double)100);
                 for (cls = 0; cls < values.Count; ++cls)
                 {
                     if (p < custom.classPercentiles[cls + 1])
@@ -440,7 +445,7 @@ namespace iLand.abe
                     }
                 }
                 // select a tree:
-                int tree_idx = selectRandomTree(trees, percentiles[cls], percentiles[cls + 1] - 1, species_selective);
+                int tree_idx = SelectRandomTree(trees, percentiles[cls], percentiles[cls + 1] - 1, species_selective);
                 if (tree_idx >= 0)
                 {
                     // stop harvesting, when the target size is reached: if the current tree would surpass the limit,
@@ -450,7 +455,7 @@ namespace iLand.abe
                     {
                         if (removed_value + tree_value > target_value)
                         {
-                            if (RandomGenerator.drandom() > 0.5 || target_value_reached)
+                            if (RandomGenerator.Random() > 0.5 || target_value_reached)
                             {
                                 break;
                             }
@@ -461,7 +466,7 @@ namespace iLand.abe
                         }
 
                     }
-                    trees.remove_single_tree(tree_idx, true);
+                    trees.RemoveSingleTree(tree_idx, true);
                     removed_trees++;
                     removed_value += tree_value;
                     values[cls]++;
@@ -487,7 +492,7 @@ namespace iLand.abe
             }
             while (!finished);
 
-            if (stand.trace())
+            if (stand.TracingEnabled())
             {
                 Debug.WriteLine(stand.context() + " custom-thinning: removed " + removed_trees + ". Reached cumulative 'value' of: " + removed_value + " (planned value: " + target_value + "). #of no trees found: " + no_tree_found + "; stand-area:" + stand.area());
                 for (int i = 0; i < values.Count; ++i)
@@ -499,7 +504,7 @@ namespace iLand.abe
             return true;
         }
 
-        private int selectRandomTree(FMTreeList list, int pct_min, int pct_max, bool selective)
+        private int SelectRandomTree(FMTreeList list, int pct_min, int pct_max, bool selective)
         {
             // pct_min, pct_max: the indices of the first and last tree in the list to be looked for, including pct_max
             // seek a tree in the class 'cls' (which has not already been removed);
@@ -511,16 +516,16 @@ namespace iLand.abe
             // search randomly for a couple of times
             for (int i = 0; i < 5; i++)
             {
-                idx = RandomGenerator.irandom(pct_min, pct_max);
+                idx = RandomGenerator.Random(pct_min, pct_max);
                 Tree tree = list.trees()[idx].Item1;
-                if (!tree.isDead() && !tree.isMarkedForHarvest() && !tree.isMarkedForCut())
+                if (!tree.IsDead() && !tree.IsMarkedForHarvest() && !tree.IsMarkedForCut())
                 {
-                    return selectSelectiveSpecies(list, selective, idx);
+                    return SelectSelectiveSpecies(list, selective, idx);
                 }
             }
             // not found, now walk in a random direction...
             int direction = 1;
-            if (RandomGenerator.drandom() > 0.5)
+            if (RandomGenerator.Random() > 0.5)
             {
                 direction = -1;
             }
@@ -529,9 +534,9 @@ namespace iLand.abe
             while (ridx >= pct_min && ridx < pct_max)
             {
                 Tree tree = list.trees()[ridx].Item1;
-                if (!tree.isDead() && !tree.isMarkedForHarvest() && !tree.isMarkedForCut())
+                if (!tree.IsDead() && !tree.IsMarkedForHarvest() && !tree.IsMarkedForCut())
                 {
-                    return selectSelectiveSpecies(list, selective, ridx);
+                    return SelectSelectiveSpecies(list, selective, ridx);
                 }
                 ridx += direction;
             }
@@ -541,9 +546,9 @@ namespace iLand.abe
             while (ridx >= pct_min && ridx < pct_max)
             {
                 Tree tree = list.trees()[ridx].Item1;
-                if (!tree.isDead() && !tree.isMarkedForHarvest() && !tree.isMarkedForCut())
+                if (!tree.IsDead() && !tree.IsMarkedForHarvest() && !tree.IsMarkedForCut())
                 {
-                    return selectSelectiveSpecies(list, selective, ridx);
+                    return SelectSelectiveSpecies(list, selective, ridx);
                 }
                 ridx += direction;
             }
@@ -552,14 +557,14 @@ namespace iLand.abe
             return -1;
         }
 
-        private int selectSelectiveSpecies(FMTreeList list, bool is_selective, int index)
+        private int SelectSelectiveSpecies(FMTreeList list, bool is_selective, int index)
         {
             if (!is_selective)
             {
                 return index;
             }
             // check probability for species [0..1, 0: 0% chance to take a tree of that species] against a random number
-            if (mSpeciesSelectivity[list.trees()[index].Item1.species()] < RandomGenerator.drandom())
+            if (mSpeciesSelectivity[list.trees()[index].Item1.Species] < RandomGenerator.Random())
             {
                 return index; // take the tree
             }
@@ -567,40 +572,40 @@ namespace iLand.abe
             return -2;
         }
 
-        public void clearTreeMarks(FMTreeList list)
+        public void ClearTreeMarks(FMTreeList list)
         {
             foreach (MutableTuple<Tree, double> it in list.trees())
             {
                 Tree tree = it.Item1;
-                if (tree.isMarkedForHarvest())
+                if (tree.IsMarkedForHarvest())
                 {
-                    tree.markForHarvest(false);
+                    tree.MarkForHarvest(false);
                 }
-                if (tree.isMarkedForCut())
+                if (tree.IsMarkedForCut())
                 {
-                    tree.markForCut(false);
+                    tree.MarkForCut(false);
                 }
             }
         }
 
-        private bool evaluateSelective(FMStand stand)
+        private bool EvaluateSelective(FMStand stand)
         {
-            markCropTrees(stand);
+            MarkCropTrees(stand);
             return true;
         }
 
-        private bool markCropTrees(FMStand stand)
+        private bool MarkCropTrees(FMStand stand)
         {
             // tree list from current exeution context
             FMTreeList treelist = ForestManagementEngine.instance().scriptBridge().treesObj();
-            treelist.setStand(stand);
+            treelist.SetStand(stand);
             treelist.loadAll();
-            clearTreeMarks(treelist);
+            ClearTreeMarks(treelist);
 
             // get the 2x2m grid for the current stand
             Grid<float> grid = treelist.localGrid();
             // clear (except the out of "stand" pixels)
-            for (int p = 0; p < grid.count(); ++p)
+            for (int p = 0; p < grid.Count; ++p)
             {
                 if (grid[p] > -1.0F)
                 {
@@ -625,21 +630,21 @@ namespace iLand.abe
             // if *more* trees should be marked, some trees need to be on neighbor pixels:
             // pixels = 2500 / N; if 9 px are the Moore neighborhood, the "overprint" is N*9 / 2500.
             // N*)/2500 -1 = probability of having more than zero overlapping pixels
-            double overprint = (mSelectiveThinning.N * 9) / (double)(Constant.cPxPerHectare) - 1.0;
+            double overprint = (mSelectiveThinning.N * 9) / (double)(Constant.LightCellsPerHectare) - 1.0;
 
             // order the list of trees according to tree height
-            treelist.sort("-height");
+            treelist.Sort("-height");
 
             // start with a part of N and 0 overlap
             int n_found = 0;
             int tests = 0;
             for (int i = 0; i < target_n / 3; i++)
             {
-                float f = testPixel(treelist.trees()[i].Item1.position(), grid); ++tests;
+                float f = TestPixel(treelist.trees()[i].Item1.GetCellCenterPoint(), grid); ++tests;
                 if (f == 0.0F)
                 {
-                    setPixel(treelist.trees()[i].Item1.position(), grid);
-                    treelist.trees()[i].Item1.markCropTree(true);
+                    SetPixel(treelist.trees()[i].Item1.GetCellCenterPoint(), grid);
+                    treelist.trees()[i].Item1.MarkAsCropTree(true);
                     ++n_found;
                 }
             }
@@ -648,20 +653,20 @@ namespace iLand.abe
             {
                 for (int i = 0; i < max_target_n; ++i)
                 {
-                    if (treelist.trees()[i].Item1.isMarkedAsCropTree())
+                    if (treelist.trees()[i].Item1.IsMarkedAsCropTree())
                     {
                         continue;
                     }
 
-                    float f = testPixel(treelist.trees()[i].Item1.position(), grid); ++tests;
+                    float f = TestPixel(treelist.trees()[i].Item1.GetCellCenterPoint(), grid); ++tests;
                     if ((f == 0.0F) ||
-                         (f <= 2.0F && RandomGenerator.drandom() < overprint) ||
-                         (run == 1 && f <= 4 && RandomGenerator.drandom() < overprint) ||
-                         (run == 2 && RandomGenerator.drandom() < overprint) ||
+                         (f <= 2.0F && RandomGenerator.Random() < overprint) ||
+                         (run == 1 && f <= 4 && RandomGenerator.Random() < overprint) ||
+                         (run == 2 && RandomGenerator.Random() < overprint) ||
                          (run == 3))
                     {
-                        setPixel(treelist.trees()[i].Item1.position(), grid);
-                        treelist.trees()[i].Item1.markCropTree(true);
+                        SetPixel(treelist.trees()[i].Item1.GetCellCenterPoint(), grid);
+                        treelist.trees()[i].Item1.MarkAsCropTree(true);
                         ++n_found;
                         if (n_found == target_n)
                         {
@@ -683,16 +688,16 @@ namespace iLand.abe
                 for (int i = 0; i < max_target_n; ++i)
                 {
                     Tree tree = treelist.trees()[i].Item1;
-                    if (tree.isMarkedAsCropTree() || tree.isMarkedAsCropCompetitor())
+                    if (tree.IsMarkedAsCropTree() || tree.IsMarkedAsCropCompetitor())
                     {
                         continue;
                     }
 
-                    float f = testPixel(treelist.trees()[i].Item1.position(), grid); ++tests;
+                    float f = TestPixel(treelist.trees()[i].Item1.GetCellCenterPoint(), grid); ++tests;
 
                     if ((f > 12.0F) || (run == 1 && f > 8) || (run == 2 && f > 4))
                     {
-                        tree.markCropCompetitor(true);
+                        tree.MarkAsCropCompetitor(true);
                         n_competitor++;
                     }
                 }
@@ -707,45 +712,45 @@ namespace iLand.abe
 
         }
 
-        private float testPixel(PointF pos, Grid<float> grid)
+        private float TestPixel(PointF pos, Grid<float> grid)
         {
             // check Moore neighborhood
-            int x = grid.indexAt(pos).X;
-            int y = grid.indexAt(pos).Y;
+            int x = grid.IndexAt(pos).X;
+            int y = grid.IndexAt(pos).Y;
 
             float sum = 0.0F;
-            sum += grid.isIndexValid(x - 1, y - 1) ? grid.valueAtIndex(x - 1, y - 1) : 0;
-            sum += grid.isIndexValid(x, y - 1) ? grid.valueAtIndex(x, y - 1) : 0;
-            sum += grid.isIndexValid(x + 1, y - 1) ? grid.valueAtIndex(x + 1, y - 1) : 0;
+            sum += grid.Contains(x - 1, y - 1) ? grid[x - 1, y - 1] : 0;
+            sum += grid.Contains(x, y - 1) ? grid[x, y - 1] : 0;
+            sum += grid.Contains(x + 1, y - 1) ? grid[x + 1, y - 1] : 0;
 
-            sum += grid.isIndexValid(x - 1, y) ? grid.valueAtIndex(x - 1, y) : 0;
-            sum += grid.isIndexValid(x, y) ? grid.valueAtIndex(x, y) : 0;
-            sum += grid.isIndexValid(x + 1, y) ? grid.valueAtIndex(x + 1, y) : 0;
+            sum += grid.Contains(x - 1, y) ? grid[x - 1, y] : 0;
+            sum += grid.Contains(x, y) ? grid[x, y] : 0;
+            sum += grid.Contains(x + 1, y) ? grid[x + 1, y] : 0;
 
-            sum += grid.isIndexValid(x - 1, y + 1) ? grid.valueAtIndex(x - 1, y + 1) : 0;
-            sum += grid.isIndexValid(x, y + 1) ? grid.valueAtIndex(x, y + 1) : 0;
-            sum += grid.isIndexValid(x + 1, y + 1) ? grid.valueAtIndex(x + 1, y + 1) : 0;
+            sum += grid.Contains(x - 1, y + 1) ? grid[x - 1, y + 1] : 0;
+            sum += grid.Contains(x, y + 1) ? grid[x, y + 1] : 0;
+            sum += grid.Contains(x + 1, y + 1) ? grid[x + 1, y + 1] : 0;
 
             return sum;
         }
 
-        private void setPixel(PointF pos, Grid<float> grid)
+        private void SetPixel(PointF pos, Grid<float> grid)
         {
             // check Moore neighborhood
-            int x = grid.indexAt(pos).X;
-            int y = grid.indexAt(pos).Y;
+            int x = grid.IndexAt(pos).X;
+            int y = grid.IndexAt(pos).Y;
 
-            if (grid.isIndexValid(x - 1, y - 1)) grid[x - 1, y - 1]++;
-            if (grid.isIndexValid(x, y - 1)) grid[x, y - 1]++;
-            if (grid.isIndexValid(x + 1, y - 1)) grid[x + 1, y - 1]++;
+            if (grid.Contains(x - 1, y - 1)) grid[x - 1, y - 1]++;
+            if (grid.Contains(x, y - 1)) grid[x, y - 1]++;
+            if (grid.Contains(x + 1, y - 1)) grid[x + 1, y - 1]++;
 
-            if (grid.isIndexValid(x - 1, y)) grid[x - 1, y]++;
-            if (grid.isIndexValid(x, y)) grid[x, y] += 3; // more impact on center pixel
-            if (grid.isIndexValid(x + 1, y)) grid[x + 1, y]++;
+            if (grid.Contains(x - 1, y)) grid[x - 1, y]++;
+            if (grid.Contains(x, y)) grid[x, y] += 3; // more impact on center pixel
+            if (grid.Contains(x + 1, y)) grid[x + 1, y]++;
 
-            if (grid.isIndexValid(x - 1, y + 1)) grid[x - 1, y + 1]++;
-            if (grid.isIndexValid(x, y + 1)) grid[x, y + 1]++;
-            if (grid.isIndexValid(x + 1, y + 1)) grid[x + 1, y + 1]++;
+            if (grid.Contains(x - 1, y + 1)) grid[x - 1, y + 1]++;
+            if (grid.Contains(x, y + 1)) grid[x, y + 1]++;
+            if (grid.Contains(x + 1, y + 1)) grid[x + 1, y + 1]++;
         }
     }
 }

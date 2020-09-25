@@ -10,13 +10,13 @@ namespace iLand.abe
 
         public void setStand(FMStand stand) { mStand = stand; }
 
-        public UnitObj(object parent = null)
+        public UnitObj()
         {
         }
 
-        public bool agentUpdate(string what, string how, string when)
+        public bool AgentUpdate(string what, string how, string when)
         {
-            UpdateType type = AgentUpdate.label(what);
+            UpdateType type = abe.AgentUpdate.Label(what);
             if (type == UpdateType.UpdateInvalid)
             {
                 Debug.WriteLine("unit.agentUpdate: invalid 'what': " + what);
@@ -26,7 +26,7 @@ namespace iLand.abe
             update.setType(type);
 
             // how
-            int idx = FomeScript.levelIndex(how);
+            int idx = FomeScript.LevelIndex(how);
             if (idx > -1)
             {
                 update.setValue(idx.ToString());
@@ -46,20 +46,20 @@ namespace iLand.abe
                 update.setTimeActivity(when);
             }
 
-            mStand.unit().agent().type().addAgentUpdate(update, mStand.unit());
-            Debug.WriteLine("Unit::agentUpdate: " + update.dump());
+            mStand.unit().agent().type().AddAgentUpdate(update, mStand.unit());
+            Debug.WriteLine("Unit::agentUpdate: " + update.Dump());
             return true;
         }
 
-        public string harvestMode()
+        public string HarvestMode()
         {
             return mStand.unit().harvestMode();
         }
 
-        public string speciesComposition()
+        public string SpeciesComposition()
         {
             int index = mStand.unit().targetSpeciesIndex();
-            return mStand.unit().agent().type().speciesCompositionName(index);
+            return mStand.unit().agent().type().SpeciesCompositionName(index);
         }
 
         public double U()
@@ -70,7 +70,7 @@ namespace iLand.abe
         public string thinningIntensity()
         {
             int t = mStand.unit().thinningIntensity();
-            return FomeScript.levelLabel(t);
+            return FomeScript.LevelLabel(t);
         }
 
         public double MAIChange()
@@ -84,7 +84,7 @@ namespace iLand.abe
             return mStand.unit().averageMAI();
         }
 
-        public double landscapeMAI()
+        public double LandscapeMAI()
         {
             // hacky way of getting a MAI on landscape level
             double total_area = 0.0;
@@ -105,24 +105,24 @@ namespace iLand.abe
             }
         }
 
-        public double mortalityChange()
+        public double MortalityChange()
         {
             return 1; // todo
         }
 
-        public double mortalityLevel()
-        {
-            return 1; // todo
-
-        }
-
-        public double regenerationChange()
+        public double MortalityLevel()
         {
             return 1; // todo
 
         }
 
-        public double regenerationLevel()
+        public double RegenerationChange()
+        {
+            return 1; // todo
+
+        }
+
+        public double RegenerationLevel()
         {
             return 1; // todo
 

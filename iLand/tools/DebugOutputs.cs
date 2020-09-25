@@ -7,15 +7,15 @@ namespace iLand.tools
     [Flags]
     internal enum DebugOutputs : uint
     {
-        dTreeNPP = 1, 
-        dTreePartition = 2, 
-        dTreeGrowth = 4,
-        dStandGPP = 8, 
-        dWaterCycle = 16,
-        dDailyResponses = 32,
-        dEstablishment = 64, 
-        dSaplingGrowth = 128, 
-        dCarbonCycle = 256,
-        dPerformance = 512
+        TreeNpp = 1, 
+        TreePartition = 2, 
+        TreeGrowth = 4,
+        StandGpp = 8, 
+        WaterCycle = 16,
+        DailyResponses = 32,
+        Establishment = 64, 
+        SaplingGrowth = 128, 
+        CarbonCycle = 256,
+        Performance = 512
     };
 }

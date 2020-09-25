@@ -3,47 +3,48 @@ using System.Collections.Generic;
 
 namespace iLand.core
 {
-    /** holds a couple of system statistics primarily aimed for performance and memory analyis.
+    /** holds system statistics primarily aimed for performance and memory analyis.
       */
     internal class SystemStatistics
     {
-        // the system counters
-        public int treeCount;
-        public int saplingCount;
-        public int newSaplings;
-        // timings
-        public double tManagement;
-        public double tApplyPattern;
-        public double tReadPattern;
-        public double tTreeGrowth;
-        public double tSeedDistribution;
-        public double tSapling;
-        public double tEstablishment;
-        public double tCarbonCycle;
-        public double tWriteOutput;
-        public double tTotalYear;
+        public int NewSaplings { get; set; }
+        public int SaplingCount { get; set; }
+        public int TreeCount { get; set; }
+
+        public double ApplyPatternTime { get; set; }
+        public double CarbonCycleTime { get; set; }
+        public double EstablishmentTime { get; set; }
+        public double ManagementTime { get; set; }
+        public double ReadPatternTime { get; set; }
+        public double SeedDistributionTime { get; set; }
+        public double SaplingTime { get; set; }
+        public double TotalYearTime { get; set; }
+        public double TreeGrowthTime { get; set; }
+        public double WriteOutputTime { get; set; }
 
         public SystemStatistics()
         {
-            reset();
+            Reset();
         }
 
-        public void reset()
+        public void Reset()
         {
-            treeCount = 0; saplingCount = 0; newSaplings = 0;
-            tManagement = 0.0; tApplyPattern = tReadPattern = tTreeGrowth = 0.0;
-            tSeedDistribution = tSapling = tEstablishment = tCarbonCycle = tWriteOutput = tTotalYear = 0.0;
+            TreeCount = 0; 
+            SaplingCount = 0; 
+            NewSaplings = 0;
+            ManagementTime = 0.0; 
+            ApplyPatternTime = ReadPatternTime = TreeGrowthTime = 0.0;
+            SeedDistributionTime = SaplingTime = EstablishmentTime = CarbonCycleTime = WriteOutputTime = TotalYearTime = 0.0;
         }
 
-        public void writeOutput()
+        public void WriteOutput()
         {
-            if (GlobalSettings.instance().isDebugEnabled(DebugOutputs.dPerformance))
+            if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.Performance))
             {
-                List<object> output = GlobalSettings.instance().debugList(0, DebugOutputs.dPerformance);
-                output.AddRange(new object[] { treeCount, saplingCount, newSaplings, tManagement, tApplyPattern, tReadPattern, tTreeGrowth,
-                                               tSeedDistribution, tEstablishment, tSapling, tCarbonCycle, tWriteOutput, tTotalYear } );
+                List<object> output = GlobalSettings.Instance.DebugList(0, DebugOutputs.Performance);
+                output.AddRange(new object[] { TreeCount, SaplingCount, NewSaplings, ManagementTime, ApplyPatternTime, ReadPatternTime, TreeGrowthTime,
+                                               SeedDistributionTime, EstablishmentTime, SaplingTime, CarbonCycleTime, WriteOutputTime, TotalYearTime } );
             }
         }
-
     }
 }

@@ -4,26 +4,31 @@ namespace iLand.tools
 {
     internal class SCoordTrans
     {
-        public double RotationAngle;
-        public double sinRotate, cosRotate;
-        public double sinRotateReverse, cosRotateReverse;
-        public double offsetX, offsetY, offsetZ;
+        private double rotationAngle;
+
+        public double SinRotate { get; set; }
+        public double CosRotate { get; set; }
+        public double SinRotateReverse { get; set; }
+        public double CosRotateReverse { get; set; }
+        public double OffsetX { get; set; }
+        public double OffsetY { get; set; }
+        public double OffsetZ { get; set; }
 
         public SCoordTrans()
-        { 
-            setupTransformation(0.0, 0.0, 0.0, 0.0); 
-        }
-        
-        public void setupTransformation(double new_offsetx, double new_offsety, double new_offsetz, double angle_degree)
         {
-            offsetX = new_offsetx;
-            offsetY = new_offsety;
-            offsetZ = new_offsetz;
-            RotationAngle = angle_degree * Math.PI / 180.0;
-            sinRotate = Math.Sin(RotationAngle);
-            cosRotate = Math.Cos(RotationAngle);
-            sinRotateReverse = Math.Sin(-RotationAngle);
-            cosRotateReverse = Math.Cos(-RotationAngle);
+            this.SetupTransformation(0.0, 0.0, 0.0, 0.0);
+        }
+
+        public void SetupTransformation(double new_offsetx, double new_offsety, double new_offsetz, double angle_degree)
+        {
+            OffsetX = new_offsetx;
+            OffsetY = new_offsety;
+            OffsetZ = new_offsetz;
+            rotationAngle = angle_degree * Math.PI / 180.0;
+            SinRotate = Math.Sin(rotationAngle);
+            CosRotate = Math.Cos(rotationAngle);
+            SinRotateReverse = Math.Sin(-rotationAngle);
+            CosRotateReverse = Math.Cos(-rotationAngle);
         }
     }
 }

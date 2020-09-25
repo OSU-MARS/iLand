@@ -5,7 +5,7 @@ namespace iLand.tools
     internal class RGenerators
     {
         /* initialize state to random bits  */
-        private uint[] state;
+        private readonly uint[] state;
         /* init should also reset this to 0 */
         private int index;
         /* return 32 bit random number      */
@@ -18,32 +18,32 @@ namespace iLand.tools
             state = new uint[16];
         }
 
-        private int fastrand()
+        private int Fastrand()
         {
             g_seed = (214013 * g_seed + 2531011); // BUGBUG: always same value
             return g_seed;
         }
 
-        public int random_function(int type)
+        public int RandomFunction(int type)
         {
             if (type == 0)
             {
-                return unchecked((int)WELLRNG512());
+                return unchecked((int)WellRng512());
             }
             if (type == 1)
             {
-                return unchecked((int)xorshf96());
+                return unchecked((int)Xorshf96());
             }
             if (type == 2)
             {
-                return fastrand();
+                return Fastrand();
             }
             return 0;
         }
 
         // see  http://www.lomont.org/Math/Papers/2008/Lomont_PRNG_2008.pdf
         // for details on the WellRNG512 algorithm
-        public uint WELLRNG512()
+        public uint WellRng512()
         {
             uint a, b, c, d;
             a = state[index];
@@ -63,7 +63,7 @@ namespace iLand.tools
         // see: http://stackoverflow.com/questions/1640258/need-a-fast-random-generator-for-c and
         // http://www.cse.yorku.ca/~oz/marsaglia-rng.html
         //uint x=123456789, y=362436069, z=521288629;
-        private uint xorshf96()
+        private uint Xorshf96()
         {
             //period 2^96-1
             uint t;
@@ -79,7 +79,7 @@ namespace iLand.tools
             return z;
         }
 
-        public void seed()
+        public void Seed()
         {
             Random random = new Random();
             for (int i = 0; i < 16; i++)
@@ -93,7 +93,7 @@ namespace iLand.tools
             g_seed = random.Next();
         }
 
-        public void seed(int oneSeed)
+        public void Seed(int oneSeed)
         {
             Random random = new Random(oneSeed);
             for (int i = 0; i < 16; i++)

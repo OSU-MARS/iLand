@@ -4,55 +4,58 @@ namespace iLand.core
 {
     internal class SaplingTree
     {
-        public UInt16 age;  // number of consectuive years the sapling suffers from dire conditions
-        public Int16 species_index; // index of the species within the resource-unit-species container
-        public byte stress_years; // number of consecutive years that a sapling suffers from stress
-        public byte flags; // flags, e.g. whether sapling stems from sprouting
-        public float height; // height of the sapling in meter
+        public UInt16 Age { get; set; }  // number of consectuive years the sapling suffers from dire conditions
+        public byte Flags { get; set; } // flags, e.g. whether sapling stems from sprouting
+        public float Height { get; set; } // height of the sapling in meter
+        public Int16 SpeciesIndex { get; private set; } // index of the species within the resource-unit-species container
+        public byte StressYears { get; set; } // number of consecutive years that a sapling suffers from stress
 
-        public SaplingTree() { clear(); }
-
-        public bool is_occupied() { return height > 0.0F; }
-
-        public void clear()
-        {
-            age = 0;
-            species_index = -1;
-            stress_years = 0;
-            flags = 0;
-            height = 0.0F;
+        public SaplingTree() 
+        { 
+            Clear(); 
         }
 
-        public void setSapling(float h_m, int age_yrs, int species_idx)
-        {
-            height = h_m;
-            age = (UInt16)age_yrs;
-            stress_years = 0;
-            species_index = (Int16)species_idx;
-        }
+        public bool IsOccupied() { return Height > 0.0F; }
 
         // flags
-        public bool is_sprout() { return (flags & 1) != 0; }
-        public void set_sprout(bool sprout) 
+        public bool IsSprout() { return (Flags & 1) != 0; }
+        public void SetSprout(bool sprout)
         {
             if (sprout)
             {
-                flags |= 1;
+                Flags |= 1;
             }
             else
             {
-                flags &= 0xfe;
+                Flags &= 0xfe;
             }
         }
 
-        // get resource unit species of the sapling tree
-        public ResourceUnitSpecies resourceUnitSpecies(ResourceUnit ru)
+        public void Clear()
         {
-            if (ru == null || !is_occupied())
+            Age = 0;
+            SpeciesIndex = -1;
+            StressYears = 0;
+            Flags = 0;
+            Height = 0.0F;
+        }
+
+        public void SetSapling(float h_m, int age_yrs, int species_idx)
+        {
+            Height = h_m;
+            Age = (UInt16)age_yrs;
+            StressYears = 0;
+            SpeciesIndex = (Int16)species_idx;
+        }
+
+        // get resource unit species of the sapling tree
+        public ResourceUnitSpecies ResourceUnitSpecies(ResourceUnit ru)
+        {
+            if (ru == null || !IsOccupied())
             {
                 return null;
             }
-            ResourceUnitSpecies rus = ru.resourceUnitSpecies(species_index);
+            ResourceUnitSpecies rus = ru.ResourceUnitSpecies(SpeciesIndex);
             return rus;
         }
     }

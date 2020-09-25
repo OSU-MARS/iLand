@@ -5,40 +5,34 @@ namespace iLand.tools
 {
     internal class ScriptObjectFactory
     {
-        private int mObjCreated;
-
-        public ScriptObjectFactory(object parent = null)
+        public ScriptObjectFactory()
         {
-            mObjCreated = 0;
         }
 
-        public QJSValue newCSVFile(string filename)
+        public QJSValue NewCsvFile(string filename)
         {
-            CSVFile csv_file = new CSVFile();
+            CsvFile csv_file = new CsvFile();
             if (String.IsNullOrEmpty(filename) == false)
             {
                 Debug.WriteLine("CSVFile: loading file " + filename);
-                csv_file.loadFile(filename);
+                csv_file.LoadFile(filename);
             }
 
-            QJSValue obj = GlobalSettings.instance().scriptEngine().newQObject(csv_file);
-            mObjCreated++;
+            QJSValue obj = GlobalSettings.Instance.ScriptEngine.NewQObject(csv_file);
             return obj;
         }
 
-        public QJSValue newClimateConverter()
+        public QJSValue NewClimateConverter()
         {
-            ClimateConverter cc = new ClimateConverter(0);
-            QJSValue obj = GlobalSettings.instance().scriptEngine().newQObject(cc);
-            mObjCreated++;
+            ClimateConverter cc = new ClimateConverter();
+            QJSValue obj = GlobalSettings.Instance.ScriptEngine.NewQObject(cc);
             return obj;
         }
 
-        public QJSValue newMap()
+        public QJSValue NewMap()
         {
-            MapGridWrapper map = new MapGridWrapper(0);
-            QJSValue obj = GlobalSettings.instance().scriptEngine().newQObject(map);
-            mObjCreated++;
+            MapGridWrapper map = new MapGridWrapper();
+            QJSValue obj = GlobalSettings.Instance.ScriptEngine.NewQObject(map);
             return obj;
         }
     }

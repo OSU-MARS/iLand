@@ -5,21 +5,21 @@
         private FMStand mStand; // link to the forest stand
         public void setStand(FMStand stand) { mStand = stand; }
 
-        public SchedulerObj(object parent = null)
+        public SchedulerObj()
         {
             mStand = null;
         }
 
-        public void dump()
+        public void Dump()
         {
             if (mStand == null || mStand.unit() == null || mStand.unit().constScheduler() == null)
             {
                 return;
             }
-            mStand.unit().constScheduler().dump();
+            mStand.unit().constScheduler().Dump();
         }
 
-        public bool enabled()
+        public bool Enabled()
         {
             if (mStand == null)
             {
@@ -29,7 +29,7 @@
             return opt.useScheduler;
         }
 
-        public void setEnabled(bool is_enabled)
+        public void SetEnabled(bool is_enabled)
         {
             if (mStand == null)
             {
@@ -49,7 +49,7 @@
             return opt.harvestIntensity;
         }
 
-        public void setHarvestIntensity(double new_intensity)
+        public void SetHarvestIntensity(double new_intensity)
         {
             if (mStand == null)
             {
@@ -60,7 +60,7 @@
 
         }
 
-        public double useSustainableHarvest()
+        public double UseSustainableHarvest()
         {
             if (mStand == null)
             {
@@ -70,7 +70,7 @@
             return opt.useSustainableHarvest;
         }
 
-        public void setUseSustainableHarvest(double new_level)
+        public void SetUseSustainableHarvest(double new_level)
         {
             if (mStand == null)
             {
@@ -80,7 +80,7 @@
             opt.useSustainableHarvest = new_level;
         }
 
-        public double maxHarvestLevel()
+        public double MaxHarvestLevel()
         {
             if (mStand == null)
             {
@@ -90,7 +90,7 @@
             return opt.maxHarvestLevel;
         }
 
-        public void setMaxHarvestLevel(double new_harvest_level)
+        public void SetMaxHarvestLevel(double new_harvest_level)
         {
             if (mStand == null)
             {

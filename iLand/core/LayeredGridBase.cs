@@ -6,26 +6,26 @@ namespace iLand.core
     internal abstract class LayeredGridBase
     {
         // access to properties
-        public abstract int sizeX();
-        public abstract int sizeY();
-        public abstract RectangleF metricRect();
-        public abstract RectangleF cellRect(Point p);
+        public abstract int SizeX();
+        public abstract int SizeY();
+        public abstract RectangleF PhysicalSize();
+        public abstract RectangleF CellRect(Point p);
 
-        public virtual bool onClick(PointF world_coord) 
+        public virtual bool OnClick(PointF world_coord) 
         {
             return false; /*false: not handled*/ 
         }
 
         // available variables
         /// list of stored layers
-        public abstract List<LayerElement> names();
+        public abstract List<LayerElement> Names();
         
         /// get layer index by name of the layer. returns -1 if layer is not available.
-        public virtual int indexOf(string layer_name)
+        public virtual int IndexOf(string layer_name)
         {
-            for (int i = 0; i < names().Count; ++i)
+            for (int i = 0; i < Names().Count; ++i)
             {
-                if (names()[i].name == layer_name)
+                if (Names()[i].Name == layer_name)
                 {
                     return i;
                 }
@@ -33,12 +33,12 @@ namespace iLand.core
             return -1;
         }
 
-        public virtual List<string> layerNames()
+        public virtual List<string> LayerNames()
         {
             List<string> l = new List<string>();
-            for (int i = 0; i < names().Count; ++i)
+            for (int i = 0; i < Names().Count; ++i)
             {
-                l.Add(names()[i].name);
+                l.Add(Names()[i].Name);
             }
             return l;
         }
@@ -54,11 +54,10 @@ namespace iLand.core
         //public abstract double value(PointF world_coord, int index);
         //public abstract double value(int ix, int iy, int index);
         //public abstract double value(int grid_index, int index);
-
         // for classified values
-        public virtual string labelvalue(int value, int index)
-        {
-            return "-";
-        }
+        //public virtual string LabelValue(int value, int index)
+        //{
+        //    return "-"; // BUGBUG: doesn't use input
+        //}
     }
 }

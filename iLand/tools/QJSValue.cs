@@ -5,122 +5,124 @@ namespace iLand.tools
 {
     internal class QJSValue
     {
+        private readonly object value;
+
         public QJSValue()
+            : this(null)
         {
-            throw new NotImplementedException();
         }
 
         public QJSValue(object obj)
         {
-            throw new NotImplementedException();
+            this.value = obj;
         }
 
-        public QJSValue call()
+        public QJSValue Call()
         {
             throw new NotImplementedException();
         }
 
-        public QJSValue call(IEnumerable<QJSValue> parameters)
+        public QJSValue Call(IEnumerable<QJSValue> parameters)
         {
             throw new NotImplementedException();
         }
 
-        public QJSValue callWithInstance(QJSValue value)
+        public QJSValue CallWithInstance(QJSValue value)
         {
             throw new NotImplementedException();
         }
 
-        public QJSValue callWithParameters(QJSValue value, IEnumerable<QJSValue> parameters)
+        public QJSValue CallWithParameters(QJSValue value, IEnumerable<QJSValue> parameters)
         {
             throw new NotImplementedException();
         }
 
-        public bool hasOwnProperty(string name)
+        public bool HasOwnProperty(string name)
         {
             throw new NotImplementedException();
         }
 
-        public bool hasProperty(string name)
+        public bool HasProperty(string name)
         {
             throw new NotImplementedException();
         }
 
-        public bool isBool()
+        public bool IsArray()
+        {
+            return false;
+        }
+
+        public bool IsBool()
+        {
+            return false;
+        }
+
+        public bool IsCallable()
+        {
+            return false;
+        }
+
+        public bool IsError()
+        {
+            return false;
+        }
+
+        public bool IsNumber()
+        {
+            return false;
+        }
+
+        public bool IsObject()
+        {
+            return false;
+        }
+
+        public bool IsString()
+        {
+            return false;
+        }
+
+        public bool IsUndefined()
+        {
+            return false;
+        }
+
+        public QJSValue Property(string name)
         {
             throw new NotImplementedException();
         }
 
-        public bool isCallable()
+        public void SetProperty(string name, object value)
         {
             throw new NotImplementedException();
         }
 
-        public bool isError()
+        public bool ToBool()
         {
             throw new NotImplementedException();
         }
 
-        public bool isNumber()
+        public int ToInt()
         {
             throw new NotImplementedException();
         }
 
-        public bool isObject()
+        public object ToQObject()
         {
             throw new NotImplementedException();
         }
 
-        public bool isString()
+        public double ToNumber()
         {
             throw new NotImplementedException();
         }
 
-        public bool isArray()
+        public override string ToString()
         {
             throw new NotImplementedException();
         }
 
-        public bool isUndefined()
-        {
-            throw new NotImplementedException();
-        }
-
-        public QJSValue property(string name)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void setProperty(string name, object value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool toBool()
-        {
-            throw new NotImplementedException();
-        }
-
-        public int toInt()
-        {
-            throw new NotImplementedException();
-        }
-
-        public object toQObject()
-        {
-            throw new NotImplementedException();
-        }
-
-        public double toNumber()
-        {
-            throw new NotImplementedException();
-        }
-
-        public string toString()
-        {
-            throw new NotImplementedException();
-        }
-
-        public object toVariant()
+        public object ToVariant()
         {
             throw new NotImplementedException();
         }

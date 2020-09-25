@@ -6,9 +6,8 @@ namespace iLand.core
     internal class GrassCoverLayers : LayeredGrid<Int16>
     {
         private List<LayerElement> mNames;
-        private GrassCover mGrassCover;
 
-        public void setGrid(Grid<Int16> grid, GrassCover gc) { mGrid = grid; mGrassCover = gc; }
+        public void SetGrid(Grid<Int16> grid) { Grid = grid; }
 
         // unused in C++
         //public override double value(Int16 data, int index)
@@ -25,7 +24,7 @@ namespace iLand.core
         //    }
         //}
 
-        public override List<LayerElement> names()
+        public override List<LayerElement> Names()
         {
             if (mNames == null)
             {

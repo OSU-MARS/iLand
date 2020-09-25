@@ -13,46 +13,44 @@ namespace iLand.abe
     {
         private QJSValue mAction;
 
-        public ActGeneral(FMSTP parent)
-            : base(parent)
+        public ActGeneral()
         {
         }
 
-        public override string type() { return "general"; }
+        public override string Type() { return "general"; }
 
-        public override List<string> info()
+        public override List<string> Info()
         {
-            List<string> lines = base.info();
+            List<string> lines = base.Info();
             lines.Add("this is the 'general' activity; the activity is not scheduled. Use the action-slot to define what should happen.");
             return lines;
         }
 
-        public new void setup(QJSValue value)
+        public override void Setup(QJSValue value)
         {
-            base.setup(value);
+            base.Setup(value);
             // specific
-            mAction = FMSTP.valueFromJs(value, "action", "", "Activity of type 'general'.");
-            if (!mAction.isCallable())
+            mAction = FMSTP.ValueFromJS(value, "action", "", "Activity of type 'general'.");
+            if (!mAction.IsCallable())
             {
                 throw new NotSupportedException("'general' activity has not a callable javascript 'action'.");
             }
         }
 
-        public override bool execute(FMStand stand)
+        public override bool Execute(FMStand stand)
         {
-            FomeScript.setExecutionContext(stand);
-            if (FMSTP.verbose() || stand.trace())
+            FomeScript.SetExecutionContext(stand);
+            if (FMSTP.verbose() || stand.TracingEnabled())
             {
                 Debug.WriteLine(stand.context() + " activity 'general': execute of " + name());
             }
 
-            QJSValue result = mAction.call();
-            if (result.isError())
+            QJSValue result = mAction.Call();
+            if (result.IsError())
             {
-                throw new NotSupportedException(String.Format("{0} Javascript error in 'general' activity '{2}': {1}", stand.context(), result.toString(), name()));
+                throw new NotSupportedException(String.Format("{0} Javascript error in 'general' activity '{2}': {1}", stand.context(), result.ToString(), name()));
             }
-            return result.toBool();
+            return result.ToBool();
         }
-
     }
 }

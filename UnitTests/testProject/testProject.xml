@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- More details on iland.boku.ac.at/ProjectFile -->
+<project>
+  <system>
+    <path>
+      <home></home>
+      <database>database</database>
+      <lip>lip</lip>
+      <temp>temp</temp>
+      <!-- <script>scripts</script>
+           <init>init</init>
+           <output>output</output>-->
+    </path>
+    <database>
+      <climate>Kalkalpen subset.sqlite</climate>
+      <in>species_param_europe.sqlite</in>
+      <out></out>
+    </database>
+  </system>
+
+  <model>
+    <settings>
+    </settings>
+    <species>
+      <source>species</source>
+      <reader>readerstamp.bin</reader>
+      <enabledSpecies>
+        piab foobar prozac dunno
+      </enabledSpecies>
+    </species>
+    <world>
+      <cellSize>2</cellSize>
+      <width>100</width>
+      <height>200</height>
+      <buffer>50</buffer>
+    </world>
+    <initialization>
+      <file>E:\Daten\iLand\Light\stands\crowded_medium.csv</file>
+    </initialization>
+    <parameter>
+      
+    </parameter>
+  </model>
+</project>

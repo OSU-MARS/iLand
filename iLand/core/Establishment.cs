@@ -15,84 +15,74 @@ namespace iLand.core
     */
     internal class Establishment
     {
-        private double mPAbiotic; ///< abiotic probability for establishment (climate)
         private Climate mClimate; ///< link to the current climate
         private ResourceUnitSpecies mRUS; ///< link to the resource unit species (links to production data and species respones)
-        // some statistics
-        private double mPxDensity;
-        private int mNumberEstablished; // number of established trees in the current year
         // TACA switches
-        private bool mTACA_min_temp; // minimum temperature threshold
-        private bool mTACA_chill;  // (total) chilling requirement
-        private bool mTACA_gdd;   // gdd-thresholds
-        private bool mTACA_frostfree; // frost free days in vegetation period
-        private int mTACA_frostAfterBuds; // frost days after bud birst
         private double mSumLIFvalue;
-        private double mWaterLimitation; // scalar 0..1 signifying the drought limitation of establishment
         private int mLIFcount;
 
-        public double avgSeedDensity() { return mPxDensity; } ///< average seed density on the RU
-        public double abioticEnvironment() { return mPAbiotic; } ///< integrated value of abiotic environment (i.e.: TACA-climate + total iLand environment)
-        public int numberEstablished() { return mNumberEstablished; } ///< return number of newly established trees in the current year
-        public bool TACAminTemp() { return mTACA_min_temp; } ///< TACA flag for minimum temperature
-        public bool TACAchill() { return mTACA_chill; } ///< TACA flag chilling requirement
-        public bool TACgdd() { return mTACA_gdd; } ///< TACA flag for growing degree days
-        public bool TACAfrostFree() { return mTACA_frostfree; } ///< TACA flag for number of frost free days
-        public int TACAfrostDaysAfterBudBirst() { return mTACA_frostAfterBuds; } ///< number of frost days after bud birst
-        public double avgLIFValue() { return mLIFcount > 0 ? mSumLIFvalue / (double)mLIFcount : 0.0; } ///< average LIF value of LIF pixels where establishment is tested
-        public double waterLimitation() { return mWaterLimitation; } ///< scalar value between 0 and 1 (1: no limitation, 0: no establishment)
+        public double MeanSeedDensity { get; private set; } ///< average seed density on the RU
+        public double AbioticEnvironment { get; private set; } ///< integrated value of abiotic environment (i.e.: TACA-climate + total iLand environment)
+        public int NumberEstablished { get; private set; } ///< return number of newly established trees in the current year
+        public bool TacaMinTemp { get; private set; } ///< TACA flag for minimum temperature
+        public bool TacaChill { get; private set; } ///< TACA flag chilling requirement
+        public bool TacaGdd { get; private set; } ///< TACA flag for growing degree days
+        public bool TacaFrostFree { get; private set; } ///< TACA flag for number of frost free days
+        public int TacaFrostDaysAfterBudburst { get; private set; } ///< number of frost days after bud birst
+        public double WaterLimitation { get; private set; } ///< scalar value between 0 and 1 (1: no limitation, 0: no establishment)
 
         public Establishment()
         {
-            mPAbiotic = 0.0;
+            AbioticEnvironment = 0.0;
         }
 
         public Establishment(Climate climate, ResourceUnitSpecies rus)
         {
-            setup(climate, rus);
+            Setup(climate, rus);
         }
 
-        public void setup(Climate climate, ResourceUnitSpecies rus)
+        public double MeanLifValue() { return mLIFcount > 0 ? mSumLIFvalue / (double)mLIFcount : 0.0; } ///< average LIF value of LIF pixels where establishment is tested
+
+        public void Setup(Climate climate, ResourceUnitSpecies rus)
         {
             mClimate = climate;
             mRUS = rus;
-            mPAbiotic = 0.0;
-            mPxDensity = 0.0;
-            mNumberEstablished = 0;
+            AbioticEnvironment = 0.0;
+            MeanSeedDensity = 0.0;
+            NumberEstablished = 0;
             if (climate == null)
             {
                 throw new NotSupportedException("setup: no valid climate for a resource unit.");
             }
-            if (rus == null || rus.species() == null || rus.ru() == null)
+            if (rus == null || rus.Species == null || rus.RU == null)
             {
                 throw new NotSupportedException("setup: important variable is null (are the species properly set up?).");
             }
         }
 
-        public void clear()
+        public void Clear()
         {
-            mPAbiotic = 0.0;
-            mNumberEstablished = 0;
-            mPxDensity = 0.0;
-            mTACA_min_temp = mTACA_chill = mTACA_gdd = mTACA_frostfree = false;
-            mTACA_frostAfterBuds = 0;
+            AbioticEnvironment = 0.0;
+            NumberEstablished = 0;
+            MeanSeedDensity = 0.0;
+            TacaMinTemp = TacaChill = TacaGdd = TacaFrostFree = false;
+            TacaFrostDaysAfterBudburst = 0;
             mSumLIFvalue = 0.0;
             mLIFcount = 0;
-            mWaterLimitation = 0.0;
+            WaterLimitation = 0.0;
         }
 
-
-        private double calculateWaterLimitation(int veg_period_start, int veg_period_end)
+        private double CalculateWaterLimitation(int veg_period_start, int veg_period_end)
         {
             // return 1 if effect is disabled
-            if (mRUS.species().establishmentParameters().psi_min >= 0.0)
+            if (mRUS.Species.EstablishmentParameters.PsiMin >= 0.0)
             {
                 return 1.0;
             }
 
-            double psi_min = mRUS.species().establishmentParameters().psi_min;
-            WaterCycle water = mRUS.ru().waterCycle();
-            int days = mRUS.ru().climate().daysOfYear();
+            double psi_min = mRUS.Species.EstablishmentParameters.PsiMin;
+            WaterCycle water = mRUS.RU.WaterCycle;
+            int days = mRUS.RU.Climate.DaysOfYear();
 
             // two week (14 days) running average of actual psi-values on the resource unit
             const int nwindow = 14;
@@ -101,17 +91,16 @@ namespace iLand.core
 
             int i_buffer = 0;
             double min_average = 9999999.0;
-            double current_avg = 0.0;
             for (int day = 0; day < days; ++day)
             {
                 // running average: remove oldest item, add new item in a ringbuffer
                 current_sum -= psi_buffer[i_buffer];
-                psi_buffer[i_buffer] = water.psi_kPa(day);
+                psi_buffer[i_buffer] = water.Psi(day);
                 current_sum += psi_buffer[i_buffer];
 
                 if (day >= veg_period_start && day <= veg_period_end)
                 {
-                    current_avg = day > 0 ? current_sum / Math.Min(day, nwindow) : current_sum;
+                    double current_avg = day > 0 ? current_sum / Math.Min(day, nwindow) : current_sum;
                     min_average = Math.Min(min_average, current_avg);
                 }
 
@@ -126,12 +115,10 @@ namespace iLand.core
 
             // calculate the response of the species to this value of psi (see also Species::soilwaterResponse())
             double psi_mpa = min_average / 1000.0; // convert to MPa
-            double result = Global.limit((psi_mpa - psi_min) / (-0.015 - psi_min), 0.0, 1.0);
+            double result = Global.Limit((psi_mpa - psi_min) / (-0.015 - psi_min), 0.0, 1.0);
 
             return result;
         }
-
-
 
         /** Calculate the abiotic environemnt for seedling for a given species and a given resource unit.
          The model is closely based on the TACA approach of Nitschke and Innes (2008), Ecol. Model 210, 263-277
@@ -139,53 +126,53 @@ namespace iLand.core
          a model mockup in R: script_establishment.r
 
          */
-        public void calculateAbioticEnvironment()
+        public void CalculateAbioticEnvironment()
         {
             //DebugTimer t("est_abiotic"); t.setSilent();
             // make sure that required calculations (e.g. watercycle are already performed)
-            mRUS.calculate(true); // calculate the 3pg module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
+            mRUS.Calculate(true); // calculate the 3pg module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
 
-            EstablishmentParameters p = mRUS.species().establishmentParameters();
-            Phenology pheno = mClimate.phenology(mRUS.species().phenologyClass());
+            EstablishmentParameters p = mRUS.Species.EstablishmentParameters;
+            Phenology pheno = mClimate.Phenology(mRUS.Species.PhenologyClass);
 
-            mTACA_min_temp = true; // minimum temperature threshold
-            mTACA_chill = false;  // (total) chilling requirement
-            mTACA_gdd = false;   // gdd-thresholds
-            mTACA_frostfree = false; // frost free days in vegetation period
-            mTACA_frostAfterBuds = 0; // frost days after bud birst
+            TacaMinTemp = true; // minimum temperature threshold
+            TacaChill = false;  // (total) chilling requirement
+            TacaGdd = false;   // gdd-thresholds
+            TacaFrostFree = false; // frost free days in vegetation period
+            TacaFrostDaysAfterBudburst = 0; // frost days after bud birst
 
             int doy = 0;
             double GDD = 0.0;
             double GDD_BudBirst = 0.0;
-            int chill_days = pheno.chillingDaysLastYear(); // chilling days of the last autumn
+            int chill_days = pheno.ChillingDaysLastYear; // chilling days of the last autumn
             int frost_free = 0;
-            mTACA_frostAfterBuds = 0;
+            TacaFrostDaysAfterBudburst = 0;
             bool chill_ok = false;
             bool buds_are_birst = false;
-            int veg_period_end = pheno.vegetationPeriodEnd();
+            int veg_period_end = pheno.LeafOnEnd;
             if (veg_period_end >= 365)
             {
-                veg_period_end = mClimate.sun().dayShorter10_5hrs();
+                veg_period_end = mClimate.Sun.LastDayLongerThan10_5Hours;
             }
-            for (int index = mClimate.begin(); index != mClimate.end(); ++index, ++doy)
+            for (int index = mClimate.Begin; index != mClimate.End; ++index, ++doy)
             {
                 ClimateDay day = mClimate[index];
                 // minimum temperature: if temp too low . set prob. to zero
-                if (day.min_temperature < p.min_temp)
+                if (day.MinTemperature < p.MinTemp)
                 {
-                    mTACA_min_temp = false;
+                    TacaMinTemp = false;
                 }
                 // count frost free days
-                if (day.min_temperature > 0.0)
+                if (day.MinTemperature > 0.0)
                 {
                     frost_free++;
                 }
                 // chilling requirement, GDD, bud birst
-                if (day.temperature >= -5.0 && day.temperature < 5.0)
+                if (day.MeanDaytimeTemperature >= -5.0 && day.MeanDaytimeTemperature < 5.0)
                 {
                     chill_days++;
                 }
-                if (chill_days > p.chill_requirement)
+                if (chill_days > p.ChillRequirement)
                 {
                     chill_ok = true;
                 }
@@ -194,87 +181,86 @@ namespace iLand.core
                 if (doy <= veg_period_end)
                 {
                     // accumulate growing degree days
-                    if (chill_ok && day.temperature > p.GDD_baseTemperature)
+                    if (chill_ok && day.MeanDaytimeTemperature > p.GddBaseTemperature)
                     {
-                        GDD += day.temperature - p.GDD_baseTemperature;
-                        GDD_BudBirst += day.temperature - p.GDD_baseTemperature;
+                        GDD += day.MeanDaytimeTemperature - p.GddBaseTemperature;
+                        GDD_BudBirst += day.MeanDaytimeTemperature - p.GddBaseTemperature;
                     }
                     // if day-frost occurs, the GDD counter for bud birst is reset
-                    if (day.temperature <= 0.0)
+                    if (day.MeanDaytimeTemperature <= 0.0)
                     {
                         GDD_BudBirst = 0.0;
                     }
-                    if (GDD_BudBirst > p.bud_birst)
+                    if (GDD_BudBirst > p.GddBudBurst)
                     {
                         buds_are_birst = true;
                     }
-                    if (doy < veg_period_end && buds_are_birst && day.min_temperature <= 0.0)
+                    if (doy < veg_period_end && buds_are_birst && day.MinTemperature <= 0.0)
                     {
-                        mTACA_frostAfterBuds++;
+                        TacaFrostDaysAfterBudburst++;
                     }
                 }
             }
             // chilling requirement
             if (chill_ok)
             {
-                mTACA_chill = true;
+                TacaChill = true;
             }
 
             // GDD requirements
-            if (GDD > p.GDD_min && GDD < p.GDD_max)
+            if (GDD > p.GddMin && GDD < p.GddMax)
             {
-                mTACA_gdd = true;
+                TacaGdd = true;
             }
 
             // frost free days in the vegetation period
-            if (frost_free > p.frost_free)
+            if (frost_free > p.MinFrostFree)
             {
-                mTACA_frostfree = true;
+                TacaFrostFree = true;
             }
 
             // if all requirements are met:
-            if (mTACA_chill && mTACA_min_temp && mTACA_gdd && mTACA_frostfree)
+            if (TacaChill && TacaMinTemp && TacaGdd && TacaFrostFree)
             {
                 // negative effect of frost events after bud birst
                 double frost_effect = 1.0;
-                if (mTACA_frostAfterBuds > 0)
+                if (TacaFrostDaysAfterBudburst > 0)
                 {
-                    frost_effect = Math.Pow(p.frost_tolerance, Math.Sqrt(mTACA_frostAfterBuds));
+                    frost_effect = Math.Pow(p.FrostTolerance, Math.Sqrt(TacaFrostDaysAfterBudburst));
                 }
                 // negative effect due to water limitation on establishment [1: no effect]
-                mWaterLimitation = calculateWaterLimitation(pheno.vegetationPeriodStart(), pheno.vegetationPeriodLength());
+                WaterLimitation = CalculateWaterLimitation(pheno.LeafOnStart, pheno.LeafOnDuration());
                 // combine drought and frost effect multiplicatively
-                mPAbiotic = frost_effect * mWaterLimitation;
+                AbioticEnvironment = frost_effect * WaterLimitation;
             }
             else
             {
-                mPAbiotic = 0.0; // if any of the requirements is not met
+                AbioticEnvironment = 0.0; // if any of the requirements is not met
             }
         }
 
-        public void writeDebugOutputs()
+        public void WriteDebugOutputs()
         {
-            if (GlobalSettings.instance().isDebugEnabled(DebugOutputs.dEstablishment))
+            if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.Establishment))
             {
-                List<object> output = GlobalSettings.instance().debugList(mRUS.ru().index(), DebugOutputs.dEstablishment);
+                List<object> output = GlobalSettings.Instance.DebugList(mRUS.RU.Index, DebugOutputs.Establishment);
                 // establishment details
-                output.AddRange(new object[] { mRUS.species().id(),  mRUS.ru().index(), mRUS.ru().id(),
-                                               avgSeedDensity(),
-                                               TACAminTemp(), TACAchill(), TACAfrostFree(), TACgdd(),
-                                               TACAfrostDaysAfterBudBirst(), waterLimitation(), abioticEnvironment(),
-                                               mRUS.prod3PG().fEnvYear(), mRUS.constSaplingStat().newSaplings()
+                output.AddRange(new object[] { mRUS.Species.ID,  mRUS.RU.Index, mRUS.RU.ID,
+                                               MeanSeedDensity, TacaMinTemp, TacaChill, TacaFrostFree, TacaGdd,
+                                               TacaFrostDaysAfterBudburst, WaterLimitation, AbioticEnvironment,
+                                               mRUS.BiomassGrowth.EnvironmentalFactor, mRUS.SaplingStats.NewSaplings
                                                //mSaplingStat.livingSaplings(), mSaplingStat.averageHeight(), mSaplingStat.averageAge(), mSaplingStat.averageDeltaHPot(), mSaplingStat.averageDeltaHRealized();
                                                //mSaplingStat.newSaplings(), mSaplingStat.diedSaplings(), mSaplingStat.recruitedSaplings(), mSpecies.saplingGrowthParameters().referenceRatio;
                 });
             }
 
-            if (GlobalSettings.instance().logLevelDebug())
+            if (GlobalSettings.Instance.LogDebug())
             {
-                Debug.WriteLine("establishment of RU " + mRUS.ru().index() + " species " + mRUS.species().id()
-                         + " seeds density :" + avgSeedDensity()
-                         + " abiotic environment: " + abioticEnvironment()
-                         + " f_env,yr: " + mRUS.prod3PG().fEnvYear()
-                         + " N(established):"  + numberEstablished());
+                Debug.WriteLine("establishment of RU " + mRUS.RU.Index + " species " + mRUS.Species.ID +
+                                " seeds density :" + MeanSeedDensity + 
+                                " abiotic environment: " + AbioticEnvironment +
+                                " f_env,yr: " + mRUS.BiomassGrowth.EnvironmentalFactor + 
+                                " N(established):"  + NumberEstablished);
             }
         }
     }

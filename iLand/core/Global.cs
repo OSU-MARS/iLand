@@ -19,7 +19,7 @@ namespace iLand.core
         //bool logLevelWarning(); // true if only severe warnings/errors are logged.
         //void setLogLevel(int loglevel); // setter function
 
-        public static int MOD(int a, int b)
+        public static int Modulo(int a, int b)
         {
             // because C modulo operation gives negative numbers for negative values, here a fix
             // that always returns positive numbers: http://www.lemoda.net/c/modulo-operator/
@@ -28,18 +28,18 @@ namespace iLand.core
 
         // conversions rad/degree
         //#define RAD(x) (x*M_PI/180.)
-        public static double RAD(double degrees)
+        public static double ToRadians(double degrees)
         {
             return Math.PI / 180.0 * degrees;
         }
 
         //#define GRAD(x) (x/M_PI*180.)
-        public static double GRAD(double radians)
+        public static double ToDegrees(double radians)
         {
             return 180.0 / Math.PI * radians;
         }
 
-        public static double limit(double value, double min, double max)
+        public static double Limit(double value, double min, double max)
         {
             Debug.Assert(max > min);
             if (value < min)
@@ -53,7 +53,7 @@ namespace iLand.core
             return value;
         }
 
-        public static int limit(int value, int min, int max)
+        public static int Limit(int value, int min, int max)
         {
             Debug.Assert(max > min);
             if (value < min)
@@ -67,7 +67,7 @@ namespace iLand.core
             return value;
         }
 
-        public static void setBit(ref int rTarget, int bit, bool value)
+        public static void SetBit(ref int rTarget, int bit, bool value)
         {
             if (value)
             {
@@ -79,7 +79,7 @@ namespace iLand.core
             }
         }
 
-        public static bool isBitSet(int value, int bit)
+        public static bool IsBitSet(int value, int bit)
         {
             return (value & (1 << bit)) != 0;
         }

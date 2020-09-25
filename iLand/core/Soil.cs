@@ -18,8 +18,6 @@ namespace iLand.core
 
         public ResourceUnit mRU; ///< link to containing resource unit
         // variables
-        private double mRE; ///< climate factor 're' (see Snag::calculateClimateFactors())
-        private double mAvailableNitrogen; ///< plant available nitrogen (kg/ha)
         private double mAvailableNitrogenFromLabile; ///< plant available nitrogen from labile pool (kg/ha)
         private double mAvailableNitrogenFromRefractory; ///< plant available nitrogen from refractory pool (kg/ha)
         public double mKyl; ///< litter decomposition rate
@@ -29,23 +27,14 @@ namespace iLand.core
 
         public CNPool mInputLab; ///< input pool labile matter (t/ha)
         public CNPool mInputRef; ///< input pool refractory matter (t/ha)
-        // state variables
-        public CNPool mYL; ///< C/N Pool for young labile matter (i.e. litter) (t/ha)
-        public CNPool mYR; ///< C/N Pool for young refractory matter (i.e. downed woody debris) (t/ha)
-        public CNPair mSOM; ///< C/N Pool for old matter (t/ha) (i.e. soil organic matter, SOM)
 
-        private CNPair mTotalToDisturbance; ///< book-keeping pool for heterotrophic respiration (kg/*ha)
-        private CNPair mTotalToAtmosphere; ///< book-keeping disturbance envents (fire) (kg/ha)
-
-        public void setClimateFactor(double climate_factor_re) { mRE = climate_factor_re; } ///< set the climate decomposition factor for the current year
-
-        public CNPool youngLabile() { return mYL; } ///< young labile matter (t/ha)
-        public CNPool youngRefractory() { return mYR; } ///< young refractory matter (t/ha)
-        public CNPair oldOrganicMatter() { return mSOM; } ///< old matter (SOM) (t/ha)
-        public double availableNitrogen() { return mAvailableNitrogen; } ///< return available Nitrogen (kg/ha*yr)
-
-        public CNPair fluxToAtmosphere() { return mTotalToAtmosphere; } ///< total flux due to heterotrophic respiration kg/ha
-        public CNPair fluxToDisturbance() { return mTotalToDisturbance; } ///< total flux due to disturbance events (e.g. fire) kg/ha
+        public double AvailableNitrogen { get; private set; } ///< return available Nitrogen (kg/ha*yr)
+        public double ClimateFactor { get; set; } ///< set the climate decomposition factor for the current year
+        public CNPair FluxToAtmosphere { get; private set; } ///< total flux due to heterotrophic respiration kg/ha
+        public CNPair FluxToDisturbance { get; private set; } ///< total flux due to disturbance events (e.g. fire) kg/ha
+        public CNPair OrganicMatter { get; private set; } ///< soil organic matter (SOM) (t/ha)
+        public CNPool YoungLabile { get; private set; } ///< young labile matter (litter) (t/ha)
+        public CNPool YoungRefractory { get; private set; } ///< young refractory (woody debris)  matter (t/ha)
 
         // site-specific parameters
         // i.e. parameters that need to be specified in the environment file
@@ -74,83 +63,82 @@ namespace iLand.core
             }
         }
 
-        private void fetchParameters()
-        {
-            XmlHelper xml_site = new XmlHelper(GlobalSettings.instance().settings().node("model.site"));
-            mKo = xml_site.valueDouble("somDecompRate", 0.02);
-            mH = xml_site.valueDouble("soilHumificationRate", 0.3);
-
-            if (mParams.is_setup || GlobalSettings.instance().model() != null)
-            {
-                return;
-            }
-            XmlHelper xml = new XmlHelper(GlobalSettings.instance().settings().node("model.settings.soil"));
-            mParams.qb = xml.valueDouble("qb", 5.0);
-            mParams.qh = xml.valueDouble("qh", 25.0);
-            mParams.leaching = xml.valueDouble("leaching", 0.15);
-            mParams.el = xml.valueDouble("el", 0.0577);
-            mParams.er = xml.valueDouble("er", 0.073);
-
-            mParams.is_setup = true;
-
-            mNitrogenDeposition = xml.valueDouble("nitrogenDeposition", 0.0);
-        }
-
-
         public Soil(ResourceUnit ru = null)
         {
             mRU = ru;
-            mRE = 0.0;
-            mAvailableNitrogen = 0.0;
+            ClimateFactor = 0.0;
+            AvailableNitrogen = 0.0;
             mKyl = 0.0;
             mKyr = 0.0;
             mH = 0.0;
             mKo = 0.0;
-            fetchParameters();
+            FetchParameters();
+        }
+
+        private void FetchParameters()
+        {
+            XmlHelper xml_site = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.site"));
+            mKo = xml_site.ValueDouble("somDecompRate", 0.02);
+            mH = xml_site.ValueDouble("soilHumificationRate", 0.3);
+
+            if (mParams.is_setup || GlobalSettings.Instance.Model != null)
+            {
+                return;
+            }
+            XmlHelper xml = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.settings.soil"));
+            mParams.qb = xml.ValueDouble("qb", 5.0);
+            mParams.qh = xml.ValueDouble("qh", 25.0);
+            mParams.leaching = xml.ValueDouble("leaching", 0.15);
+            mParams.el = xml.ValueDouble("el", 0.0577);
+            mParams.er = xml.ValueDouble("er", 0.073);
+
+            mParams.is_setup = true;
+
+            mNitrogenDeposition = xml.ValueDouble("nitrogenDeposition", 0.0);
         }
 
         // reset of bookkeeping variables
-        public void newYear()
+        public void NewYear()
         {
-            mTotalToDisturbance.clear();
-            mTotalToAtmosphere.clear();
+            FluxToDisturbance.Clear();
+            FluxToAtmosphere.Clear();
         }
 
         /// setup initial content of the soil pool (call before model start)
-        public void setInitialState(CNPool young_labile_kg_ha, CNPool young_refractory_kg_ha, CNPair SOM_kg_ha)
+        public void SetInitialState(CNPool young_labile_kg_ha, CNPool young_refractory_kg_ha, CNPair SOM_kg_ha)
         {
-            mYL = young_labile_kg_ha * 0.001; // pool sizes are stored in t/ha
-            mYR = young_refractory_kg_ha * 0.001;
-            mSOM = SOM_kg_ha * 0.001;
+            YoungLabile = young_labile_kg_ha * 0.001; // pool sizes are stored in t/ha
+            YoungRefractory = young_refractory_kg_ha * 0.001;
+            OrganicMatter = SOM_kg_ha * 0.001;
 
-            mKyl = young_labile_kg_ha.parameter();
-            mKyr = young_refractory_kg_ha.parameter();
+            mKyl = young_labile_kg_ha.Parameter;
+            mKyr = young_refractory_kg_ha.Parameter;
 
             if (mKyl <= 0.0 || mKyr <= 0.0)
             {
                 throw new NotSupportedException(String.Format("setup of Soil: kyl or kyr invalid: kyl: {0} kyr: {1}", mKyl, mKyr));
             }
-            if (!mYL.isValid())
+            if (!YoungLabile.IsValid())
             {
-                throw new NotSupportedException(String.Format("setup of Soil: yl-pool invalid: c: {0} n: {1}", mYL.C, mYL.N));
+                throw new NotSupportedException(String.Format("setup of Soil: yl-pool invalid: c: {0} n: {1}", YoungLabile.C, YoungLabile.N));
             }
-            if (!mYL.isValid())
+            if (!YoungLabile.IsValid())
             {
-                throw new NotSupportedException(String.Format("setup of Soil: yr-pool invalid: c: {0} n: {1}", mYR.C, mYR.N));
+                throw new NotSupportedException(String.Format("setup of Soil: yr-pool invalid: c: {0} n: {1}", YoungRefractory.C, YoungRefractory.N));
             }
-            if (!mYL.isValid())
+            if (!YoungLabile.IsValid())
             {
-                throw new NotSupportedException(String.Format("setup of Soil: som-pool invalid: c: {0} n: {1}", mSOM.C, mSOM.N));
+                throw new NotSupportedException(String.Format("setup of Soil: som-pool invalid: c: {0} n: {1}", OrganicMatter.C, OrganicMatter.N));
             }
         }
 
         /// set soil inputs of current year (litter and deadwood)
-        public void setSoilInput(CNPool labile_input_kg_ha, CNPool refractory_input_kg_ha)
+        public void SetSoilInput(CNPool labile_input_kg_ha, CNPool refractory_input_kg_ha)
         {
             // stockable area:
             // if the stockable area is < 1ha, then
             // scale the soil inputs to a full hectare
-            double area_ha = mRU != null ? mRU.stockableArea() / Constant.cRUArea : 1.0;
+            double area_ha = mRU != null ? mRU.StockableArea / Constant.RUArea : 1.0;
 
             if (area_ha == 0.0)
             {
@@ -167,105 +155,104 @@ namespace iLand.core
             mInputLab = labile_input_kg_ha * (0.001 / area_ha); // transfer from kg/ha -> tons/ha and scale to 1 ha
             mInputRef = refractory_input_kg_ha * (0.001 / area_ha);
             // calculate the decomposition rates
-            mKyl = mYL.parameter(mInputLab);
-            mKyr = mYR.parameter(mInputRef);
-            if (Double.IsNaN(mKyr) || Double.IsNaN(mYR.C))
+            mKyl = YoungLabile.GetWeightedParameter(mInputLab);
+            mKyr = YoungRefractory.GetWeightedParameter(mInputRef);
+            if (Double.IsNaN(mKyr) || Double.IsNaN(YoungRefractory.C))
             {
                 Debug.WriteLine("mKyr is NAN");
             }
         }
 
-
         /// Main calculation function
         /// must be called after snag dyanmics (i.e. to ensure input fluxes are available)
-        public void calculateYear()
+        public void CalculateYear()
         {
             SoilParams sp = mParams;
             // checks
-            if (mRE == 0.0)
+            if (ClimateFactor == 0.0)
             {
-                throw new NotSupportedException("calculateYear(): Invalid value for 're' (=0) for RU(index): " + mRU.index());
+                throw new NotSupportedException("calculateYear(): Invalid value for 're' (=0) for RU(index): " + mRU.Index);
             }
             double t = 1.0; // timestep (annual)
                             // auxiliary calculations
-            CNPair total_before = mYL + mYR + mSOM;
+            CNPair total_before = YoungLabile + YoungRefractory + OrganicMatter;
 
             CNPair total_in = mInputLab + mInputRef;
             if (Double.IsNaN(total_in.C) || Double.IsNaN(mKyr))
             {
                 Debug.WriteLine("soil input is NAN.");
             }
-            double ylss = mInputLab.C / (mKyl * mRE); // Yl stedy state C
+            double ylss = mInputLab.C / (mKyl * ClimateFactor); // Yl stedy state C
             double cl = sp.el * (1.0 - mH) / sp.qb - mH * (1.0 - sp.el) / sp.qh; // eta l in the paper
             double ynlss = 0.0;
-            if (!mInputLab.isEmpty())
+            if (!mInputLab.IsEmpty())
             {
-                ynlss = mInputLab.C / (mKyl * mRE * (1.0 - mH)) * ((1.0 - sp.el) / mInputLab.CN() + cl); // Yl steady state N
+                ynlss = mInputLab.C / (mKyl * ClimateFactor * (1.0 - mH)) * ((1.0 - sp.el) / mInputLab.CNratio() + cl); // Yl steady state N
             }
-            double yrss = mInputRef.C / (mKyr * mRE); // Yr steady state C
+            double yrss = mInputRef.C / (mKyr * ClimateFactor); // Yr steady state C
             double cr = sp.er * (1.0 - mH) / sp.qb - mH * (1.0 - sp.er) / sp.qh; // eta r in the paper
             double ynrss = 0.0;
-            if (!mInputRef.isEmpty())
+            if (!mInputRef.IsEmpty())
             {
-                ynrss = mInputRef.C / (mKyr * mRE * (1.0 - mH)) * ((1.0 - sp.er) / mInputRef.CN() + cr); // Yr steady state N
+                ynrss = mInputRef.C / (mKyr * ClimateFactor * (1.0 - mH)) * ((1.0 - sp.er) / mInputRef.CNratio() + cr); // Yr steady state N
             }
-            double oss = mH * total_in.C / (mKo * mRE); // O steady state C
-            double onss = mH * total_in.C / (sp.qh * mKo * mRE); // O steady state N
+            double oss = mH * total_in.C / (mKo * ClimateFactor); // O steady state C
+            double onss = mH * total_in.C / (sp.qh * mKo * ClimateFactor); // O steady state N
 
-            double al = mH * (mKyl * mRE * mYL.C - mInputLab.C) / ((mKo - mKyl) * mRE);
-            double ar = mH * (mKyr * mRE * mYR.C - mInputRef.C) / ((mKo - mKyr) * mRE);
+            double al = mH * (mKyl * ClimateFactor * YoungLabile.C - mInputLab.C) / ((mKo - mKyl) * ClimateFactor);
+            double ar = mH * (mKyr * ClimateFactor * YoungRefractory.C - mInputRef.C) / ((mKo - mKyr) * ClimateFactor);
 
             // update of state variables
             // precalculations
-            double lfactor = Math.Exp(-mKyl * mRE * t);
-            double rfactor = Math.Exp(-mKyr * mRE * t);
+            double lfactor = Math.Exp(-mKyl * ClimateFactor * t);
+            double rfactor = Math.Exp(-mKyr * ClimateFactor * t);
             // young labile pool
-            CNPair yl = mYL;
-            mYL.C = ylss + (yl.C - ylss) * lfactor;
-            mYL.N = ynlss + (yl.N - ynlss - cl / (sp.el - mH) * (yl.C - ylss)) * Math.Exp(-mKyl * mRE * (1.0 - mH) * t / (1.0 - sp.el)) + cl / (sp.el - mH) * (yl.C - ylss) * lfactor;
-            mYL.setParameter(mKyl); // update decomposition rate
-                                    // young ref. pool
-            CNPair yr = mYR;
-            mYR.C = yrss + (yr.C - yrss) * rfactor;
-            mYR.N = ynrss + (yr.N - ynrss - cr / (sp.er - mH) * (yr.C - yrss)) * Math.Exp(-mKyr * mRE * (1.0 - mH) * t / (1.0 - sp.er)) + cr / (sp.er - mH) * (yr.C - yrss) * rfactor;
-            mYR.setParameter(mKyr); // update decomposition rate
-                                    // SOM pool (old)
-            CNPair o = mSOM;
-            mSOM.C = oss + (o.C - oss - al - ar) * Math.Exp(-mKo * mRE * t) + al * lfactor + ar * rfactor;
-            mSOM.N = onss + (o.N - onss - (al + ar) / sp.qh) * Math.Exp(-mKo * mRE * t) + al / sp.qh * lfactor + ar / sp.qh * rfactor;
+            CNPair yl = YoungLabile;
+            YoungLabile.C = ylss + (yl.C - ylss) * lfactor;
+            YoungLabile.N = ynlss + (yl.N - ynlss - cl / (sp.el - mH) * (yl.C - ylss)) * Math.Exp(-mKyl * ClimateFactor * (1.0 - mH) * t / (1.0 - sp.el)) + cl / (sp.el - mH) * (yl.C - ylss) * lfactor;
+            YoungLabile.Parameter = mKyl; // update decomposition rate
+            // young ref. pool
+            CNPair yr = YoungRefractory;
+            YoungRefractory.C = yrss + (yr.C - yrss) * rfactor;
+            YoungRefractory.N = ynrss + (yr.N - ynrss - cr / (sp.er - mH) * (yr.C - yrss)) * Math.Exp(-mKyr * ClimateFactor * (1.0 - mH) * t / (1.0 - sp.er)) + cr / (sp.er - mH) * (yr.C - yrss) * rfactor;
+            YoungRefractory.Parameter = mKyr; // update decomposition rate
+            // SOM pool (old)
+            CNPair o = OrganicMatter;
+            OrganicMatter.C = oss + (o.C - oss - al - ar) * Math.Exp(-mKo * ClimateFactor * t) + al * lfactor + ar * rfactor;
+            OrganicMatter.N = onss + (o.N - onss - (al + ar) / sp.qh) * Math.Exp(-mKo * ClimateFactor * t) + al / sp.qh * lfactor + ar / sp.qh * rfactor;
 
             // calculate delta (i.e. flux to atmosphere)
-            CNPair total_after = mYL + mYR + mSOM;
+            CNPair total_after = YoungLabile + YoungRefractory + OrganicMatter;
             CNPair flux = total_before + total_in - total_after;
             if (flux.C < 0.0)
             {
                 Debug.WriteLine("negative flux to atmosphere?!?");
-                flux.clear();
+                flux.Clear();
             }
-            mTotalToAtmosphere += flux;
+            FluxToAtmosphere += flux;
 
             // calculate plant available nitrogen
-            mAvailableNitrogenFromLabile = mKyl * mRE * (1.0 - mH) / (1.0 - sp.el) * (mYL.N - sp.el * mYL.C / sp.qb);  // N from labile...
-            mAvailableNitrogenFromRefractory = mKyr * mRE * (1 - mH) / (1.0 - sp.er) * (mYR.N - sp.er * mYR.C / sp.qb); // + N from refractory...
-            double nav_from_som = mKo * mRE * mSOM.N * (1.0 - sp.leaching); // + N from SOM pool (reduced by leaching (leaching modeled only from slow SOM Pool))
+            mAvailableNitrogenFromLabile = mKyl * ClimateFactor * (1.0 - mH) / (1.0 - sp.el) * (YoungLabile.N - sp.el * YoungLabile.C / sp.qb);  // N from labile...
+            mAvailableNitrogenFromRefractory = mKyr * ClimateFactor * (1 - mH) / (1.0 - sp.er) * (YoungRefractory.N - sp.er * YoungRefractory.C / sp.qb); // + N from refractory...
+            double nav_from_som = mKo * ClimateFactor * OrganicMatter.N * (1.0 - sp.leaching); // + N from SOM pool (reduced by leaching (leaching modeled only from slow SOM Pool))
 
             mAvailableNitrogenFromLabile *= 1000.0; // t/ha -> kg/ha
             mAvailableNitrogenFromRefractory *= 1000.0; // t/ha -> kg/ha
             nav_from_som *= 1000.0; // t/ha -> kg/ha
 
-            mAvailableNitrogen = mAvailableNitrogenFromLabile + mAvailableNitrogenFromRefractory + nav_from_som;
+            AvailableNitrogen = mAvailableNitrogenFromLabile + mAvailableNitrogenFromRefractory + nav_from_som;
 
-            if (mAvailableNitrogen < 0.0)
+            if (AvailableNitrogen < 0.0)
             {
-                mAvailableNitrogen = 0.0;
+                AvailableNitrogen = 0.0;
             }
-            if (Double.IsNaN(mAvailableNitrogen) || Double.IsNaN(mYR.C))
+            if (Double.IsNaN(AvailableNitrogen) || Double.IsNaN(YoungRefractory.C))
             {
                 Debug.WriteLine("Available Nitrogen is NAN.");
             }
 
             // add nitrogen deposition
-            mAvailableNitrogen += mNitrogenDeposition;
+            AvailableNitrogen += mNitrogenDeposition;
 
             // stedy state for n-available
             //    double navss = mKyl*mRE*(1.0 -mH)/(1.0 -sp.el)*(ynlss-sp.el*ylss/sp.qb); // available nitrogen (steady state)
@@ -274,16 +261,17 @@ namespace iLand.core
 
         }
 
-        public List<object> debugList()
+        public List<object> DebugList()
         {
-            List<object> list = new List<object>() {
-        // (1) inputs of the year
-        mInputLab.C, mInputLab.N, mInputLab.parameter(), mInputRef.C, mInputRef.N, mInputRef.parameter(), mRE,
-            // (2) states
-            mKyl, mKyr, mYL.C, mYL.N, mYR.C, mYR.N, mSOM.C, mSOM.N,
-            // (3) nav
-            mAvailableNitrogen, mAvailableNitrogenFromLabile, mAvailableNitrogenFromRefractory, (mAvailableNitrogen - mAvailableNitrogenFromLabile - mAvailableNitrogenFromRefractory)
-                };
+            List<object> list = new List<object>() 
+            {
+                // (1) inputs of the year
+                mInputLab.C, mInputLab.N, mInputLab.Parameter, mInputRef.C, mInputRef.N, mInputRef.Parameter, ClimateFactor,
+                // (2) states
+                mKyl, mKyr, YoungLabile.C, YoungLabile.N, YoungRefractory.C, YoungRefractory.N, OrganicMatter.C, OrganicMatter.N,
+                // (3) nav
+                AvailableNitrogen, mAvailableNitrogenFromLabile, mAvailableNitrogenFromRefractory, (AvailableNitrogen - mAvailableNitrogenFromLabile - mAvailableNitrogenFromRefractory)
+            };
             return list;
         }
 
@@ -291,7 +279,7 @@ namespace iLand.core
         /// @param DWDfrac fraction of downed woody debris (yR) to remove (0: nothing, 1: remove 100% percent)
         /// @param litterFrac fraction of litter pools (yL) to remove (0: nothing, 1: remove 100% percent)
         /// @param soilFrac fraction of soil pool (SOM) to remove (0: nothing, 1: remove 100% percent)
-        public void disturbance(double DWDfrac, double litterFrac, double soilFrac)
+        public void Disturbance(double DWDfrac, double litterFrac, double soilFrac)
         {
             if (DWDfrac < 0.0 || DWDfrac > 1.0)
             {
@@ -306,15 +294,15 @@ namespace iLand.core
                 Debug.WriteLine("warning: Soil:disturbance: soil-fraction invalid " + soilFrac);
             }
             // dwd
-            mTotalToDisturbance += mYR * Global.limit(DWDfrac, 0.0, 1.0);
-            mYR *= (1.0 - DWDfrac);
+            FluxToDisturbance += YoungRefractory * Global.Limit(DWDfrac, 0.0, 1.0);
+            YoungRefractory *= (1.0 - DWDfrac);
             // litter
-            mTotalToDisturbance += mYL * Global.limit(litterFrac, 0.0, 1.0);
-            mYL *= (1.0 - litterFrac);
+            FluxToDisturbance += YoungLabile * Global.Limit(litterFrac, 0.0, 1.0);
+            YoungLabile *= (1.0 - litterFrac);
             // old soil organic matter
-            mTotalToDisturbance += mSOM * Global.limit(soilFrac, 0.0, 1.0);
-            mSOM *= (1.0 - soilFrac);
-            if (Double.IsNaN(mAvailableNitrogen) || Double.IsNaN(mYR.C))
+            FluxToDisturbance += OrganicMatter * Global.Limit(soilFrac, 0.0, 1.0);
+            OrganicMatter *= (1.0 - soilFrac);
+            if (Double.IsNaN(AvailableNitrogen) || Double.IsNaN(YoungRefractory.C))
             {
                 Debug.WriteLine("Available Nitrogen is NAN.");
             }
@@ -324,25 +312,25 @@ namespace iLand.core
         /// @param DWD_kg_ha downed woody debris (yR) to remove kg/ha
         /// @param litter_kg_ha biomass in litter pools (yL) to remove kg/ha
         /// @param soil_kg_ha biomass in soil pool (SOM) to remove kg/ha
-        public void disturbanceBiomass(double DWD_kg_ha, double litter_kg_ha, double soil_kg_ha)
+        public void DisturbanceBiomass(double DWD_kg_ha, double litter_kg_ha, double soil_kg_ha)
         {
             double frac_dwd = 0.0;
             double frac_litter = 0.0;
             double frac_som = 0.0;
-            if (!mYR.isEmpty())
+            if (!YoungRefractory.IsEmpty())
             {
-                frac_dwd = DWD_kg_ha / 1000.0 / mYR.biomass();
+                frac_dwd = DWD_kg_ha / 1000.0 / YoungRefractory.Biomass();
             }
-            if (!mYL.isEmpty())
+            if (!YoungLabile.IsEmpty())
             {
-                frac_litter = litter_kg_ha / 1000.0 / mYL.biomass();
+                frac_litter = litter_kg_ha / 1000.0 / YoungLabile.Biomass();
             }
-            if (!mSOM.isEmpty())
+            if (!OrganicMatter.IsEmpty())
             {
-                frac_som = soil_kg_ha / 1000.0 / mSOM.biomass();
+                frac_som = soil_kg_ha / 1000.0 / OrganicMatter.Biomass();
             }
 
-            disturbance(frac_dwd, frac_litter, frac_som);
+            Disturbance(frac_dwd, frac_litter, frac_som);
         }
     }
 }

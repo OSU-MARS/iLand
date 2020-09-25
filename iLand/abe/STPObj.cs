@@ -6,15 +6,14 @@ namespace iLand.abe
     {
         private FMSTP mSTP;
         private QJSValue mOptions; ///< options of the current STP
+        public QJSValue options() { return mOptions; }
 
-        public STPObj(object parent = null)
+        public STPObj()
         {
             mSTP = null;
         }
 
-        public QJSValue options() { return mOptions; }
-
-        public void setSTP(FMStand stand)
+        public void SetStp(FMStand stand)
         {
             if (stand != null && stand.stp() != null)
             {
@@ -28,7 +27,7 @@ namespace iLand.abe
             }
         }
 
-        public string name()
+        public string Name()
         {
             if (mSTP != null)
             {

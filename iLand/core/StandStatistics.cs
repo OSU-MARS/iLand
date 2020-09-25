@@ -13,7 +13,6 @@
       */
     internal class StandStatistics
     {
-        private ResourceUnitSpecies mRUS; ///< link to the resource unit species
         private double mCount;
         private double mSumDbh;
         private double mSumHeight;
@@ -23,71 +22,67 @@
         private double mAverageDbh;
         private double mAverageHeight;
         private double mLeafAreaIndex;
-        private double mNPP;
-        private double mNPPabove;
-        private double mNPPsaplings; // carbon gain of saplings
-                                     // regeneration layer
         private int mCohortCount; ///< number of cohrots
-        private int mSaplingCount; ///< number of sapling (Reinekes Law)
         private double mSumSaplingAge;
-        private double mAverageSaplingAge;
-        // carbon and nitrogen pools
-        private double mCStem, mCFoliage, mCBranch, mCCoarseRoot, mCFineRoot;
-        private double mNStem, mNFoliage, mNBranch, mNCoarseRoot, mNFineRoot;
-        private double mCRegeneration, mNRegeneration;
 
-        // getters
-        public double count() { return mCount; }
-        public double dbh_avg() { return mAverageDbh; } ///< average dbh (cm)
-        public double height_avg() { return mAverageHeight; } ///< average tree height (m)
-        public double volume() { return mSumVolume; } ///< sum of tree volume (m3/ha)
-        public double gwl() { return mGWL; } ///< total increment (m3/ha)
-        public double basalArea() { return mSumBasalArea; } ///< sum of basal area of all trees (m2/ha)
-        public double leafAreaIndex() { return mLeafAreaIndex; } ///< [m2/m2]/ha stocked area.
-        public double npp() { return mNPP; } ///< sum. of NPP (kg Biomass increment, above+belowground, trees >4m)/ha
-        public double nppAbove() { return mNPPabove; } ///< above ground NPP (kg Biomass increment)/ha
-        public double nppSaplings() { return mNPPsaplings; } ///< carbon gain of saplings (kg Biomass increment)/ha
-        public int cohortCount() { return mCohortCount; } ///< number of cohorts of saplings / ha
-        public int saplingCount() { return mSaplingCount; } ///< number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
-        public double saplingAge() { return mAverageSaplingAge; } ///< average age of sapling (currenty not weighted with represented sapling numbers...)
+        public double AverageDbh { get; private set; } ///< average dbh (cm)
+        public double AverageHeight { get; private set; } ///< average tree height (m)
+        public double BasalArea { get; private set; } ///< sum of basal area of all trees (m2/ha)
+        public int CohortCount { get; private set; } ///< number of cohorts of saplings / ha
+        public double Count { get; private set; }
+        public double Gwl { get; private set; } ///< total increment (m3/ha)
+        public double LeafAreaIndex { get; private set; } ///< [m2/m2]/ha stocked area.
+        public double MeanSaplingAge { get; private set; } ///< average age of sapling (currenty not weighted with represented sapling numbers...)
+        public double Npp { get; private set; } ///< sum. of NPP (kg Biomass increment, above+belowground, trees >4m)/ha
+        public double NppAbove { get; private set; } ///< above ground NPP (kg Biomass increment)/ha
+        public double NppSaplings { get; private set; } ///< carbon gain of saplings (kg Biomass increment)/ha
+        public ResourceUnitSpecies ResourceUnitSpecies { get; set; }
+        ///< number of sapling (Reinekes Law)
+        public int SaplingCount { get; private set; } ///< number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
+        public double Volume { get; private set; } ///< sum of tree volume (m3/ha)
         // carbon/nitrogen cycle
-        public double cStem() { return mCStem; }
-        public double nStem() { return mNStem; }
-        public double cBranch() { return mCBranch; }
-        public double nBranch() { return mNBranch; }
-        public double cFoliage() { return mCFoliage; }
-        public double nFoliage() { return mNFoliage; }
-        public double cCoarseRoot() { return mCCoarseRoot; }
-        public double nCoarseRoot() { return mNCoarseRoot; }
-        public double cFineRoot() { return mCFineRoot; }
-        public double nFineRoot() { return mNFineRoot; }
-        public double cRegeneration() { return mCRegeneration; }
-        public double nRegeneration() { return mNRegeneration; }
+        public double BranchC { get; private set; }
+        public double BranchN { get; private set; }
+        public double CoarseRootC { get; private set; }
+        public double CoarseRootN { get; private set; }
+        public double FineRootC { get; private set; }
+        public double FineRootN { get; private set; }
+        public double FoliageC { get; private set; }
+        public double FoliageN { get; private set; }
+        public double RegenerationC { get; private set; }
+        public double RegenerationN { get; private set; }
+        public double StemC { get; private set; }
+        public double StemN { get; private set; }
+
+        public StandStatistics() 
+        { 
+            ResourceUnitSpecies = null; 
+            Clear(); 
+        }
+
         /// total carbon stock: sum of carbon of all living trees + regeneration layer
-        public double totalCarbon() { return mCStem + mCBranch + mCFoliage + mCFineRoot + mCCoarseRoot + mCRegeneration; }
+        public double TotalCarbon() { return StemC + BranchC + FoliageC + FineRootC + CoarseRootC + RegenerationC; }
 
-        public StandStatistics() { mRUS = null; clear(); }
-        public void setResourceUnitSpecies(ResourceUnitSpecies rus) { mRUS = rus; }
-
-        public void clear()
+        public void Clear()
         {
             // reset all values
+            // TODO: call ClearOnlyTrees()
             mCount = 0;
             mSumDbh = mSumHeight = mAverageDbh = mAverageHeight = 0.0;
             mSumBasalArea = mSumVolume = mGWL = 0.0;
             mLeafAreaIndex = 0.0;
-            mNPP = mNPPabove = 0.0;
-            mNPPsaplings = 0.0;
-            mCohortCount = mSaplingCount = 0;
-            mAverageSaplingAge = 0.0;
+            Npp = NppAbove = 0.0;
+            NppSaplings = 0.0;
+            mCohortCount = SaplingCount = 0;
+            MeanSaplingAge = 0.0;
             mSumSaplingAge = 0.0;
-            mCStem = 0.0;
-            mCFoliage = 0.0; mCBranch = 0.0; mCCoarseRoot = 0.0; mCFineRoot = 0.0;
-            mNStem = 0.0; mNFoliage = 0.0; mNBranch = 0.0; mNCoarseRoot = 0.0; mNFineRoot = 0.0;
-            mCRegeneration = 0.0; mNRegeneration = 0.0;
+            StemC = 0.0;
+            FoliageC = 0.0; BranchC = 0.0; CoarseRootC = 0.0; FineRootC = 0.0;
+            StemN = 0.0; FoliageN = 0.0; BranchN = 0.0; CoarseRootN = 0.0; FineRootN = 0.0;
+            RegenerationC = 0.0; RegenerationN = 0.0;
         }
 
-        public void clearOnlyTrees()
+        public void ClearOnlyTrees()
         {
             // reset only those values that are directly accumulated from trees
             mCount = 0;
@@ -99,93 +94,92 @@
             mCohortCount = mSaplingCount = 0;
             mAverageSaplingAge = 0.0;
             mSumSaplingAge = 0.0;*/
-            mCStem = 0.0; mCFoliage = 0.0; mCBranch = 0.0; mCCoarseRoot = 0.0; mCFineRoot = 0.0;
-            mNStem = 0.0; mNFoliage = 0.0; mNBranch = 0.0; mNCoarseRoot = 0.0; mNFineRoot = 0.0;
+            StemC = 0.0; FoliageC = 0.0; BranchC = 0.0; CoarseRootC = 0.0; FineRootC = 0.0;
+            StemN = 0.0; FoliageN = 0.0; BranchN = 0.0; CoarseRootN = 0.0; FineRootN = 0.0;
             /*mCRegeneration=0.0; mNRegeneration=0.0;*/
         }
 
-        public void addBiomass(double biomass, double CNRatio, ref double C, ref double N)
-        {
-            C += biomass * Constant.biomassCFraction;
-            N += biomass * Constant.biomassCFraction / CNRatio;
-        }
-
-        public void add(Tree tree, TreeGrowthData tgd)
+        public void Add(Tree tree, TreeGrowthData tgd)
         {
             mCount++;
-            mSumDbh += tree.dbh();
-            mSumHeight += tree.height();
-            mSumBasalArea += tree.basalArea();
-            mSumVolume += tree.volume();
-            mLeafAreaIndex += tree.leafArea(); // warning: sum of leafarea!
+            mSumDbh += tree.Dbh;
+            mSumHeight += tree.Height;
+            mSumBasalArea += tree.BasalArea();
+            mSumVolume += tree.Volume();
+            mLeafAreaIndex += tree.LeafArea; // warning: sum of leafarea!
             if (tgd != null)
             {
-                mNPP += tgd.NPP;
-                mNPPabove += tgd.NPP_above;
+                Npp += tgd.NppTotal;
+                NppAbove += tgd.NppAboveground;
             }
             // carbon and nitrogen pools
-            addBiomass(tree.biomassStem(), tree.species().cnWood(), ref mCStem, ref mNStem);
-            addBiomass(tree.biomassBranch(), tree.species().cnWood(), ref mCBranch, ref mNBranch);
-            addBiomass(tree.biomassFoliage(), tree.species().cnFoliage(), ref mCFoliage, ref mNFoliage);
-            addBiomass(tree.biomassFineRoot(), tree.species().cnFineroot(), ref mCFineRoot, ref mNFineRoot);
-            addBiomass(tree.biomassCoarseRoot(), tree.species().cnWood(), ref mCCoarseRoot, ref mNCoarseRoot);
+            this.BranchC += Constant.BiomassCFraction * tree.GetBranchBiomass();
+            this.BranchN += Constant.BiomassCFraction / tree.Species.CNRatioWood * tree.GetBranchBiomass();
+            this.CoarseRootC += Constant.BiomassCFraction * tree.CoarseRootMass;
+            this.CoarseRootN += Constant.BiomassCFraction / tree.Species.CNRatioWood * tree.CoarseRootMass;
+            this.FineRootC += Constant.BiomassCFraction * tree.FineRootMass;
+            this.FineRootN += Constant.BiomassCFraction / tree.Species.CNRatioFineroot * tree.FineRootMass;
+            this.FoliageC += Constant.BiomassCFraction * tree.FoliageMass;
+            this.FoliageN += Constant.BiomassCFraction / tree.Species.CNRatioFineroot * tree.FoliageMass;
+            this.StemC += Constant.BiomassCFraction * tree.StemMass;
+            this.StemN += Constant.BiomassCFraction / tree.Species.CNRatioWood * tree.StemMass;
         }
 
         // note: mRUS = 0 for aggregated statistics
-        public void calculate()
+        public void Calculate()
         {
             if (mCount > 0.0)
             {
                 mAverageDbh = mSumDbh / mCount;
                 mAverageHeight = mSumHeight / mCount;
-                if (mRUS != null && mRUS.ru().stockableArea() > 0.0)
+                if (ResourceUnitSpecies != null && ResourceUnitSpecies.RU.StockableArea > 0.0)
                 {
-                    mLeafAreaIndex /= mRUS.ru().stockableArea(); // convert from leafarea to LAI
+                    mLeafAreaIndex /= ResourceUnitSpecies.RU.StockableArea; // convert from leafarea to LAI
                 }
             }
             if (mCohortCount != 0)
             {
-                mAverageSaplingAge = mSumSaplingAge / (double)mCohortCount;
+                MeanSaplingAge = mSumSaplingAge / (double)mCohortCount;
             }
 
             // scale values to per hectare if resource unit <> 1ha
             // note: do this only on species-level (avoid double scaling)
-            if (mRUS != null)
+            if (ResourceUnitSpecies != null)
             {
-                double area_factor = Constant.cRUArea / mRUS.ru().stockableArea();
+                double area_factor = Constant.RUArea / ResourceUnitSpecies.RU.StockableArea;
                 if (area_factor != 1.0)
                 {
-                    mCount = mCount * area_factor;
+                    mCount *= area_factor;
                     mSumBasalArea *= area_factor;
                     mSumVolume *= area_factor;
                     mSumDbh *= area_factor;
-                    mNPP *= area_factor;
-                    mNPPabove *= area_factor;
-                    mNPPsaplings *= area_factor;
+                    Npp *= area_factor;
+                    NppAbove *= area_factor;
+                    NppSaplings *= area_factor;
                     //mGWL *= area_factor;
                     mCohortCount = (int)(area_factor * mCohortCount); // BUGBUG: quantization?
-                    mSaplingCount = (int)(area_factor * mSaplingCount); // BUGBUG: quantization?
+                    SaplingCount = (int)(area_factor * SaplingCount); // BUGBUG: quantization?
                     //double mCStem, mCFoliage, mCBranch, mCCoarseRoot, mCFineRoot;
                     //double mNStem, mNFoliage, mNBranch, mNCoarseRoot, mNFineRoot;
                     //double mCRegeneration, mNRegeneration;
-                    mCStem *= area_factor; 
-                    mNStem *= area_factor;
-                    mCFoliage *= area_factor; 
-                    mNFoliage *= area_factor;
-                    mCBranch *= area_factor; 
-                    mNBranch *= area_factor;
-                    mCCoarseRoot *= area_factor; 
-                    mNCoarseRoot *= area_factor;
-                    mCFineRoot *= area_factor; 
-                    mNFineRoot *= area_factor;
-                    mCRegeneration *= area_factor; 
-                    mNRegeneration *= area_factor;
+                    StemC *= area_factor; 
+                    StemN *= area_factor;
+                    FoliageC *= area_factor; 
+                    FoliageN *= area_factor;
+                    BranchC *= area_factor; 
+                    BranchN *= area_factor;
+                    CoarseRootC *= area_factor; 
+                    CoarseRootN *= area_factor;
+                    FineRootC *= area_factor; 
+                    FineRootN *= area_factor;
+                    RegenerationC *= area_factor; 
+                    RegenerationN *= area_factor;
                 }
-                mGWL = mSumVolume + mRUS.removedVolume(); // removedVolume: per ha, SumVolume now too
+                mGWL = mSumVolume + ResourceUnitSpecies.RemovedVolume; // removedVolume: per ha, SumVolume now too
             }
         }
 
-        public void add(StandStatistics stat)
+        public void Add(StandStatistics stat)
         {
             mCount += stat.mCount;
             mSumBasalArea += stat.mSumBasalArea;
@@ -193,24 +187,24 @@
             mSumHeight += stat.mSumHeight;
             mSumVolume += stat.mSumVolume;
             mLeafAreaIndex += stat.mLeafAreaIndex;
-            mNPP += stat.mNPP;
-            mNPPabove += stat.mNPPabove;
-            mNPPsaplings += stat.mNPPsaplings;
+            Npp += stat.Npp;
+            NppAbove += stat.NppAbove;
+            NppSaplings += stat.NppSaplings;
             mGWL += stat.mGWL;
             // regeneration
             mCohortCount += stat.mCohortCount;
-            mSaplingCount += stat.mSaplingCount;
+            SaplingCount += stat.SaplingCount;
             mSumSaplingAge += stat.mSumSaplingAge;
             // carbon/nitrogen pools
-            mCStem += stat.mCStem; mNStem += stat.mNStem;
-            mCBranch += stat.mCBranch; mNBranch += stat.mNBranch;
-            mCFoliage += stat.mCFoliage; mNFoliage += stat.mNFoliage;
-            mCFineRoot += stat.mCFineRoot; mNFineRoot += stat.mNFineRoot;
-            mCCoarseRoot += stat.mCCoarseRoot; mNCoarseRoot += stat.mNCoarseRoot;
-            mCRegeneration += stat.mCRegeneration; mNRegeneration += stat.mNRegeneration;
+            StemC += stat.StemC; StemN += stat.StemN;
+            BranchC += stat.BranchC; BranchN += stat.BranchN;
+            FoliageC += stat.FoliageC; FoliageN += stat.FoliageN;
+            FineRootC += stat.FineRootC; FineRootN += stat.FineRootN;
+            CoarseRootC += stat.CoarseRootC; CoarseRootN += stat.CoarseRootN;
+            RegenerationC += stat.RegenerationC; RegenerationN += stat.RegenerationN;
         }
 
-        public void addAreaWeighted(StandStatistics stat, double weight)
+        public void AddAreaWeighted(StandStatistics stat, double weight)
         {
             // aggregates that are not scaled to hectares
             mCount += stat.mCount * weight;
@@ -221,37 +215,37 @@
             // averages that are scaled to per hectare need to be scaled
             mAverageDbh += stat.mAverageDbh * weight;
             mAverageHeight += stat.mAverageHeight * weight;
-            mAverageSaplingAge += stat.mAverageSaplingAge * weight;
+            MeanSaplingAge += stat.MeanSaplingAge * weight;
             mLeafAreaIndex += stat.mLeafAreaIndex * weight;
 
-            mNPP += stat.mNPP * weight;
-            mNPPabove += stat.mNPPabove * weight;
-            mNPPsaplings += stat.mNPPsaplings * weight;
+            Npp += stat.Npp * weight;
+            NppAbove += stat.NppAbove * weight;
+            NppSaplings += stat.NppSaplings * weight;
             mGWL += stat.mGWL * weight;
             // regeneration
             mCohortCount += (int)(stat.mCohortCount * weight); // BUGBUG: quantization?
-            mSaplingCount += (int)(stat.mSaplingCount * weight); // BUGBUG: quantization?
+            SaplingCount += (int)(stat.SaplingCount * weight); // BUGBUG: quantization?
             mSumSaplingAge += stat.mSumSaplingAge * weight;
             // carbon/nitrogen pools
-            mCStem += stat.mCStem * weight; mNStem += stat.mNStem * weight;
-            mCBranch += stat.mCBranch * weight; mNBranch += stat.mNBranch * weight;
-            mCFoliage += stat.mCFoliage * weight; mNFoliage += stat.mNFoliage * weight;
-            mCFineRoot += stat.mCFineRoot * weight; mNFineRoot += stat.mNFineRoot * weight;
-            mCCoarseRoot += stat.mCCoarseRoot * weight; mNCoarseRoot += stat.mNCoarseRoot * weight;
-            mCRegeneration += stat.mCRegeneration * weight; mNRegeneration += stat.mNRegeneration * weight;
+            StemC += stat.StemC * weight; StemN += stat.StemN * weight;
+            BranchC += stat.BranchC * weight; BranchN += stat.BranchN * weight;
+            FoliageC += stat.FoliageC * weight; FoliageN += stat.FoliageN * weight;
+            FineRootC += stat.FineRootC * weight; FineRootN += stat.FineRootN * weight;
+            CoarseRootC += stat.CoarseRootC * weight; CoarseRootN += stat.CoarseRootN * weight;
+            RegenerationC += stat.RegenerationC * weight; RegenerationN += stat.RegenerationN * weight;
         }
 
-        public void add(SaplingStat sapling)
+        public void Add(SaplingStat sapling)
         {
-            mCohortCount += sapling.livingCohorts();
-            mSaplingCount += (int)sapling.livingSaplings(); // saplings with height >1.3m
+            mCohortCount += sapling.LivingCohorts;
+            SaplingCount += (int)sapling.LivingSaplings; // saplings with height >1.3m
 
-            mSumSaplingAge += sapling.averageAge() * sapling.livingCohorts();
+            mSumSaplingAge += sapling.AverageAge * sapling.LivingCohorts;
 
-            mCRegeneration += sapling.carbonLiving().C;
-            mNRegeneration += sapling.carbonLiving().N;
+            RegenerationC += sapling.CarbonLiving.C;
+            RegenerationN += sapling.CarbonLiving.N;
 
-            mNPPsaplings += sapling.carbonGain().C / Constant.biomassCFraction;
+            NppSaplings += sapling.CarbonGain.C / Constant.BiomassCFraction;
         }
     }
 }

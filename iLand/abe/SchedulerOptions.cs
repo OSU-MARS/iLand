@@ -33,41 +33,41 @@ namespace iLand.abe
             deviationDecayRate = 0.0;
         }
 
-        public void setup(QJSValue jsvalue)
+        public void Setup(QJSValue jsvalue)
         {
             useScheduler = false;
-            if (!jsvalue.isObject())
+            if (!jsvalue.IsObject())
             {
-                Debug.WriteLine("Scheduler options are not an object: " + jsvalue.toString());
+                Debug.WriteLine("Scheduler options are not an object: " + jsvalue.ToString());
                 return;
             }
-            FMSTP.checkObjectProperties(jsvalue, mAllowedProperties, "setup of scheduler options");
+            FMSTP.CheckObjectProperties(jsvalue, mAllowedProperties, "setup of scheduler options");
 
-            minScheduleHarvest = FMSTP.valueFromJs(jsvalue, "minScheduleHarvest", "0").toNumber();
-            maxScheduleHarvest = FMSTP.valueFromJs(jsvalue, "maxScheduleHarvest", "10000").toNumber();
-            maxHarvestLevel = FMSTP.valueFromJs(jsvalue, "maxHarvestLevel", "2").toNumber();
+            minScheduleHarvest = FMSTP.ValueFromJS(jsvalue, "minScheduleHarvest", "0").ToNumber();
+            maxScheduleHarvest = FMSTP.ValueFromJS(jsvalue, "maxScheduleHarvest", "10000").ToNumber();
+            maxHarvestLevel = FMSTP.ValueFromJS(jsvalue, "maxHarvestLevel", "2").ToNumber();
             Debug.WriteLine("maxHarvestLevel " + maxHarvestLevel);
-            useSustainableHarvest = FMSTP.valueFromJs(jsvalue, "useSustainableHarvest", "1").toNumber();
+            useSustainableHarvest = FMSTP.ValueFromJS(jsvalue, "useSustainableHarvest", "1").ToNumber();
             if (useSustainableHarvest < 0.0 || useSustainableHarvest > 1.0)
             {
                 throw new NotSupportedException("Setup of scheduler-options: invalid value for 'useSustainableHarvest' (0..1 allowed).");
             }
 
-            harvestIntensity = FMSTP.valueFromJs(jsvalue, "harvestIntensity", "1").toNumber();
-            scheduleRebounceDuration = FMSTP.valueFromJs(jsvalue, "scheduleRebounceDuration", "5").toNumber();
+            harvestIntensity = FMSTP.ValueFromJS(jsvalue, "harvestIntensity", "1").ToNumber();
+            scheduleRebounceDuration = FMSTP.ValueFromJS(jsvalue, "scheduleRebounceDuration", "5").ToNumber();
             if (scheduleRebounceDuration == 0.0)
             {
                 throw new NotSupportedException("Setup of scheduler-options: '0' is not a valid value for 'scheduleRebounceDuration'!");
             }
             // calculate the "tau" of a exponential decay function based on the provided half-time
-            scheduleRebounceDuration = scheduleRebounceDuration / Math.Log(2.0);
-            deviationDecayRate = FMSTP.valueFromJs(jsvalue, "deviationDecayRate", "0").toNumber();
+            scheduleRebounceDuration /= Math.Log(2.0);
+            deviationDecayRate = FMSTP.ValueFromJS(jsvalue, "deviationDecayRate", "0").ToNumber();
             if (deviationDecayRate == 1.0)
             {
                 throw new NotSupportedException("Setup of scheduler-options: '0' is not a valid value for 'deviationDecayRate'!");
             }
             deviationDecayRate = 1.0 - deviationDecayRate; // if eg value is 0.05 -> multiplier 0.95
-            useScheduler = FMSTP.boolValueFromJs(jsvalue, "enabled", true);
+            useScheduler = FMSTP.BoolValueFromJS(jsvalue, "enabled", true);
         }
     }
 }

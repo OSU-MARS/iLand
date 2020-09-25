@@ -9,24 +9,32 @@ namespace iLand.abe
     /** @class ABELayers
         @ingroup abe
         ABELayers is a helper class for spatial visualization of ABE data.
-
         */
     internal class ABELayers : LayeredGrid<FMStand>
     {
+        private readonly Dictionary<Agent, int> mAgentIndex;
         private List<LayerElement> mNames;
-        private Dictionary<Agent, int> mAgentIndex;
-        private Dictionary<string, int> mUnitIndex;
-        private Dictionary<int, int> mStandIndex;
-        private Dictionary<string, int> mSTPIndex;
+        private readonly Dictionary<int, int> mStandIndex;
+        private readonly Dictionary<string, int> mStpIndex;
+        private readonly Dictionary<string, int> mUnitIndex;
 
-        public void setGrid(Grid<FMStand> grid) { mGrid = grid; }
+        public void setGrid(Grid<FMStand> grid) { Grid = grid; }
+
+        public ABELayers()
+        {
+            this.mAgentIndex = new Dictionary<Agent, int>();
+            this.mNames = null; // lazy init
+            this.mStandIndex = new Dictionary<int, int>();
+            this.mStpIndex = new Dictionary<string, int>();
+            this.mUnitIndex = new Dictionary<string, int>();
+        }
 
         ~ABELayers()
         {
-            GlobalSettings.instance().controller().removeLayers(this);
+            GlobalSettings.Instance.ModelController.RemoveLayers(this);
         }
 
-        public double value(FMStand data, int index)
+        public double Value(FMStand data, int index)
         {
             if (data == null && index < 2)
             {
@@ -64,19 +72,19 @@ namespace iLand.abe
                 case 8: return data.lastExecution(); // "last evaluation"
                 case 9: return data.sleepYears(); // "next evaluation"
                 case 10: return data.lastUpdate(); // last update
-                case 11: return data.unit().constScheduler() != null ? data.unit().constScheduler().scoreOf(data.id()) : -1.0; // scheduler score
+                case 11: return data.unit().constScheduler() != null ? data.unit().constScheduler().ScoreOf(data.id()) : -1.0; // scheduler score
                 case 12:
-                    if (!mSTPIndex.ContainsKey(data.stp().name())) // stand treatment program
+                    if (!mStpIndex.ContainsKey(data.stp().name())) // stand treatment program
                     {
-                        mSTPIndex[data.stp().name()] = mSTPIndex.Count();
+                        mStpIndex[data.stp().name()] = mStpIndex.Count();
                     }
-                    return mSTPIndex[data.stp().name()];
+                    return mStpIndex[data.stp().name()];
 
                 default: throw new NotSupportedException("ABELayers:value(): Invalid index");
             }
         }
 
-        public override List<LayerElement> names()
+        public override List<LayerElement> Names()
         {
             if (mNames == null)
             {
@@ -100,29 +108,29 @@ namespace iLand.abe
             return mNames;
         }
 
-        public string labelvalue(int value, int index)
+        // unused in C++
+        //public override string LabelValue(int value, int index)
+        //{
+        //    return index switch
+        //    {
+        //        // stand id
+        //        0 => mStandIndex.Single(keyValuePair => keyValuePair.Value == value).Key.ToString(),
+        //        // unit
+        //        1 => mUnitIndex.Single(keyValuePair => keyValuePair.Value == value).Key,
+        //        // agent
+        //        2 => mAgentIndex.Single(keyValuePair => keyValuePair.Value == value).Key.name(),
+        //        // stp
+        //        12 => mStpIndex.Single(keyValuePair => keyValuePair.Value == value).Key,
+        //        _ => value.ToString(),
+        //    };
+        //}
+
+        public void RegisterLayers()
         {
-            switch (index)
-            {
-                case 0: // stand id
-                    return mStandIndex.Single(keyValuePair => keyValuePair.Value == value).Key.ToString();
-                case 1: // unit
-                    return mUnitIndex.Single(keyValuePair => keyValuePair.Value == value).Key;
-                case 2: // agent
-                    return mAgentIndex.Single(keyValuePair => keyValuePair.Value == value).Key.name();
-                case 12: // stp
-                    return mSTPIndex.Single(keyValuePair => keyValuePair.Value == value).Key;
-                default:
-                    return value.ToString();
-            }
+            GlobalSettings.Instance.ModelController.AddLayers(this, "ABE");
         }
 
-        public void registerLayers()
-        {
-            GlobalSettings.instance().controller().addLayers(this, "ABE");
-        }
-
-        public void clearClasses()
+        public void ClearClasses()
         {
             mAgentIndex.Clear();
             mStandIndex.Clear();

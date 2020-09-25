@@ -19,41 +19,35 @@ namespace iLand.tools
      */
     internal abstract class ExpressionWrapper
     {
-        protected static readonly List<string> baseVarList;
+        protected static readonly List<string> BaseVarList;
 
         static ExpressionWrapper()
         {
-            baseVarList = new List<string>(1);
-            baseVarList.Add("year");
+            ExpressionWrapper.BaseVarList = new List<string>() { "year" };
         }
 
-        public ExpressionWrapper()
-        {
-        }
-
-        public abstract List<string> getVariablesList();
+        public abstract List<string> GetVariablesList();
 
         // must be overloaded!
-        public virtual double value(int variableIndex)
+        public virtual double Value(int variableIndex)
         {
-            switch (variableIndex)
+            return variableIndex switch
             {
-                case 0: // year
-                    return (double)GlobalSettings.instance().currentYear();
-                default:
-                    throw new NotSupportedException(string.Format("expression wrapper reached base with invalid index index {0}", variableIndex));
-            }
+                // year
+                0 => (double)GlobalSettings.Instance.CurrentYear,
+                _ => throw new NotSupportedException(string.Format("expression wrapper reached base with invalid index index {0}", variableIndex)),
+            };
         }
 
-        public int variableIndex(string variableName)
+        public int GetVariableIndex(string variableName)
         {
-            return getVariablesList().IndexOf(variableName);
+            return GetVariablesList().IndexOf(variableName);
         }
 
-        public double valueByName(string variableName)
+        public double ValueByName(string variableName)
         {
-            int idx = variableIndex(variableName);
-            return value(idx);
+            int idx = GetVariableIndex(variableName);
+            return Value(idx);
         }
     }
 }

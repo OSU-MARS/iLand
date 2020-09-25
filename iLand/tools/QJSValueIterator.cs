@@ -14,22 +14,22 @@ namespace iLand.tools
             throw new NotImplementedException();
         }
 
-        public bool hasNext()
+        public bool HasNext()
         {
             throw new NotImplementedException();
         }
 
-        public string name()
+        public string Name()
         {
             throw new NotImplementedException();
         }
 
-        public QJSValue next()
+        public QJSValue Next()
         {
             throw new NotImplementedException();
         }
 
-        public QJSValue value()
+        public QJSValue Value()
         {
             throw new NotImplementedException();
         }

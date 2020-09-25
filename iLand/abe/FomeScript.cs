@@ -12,7 +12,7 @@ namespace iLand.abe
         */
     internal class FomeScript
     {
-        private static string mInvalidContext = "S---";
+        private static readonly string mInvalidContext = "S---";
         private FMStand mStand;
         private StandObj mStandObj;
         private UnitObj mUnitObj;
@@ -21,7 +21,8 @@ namespace iLand.abe
         private FMTreeList mTrees;
         private SchedulerObj mSchedulerObj;
         private STPObj mSTPObj;
-        private string mLastErrorMessage;
+        // unused in C++
+        // private string mLastErrorMessage;
 
         /// returns a string for debug/trace messages
         public string context() { return mStand != null ? mStand.context() : mInvalidContext; }
@@ -31,7 +32,7 @@ namespace iLand.abe
         public FMTreeList treesObj() { return mTrees; }
         public ActivityObj activityObj() { return mActivityObj; }
 
-        public FomeScript(object parent = null)
+        public FomeScript()
         {
             mStandObj = null;
             mUnitObj = null;
@@ -42,99 +43,10 @@ namespace iLand.abe
             mStand = null;
         }
 
-        public void setupScriptEnvironment()
-        {
-            // create javascript objects in the script engine
-            // these objects can be accessed from Javascript code representing forest management activities
-            // or agents.
-
-            // stand variables
-            mStandObj = new StandObj();
-            QJSValue stand_value = ForestManagementEngine.scriptEngine().newQObject(mStandObj);
-            ForestManagementEngine.scriptEngine().globalObject().setProperty("stand", stand_value);
-
-            // site variables
-            mUnitObj = new UnitObj();
-            QJSValue site_value = ForestManagementEngine.scriptEngine().newQObject(mUnitObj);
-            ForestManagementEngine.scriptEngine().globalObject().setProperty("unit", site_value);
-
-            // general simulation variables (mainly scenariolevel)
-            mSimulationObj = new SimulationObj();
-            QJSValue simulation_value = ForestManagementEngine.scriptEngine().newQObject(mSimulationObj);
-            ForestManagementEngine.scriptEngine().globalObject().setProperty("simulation", simulation_value);
-
-            //access to the current activity
-            mActivityObj = new ActivityObj();
-            QJSValue activity_value = ForestManagementEngine.scriptEngine().newQObject(mActivityObj);
-            ForestManagementEngine.scriptEngine().globalObject().setProperty("activity", activity_value);
-
-            // general simulation variables (mainly scenariolevel)
-            mTrees = new FMTreeList();
-            QJSValue treelist_value = ForestManagementEngine.scriptEngine().newQObject(mTrees);
-            ForestManagementEngine.scriptEngine().globalObject().setProperty("trees", treelist_value);
-
-            // options of the STP
-            mSTPObj = new STPObj();
-            QJSValue stp_value = ForestManagementEngine.scriptEngine().newQObject(mSTPObj);
-            ForestManagementEngine.scriptEngine().globalObject().setProperty("stp", stp_value);
-
-            // scheduler options
-            mSchedulerObj = new SchedulerObj();
-            QJSValue scheduler_value = ForestManagementEngine.scriptEngine().newQObject(mSchedulerObj);
-            ForestManagementEngine.scriptEngine().globalObject().setProperty("scheduler", scheduler_value);
-
-            // the script object itself
-            QJSValue script_value = ForestManagementEngine.scriptEngine().newQObject(this);
-            ForestManagementEngine.scriptEngine().globalObject().setProperty("fmengine", script_value);
-
-        }
-
-        public static void setExecutionContext(FMStand stand, bool add_agent = false)
-        {
-            FomeScript br = bridge();
-            br.mStand = stand;
-            br.mStandObj.setStand(stand);
-            br.mTrees.setStand(stand);
-            br.mUnitObj.setStand(stand);
-            br.mActivityObj.setStand(stand);
-            br.mSchedulerObj.setStand(stand);
-            br.mSTPObj.setSTP(stand);
-            if (stand != null && stand.trace())
-            {
-                Debug.WriteLine(br.context() + " Prepared execution context (thread " + Thread.CurrentThread.ManagedThreadId + ").");
-            }
-            if (add_agent)
-            {
-                Agent ag = stand.unit().agent();
-                ForestManagementEngine.scriptEngine().globalObject().setProperty("agent", ag.jsAgent());
-            }
-        }
-
-        public static void setActivity(Activity act)
-        {
-            FomeScript br = bridge();
-            setExecutionContext(null);
-            br.mActivityObj.setActivity(act);
-        }
-
         public static FomeScript bridge()
         {
             // get the right bridge object (for the right thread??)
             return ForestManagementEngine.instance().scriptBridge();
-        }
-
-        public static string JStoString(QJSValue value)
-        {
-            if (value.isArray() || value.isObject())
-            {
-                QJSValue fun = ForestManagementEngine.scriptEngine().evaluate("(function(a) { return JSON.stringify(a); })");
-                QJSValue result = fun.call(new List<QJSValue>() { value });
-                return result.toString();
-            }
-            else
-            {
-                return value.toString();
-            }
         }
 
         public bool verbose()
@@ -157,94 +69,182 @@ namespace iLand.abe
             return -1;
         }
 
-        public void setStandId(int new_stand_id)
+        public void SetupScriptEnvironment()
         {
-            FMStand stand = ForestManagementEngine.instance().stand(new_stand_id);
+            // create javascript objects in the script engine
+            // these objects can be accessed from Javascript code representing forest management activities
+            // or agents.
+
+            // stand variables
+            mStandObj = new StandObj();
+            QJSValue stand_value = ForestManagementEngine.ScriptEngine().NewQObject(mStandObj);
+            ForestManagementEngine.ScriptEngine().GlobalObject().SetProperty("stand", stand_value);
+
+            // site variables
+            mUnitObj = new UnitObj();
+            QJSValue site_value = ForestManagementEngine.ScriptEngine().NewQObject(mUnitObj);
+            ForestManagementEngine.ScriptEngine().GlobalObject().SetProperty("unit", site_value);
+
+            // general simulation variables (mainly scenariolevel)
+            mSimulationObj = new SimulationObj();
+            QJSValue simulation_value = ForestManagementEngine.ScriptEngine().NewQObject(mSimulationObj);
+            ForestManagementEngine.ScriptEngine().GlobalObject().SetProperty("simulation", simulation_value);
+
+            //access to the current activity
+            mActivityObj = new ActivityObj();
+            QJSValue activity_value = ForestManagementEngine.ScriptEngine().NewQObject(mActivityObj);
+            ForestManagementEngine.ScriptEngine().GlobalObject().SetProperty("activity", activity_value);
+
+            // general simulation variables (mainly scenariolevel)
+            mTrees = new FMTreeList();
+            QJSValue treelist_value = ForestManagementEngine.ScriptEngine().NewQObject(mTrees);
+            ForestManagementEngine.ScriptEngine().GlobalObject().SetProperty("trees", treelist_value);
+
+            // options of the STP
+            mSTPObj = new STPObj();
+            QJSValue stp_value = ForestManagementEngine.ScriptEngine().NewQObject(mSTPObj);
+            ForestManagementEngine.ScriptEngine().GlobalObject().SetProperty("stp", stp_value);
+
+            // scheduler options
+            mSchedulerObj = new SchedulerObj();
+            QJSValue scheduler_value = ForestManagementEngine.ScriptEngine().NewQObject(mSchedulerObj);
+            ForestManagementEngine.ScriptEngine().GlobalObject().SetProperty("scheduler", scheduler_value);
+
+            // the script object itself
+            QJSValue script_value = ForestManagementEngine.ScriptEngine().NewQObject(this);
+            ForestManagementEngine.ScriptEngine().GlobalObject().SetProperty("fmengine", script_value);
+
+        }
+
+        public static void SetExecutionContext(FMStand stand, bool add_agent = false)
+        {
+            FomeScript br = bridge();
+            br.mStand = stand;
+            br.mStandObj.setStand(stand);
+            br.mTrees.SetStand(stand);
+            br.mUnitObj.setStand(stand);
+            br.mActivityObj.SetStand(stand);
+            br.mSchedulerObj.setStand(stand);
+            br.mSTPObj.SetStp(stand);
+            if (stand != null && stand.TracingEnabled())
+            {
+                Debug.WriteLine(br.context() + " Prepared execution context (thread " + Thread.CurrentThread.ManagedThreadId + ").");
+            }
+            if (add_agent)
+            {
+                Agent ag = stand.unit().agent();
+                ForestManagementEngine.ScriptEngine().GlobalObject().SetProperty("agent", ag.jsAgent());
+            }
+        }
+
+        public static void SetActivity(Activity act)
+        {
+            FomeScript br = bridge();
+            SetExecutionContext(null);
+            br.mActivityObj.SetActivity(act);
+        }
+
+        public static string JStoString(QJSValue value)
+        {
+            if (value.IsArray() || value.IsObject())
+            {
+                QJSValue fun = ForestManagementEngine.ScriptEngine().Evaluate("(function(a) { return JSON.stringify(a); })");
+                QJSValue result = fun.Call(new List<QJSValue>() { value });
+                return result.ToString();
+            }
+            else
+            {
+                return value.ToString();
+            }
+        }
+        public void SetStandId(int new_stand_id)
+        {
+            FMStand stand = ForestManagementEngine.instance().Stand(new_stand_id);
             if (stand == null)
             {
                 Debug.WriteLine(bridge().context() + " invalid stand id " + new_stand_id);
                 return;
             }
 
-            setExecutionContext(stand);
+            SetExecutionContext(stand);
         }
 
-        public void log(QJSValue value)
+        public void Log(QJSValue value)
         {
             string msg = JStoString(value);
             Debug.WriteLine(bridge().context() + msg);
         }
 
-        public void abort(QJSValue message)
+        public void Abort(QJSValue message)
         {
-            log(message);
-            ForestManagementEngine.instance().abortExecution(String.Format("{0}: {1}", context(), message.toString()));
+            Log(message);
+            ForestManagementEngine.instance().AbortExecution(String.Format("{0}: {1}", context(), message.ToString()));
         }
 
-        public bool addManagement(QJSValue program, string name)
+        public bool AddManagement(QJSValue program, string name)
         {
             FMSTP stp = new FMSTP();
-            stp.setup(program, name);
-            ForestManagementEngine.instance().addSTP(stp);
+            stp.Setup(program, name);
+            ForestManagementEngine.instance().AddStandTreatmentProgram(stp);
             return true;
         }
 
-        public bool updateManagement(QJSValue program, string name)
+        public bool UpdateManagement(QJSValue program, string name)
         {
-            FMSTP stp = ForestManagementEngine.instance().stp(name);
+            FMSTP stp = ForestManagementEngine.instance().Stp(name);
             if (stp == null)
             {
                 Trace.TraceWarning("updateManagement: STP " + name + " not found. No program updated.");
                 return false;
             }
-            stp.setup(program, name);
+            stp.Setup(program, name);
             return true;
         }
 
-        public bool addManagementToAgentType(string name, string agentname)
+        public bool AddManagementToAgentType(string name, string agentname)
         {
-            FMSTP stp = ForestManagementEngine.instance().stp(name);
+            FMSTP stp = ForestManagementEngine.instance().Stp(name);
             if (stp == null)
             {
                 Trace.TraceWarning("addManagementToAgentType: STP " + name + " not found!");
                 return false;
             }
-            AgentType at = ForestManagementEngine.instance().agentType(agentname);
+            AgentType at = ForestManagementEngine.instance().GetAgentType(agentname);
             if (at == null)
             {
                 Trace.TraceWarning("addManagementToAgentType: agenttype " + agentname + " not found!");
                 return false;
             }
-            at.addSTP(name);
+            at.AddStp(name);
             return true;
         }
 
-        public bool addAgentType(QJSValue program, string name)
+        public bool AddAgentType(QJSValue program, string name)
         {
             AgentType at = new AgentType();
-            at.setupSTP(program, name);
-            ForestManagementEngine.instance().addAgentType(at);
+            at.SetupStp(program, name);
+            ForestManagementEngine.instance().AddAgentType(at);
             return true;
         }
 
-        public QJSValue addAgent(string agent_type, string agent_name)
+        public QJSValue AddAgent(string agent_type, string agent_name)
         {
             // find the agent type
-            AgentType at = ForestManagementEngine.instance().agentType(agent_type);
+            AgentType at = ForestManagementEngine.instance().GetAgentType(agent_type);
             if (at != null)
             {
-                abort(new QJSValue(String.Format("fmengine.addAgent: invalid 'agent_type': '{0}'", agent_type)));
+                Abort(new QJSValue(String.Format("fmengine.addAgent: invalid 'agent_type': '{0}'", agent_type)));
                 return null;
             }
-            Agent ag = at.createAgent(agent_name);
+            Agent ag = at.CreateAgent(agent_name);
             return ag.jsAgent();
         }
 
         /// force execution of an activity (outside of the usual execution context, e.g. for debugging)
-        public bool runActivity(int stand_id, string activity)
+        public bool RunActivity(int stand_id, string activity)
         {
             // find stand
-            FMStand stand = ForestManagementEngine.instance().stand(stand_id);
+            FMStand stand = ForestManagementEngine.instance().Stand(stand_id);
             if (stand == null)
             {
                 return false;
@@ -253,7 +253,7 @@ namespace iLand.abe
             {
                 return false;
             }
-            Activity act = stand.stp().activity(activity);
+            Activity act = stand.stp().GetActivity(activity);
             if (act == null)
             {
                 return false;
@@ -261,13 +261,13 @@ namespace iLand.abe
 
             // run the activity....
             Debug.WriteLine("running activity " + activity + " for stand " + stand_id);
-            return act.execute(stand);
+            return act.Execute(stand);
         }
 
-        public bool runActivityEvaluate(int stand_id, string activity)
+        public bool RunActivityEvaluate(int stand_id, string activity)
         {
             // find stand
-            FMStand stand = ForestManagementEngine.instance().stand(stand_id);
+            FMStand stand = ForestManagementEngine.instance().Stand(stand_id);
             if (stand == null)
             {
                 return false;
@@ -276,7 +276,7 @@ namespace iLand.abe
             {
                 return false;
             }
-            Activity act = stand.stp().activity(activity);
+            Activity act = stand.stp().GetActivity(activity);
             if (act == null)
             {
                 return false;
@@ -284,26 +284,26 @@ namespace iLand.abe
 
             // run the activity....
             Debug.WriteLine("running evaluate of activity " + activity + " for stand " + stand_id);
-            return act.evaluate(stand);
+            return act.Evaluate(stand);
         }
 
-        public bool runAgent(int stand_id, string function)
+        public bool RunAgent(int stand_id, string function)
         {
             // find stand
-            FMStand stand = ForestManagementEngine.instance().stand(stand_id);
+            FMStand stand = ForestManagementEngine.instance().Stand(stand_id);
             if (stand == null)
             {
                 return false;
             }
 
-            setExecutionContext(stand, true); // true: add also agent as 'agent'
+            SetExecutionContext(stand, true); // true: add also agent as 'agent'
 
             QJSValue val;
             QJSValue agent_type = stand.unit().agent().type().jsObject();
-            if (agent_type.property(function).isCallable())
+            if (agent_type.Property(function).IsCallable())
             {
-                val = agent_type.property(function).callWithInstance(agent_type);
-                Debug.WriteLine("running agent-function " + function + " for stand " + stand_id + ": " + val.toString());
+                val = agent_type.Property(function).CallWithInstance(agent_type);
+                Debug.WriteLine("running agent-function " + function + " for stand " + stand_id + ": " + val.ToString());
             }
             else
             {
@@ -313,9 +313,9 @@ namespace iLand.abe
             return true;
         }
 
-        public bool isValidStand(int stand_id)
+        public bool IsValidStand(int stand_id)
         {
-            FMStand stand = ForestManagementEngine.instance().stand(stand_id);
+            FMStand stand = ForestManagementEngine.instance().Stand(stand_id);
             if (stand != null)
             {
                 return true;
@@ -324,47 +324,48 @@ namespace iLand.abe
             return false;
         }
 
-        public List<string> standIds()
+        public List<string> StandIDs()
         {
-            return ForestManagementEngine.instance().standIds();
+            // BUGBUG: why wrap this?
+            return ForestManagementEngine.instance().StandIDs();
         }
 
-        public QJSValue activity(string stp_name, string activity_name)
+        public QJSValue Activity(string stp_name, string activity_name)
         {
 
-            FMSTP stp = ForestManagementEngine.instance().stp(stp_name);
+            FMSTP stp = ForestManagementEngine.instance().Stp(stp_name);
             if (stp == null)
             {
                 Debug.WriteLine("fmengine.activty: invalid stp " + stp_name);
                 return null;
             }
 
-            Activity act = stp.activity(activity_name);
+            Activity act = stp.GetActivity(activity_name);
             if (act == null)
             {
                 Debug.WriteLine("fmengine.activty: activity " + activity_name + " not found in stp: " + stp_name);
                 return null;
             }
 
-            int idx = stp.activityIndex(act);
+            int idx = stp.GetIndexOf(act);
             ActivityObj ao = new ActivityObj(null, act, idx);
-            QJSValue value = ForestManagementEngine.scriptEngine().newQObject(ao);
+            QJSValue value = ForestManagementEngine.ScriptEngine().NewQObject(ao);
             return value;
         }
 
-        public void runPlanting(int stand_id, QJSValue planting_item)
+        public void RunPlanting(int stand_id, QJSValue planting_item)
         {
-            FMStand stand = ForestManagementEngine.instance().stand(stand_id);
+            FMStand stand = ForestManagementEngine.instance().Stand(stand_id);
             if (stand == null)
             {
                 Trace.TraceWarning("runPlanting: stand not found " + stand_id);
                 return;
             }
 
-            ActPlanting.runSinglePlantingItem(stand, planting_item);
+            ActPlanting.RunSinglePlantingItem(stand, planting_item);
         }
 
-        public static int levelIndex(string level_label)
+        public static int LevelIndex(string level_label)
         {
             if (level_label == "low") return 1;
             if (level_label == "medium") return 2;
@@ -372,15 +373,15 @@ namespace iLand.abe
             return -1;
         }
 
-        public static string levelLabel(int level_index)
+        public static string LevelLabel(int level_index)
         {
-            switch (level_index)
+            return level_index switch
             {
-                case 1: return "low";
-                case 2: return "medium";
-                case 3: return "high";
-            }
-            return "invalid";
+                1 => "low",
+                2 => "medium",
+                3 => "high",
+                _ => "invalid",
+            };
         }
     }
 }

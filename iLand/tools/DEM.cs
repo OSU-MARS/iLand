@@ -23,91 +23,95 @@ namespace iLand.tools
      */
     internal class DEM : Grid<float>
     {
-        private Grid<float> aspect_grid;
-        private Grid<float> slope_grid;
-        private Grid<float> view_grid;
+        private readonly Grid<float> aspect_grid;
+        private readonly Grid<float> slope_grid;
+        private readonly Grid<float> view_grid;
 
-        public Grid<float> aspectGrid()
+        public DEM(string fileName)
         {
-            createSlopeGrid();
+            this.aspect_grid = new Grid<float>();
+            this.slope_grid = new Grid<float>();
+            this.view_grid = new Grid<float>();
+
+            LoadFromFile(fileName);
+        }
+
+        public Grid<float> EnsureAspectGrid()
+        {
+            CreateSlopeGrid();
             return aspect_grid;
         }
 
-        public Grid<float> slopeGrid()
+        public Grid<float> EnsureSlopeGrid()
         {
-            createSlopeGrid();
+            CreateSlopeGrid();
             return slope_grid;
         }
 
-        public Grid<float> viewGrid()
+        public Grid<float> EnsureViewGrid()
         {
-            createSlopeGrid();
+            CreateSlopeGrid();
             return view_grid;
         }
 
         // special functions for DEM
         /// get the elevation (m) at point (x/y)
-        public float elevation(float x, float y)
+        public float GetElevation(float x, float y)
         {
-            return constValueAt(x, y);
+            return this[x, y];
         }
 
-        public float elevation(PointF p)
+        public float GetElevation(PointF p)
         {
-            return constValueAt(p.X, p.Y);
+            return this[p];
         }
 
-        public DEM(string fileName)
+        public float GetOrientation(float x, float y, out float rslope_angle, out float rslope_aspect)
         {
-            loadFromFile(fileName);
-        }
-
-        public float orientation(float x, float y, float rslope_angle, float rslope_aspect)
-        {
-            return orientation(new PointF(x, y), rslope_angle, rslope_aspect);
+            return GetOrientation(new PointF(x, y), out rslope_angle, out rslope_aspect);
         }
 
         /// loads a DEM from a ESRI style text file.
         /// internally, the DEM has always a resolution of 10m
-        public bool loadFromFile(string fileName)
+        public bool LoadFromFile(string fileName)
         {
-            if (GlobalSettings.instance().model() == null)
+            if (GlobalSettings.Instance.Model == null)
             {
                 throw new NotSupportedException("create10mGrid: no valid model to retrieve height grid.");
             }
 
-            Grid<HeightGridValue> h_grid = GlobalSettings.instance().model().heightGrid();
-            if (h_grid == null || h_grid.isEmpty())
+            Grid<HeightGridValue> h_grid = GlobalSettings.Instance.Model.HeightGrid;
+            if (h_grid == null || h_grid.IsEmpty())
             {
                 throw new NotSupportedException("GisGrid::create10mGrid: no valid height grid to copy grid size.");
             }
 
             GisGrid gis_grid = new GisGrid();
-            if (!gis_grid.loadFromFile(fileName))
+            if (!gis_grid.LoadFromFile(fileName))
             {
                 throw new FileLoadException(String.Format("Unable to load DEM file {0}", fileName));
             }
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
-            clear();
-            aspect_grid.clear();
-            slope_grid.clear();
-            view_grid.clear();
+            Clear();
+            aspect_grid.Clear();
+            slope_grid.Clear();
+            view_grid.Clear();
 
-            setup(h_grid.metricRect(), h_grid.cellsize());
+            Setup(h_grid.PhysicalSize, h_grid.CellSize);
 
-            RectangleF world = GlobalSettings.instance().model().extent();
+            RectangleF world = GlobalSettings.Instance.Model.PhysicalExtent;
 
-            if ((gis_grid.cellSize() % cellsize()) != 0.0)
+            if ((gis_grid.CellSize % CellSize) != 0.0)
             {
                 PointF p;
                 // simple copy of the data
-                for (int i = 0; i < count(); i++)
+                for (int i = 0; i < Count; i++)
                 {
-                    p = cellCenterPoint(indexOf(i));
-                    if (gis_grid.value(p) != gis_grid.noDataValue() && world.Contains(p))
+                    p = GetCellCenterPoint(IndexOf(i));
+                    if (gis_grid.GetValue(p) != gis_grid.NoDataValue && world.Contains(p))
                     {
-                        this[i] = (float)gis_grid.value(p);
+                        this[i] = (float)gis_grid.GetValue(p);
                     }
                     else
                     {
@@ -118,38 +122,38 @@ namespace iLand.tools
             else
             {
                 // bilinear approximation approach
-                Debug.WriteLine("DEM: built-in bilinear interpolation from cell size " + gis_grid.cellSize());
-                int f = (int)(gis_grid.cellSize() / cellsize()); // size-factor
-                initialize(-1.0F);
+                Debug.WriteLine("DEM: built-in bilinear interpolation from cell size " + gis_grid.CellSize);
+                int sizeFactor = (int)(gis_grid.CellSize / this.CellSize); // size-factor
+                Initialize(-1.0F);
                 int ixmin = 10000000, iymin = 1000000, ixmax = -1, iymax = -1;
-                for (int y = 0; y < gis_grid.rows(); ++y)
+                for (int y = 0; y < gis_grid.Rows; ++y)
                 {
-                    for (int x = 0; x < gis_grid.cols(); ++x)
+                    for (int x = 0; x < gis_grid.Cols; ++x)
                     {
-                        Vector3D p3d = gis_grid.coord(x, y);
-                        if (world.Contains((float)p3d.x(), (float)p3d.y()))
+                        Vector3D p3d = gis_grid.GetCoordinate(x, y);
+                        if (world.Contains((float)p3d.X, (float)p3d.Y))
                         {
-                            Point pt = indexAt(new PointF((float)p3d.x(), (float)p3d.y()));
-                            this[(float)p3d.x(), (float)p3d.y()] = (float)gis_grid.value(x, y);
+                            Point pt = IndexAt(new PointF((float)p3d.X, (float)p3d.Y));
+                            this[(float)p3d.X, (float)p3d.Y] = (float)gis_grid.GetValue(x, y);
                             ixmin = Math.Min(ixmin, pt.X); ixmax = Math.Max(ixmax, pt.X);
                             iymin = Math.Min(iymin, pt.Y); iymax = Math.Max(iymax, pt.Y);
                         }
                     }
                 }
 
-                for (int y = iymin; y <= iymax - f; y += f)
+                for (int y = iymin; y <= iymax - sizeFactor; y += sizeFactor)
                 {
-                    for (int x = ixmin; x <= ixmax - f; x += f)
+                    for (int x = ixmin; x <= ixmax - sizeFactor; x += sizeFactor)
                     {
-                        float c00 = valueAtIndex(x, y);
-                        float c10 = valueAtIndex(x + f, y);
-                        float c01 = valueAtIndex(x, y + f);
-                        float c11 = valueAtIndex(x + f, y + f);
-                        for (int my = 0; my < f; ++my)
+                        float c00 = this[x, y];
+                        float c10 = this[x + sizeFactor, y];
+                        float c01 = this[x, y + sizeFactor];
+                        float c11 = this[x + sizeFactor, y + sizeFactor];
+                        for (int my = 0; my < sizeFactor; ++my)
                         {
-                            for (int mx = 0; mx < f; ++mx)
+                            for (int mx = 0; mx < sizeFactor; ++mx)
                             {
-                                this[x + mx, y + my] = bilinear(mx / (float)f, my / (float)f, c00, c10, c01, c11);
+                                this[x + mx, y + my] = Bilinear(mx / (float)sizeFactor, my / (float)sizeFactor, c00, c10, c01, c11);
                             }
                         }
                     }
@@ -167,18 +171,18 @@ namespace iLand.tools
         /// @param point metric coordinates of point to derive orientation
         /// @param rslope_angle RESULTING (passed by reference) slope angle as percentage (i.e: 1:=45 degrees)
         /// @param rslope_aspect RESULTING slope direction in degrees (0: North, 90: east, 180: south, 270: west)
-        public float orientation(PointF point, float rslope_angle, float rslope_aspect)
+        public float GetOrientation(PointF point, out float rslope_angle, out float rslope_aspect)
         {
-            Point pt = indexAt(point);
-            if (pt.X > 0 && pt.X < sizeX() + 1 && pt.Y > 0 && pt.Y < sizeY() - 1)
+            Point pt = IndexAt(point);
+            if (pt.X > 0 && pt.X < SizeX + 1 && pt.Y > 0 && pt.Y < SizeY - 1)
             {
-                int p = this.index(pt);
-                float z2 = this[p - sizeX()];
+                int p = this.IndexOf(pt);
+                float z2 = this[p - SizeX];
                 float z4 = this[p - 1];
                 float z6 = this[p + 1];
-                float z8 = this[p + sizeX()];
-                float g = (-z4 + z6) / (2 * cellsize());
-                float h = (z2 - z8) / (2 * cellsize());
+                float z8 = this[p + SizeX];
+                float g = (-z4 + z6) / (2 * CellSize);
+                float h = (z2 - z8) / (2 * CellSize);
 
                 if (z2 <= 0.0F || z4 <= 0.0F || z6 <= 0.0F || z8 <= 0)
                 {
@@ -194,7 +198,7 @@ namespace iLand.tools
                     // transform to degree:
                     // north: 0, east: 90, south: 180, west: 270
                     aspect = aspect * 180.0F / MathF.PI + 360.0F + 90.0F;
-                    aspect = aspect % 360.0F;
+                    aspect %= 360.0F;
                     rslope_aspect = aspect;
                 }
                 return this[p];
@@ -207,14 +211,14 @@ namespace iLand.tools
             }
         }
 
-        public void createSlopeGrid()
+        public void CreateSlopeGrid()
         {
-            if (slope_grid.isEmpty())
+            if (slope_grid.IsEmpty())
             {
                 // setup custom grids with the same size as this DEM
-                slope_grid.setup(this);
-                view_grid.setup(this);
-                aspect_grid.setup(this);
+                slope_grid.Setup(this);
+                view_grid.Setup(this);
+                aspect_grid.Setup(this);
             }
             else
             {
@@ -228,10 +232,12 @@ namespace iLand.tools
             float sun_z = MathF.Sin(45.0F * MathF.PI / 180.0F);
 
             float a_x, a_y, a_z;
-            for (int p = 0; p < this.count(); ++p)
+            for (int p = 0; p < this.Count; ++p)
             {
-                PointF pt = cellCenterPoint(p);
-                float height = orientation(pt, slope_grid[p], aspect_grid[p]);
+                PointF pt = GetCellCenterPoint(p);
+                float height = GetOrientation(pt, out float slope, out float aspect);
+                slope_grid[p] = slope;
+                aspect_grid[p] = aspect;
                 // calculate the view value:
                 if (height > 0)
                 {
@@ -252,7 +258,7 @@ namespace iLand.tools
         }
 
         // from here: http://www.scratchapixel.com/lessons/3d-advanced-lessons/interpolation/bilinear-interpolation/
-        private float bilinear(float tx, float ty, float c00, float c10, float c01, float c11)
+        private float Bilinear(float tx, float ty, float c00, float c10, float c01, float c11)
         {
             float a = c00 * (1.0F - tx) + c10 * tx;
             float b = c01 * (1.0F - tx) + c11 * tx;

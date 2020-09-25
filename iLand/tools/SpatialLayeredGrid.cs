@@ -7,72 +7,74 @@ namespace iLand.tools
 {
     internal class SpatialLayeredGrid
     {
-        private List<string> mGridNames; ///< the list of grid names
-        private List<Grid<float>> mGrids; ///< the grid
+        private readonly List<Grid<float>> mGrids; ///< the grid
 
-        public List<string> gridNames() { return mGridNames; }
+        public List<string> GridNames { get; private set; }
 
         public SpatialLayeredGrid() 
-        { 
-            setup(); 
-        }
-
-        public double value(float x, float y, int index)
         {
-            checkGrid(index); return mGrids[index].constValueAt(x, y);
+            this.GridNames = new List<string>();
+            this.mGrids = new List<Grid<float>>();
+
+            Setup(); 
         }
 
-        public double value(PointF world_coord, int index)
+        public double Value(float x, float y, int index)
         {
-            checkGrid(index); 
-            return mGrids[index].constValueAt(world_coord);
+            CheckGrid(index); return mGrids[index][x, y];
         }
 
-        public double value(int ix, int iy, int index) 
+        public double Value(PointF world_coord, int index)
+        {
+            CheckGrid(index); 
+            return mGrids[index][world_coord];
+        }
+
+        public double Value(int ix, int iy, int index) 
         { 
-            checkGrid(index); 
-            return mGrids[index].constValueAtIndex(ix, iy); 
+            CheckGrid(index); 
+            return mGrids[index][ix, iy];
         }
         
-        public double value(int grid_index, int index) 
+        public double Value(int grid_index, int index) 
         { 
-            checkGrid(index); 
-            return mGrids[index].constValueAtIndex(grid_index); 
+            CheckGrid(index); 
+            return mGrids[index][grid_index];
         }
         
-        public void range(out double rMin, out double rMax, int index)
+        public void Range(out double rMin, out double rMax, int index)
         {
             rMin = 9999999999.0; 
             rMax = -99999999999.0;
-            for (int i = 0; i < mGrids[index].count(); ++i)
+            for (int i = 0; i < mGrids[index].Count; ++i)
             {
-                rMin = Math.Min(rMin, value(i, index));
-                rMax = Math.Max(rMax, value(i, index));
+                rMin = Math.Min(rMin, Value(i, index));
+                rMax = Math.Max(rMax, Value(i, index));
             }
         }
 
         ///< helper function that checks if grids are to be created
-        private void checkGrid(int grid_index) 
+        private void CheckGrid(int grid_index) 
         {
             if (mGrids[grid_index] != null)
             {
-                this.createGrid(grid_index);
+                this.CreateGrid(grid_index);
             }
         }
 
-        public void setup()
+        public void Setup()
         {
-            addGrid("rumple", null);
+            AddGrid("rumple", null);
         }
 
-        public void createGrid(int grid_index)
+        public void CreateGrid(int grid_index)
         {
             // TODO: what should happen here?
         }
 
-        public int addGrid(string name, Grid<float> grid)
+        public int AddGrid(string name, Grid<float> grid)
         {
-            mGridNames.Add(name);
+            GridNames.Add(name);
             mGrids.Add(grid);
             return mGrids.Count;
         }

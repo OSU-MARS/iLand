@@ -22,49 +22,49 @@ namespace iLand.core
         private double mPsi_sat; ///< see psiFromHeight(), kPa
         private double mTheta_sat; ///< see psiFromHeight(), [-], m3/m3
         private ResourceUnit mRU; ///< resource unit to which this watercycle is connected
-        private Canopy mCanopy; ///< object representing the forest canopy (interception, evaporation)
-        private SnowPack mSnowPack; ///< object representing the snow cover (aggregation, melting)
+        private readonly Canopy mCanopy; ///< object representing the forest canopy (interception, evaporation)
+        private readonly SnowPack mSnowPack; ///< object representing the snow cover (aggregation, melting)
         private double mSoilDepth; ///< depth of the soil (without rocks) in mm
-        private double mContent; ///< current water content in mm water column of the soil.
-        private double mFieldCapacity; ///< bucket height of field-capacity (eq. -15kPa) (mm)
         private double mPermanentWiltingPoint; ///< bucket "height" of PWP (is fixed to -4MPa) (mm)
-        private double[] mPsi; ///< soil water potential for each day in kPa
+        private readonly double[] mPsi; ///< soil water potential for each day in kPa
         private double mLAINeedle;
         private double mLAIBroadleaved;
-        private double mCanopyConductance; ///< m/s
-        // annual sums
-        public double mTotalET; ///< annual sum of evapotranspiration (mm)
-        public double mTotalExcess; ///< annual sum of water loss due to lateral outflow/groundwater flow (mm)
-        public double mSnowRad; ///< sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
-        public double mSnowDays; ///< # of days with snowcover >0
+        
+        public double TotalEvapotranspiration { get; set; } ///< annual sum of evapotranspiration (mm)
+        public double TotalWaterLoss { get; set; } ///< annual sum of water loss due to lateral outflow/groundwater flow (mm)
+        public double SnowDayRad { get; set; } ///< sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
+        public double SnowDays { get; set; } ///< # of days with snowcover >0
 
-        public void setContent(double content, double snow_mm) { mContent = content; mSnowPack.setSnow(snow_mm); }
-        public double fieldCapacity() { return mFieldCapacity; } ///< field capacity (mm)
-        public double psi_kPa(int doy) { return mPsi[doy]; } ///< soil water potential for the day 'doy' (0-index) in kPa
-        public double soilDepth() { return mSoilDepth; } ///< soil depth in mm
-        public double currentContent() { return mContent; } ///< current water content in mm
-        public double currentSnowPack() { return mSnowPack.snowPack(); } ///< current water stored as snow (mm water)
-        public double canopyConductance() { return mCanopyConductance; } ///< current canopy conductance (LAI weighted CC of available tree species) (m/s)
-                                                                         /// monthly values for PET (mm sum)
-        public double[] referenceEvapotranspiration() { return mCanopy.referenceEvapotranspiration(); }
+        public double CanopyConductance { get; private set; } ///< current canopy conductance (LAI weighted CC of available tree species) (m/s)
+        public double CurrentContent { get; private set; } ///< current water content in mm water column of the soil
+        public double FieldCapacity { get; private set; } ///<  bucket height of field-capacity (eq. -15kPa) (mm)
+        public double SoilDepth { get; private set; } ///< soil depth in mm
 
         public WaterCycle()
         {
-            mPsi = new double[366];
-            mSoilDepth = 0;
-            mLastYear = -1;
+            this.mCanopy = new Canopy();
+            this.mLastYear = -1;
+            this.mPsi = new double[366];
+            this.mSnowPack = new SnowPack();
+            this.mSoilDepth = 0;
         }
 
-        public void setup(ResourceUnit ru)
+        public double CurrentSnowWaterEquivalent() { return mSnowPack.WaterEquivalent; } ///< current water stored as snow (mm water)
+        public double Psi(int day) { return mPsi[day]; } ///< soil water potential for the day 'doy' (0-index) in kPa
+        /// monthly values for PET (mm sum)
+        public double[] ReferenceEvapotranspiration() { return mCanopy.ReferenceEvapotranspiration; }
+        public void SetContent(double content, double snow_mm) { CurrentContent = content; mSnowPack.WaterEquivalent = snow_mm; }
+
+        public void Setup(ResourceUnit ru)
         {
             mRU = ru;
             // get values...
-            mFieldCapacity = 0.0; // on top
-            XmlHelper xml = GlobalSettings.instance().settings();
-            mSoilDepth = xml.valueDouble("model.site.soilDepth", 0.0) * 10; // convert from cm to mm
-            double pct_sand = xml.valueDouble("model.site.pctSand");
-            double pct_silt = xml.valueDouble("model.site.pctSilt");
-            double pct_clay = xml.valueDouble("model.site.pctClay");
+            FieldCapacity = 0.0; // on top
+            XmlHelper xml = GlobalSettings.Instance.Settings;
+            mSoilDepth = xml.ValueDouble("model.site.soilDepth", 0.0) * 10; // convert from cm to mm
+            double pct_sand = xml.ValueDouble("model.site.pctSand");
+            double pct_silt = xml.ValueDouble("model.site.pctSilt");
+            double pct_clay = xml.ValueDouble("model.site.pctClay");
             if (Math.Abs(100.0 - (pct_sand + pct_silt + pct_clay)) > 0.01)
             {
                 throw new NotSupportedException(String.Format("Setup Watercycle: soil composition percentages do not sum up to 100. Sand: {0}, Silt: {1} Clay: {2}", pct_sand, pct_silt, pct_clay));
@@ -75,45 +75,45 @@ namespace iLand.core
             mPsi_sat = -Math.Exp((1.54 - 0.0095 * pct_sand + 0.0063 * pct_silt) * Math.Log(10)) * 0.000098; // Eq. 83
             mPsi_koeff_b = -(3.1 + 0.157 * pct_clay - 0.003 * pct_sand);  // Eq. 84
             mTheta_sat = 0.01 * (50.5 - 0.142 * pct_sand - 0.037 * pct_clay); // Eq. 78
-            mCanopy.setup();
+            mCanopy.Setup();
 
-            mPermanentWiltingPoint = heightFromPsi(-4000); // maximum psi is set to a constant of -4MPa
-            if (xml.valueBool("model.settings.waterUseSoilSaturation", false) == false)
+            mPermanentWiltingPoint = HeightFromPsi(-4000); // maximum psi is set to a constant of -4MPa
+            if (xml.ValueBool("model.settings.waterUseSoilSaturation", false) == false)
             {
-                mFieldCapacity = heightFromPsi(-15);
+                FieldCapacity = HeightFromPsi(-15);
             }
             else
             {
                 // =-EXP((1.54-0.0095* pctSand +0.0063* pctSilt)*LN(10))*0.000098
                 double psi_sat = -Math.Exp((1.54 - 0.0095 * pct_sand + 0.0063 * pct_silt) * Math.Log(10.0)) * 0.000098;
-                mFieldCapacity = heightFromPsi(psi_sat);
-                if (GlobalSettings.instance().logLevelDebug())
+                FieldCapacity = HeightFromPsi(psi_sat);
+                if (GlobalSettings.Instance.LogDebug())
                 {
-                    Debug.WriteLine("psi: saturation " + psi_sat + " field capacity: " + mFieldCapacity);
+                    Debug.WriteLine("psi: saturation " + psi_sat + " field capacity: " + FieldCapacity);
                 }
             }
 
-            mContent = mFieldCapacity; // start with full water content (in the middle of winter)
-            if (GlobalSettings.instance().logLevelDebug())
+            CurrentContent = FieldCapacity; // start with full water content (in the middle of winter)
+            if (GlobalSettings.Instance.LogDebug())
             {
                 Debug.WriteLine("setup of water: Psi_sat (kPa) " + mPsi_sat + " Theta_sat " + mTheta_sat + " coeff. b " + mPsi_koeff_b);
             }
-            mCanopyConductance = 0.0;
+            CanopyConductance = 0.0;
             mLastYear = -1;
 
             // canopy settings
-            mCanopy.mNeedleFactor = xml.valueDouble("model.settings.interceptionStorageNeedle", 4.0);
-            mCanopy.mDecidousFactor = xml.valueDouble("model.settings.interceptionStorageBroadleaf", 2.0);
-            mSnowPack.mSnowTemperature = xml.valueDouble("model.settings.snowMeltTemperature", 0.0);
+            mCanopy.NeedleFactor = xml.ValueDouble("model.settings.interceptionStorageNeedle", 4.0);
+            mCanopy.DecidousFactor = xml.ValueDouble("model.settings.interceptionStorageBroadleaf", 2.0);
+            mSnowPack.Temperature = xml.ValueDouble("model.settings.snowMeltTemperature", 0.0);
 
-            mTotalET = mTotalExcess = mSnowRad = 0.0;
-            mSnowDays = 0;
+            TotalEvapotranspiration = TotalWaterLoss = SnowDayRad = 0.0;
+            SnowDays = 0;
         }
 
         /** function to calculate the water pressure [saugspannung] for a given amount of water.
             returns water potential in kPa.
           see http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance */
-        public double psiFromHeight(double mm)
+        public double PsiFromHeight(double mm)
         {
             // psi_x = psi_ref * ( rho_x / rho_ref) ^ b
             if (mm < 0.001)
@@ -127,7 +127,7 @@ namespace iLand.core
         /// calculate the height of the water column for a given pressure
         /// return water amount in mm
         /// see http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance
-        public double heightFromPsi(double psi_kpa)
+        public double HeightFromPsi(double psi_kpa)
         {
             // rho_x = rho_ref * (psi_x / psi_ref)^(1/b)
             double h = mSoilDepth * mTheta_sat * Math.Pow(psi_kpa / mPsi_sat, 1.0 / mPsi_koeff_b);
@@ -136,15 +136,15 @@ namespace iLand.core
 
         /// get canopy characteristics of the resource unit.
         /// It is important, that species-statistics are valid when this function is called (LAI)!
-        public void getStandValues()
+        public void GetStandValues()
         {
             mLAINeedle = mLAIBroadleaved = 0.0;
-            mCanopyConductance = 0.0;
+            CanopyConductance = 0.0;
             double ground_vegetationCC = 0.02;
-            foreach (ResourceUnitSpecies rus in mRU.ruSpecies()) 
+            foreach (ResourceUnitSpecies rus in mRU.Species) 
             {
-                double lai = rus.constStatistics().leafAreaIndex();
-                if (rus.species().isConiferous())
+                double lai = rus.Statistics.LeafAreaIndex;
+                if (rus.Species.IsConiferous)
                 {
                     mLAINeedle += lai;
                 }
@@ -152,7 +152,7 @@ namespace iLand.core
                 {
                     mLAIBroadleaved += lai;
                 }
-                mCanopyConductance += rus.species().canopyConductance() * lai; // weigh with LAI
+                CanopyConductance += rus.Species.MaxCanopyConductance * lai; // weigh with LAI
             }
             double total_lai = mLAIBroadleaved + mLAINeedle;
 
@@ -164,27 +164,27 @@ namespace iLand.core
             */
             if (total_lai < 1.0)
             {
-                mCanopyConductance += (ground_vegetationCC) * (1.0 - total_lai);
+                CanopyConductance += (ground_vegetationCC) * (1.0 - total_lai);
                 total_lai = 1.0;
             }
-            mCanopyConductance /= total_lai;
+            CanopyConductance /= total_lai;
 
-            if (total_lai < GlobalSettings.instance().model().settings().laiThresholdForClosedStands)
+            if (total_lai < GlobalSettings.Instance.Model.Settings.LaiThresholdForClosedStands)
             {
                 // following Landsberg and Waring: when LAI is < 3 (default for laiThresholdForClosedStands), a linear "ramp" from 0 to 3 is assumed
                 // http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance
-                mCanopyConductance *= total_lai / GlobalSettings.instance().model().settings().laiThresholdForClosedStands;
+                CanopyConductance *= total_lai / GlobalSettings.Instance.Model.Settings.LaiThresholdForClosedStands;
             }
-            if (GlobalSettings.instance().logLevelInfo())
+            if (GlobalSettings.Instance.LogInfo())
             {
-                Debug.WriteLine("WaterCycle:getStandValues: LAI needle " + mLAINeedle + " LAI Broadl: " + mLAIBroadleaved + " weighted avg. Conductance (m/2): " + mCanopyConductance);
+                Debug.WriteLine("WaterCycle:getStandValues: LAI needle " + mLAINeedle + " LAI Broadl: " + mLAIBroadleaved + " weighted avg. Conductance (m/2): " + CanopyConductance);
             }
         }
 
         /// calculate responses for ground vegetation, i.e. for "unstocked" areas.
         /// this duplicates calculations done in Species.
         /// @return Minimum of vpd and soilwater response for default
-        public double calculateBaseSoilAtmosphereResponse(double psi_kpa, double vpd_kpa)
+        public double CalculateBaseSoilAtmosphereResponse(double psi_kpa, double vpd_kpa)
         {
             // constant parameters used for ground vegetation:
             double mPsiMin = 1.5; // MPa
@@ -193,7 +193,7 @@ namespace iLand.core
             double water_resp;
             // see Species::soilwaterResponse:
             double psi_mpa = psi_kpa / 1000.0; // convert to MPa
-            water_resp = Global.limit(1.0 - psi_mpa / mPsiMin, 0.0, 1.0);
+            water_resp = Global.Limit(1.0 - psi_mpa / mPsiMin, 0.0, 1.0);
             // see species::vpdResponse
 
             double vpd_resp;
@@ -203,42 +203,42 @@ namespace iLand.core
 
         /// calculate combined VPD and soilwaterresponse for all species
         /// on the RU. This is used for the calc. of the transpiration.
-        public double calculateSoilAtmosphereResponse(double psi_kpa, double vpd_kpa)
+        public double CalculateSoilAtmosphereResponse(double psi_kpa, double vpd_kpa)
         {
             double total_response = 0; // LAI weighted minimum response for all speices on the RU
             double total_lai_factor = 0.0;
-            foreach (ResourceUnitSpecies rus in mRU.ruSpecies())
+            foreach (ResourceUnitSpecies rus in mRU.Species)
             {
-                if (rus.LAIfactor() > 0.0)
+                if (rus.LaiFactor > 0.0)
                 {
                     // retrieve the minimum of VPD / soil water response for that species
-                    rus.speciesResponse().soilAtmosphereResponses(psi_kpa, vpd_kpa, out double min_response);
-                    total_response += min_response * rus.LAIfactor();
-                    total_lai_factor += rus.LAIfactor();
+                    rus.Response.SoilAtmosphereResponses(psi_kpa, vpd_kpa, out double min_response);
+                    total_response += min_response * rus.LaiFactor;
+                    total_lai_factor += rus.LaiFactor;
                 }
             }
 
             if (total_lai_factor < 1.0)
             {
                 // the LAI is below 1: the rest is considered as "ground vegetation"
-                total_response += calculateBaseSoilAtmosphereResponse(psi_kpa, vpd_kpa) * (1.0 - total_lai_factor);
+                total_response += CalculateBaseSoilAtmosphereResponse(psi_kpa, vpd_kpa) * (1.0 - total_lai_factor);
             }
 
             // add an aging factor to the total response (averageAging: leaf area weighted mean aging value):
             // conceptually: response = min(vpd_response, water_response)*aging
             if (total_lai_factor == 1.0)
             {
-                total_response *= mRU.averageAging(); // no ground cover: use aging value for all LA
+                total_response *= mRU.AverageAging; // no ground cover: use aging value for all LA
             }
-            else if (total_lai_factor > 0.0 && mRU.averageAging() > 0.0)
+            else if (total_lai_factor > 0.0 && mRU.AverageAging > 0.0)
             {
-                total_response *= (1.0 - total_lai_factor) * 1.0 + (total_lai_factor * mRU.averageAging()); // between 0..1: a part of the LAI is "ground cover" (aging=1)
+                total_response *= (1.0 - total_lai_factor) * 1.0 + (total_lai_factor * mRU.AverageAging); // between 0..1: a part of the LAI is "ground cover" (aging=1)
             }
 
 #if DEBUG
-            if (mRU.averageAging() > 1.0 || mRU.averageAging() < 0.0 || total_response < 0 || total_response > 1.0)
+            if (mRU.AverageAging > 1.0 || mRU.AverageAging < 0.0 || total_response < 0 || total_response > 1.0)
             {
-                Debug.WriteLine("water cycle: average aging invalid. aging: " + mRU.averageAging() + " total response " + total_response + " total lai factor: " + total_lai_factor);
+                Debug.WriteLine("water cycle: average aging invalid. aging: " + mRU.AverageAging + " total response " + total_response + " total lai factor: " + total_lai_factor);
             }
 #endif
             //DBG_IF(mRU.averageAging()>1. || mRU.averageAging()<0.,"water cycle", "average aging invalid!" );
@@ -248,10 +248,10 @@ namespace iLand.core
         /// Main Water Cycle function. This function triggers all water related tasks for
         /// one simulation year.
         /// @sa http://iland.boku.ac.at/water+cycle
-        public void run()
+        public void Run()
         {
             // necessary?
-            if (GlobalSettings.instance().currentYear() == mLastYear)
+            if (GlobalSettings.Instance.CurrentYear == mLastYear)
             {
                 return;
             }
@@ -259,90 +259,90 @@ namespace iLand.core
             WaterCycleData add_data = new WaterCycleData();
 
             // preparations (once a year)
-            getStandValues(); // fetch canopy characteristics from iLand (including weighted average for mCanopyConductance)
-            mCanopy.setStandParameters(mLAINeedle, mLAIBroadleaved, mCanopyConductance);
+            GetStandValues(); // fetch canopy characteristics from iLand (including weighted average for mCanopyConductance)
+            mCanopy.SetStandParameters(mLAINeedle, mLAIBroadleaved, CanopyConductance);
 
             // main loop over all days of the year
             double prec_mm, prec_after_interception, prec_to_soil, et, excess;
-            Climate climate = mRU.climate();
+            Climate climate = mRU.Climate;
             
             int doy = 0;
-            mTotalExcess = 0.0;
-            mTotalET = 0.0;
-            mSnowRad = 0.0;
-            mSnowDays = 0;
-            for (int index = climate.begin(); index < climate.end(); ++index, ++doy)
+            TotalWaterLoss = 0.0;
+            TotalEvapotranspiration = 0.0;
+            SnowDayRad = 0.0;
+            SnowDays = 0;
+            for (int index = climate.Begin; index < climate.End; ++index, ++doy)
             {
                 ClimateDay day = climate[index];
                 // (1) precipitation of the day
-                prec_mm = day.preciptitation;
+                prec_mm = day.Preciptitation;
                 // (2) interception by the crown
-                prec_after_interception = mCanopy.flow(prec_mm);
+                prec_after_interception = mCanopy.Flow(prec_mm);
                 // (3) storage in the snow pack
-                prec_to_soil = mSnowPack.flow(prec_after_interception, day.temperature);
+                prec_to_soil = mSnowPack.Flow(prec_after_interception, day.MeanDaytimeTemperature);
                 // save extra data (used by e.g. fire module)
-                add_data.water_to_ground[doy] = prec_to_soil;
-                add_data.snow_cover[doy] = mSnowPack.snowPack();
-                if (mSnowPack.snowPack() > 0.0)
+                add_data.WaterReachingGround[doy] = prec_to_soil;
+                add_data.SnowCover[doy] = mSnowPack.WaterEquivalent;
+                if (mSnowPack.WaterEquivalent > 0.0)
                 {
-                    mSnowRad += day.radiation;
-                    mSnowDays++;
+                    SnowDayRad += day.Radiation;
+                    SnowDays++;
                 }
 
                 // (4) add rest to soil
-                mContent += prec_to_soil;
+                CurrentContent += prec_to_soil;
 
                 excess = 0.0;
-                if (mContent > mFieldCapacity)
+                if (CurrentContent > FieldCapacity)
                 {
                     // excess water runoff
-                    excess = mContent - mFieldCapacity;
-                    mTotalExcess += excess;
-                    mContent = mFieldCapacity;
+                    excess = CurrentContent - FieldCapacity;
+                    TotalWaterLoss += excess;
+                    CurrentContent = FieldCapacity;
                 }
 
-                double current_psi = psiFromHeight(mContent);
+                double current_psi = PsiFromHeight(CurrentContent);
                 mPsi[doy] = current_psi;
 
                 // (5) transpiration of the vegetation (and of water intercepted in canopy)
                 // calculate the LAI-weighted response values for soil water and vpd:
-                double interception_before_transpiration = mCanopy.interception();
-                double combined_response = calculateSoilAtmosphereResponse(current_psi, day.vpd);
-                et = mCanopy.evapotranspiration3PG(day, climate.daylength_h(doy), combined_response);
+                double interception_before_transpiration = mCanopy.Interception;
+                double combined_response = CalculateSoilAtmosphereResponse(current_psi, day.Vpd);
+                et = mCanopy.Evapotranspiration3PG(day, climate.DayLengthInHours(doy), combined_response);
                 // if there is some flow from intercepted water to the ground -> add to "water_to_the_ground"
-                if (mCanopy.interception() < interception_before_transpiration)
+                if (mCanopy.Interception < interception_before_transpiration)
                 {
-                    add_data.water_to_ground[doy] += interception_before_transpiration - mCanopy.interception();
+                    add_data.WaterReachingGround[doy] += interception_before_transpiration - mCanopy.Interception;
                 }
 
-                mContent -= et; // reduce content (transpiration)
+                CurrentContent -= et; // reduce content (transpiration)
                                 // add intercepted water (that is *not* evaporated) again to the soil (or add to snow if temp too low -> call to snowpack)
-                mContent += mSnowPack.add(mCanopy.interception(), day.temperature);
+                CurrentContent += mSnowPack.Add(mCanopy.Interception, day.MeanDaytimeTemperature);
 
                 // do not remove water below the PWP (fixed value)
-                if (mContent < mPermanentWiltingPoint)
+                if (CurrentContent < mPermanentWiltingPoint)
                 {
-                    et -= mPermanentWiltingPoint - mContent; // reduce et (for bookkeeping)
-                    mContent = mPermanentWiltingPoint;
+                    et -= mPermanentWiltingPoint - CurrentContent; // reduce et (for bookkeeping)
+                    CurrentContent = mPermanentWiltingPoint;
                 }
 
-                mTotalET += et;
+                TotalEvapotranspiration += et;
 
                 //DBGMODE(
-                if (GlobalSettings.instance().isDebugEnabled(DebugOutputs.dWaterCycle))
+                if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.WaterCycle))
                 {
-                    List<object> output = GlobalSettings.instance().debugList(day.id(), DebugOutputs.dWaterCycle);
+                    List<object> output = GlobalSettings.Instance.DebugList(day.ID(), DebugOutputs.WaterCycle);
                     // climatic variables
-                    output.AddRange(new object[] { day.id(), mRU.index(), mRU.id(), day.temperature, day.vpd, day.preciptitation, day.radiation });
+                    output.AddRange(new object[] { day.ID(), mRU.Index, mRU.ID, day.MeanDaytimeTemperature, day.Vpd, day.Preciptitation, day.Radiation });
                     output.Add(combined_response); // combined response of all species on RU (min(water, vpd))
                                                    // fluxes
-                    output.AddRange(new object[] { prec_after_interception, prec_to_soil, et, mCanopy.evaporationCanopy(), mContent, mPsi[doy], excess });
+                    output.AddRange(new object[] { prec_after_interception, prec_to_soil, et, mCanopy.EvaporationCanopy, CurrentContent, mPsi[doy], excess });
                     // other states
-                    output.Add(mSnowPack.snowPack());
+                    output.Add(mSnowPack.WaterEquivalent);
                     //special sanity check:
-                    if (prec_to_soil > 0.0 && mCanopy.interception() > 0.0)
+                    if (prec_to_soil > 0.0 && mCanopy.Interception > 0.0)
                     {
-                        if (mSnowPack.snowPack() == 0.0 && day.preciptitation == 0)
+                        if (mSnowPack.WaterEquivalent == 0.0 && day.Preciptitation == 0)
                         {
                             Debug.WriteLine("watercontent increase without precipititation");
                         }
@@ -351,8 +351,8 @@ namespace iLand.core
                 //); // DBGMODE()
             }
             // call external modules
-            GlobalSettings.instance().model().modules().calculateWater(mRU, add_data);
-            mLastYear = GlobalSettings.instance().currentYear();
+            GlobalSettings.Instance.Model.Modules.CalculateWater(mRU, add_data);
+            mLastYear = GlobalSettings.Instance.CurrentYear;
         }
     }
 }

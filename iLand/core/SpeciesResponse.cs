@@ -21,61 +21,47 @@ namespace iLand.core
         */
     internal class SpeciesResponse
     {
-        private ResourceUnit mRu;
-        private Species mSpecies;
+        public Species Species { get; private set; }
+        public ResourceUnit ResourceUnit { get; private set; }
 
-        private double[] mRadiation; ///<  radiation sums per month (MJ/m2)
-        private double[] mUtilizableRadiation; ///< sum of daily radiation*minResponse (MJ/m2)
-        private double[] mTempResponse; ///< average of temperature response
-        private double[] mSoilWaterResponse; ///< average of soilwater response
-        private double[] mVpdResponse; ///< mean of vpd-response
-        private double mNitrogenResponse;
-        private double[] mCO2Response;
-        private double mTotalRadiation;  ///< total radiation of the year (MJ/m2)
-        private double mTotalUtilizeableRadiation; ///< yearly sum of utilized radiation (MJ/m2)
-
-        // access components
-        public Species species() { return mSpecies; }
-        public ResourceUnit resourceUnit() { return mRu; }
-        // access responses
-        public double[] tempResponse() { return mTempResponse; }
-        public double[] soilWaterResponse() { return mSoilWaterResponse; }
-        public double[] globalRadiation() { return mRadiation; } ///< radiation sum in MJ/m2
-        public double[] utilizableRadiation() { return mUtilizableRadiation; } ///< utilizable radiation (rad*responses)
-        public double[] vpdResponse() { return mVpdResponse; }
-        public double[] co2Response() { return mCO2Response; }
-        public double nitrogenResponse() { return mNitrogenResponse; }
-        public double yearlyRadiation() { return mTotalRadiation; }
-        public double totalUtilizeableRadiation() { return mTotalUtilizeableRadiation; }
+        public double[] TempResponse { get; private set; } ///< average of temperature response
+        public double[] SoilWaterResponse { get; private set; } ///< average of soilwater response
+        public double[] GlobalRadiation { get; private set; } ///< radiation sum in MJ/m2
+        public double[] UtilizableRadiation { get; private set; } ///< sum of daily radiation*minResponse (MJ/m2)
+        public double[] VpdResponse { get; private set; } ///< mean of vpd-response
+        public double[] Co2Response { get; private set; }
+        public double NitrogenResponse { get; private set; }
+        public double YearlyRadiation { get; private set; } ///< total radiation of the year (MJ/m2)
+        public double YearlyUtilizableRadiation { get; private set; } ///< yearly sum of utilized radiation (MJ/m2)
 
         public SpeciesResponse()
         {
-            mTempResponse = new double[12];
-            mSoilWaterResponse = new double[12];
-            mRadiation = new double[12];
-            mUtilizableRadiation = new double[12];
-            mVpdResponse = new double[12];
-            mCO2Response = new double[12];
-            mSpecies = null;
-            mRu = null;
+            TempResponse = new double[12];
+            SoilWaterResponse = new double[12];
+            GlobalRadiation = new double[12];
+            UtilizableRadiation = new double[12];
+            VpdResponse = new double[12];
+            Co2Response = new double[12];
+            Species = null;
+            ResourceUnit = null;
         }
 
-        public void clear()
+        public void Clear()
         {
             for (int i = 0; i < 12; i++)
             {
-                mCO2Response[i] = mSoilWaterResponse[i] = mTempResponse[i] = mRadiation[i] = mUtilizableRadiation[i] = mVpdResponse[i] = 0.0;
+                Co2Response[i] = SoilWaterResponse[i] = TempResponse[i] = GlobalRadiation[i] = UtilizableRadiation[i] = VpdResponse[i] = 0.0;
             }
-            mNitrogenResponse = 0.0;
-            mTotalRadiation = 0.0;
-            mTotalUtilizeableRadiation = 0.0;
+            NitrogenResponse = 0.0;
+            YearlyRadiation = 0.0;
+            YearlyUtilizableRadiation = 0.0;
         }
 
-        public void setup(ResourceUnitSpecies rus)
+        public void Setup(ResourceUnitSpecies rus)
         {
-            mSpecies = rus.species();
-            mRu = rus.ru();
-            clear();
+            Species = rus.Species;
+            ResourceUnit = rus.RU;
+            Clear();
         }
 
         /// response calculation called during water cycle
@@ -84,47 +70,47 @@ namespace iLand.core
         /// @param psi_kPa psi of the soil in kPa
         /// @param vpd vapor pressure deficit in kPa
         /// @return minimum of soil water and vpd response
-        public void soilAtmosphereResponses(double psi_kPa, double vpd, out double rMinResponse)
+        public void SoilAtmosphereResponses(double psi_kPa, double vpd, out double rMinResponse)
         {
-            double water_resp = mSpecies.soilwaterResponse(psi_kPa);
-            double vpd_resp = mSpecies.vpdResponse(vpd);
+            double water_resp = Species.SoilwaterResponse(psi_kPa);
+            double vpd_resp = Species.VpdResponse(vpd);
             rMinResponse = Math.Min(water_resp, vpd_resp);
         }
 
         /// Main function that calculates monthly / annual species responses
-        public void calculate()
+        public void Calculate()
         {
             using DebugTimer tpg = new DebugTimer("calculate");
-            clear(); // reset values
+            Clear(); // reset values
 
             // calculate yearly responses
-            WaterCycle water = mRu.waterCycle();
-            Phenology pheno = mRu.climate().phenology(mSpecies.phenologyClass());
-            int veg_begin = pheno.vegetationPeriodStart();
-            int veg_end = pheno.vegetationPeriodEnd();
+            WaterCycle water = ResourceUnit.WaterCycle;
+            Phenology pheno = ResourceUnit.Climate.Phenology(Species.PhenologyClass);
+            int veg_begin = pheno.LeafOnStart;
+            int veg_end = pheno.LeafOnEnd;
 
             // yearly response
-            double nitrogen = mRu.resouceUnitVariables().nitrogenAvailable;
+            double nitrogen = ResourceUnit.Variables.NitrogenAvailable;
             // Nitrogen response: a yearly value based on available nitrogen
-            mNitrogenResponse = mSpecies.nitrogenResponse(nitrogen);
-            double ambient_co2 = ClimateDay.co2; // CO2 level of first day of year (co2 is static)
+            NitrogenResponse = Species.GetNitrogenResponse(nitrogen);
+            double ambient_co2 = ClimateDay.CarbonDioxidePpm; // CO2 level of first day of year (co2 is static)
 
             double water_resp, vpd_resp, temp_resp, min_resp;
             double utilizeable_radiation;
             int doy = 0;
             int month;
-            for (int index = mRu.climate().begin(); index != mRu.climate().end(); ++index)
+            for (int index = ResourceUnit.Climate.Begin; index != ResourceUnit.Climate.End; ++index)
             {
-                ClimateDay day = mRu.climate()[index];
-                month = day.month - 1;
+                ClimateDay day = ResourceUnit.Climate[index];
+                month = day.Month - 1;
                 // environmental responses
-                water_resp = mSpecies.soilwaterResponse(water.psi_kPa(doy));
-                vpd_resp = mSpecies.vpdResponse(day.vpd);
-                temp_resp = mSpecies.temperatureResponse(day.temp_delayed);
-                mSoilWaterResponse[month] += water_resp;
-                mTempResponse[month] += temp_resp;
-                mVpdResponse[month] += vpd_resp;
-                mRadiation[month] += day.radiation;
+                water_resp = Species.SoilwaterResponse(water.Psi(doy));
+                vpd_resp = Species.VpdResponse(day.Vpd);
+                temp_resp = Species.TemperatureResponse(day.TempDelayed);
+                SoilWaterResponse[month] += water_resp;
+                TempResponse[month] += temp_resp;
+                VpdResponse[month] += vpd_resp;
+                GlobalRadiation[month] += day.Radiation;
 
                 if (doy >= veg_begin && doy <= veg_end)
                 {
@@ -132,38 +118,38 @@ namespace iLand.core
                     // combine responses
                     min_resp = Math.Min(Math.Min(vpd_resp, temp_resp), water_resp);
                     // calculate utilizable radiation, Eq. 4, http://iland.boku.ac.at/primary+production
-                    utilizeable_radiation = day.radiation * min_resp;
+                    utilizeable_radiation = day.Radiation * min_resp;
                 }
                 else
                 {
                     utilizeable_radiation = 0.0; // no utilizable radiation outside of vegetation period
                     min_resp = 0.0;
                 }
-                mUtilizableRadiation[month] += utilizeable_radiation;
+                UtilizableRadiation[month] += utilizeable_radiation;
                 doy++;
                 //DBGMODE(
-                if (GlobalSettings.instance().isDebugEnabled(DebugOutputs.dDailyResponses))
+                if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.DailyResponses))
                 {
-                    List<object> output = GlobalSettings.instance().debugList(day.id(), DebugOutputs.dDailyResponses);
+                    List<object> output = GlobalSettings.Instance.DebugList(day.ID(), DebugOutputs.DailyResponses);
                     // climatic variables
-                    output.AddRange(new object[] { mSpecies.id(), day.id(), mRu.index(), mRu.id() }); // date, day.temperature, day.vpd, day.preciptitation, day.radiation;
-                    output.AddRange(new object[] { water_resp, temp_resp, vpd_resp, day.radiation, utilizeable_radiation });
+                    output.AddRange(new object[] { Species.ID, day.ID(), ResourceUnit.Index, ResourceUnit.ID }); // date, day.temperature, day.vpd, day.preciptitation, day.radiation;
+                    output.AddRange(new object[] { water_resp, temp_resp, vpd_resp, day.Radiation, utilizeable_radiation });
                 }
                 //); // DBGMODE()
 
             }
-            mTotalRadiation = mRu.climate().totalRadiation();
+            YearlyRadiation = ResourceUnit.Climate.TotalRadiation;
             // monthly values
             for (int i = 0; i < 12; i++)
             {
-                double days = mRu.climate().days(i);
-                mTotalUtilizeableRadiation += mUtilizableRadiation[i];
-                mSoilWaterResponse[i] /= days;
-                mTempResponse[i] /= days;
-                mVpdResponse[i] /= days;
-                mCO2Response[i] = mSpecies.speciesSet().co2Response(ambient_co2,
-                                                                   mNitrogenResponse,
-                                                                   mSoilWaterResponse[i]);
+                double days = ResourceUnit.Climate.Days(i);
+                YearlyUtilizableRadiation += UtilizableRadiation[i];
+                SoilWaterResponse[i] /= days;
+                TempResponse[i] /= days;
+                VpdResponse[i] /= days;
+                Co2Response[i] = Species.SpeciesSet.CarbonDioxideResponse(ambient_co2,
+                                                                   NitrogenResponse,
+                                                                   SoilWaterResponse[i]);
             }
 
         }

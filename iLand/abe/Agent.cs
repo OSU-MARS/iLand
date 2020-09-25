@@ -10,63 +10,61 @@ namespace iLand.abe
         private static int mAgentsCreated = 0;
 
         // link to the base agent type
-        private AgentType mType;
+        private readonly AgentType mType;
         // the javascript object representing the agent:
-        private QJSValue mJSAgent;
-        SchedulerOptions mSchedulerOptions; ///< agent specific scheduler options
-        private List<FMUnit> mUnits; ///< list of units managed by the agent
+        private readonly QJSValue mJSAgent;
+        private readonly SchedulerOptions mSchedulerOptions; ///< agent specific scheduler options
+        private readonly List<FMUnit> mUnits; ///< list of units managed by the agent
 
         // agent properties
         private string mName;
-        private double mKnowledge;
-        private double mEconomy;
-        private double mExperimentation;
-        private double mAltruism;
-        private double mRisk;
 
         public QJSValue jsAgent() { return mJSAgent; }
         public AgentType type() { return mType; }
         public string name() { return mName; }
         public SchedulerOptions schedulerOptions() { return mSchedulerOptions; }
 
-        /// add a unit to the list of managed units
-        public void addUnit(FMUnit unit) { mUnits.Add(unit); }
-
         public Agent(AgentType type, QJSValue js)
         {
-            mType = type;
-            mJSAgent = js;
-            mAgentsCreated++;
-            mName = String.Format("agent_{0}", mAgentsCreated);
+            this.mJSAgent = js;
+            this.mName = String.Format("agent_{0}", mAgentsCreated);
+            this.mSchedulerOptions = new SchedulerOptions();
+            this.mType = type;
+            this.mUnits = new List<FMUnit>();
+
+            Agent.mAgentsCreated++; // BUGBUG: not thread safe?
         }
 
-        public void setName(string name)
+        /// add a unit to the list of managed units
+        public void AddUnit(FMUnit unit) { mUnits.Add(unit); }
+
+        public void SetName(string name)
         {
             mName = name;
-            mJSAgent.setProperty("name", name);
+            mJSAgent.SetProperty("name", name);
         }
 
-        public double useSustainableHarvest()
+        public double UseSustainableHarvest()
         {
             return schedulerOptions().useSustainableHarvest;
         }
 
-        public void setup()
+        public void Setup()
         {
-            QJSValue scheduler = jsAgent().property("scheduler");
-            mSchedulerOptions.setup(scheduler);
+            QJSValue scheduler = jsAgent().Property("scheduler");
+            mSchedulerOptions.Setup(scheduler);
 
-            FMSTP stp = type().stpByName("default");
+            FMSTP stp = type().StpByName("default");
             if (stp != null)
             {
                 throw new NotSupportedException("setup(): default-STP not defined");
             }
-            QJSValue onSelect_handler = type().jsObject().property("onSelect");
+            QJSValue onSelect_handler = type().jsObject().Property("onSelect");
 
             MultiValueDictionary<FMUnit, FMStand> stand_map = ForestManagementEngine.instance().stands();
             foreach (FMUnit unit in mUnits)
             {
-                unit.setU(stp.rotationLengthOfType(2)); // medium
+                unit.setU(stp.GetRotationLength(2)); // medium
                 foreach (KeyValuePair<FMUnit, IReadOnlyCollection<FMStand>> it in stand_map)
                 {
                     if (it.Key != unit)
@@ -79,18 +77,18 @@ namespace iLand.abe
                         // check if STP is already assigned. If not, do it now.
                         if (stand.stp() == null)
                         {
-                            stand.reload(); // fetch data from iLand ...
-                            if (onSelect_handler.isCallable())
+                            stand.Reload(); // fetch data from iLand ...
+                            if (onSelect_handler.IsCallable())
                             {
-                                FomeScript.setExecutionContext(stand);
+                                FomeScript.SetExecutionContext(stand);
                                 //QJSValue mix = onSelect_handler.call();
-                                QJSValue mix = onSelect_handler.callWithInstance(type().jsObject());
-                                string mixture_type = mix.toString();
-                                if (type().stpByName(mixture_type) == null)
+                                QJSValue mix = onSelect_handler.CallWithInstance(type().jsObject());
+                                string mixture_type = mix.ToString();
+                                if (type().StpByName(mixture_type) == null)
                                 {
                                     throw new NotSupportedException(String.Format("setup(): the selected mixture type '{0}' for stand '{1}' is not valid for agent '{2}'.", mixture_type, stand.id(), mName));
                                 }
-                                stand.setSTP(type().stpByName(mixture_type));
+                                stand.setSTP(type().StpByName(mixture_type));
                             }
                             else
                             {
@@ -100,7 +98,7 @@ namespace iLand.abe
                             stand.setU(unit.U());
                             stand.setThinningIntensity(unit.thinningIntensity());
                             stand.setTargetSpeciesIndex(unit.targetSpeciesIndex());
-                            stand.initialize(); // run initialization
+                            stand.Initialize(); // run initialization
                         }
                     }
                 }

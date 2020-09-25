@@ -7,84 +7,87 @@ namespace iLand.output
 {
     internal class TreeOut : Output
     {
-        private Expression mFilter;
+        private readonly Expression mFilter;
 
         public TreeOut()
         {
-            setName("Tree Output", "tree");
-            setDescription("Output of indivdual trees. Use the ''filter'' property to reduce amount of data (filter by resource-unit, year, species, ...)." + System.Environment.NewLine +
-                       "The output is triggered after the growth of the current season. " +
-                       "Initial values (without any growth) are output as 'startyear-1'.");
-            columns().Add(OutputColumn.year());
-            columns().Add(OutputColumn.ru());
-            columns().Add(OutputColumn.id());
-            columns().Add(OutputColumn.species());
-            columns().Add(new OutputColumn("id", "id of the tree", OutputDatatype.OutInteger));
-            columns().Add(new OutputColumn("x", "position of the tree, x-direction (m)", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("y", "position of the tree, y-direction (m)", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("dbh", "dbh (cm) of the tree", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("height", "height (m) of the tree", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("basalArea", "basal area of tree in m2", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("volume_m3", "volume of tree (m3)", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("leafArea_m2", "current leaf area of the tree (m2)", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("foliageMass", "current mass of foliage (kg)", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("woodyMass", "kg Biomass in woody department", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("fineRootMass", "kg Biomass in fine-root department", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("coarseRootMass", "kg Biomass in coarse-root department", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("lri", "LightResourceIndex of the tree (raw light index from iLand, without applying resource-unit modifications)", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("lightResponse", "light response value (including species specific response to the light level)", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("stressIndex", "scalar (0..1) indicating the stress level (see [Mortality]).", OutputDatatype.OutDouble));
-            columns().Add(new OutputColumn("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", OutputDatatype.OutDouble));
+            this.mFilter = new Expression();
+
+            Name = "Tree Output";
+            TableName = "tree";
+            Description = "Output of indivdual trees. Use the ''filter'' property to reduce amount of data (filter by resource-unit, year, species, ...)." + System.Environment.NewLine +
+                          "The output is triggered after the growth of the current season. " +
+                          "Initial values (without any growth) are output as 'startyear-1'.";
+            Columns.Add(OutputColumn.CreateYear());
+            Columns.Add(OutputColumn.CreateResourceUnit());
+            Columns.Add(OutputColumn.CreateID());
+            Columns.Add(OutputColumn.CreateSpecies());
+            Columns.Add(new OutputColumn("id", "id of the tree", OutputDatatype.OutInteger));
+            Columns.Add(new OutputColumn("x", "position of the tree, x-direction (m)", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("y", "position of the tree, y-direction (m)", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("dbh", "dbh (cm) of the tree", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("height", "height (m) of the tree", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("basalArea", "basal area of tree in m2", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("volume_m3", "volume of tree (m3)", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("leafArea_m2", "current leaf area of the tree (m2)", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("foliageMass", "current mass of foliage (kg)", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("woodyMass", "kg Biomass in woody department", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("fineRootMass", "kg Biomass in fine-root department", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("coarseRootMass", "kg Biomass in coarse-root department", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("lri", "LightResourceIndex of the tree (raw light index from iLand, without applying resource-unit modifications)", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("lightResponse", "light response value (including species specific response to the light level)", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("stressIndex", "scalar (0..1) indicating the stress level (see [Mortality]).", OutputDatatype.OutDouble));
+            Columns.Add(new OutputColumn("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", OutputDatatype.OutDouble));
         }
 
-        public void setup()
+        public override void Setup()
         {
             Debug.WriteLine("treeout::setup() called");
-            if (!settings().isValid())
+            if (!Settings().IsValid())
             {
                 throw new NotSupportedException("setup(): no parameter section in init file!");
             }
-            string filter = settings().value(".filter", "");
-            mFilter.setExpression(filter);
+            string filter = Settings().Value(".filter", "");
+            mFilter.SetExpression(filter);
         }
 
-        public override void exec()
+        public override void Exec()
         {
-            AllTreeIterator at = new AllTreeIterator(GlobalSettings.instance().model());
+            AllTreeIterator at = new AllTreeIterator(GlobalSettings.Instance.Model);
             using DebugTimer dt = new DebugTimer("exec()");
             TreeWrapper tw = new TreeWrapper();
-            mFilter.setModelObject(tw);
-            for (Tree t = at.next(); t != null; t = at.next())
+            mFilter.Wrapper = tw;
+            for (Tree t = at.MoveNext(); t != null; t = at.MoveNext())
             {
-                if (!mFilter.isEmpty())
+                if (!mFilter.IsEmpty)
                 { // skip fields
-                    tw.setTree(t);
-                    if (mFilter.execute() == 0.0)
+                    tw.Tree = t;
+                    if (mFilter.Execute() == 0.0)
                     {
                         continue;
                     }
                 }
-                this.add(currentYear());
-                this.add(t.ru().index());
-                this.add(t.ru().id());
-                this.add(t.species().id());
-                this.add(t.id());
-                this.add(t.position().X);
-                this.add(t.position().Y);
-                this.add(t.dbh());
-                this.add(t.height());
-                this.add(t.basalArea());
-                this.add(t.volume());
-                this.add(t.leafArea());
-                this.add(t.mFoliageMass);
-                this.add(t.mWoodyMass);
-                this.add(t.mFineRootMass);
-                this.add(t.mCoarseRootMass);
-                this.add(t.lightResourceIndex());
-                this.add(t.mLightResponse);
-                this.add(t.mStressIndex);
-                this.add(t.mNPPReserve);
-                writeRow();
+                this.Add(CurrentYear());
+                this.Add(t.RU.Index);
+                this.Add(t.RU.ID);
+                this.Add(t.Species.ID);
+                this.Add(t.ID);
+                this.Add(t.GetCellCenterPoint().X);
+                this.Add(t.GetCellCenterPoint().Y);
+                this.Add(t.Dbh);
+                this.Add(t.Height);
+                this.Add(t.BasalArea());
+                this.Add(t.Volume());
+                this.Add(t.LeafArea);
+                this.Add(t.FoliageMass);
+                this.Add(t.StemMass);
+                this.Add(t.FineRootMass);
+                this.Add(t.CoarseRootMass);
+                this.Add(t.LightResourceIndex);
+                this.Add(t.mLightResponse);
+                this.Add(t.StressIndex);
+                this.Add(t.mNPPReserve);
+                WriteRow();
             }
         }
     }

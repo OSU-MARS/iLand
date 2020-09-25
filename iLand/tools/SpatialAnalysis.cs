@@ -14,44 +14,47 @@ namespace iLand.tools
     internal class SpatialAnalysis
     {
         private RumpleIndex mRumple;
-        private SpatialLayeredGrid mLayers;
-        private Grid<float> mCrownCoverGrid;
-        private Grid<int> mClumpGrid;
-        private List<int> mLastPatches;
+        // unused in C++
+        // private SpatialLayeredGrid mLayers;
+        private readonly Grid<float> mCrownCoverGrid;
+        private readonly Grid<int> mClumpGrid;
 
-        public SpatialAnalysis(object parent = null)
+        public List<int> PatchSizes { get; private set; }
+
+        public SpatialAnalysis()
         {
             // BUGBUG: parent not ported to C# - does this matteR?
             // QObject(parent)
-            mRumple = null;
+            this.mClumpGrid = new Grid<int>();
+            this.mCrownCoverGrid = new Grid<float>();
+            this.mRumple = null;
         }
 
-        public List<int> patchsizes() { return mLastPatches; }
 
-        public static void addToScriptEngine()
+        public static void AddToScriptEngine()
         {
             SpatialAnalysis spati = new SpatialAnalysis();
-            QJSValue v = GlobalSettings.instance().scriptEngine().newQObject(spati);
-            GlobalSettings.instance().scriptEngine().globalObject().setProperty("SpatialAnalysis", v);
+            QJSValue v = GlobalSettings.Instance.ScriptEngine.NewQObject(spati);
+            GlobalSettings.Instance.ScriptEngine.GlobalObject().SetProperty("SpatialAnalysis", v);
         }
 
-        public double rumpleIndexFullArea()
+        public double RumpleIndexFullArea()
         {
             if (mRumple == null)
             {
                 mRumple = new RumpleIndex();
             }
-            double rum = mRumple.value();
+            double rum = mRumple.Value();
             return rum;
         }
 
         /// extract patches (clumps) from the grid 'src'.
         /// Patches are defined as adjacent pixels (8-neighborhood)
         /// Return: vector with number of pixels per patch (first element: patch 1, second element: patch 2, ...)
-        public List<int> extractPatches(Grid<double> src, int min_size, string fileName)
+        public List<int> ExtractPatches(Grid<double> src, int min_size, string fileName)
         {
-            mClumpGrid.setup(src.metricRect(), src.cellsize());
-            mClumpGrid.wipe();
+            mClumpGrid.Setup(src.PhysicalSize, src.CellSize);
+            mClumpGrid.ClearDefault();
 
             // now loop over all pixels and run a floodfill algorithm
             Point start;
@@ -60,11 +63,11 @@ namespace iLand.tools
             int patch_index = 0;
             int total_size = 0;
             int patches_skipped = 0;
-            for (int i = 0; i < src.count(); ++i)
+            for (int i = 0; i < src.Count; ++i)
             {
                 if (src[i] > 0.0 && mClumpGrid[i] == 0)
                 {
-                    start = src.indexOf(i);
+                    start = src.IndexOf(i);
                     pqueue.Clear();
                     patch_index++;
 
@@ -76,9 +79,9 @@ namespace iLand.tools
                     while (pqueue.Count > 0)
                     {
                         Point p = pqueue.Dequeue();
-                        if (!src.isIndexValid(p))
+                        if (!src.Contains(p))
                             continue;
-                        if (src.valueAtIndex(p) > 0.0 && mClumpGrid.valueAtIndex(p) == 0)
+                        if (src[p] > 0.0 && mClumpGrid[p] == 0)
                         {
                             mClumpGrid[p] = patch_index;
                             pqueue.Enqueue(new Point(p.X - 1, p.Y));
@@ -99,7 +102,7 @@ namespace iLand.tools
                         while (pqueue.Count > 0)
                         {
                             Point p = pqueue.Dequeue();
-                            if (!src.isIndexValid(p))
+                            if (!src.Contains(p))
                             {
                                 continue;
                             }
@@ -128,74 +131,74 @@ namespace iLand.tools
                 }
             }
             // remove the -1 again...
-            mClumpGrid.limit(0, 999999);
+            mClumpGrid.Limit(0, 999999);
 
             Debug.WriteLine("extractPatches: found " + patch_index + " patches, total valid pixels: " + total_size + " skipped" + patches_skipped);
             if (String.IsNullOrEmpty(fileName) == false)
             {
-                Debug.WriteLine("extractPatches: save to file: " + GlobalSettings.instance().path(fileName));
-                Helper.saveToTextFile(GlobalSettings.instance().path(fileName), Grid.gridToESRIRaster(mClumpGrid));
+                Debug.WriteLine("extractPatches: save to file: " + GlobalSettings.Instance.Path(fileName));
+                Helper.SaveToTextFile(GlobalSettings.Instance.Path(fileName), Grid.ToEsriRaster(mClumpGrid));
             }
             return counts;
 
         }
 
-        public void saveRumpleGrid(string fileName)
+        public void SaveRumpleGrid(string fileName)
         {
             if (mRumple == null)
             {
                 mRumple = new RumpleIndex();
             }
-            Helper.saveToTextFile(GlobalSettings.instance().path(fileName), Grid.gridToESRIRaster(mRumple.rumpleGrid()));
+            Helper.SaveToTextFile(GlobalSettings.Instance.Path(fileName), Grid.ToEsriRaster(mRumple.RumpleGrid()));
         }
 
-        public void saveCrownCoverGrid(string fileName)
+        public void SaveCrownCoverGrid(string fileName)
         {
-            calculateCrownCover();
-            Helper.saveToTextFile(GlobalSettings.instance().path(fileName), Grid.gridToESRIRaster(mCrownCoverGrid));
+            CalculateCrownCover();
+            Helper.SaveToTextFile(GlobalSettings.Instance.Path(fileName), Grid.ToEsriRaster(mCrownCoverGrid));
         }
 
-        public QJSValue patches(QJSValue grid, int min_size)
+        public QJSValue Patches(QJSValue grid, int min_size)
         {
-            ScriptGrid sg = (ScriptGrid)grid.toQObject();
+            ScriptGrid sg = (ScriptGrid)grid.ToQObject();
             if (sg != null)
             {
                 // extract patches (keep patches with a size >= min_size
-                mLastPatches = extractPatches(sg.grid(), min_size, String.Empty);
+                PatchSizes = ExtractPatches(sg.Grid, min_size, String.Empty);
                 // create a (double) copy of the internal clump grid, and return this grid
                 // as a JS value
-                QJSValue v = ScriptGrid.createGrid(mClumpGrid.toDouble(), "patch");
+                QJSValue v = ScriptGrid.CreateGrid(mClumpGrid.ToDouble(), "patch");
                 return v;
             }
             return new QJSValue();
         }
 
-        private void calculateCrownCover()
+        private void CalculateCrownCover()
         {
-            mCrownCoverGrid.setup(GlobalSettings.instance().model().RUgrid().metricRect(),
-                                  GlobalSettings.instance().model().RUgrid().cellsize());
+            mCrownCoverGrid.Setup(GlobalSettings.Instance.Model.ResourceUnitGrid.PhysicalSize,
+                                  GlobalSettings.Instance.Model.ResourceUnitGrid.CellSize);
 
             // calculate the crown cover per resource unit. We use the "reader"-stamps of the individual trees
             // as they represent the crown (size). We also simply hijack the LIF grid for our calculations.
-            Grid<float> grid = GlobalSettings.instance().model().grid();
-            grid.initialize(0.0F);
+            Grid<float> grid = GlobalSettings.Instance.Model.LightGrid;
+            grid.Initialize(0.0F);
             // we simply iterate over all trees of all resource units (not bothering about multithreading here)
-            AllTreeIterator ati = new AllTreeIterator(GlobalSettings.instance().model());
-            for (Tree t = ati.nextLiving(); t != null; t = ati.nextLiving())
+            AllTreeIterator ati = new AllTreeIterator(GlobalSettings.Instance.Model);
+            for (Tree t = ati.MoveNextLiving(); t != null; t = ati.MoveNextLiving())
             {
                 // apply the reader-stamp
-                Stamp reader = t.stamp().reader();
-                Point pos_reader = t.positionIndex(); // tree position
-                pos_reader.X -= reader.offset();
-                pos_reader.Y -= reader.offset();
-                int reader_size = reader.size();
+                Stamp reader = t.Stamp.Reader;
+                Point pos_reader = t.LightCellIndex; // tree position
+                pos_reader.X -= reader.DistanceOffset;
+                pos_reader.Y -= reader.DistanceOffset;
+                int reader_size = reader.Size();
                 int rx = pos_reader.X;
                 int ry = pos_reader.Y;
                 // the reader stamps are stored such as to have a sum of 1.0 over all pixels
                 // (i.e.: they express the percentage for each cell contributing to the full crown).
                 // we thus calculate a the factor to "blow up" cell values; a fully covered cell has then a value of 1,
                 // and values between 0-1 are cells that are partially covered by the crown.
-                double crown_factor = reader.crownArea() / (double)(Constant.cPxSize * Constant.cPxSize);
+                double crown_factor = reader.CrownArea / (double)(Constant.LightSize * Constant.LightSize);
 
                 // add the reader-stamp values: multiple (partial) crowns can add up to being fully covered
                 for (int y = 0; y < reader_size; ++y)
@@ -207,21 +210,21 @@ namespace iLand.tools
                 }
             }
             // now aggregate values for each resource unit
-            Model model = GlobalSettings.instance().model();
-            for (int rg = 0; rg < mCrownCoverGrid.count(); ++rg)
+            Model model = GlobalSettings.Instance.Model;
+            for (int rg = 0; rg < mCrownCoverGrid.Count; ++rg)
             {
-                ResourceUnit ru = model.RUgrid().constValueAtIndex(mCrownCoverGrid.indexOf(rg));
+                ResourceUnit ru = model.ResourceUnitGrid[mCrownCoverGrid.IndexOf(rg)];
                 if (ru == null)
                 {
                     mCrownCoverGrid[rg] = 0.0F;
                     continue;
                 }
                 float cc_sum = 0.0F;
-                GridRunner<float> runner = new GridRunner<float>(grid, mCrownCoverGrid.cellRect(mCrownCoverGrid.indexOf(rg)));
-                for (runner.next(); runner.isValid(); runner.next())
+                GridRunner<float> runner = new GridRunner<float>(grid, mCrownCoverGrid.GetCellRect(mCrownCoverGrid.IndexOf(rg)));
+                for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
                 {
-                    float gv = runner.current();
-                    if (model.heightGridValue(runner.currentIndex().X, runner.currentIndex().Y).isValid())
+                    float gv = runner.Current;
+                    if (model.HeightGridValue(runner.CurrentIndex().X, runner.CurrentIndex().Y).IsValid())
                     {
                         if (gv >= 0.5F) // 0.5: half of a 2m cell is covered by a tree crown; is a bit pragmatic but seems reasonable (and works)
                         {
@@ -229,10 +232,10 @@ namespace iLand.tools
                         }
                     }
                 }
-                if (ru.stockableArea() > 0.0)
+                if (ru.StockableArea > 0.0)
                 {
-                    double value = Constant.cPxSize * Constant.cPxSize * cc_sum / ru.stockableArea();
-                    mCrownCoverGrid[rg] = (float)Global.limit(value, 0.0, 1.0);
+                    double value = Constant.LightSize * Constant.LightSize * cc_sum / ru.StockableArea;
+                    mCrownCoverGrid[rg] = (float)Global.Limit(value, 0.0, 1.0);
                 }
             }
         }

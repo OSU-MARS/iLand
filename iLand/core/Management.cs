@@ -16,64 +16,61 @@ namespace iLand.core
         */
     internal class Management
     {
-        private double mRemoveFoliage;
-        private double mRemoveBranch;
-        private double mRemoveStem;
-        private string mScriptFile;
-        private List<MutableTuple<Tree, double>> mTrees;
-        private QJSEngine mEngine;
-        private int mRemoved;
+        private readonly List<MutableTuple<Tree, double>> mTrees;
+        private readonly QJSEngine mEngine;
 
-        string scriptFile() { return mScriptFile; }
+        // unused in C++
+        // string scriptFile() { return mScriptFile; }
 
         // property getter & setter for removal fractions
         /// removal fraction foliage: 0: 0% will be removed, 1: 100% will be removed from the forest by management operations (i.e. calls to manage() instead of kill())
-        public double removeFoliage() { return mRemoveFoliage; }
+        private readonly double mRemoveFoliage;
         /// removal fraction branch biomass: 0: 0% will be removed, 1: 100% will be removed from the forest by management operations (i.e. calls to manage() instead of kill())
-        public double removeBranch() { return mRemoveBranch; }
+        private readonly double mRemoveBranch;
         /// removal fraction stem biomass: 0: 0% will be removed, 1: 100% will be removed from the forest by management operations (i.e. calls to manage() instead of kill())
-        public double removeStem() { return mRemoveStem; }
-
-        public void setRemoveFoliage(double fraction) { mRemoveFoliage = fraction; }
-        public void setRemoveBranch(double fraction) { mRemoveBranch = fraction; }
-        public void setRemoveStem(double fraction) { mRemoveStem = fraction; }
-
-        public int count() { return mTrees.Count; } ///< return number of trees currently in list
-                                                    /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
-        public double mean(string expression, string filter = null) { return aggregate_function(expression, filter, "mean"); }
-        /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
-        public double sum(string expression, string filter = null) { return aggregate_function(expression, filter, "sum"); }
-
-
-        // global output function
-        public string executeScript(string cmd = "")
-        {
-            return GlobalSettings.instance().scriptEngine().executeScript(cmd);
-        }
+        private readonly double mRemoveStem;
 
         public Management()
         {
             // setup the scripting engine
-            mEngine = GlobalSettings.instance().scriptEngine();
-            QJSValue objectValue = mEngine.newQObject(this);
-            mEngine.globalObject().setProperty("management", objectValue);
+            this.mEngine = GlobalSettings.Instance.ScriptEngine;
+            QJSValue objectValue = mEngine.NewQObject(this);
+            this.mEngine.GlobalObject().SetProperty("management", objectValue);
 
             // default values for removal fractions
             // 100% of the stem, 0% of foliage and branches
-            mRemoveFoliage = 0.0;
-            mRemoveBranch = 0.0;
-            mRemoveStem = 1.0;
+            this.mRemoveFoliage = 0.0;
+            this.mRemoveBranch = 0.0;
+            this.mRemoveStem = 1.0;
+            this.mTrees = new List<MutableTuple<Tree, double>>();
         }
 
-        public int loadAll() { return load(null); } ///< load all trees, return number of trees
+        ///< return number of trees currently in list
+        public int Count() { return mTrees.Count; }
+        /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
+        public double Mean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
+        /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
+        public double Sum(string expression, string filter = null) { return AggregateFunction(expression, filter, "sum"); }
 
-        public int remain(int number)
+        // global output function
+        public string ExecuteScript(string cmd = "")
+        {
+            return GlobalSettings.Instance.ScriptEngine.ExecuteScript(cmd);
+        }
+
+        ///< load all trees, return number of trees
+        public int LoadAll()
+        { 
+            return Load(null);
+        }
+
+        public int Remain(int number)
         {
             Debug.WriteLine("remain called (number): " + number);
-            Model m = GlobalSettings.instance().model();
+            Model m = GlobalSettings.Instance.Model;
             AllTreeIterator at = new AllTreeIterator(m);
             List<Tree> trees = new List<Tree>();
-            for (Tree t = at.next(); t != null; t = at.next())
+            for (Tree t = at.MoveNext(); t != null; t = at.MoveNext())
             {
                 trees.Add(t);
             }
@@ -81,63 +78,64 @@ namespace iLand.core
             Debug.WriteLine(trees.Count + " standing, targetsize " + number + ", hence " + to_kill + " trees to remove");
             for (int i = 0; i < to_kill; i++)
             {
-                int index = RandomGenerator.irandom(0, trees.Count);
-                trees[index].remove();
+                int index = RandomGenerator.Random(0, trees.Count);
+                trees[index].Remove();
                 trees.RemoveAt(index);
             }
-            mRemoved += to_kill;
             return to_kill;
         }
 
-        public int killAll()
-        {
-            int c = mTrees.Count;
-            for (int i = 0; i < mTrees.Count; i++)
-                mTrees[i].Item1.remove();
-            mTrees.Clear();
-            return c;
-        }
-
-        public int disturbanceKill()
+        public int KillAll()
         {
             int c = mTrees.Count;
             for (int i = 0; i < mTrees.Count; i++)
             {
-                mTrees[i].Item1.removeDisturbance(0.1, 0.1, 0.1, 0.1, 1.0);
+                mTrees[i].Item1.Remove();
             }
             mTrees.Clear();
             return c;
         }
 
-        public int kill(string filter, double fraction)
+        public int DisturbanceKill()
         {
-            return remove_trees(filter, fraction, false);
+            int c = mTrees.Count;
+            for (int i = 0; i < mTrees.Count; i++)
+            {
+                mTrees[i].Item1.RemoveDisturbance(0.1, 0.1, 0.1, 0.1, 1.0);
+            }
+            mTrees.Clear();
+            return c;
         }
 
-        public int manage(string filter, double fraction)
+        public int Kill(string filter, double fraction)
         {
-            return remove_trees(filter, fraction, true);
+            return RemoveTrees(filter, fraction, false);
         }
 
-        public void cutAndDrop()
+        public int Manage(string filter, double fraction)
+        {
+            return RemoveTrees(filter, fraction, true);
+        }
+
+        public void CutAndDrop()
         {
             //int c = mTrees.Count;
             for (int i = 0; i < mTrees.Count; i++)
             {
-                mTrees[i].Item1.setDeathCutdown(); // set flag that tree is cut down
-                mTrees[i].Item1.die();
+                mTrees[i].Item1.SetDeathReasonCutdown(); // set flag that tree is cut down
+                mTrees[i].Item1.Die();
             }
             mTrees.Clear();
         }
 
-        private int remove_percentiles(int pctfrom, int pctto, int number, bool management)
+        private int RemovePercentiles(int pctfrom, int pctto, int number, bool management)
         {
             if (mTrees.Count == 0)
             {
                 return 0;
             }
-            int index_from = Global.limit((int)(pctfrom / 100.0 * mTrees.Count), 0, mTrees.Count);
-            int index_to = Global.limit((int)(pctto / 100.0 * mTrees.Count), 0, mTrees.Count);
+            int index_from = Global.Limit((int)(pctfrom / 100.0 * mTrees.Count), 0, mTrees.Count);
+            int index_to = Global.Limit((int)(pctto / 100.0 * mTrees.Count), 0, mTrees.Count);
             if (index_from >= index_to)
             {
                 return 0;
@@ -152,7 +150,7 @@ namespace iLand.core
                     // management
                     for (int i = index_from; i < index_to; i++)
                     {
-                        mTrees[i].Item1.remove(removeFoliage(), removeBranch(), removeStem());
+                        mTrees[i].Item1.Remove(mRemoveFoliage, mRemoveBranch, mRemoveStem);
                     }
                 }
                 else
@@ -160,7 +158,7 @@ namespace iLand.core
                     // just kill...
                     for (int i = index_from; i < index_to; i++)
                     {
-                        mTrees[i].Item1.remove();
+                        mTrees[i].Item1.Remove();
                     }
                 }
                 count = index_to - index_from;
@@ -171,8 +169,8 @@ namespace iLand.core
                 int cancel = 1000;
                 while (number >= 0)
                 {
-                    int rnd_index = RandomGenerator.irandom(index_from, index_to);
-                    if (mTrees[rnd_index].Item1.isDead())
+                    int rnd_index = RandomGenerator.Random(index_from, index_to);
+                    if (mTrees[rnd_index].Item1.IsDead())
                     {
                         if (--cancel < 0)
                         {
@@ -186,11 +184,11 @@ namespace iLand.core
                     number--;
                     if (management)
                     {
-                        mTrees[rnd_index].Item1.remove(removeFoliage(), removeBranch(), removeStem());
+                        mTrees[rnd_index].Item1.Remove(mRemoveFoliage, mRemoveBranch, mRemoveStem);
                     }
                     else
                     {
-                        mTrees[rnd_index].Item1.remove();
+                        mTrees[rnd_index].Item1.Remove();
                     }
                 }
             }
@@ -198,7 +196,7 @@ namespace iLand.core
             // clean up the tree list...
             for (int i = mTrees.Count - 1; i >= 0; --i)
             {
-                if (mTrees[i].Item1.isDead())
+                if (mTrees[i].Item1.IsDead())
                 {
                     mTrees.RemoveAt(i);
                 }
@@ -208,26 +206,26 @@ namespace iLand.core
 
         /** remove trees from a list and reduce the list.
           */
-        private int remove_trees(string expression, double fraction, bool management)
+        private int RemoveTrees(string expression, double fraction, bool management)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression expr = new Expression(expression, tw);
-            expr.enableIncSum();
+            expr.EnableIncrementalSum();
             int n = 0;
             for (int tp = 0; tp < mTrees.Count; ++tp)
             {
-                tw.setTree(mTrees[tp].Item1);
+                tw.Tree = mTrees[tp].Item1;
                 // if expression evaluates to true and if random number below threshold...
-                if (expr.calculate(tw) != 0.0 && RandomGenerator.drandom() <= fraction)
+                if (expr.Calculate(tw) != 0.0 && RandomGenerator.Random() <= fraction)
                 {
                     // remove from system
                     if (management)
                     {
-                        mTrees[tp].Item1.remove(removeFoliage(), removeBranch(), removeStem()); // management with removal fractions
+                        mTrees[tp].Item1.Remove(mRemoveFoliage, mRemoveBranch, mRemoveStem); // management with removal fractions
                     }
                     else
                     {
-                        mTrees[tp].Item1.remove(); // kill
+                        mTrees[tp].Item1.Remove(); // kill
                     }
 
                     // remove from tree list
@@ -244,7 +242,7 @@ namespace iLand.core
         }
 
         // calculate aggregates for all trees in the internal list
-        private double aggregate_function(string expression, string filter, string type)
+        private double AggregateFunction(string expression, string filter, string type)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression expr = new Expression(expression, tw);
@@ -256,8 +254,8 @@ namespace iLand.core
                 // without filtering
                 for (int tp = 0; tp < mTrees.Count; ++tp)
                 {
-                    tw.setTree(mTrees[tp].Item1);
-                    sum += expr.calculate();
+                    tw.Tree = mTrees[tp].Item1;
+                    sum += expr.Calculate();
                     ++n;
                     ++tp;
                 }
@@ -266,13 +264,13 @@ namespace iLand.core
             {
                 // with filtering
                 Expression filter_expr = new Expression(filter, tw);
-                filter_expr.enableIncSum();
+                filter_expr.EnableIncrementalSum();
                 for (int tp = 0; tp < mTrees.Count; ++tp)
                 {
-                    tw.setTree(mTrees[tp].Item1);
-                    if (filter_expr.calculate() != 0.0)
+                    tw.Tree = mTrees[tp].Item1;
+                    if (filter_expr.Calculate() != 0.0)
                     {
-                        sum += expr.calculate();
+                        sum += expr.Calculate();
                         ++n;
                     }
                     ++tp;
@@ -290,60 +288,56 @@ namespace iLand.core
         }
 
         // introduced with switch to QJSEngine (context.throwMessage not available any more)
-        private void throwError(string errormessage)
+        private void ThrowError(string errormessage)
         {
-            GlobalSettings.instance().scriptEngine().evaluate(String.Format("throw '{0}'", errormessage));
+            GlobalSettings.Instance.ScriptEngine.Evaluate(String.Format("throw '{0}'", errormessage));
             Debug.WriteLine("Management-script error: " + errormessage);
             // no idea if this works!!!
         }
 
         // from the range percentile range pctfrom to pctto (each 1..100)
-        public int killPct(int pctfrom, int pctto, int number)
+        public int KillPercentage(int pctfrom, int pctto, int number)
         {
-            return remove_percentiles(pctfrom, pctto, number, false);
+            return RemovePercentiles(pctfrom, pctto, number, false);
         }
 
         // from the range percentile range pctfrom to pctto (each 1..100)
-        public int managePct(int pctfrom, int pctto, int number)
+        public int ManagePercentage(int pctfrom, int pctto, int number)
         {
-            return remove_percentiles(pctfrom, pctto, number, true);
+            return RemovePercentiles(pctfrom, pctto, number, true);
         }
 
-        public int manageAll()
+        public int ManageAll()
         {
             int c = mTrees.Count;
             for (int i = 0; i < mTrees.Count; i++)
             {
-                mTrees[i].Item1.remove(removeFoliage(),
-                                       removeBranch(),
-                                       removeStem()); // remove with current removal fractions
+                mTrees[i].Item1.Remove(mRemoveFoliage, mRemoveBranch, mRemoveStem);
             }
             mTrees.Clear();
             return c;
         }
 
-        public void run()
+        public void Run()
         {
             mTrees.Clear();
-            mRemoved = 0;
             Debug.WriteLine("run() called");
-            QJSValue mgmt = mEngine.globalObject().property("manage");
-            int year = GlobalSettings.instance().currentYear();
+            QJSValue mgmt = mEngine.GlobalObject().Property("manage");
+            int year = GlobalSettings.Instance.CurrentYear;
             //mgmt.call(QJSValue(), QScriptValueList()+year);
-            QJSValue result = mgmt.call(new List<QJSValue>() { new QJSValue(year) });
-            if (result.isError())
+            QJSValue result = mgmt.Call(new List<QJSValue>() { new QJSValue(year) });
+            if (result.IsError())
             {
-                Debug.WriteLine("Script Error occured: " + result.toString());//  + "\n" + mEngine.uncaughtExceptionBacktrace();
+                Debug.WriteLine("Script Error occured: " + result.ToString());//  + "\n" + mEngine.uncaughtExceptionBacktrace();
             }
         }
 
-        public void loadScript(string fileName)
+        public void LoadScript(string fileName)
         {
-            mScriptFile = fileName;
-            GlobalSettings.instance().scriptEngine().loadScript(fileName);
+            GlobalSettings.Instance.ScriptEngine.LoadScript(fileName);
         }
 
-        public int filterIdList(List<object> idList)
+        public int FilterIDList(List<object> idList)
         {
             List<int> ids = new List<int>();
             foreach (object v in idList)
@@ -358,7 +352,7 @@ namespace iLand.core
             //        ids[v.toInt()] = 1;
             for (int tp = 0; tp < mTrees.Count; ++tp)
             {
-                if (!ids.Contains(mTrees[tp].Item1.id()))
+                if (!ids.Contains(mTrees[tp].Item1.ID))
                 {
                     mTrees.RemoveAt(tp);
                     --tp;
@@ -372,22 +366,22 @@ namespace iLand.core
             return mTrees.Count;
         }
 
-        public int filter(string filter)
+        public int Filter(string filter)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression expr = new Expression(filter, tw);
-            expr.enableIncSum();
+            expr.EnableIncrementalSum();
             int n_before = mTrees.Count;
             for (int tp = 0; tp < mTrees.Count; ++tp)
             {
-                tw.setTree(mTrees[tp].Item1);
-                double value = expr.calculate(tw);
+                tw.Tree = mTrees[tp].Item1;
+                double value = expr.Calculate(tw);
                 // keep if expression returns true (1)
                 bool keep = value == 1.0;
                 // if value is >0 (i.e. not "false"), then draw a random number
                 if (!keep && value > 0.0)
                 {
-                    keep = RandomGenerator.drandom() < value;
+                    keep = RandomGenerator.Random() < value;
                 }
                 if (!keep)
                 {
@@ -404,36 +398,36 @@ namespace iLand.core
             return mTrees.Count;
         }
 
-        public int loadResourceUnit(int ruindex)
+        public int LoadResourceUnit(int ruindex)
         {
-            Model m = GlobalSettings.instance().model();
-            ResourceUnit ru = m.ru(ruindex);
+            Model m = GlobalSettings.Instance.Model;
+            ResourceUnit ru = m.GetResourceUnit(ruindex);
             if (ru == null)
             {
                 return -1;
             }
             mTrees.Clear();
-            for (int i = 0; i < ru.trees().Count; i++)
+            for (int i = 0; i < ru.Trees.Count; i++)
             {
-                if (!ru.tree(i).isDead())
+                if (!ru.Tree(i).IsDead())
                 {
-                    mTrees.Add(new MutableTuple<Tree, double>(ru.tree(i), 0.0));
+                    mTrees.Add(new MutableTuple<Tree, double>(ru.Tree(i), 0.0));
                 }
             }
             return mTrees.Count;
         }
 
-        public int load(string filter)
+        public int Load(string filter)
         {
             TreeWrapper tw = new TreeWrapper();
-            Model m = GlobalSettings.instance().model();
+            Model m = GlobalSettings.Instance.Model;
             mTrees.Clear();
             AllTreeIterator at = new AllTreeIterator(m);
             if (String.IsNullOrEmpty(filter))
             {
-                for (Tree t = at.nextLiving(); t != null; t = at.nextLiving())
+                for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
                 {
-                    if (!t.isDead())
+                    if (!t.IsDead())
                     {
                         mTrees.Add(new MutableTuple<Tree, double>(t, 0.0));
                     }
@@ -442,12 +436,12 @@ namespace iLand.core
             else
             {
                 Expression expr = new Expression(filter, tw);
-                expr.enableIncSum();
+                expr.EnableIncrementalSum();
                 Debug.WriteLine("filtering with " + filter);
-                for (Tree t = at.nextLiving(); t != null; t = at.nextLiving())
+                for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
                 {
-                    tw.setTree(t);
-                    if (!t.isDead() && expr.execute() == 0.0)
+                    tw.Tree = t;
+                    if (!t.IsDead() && expr.Execute() == 0.0)
                     {
                         mTrees.Add(new MutableTuple<Tree, double>(t, 0.0));
                     }
@@ -456,7 +450,7 @@ namespace iLand.core
             return mTrees.Count;
         }
 
-        public void loadFromTreeList(List<Tree> tree_list)
+        public void LoadFromTreeList(List<Tree> tree_list)
         {
             mTrees.Clear();
             for (int i = 0; i < tree_list.Count; ++i)
@@ -466,17 +460,17 @@ namespace iLand.core
         }
 
         // loadFromMap: script access
-        public void loadFromMap(MapGridWrapper wrap, int key)
+        public void LoadFromMap(MapGridWrapper wrap, int key)
         {
             if (wrap == null)
             {
-                throwError("loadFromMap called with invalid map object!");
+                ThrowError("loadFromMap called with invalid map object!");
                 return;
             }
-            loadFromMap(wrap.map(), key);
+            LoadFromMap(wrap.Map, key);
         }
 
-        public void killSaplings(MapGridWrapper wrap, int key)
+        public void KillSaplings(MapGridWrapper wrap, int key)
         {
             //MapGridWrapper *wrap = qobject_cast<MapGridWrapper*>(map_grid_object.toQObject());
             //if (!wrap) {
@@ -484,17 +478,17 @@ namespace iLand.core
             //    return;
             //}
             //loadFromMap(wrap.map(), key);
-            RectangleF box = wrap.map().boundingBox(key);
-            GridRunner<float> runner = new GridRunner<float>(GlobalSettings.instance().model().grid(), box);
-            for (runner.next(); runner.isValid(); runner.next())
+            RectangleF box = wrap.Map.BoundingBox(key);
+            GridRunner<float> runner = new GridRunner<float>(GlobalSettings.Instance.Model.LightGrid, box);
+            for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
             {
-                if (wrap.map().standIDFromLIFCoord(runner.currentIndex()) == key)
+                if (wrap.Map.StandIDFromLifCoord(runner.CurrentIndex()) == key)
                 {
                     ResourceUnit ru = null;
-                    SaplingCell sc = GlobalSettings.instance().model().saplings().cell(runner.currentIndex(), true, ref ru);
+                    SaplingCell sc = GlobalSettings.Instance.Model.Saplings.Cell(runner.CurrentIndex(), true, ref ru);
                     if (sc != null)
                     {
-                        GlobalSettings.instance().model().saplings().clearSaplings(sc, ru, true);
+                        GlobalSettings.Instance.Model.Saplings.ClearSaplings(sc, ru, true);
                     }
                 }
             }
@@ -505,14 +499,14 @@ namespace iLand.core
         /// @param DWDfrac 0: no change, 1: remove all of downled woody debris
         /// @param litterFrac 0: no change, 1: remove all of soil litter
         /// @param soilFrac 0: no change, 1: remove all of soil organic matter
-        public void removeSoilCarbon(MapGridWrapper wrap, int key, double SWDfrac, double DWDfrac, double litterFrac, double soilFrac)
+        public void RemoveSoilCarbon(MapGridWrapper wrap, int key, double SWDfrac, double DWDfrac, double litterFrac, double soilFrac)
         {
             if (!(SWDfrac >= 0.0 && SWDfrac <= 1.0 && DWDfrac >= 0.0 && DWDfrac <= 1.0 && soilFrac >= 0.0 && soilFrac <= 1.0 && litterFrac >= 0.0 && litterFrac <= 1.0))
             {
-                throwError("removeSoilCarbon called with invalid parameters!!\nArgs: ---");
+                ThrowError("removeSoilCarbon called with invalid parameters!!\nArgs: ---");
                 return;
             }
-            List<MutableTuple<ResourceUnit, double>> ru_areas = wrap.map().resourceUnitAreas(key).ToList();
+            List<MutableTuple<ResourceUnit, double>> ru_areas = wrap.Map.ResourceUnitAreas(key).ToList();
             double total_area = 0.0;
             for (int i = 0; i < ru_areas.Count; ++i)
             {
@@ -522,13 +516,13 @@ namespace iLand.core
                 // swd
                 if (SWDfrac > 0.0)
                 {
-                    ru.snag().removeCarbon(SWDfrac * area_factor);
+                    ru.Snags.RemoveCarbon(SWDfrac * area_factor);
                 }
                 // soil pools
-                ru.soil().disturbance(DWDfrac * area_factor, litterFrac * area_factor, soilFrac * area_factor);
+                ru.Soil.Disturbance(DWDfrac * area_factor, litterFrac * area_factor, soilFrac * area_factor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
-            Debug.WriteLine("total area " + total_area + " of " + wrap.map().area(key));
+            Debug.WriteLine("total area " + total_area + " of " + wrap.Map.Area(key));
         }
 
         /** slash snags (SWD and otherWood-Pools) of polygon \p key on the map \p wrap.
@@ -537,49 +531,47 @@ namespace iLand.core
           @param key ID of the polygon.
           @param slash_fraction 0: no change, 1: 100%
            */
-        public void slashSnags(MapGridWrapper wrap, int key, double slash_fraction)
+        public void SlashSnags(MapGridWrapper wrap, int key, double slash_fraction)
         {
             if (slash_fraction < 0 || slash_fraction > 1)
             {
-                throwError(String.Format("slashSnags called with invalid parameters!!\nArgs: ...."));
+                ThrowError(String.Format("slashSnags called with invalid parameters!!\nArgs: ...."));
                 return;
             }
-            List<MutableTuple<ResourceUnit, double>> ru_areas = wrap.map().resourceUnitAreas(key).ToList();
+            List<MutableTuple<ResourceUnit, double>> ru_areas = wrap.Map.ResourceUnitAreas(key).ToList();
             double total_area = 0.0;
             for (int i = 0; i < ru_areas.Count; ++i)
             {
                 ResourceUnit ru = ru_areas[i].Item1;
                 double area_factor = ru_areas[i].Item2; // 0..1
                 total_area += area_factor;
-                ru.snag().management(slash_fraction * area_factor);
+                ru.Snags.Management(slash_fraction * area_factor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
-            Debug.WriteLine("total area " + total_area + " of " + wrap.map().area(key));
-
+            Debug.WriteLine("total area " + total_area + " of " + wrap.Map.Area(key));
         }
 
         /** loadFromMap selects trees located on pixels with value 'key' within the grid 'map_grid'.
             */
-        public void loadFromMap(MapGrid map_grid, int key)
+        public void LoadFromMap(MapGrid map_grid, int key)
         {
             if (map_grid == null)
             {
                 Debug.WriteLine("invalid parameter for loadFromMap: Map expected!");
                 return;
             }
-            if (map_grid.isValid())
+            if (map_grid.IsValid())
             {
-                List<Tree> tree_list = map_grid.trees(key);
-                loadFromTreeList(tree_list);
+                List<Tree> tree_list = map_grid.Trees(key);
+                LoadFromTreeList(tree_list);
             }
             else
             {
                 Debug.WriteLine("loadFromMap: grid is not valid - no trees loaded");
             }
-
         }
 
-        private int treePairValue(MutableTuple<Tree, double> p1, MutableTuple<Tree, double> p2)
+        private int TreePairValue(MutableTuple<Tree, double> p1, MutableTuple<Tree, double> p2)
         {
             if (p1.Item2 < p2.Item2)
             {
@@ -592,22 +584,22 @@ namespace iLand.core
             return 0;
         }
 
-        public void sort(string statement)
+        public void Sort(string statement)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression sorter = new Expression(statement, tw);
             // fill the "value" part of the tree storage with a value for each tree
             for (int i = 0; i < mTrees.Count; ++i)
             {
-                tw.setTree(mTrees[i].Item1);
+                tw.Tree = mTrees[i].Item1;
                 MutableTuple<Tree, double> tree = mTrees[i];
-                tree.Item2 = sorter.execute();
+                tree.Item2 = sorter.Execute();
             }
             // now sort the list....
-            mTrees.Sort(treePairValue);
+            mTrees.Sort(TreePairValue);
         }
 
-        public double percentile(int pct)
+        public double Percentile(int pct)
         {
             if (mTrees.Count == 0)
             {
@@ -625,16 +617,16 @@ namespace iLand.core
         }
 
         /// random shuffle of all trees in the list
-        public void randomize()
+        public void Randomize()
         {
             // fill the "value" part of the tree storage with a random value for each tree
             for (int i = 0; i < mTrees.Count; ++i)
             {
                 MutableTuple<Tree, double> tree = mTrees[i];
-                tree.Item2 = RandomGenerator.drandom();
+                tree.Item2 = RandomGenerator.Random();
             }
             // now sort the list....
-            mTrees.Sort(treePairValue);
+            mTrees.Sort(TreePairValue);
         }
     }
 }

@@ -17,7 +17,7 @@ namespace iLand.tools
             mGrid = new int[mMemorySize];
         }
 
-        public void setup(int gridSize)
+        public void Setup(int gridSize)
         {
             if (gridSize > mMemorySize)
             {
@@ -35,7 +35,7 @@ namespace iLand.tools
             mUpdated = false;
         }
 
-        public void setWeight(int index, int value)
+        public void SetWeight(int index, int value)
         {
             if (mGrid == null || index < 0 || index >= mSize)
             {
@@ -45,7 +45,7 @@ namespace iLand.tools
             mUpdated = false;
         }
 
-        public int get()
+        public int Random()
         {
             if (mGrid == null)
             {
@@ -53,9 +53,9 @@ namespace iLand.tools
             }
             if (!mUpdated)
             {
-                updateValues();
+                UpdateValues();
             }
-            int rnd = RandomGenerator.irandom(0, mMaxVal);
+            int rnd = RandomGenerator.Random(0, mMaxVal);
             int index = 0;
             while (rnd >= mGrid[index] && index < mSize)
             {
@@ -64,7 +64,7 @@ namespace iLand.tools
             return index;
         }
 
-        public double getRelWeight(int index)
+        public double GetRelWeight(int index)
         {
             // das relative gewicht der Zelle "Index".
             // das ist das Delta zu Index-1 relativ zu "MaxVal".
@@ -74,7 +74,7 @@ namespace iLand.tools
             }
             if (!mUpdated)
             {
-                updateValues();
+                UpdateValues();
             }
 
             if (mMaxVal != 0)
@@ -90,13 +90,13 @@ namespace iLand.tools
             return (mGrid[index] - mGrid[index - 1]) / (double)mMaxVal;
         }
 
-        public double getRelWeight(int from, int to)
+        public double GetRelWeight(int from, int to)
         {
             // das relative gewicht der Zelle "Index".
             // das ist das Delta zu Index-1 relativ zu "MaxVal".
             if (from == to)
             {
-                return getRelWeight(from);
+                return GetRelWeight(from);
             }
             if (from < 0 || from >= mSize || to < 0 || to >= mSize || from > to)
             {
@@ -104,7 +104,7 @@ namespace iLand.tools
             }
             if (!mUpdated)
             {
-                updateValues();
+                UpdateValues();
             }
 
             if (mMaxVal != 0)
@@ -114,7 +114,7 @@ namespace iLand.tools
             return (mGrid[to] - mGrid[from]) / (double)mMaxVal;
         }
 
-        private void updateValues()
+        private void UpdateValues()
         {
             int i;
             mMaxVal = 0;

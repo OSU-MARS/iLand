@@ -8,12 +8,11 @@ namespace iLand.tools
     {
         private static readonly List<string> ruVarList;
 
-        private ResourceUnit mRU;
-        public void setResourceUnit(ResourceUnit resourceUnit) { mRU = resourceUnit; }
+        public ResourceUnit ResourceUnit { get; set; }
 
         static RUWrapper()
         {
-            ruVarList = new List<string>(baseVarList);
+            ruVarList = new List<string>(BaseVarList);
             ruVarList.AddRange(new string[] { "id", "totalEffectiveArea", "nitrogenAvailable", "soilDepth", "stockedArea", "stockableArea",
                          "count", "volume", "avgDbh", "avgHeight", "basalArea", "leafAreaIndex", "aging", "cohortCount", "saplingCount", "saplingAge",
                          "canopyConductance", "soilC", "soilN", "snagC", "index", "meanTemp", "annualPrecip", "annualRad" });
@@ -21,56 +20,56 @@ namespace iLand.tools
 
         public RUWrapper()
         {
-            mRU = null;
+            ResourceUnit = null;
         }
 
         public RUWrapper(ResourceUnit resourceUnit)
         {
-            mRU = resourceUnit;
+            ResourceUnit = resourceUnit;
         }
 
-        public override List<string> getVariablesList()
+        public override List<string> GetVariablesList()
         {
             return ruVarList;
         }
 
-        public virtual double value(int variableIndex)
+        public override double Value(int variableIndex)
         {
-            Debug.Assert(mRU != null);
+            Debug.Assert(ResourceUnit != null);
 
-            switch (variableIndex - baseVarList.Count)
+            switch (variableIndex - BaseVarList.Count)
             {
-                case 0: return mRU.id(); // id from grid
-                case 1: return mRU.mEffectiveArea_perWLA;
-                case 2: return mRU.mUnitVariables.nitrogenAvailable;
-                case 3: return mRU.waterCycle().soilDepth();
-                case 4: return mRU.stockedArea();
-                case 5: return mRU.stockableArea();
-                case 6: return mRU.mStatistics.count();
-                case 7: return mRU.mStatistics.volume();
-                case 8: return mRU.mStatistics.dbh_avg();
-                case 9: return mRU.mStatistics.height_avg();
-                case 10: return mRU.mStatistics.basalArea();
-                case 11: return mRU.mStatistics.leafAreaIndex();
-                case 12: return mRU.mAverageAging;
-                case 13: return mRU.statistics().cohortCount();
-                case 14: return mRU.statistics().saplingCount();
-                case 15: return mRU.statistics().saplingAge();
-                case 16: return mRU.waterCycle().canopyConductance();
+                case 0: return ResourceUnit.ID; // id from grid
+                case 1: return ResourceUnit.mEffectiveArea_perWLA;
+                case 2: return ResourceUnit.Variables.NitrogenAvailable;
+                case 3: return ResourceUnit.WaterCycle.SoilDepth;
+                case 4: return ResourceUnit.StockedArea;
+                case 5: return ResourceUnit.StockableArea;
+                case 6: return ResourceUnit.Statistics.Count;
+                case 7: return ResourceUnit.Statistics.Volume;
+                case 8: return ResourceUnit.Statistics.AverageDbh;
+                case 9: return ResourceUnit.Statistics.AverageHeight;
+                case 10: return ResourceUnit.Statistics.BasalArea;
+                case 11: return ResourceUnit.Statistics.LeafAreaIndex;
+                case 12: return ResourceUnit.AverageAging;
+                case 13: return ResourceUnit.Statistics.CohortCount;
+                case 14: return ResourceUnit.Statistics.SaplingCount;
+                case 15: return ResourceUnit.Statistics.MeanSaplingAge;
+                case 16: return ResourceUnit.WaterCycle.CanopyConductance;
                 // soil C + soil N
                 case 17:
-                    if (mRU.soil() != null)
+                    if (ResourceUnit.Soil != null)
                     {
-                        return mRU.soil().youngLabile().C + mRU.soil().youngRefractory().C + mRU.soil().oldOrganicMatter().C;
+                        return ResourceUnit.Soil.YoungLabile.C + ResourceUnit.Soil.YoungRefractory.C + ResourceUnit.Soil.OrganicMatter.C;
                     }
                     else
                     {
                         return 0.0;
                     }
                 case 18:
-                    if (mRU.soil() != null)
+                    if (ResourceUnit.Soil != null)
                     {
-                        return mRU.soil().youngLabile().N + mRU.soil().youngRefractory().N + mRU.soil().oldOrganicMatter().N;
+                        return ResourceUnit.Soil.YoungLabile.N + ResourceUnit.Soil.YoungRefractory.N + ResourceUnit.Soil.OrganicMatter.N;
                     }
                     else
                     {
@@ -78,29 +77,29 @@ namespace iLand.tools
                     }
                 // snags
                 case 19:
-                    if (mRU.snag() != null)
+                    if (ResourceUnit.Snags != null)
                     {
-                        return mRU.snag().totalCarbon();
+                        return ResourceUnit.Snags.TotalCarbon;
                     }
                     else
                     {
                         return 0.0;
                     }
-                case 20: return mRU.index(); // numeric index
-                case 21: return mRU.climate().meanAnnualTemperature(); // mean temperature
+                case 20: return ResourceUnit.Index; // numeric index
+                case 21: return ResourceUnit.Climate.MeanAnnualTemperature; // mean temperature
                 case 22:
                     {
                         double psum = 0;
                         for (int i = 0; i < 12; ++i)
                         {
-                            psum += mRU.climate().precipitationMonth()[i];
+                            psum += ResourceUnit.Climate.PrecipitationMonth[i];
                         }
                         return psum;
                     }
                 case 23: 
-                    return mRU.climate().totalRadiation();
+                    return ResourceUnit.Climate.TotalRadiation;
                 default:
-                    return base.value(variableIndex);
+                    return base.Value(variableIndex);
             }
         }
     }

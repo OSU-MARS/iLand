@@ -13,51 +13,58 @@ namespace iLand.abe
         */
     internal class Scheduler
     {
-        private List<SchedulerItem> mItems; ///< the list of active tickets
-        private MultiValueDictionary<int, SchedulerItem> mSchedule;
-        private FMUnit mUnit;
+        private readonly List<SchedulerItem> mItems; ///< the list of active tickets
+        private readonly MultiValueDictionary<int, SchedulerItem> mSchedule;
+        private readonly FMUnit mUnit;
         public double mExtraHarvest; ///< extra harvests due to disturbances m3
         public double mFinalCutTarget; ///< current harvest target for regeneration harvests (m3/ha)
         private double mThinningTarget; ///< current harvest target for thinning/tending operations (m3/ha)
 
         private const int MAX_YEARS = 20;
 
+        public double harvestTarget() { return mFinalCutTarget; }
+
         public Scheduler(FMUnit unit)
         {
-            mUnit = unit;
-            mExtraHarvest = 0.0;
-            mFinalCutTarget = 0.0;
+            this.mExtraHarvest = 0.0;
+            this.mFinalCutTarget = 0.0;
+            this.mItems = new List<SchedulerItem>();
+            this.mSchedule = new MultiValueDictionary<int, SchedulerItem>();
+            this.mUnit = unit;
         }
 
         /// at the end of the year, reset the salvage harvests
-        public void resetHarvestCounter() { mExtraHarvest = 0.0; }
+        public void ResetHarvestCounter() { mExtraHarvest = 0.0; }
+
         /// set the harvest target for the unit (m3/ha) for the current year.
         /// target_m3_ha: the
-        public void setHarvestTarget(double target_m3_ha, double thinning_target_m3_ha)
+        public void SetHarvestTargets(double target_m3_ha, double thinning_target_m3_ha)
         {
             mFinalCutTarget = Math.Max(target_m3_ha, 0.01);
             mThinningTarget = Math.Max(thinning_target_m3_ha, 0.01);
         }
-        public double harvestTarget() { return mFinalCutTarget; }
 
         /// add an planned activity for a given stand.
         /// @param stand the stand to add
         /// @param flags the execution flags (activty x stand)
         /// @param prob_schedule the probability from the activity-scheduling algorithm at the time of adding the ticket
         /// @param prob_execute the probability for executing the activity (based on the constraints of the activity)
-        public void addTicket(FMStand stand, ActivityFlags flags, double prob_schedule, double prob_execute)
+        public void AddTicket(FMStand stand, ActivityFlags flags, double prob_schedule, double prob_execute)
         {
             if (FMSTP.verbose())
             {
                 Debug.WriteLine("ticked added for stand " + stand.id());
             }
-            flags.setIsPending(true);
-            SchedulerItem item = new SchedulerItem();
-            item.stand = stand;
-            item.flags = flags;
-            item.enterYear = ForestManagementEngine.instance().currentYear();
-            item.optimalYear = item.enterYear + flags.activity().optimalSchedule(stand.U()) - (int)stand.absoluteAge();
+            flags.SetIsPending(true);
+            SchedulerItem item = new SchedulerItem()
+            {
+                stand = stand,
+                flags = flags,
+                enterYear = ForestManagementEngine.instance().currentYear()
+            };
+            item.optimalYear = item.enterYear + flags.activity().GetOptimalSchedule(stand.U()) - (int)stand.AbsoluteAge();
             item.scheduledYear = item.optimalYear;
+
             // estimate growth from now to the optimal time - we assume that growth of the last decade continues
             int t = item.optimalYear - item.enterYear; // in t years harvest is optimal
             double time_factor = 0.0;
@@ -65,15 +72,15 @@ namespace iLand.abe
                 time_factor = t * stand.meanAnnualIncrement() / stand.volume();
             item.harvest = stand.scheduledHarvest() * (1.0 + time_factor);
             item.harvestPerHa = item.harvest / stand.area();
-            item.harvestType = flags.isFinalHarvest() ? HarvestType.EndHarvest : HarvestType.Thinning;
+            item.harvestType = flags.IsFinalHarvest() ? HarvestType.EndHarvest : HarvestType.Thinning;
             item.scheduleScore = prob_schedule;
             item.harvestScore = prob_execute;
             item.forbiddenTo = 0;
-            item.calculate(); // set score
+            item.Calculate(); // set score
             mItems.Add(item);
         }
 
-        public void run()
+        public void Run()
         {
             // update the plan if necessary...
             if (FMSTP.verbose() && mItems.Count > 0)
@@ -96,10 +103,10 @@ namespace iLand.abe
             for (int it = 0; it < mItems.Count; ++it)
             {
                 SchedulerItem item = mItems[it];
-                double p_sched = item.flags.activity().scheduleProbability(item.stand);
+                double p_sched = item.flags.activity().ScheduleProbability(item.stand);
                 item.scheduleScore = p_sched;
-                item.calculate();
-                if (item.stand.trace())
+                item.Calculate();
+                if (item.stand.TracingEnabled())
                 {
                     Debug.WriteLine(item.stand.context() + " scheduler scores (harvest schedule total): " + item.harvestScore + item.scheduleScore + item.score);
                 }
@@ -107,12 +114,12 @@ namespace iLand.abe
                 // drop item if no schedule to happen any more
                 if (item.score == 0.0)
                 {
-                    if (item.stand.trace())
+                    if (item.stand.TracingEnabled())
                     {
                         Debug.WriteLine(item.stand.context() + " dropped activity " + item.flags.activity().name() + " from scheduler.");
                     }
-                    item.flags.setIsPending(false);
-                    item.flags.setActive(false);
+                    item.flags.SetIsPending(false);
+                    item.flags.SetIsActive(false);
 
                     item.stand.afterExecution(true); // execution canceled
                     mItems.RemoveAt(it--);
@@ -126,7 +133,7 @@ namespace iLand.abe
 
             if (mUnit.agent().schedulerOptions().useScheduler)
             {
-                updateCurrentPlan();
+                UpdateCurrentPlan();
             }
 
             // sort the probabilities, highest probs go first....
@@ -135,7 +142,7 @@ namespace iLand.abe
             mItems.Sort(ItemComparator);
             if (FMSTP.verbose())
             {
-                dump();
+                Dump();
             }
 
             int no_executed = 0;
@@ -146,7 +153,7 @@ namespace iLand.abe
             {
                 SchedulerItem item = mItems[it];
                 // ignore stands that are currently banned (only for final harvests)
-                if (item.forbiddenTo > current_year && item.flags.isFinalHarvest())
+                if (item.forbiddenTo > current_year && item.flags.IsFinalHarvest())
                 {
                     continue;
                 }
@@ -157,7 +164,7 @@ namespace iLand.abe
                 }
 
                 bool remove = false;
-                bool final_harvest = item.flags.isFinalHarvest();
+                bool final_harvest = item.flags.IsFinalHarvest();
                 //
                 double rel_harvest;
                 if (final_harvest)
@@ -179,7 +186,7 @@ namespace iLand.abe
                 if (rel_harvest + item.harvest / mUnit.area() / (mFinalCutTarget + mThinningTarget) > mUnit.agent().schedulerOptions().maxHarvestLevel)
                 {
                     // including the *current* harvest, the threshold would be exceeded . draw a random number
-                    if (RandomGenerator.drandom() < 0.5)
+                    if (RandomGenerator.Random() < 0.5)
                     {
                         break;
                     }
@@ -188,26 +195,26 @@ namespace iLand.abe
                 if (item.score >= min_exec_probability)
                 {
                     // execute activity:
-                    if (item.stand.trace())
+                    if (item.stand.TracingEnabled())
                     {
                         Debug.WriteLine(item.stand.context() + " execute activity " + item.flags.activity().name() + " score " + item.score + " planned harvest: " + item.harvest);
                     }
                     harvest_scheduled += item.harvest;
 
-                    bool executed = item.flags.activity().execute(item.stand);
+                    bool executed = item.flags.activity().Execute(item.stand);
                     if (final_harvest)
                     {
-                        total_final_harvested += item.stand.totalHarvest();
+                        total_final_harvested += item.stand.TotalHarvest();
                     }
                     else
                     {
-                        total_thinning_harvested += item.stand.totalHarvest();
+                        total_thinning_harvested += item.stand.TotalHarvest();
                     }
 
-                    item.flags.setIsPending(false);
-                    if (!item.flags.activity().isRepeatingActivity())
+                    item.flags.SetIsPending(false);
+                    if (!item.flags.activity().IsRepeating())
                     {
-                        item.flags.setActive(false);
+                        item.flags.SetIsActive(false);
                         item.stand.afterExecution(!executed); // check what comes next for the stand
                     }
                     no_executed++;
@@ -222,7 +229,7 @@ namespace iLand.abe
                         }
                         // simple rule: do not allow harvests for neighboring stands for 7 years
                         item.forbiddenTo = current_year + 7;
-                        List<int> neighbors = ForestManagementEngine.standGrid().neighborsOf(item.stand.id());
+                        List<int> neighbors = ForestManagementEngine.StandGrid().NeighborsOf(item.stand.id());
                         foreach (SchedulerItem nit in mItems)
                         {
                             if (neighbors.Contains(nit.stand.id()))
@@ -237,7 +244,7 @@ namespace iLand.abe
                 if (remove)
                 {
                     // removing item from scheduler
-                    if (item.stand.trace())
+                    if (item.stand.TracingEnabled())
                     {
                         Debug.WriteLine(item.stand.context() + " removing activity " + item.flags.activity().name() + "from scheduler.");
                     }
@@ -278,7 +285,7 @@ namespace iLand.abe
             }
         }
 
-        public bool forceHarvest(FMStand stand, int max_years)
+        public bool ForceHarvest(FMStand stand, int max_years)
         {
             // check if we have the stand in the list:
             foreach (SchedulerItem nit in mItems)
@@ -286,9 +293,9 @@ namespace iLand.abe
                 SchedulerItem item = nit;
                 if (item.stand == stand)
                 {
-                    if (Math.Abs(item.optimalYear - GlobalSettings.instance().currentYear()) < max_years)
+                    if (Math.Abs(item.optimalYear - GlobalSettings.Instance.CurrentYear) < max_years)
                     {
-                        item.flags.setExecuteImmediate(true);
+                        item.flags.SetIsExecuteImmediate(true);
                         return true;
                     }
                 }
@@ -296,13 +303,13 @@ namespace iLand.abe
             return false;
         }
 
-        public void addExtraHarvest(FMStand stand, double volume, HarvestType type)
+        public void AddExtraHarvest(FMStand stand, double volume, HarvestType type)
         {
             // Q_UNUSED(stand); Q_UNUSED(type); // at least for now
             mExtraHarvest += volume;
         }
 
-        public double plannedHarvests(out double rFinal, out double rThinning)
+        public double GetPlannedHarvests(out double rFinal, out double rThinning)
         {
             rFinal = 0.0; 
             rThinning = 0.0;
@@ -311,7 +318,7 @@ namespace iLand.abe
             {
                 if (nit.optimalYear < current_year + 10)
                 {
-                    if (nit.flags.isFinalHarvest())
+                    if (nit.flags.IsFinalHarvest())
                     {
                         rFinal += nit.harvest; // scheduled harvest in m3
                     }
@@ -324,7 +331,7 @@ namespace iLand.abe
             return rFinal + rThinning;
         }
 
-        public double scoreOf(int stand_id)
+        public double ScoreOf(int stand_id)
         {
             // lookup stand in scheduler list
             SchedulerItem item = null;
@@ -343,10 +350,10 @@ namespace iLand.abe
             return item.score;
         }
 
-        public List<string> info(int stand_id)
+        public List<string> Info(int stand_id)
         {
             List<string> lines = new List<string>();
-            SchedulerItem si = item(stand_id);
+            SchedulerItem si = Item(stand_id);
             if (si != null)
             {
                 lines.Add("-");
@@ -361,7 +368,7 @@ namespace iLand.abe
             return lines;
         }
 
-        private void updateCurrentPlan()
+        private void UpdateCurrentPlan()
         {
             if (mItems.Count == 0)
             {
@@ -400,7 +407,7 @@ namespace iLand.abe
                 state[i] = scheduled_harvest[i] > level ? 1.0 : 0.0;
             }
             int max_iter = mItems.Count * 10;
-            bool updated = false;
+            bool updated;
             do
             {
                 updated = false;
@@ -431,7 +438,7 @@ namespace iLand.abe
                     }
                     state[year] = -1.0; // processed
                                         // pick an element of that year and try to find another year
-                    int pick = RandomGenerator.irandom(0, mSchedule[year + current_year].Count);
+                    int pick = RandomGenerator.Random(0, mSchedule[year + current_year].Count);
                     SchedulerItem item = mSchedule[year + current_year].ToList()[pick];
                     if (item == null)
                     {
@@ -446,7 +453,7 @@ namespace iLand.abe
                         int dist = -1;
                         do
                         {
-                            double value = item.flags.activity().scheduleProbability(item.stand, calendar_year + dist);
+                            double value = item.flags.activity().ScheduleProbability(item.stand, calendar_year + dist);
                             if (value > 0.0 && year + dist >= 0 && year + dist < MAX_YEARS)
                             {
                                 if (state[year + dist] == 0.0)
@@ -498,11 +505,11 @@ namespace iLand.abe
             }
             if (FMSTP.verbose())
             {
-                dump();
+                Dump();
             }
         }
 
-        public void dump()
+        public void Dump()
         {
             if (mItems.Count == 0)
             {
@@ -519,7 +526,7 @@ namespace iLand.abe
         }
 
         /// find scheduler item for 'stand_id' or return NULL.
-        public SchedulerItem item(int stand_id)
+        public SchedulerItem Item(int stand_id)
         {
             foreach (SchedulerItem nit in mItems)
             {

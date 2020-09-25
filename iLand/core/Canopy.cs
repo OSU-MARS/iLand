@@ -13,31 +13,27 @@ namespace iLand.core
         private double mLAINeedle; // leaf area index of coniferous species
         private double mLAIBroadleaved; // leaf area index of broadlevaed species
         private double mLAI; // total leaf area index
-        private double mAvgMaxCanopyConductance; // maximum weighted canopy conductance (m/s)
-        private double mInterception; ///< intercepted precipitation of the current day (mm)
-        private double mEvaporation; ///< water that evaporated from foliage surface to atmosphere (mm)
         // Penman-Monteith parameters
         private double mAirDensity; // density of air [kg / m3]
-        private double[] mET0; ///< reference evapotranspiration per month (sum of the month, mm)
         // parameters for interception
-        public double mNeedleFactor { get; set; } ///< factor for calculating water storage capacity for intercepted water for conifers
-        public double mDecidousFactor { get; set; } ///< the same for broadleaved
+        public double NeedleFactor { get; set; } ///< factor for calculating water storage capacity for intercepted water for conifers
+        public double DecidousFactor { get; set; } ///< the same for broadleaved
 
-        public double interception() { return mInterception; } ///< mm water that is intercepted by the crown
-        public double evaporationCanopy() { return mEvaporation; } ///< evaporation from canopy (mm)
-        public double avgMaxCanopyConductance() { return mAvgMaxCanopyConductance; } ///< averaged maximum canopy conductance of current species distribution (m/s)
-        public double[] referenceEvapotranspiration() { return mET0; } ///< monthly reference ET (see Adair et al 2008)
+        public double Interception { get; private set; } ///< mm water that is intercepted by the crown
+        public double EvaporationCanopy { get; private set; } ///< evaporation from canopy (mm)
+        public double AvgMaxCanopyConductance { get; private set; } ///< averaged maximum canopy conductance of current species distribution (m/s)
+        public double[] ReferenceEvapotranspiration { get; private set; } ///< monthly reference ET (see Adair et al 2008)
 
         public Canopy()
         {
-            mET0 = new double[12];
+            this.ReferenceEvapotranspiration = new double[12];
         }
 
-        public double flow(double preciptitation_mm)
+        public double Flow(double preciptitation_mm)
         {
             // sanity checks
-            mInterception = 0.0;
-            mEvaporation = 0.0;
+            Interception = 0.0;
+            EvaporationCanopy = 0.0;
             if (mLAI == 0.0)
             {
                 return preciptitation_mm;
@@ -47,8 +43,7 @@ namespace iLand.core
                 return 0.0;
             }
             double max_interception_mm = 0.0; // maximum interception based on the current foliage
-            double max_storage_mm = 0.0; // maximum storage in canopy (current LAI)
-            double max_storage_potentital = 0.0; // storage capacity at very high LAI
+            double max_storage_potential = 0.0; // storage capacity at very high LAI
 
             if (mLAINeedle > 0.0)
             {
@@ -57,7 +52,7 @@ namespace iLand.core
                 max_interception_mm += preciptitation_mm * (1.0 - max_flow_needle * mLAINeedle / mLAI);
                 // (2) calculate maximum storage potential based on the current LAI
                 //     by weighing the needle/decidious storage capacity
-                max_storage_potentital += mNeedleFactor * mLAINeedle / mLAI;
+                max_storage_potential += NeedleFactor * mLAINeedle / mLAI;
             }
 
             if (mLAIBroadleaved > 0.0)
@@ -66,50 +61,50 @@ namespace iLand.core
                 double max_flow_broad = 0.9 * Math.Pow(1.22 - Math.Exp(-0.055 * preciptitation_mm), 0.35);
                 max_interception_mm += preciptitation_mm * (1.0 - max_flow_broad) * mLAIBroadleaved / mLAI;
                 // (2) calculate maximum storage potential based on the current LAI
-                max_storage_potentital += mDecidousFactor * mLAIBroadleaved / mLAI;
+                max_storage_potential += DecidousFactor * mLAIBroadleaved / mLAI;
             }
 
             // the extent to which the maximum stoarge capacity is exploited, depends on LAI:
-            max_storage_mm = max_storage_potentital * (1.0 - Math.Exp(-0.5 * mLAI));
+            double max_storage_mm = max_storage_potential * (1.0 - Math.Exp(-0.5 * mLAI));
 
             // (3) calculate actual interception and store for evaporation calculation
-            mInterception = Math.Min(max_storage_mm, max_interception_mm);
+            Interception = Math.Min(max_storage_mm, max_interception_mm);
 
             // (4) limit interception with amount of precipitation
-            mInterception = Math.Min(mInterception, preciptitation_mm);
+            Interception = Math.Min(Interception, preciptitation_mm);
 
             // (5) reduce preciptitaion by the amount that is intercepted by the canopy
-            return preciptitation_mm - mInterception;
+            return preciptitation_mm - Interception;
 
         }
 
         /// sets up the canopy. fetch some global parameter values...
-        public void setup()
+        public void Setup()
         {
-            mAirDensity = GlobalSettings.instance().model().settings().airDensity; // kg / m3
+            mAirDensity = GlobalSettings.Instance.Model.Settings.AirDensity; // kg / m3
         }
 
-        public void setStandParameters(double LAIneedle, double LAIbroadleave, double maxCanopyConductance)
+        public void SetStandParameters(double LAIneedle, double LAIbroadleave, double maxCanopyConductance)
         {
             mLAINeedle = LAIneedle;
             mLAIBroadleaved = LAIbroadleave;
             mLAI = LAIneedle + LAIbroadleave;
-            mAvgMaxCanopyConductance = maxCanopyConductance;
+            AvgMaxCanopyConductance = maxCanopyConductance;
 
             // clear aggregation containers
             for (int i = 0; i < 12; ++i)
             {
-                mET0[i] = 0.0;
+                ReferenceEvapotranspiration[i] = 0.0;
             }
         }
 
         // Returns the total sum of evaporation+transpiration in mm of the day.
-        public double evapotranspiration3PG(ClimateDay climate, double daylength_h, double combined_response)
+        public double Evapotranspiration3PG(ClimateDay climate, double daylength_h, double combined_response)
         {
-            double vpd_mbar = climate.vpd * 10.0; // convert from kPa to mbar
-            double temperature = climate.temperature; // average temperature of the day (degree C)
+            double vpd_mbar = climate.Vpd * 10.0; // convert from kPa to mbar
+            double temperature = climate.MeanDaytimeTemperature; // average temperature of the day (degree C)
             double daylength = daylength_h * 3600.0; // daylength in seconds (convert from length in hours)
-            double rad = climate.radiation / daylength * 1000000; //convert from MJ/m2 (day sum) to average radiation flow W/m2 [MJ=MWs . /s * 1,000,000
+            double rad = climate.Radiation / daylength * 1000000; //convert from MJ/m2 (day sum) to average radiation flow W/m2 [MJ=MWs . /s * 1,000,000
 
             // the radiation: based on linear empirical function
             double qa = -90.0;
@@ -120,13 +115,13 @@ namespace iLand.core
             double VPDconv = 0.000622; //convert VPD to saturation deficit = 18/29/1000 = molecular weight of H2O/molecular weight of air
             double latent_heat = 2460000.0; // Latent heat of vaporization. Energy required per unit mass of water vaporized [J kg-1]
 
-            double gBL = GlobalSettings.instance().model().settings().boundaryLayerConductance; // boundary layer conductance
+            double gBL = GlobalSettings.Instance.Model.Settings.BoundaryLayerConductance; // boundary layer conductance
 
             // canopy conductance.
             // The species traits are weighted by LAI on the RU.
             // maximum canopy conductance: see getStandValues()
             // current response: see calculateSoilAtmosphereResponse(). This is basically a weighted average of min(water_response, vpd_response) for each species
-            double gC = mAvgMaxCanopyConductance * combined_response;
+            double gC = AvgMaxCanopyConductance * combined_response;
 
 
             double defTerm = mAirDensity * latent_heat * (vpd_mbar * VPDconv) * gBL;
@@ -149,12 +144,12 @@ namespace iLand.core
             const double psychrometric_const = 0.0672718682328237; // kPa/degC
             double windspeed = 2.0; // m/s
             double net_rad_mj_day = net_rad * daylength / 1000000.0; // convert W/m2 again to MJ/m2*day
-            double et0_day = 0.408 * svp_slope * net_rad_mj_day + psychrometric_const * 900.0 / (temperature + 273.15) * windspeed * climate.vpd;
+            double et0_day = 0.408 * svp_slope * net_rad_mj_day + psychrometric_const * 900.0 / (temperature + 273.15) * windspeed * climate.Vpd;
             double et0_div = svp_slope + psychrometric_const * (1.0 + 0.34 * windspeed);
-            et0_day = et0_day / et0_div;
-            mET0[climate.month - 1] += et0_day;
+            et0_day /= et0_div;
+            ReferenceEvapotranspiration[climate.Month - 1] += et0_day;
 
-            if (mInterception > 0.0)
+            if (Interception > 0.0)
             {
                 // we assume that for evaporation from leaf surface gBL/gC -> 0
                 double div_evap = 1.0 + svp_slope;
@@ -163,13 +158,13 @@ namespace iLand.core
                 // Wigmosta et al (1994). See http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance
 
                 double ratio_T_E = canopy_transpiration / evap_canopy_potential;
-                double evap_canopy = Math.Min(evap_canopy_potential, mInterception);
+                double evap_canopy = Math.Min(evap_canopy_potential, Interception);
 
                 // for interception -> 0, the canopy transpiration is unchanged
                 canopy_transpiration = (evap_canopy_potential - evap_canopy) * ratio_T_E;
 
-                mInterception -= evap_canopy; // reduce interception
-                mEvaporation = evap_canopy; // evaporation from intercepted water
+                Interception -= evap_canopy; // reduce interception
+                EvaporationCanopy = evap_canopy; // evaporation from intercepted water
 
             }
             return canopy_transpiration;

@@ -10,48 +10,48 @@ namespace iLand.abe
         /// basal area of a given species (m2/ha) given by Id.
         public double speciesBasalAreaOf(string species_id)
         {
-            return mStand.basalArea(species_id);
+            return mStand.BasalArea(species_id);
         }
         public double relSpeciesBasalAreaOf(string species_id)
         {
-            return mStand.relBasalArea(species_id);
+            return mStand.RelBasalArea(species_id);
         }
-        public double speciesBasalArea(int index) { if (index >= 0 && index < nspecies()) return mStand.speciesData(index).basalArea; else return 0.0; }
-        public double relSpeciesBasalArea(int index) { if (index >= 0 && index < nspecies()) return mStand.speciesData(index).relBasalArea; else return 0.0; }
+        public double speciesBasalArea(int index) { if (index >= 0 && index < SpeciesCount()) return mStand.speciesData(index).basalArea; else return 0.0; }
+        public double relSpeciesBasalArea(int index) { if (index >= 0 && index < SpeciesCount()) return mStand.speciesData(index).relBasalArea; else return 0.0; }
 
         // set and get standspecific data (persistent!)
-        public void setFlag(string name, QJSValue value) { mStand.setProperty(name, value); }
-        public QJSValue flag(string name) { return mStand.property(name); }
+        public void setFlag(string name, QJSValue value) { mStand.SetProperty(name, value); }
+        public QJSValue flag(string name) { return mStand.Property(name); }
 
         // actions
         /// force a reload of the stand data.
-        public void reload() { if (mStand != null) mStand.reload(true); }
-        public void sleep(int years) { if (mStand != null) mStand.sleep(years); }
-
-        public StandObj(object parent = null)
-        {
-            mStand = null;
-        }
+        public void reload() { if (mStand != null) mStand.Reload(true); }
+        public void sleep(int years) { if (mStand != null) mStand.Sleep(years); }
 
         // system stuff
         public void setStand(FMStand stand) { mStand = stand; }
 
-        // properties of the forest
-        public double basalArea() { if (mStand != null) return mStand.basalArea(); throwError("basalArea"); return -1.0; }
-        public double height() { if (mStand != null) return mStand.height(); throwError("height"); return -1.0; }
-        public double topHeight() { if (mStand != null) return mStand.topHeight(); throwError("topHeight"); return -1.0; }
-        public double age() { if (mStand != null) return mStand.age(); throwError("age"); return -1.0; }
-        public double absoluteAge() { if (mStand != null) return mStand.absoluteAge(); throwError("absoluteAge"); return -1.0; }
-        public double volume() { if (mStand != null) return mStand.volume(); throwError("volume"); return -1.0; }
-        public int id() { if (mStand != null) return mStand.id(); throwError("id"); return -1; }
-        public int nspecies() { if (mStand != null) return mStand.nspecies(); throwError("id"); return -1; }
-        public double area() { if (mStand != null) return mStand.area(); throwError("area"); return -1; }
-
-        public string speciesId(int index)
+        public StandObj()
         {
-            if (index >= 0 && index < nspecies())
+            mStand = null;
+        }
+
+        // properties of the forest
+        public double AbsoluteAge() { if (mStand != null) return mStand.AbsoluteAge(); ThrowError("absoluteAge"); return -1.0; }
+        public double Age() { if (mStand != null) return mStand.age(); ThrowError("age"); return -1.0; }
+        public double Area() { if (mStand != null) return mStand.area(); ThrowError("area"); return -1; }
+        public double BasalArea() { if (mStand != null) return mStand.basalArea(); ThrowError("basalArea"); return -1.0; }
+        public double Height() { if (mStand != null) return mStand.height(); ThrowError("height"); return -1.0; }
+        public int ID() { if (mStand != null) return mStand.id(); ThrowError("id"); return -1; }
+        public int SpeciesCount() { if (mStand != null) return mStand.SpeciesCount(); ThrowError("id"); return -1; }
+        public double TopHeight() { if (mStand != null) return mStand.topHeight(); ThrowError("topHeight"); return -1.0; }
+        public double Volume() { if (mStand != null) return mStand.volume(); ThrowError("volume"); return -1.0; }
+
+        public string GetSpeciesID(int index)
+        {
+            if (index >= 0 && index < SpeciesCount())
             {
-                return mStand.speciesData(index).species.id();
+                return mStand.speciesData(index).species.ID;
             }
             else
             {
@@ -59,21 +59,21 @@ namespace iLand.abe
             }
         }
 
-        public QJSValue activity(string name)
+        public QJSValue Activity(string name)
         {
-            Activity act = mStand.stp().activity(name);
+            Activity act = mStand.stp().GetActivity(name);
             if (act != null)
             {
                 return null;
             }
 
-            int idx = mStand.stp().activityIndex(act);
+            int idx = mStand.stp().GetIndexOf(act);
             ActivityObj ao = new ActivityObj(mStand, act, idx);
-            QJSValue value = ForestManagementEngine.scriptEngine().newQObject(ao);
+            QJSValue value = ForestManagementEngine.ScriptEngine().NewQObject(ao);
             return value;
         }
 
-        public QJSValue agent()
+        public QJSValue Agent()
         {
             if (mStand != null && mStand.unit().agent() != null)
             {
@@ -81,94 +81,94 @@ namespace iLand.abe
             }
             else
             {
-                throwError("get agent of the stand failed.");
+                ThrowError("get agent of the stand failed.");
             }
             return null;
         }
 
-        public void setAbsoluteAge(double arg)
+        public void SetAbsoluteAge(double arg)
         {
             if (mStand == null)
             {
-                throwError("set absolute age");
+                ThrowError("set absolute age");
                 return;
             }
-            mStand.setAbsoluteAge(arg);
+            mStand.SetAbsoluteAge(arg);
         }
 
-        public void reset()
+        public void Reset()
         {
             if (mStand == null)
             {
-                throwError("reset");
+                ThrowError("reset");
                 return;
             }
-            mStand.initialize();
+            mStand.Initialize();
         }
 
-        public bool trace()
+        public bool Trace()
         {
             if (mStand == null)
             { 
-                throwError("trace");
+                ThrowError("trace");
                 return false; 
             }
-            return mStand.trace();
+            return mStand.TracingEnabled();
         }
 
-        public void setTrace(bool do_trace)
+        public void SetTrace(bool do_trace)
         {
             if (mStand == null) 
             { 
-                throwError("trace"); 
+                ThrowError("trace"); 
             }
-            mStand.setProperty("trace", new QJSValue(do_trace));
+            mStand.SetProperty("trace", new QJSValue(do_trace));
         }
 
-        public int timeSinceLastExecution()
+        public int TimeSinceLastExecution()
         {
             if (mStand != null)
             {
                 return ForestManagementEngine.instance().currentYear() - mStand.lastExecution();
             }
-            throwError("timeSinceLastExecution");
+            ThrowError("timeSinceLastExecution");
             return -1;
         }
 
-        public string lastActivity()
+        public string LastActivity()
         {
-            if (mStand.lastExecutedActivity() != null)
+            if (mStand.LastExecutedActivity() != null)
             {
-                return mStand.lastExecutedActivity().name();
+                return mStand.LastExecutedActivity().name();
             }
             return null;
         }
 
-        public double rotationLength()
+        public double RotationLength()
         {
             if (mStand != null)
             {
                 return mStand.U();
             }
-            throwError("U");
+            ThrowError("U");
             return -1.0;
         }
 
-        public string speciesComposition()
+        public string SpeciesComposition()
         {
             int index = mStand.targetSpeciesIndex();
-            return mStand.unit().agent().type().speciesCompositionName(index);
+            return mStand.unit().agent().type().SpeciesCompositionName(index);
         }
 
-        public string thinningIntensity()
+        public string ThinningIntensity()
         {
             int t = mStand.thinningIntensity();
-            return FomeScript.levelLabel(t);
+            return FomeScript.LevelLabel(t);
         }
 
-        private void throwError(string msg)
+        private void ThrowError(string msg)
         {
-            FomeScript.bridge().abort(new QJSValue(String.Format("Error while accessing 'stand': no valid execution context. Message: {0}", msg)));
+            FomeScript.bridge().Abort(new QJSValue(String.Format("Error while accessing 'stand': no valid execution context. Message: {0}", msg)));
         }
     }
 }

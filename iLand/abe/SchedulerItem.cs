@@ -52,9 +52,9 @@
             }
         }
 
-        public void calculate()
+        public void Calculate()
         {
-            if (flags.isExecuteImmediate())
+            if (flags.IsExecuteImmediate())
             {
                 score = 1.1; // above 1
             }

@@ -10,37 +10,38 @@ namespace iLand.core
 {
     internal class TimeEvents
     {
-        private static string lastLoadedFile;
+        private readonly MultiValueDictionary<int, MutableTuple<string, object>> mData;
 
-        private MultiValueDictionary<int, MutableTuple<string, object>> mData;
-
-        public void clear() { mData.Clear(); }
-
-        public bool loadFromFile(string fileName)
+        public TimeEvents()
         {
-            string source = Helper.loadTextFile(GlobalSettings.instance().path(fileName));
+            this.mData = new MultiValueDictionary<int, MutableTuple<string, object>>();
+        }
+
+        public void Clear() 
+        { 
+            mData.Clear(); 
+        }
+
+        public bool LoadFromFile(string fileName)
+        {
+            string source = Helper.LoadTextFile(GlobalSettings.Instance.Path(fileName));
             if (String.IsNullOrEmpty(source))
             {
                 throw new FileNotFoundException(String.Format("TimeEvents: input file does not exist or is empty (%1)", fileName));
             }
-            lastLoadedFile = fileName;
-            return loadFromString(source);
-        }
 
-        public bool loadFromString(string source)
-        {
-            CSVFile infile = new CSVFile();
-            infile.loadFromString(source);
-            List<string> captions = infile.captions();
-            int yearcol = infile.columnIndex("year");
+            CsvFile infile = new CsvFile();
+            infile.LoadFromString(source);
+            List<string> captions = infile.Captions;
+            int yearcol = infile.GetColumnIndex("year");
             if (yearcol == -1)
             {
-                throw new NotSupportedException(String.Format("TimeEvents: input file '{0}' has no 'year' column.", lastLoadedFile));
+                throw new NotSupportedException(String.Format("TimeEvents: input file '{0}' has no 'year' column.", fileName));
             }
-            for (int row = 0; row < infile.rowCount(); row++)
+            for (int row = 0; row < infile.RowCount; row++)
             {
-                int year = Int32.Parse(infile.value(row, yearcol));
-                List<object> line = infile.values(row);
+                int year = Int32.Parse(infile.Value(row, yearcol));
+                List<object> line = infile.Values(row);
                 for (int col = 0; col < line.Count; col++)
                 {
                     if (col != yearcol)
@@ -50,13 +51,13 @@ namespace iLand.core
                     }
                 }
             } // for each row
-            Debug.WriteLine(String.Format("loaded TimeEvents (file: {0}). {1} items stored.", lastLoadedFile, mData.Count));
+            Debug.WriteLine(String.Format("loaded TimeEvents (file: {0}). {1} items stored.", fileName, mData.Count));
             return true;
         }
 
-        public void run()
+        public void Run()
         {
-            int current_year = GlobalSettings.instance().currentYear();
+            int current_year = GlobalSettings.Instance.CurrentYear;
             List<MutableTuple<string, object>> entries = mData[current_year].ToList();
             if (entries.Count == 0)
             {
@@ -75,13 +76,13 @@ namespace iLand.core
                     if (String.IsNullOrEmpty(entries[i].Item2.ToString()) == false)
                     {
                         Debug.WriteLine("executing Javascript time event: " + entries[i].Item2.ToString());
-                        GlobalSettings.instance().executeJavascript(entries[i].Item2.ToString());
+                        GlobalSettings.Instance.ExecuteJavascript(entries[i].Item2.ToString());
                     }
                 }
                 else
                 {
                     // no special value: a xml node...
-                    if (GlobalSettings.instance().settings().setNodeValue(key, entries[i].Item2.ToString()))
+                    if (GlobalSettings.Instance.Settings.SetNodeValue(key, entries[i].Item2.ToString()))
                         Debug.WriteLine("TimeEvents: Error: Key " + key + "not found! (tried to set to " + entries[i].Item2.ToString() + ")");
                     else
                         Debug.WriteLine("TimeEvents: set " + key + "to" + entries[i].Item2.ToString());
@@ -96,7 +97,7 @@ namespace iLand.core
 
         // read value for key 'key' and year 'year' from the list of items.
         // return a empty object if for 'year' no value is set
-        public object value(int year, string key)
+        public object Value(int year, string key)
         {
             if (mData.TryGetValue(year, out IReadOnlyCollection<MutableTuple<string, object>> it) == false)
             {

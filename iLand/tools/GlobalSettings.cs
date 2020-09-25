@@ -70,78 +70,68 @@ namespace iLand.tools
         // storing the names of debug outputs
         //    enum DebugOutputs { dTreeNPP=1, dTreePartition=2, dTreeGrowth=4,
         // dStandNPP=8, dWaterCycle=16, dDailyResponses=32, dEstablishment=64, dCarbonCycle=128 }; ///< defines available debug output types.
-        private static readonly ReadOnlyCollection<string> debug_output_names = new List<string>() { "treeNPP", "treePartition", "treeGrowth", "waterCycle", "dailyResponse", "establishment", "carbonCycle", "performance" }.AsReadOnly();
-        private static GlobalSettings mInstance = null;
+        private static readonly ReadOnlyCollection<string> DebugOutputNames = new List<string>() { "treeNPP", "treePartition", "treeGrowth", "waterCycle", "dailyResponse", "establishment", "carbonCycle", "performance" }.AsReadOnly();
+        public static GlobalSettings Instance { get; private set; }
 
-        private SqliteConnection databaseClimate;
-        private SqliteConnection databaseIn;
-        private SqliteConnection databaseOut;
         private bool isDisposed;
-        private int _loglevel = 0;
-        private Model mModel;
-        private ModelController mModelController;
-        private OutputManager mOutputManager;
-        private QJSEngine mScriptEngine;
-        private int mRunYear;
-        private SystemStatistics mSystemStatistics;
-
+        private int _loglevel;
         // special debug outputs
-        private MultiValueDictionary<int, List<object>> mDebugLists;
-        private uint mDebugOutputs; // "bitmap" of enabled debugoutputs.
+        private readonly MultiValueDictionary<int, List<object>> mDebugLists;
+        private readonly Dictionary<string, string> mFilePath; ///< storage for file paths
+        private readonly Dictionary<string, SettingMetaData> mSettingMetaData; ///< storage container (QHash) for settings.
 
-        private Dictionary<string, SettingMetaData> mSettingMetaData; ///< storage container (QHash) for settings.
-        private Dictionary<string, string> mFilePath; ///< storage for file paths
+        public int CurrentYear { get; set; }
+        public SqliteConnection DatabaseClimate { get; private set; }
+        public SqliteConnection DatabaseInput { get; private set; }
+        public SqliteConnection DatabaseOutput { get; private set; }
+        public int DebugOutputs { get; set; }
+        public Model Model { get; set; }
+        public ModelController ModelController { get; set; }
 
-        private XmlHelper mXml;
+        public OutputManager OutputManager { get; private set; }
+        public QJSEngine ScriptEngine { get; private set; }
+        // xml project file
+        public XmlHelper Settings { get; private set; }
+        public SystemStatistics SystemStatistics { get; private set; }
 
-        ///< xml-based hierarchical settings
+        static GlobalSettings()
+        {
+            GlobalSettings.Instance = new GlobalSettings();
+        }
 
         private GlobalSettings()
         {
-            mDebugOutputs = 0;
-            mModel = null;
-            mModelController = null;
-            mSystemStatistics = new SystemStatistics();
-            // create output manager
-            mOutputManager = new OutputManager();
-            mScriptEngine = null;
+            // lazy init
+            // this.databaseClimate
+            // this.databaseIn
+            // this.databaseOut
+            this._loglevel = 0;
+            this.isDisposed = false;
+            this.mDebugLists = new MultiValueDictionary<int, List<object>>();
+            this.DebugOutputs = 0;
+            this.mFilePath = new Dictionary<string, string>();
+            this.Model = null;
+            this.ModelController = null;
+            this.OutputManager = new OutputManager();
+            // initialized externall
+            // this.mRunYear
+            this.ScriptEngine = null;
+            this.mSettingMetaData = new Dictionary<string, SettingMetaData>();
+            this.SystemStatistics = new SystemStatistics();
+            this.Settings = new XmlHelper();
         }
 
-        // database access functions
-        public SqliteConnection dbclimate() { return this.databaseClimate; }
-        public SqliteConnection dbin() { return this.databaseIn; }
-        public SqliteConnection dbout() { return this.databaseOut; }
-        public SqliteConnection dbsnapshot() { throw new NotImplementedException(); }
-        public SqliteConnection dbsnapshotstand() { throw new NotImplementedException(); }
+        public SqliteConnection DatabaseSnapshot() { throw new NotImplementedException(); }
+        public SqliteConnection DatabaseSnapshotstand() { throw new NotImplementedException(); }
 
-        // singleton-access
-        public static GlobalSettings instance() { if (mInstance != null) return mInstance; mInstance = new GlobalSettings(); return mInstance; }
+        public bool IsDebugEnabled(DebugOutputs dbg) 
+        { 
+            return ((int)dbg & DebugOutputs) != 0;
+        } ///< returns true, if a specific debug outut type is enabled.
 
-        // Access
-        // model and clock
-        public ModelController controller() { return mModelController; }
-        public void setModelController(ModelController mc) { mModelController = mc; }
+        public List<string> SettingNames() { return mSettingMetaData.Keys.ToList(); } ///< retrieve list of all names of settings.
 
-        public int currentDebugOutput() { return (int)mDebugOutputs; }
-        public int currentYear() { return mRunYear; }
-        public void setCurrentYear(int year) { mRunYear = year; }
-
-        public Model model() { return mModel; }
-        public void setModel(Model model) { mModel = model; }
-
-        public bool isDebugEnabled(DebugOutputs dbg) { return (dbg != 0) & (mDebugOutputs != 0); } ///< returns true, if a specific debug outut type is enabled.
-
-        // output manager
-        public OutputManager outputManager() { return mOutputManager; }
-
-        public QJSEngine scriptEngine() { return mScriptEngine; }
-        public List<string> settingNames() { return mSettingMetaData.Keys.ToList(); } ///< retrieve list of all names of settings.
-        // xml project file
-        public XmlHelper settings() { return mXml; }
-        // system statistics
-        public SystemStatistics systemStatistics() { return mSystemStatistics; }
-
-        private string childText(XmlNode elem, string name, string defaultTest = "")
+        private string ChildText(XmlNode elem, string name, string defaultTest = "")
         {
             foreach (XmlNode node in elem.SelectNodes(name))
             {
@@ -150,24 +140,25 @@ namespace iLand.tools
             return defaultTest;
         }
 
-        public void clearDebugLists() ///< clear all debug data
+        public void ClearDebugLists() ///< clear all debug data
         {
             mDebugLists.Clear();
         }
 
-        private void dbg_helper(string where, string what, string file, int line)
-        {
-            Debug.WriteLine("Warning in " + where + ":" + what + ". (file: " + file + "line:" + line);
-        }
-        private void dbg_helper_ext(string where, string what, string file, int line, string s)
-        {
-            Debug.WriteLine("Warning in " + where + ":" + what + ". (file: " + file + "line:" + line + "more:" + s);
-        }
+        // unused in C++
+        //private void dbg_helper(string where, string what, string file, int line)
+        //{
+        //    Debug.WriteLine("Warning in " + where + ":" + what + ". (file: " + file + "line:" + line);
+        //}
+        //private void dbg_helper_ext(string where, string what, string file, int line, string s)
+        //{
+        //    Debug.WriteLine("Warning in " + where + ":" + what + ". (file: " + file + "line:" + line + "more:" + s);
+        //}
 
-        public List<string> debugDataTable(DebugOutputs type, string separator, string fileName = null) ///< output for all available items (trees, ...) in table form
+        public List<string> DebugDataTable(DebugOutputs type, string separator, string fileName = null) ///< output for all available items (trees, ...) in table form
         {
-            GlobalSettings g = GlobalSettings.instance();
-            List<List<object>> ddl = g.debugLists(-1, type); // get all debug data
+            GlobalSettings g = GlobalSettings.Instance;
+            List<List<object>> ddl = g.DebugLists(-1, type); // get all debug data
 
             List<string> result = new List<string>();
             if (ddl.Count < 1)
@@ -175,13 +166,12 @@ namespace iLand.tools
                 return result;
             }
 
-            FileStream out_file = null;
             TextWriter ts = null;
             if (!String.IsNullOrWhiteSpace(fileName))
             {
-                out_file = new FileStream(fileName, FileMode.Append, FileAccess.Write, FileShare.Read);
+                FileStream out_file = new FileStream(fileName, FileMode.Append, FileAccess.Write, FileShare.Read);
                 ts = new StreamWriter(out_file);
-                ts.WriteLine(String.Join(separator, g.debugListCaptions(type)));
+                ts.WriteLine(String.Join(separator, g.DebugListCaptions(type)));
             }
 
             try
@@ -219,28 +209,31 @@ namespace iLand.tools
             if (result.Count > 0)
             {
                 // TODO: hoist this
-                result.Insert(0, String.Join(separator, g.debugListCaptions(type)));
+                result.Insert(0, String.Join(separator, g.DebugListCaptions(type)));
             }
             return result;
         }
 
-        public DebugOutputs debugOutputId(string debug_name) ///< returns the DebugOutputs bit or 0 if not found
+        public DebugOutputs DebugOutputID(string debug_name) ///< returns the DebugOutputs bit or 0 if not found
         {
-            int index = debug_output_names.IndexOf(debug_name);
-            if (index == -1) return default;
+            int index = DebugOutputNames.IndexOf(debug_name);
+            if (index == -1)
+            {
+                return default;
+            }
             return (DebugOutputs)(2 << index); // 1,2,4,8, ...
         }
 
-        public List<object> debugList(int ID, DebugOutputs dbg) ///< returns a ref to a list ready to be filled with debug output of a type/id combination.
+        public List<object> DebugList(int ID, DebugOutputs dbg) ///< returns a ref to a list ready to be filled with debug output of a type/id combination.
         {
             // serialize creation of debug outputs
             lock (mDebugLists)
             {
-                List<object> dbglist = new List<object>() { ID , dbg, currentYear() };
+                List<object> dbglist = new List<object>() { ID, dbg, CurrentYear };
                 int id = ID;
                 // use negative values for debug-outputs on RU - level
                 // Note: at some point we will also have to handle RUS-level...
-                if (dbg == DebugOutputs.dEstablishment || dbg == DebugOutputs.dCarbonCycle || dbg == DebugOutputs.dSaplingGrowth)
+                if (dbg == tools.DebugOutputs.Establishment || dbg == tools.DebugOutputs.CarbonCycle || dbg == tools.DebugOutputs.SaplingGrowth)
                 {
                     id = -id;
                 }
@@ -249,13 +242,13 @@ namespace iLand.tools
             }
         }
 
-        private int debuglist_sorter(List<object> i, List<object> j)
+        private int DebugListSorter(List<object> i, List<object> j)
         {
             // TODO: implement less fragile compare
             return Comparer<int>.Default.Compare((int)i[0], (int)j[0]);
         }
 
-        public List<string> debugListCaptions(DebugOutputs dbg) ///< returns stringlist of captions for a specific output type
+        public List<string> DebugListCaptions(DebugOutputs dbg) ///< returns stringlist of captions for a specific output type
         {
             List<string> treeCaps = new List<string>() { "Id", "Species", "Dbh", "Height", "x", "y", "ru_index", "LRI", "mWoody", "mRoot", "mFoliage", "LA" };
             if (dbg == 0)
@@ -266,39 +259,39 @@ namespace iLand.tools
             // TODO: what if multiple flags are set?
             switch (dbg)
             {
-                case DebugOutputs.dTreeNPP:
+                case tools.DebugOutputs.TreeNpp:
                     List<string> treeNpp = new List<string>() { "id", "type", "year" };
                     treeNpp.AddRange(treeCaps);
                     treeNpp.AddRange(new string[] { "LRI_modRU", "lightResponse", "effective_area", "raw_gpp", "gpp", "npp", "aging" });
                     return treeNpp;
-                case DebugOutputs.dTreeGrowth:
+                case tools.DebugOutputs.TreeGrowth:
                     List<string> treeGrowth = new List<string>() { "id", "type", "year" };
                     treeGrowth.AddRange(treeCaps);
                     treeGrowth.AddRange(new string[] { "netNPPStem", "massStemOld", "hd_growth", "factor_diameter", "delta_d_estimate", "d_increment" });
                     return treeGrowth;
-                case DebugOutputs.dTreePartition:
+                case tools.DebugOutputs.TreePartition:
                     List<string> treePartition = new List<string>() { "id", "type", "year" };
                     treePartition.AddRange(treeCaps);
                     treePartition.AddRange(new string[] { "npp_kg", "apct_foliage", "apct_wood", "apct_root", "delta_foliage", "delta_woody", "delta_root", "mNPPReserve", "netStemInc", "stress_index" });
                     return treePartition;
-                case DebugOutputs.dStandGPP:
+                case tools.DebugOutputs.StandGpp:
                     return new List<string>() { "id", "type", "year", "species", "RU_index", "rid", "lai_factor", "gpp_kg_m2", "gpp_kg", "avg_aging", "f_env_yr" };
-                case DebugOutputs.dWaterCycle:
+                case tools.DebugOutputs.WaterCycle:
                     return new List<string>() { "id", "type", "year", "date", "ruindex", "rid", "temp", "vpd", "prec", "rad", "combined_response"
                                         , "after_intercept", "after_snow", "et_canopy", "evapo_intercepted"
                                         , "content", "psi_kpa", "excess_mm", "snow_height" };
-                case DebugOutputs.dDailyResponses:
+                case tools.DebugOutputs.DailyResponses:
                     return new List<string>() { "id", "type", "year", "species", "date", "RU_index", "rid"
                                         , "waterResponse", "tempResponse", "VpdResponse", "Radiation of day", "util.Radiation" };
-                case DebugOutputs.dEstablishment:
+                case tools.DebugOutputs.Establishment:
                     return new List<string>() { "id", "type", "year", "species", "RU_index", "rid"
                                         , "avgProbDensity", "TACAminTemp", "TACAchill", "TACAfrostFree", "TACAgdd", "TACAFrostAfterBud", "waterLimitation", "TACAAbioticEnv"
                                         , "fEnvYr", "N_Established" };
-                case DebugOutputs.dSaplingGrowth:
+                case tools.DebugOutputs.SaplingGrowth:
                     return new List<string>() { "id", "type", "year", "species", "RU_index", "rid"
                                         , "Living_cohorts", "averageHeight", "averageAge", "avgDeltaHPot", "avgDeltaHRealized"
                                         , "Added", "Died", "Recruited", "refRatio" };
-                case DebugOutputs.dCarbonCycle:
+                case tools.DebugOutputs.CarbonCycle:
                     return new List<string>() { "id", "type", "year", "RU_index", "rid"
                                         , "SnagState_c", "TotalC_in", "TotalC_toAtm", "SWDtoDWD_c", "SWDtoDWD_n", "toLabile_c", "toLabile_n", "toRefr_c", "toRefr_n"
                                         , "swd1_c", "swd1_n", "swd1_count", "swd1_tsd", "toSwd1_c", "toSwd1_n", "dbh1", "height1", "volume1"  // pool of small dbhs
@@ -307,7 +300,7 @@ namespace iLand.tools
                                         , "otherWood1_c", "otherWood1_n", "otherWood2_c", "otherWood2_n", "otherWood3_c", "otherWood3_n", "otherWood4_c", "otherWood4_n", "otherWood5_c", "otherWood5_n"
                                         , "iLabC", "iLabN", "iKyl", "iRefC", "iRefN", "iKyr", "re", "kyl", "kyr", "ylC", "ylN", "yrC", "yrN", "somC", "somN"
                                         , "NAvailable", "NAVLab", "NAVRef", "NAVSom" };
-                case DebugOutputs.dPerformance:
+                case tools.DebugOutputs.Performance:
                     return new List<string>() { "id", "type", "year", "treeCount", "saplingCount", "newSaplings", "management"
                                         , "applyPattern", "readPattern", "treeGrowth", "seedDistribution", "establishment", "saplingGrowth", "carbonCycle"
                                         , "writeOutput", "totalYear" };
@@ -316,7 +309,7 @@ namespace iLand.tools
             }
         }
 
-        public List<List<object>> debugLists(int ID, DebugOutputs dbg) ///< return a list of debug outputs
+        public List<List<object>> DebugLists(int ID, DebugOutputs dbg) ///< return a list of debug outputs
         {
             List<List<object>> result_list = new List<List<object>>();
             if (ID == -1)
@@ -344,29 +337,29 @@ namespace iLand.tools
             }
             // sort result list
             //std::sort(result_list.begin(), result_list.end(), debuglist_sorter); // changed because of compiler warnings
-            result_list.Sort(debuglist_sorter);
+            result_list.Sort(DebugListSorter);
             return result_list;
         }
 
-        public string debugOutputName(DebugOutputs d) ///< returns the name attached to 'd' or an empty string if not found
+        public string DebugOutputName(DebugOutputs d) ///< returns the name attached to 'd' or an empty string if not found
         {
             // this is a little hacky...(and never really tried!)
-            for (int index = 0; index < debug_output_names.Count; ++index)
+            for (int index = 0; index < DebugOutputNames.Count; ++index)
             {
                 if (((int)d & (2 << index)) != 0)
-                    return debug_output_names[index];
+                    return DebugOutputNames[index];
             }
             throw new NotSupportedException();
         }
 
-        public List<Tuple<string, object>> debugValues(int ID) ///< all debug values for object with given ID
+        public List<Tuple<string, object>> DebugValues(int ID) ///< all debug values for object with given ID
         {
             List<Tuple<string, object>> result = new List<Tuple<string, object>>();
             foreach (List<object> list in mDebugLists[ID])
             {
                 if (list.Count > 2) // TODO: should this be zero?
                 { // contains data
-                    List<string> cap = debugListCaptions((DebugOutputs)list[1]);
+                    List<string> cap = DebugListCaptions((DebugOutputs)list[1]);
                     result.Add(new Tuple<string, object>("Debug data", "Debug data"));
                     int first_index = 3;
                     if (String.Equals((string)list[3], "Id", StringComparison.Ordinal))  // skip default data fields (not needed for drill down)
@@ -401,7 +394,7 @@ namespace iLand.tools
                     //mInstance = NULL;
                     //delete mOutputManager;
                     // clear all databases
-                    clearDatabaseConnections();
+                    ClearDatabaseConnections();
                     //if (mScriptEngine)
                     //    delete mScriptEngine;
                 }
@@ -412,22 +405,22 @@ namespace iLand.tools
 
         /// access the global QScriptEngine used throughout the model
         /// for all Javascript related functionality.
-        public string executeJavascript(string command)
+        public string ExecuteJavascript(string command)
         {
-            return ScriptGlobal.executeScript(command);
+            return ScriptGlobal.ExecuteScript(command);
         }
 
         /// execute a javasript function in the global context
-        public string executeJSFunction(string function_name)
+        public string ExecuteJSFunction(string function_name)
         {
-            return ScriptGlobal.executeJSFunction(function_name);
+            return ScriptGlobal.ExecuteJSFunction(function_name);
         }
 
         // path and directory
-        public bool fileExists(string fileName, string type = "home")
+        public bool FileExists(string fileName, string type = "home")
         {
             // TODO: review use since semantics here seem confused
-            string name = Path.Combine(fileName, type);
+            string name = System.IO.Path.Combine(fileName, type);
 
             if (!Directory.Exists(name)) // TODO: also try File.Exists()
             {
@@ -437,49 +430,46 @@ namespace iLand.tools
             return true;
         }
 
-        public string path(string fileName, string type = "home")
+        public string Path(string fileName, string type = "home")
         {
             if (!String.IsNullOrEmpty(fileName))
             {
-                if (Path.IsPathRooted(fileName))
+                if (System.IO.Path.IsPathRooted(fileName))
                 {
                     // canonicalize path
-                    return Path.GetFullPath(fileName);
+                    return System.IO.Path.GetFullPath(fileName);
                 }
             }
 
-            DirectoryInfo d;
-            if (mFilePath.TryGetValue(type, out string directoryPath))
+            if (mFilePath.TryGetValue(type, out string directoryPath) == false)
             {
-                d = new DirectoryInfo(directoryPath);
+                directoryPath = System.Environment.CurrentDirectory;
             }
-            else
+            if (String.IsNullOrEmpty(fileName))
             {
-                Debug.WriteLine("GlobalSettings::path() called with unknown type " + type);
-                d = new DirectoryInfo(System.Environment.CurrentDirectory);
+                return directoryPath;
             }
-
-            return d.FullName;
+            return System.IO.Path.Combine(directoryPath, fileName);
         }
 
         // xml project settings
-        public void loadProjectFile(string fileName)
+        public void LoadProjectFile(string fileName)
         {
             Debug.WriteLine("Loading Project file " + fileName);
             if (File.Exists(fileName) == false)
             {
                 throw new ArgumentException(String.Format("The project file {0} does not exist!", fileName), nameof(fileName));
             }
-            mXml.loadFromFile(fileName);
-            setupDirectories(mXml.node("system.path"), new FileInfo(fileName).FullName);
+            Settings.LoadFromFile(fileName);
+            SetupDirectories(Settings.Node("system.path"), new FileInfo(fileName).FullName);
         }
 
+        // unused in C++
         // meta data of settings
-        public void loadSettingsMetaDataFromFile(string fileName)
-        {
-            // TODO; apparently a no op?
-            string metadata = Helper.loadTextFile(fileName);
-        }
+        //public void loadSettingsMetaDataFromFile(string fileName)
+        //{
+        //    string metadata = Helper.loadTextFile(fileName);
+        //}
 
         /** Load setting meta data from a piece of XML.
             @p topNode is a XML node, that contains the "setting" nodes as childs:
@@ -491,7 +481,7 @@ namespace iLand.tools
             </topnode>
             @endcode
           */
-        public void loadSettingsMetaDataFromXml(XmlElement topNode)
+        public void LoadSettingsMetaDataFromXml(XmlElement topNode)
         {
             mSettingMetaData.Clear();
             if (topNode == null)
@@ -508,28 +498,40 @@ namespace iLand.tools
                     throw new NotSupportedException();
                 }
 
-                SettingMetaData md = new SettingMetaData(SettingMetaData.typeFromName(elt.Attributes["type"].Value), // type
+                SettingMetaData md = new SettingMetaData(tools.SettingMetaData.TypeFromName(elt.Attributes["type"].Value), // type
                               settingName, // name
-                              childText(elt, "description"), // description
-                              childText(elt, "url"), // url
-                              childText(elt, "default"));
+                              ChildText(elt, "description"), // description
+                              ChildText(elt, "url"), // url
+                              ChildText(elt, "default"));
                 mSettingMetaData[settingName] = md;
 
-                Debug.WriteLine(md.dump());
+                Debug.WriteLine(md.Dump());
                 //mSettingMetaData[settingName].dump();
             }
             Debug.WriteLine("setup settingmetadata complete." + mSettingMetaData.Count + "items loaded.");
         }
 
         // Database connections
-        public void clearDatabaseConnections() ///< shutdown and clear connections
+        public void ClearDatabaseConnections() ///< shutdown and clear connections
         {
-            this.dbin().Dispose();
-            this.dbout().Dispose();
-            this.dbclimate().Dispose();
+            if (this.DatabaseClimate != null)
+            {
+                this.DatabaseClimate.Dispose();
+                this.DatabaseClimate = null;
+            }
+            if (this.DatabaseInput != null)
+            {
+                this.DatabaseInput.Dispose();
+                this.DatabaseInput = null;
+            }
+            if (this.DatabaseOutput != null)
+            {
+                this.DatabaseOutput.Dispose();
+                this.DatabaseOutput = null;
+            }
         }
 
-        public bool setupDatabaseConnection(string dbname, string fileName, bool fileMustExist)
+        public bool SetupDatabaseConnection(string dbname, string databaseFilePath, bool fileMustExist)
         {
             if ((String.Equals(dbname, "in", StringComparison.Ordinal) == false) &&
                 (String.Equals(dbname, "out", StringComparison.Ordinal) == false) &&
@@ -537,42 +539,45 @@ namespace iLand.tools
             {
                 throw new ArgumentOutOfRangeException(nameof(dbname));
             }
+            if (fileMustExist)
+            {
+                if (File.Exists(databaseFilePath) == false)
+                {
+                    throw new ArgumentException("Database file '" + databaseFilePath + "'does not exist!", nameof(databaseFilePath));
+                }
+            }
 
             // TODO: check if database is already open
             //QSqlDatabase::database(dbname).close(); // close database
-            SqliteConnection db = new SqliteConnection(dbname);
-            Trace.WriteLine("setup database connection " + dbname + " to " + fileName);
-            if (fileMustExist)
+            SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
             {
-                if (File.Exists(fileName) == false)
-                {
-                    throw new ArgumentException("Error setting up database connection: file " + fileName + " does not exist!", nameof(fileName));
-                }
-            }
+                DataSource = databaseFilePath,
+                Mode = fileMustExist ? SqliteOpenMode.ReadWrite : SqliteOpenMode.ReadWriteCreate,
+            };
+            SqliteConnection db = new SqliteConnection(connectionString.ConnectionString);
+            Trace.WriteLine("setup database connection " + dbname + " to " + databaseFilePath);
             db.Open();
             if (!fileMustExist)
             {
                 // for output databases:
                 // some special commands (pragmas: see also: http://www.sqlite.org/pragma.html)
-                using (SqliteTransaction transaction = db.BeginTransaction())
-                {
-                    SqliteCommand tempStore = new SqliteCommand("pragma temp_store(2)", db, transaction); // temp storage in memory
-                    // for now, use default Sqlite synchronization
-                    // db.exec("pragma synchronous(1)"); // medium synchronization between memory and disk (faster than "full", more than "none")
-                    transaction.Commit();
-                }
+                using SqliteTransaction transaction = db.BeginTransaction();
+                SqliteCommand tempStore = new SqliteCommand("pragma temp_store(2)", db, transaction); // temp storage in memory
+                // for now, use default Sqlite synchronization
+                // db.exec("pragma synchronous(1)"); // medium synchronization between memory and disk (faster than "full", more than "none")
+                transaction.Commit();
             }
 
             switch (dbname)
             {
                 case "climate":
-                    this.databaseClimate = db;
+                    this.DatabaseClimate = db;
                     break;
                 case "in":
-                    this.databaseIn = db;
+                    this.DatabaseInput = db;
                     break;
                 case "out":
-                    this.databaseOut = db;
+                    this.DatabaseOutput = db;
                     break;
                 default:
                     throw new NotSupportedException();
@@ -581,25 +586,25 @@ namespace iLand.tools
         }
 
         // true, if detailed debug information is logged
-        public bool logLevelDebug()
+        public bool LogDebug()
         {
             return _loglevel < 1;
         }
 
         // true, if only important aggreate info is logged
-        public bool logLevelInfo()
+        public bool LogInfo()
         {
             return _loglevel < 2;
         }
 
         // true if only severe warnings/errors are logged.
-        public bool logLevelWarning()
+        public bool LogWarnings()
         {
             return _loglevel < 3;
         }
 
         // path
-        public void printDirectories()
+        public void PrintDirectories()
         {
             Debug.WriteLine("current File Paths:");
             foreach (KeyValuePair<string, string> filePath in mFilePath)
@@ -608,50 +613,46 @@ namespace iLand.tools
             }
         }
 
-        public void setupDirectories(XmlNode pathNode, string projectFilePath)
+        public void SetupDirectories(XmlNode pathNode, string projectFilePath)
         {
             mFilePath.Clear();
             mFilePath.Add("exe", this.GetType().Assembly.Location);
             XmlHelper xml = new XmlHelper(pathNode);
-            string homePath = xml.value("home", projectFilePath);
+            string homePath = xml.Value("home", System.IO.Path.GetDirectoryName(projectFilePath));
             mFilePath.Add("home", homePath);
-            // make other paths relativ to "home" if given as relative paths
-            mFilePath.Add("lip", path(xml.value("lip", "lip"), "home"));
-            mFilePath.Add("database", path(xml.value("database", "database"), "home"));
-            mFilePath.Add("temp", path(xml.value("temp", ""), "home"));
-            mFilePath.Add("log", path(xml.value("log", ""), "home"));
-            mFilePath.Add("script", path(xml.value("script", ""), "home"));
-            mFilePath.Add("init", path(xml.value("init", ""), "home"));
-            mFilePath.Add("output", path(xml.value("output", "output"), "home"));
+            // make other paths relative to "home" if given as relative paths
+            // BUGBUG: doesn't detect missing entries in project file
+            mFilePath.Add("lip", Path(xml.Value("lip", "lip"), "home"));
+            mFilePath.Add("database", Path(xml.Value("database", "database"), "home"));
+            mFilePath.Add("temp", Path(xml.Value("temp", ""), "home"));
+            mFilePath.Add("log", Path(xml.Value("log", ""), "home"));
+            mFilePath.Add("script", Path(xml.Value("script", ""), "home"));
+            mFilePath.Add("init", Path(xml.Value("init", ""), "home"));
+            mFilePath.Add("output", Path(xml.Value("output", "output"), "home"));
         }
 
-        public void resetScriptEngine() ///< re-creates the script engine (when the Model is re-created)
+        public void ResetScriptEngine() ///< re-creates the script engine (when the Model is re-created)
         {
-            mScriptEngine = new QJSEngine();
+            ScriptEngine = new QJSEngine();
             // globals object: instatiate here, but ownership goes to script engine
             ScriptGlobal global = new ScriptGlobal();
-            object glb = mScriptEngine.newQObject(global);
-            mScriptEngine.globalObject().setProperty("Globals", glb);
+            object glb = ScriptEngine.NewQObject(global);
+            ScriptEngine.GlobalObject().SetProperty("Globals", glb);
         }
 
-        public void setDebugOutput(int debug) 
-        { 
-            mDebugOutputs = (uint)debug;
-        }
-
-        public void setDebugOutput(DebugOutputs dbg, bool enable = true) ///< enable/disable a specific output type.
+        public void SetDebugOutput(DebugOutputs dbg, bool enable = true) ///< enable/disable a specific output type.
         {
             if (enable)
             {
-                mDebugOutputs |= (uint)dbg;
+                DebugOutputs |= (int)dbg;
             }
             else
             {
-                mDebugOutputs &= (uint)dbg ^ 0xffffffff;
+                DebugOutputs &= (int)((uint)dbg ^ 0xffffffff);
             }
         }
 
-        public void setLogLevel(int loglevel)
+        public void SetLogLevel(int loglevel)
         {
             _loglevel = loglevel;
             switch (loglevel)
@@ -666,7 +667,7 @@ namespace iLand.tools
 
         // setting-meta-data
         /// access an individual SettingMetaData named @p name.
-        public SettingMetaData settingMetaData(string name) // unused??
+        public SettingMetaData SettingMetaData(string name) // unused??
         {
             if (mSettingMetaData.ContainsKey(name))
             {
@@ -676,12 +677,12 @@ namespace iLand.tools
         }
 
         /// retrieve the default value of the setting @p name.
-        public object settingDefaultValue(string name) // unused?
+        public object SettingDefaultValue(string name) // unused?
         {
-            SettingMetaData smd = settingMetaData(name);
+            SettingMetaData smd = SettingMetaData(name);
             if (smd != null)
             {
-                return smd.defaultValue();
+                return smd.DefaultValue;
             }
             return null;
         }
