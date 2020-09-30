@@ -11,17 +11,6 @@ namespace iLand.tools
 
         public MapGrid Map { get; private set; } ///< acccess for C++ classes
 
-        public static void AddToScriptEngine(QJSEngine engine)
-        {
-            // about this kind of scripting magic see: http://qt.nokia.com/developer/faqs/faq.2007-06-25.9557303148
-            //QJSValue cc_class = engine.scriptValueFromQMetaObject<MapGridWrapper>();
-            // the script name for the object is "Map".
-            // TODO: solution for creating objects!!!
-            MapGridWrapper mgw = new MapGridWrapper();
-            QJSValue mgw_cls = engine.NewQObject(mgw);
-            engine.GlobalObject().SetProperty("Map", mgw_cls);
-        }
-
         public MapGridWrapper()
         {
             mCreated = false;

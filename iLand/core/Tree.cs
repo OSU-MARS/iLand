@@ -1,5 +1,4 @@
-﻿using iLand.abe;
-using iLand.output;
+﻿using iLand.output;
 using iLand.tools;
 using System;
 using System.Collections.Generic;
@@ -127,20 +126,6 @@ namespace iLand.core
             }
         }
 
-        // unused in C++
-        /// set a number of flags (need to be constructed by or'ing flags together) at the same time to the Boolean value 'value'.
-        //private void setFlag(int flag, bool value)
-        //{
-        //    if (value)
-        //    {
-        //        mFlags |= flag;
-        //    }
-        //    else
-        //    {
-        //        mFlags &= (flag ^ 0xffffff);
-        //    }
-        //}
-
         /// retrieve the value of the flag 'flag'.
         private bool IsFlagSet(Flags flag)
         {
@@ -170,13 +155,6 @@ namespace iLand.core
         {
             mGrid = gridToStamp; mHeightGrid = dominanceGrid;
         }
-
-        // unused in C++
-        // calculate the thickness of the bark of the tree
-        //private double barkThickness()
-        //{
-        //    return mSpecies.barkThickness(mDbh);
-        //}
 
         /// dumps some core variables of a tree to a string.
         private string Dump()
@@ -1103,16 +1081,6 @@ namespace iLand.core
             }
         }
 
-        // unused in C++
-        /// remove a part of the biomass of the tree, e.g. due to fire.
-        //private void removeBiomassOfTree(double removeFoliageFraction, double removeBranchFraction, double removeStemFraction)
-        //{
-        //    mFoliageMass *= 1.0F - (float)removeFoliageFraction;
-        //    mWoodyMass *= (1.0F - (float)removeStemFraction);
-        //    // we have a problem with the branches: this currently cannot be done properly!
-        //    // (void)removeBranchFraction; // silence warning
-        //}
-
         public void SetHeight(float height)
         {
             if (height <= 0.0 || height > 150.0)
@@ -1172,13 +1140,6 @@ namespace iLand.core
 
         private void NotifyTreeRemoved(TreeRemovalType reason)
         {
-            // this information is used to track the removed volume for stands based on grids (and for salvaging operations)
-            ForestManagementEngine abe = GlobalSettings.Instance.Model.AbeEngine;
-            if (abe != null)
-            {
-                abe.NotifyTreeRemoval(this, (int)reason);
-            }
-
             // tell disturbance modules that a tree died
             GlobalSettings.Instance.Model.Modules.TreeDeath(this, (int)reason);
 

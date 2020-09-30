@@ -1,5 +1,4 @@
-﻿using iLand.abe;
-using iLand.output;
+﻿using iLand.output;
 using iLand.tools;
 using System;
 using System.Collections.Generic;
@@ -24,7 +23,6 @@ namespace iLand.core
 
         public List<ResourceUnit> ResourceUnits { get; private set; }
         public Management Management { get; private set; }
-        public ForestManagementEngine AbeEngine { get; private set; }
         public Environment Environment { get; private set; }
         public Saplings Saplings { get; private set; }
         public TimeEvents TimeEvents { get; private set; }
@@ -54,7 +52,6 @@ namespace iLand.core
 
             Initialize();
             GlobalSettings.Instance.Model = this; // BUGBUG: many to one set
-            GlobalSettings.Instance.ResetScriptEngine(); // clear the script
             Debug.WriteLine("extended debug checks disabled.");
         }
 
@@ -87,12 +84,6 @@ namespace iLand.core
             {
                 using DebugTimer loadtrees = new DebugTimer("load trees");
                 loader.ProcessInit();
-            }
-            // initalization of ABE
-            if (AbeEngine != null)
-            {
-                AbeEngine.Setup();
-                AbeEngine.RunOnInit(true);
             }
 
             // load climate
@@ -130,13 +121,6 @@ namespace iLand.core
 
                 // force the compilation of initial stand statistics
                 CreateStandStatistics();
-            }
-
-            // initalization of ABE (now all stands are properly set up)
-            if (AbeEngine != null)
-            {
-                AbeEngine.Initialize();
-                AbeEngine.RunOnInit(false);
             }
 
             // outputs to create with inital state (without any growth) are called here:
@@ -202,13 +186,6 @@ namespace iLand.core
             {
                 using DebugTimer t2 = new DebugTimer("management");
                 Management.Run();
-                GlobalSettings.Instance.SystemStatistics.ManagementTime += t.Elapsed();
-            }
-            // ... or ABE (the agent based variant)
-            if (AbeEngine != null)
-            {
-                using DebugTimer t3 = new DebugTimer("ABE:run");
-                AbeEngine.Run();
                 GlobalSettings.Instance.SystemStatistics.ManagementTime += t.Elapsed();
             }
 
@@ -290,12 +267,7 @@ namespace iLand.core
             GlobalSettings.Instance.SystemStatistics.TotalYearTime += t.Elapsed();
             GlobalSettings.Instance.SystemStatistics.WriteOutput();
 
-            // global javascript event
-            GlobalSettings.Instance.ExecuteJSFunction("onYearEnd");
             ++GlobalSettings.Instance.CurrentYear;
-
-            // try to clean up a bit of memory (useful if many large JS objects (e.g., grids) are used)
-            GlobalSettings.Instance.ScriptEngine.CollectGarbage();
         }
 
         // setup/maintenance
@@ -319,7 +291,6 @@ namespace iLand.core
             Modules = null;
             Dem = null;
             GrassCover = null;
-            AbeEngine = null;
 
             GlobalSettings.Instance.OutputManager.Close();
 
@@ -411,15 +382,6 @@ namespace iLand.core
             }
 
             // (3) additional issues
-            // (3.1) load javascript code into the engine
-            string script_file = xml.Value("system.javascript.fileName");
-            if (String.IsNullOrEmpty(script_file) == false)
-            {
-                script_file = g.Path(script_file, "script");
-                ScriptGlobal.LoadScript(script_file);
-                g.ModelController.LoadedJavascriptFile = script_file;
-            }
-
             // (3.2) setup of regeneration
             if (Settings.RegenerationEnabled)
             {
@@ -430,36 +392,12 @@ namespace iLand.core
             }
             Saplings.RecruitmentVariation = xml.ValueDouble("model.settings.seedDispersal.recruitmentDimensionVariation", 0.1);
 
-            // (3.3) management
-            bool use_abe = xml.ValueBool("model.management.abeEnabled");
-            if (use_abe)
-            {
-                // use the agent based forest management engine
-                AbeEngine = new ForestManagementEngine();
-                // setup of ABE after loading of trees.
-
-            }
-            // use the standard management
-            string mgmtFile = xml.Value("model.management.file");
             if (xml.ValueBool("model.management.enabled"))
             {
                 Management = new Management();
+                string mgmtFile = xml.Value("model.management.file");
                 string path = GlobalSettings.Instance.Path(mgmtFile, "script");
-                Management.LoadScript(path);
-                Debug.WriteLine("setup management using script" + path);
             }
-        }
-
-        public void ReloadAbe() ///< force a recreate of the agent based forest management engine
-        {
-            // delete firest
-            AbeEngine = new ForestManagementEngine();
-            // and setup
-            AbeEngine.Setup();
-            AbeEngine.RunOnInit(true);
-
-            AbeEngine.Initialize();
-            AbeEngine.RunOnInit(false);
         }
 
         /// get the value of the (10m) Height grid at the position index ix and iy (of the LIF grid)
@@ -467,13 +405,6 @@ namespace iLand.core
         {
             return HeightGrid[ix / Constant.LightPerHeightSize, iy / Constant.LightPerHeightSize];
         }
-
-        // unused in C++
-        //public HeightGridValue heightGridValue(float lif_ptr)
-        //{
-        //    Point p = mGrid.indexOf(lif_ptr);
-        //    return mHeightGrid[p.X / Constant.cPxPerHeight, p.Y / Constant.cPxPerHeight);
-        //}
 
         public SpeciesSet SpeciesSet()
         {
@@ -522,7 +453,6 @@ namespace iLand.core
             LightGrid = null;
             HeightGrid = null;
             Management = null;
-            AbeEngine = null;
             Environment = null;
             TimeEvents = null;
             StandGrid = null;
@@ -789,9 +719,6 @@ namespace iLand.core
                         }
                     }
                 }
-
-                // setup of scripting environment
-                ScriptGlobal.SetupGlobalScripting();
 
                 // setup the helper that does the multithreading
                 ThreadRunner.Setup(valid_rus);
@@ -1123,28 +1050,6 @@ namespace iLand.core
             // (2) do the soil carbon and nitrogen dynamics calculations (ICBM/2N)
             unit.CalculateCarbonCycle();
         }
-
-        // unused in C++
-        //private void debugCheckAllTrees()
-        //{
-        //    AllTreeIterator at = new AllTreeIterator(this);
-        //    bool has_errors = false; 
-        //    double dummy = 0.0;
-        //    for (Tree t = at.next(); t != null; t = at.next())
-        //    {
-        //        // plausibility
-        //        if (t.dbh() < 0 || t.dbh() > 10000.0 || t.biomassFoliage() < 0.0 || t.height() > 1000.0 || t.height() < 0.0 || t.biomassFoliage() < 0.0)
-        //        {
-        //            has_errors = true;
-        //        }
-        //        // check for objects....
-        //        dummy = t.stamp().offset() + t.ru().ruSpecies()[1].statistics().count();
-        //    }
-        //    if (has_errors)
-        //    {
-        //        Debug.WriteLine("model: debugCheckAllTrees found problems " + dummy);
-        //    }
-        //}
 
         public ResourceUnit FirstResourceUnit()
         {

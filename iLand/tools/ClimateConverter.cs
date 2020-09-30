@@ -69,16 +69,6 @@ namespace iLand.tools
             this.BindExpression(mExpVpd, 7);
         }
 
-        public static void AddToScriptEngine(QJSEngine engine)
-        {
-            // about this kind of scripting magic see: http://qt.nokia.com/developer/faqs/faq.2007-06-25.9557303148
-            //QJSValue cc_class = engine.scriptValueFromQMetaObject<ClimateConverter>();
-            // the script name for the object is "ClimateConverter".
-            ClimateConverter cc = new ClimateConverter();
-            QJSValue cc_class = engine.NewQObject(cc);
-            engine.GlobalObject().SetProperty("ClimateConverter", cc_class);
-        }
-
         private void BindExpression(Expression expr, int index)
         {
             expr.SetExpression(index.ToString(CultureInfo.InvariantCulture)); // "cX" is the default expression

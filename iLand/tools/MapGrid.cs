@@ -28,9 +28,6 @@ namespace iLand.tools
         public Grid<int> Grid { get; private set; }
         ///< file name of the grid
         public string Name { get; private set; }
-        // unused in C++
-        /// extract a list of neighborhood relationships between all the polygons of the grid
-        // public MultiValueDictionary<int, int> NeighborList { get; private set; }
 
         public double Area(int id) { return IsValid(id) ? mRectIndex[id].Item2 : 0.0; } ///< return the area (m2) covered by the polygon
         public RectangleF BoundingBox(int id) { return IsValid(id) ? mRectIndex[id].Item1 : new RectangleF(); } ///< returns the bounding box of a polygon

@@ -42,22 +42,5 @@ namespace iLand.core
             }
             return l;
         }
-
-        // unused in C++
-        // statistics
-        /// retrieve min and max of variable 'index'
-        //public abstract void range(ref double rMin, ref double rMax, int index);
-
-        // unused in C++
-        // data access functions
-        //public abstract double value(float x, float y, int index);
-        //public abstract double value(PointF world_coord, int index);
-        //public abstract double value(int ix, int iy, int index);
-        //public abstract double value(int grid_index, int index);
-        // for classified values
-        //public virtual string LabelValue(int value, int index)
-        //{
-        //    return "-"; // BUGBUG: doesn't use input
-        //}
     }
 }

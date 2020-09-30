@@ -9,8 +9,6 @@ namespace iLand.output
     {
         private bool mIncludeDeadTrees;
         private bool mIncludeHarvestTrees;
-        // unused in C++
-        // private Expression mCondition;
 
         private class LROdata
         {

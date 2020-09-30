@@ -27,7 +27,7 @@ namespace iLand.tools
         // load the static plugins
         private void Init()
         {
-            foreach (object plugin in QPluginLoader.StaticInstances)
+            foreach (object plugin in PluginLoader.StaticInstances)
             {
                 if (plugin is IDisturbanceInterface di)
                 {
@@ -96,13 +96,6 @@ namespace iLand.tools
             foreach (IDisturbanceInterface di in mInterfaces)
             {
                 di.Setup();
-            }
-
-            // set up the scripting (i.e., Javascript)
-            QJSEngine engine = GlobalSettings.Instance.ScriptEngine;
-            foreach (IDisturbanceInterface di in mInterfaces)
-            {
-                di.SetupScripting(engine);
             }
         }
 

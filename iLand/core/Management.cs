@@ -17,10 +17,6 @@ namespace iLand.core
     internal class Management
     {
         private readonly List<MutableTuple<Tree, double>> mTrees;
-        private readonly QJSEngine mEngine;
-
-        // unused in C++
-        // string scriptFile() { return mScriptFile; }
 
         // property getter & setter for removal fractions
         /// removal fraction foliage: 0: 0% will be removed, 1: 100% will be removed from the forest by management operations (i.e. calls to manage() instead of kill())
@@ -32,11 +28,6 @@ namespace iLand.core
 
         public Management()
         {
-            // setup the scripting engine
-            this.mEngine = GlobalSettings.Instance.ScriptEngine;
-            QJSValue objectValue = mEngine.NewQObject(this);
-            this.mEngine.GlobalObject().SetProperty("management", objectValue);
-
             // default values for removal fractions
             // 100% of the stem, 0% of foliage and branches
             this.mRemoveFoliage = 0.0;
@@ -51,12 +42,6 @@ namespace iLand.core
         public double Mean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
         /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
         public double Sum(string expression, string filter = null) { return AggregateFunction(expression, filter, "sum"); }
-
-        // global output function
-        public string ExecuteScript(string cmd = "")
-        {
-            return GlobalSettings.Instance.ScriptEngine.ExecuteScript(cmd);
-        }
 
         ///< load all trees, return number of trees
         public int LoadAll()
@@ -287,14 +272,6 @@ namespace iLand.core
             return 0.0;
         }
 
-        // introduced with switch to QJSEngine (context.throwMessage not available any more)
-        private void ThrowError(string errormessage)
-        {
-            GlobalSettings.Instance.ScriptEngine.Evaluate(String.Format("throw '{0}'", errormessage));
-            Debug.WriteLine("Management-script error: " + errormessage);
-            // no idea if this works!!!
-        }
-
         // from the range percentile range pctfrom to pctto (each 1..100)
         public int KillPercentage(int pctfrom, int pctto, int number)
         {
@@ -322,19 +299,7 @@ namespace iLand.core
         {
             mTrees.Clear();
             Debug.WriteLine("run() called");
-            QJSValue mgmt = mEngine.GlobalObject().Property("manage");
             int year = GlobalSettings.Instance.CurrentYear;
-            //mgmt.call(QJSValue(), QScriptValueList()+year);
-            QJSValue result = mgmt.Call(new List<QJSValue>() { new QJSValue(year) });
-            if (result.IsError())
-            {
-                Debug.WriteLine("Script Error occured: " + result.ToString());//  + "\n" + mEngine.uncaughtExceptionBacktrace();
-            }
-        }
-
-        public void LoadScript(string fileName)
-        {
-            GlobalSettings.Instance.ScriptEngine.LoadScript(fileName);
         }
 
         public int FilterIDList(List<object> idList)
@@ -464,8 +429,7 @@ namespace iLand.core
         {
             if (wrap == null)
             {
-                ThrowError("loadFromMap called with invalid map object!");
-                return;
+                throw new ArgumentNullException(nameof(wrap));
             }
             LoadFromMap(wrap.Map, key);
         }
@@ -503,8 +467,7 @@ namespace iLand.core
         {
             if (!(SWDfrac >= 0.0 && SWDfrac <= 1.0 && DWDfrac >= 0.0 && DWDfrac <= 1.0 && soilFrac >= 0.0 && soilFrac <= 1.0 && litterFrac >= 0.0 && litterFrac <= 1.0))
             {
-                ThrowError("removeSoilCarbon called with invalid parameters!!\nArgs: ---");
-                return;
+                throw new ArgumentException("removeSoilCarbon called with invalid parameters!!");
             }
             List<MutableTuple<ResourceUnit, double>> ru_areas = wrap.Map.ResourceUnitAreas(key).ToList();
             double total_area = 0.0;
@@ -533,10 +496,9 @@ namespace iLand.core
            */
         public void SlashSnags(MapGridWrapper wrap, int key, double slash_fraction)
         {
-            if (slash_fraction < 0 || slash_fraction > 1)
+            if (slash_fraction < 0.0 || slash_fraction > 1.0)
             {
-                ThrowError(String.Format("slashSnags called with invalid parameters!!\nArgs: ...."));
-                return;
+                throw new ArgumentOutOfRangeException(nameof(slash_fraction), "slashSnags called with invalid parameters!");
             }
             List<MutableTuple<ResourceUnit, double>> ru_areas = wrap.Map.ResourceUnitAreas(key).ToList();
             double total_area = 0.0;

@@ -313,30 +313,6 @@ namespace iLand.core
             return true;
         }
 
-        // unused in C++
-        //private Grid<T> normalized(T targetvalue)
-        //{
-        //    Grid<T> target = new Grid<T>(this);
-        //    T total = sum();
-        //    T multiplier;
-        //    if (total != 0)
-        //    {
-        //        multiplier = targetvalue / total;
-        //    }
-        //    else
-        //    {
-        //        return target;
-        //    }
-        //    for (int xIndex = 0; xIndex < this.sizeX(); ++xIndex)
-        //    {
-        //        for (int yIndex = 0; yIndex < this.sizeY(); ++yIndex)
-        //        {
-        //            this[xIndex, yIndex] *= multiplier;
-        //        }
-        //    }
-        //    return target;
-        //}
-
         public bool Setup(RectangleF rect, double cellsize)
         {
             PhysicalSize = rect;
@@ -352,31 +328,6 @@ namespace iLand.core
             }
             return Setup((float)cellsize, dx, dy);
         }
-
-        // unused in C++
-        //private T avg()
-        //{
-        //    if (count() != 0)
-        //    {
-        //        return sum() / count();
-        //    }
-        //    else
-        //    {
-        //        return 0;
-        //    }
-        //}
-
-        // unused in C++
-        //private void add(T summand)
-        //{
-        //    for (int xIndex = 0; xIndex < this.sizeX(); ++xIndex)
-        //    {
-        //        for (int yIndex = 0; yIndex < this.sizeY(); ++yIndex)
-        //        {
-        //            this[xIndex, yIndex] += summand;
-        //        }
-        //    }
-        //}
 
         public void ClearDefault()
         {
@@ -395,11 +346,5 @@ namespace iLand.core
             double distance = MathF.Sqrt((fp1.X - fp2.X) * (fp1.X - fp2.X) + (fp1.Y - fp2.Y) * (fp1.Y - fp2.Y));
             return distance;
         }
-
-        // unused in C++
-        //private Point randomPosition()
-        //{
-        //    return new Point(RandomGenerator.irandom(0, mSizeX), RandomGenerator.irandom(0, mSizeY));
-        //}
     }
 }

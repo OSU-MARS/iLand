@@ -76,16 +76,19 @@ namespace iLand.core
                     if (String.IsNullOrEmpty(entries[i].Item2.ToString()) == false)
                     {
                         Debug.WriteLine("executing Javascript time event: " + entries[i].Item2.ToString());
-                        GlobalSettings.Instance.ExecuteJavascript(entries[i].Item2.ToString());
                     }
                 }
                 else
                 {
                     // no special value: a xml node...
                     if (GlobalSettings.Instance.Settings.SetNodeValue(key, entries[i].Item2.ToString()))
+                    {
                         Debug.WriteLine("TimeEvents: Error: Key " + key + "not found! (tried to set to " + entries[i].Item2.ToString() + ")");
+                    }
                     else
+                    {
                         Debug.WriteLine("TimeEvents: set " + key + "to" + entries[i].Item2.ToString());
+                    }
                 }
                 values_set++;
             }

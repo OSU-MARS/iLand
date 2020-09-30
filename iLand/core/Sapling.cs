@@ -20,9 +20,6 @@ namespace iLand.core
         private static readonly double mRecruitmentVariation = 0.1; // +/- 10%
         private static double mBrowsingPressure = 0.0;
 
-        // unused in C++
-        // public static void setRecruitmentVariation(double variation) { mRecruitmentVariation = variation; }
-
         private ResourceUnitSpecies mRUS;
         private readonly List<SaplingTreeOld> mSaplingTrees;
         private double mSumDbhDied; ///< running sum of dbh of died trees (used to calculate detritus)
@@ -81,40 +78,6 @@ namespace iLand.core
                 mBrowsingPressure = 0.0;
             }
         }
-
-        // unused in C++
-        /// get the *represented* (Reineke's Law) number of trees (N/ha)
-        //public double livingStemNumber(double rAvgDbh, double rAvgHeight, double rAvgAge)
-        //{
-        //    double total = 0.0;
-        //    double dbh_sum = 0.0;
-        //    double h_sum = 0.0;
-        //    double age_sum = 0.0;
-        //    SaplingGrowthParameters p = mRUS.species().saplingGrowthParameters();
-        //    for (int it = 0; it != mSaplingTrees.Count; ++it)
-        //    {
-        //        float dbh = mSaplingTrees[it].height / p.hdSapling * 100.0F;
-        //        if (dbh < 1.0) // minimum size: 1cm
-        //        {
-        //            continue;
-        //        }
-        //        double n = p.representedStemNumber(dbh); // one cohort on the pixel represents that number of trees
-        //        dbh_sum += n * dbh;
-        //        h_sum += n * mSaplingTrees[it].height;
-        //        age_sum += n * mSaplingTrees[it].age.age;
-        //        total += n;
-        //    }
-        //    if (total > 0.0)
-        //    {
-        //        dbh_sum /= total;
-        //        h_sum /= total;
-        //        age_sum /= total;
-        //    }
-        //    rAvgDbh = dbh_sum;
-        //    rAvgHeight = h_sum;
-        //    rAvgAge = age_sum;
-        //    return total;
-        //}
 
         public double RepresentedStemNumber(float height)
         {

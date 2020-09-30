@@ -100,12 +100,6 @@ namespace iLand.core
             return CanRun() && !IsRunning() && mFinished;
         }
 
-        // unused in C++
-        //private bool isPaused()
-        //{
-        //    return mPaused;
-        //}
-
         public int CurrentYear()
         {
             return GlobalSettings.Instance.CurrentYear;
@@ -145,7 +139,6 @@ namespace iLand.core
             GlobalSettings.Instance.CurrentYear = 1;
             // initialization of trees, output on startup
             Model.BeforeRun();
-            GlobalSettings.Instance.ExecuteJSFunction("onAfterCreate");
 
             Debug.WriteLine("Model created.");
         }
@@ -154,7 +147,6 @@ namespace iLand.core
         {
             if (CanDestroy())
             {
-                GlobalSettings.Instance.ExecuteJSFunction("onBeforeDestroy");
                 Model = null;
                 GlobalSettings.Instance.CurrentYear = 0;
                 Debug.WriteLine("ModelController: Model destroyed.");
@@ -281,35 +273,12 @@ namespace iLand.core
                 GlobalSettings.Instance.ClearDebugLists();  // clear debug data
             }
             bool err = false;
-            GlobalSettings.Instance.ExecuteJSFunction("onYearBegin");
             Model.RunYear();
 
             FetchDynamicOutput();
 
             return err;
         }
-
-        // unused in C++
-        //private bool pause()
-        //{
-        //    if (!isRunning())
-        //    {
-        //        return mPaused;
-        //    }
-        //    if (mPaused)
-        //    {
-        //        // currently in pause - mode . continue
-        //        mPaused = false;
-
-        //    }
-        //    else
-        //    {
-        //        // currently running . set to pause mode
-        //        GlobalSettings.instance().outputManager().save();
-        //        mPaused = true;
-        //    }
-        //    return mPaused;
-        //}
 
         public bool ContinueRun()
         {

@@ -95,10 +95,6 @@ namespace iLand.tools
         private int m_tokCount;
         private readonly List<string> m_varList;
 
-        // unused in C++
-        //private string m_prepStr;
-        //private bool m_incSumEnabled;
-
         private readonly object m_execMutex;
         // linearization
         private int mLinearizeMode;
@@ -837,24 +833,6 @@ namespace iLand.tools
             }
             return m_varSpace[GetVariableIndex(varName)];
         }
-
-        // unused in C++
-        //public double getVarAdress(string varName)
-        //{
-        //    if (!m_parsed)
-        //    {
-        //        parse();
-        //    }
-        //    int idx = getVarIndex(varName);
-        //    if (idx >= 0 && idx < 10)
-        //    {
-        //        return m_varSpace[idx];
-        //    }
-        //    else
-        //    {
-        //        throw new NotSupportedException(String.Format("getVarAdress: Invalid variable <{0}>.", varName));
-        //    }
-        //}
 
         public int GetVariableIndex(string variableName)
         {

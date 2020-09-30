@@ -14,8 +14,6 @@ namespace iLand.tools
     internal class SpatialAnalysis
     {
         private RumpleIndex mRumple;
-        // unused in C++
-        // private SpatialLayeredGrid mLayers;
         private readonly Grid<float> mCrownCoverGrid;
         private readonly Grid<int> mClumpGrid;
 
@@ -28,14 +26,6 @@ namespace iLand.tools
             this.mClumpGrid = new Grid<int>();
             this.mCrownCoverGrid = new Grid<float>();
             this.mRumple = null;
-        }
-
-
-        public static void AddToScriptEngine()
-        {
-            SpatialAnalysis spati = new SpatialAnalysis();
-            QJSValue v = GlobalSettings.Instance.ScriptEngine.NewQObject(spati);
-            GlobalSettings.Instance.ScriptEngine.GlobalObject().SetProperty("SpatialAnalysis", v);
         }
 
         public double RumpleIndexFullArea()
@@ -156,21 +146,6 @@ namespace iLand.tools
         {
             CalculateCrownCover();
             Helper.SaveToTextFile(GlobalSettings.Instance.Path(fileName), Grid.ToEsriRaster(mCrownCoverGrid));
-        }
-
-        public QJSValue Patches(QJSValue grid, int min_size)
-        {
-            ScriptGrid sg = (ScriptGrid)grid.ToQObject();
-            if (sg != null)
-            {
-                // extract patches (keep patches with a size >= min_size
-                PatchSizes = ExtractPatches(sg.Grid, min_size, String.Empty);
-                // create a (double) copy of the internal clump grid, and return this grid
-                // as a JS value
-                QJSValue v = ScriptGrid.CreateGrid(mClumpGrid.ToDouble(), "patch");
-                return v;
-            }
-            return new QJSValue();
         }
 
         private void CalculateCrownCover()

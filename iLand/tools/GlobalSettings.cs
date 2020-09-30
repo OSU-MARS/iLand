@@ -89,7 +89,6 @@ namespace iLand.tools
         public ModelController ModelController { get; set; }
 
         public OutputManager OutputManager { get; private set; }
-        public QJSEngine ScriptEngine { get; private set; }
         // xml project file
         public XmlHelper Settings { get; private set; }
         public SystemStatistics SystemStatistics { get; private set; }
@@ -115,7 +114,6 @@ namespace iLand.tools
             this.OutputManager = new OutputManager();
             // initialized externall
             // this.mRunYear
-            this.ScriptEngine = null;
             this.mSettingMetaData = new Dictionary<string, SettingMetaData>();
             this.SystemStatistics = new SystemStatistics();
             this.Settings = new XmlHelper();
@@ -144,16 +142,6 @@ namespace iLand.tools
         {
             mDebugLists.Clear();
         }
-
-        // unused in C++
-        //private void dbg_helper(string where, string what, string file, int line)
-        //{
-        //    Debug.WriteLine("Warning in " + where + ":" + what + ". (file: " + file + "line:" + line);
-        //}
-        //private void dbg_helper_ext(string where, string what, string file, int line, string s)
-        //{
-        //    Debug.WriteLine("Warning in " + where + ":" + what + ". (file: " + file + "line:" + line + "more:" + s);
-        //}
 
         public List<string> DebugDataTable(DebugOutputs type, string separator, string fileName = null) ///< output for all available items (trees, ...) in table form
         {
@@ -403,19 +391,6 @@ namespace iLand.tools
             }
         }
 
-        /// access the global QScriptEngine used throughout the model
-        /// for all Javascript related functionality.
-        public string ExecuteJavascript(string command)
-        {
-            return ScriptGlobal.ExecuteScript(command);
-        }
-
-        /// execute a javasript function in the global context
-        public string ExecuteJSFunction(string function_name)
-        {
-            return ScriptGlobal.ExecuteJSFunction(function_name);
-        }
-
         // path and directory
         public bool FileExists(string fileName, string type = "home")
         {
@@ -463,13 +438,6 @@ namespace iLand.tools
             Settings.LoadFromFile(fileName);
             SetupDirectories(Settings.Node("system.path"), new FileInfo(fileName).FullName);
         }
-
-        // unused in C++
-        // meta data of settings
-        //public void loadSettingsMetaDataFromFile(string fileName)
-        //{
-        //    string metadata = Helper.loadTextFile(fileName);
-        //}
 
         /** Load setting meta data from a piece of XML.
             @p topNode is a XML node, that contains the "setting" nodes as childs:
@@ -629,15 +597,6 @@ namespace iLand.tools
             mFilePath.Add("script", Path(xml.Value("script", ""), "home"));
             mFilePath.Add("init", Path(xml.Value("init", ""), "home"));
             mFilePath.Add("output", Path(xml.Value("output", "output"), "home"));
-        }
-
-        public void ResetScriptEngine() ///< re-creates the script engine (when the Model is re-created)
-        {
-            ScriptEngine = new QJSEngine();
-            // globals object: instatiate here, but ownership goes to script engine
-            ScriptGlobal global = new ScriptGlobal();
-            object glb = ScriptEngine.NewQObject(global);
-            ScriptEngine.GlobalObject().SetProperty("Globals", glb);
         }
 
         public void SetDebugOutput(DebugOutputs dbg, bool enable = true) ///< enable/disable a specific output type.

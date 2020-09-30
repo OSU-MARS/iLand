@@ -1,6 +1,4 @@
-﻿using iLand.tools;
-
-namespace iLand.core
+﻿namespace iLand.core
 {
     internal interface IDisturbanceInterface
     {
@@ -11,7 +9,6 @@ namespace iLand.core
 
         // setup
         void Setup(); ///< setup after general iLand model frame is created.
-        void SetupScripting(QJSEngine engine); ///< allow module specific javascript functions/classes
         void Run(); ///< main function that once a year (after growth)
         void YearBegin(); ///< function executes at the beginning of a year (e.g., cleanup)
     }

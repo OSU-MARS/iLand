@@ -9,21 +9,6 @@ namespace iLand.core
 
         public void SetGrid(Grid<Int16> grid) { Grid = grid; }
 
-        // unused in C++
-        //public override double value(Int16 data, int index)
-        //{
-        //    if (!mGrassCover.enabled())
-        //    {
-        //        return 0.0;
-        //    }
-        //    switch (index)
-        //    {
-        //        case 0: return mGrassCover.effect(data); //effect
-        //        case 1: return mGrassCover.cover(data); // cover
-        //        default: throw new NotSupportedException(String.Format("invalid variable index for a GrassCoverLayers: {0}", index));
-        //    }
-        //}
-
         public override List<LayerElement> Names()
         {
             if (mNames == null)

@@ -59,18 +59,6 @@ namespace iLand.tools
             return Value(row, GetColumnIndex(column_name)); 
         }
 
-        public static void AddToScriptEngine(QJSEngine engine)
-        {
-            // remove this code?
-            // about this kind of scripting magic see: http://qt.nokia.com/developer/faqs/faq.2007-06-25.9557303148
-            //QJSValue cc_class = engine.scriptValueFromQMetaObject<CSVFile>();
-
-            // TODO: solution for creating objects (on the C++ side...)
-
-            // the script name for the object is "CSVFile".
-            //engine.globalObject().setProperty("CSVFile", cc_class);
-        }
-
         ///< ctor, load @p fileName.
         public CsvFile(string fileName)
             : this()

@@ -87,8 +87,6 @@ namespace iLand.tools
                 state[i] = (uint)random.Next();
             }
             index = 0;
-            // inits for the xorshift algorithm...
-            // x = 123456789, y = 362436069, z = 521288629; // unused in C++
             // inits for the fast rand....
             g_seed = random.Next();
         }
@@ -101,7 +99,6 @@ namespace iLand.tools
                 state[i] = (uint)random.Next();
             }
             index = 0;
-            // x = 123456789, y = 362436069, z = 521288629; // unused in C++
             g_seed = oneSeed;
         }
     }

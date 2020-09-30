@@ -17,9 +17,6 @@ namespace iLand.core
     internal class StampContainer
     {
         // constants: comments may be wrong; conflicting information in C++
-        // unused in C++
-        //private const int BHDclassWidth = 4;
-        //private const int BHDclassLow = 4; ///< bhd classes start with 4cm: class 0 = 4..8, class1 = 8..12
         private const int BHDclassCount = 70; ///< class count, see getKey(): for lower dbhs classes are smaller
         private const int HDclassWidth = 10;
         private const int HDclassLow = 35; ///< hd classes offset is 35: class 0 = 35-45, class 1 = 45-55
