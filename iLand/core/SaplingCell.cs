@@ -1,54 +1,60 @@
 ﻿using System;
 
-namespace iLand.core
+namespace iLand.Core
 {
-    internal class SaplingCell
+    public class SaplingCell
     {
-        public const int SaplingCells = 5; // TODO: cells per what?
+        public const int SaplingSlots = 5; // TODO: 5 slots per cell -> max of 5 saplings per 2 x 2 m cell -> upper limit of only 8000 TPH regen?
 
-        public enum ECellState { CellInvalid = 0, CellFree = 1, CellFull = 2 };
+        public enum SaplingCellState { Invalid = 0, Free = 1, Full = 2 };
+
         public SaplingTree[] Saplings { get; private set; }
-        public ECellState State { get; set; }
+        public SaplingCellState State { get; set; }
 
         public SaplingCell()
         {
-            State = ECellState.CellInvalid;
-            Saplings = new SaplingTree[SaplingCells];
+            this.State = SaplingCellState.Invalid;
+            this.Saplings = new SaplingTree[SaplingCell.SaplingSlots];
+            for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
+            {
+                // BUGBUG: SoA
+                this.Saplings[slotIndex] = new SaplingTree();
+            }
         }
 
         public void CheckState()
         {
-            if (State == ECellState.CellInvalid)
+            if (this.State == SaplingCellState.Invalid)
             {
                 return;
             }
 
-            bool free = false;
-            for (int i = 0; i < SaplingCells; ++i)
+            bool hasFreeSlot = false;
+            for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
                 // locked for all species, if a sapling of one species >1.3m
-                if (Saplings[i].Height > 1.3F)
+                if (this.Saplings[slotIndex].Height > 1.3F)
                 {
-                    State = ECellState.CellFull;
+                    this.State = SaplingCellState.Full;
                     return;
                 }
                 // locked, if all slots are occupied.
-                if (!Saplings[i].IsOccupied())
+                if (!this.Saplings[slotIndex].IsOccupied())
                 {
-                    free = true;
+                    hasFreeSlot = true;
                 }
             }
-            State = free ? ECellState.CellFree : ECellState.CellFull;
+            this.State = hasFreeSlot ? SaplingCellState.Free : SaplingCellState.Full;
         }
 
         /// get an index to an open slot in the cell, or -1 if all slots are occupied
         public int GetFreeIndex()
         {
-            for (int i = 0; i < SaplingCells; ++i)
+            for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
-                if (!Saplings[i].IsOccupied())
+                if (!Saplings[slotIndex].IsOccupied())
                 {
-                    return i;
+                    return slotIndex;
                 }
             }
             return -1;
@@ -57,50 +63,50 @@ namespace iLand.core
         /// count the number of occupied slots on the pixel
         public int GetOccupiedSlotCount()
         {
-            int n = 0;
-            for (int i = 0; i < SaplingCells; ++i)
+            int slotsOccupied = 0;
+            for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
-                n += Saplings[i].IsOccupied() ? 1 : 0;
+                slotsOccupied += this.Saplings[slotIndex].IsOccupied() ? 1 : 0;
             }
-            return n;
+            return slotsOccupied;
         }
 
         /// add a sapling to this cell, return a pointer to the tree on success, or 0 otherwise
         public SaplingTree AddSapling(float h_m, int age_yrs, int species_idx)
         {
-            int idx = GetFreeIndex();
-            if (idx == -1)
+            int freeIndex = GetFreeIndex();
+            if (freeIndex == -1)
             {
                 return null;
             }
-            Saplings[idx].SetSapling(h_m, age_yrs, species_idx);
-            return Saplings[idx];
+            this.Saplings[freeIndex].SetSapling(h_m, age_yrs, species_idx);
+            return Saplings[freeIndex];
         }
 
         /// return the maximum height on the pixel
         public float MaxHeight()
         {
-            if (State == ECellState.CellInvalid)
+            if (this.State == SaplingCellState.Invalid)
             {
                 return 0.0F;
             }
             float h_max = 0.0F;
-            for (int i = 0; i < SaplingCells; ++i)
+            for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
-                h_max = Math.Max(Saplings[i].Height, h_max);
+                h_max = Math.Max(Saplings[slotIndex].Height, h_max);
             }
             return h_max;
         }
 
         public bool HasNewSaplings()
         {
-            if (State == ECellState.CellInvalid)
+            if (this.State == SaplingCellState.Invalid)
             {
                 return false;
             }
-            for (int i = 0; i < SaplingCells; ++i)
+            for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
-                if (Saplings[i].IsOccupied() && Saplings[i].Age < 2)
+                if (this.Saplings[slotIndex].IsOccupied() && this.Saplings[slotIndex].Age < 2)
                 {
                     return true;
                 }
@@ -109,17 +115,17 @@ namespace iLand.core
         }
 
         /// return the sapling tree of the requested species, or 0
-        public SaplingTree Sapling(int species_index)
+        public SaplingTree FirstOrDefault(int speciesIndex)
         {
-            if (State == ECellState.CellInvalid)
+            if (this.State == SaplingCellState.Invalid)
             {
                 return null;
             }
-            for (int i = 0; i < SaplingCells; ++i)
+            for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
-                if (Saplings[i].SpeciesIndex == species_index)
+                if (this.Saplings[slotIndex].SpeciesIndex == speciesIndex)
                 {
-                    return Saplings[i];
+                    return this.Saplings[slotIndex];
                 }
             }
             return null;

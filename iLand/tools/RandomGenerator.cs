@@ -1,7 +1,8 @@
 ﻿using MersenneTwister;
 using System;
+using System.Diagnostics;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     // a new set of numbers is generated for every 5*500000 = 2.500.000 numbers
     internal class RandomGenerator
@@ -70,7 +71,9 @@ namespace iLand.tools
         /// returns a random number in [0,1] (i.e.="1" is a possible result!)
         public static double Random() 
         {
-            return ((double)RandomInteger() + Int32.MinValue) / (2.0 * Int32.MaxValue + 1);
+            double value = ((double)RandomInteger() - Int32.MinValue) / (2.0 * Int32.MaxValue + 1);
+            Debug.Assert((value >= 0.0) && (value <= 1.0));
+            return value;
         }
 
         public static double Random(double max_value)

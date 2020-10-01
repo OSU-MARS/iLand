@@ -1,11 +1,11 @@
-﻿using iLand.core;
+﻿using iLand.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
-    internal class Modules
+    public class Modules
     {
         private readonly List<IDisturbanceInterface> mInterfaces; ///< the list stores only the active modules
         private readonly List<ISetupResourceUnitInterface> mSetupRUs;
@@ -33,7 +33,7 @@ namespace iLand.tools
                 {
                     Debug.WriteLine(di.Name());
                     // check xml file
-                    if (GlobalSettings.Instance.Settings.ValueBool(String.Format("modules.{0}.enabled", di.Name())))
+                    if (GlobalSettings.Instance.Settings.GetBool(String.Format("modules.{0}.enabled", di.Name())))
                     {
                         // plugin is enabled: store in list of active modules
                         mInterfaces.Add(di);
@@ -122,7 +122,7 @@ namespace iLand.tools
 
         public void Run()
         {
-            using DebugTimer t = new DebugTimer("modules");
+            using DebugTimer t = new DebugTimer("Modules.Run()");
 
             // *** run in fixed order ***
             foreach (IDisturbanceInterface di in mInterfaces)

@@ -1,4 +1,4 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
     /** @class StandStatistics
       @ingroup tools
@@ -11,18 +11,12 @@
       - add to "add(Tree)" and "calculate()"
       - add to "add(StandStatistics)" as well!
       */
-    internal class StandStatistics
+    public class StandStatistics
     {
-        private double mCount;
         private double mSumDbh;
         private double mSumHeight;
         private double mSumBasalArea;
         private double mSumVolume;
-        private double mGWL;
-        private double mAverageDbh;
-        private double mAverageHeight;
-        private double mLeafAreaIndex;
-        private int mCohortCount; ///< number of cohrots
         private double mSumSaplingAge;
 
         public double AverageDbh { get; private set; } ///< average dbh (cm)
@@ -67,13 +61,13 @@
         {
             // reset all values
             // TODO: call ClearOnlyTrees()
-            mCount = 0;
-            mSumDbh = mSumHeight = mAverageDbh = mAverageHeight = 0.0;
-            mSumBasalArea = mSumVolume = mGWL = 0.0;
-            mLeafAreaIndex = 0.0;
+            Count = 0;
+            mSumDbh = mSumHeight = AverageDbh = AverageHeight = 0.0;
+            mSumBasalArea = mSumVolume = Gwl = 0.0;
+            LeafAreaIndex = 0.0;
             Npp = NppAbove = 0.0;
             NppSaplings = 0.0;
-            mCohortCount = SaplingCount = 0;
+            CohortCount = SaplingCount = 0;
             MeanSaplingAge = 0.0;
             mSumSaplingAge = 0.0;
             StemC = 0.0;
@@ -85,10 +79,10 @@
         public void ClearOnlyTrees()
         {
             // reset only those values that are directly accumulated from trees
-            mCount = 0;
-            mSumDbh = mSumHeight = mAverageDbh = mAverageHeight = 0.0;
-            mSumBasalArea = mSumVolume = mGWL = 0.0;
-            mLeafAreaIndex = 0.0;
+            Count = 0;
+            mSumDbh = mSumHeight = AverageDbh = AverageHeight = 0.0;
+            mSumBasalArea = mSumVolume = Gwl = 0.0;
+            LeafAreaIndex = 0.0;
             /*mNPP = mNPPabove = 0.0;
             mNPPsaplings = 0.0;
             mCohortCount = mSaplingCount = 0;
@@ -101,12 +95,12 @@
 
         public void Add(Tree tree, TreeGrowthData tgd)
         {
-            mCount++;
+            Count++;
             mSumDbh += tree.Dbh;
             mSumHeight += tree.Height;
             mSumBasalArea += tree.BasalArea();
             mSumVolume += tree.Volume();
-            mLeafAreaIndex += tree.LeafArea; // warning: sum of leafarea!
+            LeafAreaIndex += tree.LeafArea; // warning: sum of leafarea!
             if (tgd != null)
             {
                 Npp += tgd.NppTotal;
@@ -118,9 +112,9 @@
             this.CoarseRootC += Constant.BiomassCFraction * tree.CoarseRootMass;
             this.CoarseRootN += Constant.BiomassCFraction / tree.Species.CNRatioWood * tree.CoarseRootMass;
             this.FineRootC += Constant.BiomassCFraction * tree.FineRootMass;
-            this.FineRootN += Constant.BiomassCFraction / tree.Species.CNRatioFineroot * tree.FineRootMass;
+            this.FineRootN += Constant.BiomassCFraction / tree.Species.CNRatioFineRoot * tree.FineRootMass;
             this.FoliageC += Constant.BiomassCFraction * tree.FoliageMass;
-            this.FoliageN += Constant.BiomassCFraction / tree.Species.CNRatioFineroot * tree.FoliageMass;
+            this.FoliageN += Constant.BiomassCFraction / tree.Species.CNRatioFineRoot * tree.FoliageMass;
             this.StemC += Constant.BiomassCFraction * tree.StemMass;
             this.StemN += Constant.BiomassCFraction / tree.Species.CNRatioWood * tree.StemMass;
         }
@@ -128,18 +122,18 @@
         // note: mRUS = 0 for aggregated statistics
         public void Calculate()
         {
-            if (mCount > 0.0)
+            if (Count > 0.0)
             {
-                mAverageDbh = mSumDbh / mCount;
-                mAverageHeight = mSumHeight / mCount;
+                AverageDbh = mSumDbh / Count;
+                AverageHeight = mSumHeight / Count;
                 if (ResourceUnitSpecies != null && ResourceUnitSpecies.RU.StockableArea > 0.0)
                 {
-                    mLeafAreaIndex /= ResourceUnitSpecies.RU.StockableArea; // convert from leafarea to LAI
+                    LeafAreaIndex /= ResourceUnitSpecies.RU.StockableArea; // convert from leafarea to LAI
                 }
             }
-            if (mCohortCount != 0)
+            if (CohortCount != 0)
             {
-                MeanSaplingAge = mSumSaplingAge / (double)mCohortCount;
+                MeanSaplingAge = mSumSaplingAge / (double)CohortCount;
             }
 
             // scale values to per hectare if resource unit <> 1ha
@@ -149,7 +143,7 @@
                 double area_factor = Constant.RUArea / ResourceUnitSpecies.RU.StockableArea;
                 if (area_factor != 1.0)
                 {
-                    mCount *= area_factor;
+                    Count *= area_factor;
                     mSumBasalArea *= area_factor;
                     mSumVolume *= area_factor;
                     mSumDbh *= area_factor;
@@ -157,7 +151,7 @@
                     NppAbove *= area_factor;
                     NppSaplings *= area_factor;
                     //mGWL *= area_factor;
-                    mCohortCount = (int)(area_factor * mCohortCount); // BUGBUG: quantization?
+                    CohortCount = (int)(area_factor * CohortCount); // BUGBUG: quantization?
                     SaplingCount = (int)(area_factor * SaplingCount); // BUGBUG: quantization?
                     //double mCStem, mCFoliage, mCBranch, mCCoarseRoot, mCFineRoot;
                     //double mNStem, mNFoliage, mNBranch, mNCoarseRoot, mNFineRoot;
@@ -175,24 +169,24 @@
                     RegenerationC *= area_factor; 
                     RegenerationN *= area_factor;
                 }
-                mGWL = mSumVolume + ResourceUnitSpecies.RemovedVolume; // removedVolume: per ha, SumVolume now too
+                Gwl = mSumVolume + ResourceUnitSpecies.RemovedVolume; // removedVolume: per ha, SumVolume now too
             }
         }
 
         public void Add(StandStatistics stat)
         {
-            mCount += stat.mCount;
+            Count += stat.Count;
             mSumBasalArea += stat.mSumBasalArea;
             mSumDbh += stat.mSumDbh;
             mSumHeight += stat.mSumHeight;
             mSumVolume += stat.mSumVolume;
-            mLeafAreaIndex += stat.mLeafAreaIndex;
+            LeafAreaIndex += stat.LeafAreaIndex;
             Npp += stat.Npp;
             NppAbove += stat.NppAbove;
             NppSaplings += stat.NppSaplings;
-            mGWL += stat.mGWL;
+            Gwl += stat.Gwl;
             // regeneration
-            mCohortCount += stat.mCohortCount;
+            CohortCount += stat.CohortCount;
             SaplingCount += stat.SaplingCount;
             mSumSaplingAge += stat.mSumSaplingAge;
             // carbon/nitrogen pools
@@ -207,23 +201,23 @@
         public void AddAreaWeighted(StandStatistics stat, double weight)
         {
             // aggregates that are not scaled to hectares
-            mCount += stat.mCount * weight;
+            Count += stat.Count * weight;
             mSumBasalArea += stat.mSumBasalArea * weight;
             mSumDbh += stat.mSumDbh * weight;
             mSumHeight += stat.mSumHeight * weight;
             mSumVolume += stat.mSumVolume * weight;
             // averages that are scaled to per hectare need to be scaled
-            mAverageDbh += stat.mAverageDbh * weight;
-            mAverageHeight += stat.mAverageHeight * weight;
+            AverageDbh += stat.AverageDbh * weight;
+            AverageHeight += stat.AverageHeight * weight;
             MeanSaplingAge += stat.MeanSaplingAge * weight;
-            mLeafAreaIndex += stat.mLeafAreaIndex * weight;
+            LeafAreaIndex += stat.LeafAreaIndex * weight;
 
             Npp += stat.Npp * weight;
             NppAbove += stat.NppAbove * weight;
             NppSaplings += stat.NppSaplings * weight;
-            mGWL += stat.mGWL * weight;
+            Gwl += stat.Gwl * weight;
             // regeneration
-            mCohortCount += (int)(stat.mCohortCount * weight); // BUGBUG: quantization?
+            CohortCount += (int)(stat.CohortCount * weight); // BUGBUG: quantization?
             SaplingCount += (int)(stat.SaplingCount * weight); // BUGBUG: quantization?
             mSumSaplingAge += stat.mSumSaplingAge * weight;
             // carbon/nitrogen pools
@@ -237,7 +231,7 @@
 
         public void Add(SaplingStat sapling)
         {
-            mCohortCount += sapling.LivingCohorts;
+            CohortCount += sapling.LivingCohorts;
             SaplingCount += (int)sapling.LivingSaplings; // saplings with height >1.3m
 
             mSumSaplingAge += sapling.AverageAge * sapling.LivingCohorts;

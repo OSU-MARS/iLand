@@ -1,9 +1,9 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System.Diagnostics;
 
-namespace iLand.core
+namespace iLand.Core
 {
-    internal class Phenology
+    public class Phenology
     {
         private readonly Climate mClimate; ///< link to relevant climate source
         private readonly double mMinVpd; ///< minimum vpd [kPa]
@@ -140,7 +140,7 @@ namespace iLand.core
             day_stop -= 10;
             if (day_start < -1 || day_stop < -1)
             {
-                //throw IException(QString("Phenology::calculation(): was not able to determine the length of the vegetation period for group %1. climate table: '%2'." ).arg(id()).arg(mClimate.name()));
+                //throw IException(QString("Phenology::calculation(): was not able to determine the length of the vegetation period for group {0}. climate table: '{1}'.", id(), mClimate.name()));
                 Debug.WriteLine("Phenology::calculation(): vegetation period is 0 for group " + ID + ", climate table: " + mClimate.Name);
                 day_start = mClimate.DaysOfYear() - 1; // last day of the year, never reached
                 day_stop = day_start; // never reached

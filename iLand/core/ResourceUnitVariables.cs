@@ -1,6 +1,6 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
-    internal class ResourceUnitVariables
+    public class ResourceUnitVariables
     {
         public double CarbonToAtm { get; set; }
         public double CarbonUptake { get; set; }

@@ -1,4 +1,4 @@
-﻿namespace iLand.tools
+﻿namespace iLand.Tools
 {
     /** @class RandomIndex Access each index of a given size in a random order.
         Example-Usage:

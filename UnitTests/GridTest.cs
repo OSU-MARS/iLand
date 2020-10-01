@@ -1,66 +1,71 @@
-﻿using iLand.core;
-using iLand.tools;
+﻿using iLand.Core;
+using iLand.Tools;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 
 namespace iLand.Test
 {
     [TestClass]
-    public class GridTest
+    public class GridTest : LandTest
     {
         public TestContext TestContext { get; set; }
 
-        //private Grid<float> averaged(int factor, int offsetx = 0, int offsety = 0)
-        //{
-        //    Grid<float> target = new Grid<float>();
-        //    target.setup(cellsize() * factor, sizeX() / factor, sizeY() / factor);
-        //    int x, y;
-        //    T sum = 0;
-        //    target.initialize(sum);
-        //    // sum over array of 2x2, 3x3, 4x4, ...
-        //    for (x = offsetx; x < mSizeX; x++)
-        //    {
-        //        for (y = offsety; y < mSizeY; y++)
-        //        {
-        //            this[(x - offsetx) / factor, (y - offsety) / factor] += constValueAtIndex(x, y);
-        //        }
-        //    }
-        //    // divide
-        //    double fsquare = factor * factor;
-        //    for (int xIndex = 0; xIndex < this.sizeX(); ++xIndex)
-        //    {
-        //        for (int yIndex = 0; yIndex < this.sizeY(); ++yIndex)
-        //        {
-        //            this[xIndex, yIndex] /= fsquare;
-        //        }
-        //    }
-        //    return target;
-        //}
+        [ClassInitialize]
+        public static void ClassInitialize(TestContext testContext)
+        {
+            LandTest.EnsureModel(testContext);
+        }
+
+        private Grid<float> CreateAveragedGrid(int cellSize)
+        {
+            Grid<float> grid = new Grid<float>();
+            grid.Setup(cellSize, Constant.RUSize / cellSize, Constant.RUSize / cellSize);
+            for (int xIndex = 0; xIndex < grid.CellsX; xIndex++)
+            {
+                for (int yIndex = 0; yIndex < grid.CellsY; yIndex++)
+                {
+                    grid[xIndex, yIndex] += xIndex + yIndex; // include initialization to 0.0F in test coverage
+                }
+            }
+
+            float cellArea = cellSize * cellSize;
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
+            {
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
+                {
+                    grid[xIndex, yIndex] /= cellArea;
+                }
+            }
+            return grid;
+        }
 
         [TestMethod]
-        public void Averaged()
+        public void AveragedGrid()
         {
-            // Test-funktion: braucht 1/3 time von readGrid()
-            using DebugTimer t = new DebugTimer("test");
-            Grid<float> averaged = null; // TODO: this.averaged(10);
+            using DebugTimer t = new DebugTimer("GridTest.AveragedGrid()");
+            Grid<float> averaged = this.CreateAveragedGrid(10);
             int count = 0;
-            for (float p = 0; p < averaged.Count; ++p)
+            for (int index = 0; index < averaged.Count; ++index)
             {
-                if (p > 0.9)
+                if (averaged[index] > 0.09)
                 {
                     count++;
                 }
             }
-            this.TestContext.WriteLine(count + " LIF > 0.9 of " + averaged.Count);
+            Assert.IsTrue(count == 55);
         }
 
         [TestMethod]
-        public void TriangleArea()
+        public void RumpleIndex()
         {
-            // check calculation: numbers for Jenness paper
             RumpleIndex rumpleIndex = new RumpleIndex();
             rumpleIndex.Calculate();
-            float[] hs = new float[] { 165, 170, 145, 160, 183, 155, 122, 175, 190 };
-            // double area = rumpleIndex.calculateSurfaceArea(hs, 100);
+            double index = rumpleIndex.Value();
+            Assert.IsTrue(Math.Abs(index - 0.0) < 0.001);
+
+            // check calculation: numbers for Jenness paper
+            //float[] hs = new float[] { 165, 170, 145, 160, 183, 155, 122, 175, 190 };
+            //double area = rumpleIndex.CalculateSurfaceArea(hs, 100);
         }
     }
 }

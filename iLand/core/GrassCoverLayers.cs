@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace iLand.core
+namespace iLand.Core
 {
     internal class GrassCoverLayers : LayeredGrid<Int16>
     {

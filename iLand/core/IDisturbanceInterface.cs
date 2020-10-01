@@ -1,6 +1,8 @@
-﻿namespace iLand.core
+﻿using System.Diagnostics.Contracts;
+
+namespace iLand.Core
 {
-    internal interface IDisturbanceInterface
+    public interface IDisturbanceInterface
     {
         // general information / properties
         string Description(); ///< some additional description. This info is shown in the GUI and is printed to the log file.

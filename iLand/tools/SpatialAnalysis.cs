@@ -1,10 +1,10 @@
-﻿using iLand.core;
+﻿using iLand.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /**
      * @brief The SpatialAnalysis class is the scripting class related to extra spatial analysis functions.
@@ -43,7 +43,7 @@ namespace iLand.tools
         /// Return: vector with number of pixels per patch (first element: patch 1, second element: patch 2, ...)
         public List<int> ExtractPatches(Grid<double> src, int min_size, string fileName)
         {
-            mClumpGrid.Setup(src.PhysicalSize, src.CellSize);
+            mClumpGrid.Setup(src.PhysicalExtent, src.CellSize);
             mClumpGrid.ClearDefault();
 
             // now loop over all pixels and run a floodfill algorithm
@@ -150,7 +150,7 @@ namespace iLand.tools
 
         private void CalculateCrownCover()
         {
-            mCrownCoverGrid.Setup(GlobalSettings.Instance.Model.ResourceUnitGrid.PhysicalSize,
+            mCrownCoverGrid.Setup(GlobalSettings.Instance.Model.ResourceUnitGrid.PhysicalExtent,
                                   GlobalSettings.Instance.Model.ResourceUnitGrid.CellSize);
 
             // calculate the crown cover per resource unit. We use the "reader"-stamps of the individual trees

@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Xml;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /** @class XmlHelper
       XmlHelper wraps a XML file and provides some convenient functions to
@@ -34,17 +34,13 @@ namespace iLand.tools
       @endcode
 
       */
-    internal class XmlHelper
+    public class XmlHelper
     {
         private readonly XmlDocument mDoc;
         private readonly Dictionary<string, string> mParamCache;
 
         public XmlNode CurrentNode { get; set; } ///< sets node as the current (relative) top node.
         public XmlNode TopNode { get; private set; }
-
-        /// returns true if the current (relative!) node is valid (i.e. not null).
-        public bool IsValid() { return CurrentNode != null; }
-        public void SetCurrentNode(string path) { CurrentNode = Node(path); } ///< sets @p path as the current (relative) node.
 
         public XmlHelper()
         {
@@ -65,8 +61,17 @@ namespace iLand.tools
             */
         public XmlHelper(XmlNode topNode)
         {
-            TopNode = topNode;
-            CurrentNode = topNode;
+            this.TopNode = topNode ?? throw new ArgumentNullException(nameof(topNode));
+            this.CurrentNode = topNode;
+        }
+
+        /// returns true if the current (relative!) node is valid (i.e. not null).
+        public bool IsValid() { return CurrentNode != null; }
+        ///< sets @p path as the current (relative) node.
+        public bool TrySetCurrentNode(string path)
+        {
+            CurrentNode = Node(path);
+            return this.IsValid();
         }
 
         public void LoadFromFile(string fileName)
@@ -78,7 +83,7 @@ namespace iLand.tools
             }
             else
             {
-                throw new FileNotFoundException("xmlfile does not exist or is empty!", fileName);
+                throw new FileNotFoundException("XML file does not exist or is empty!", fileName);
             }
             CurrentNode = mDoc.DocumentElement; // top element
             TopNode = CurrentNode;
@@ -87,7 +92,8 @@ namespace iLand.tools
             XmlNode e = Node("model.parameter");
             if (e == null)
             {
-                throw new XmlException("/project/model/parameter element not found in project file '" + fileName + "'");
+                // TODO: move to Model parsing code
+                throw new XmlException("/project/model/parameter element not found in project file '" + fileName + "'.");
             }
             
             mParamCache.Clear();
@@ -122,24 +128,27 @@ namespace iLand.tools
         {
             if (mParamCache.ContainsKey(paramName))
             {
-                string v = mParamCache[paramName].Trim();
-                bool ret = (v == "1" || v == "true");
-                return ret;
+                string valueAsString = mParamCache[paramName].Trim();
+                if (Boolean.TryParse(valueAsString, out bool value) == false)
+                {
+                    value = String.Equals(valueAsString, "1", StringComparison.Ordinal);
+                }
+                return value;
             }
             return defaultValue;
         }
 
         public bool HasNode(string path)
         {
-            return Node(path) != null;
+            return this.Node(path) != null;
         }
 
-        public string Value(string path, string defaultValue = "")
+        public string GetString(string path, string defaultValue = "")
         {
-            XmlNode e = Node(path);
+            XmlNode e = this.Node(path);
             if (e == null)
             {
-                Debug.WriteLine("Warning: xml: node " + path + " is not present.");
+                Trace.TraceWarning("Xml: node '" + path + "' not found.");
                 return defaultValue;
             }
             else
@@ -155,31 +164,23 @@ namespace iLand.tools
             }
         }
 
-        public bool ValueBool(string path, bool defaultValue = false)
+        public bool GetBool(string path, bool defaultValue = false)
         {
             XmlNode e = Node(path);
             if (e == null)
             {
-                Debug.WriteLine("Warning: xml: node " + path + " is not present.");
+                Trace.TraceWarning("Xml: node '" + path + "' not found.");
                 return defaultValue;
             }
-            string v = e.InnerText;
-            if (v == "true" || v == "True" || v == "1")
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            return Boolean.Parse(e.InnerText);
         }
 
-        public double ValueDouble(string path, double defaultValue = 0)
+        public double GetDouble(string path, double defaultValue = 0)
         {
             XmlNode e = Node(path);
             if (e == null)
             {
-                Debug.WriteLine("Warning: xml: node " + path + " is not present.");
+                Trace.TraceWarning("Xml: node '" + path + "' not found.");
                 return defaultValue;
             }
             else
@@ -197,7 +198,7 @@ namespace iLand.tools
 
         public int ValueInt(string path, int defaultValue)
         {
-            return (int)ValueDouble(path, defaultValue);
+            return (int)GetDouble(path, defaultValue);
         }
 
         /// retrives node with given @p path and a element where isNull() is true if nothing is found.
@@ -227,8 +228,8 @@ namespace iLand.tools
                 {
                     int pos = level.IndexOf('[');
                     string levelWithoutClosingBracket = level[0..^1]; // drop closing bracket
-                    int ind = Int32.Parse(level.Substring(levelWithoutClosingBracket.Length - pos - 1));
-                    string name = levelWithoutClosingBracket.Substring(0, pos);
+                    int ind = Int32.Parse(level[(pos + 1)..^1]);
+                    string name = level[0..pos];
                     c = c.SelectSingleNode(name);
                     while (ind > 0 && c != null)
                     {
@@ -261,7 +262,7 @@ namespace iLand.tools
             XmlNode e = Node(path);
             if (e == null)
             {
-                Debug.WriteLine("XML: attempting to set value of " + path + ": node not present.");
+                Trace.TraceWarning("Xml: value of node '" + path + "' could not be set because it was not found.");
                 return false;
             }
             return SetNodeValue(e, value);

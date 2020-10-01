@@ -1,22 +1,23 @@
-﻿using iLand.tools;
+﻿using iLand.Input;
+using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
+using System.Xml;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class SpeciesSet
         A SpeciesSet acts as a container for individual Species objects. In iLand, theoretically,
         multiple species sets can be used in parallel.
         */
-    internal class SpeciesSet
+    public class SpeciesSet
     {
         private static readonly int mNRandomSets = 20;
 
         private readonly Dictionary<string, Species> mSpecies;
-        private readonly List<int> mRandomSpeciesOrder;
-        private SqliteDataReader mDataReader;
         // nitrogen response classes
         private double mNitrogen_1a, mNitrogen_1b; ///< parameters of nitrogen response class 1
         private double mNitrogen_2a, mNitrogen_2b; ///< parameters of nitrogen response class 2
@@ -33,22 +34,22 @@ namespace iLand.core
 
         public List<Species> ActiveSpecies { get; private set; } ///< list of species that are "active" (flag active in database)
         public string Name { get; private set; } ///< table name of the species set
+        public List<int> RandomSpeciesOrder { get; private set; }
         public StampContainer ReaderStamps { get; private set; }
 
         public SpeciesSet()
         {
             this.ActiveSpecies = new List<Species>();
-            this.mDataReader = null;
             this.mLightResponseIntolerant = new Expression();
             this.mLightResponseTolerant = new Expression();
             this.mLRICorrection = new Expression();
-            this.mRandomSpeciesOrder = new List<int>();
+            this.RandomSpeciesOrder = new List<int>();
             this.ReaderStamps = new StampContainer();
             this.mSeedDispersal = new List<SeedDispersal>();
             this.mSpecies = new Dictionary<string, Species>();
         }
 
-        public Species GetSpecies(string speciesId) { return mSpecies[speciesId]; }
+        public Species GetSpecies(string speciesID) { return mSpecies[speciesID]; }
         public double LriCorrection(double lightResourceIndex, double relativeHeight) { return mLRICorrection.Calculate(lightResourceIndex, relativeHeight); }
         public int SpeciesCount() { return mSpecies.Count; }
 
@@ -79,85 +80,85 @@ namespace iLand.core
         public int Setup()
         {
             XmlHelper xml = GlobalSettings.Instance.Settings;
-            string tableName = xml.Value("model.species.source", "species");
+            string tableName = xml.GetString("model.species.source", "species");
             Name = tableName;
-            string readerFile = xml.Value("model.species.reader", "reader.bin");
-            readerFile = GlobalSettings.Instance.Path(readerFile, "lip");
-            ReaderStamps.Load(readerFile);
+            string readerStampFile = xml.GetString("model.species.reader", "readerstamp.bin");
+            readerStampFile = GlobalSettings.Instance.Path(readerStampFile, "lip");
+            this.ReaderStamps.Load(readerStampFile);
             if (GlobalSettings.Instance.Settings.GetBooleanParameter("debugDumpStamps", false))
             {
                 Debug.WriteLine(ReaderStamps.Dump());
             }
 
-            using SqliteCommand query = new SqliteCommand(String.Format("select * from {0}", tableName), GlobalSettings.Instance.DatabaseInput);
-            Clear();
-            Debug.WriteLine("attempting to load a species set from " + tableName);
-            using SqliteDataReader queryReader = query.ExecuteReader();
-            for (; queryReader.HasRows; queryReader.Read())
+            this.Clear();
+            using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", tableName), GlobalSettings.Instance.DatabaseInput);
+            // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");
+            using SpeciesReader speciesReader = new SpeciesReader(speciesSelect.ExecuteReader());
+            while (speciesReader.Read())
             {
-                if ((int)GetVariable("active") == 0)
+                bool isActive = speciesReader.Active();
+                if (isActive == false)
                 {
                     continue;
                 }
-                Species s = new Species(this); // create
-                                               // call setup routine (which calls var() to retrieve values
-                s.Setup();
-
-                mSpecies.Add(s.ID, s); // store
-                if (s.Active)
+                Species species = Core.Species.Load(speciesReader, this);
+                mSpecies.Add(species.ID, species);
+                if (species.Active)
                 {
-                    ActiveSpecies.Add(s);
+                    this.ActiveSpecies.Add(species);
                 }
-                Expression.AddConstant(s.ID, s.Index);
-            } // while query.next()
-            Debug.WriteLine("loaded " + mSpecies.Count + " active species:");
-            Debug.WriteLine("index, id, name");
-            foreach (Species s in ActiveSpecies)
-            {
-                Debug.WriteLine(s.Index + " " + s.ID + " " + s.Name);
+                Expression.AddSpecies(species.ID, species.Index);
             }
-            mDataReader = null;
+
+            Debug.WriteLine("Loaded " + mSpecies.Count + " active species.");
+            //Debug.WriteLine("index, id, name");
+            //foreach (Species s in this.ActiveSpecies)
+            //{
+            //    Debug.WriteLine(s.Index + " " + s.ID + " " + s.Name);
+            //}
 
             // setup nitrogen response
             XmlHelper resp = new XmlHelper(xml.Node("model.species.nitrogenResponseClasses"));
             if (!resp.IsValid())
             {
-                throw new NotSupportedException("model.species.nitrogenResponseClasses not present!");
+                throw new XmlException("/project/model/species/nitrogenResponseClasses not present!");
             }
-            mNitrogen_1a = resp.ValueDouble("class_1_a");
-            mNitrogen_1b = resp.ValueDouble("class_1_b");
-            mNitrogen_2a = resp.ValueDouble("class_2_a");
-            mNitrogen_2b = resp.ValueDouble("class_2_b");
-            mNitrogen_3a = resp.ValueDouble("class_3_a");
-            mNitrogen_3b = resp.ValueDouble("class_3_b");
-            if (mNitrogen_1a * mNitrogen_1b * mNitrogen_2a * mNitrogen_2b * mNitrogen_3a * mNitrogen_3b == 0)
+            this.mNitrogen_1a = resp.GetDouble("class_1_a");
+            this.mNitrogen_1b = resp.GetDouble("class_1_b");
+            this.mNitrogen_2a = resp.GetDouble("class_2_a");
+            this.mNitrogen_2b = resp.GetDouble("class_2_b");
+            this.mNitrogen_3a = resp.GetDouble("class_3_a");
+            this.mNitrogen_3b = resp.GetDouble("class_3_b");
+            if ((this.mNitrogen_1a == 0.0) || (this.mNitrogen_1b == 0.0) || 
+                (this.mNitrogen_2a == 0.0) || (this.mNitrogen_2b == 0.0) ||
+                (this.mNitrogen_3a == 0.0) || (this.mNitrogen_3b == 0.0))
             {
-                throw new NotSupportedException("at least one parameter of model.species.nitrogenResponseClasses is not valid (value=0)!");
+                throw new XmlException("At least one parameter of /project/model/species/nitrogenResponseClasses/class_[1..3]_[a..b] is missing, less than zero, or zero.");
             }
 
             // setup CO2 response
             XmlHelper co2 = new XmlHelper(xml.Node("model.species.CO2Response"));
-            mCO2base = co2.ValueDouble("baseConcentration");
-            mCO2comp = co2.ValueDouble("compensationPoint");
-            mCO2beta0 = co2.ValueDouble("beta0");
-            mCO2p0 = co2.ValueDouble("p0");
-            if (mCO2base * mCO2comp * (mCO2base - mCO2comp) * mCO2beta0 * mCO2p0 == 0)
+            this.mCO2base = co2.GetDouble("baseConcentration");
+            this.mCO2comp = co2.GetDouble("compensationPoint");
+            this.mCO2beta0 = co2.GetDouble("beta0");
+            this.mCO2p0 = co2.GetDouble("p0");
+            if ((this.mCO2base == 0.0) || (this.mCO2comp == 0.0) || (mCO2base - mCO2comp) == 0.0 || (this.mCO2beta0 == 0.0) || (this.mCO2p0 == 0.0))
             {
-                throw new NotSupportedException("at least one parameter of model.species.CO2Response is not valid!");
+                throw new XmlException("At least one parameter of /project/model/species/CO2Response is missing, less than zero, or zero.");
             }
 
             // setup Light responses
             XmlHelper light = new XmlHelper(xml.Node("model.species.lightResponse"));
-            mLightResponseTolerant.SetAndParse(light.Value("shadeTolerant"));
-            mLightResponseIntolerant.SetAndParse(light.Value("shadeIntolerant"));
+            mLightResponseTolerant.SetAndParse(light.GetString("shadeTolerant"));
+            mLightResponseIntolerant.SetAndParse(light.GetString("shadeIntolerant"));
             mLightResponseTolerant.Linearize(0.0, 1.0);
             mLightResponseIntolerant.Linearize(0.0, 1.0);
             if (String.IsNullOrEmpty(mLightResponseTolerant.ExpressionString) || String.IsNullOrEmpty(mLightResponseIntolerant.ExpressionString))
             {
-                throw new NotSupportedException("at least one parameter of model.species.lightResponse is empty!");
+                throw new NotSupportedException("At least one parameter of /project/model/species/lightResponse is missing.");
             }
             // lri-correction
-            mLRICorrection.SetAndParse(light.Value("LRImodifier", "1"));
+            mLRICorrection.SetAndParse(light.GetString("LRImodifier", "1"));
             // x: LRI, y: relative heigth
             mLRICorrection.Linearize(0.0, 1.0, 0.0, 1.0);
 
@@ -170,12 +171,11 @@ namespace iLand.core
             SeedDispersal.SetupExternalSeeds();
             foreach (Species s in ActiveSpecies) 
             {
-                SeedDispersal sd = new SeedDispersal(s);
-                sd.Setup(); // setup memory for the seed map (grid)
-                s.SeedDispersal = sd; // establish the link between species and the map
+                s.SeedDispersal = new SeedDispersal(s);
+                s.SeedDispersal.Setup(); // setup memory for the seed map (grid)
             }
             SeedDispersal.FinalizeExternalSeeds();
-            Debug.WriteLine("Setup of seed dispersal maps finished.");
+            // Debug.WriteLine("Setup of seed dispersal maps finished.");
         }
 
         public void SeedDistribution(Species species)
@@ -189,7 +189,7 @@ namespace iLand.core
             {
                 return;
             }
-            using DebugTimer t = new DebugTimer("seed dispersal (all species)");
+            using DebugTimer t = new DebugTimer("SpeciesSet.Regeneration()");
 
             ThreadRunner runner = new ThreadRunner(ActiveSpecies); // initialize a thread runner object with all active species
             runner.Run(SeedDistribution);
@@ -215,35 +215,26 @@ namespace iLand.core
             }
         }
 
-        /** retrieves variables from the datasource available during the setup of species.
-          */
-        public object GetVariable(string varName)
+        public object GetVariable(SqliteDataReader reader, string columnName)
         {
-            Debug.Assert(mDataReader != null);
-
-            int idx = mDataReader.GetOrdinal(varName);
+            int idx = reader.GetOrdinal(columnName);
             if (idx >= 0)
             {
-                return mDataReader.GetValue(idx);
+                return reader.GetValue(idx);
             }
-            throw new NotSupportedException("SpeciesSet: variable not set: " + varName);
-            //throw new NotSupportedException(string("load species parameter: field {0} not found!").arg(varName));
-            // lookup in defaults
-            //Debug.WriteLine("variable" << varName << "not found - using default.";
-            //return GlobalSettings.instance().settingDefaultValue(varName);
+            throw new NotSupportedException("SpeciesSet: variable not set: " + columnName);
         }
 
-        public void RandomSpeciesOrder(out int rBegin, out int rEnd)
+        public void GetRandomSpeciesSampleIndices(out int beginIndex, out int endIndex)
         {
-            int iset = RandomGenerator.Random(0, mNRandomSets);
-            rBegin = iset * ActiveSpecies.Count;
-            rEnd = rBegin + ActiveSpecies.Count;
+            beginIndex = this.ActiveSpecies.Count * RandomGenerator.Random(0, mNRandomSets - 1);
+            endIndex = beginIndex + this.ActiveSpecies.Count;
         }
 
         private void CreateRandomSpeciesOrder()
         {
-            mRandomSpeciesOrder.Clear();
-            mRandomSpeciesOrder.Capacity = ActiveSpecies.Count * mNRandomSets;
+            RandomSpeciesOrder.Clear();
+            RandomSpeciesOrder.Capacity = ActiveSpecies.Count * mNRandomSets;
             for (int i = 0; i < mNRandomSets; ++i)
             {
                 List<int> samples = new List<int>(ActiveSpecies.Count);
@@ -256,7 +247,7 @@ namespace iLand.core
                 while (samples.Count > 0)
                 {
                     int index = RandomGenerator.Random(0, samples.Count);
-                    mRandomSpeciesOrder.Add(samples[index]);
+                    RandomSpeciesOrder.Add(samples[index]);
                     samples.RemoveAt(index);
                 }
             }

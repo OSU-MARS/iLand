@@ -1,7 +1,7 @@
-﻿using iLand.core;
+﻿using iLand.Core;
 using System;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     internal class RumpleIndex
     {
@@ -23,8 +23,8 @@ namespace iLand.tools
                 return;
             }
 
-            // the rumple grid hast the same dimensions as the resource unit grid (i.e. 100 meters)
-            mRumpleGrid.Setup(GlobalSettings.Instance.Model.ResourceUnitGrid.PhysicalSize,
+            // the rumple grid has the same dimensions as the resource unit grid (i.e. 100 meters)
+            mRumpleGrid.Setup(GlobalSettings.Instance.Model.ResourceUnitGrid.PhysicalExtent,
                               GlobalSettings.Instance.Model.ResourceUnitGrid.CellSize);
         }
 

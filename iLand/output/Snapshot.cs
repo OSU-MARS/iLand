@@ -1,5 +1,5 @@
-﻿using iLand.core;
-using iLand.tools;
+﻿using iLand.Core;
+using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 
-namespace iLand.output
+namespace iLand.Output
 {
     internal class Snapshot : Output
     {
@@ -17,6 +17,11 @@ namespace iLand.output
         public Snapshot()
         {
             this.mRUHash = new Dictionary<int, ResourceUnit>();
+        }
+
+        protected override void LogYear(SqliteCommand insertRow)
+        {
+            throw new NotImplementedException();
         }
 
         private bool OpenDatabase(string fileName, bool read)
@@ -85,8 +90,8 @@ namespace iLand.output
             string grid_file = Path.Combine(Path.GetDirectoryName(fi.FullName), Path.GetFileNameWithoutExtension(fi.FullName) + ".asc");
 
             Grid<ResourceUnit> ruGrid = GlobalSettings.Instance.Model.ResourceUnitGrid;
-            Grid<double> index_grid = new Grid<double>(ruGrid.CellSize, ruGrid.SizeX, ruGrid.SizeY);
-            index_grid.Setup(GlobalSettings.Instance.Model.ResourceUnitGrid.PhysicalSize, GlobalSettings.Instance.Model.ResourceUnitGrid.CellSize);
+            Grid<double> index_grid = new Grid<double>(ruGrid.CellSize, ruGrid.CellsX, ruGrid.CellsY);
+            index_grid.Setup(GlobalSettings.Instance.Model.ResourceUnitGrid.PhysicalExtent, GlobalSettings.Instance.Model.ResourceUnitGrid.CellSize);
             RUWrapper ru_wrap = new RUWrapper();
             Expression ru_value = new Expression("index", ru_wrap);
             for (int index = 0; index < ruGrid.Count; ++index)
@@ -109,12 +114,12 @@ namespace iLand.output
             return true;
         }
 
-        public bool LoadSnapshot(string file_name)
+        public bool Load(string fileName)
         {
-            using DebugTimer t = new DebugTimer("loadSnapshot");
-            OpenDatabase(file_name, true);
+            using DebugTimer t = new DebugTimer("Snapshot.Load()");
+            OpenDatabase(fileName, true);
 
-            FileInfo fi = new FileInfo(file_name);
+            FileInfo fi = new FileInfo(fileName);
             string grid_file = Path.Combine(Path.GetDirectoryName(fi.FullName), Path.GetFileNameWithoutExtension(fi.FullName) + ".asc");
             GisGrid grid = new GisGrid();
             mRUHash.Clear();
@@ -142,7 +147,7 @@ namespace iLand.output
                 {
                     PointF world_offset = GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
                     throw new NotSupportedException(String.Format("Loading of the snapshot '{0}' failed: The offset from the current location of the project ({3}/{4}) " +
-                                             "is not a multiple of the resource unit size (100m) relative to grid of the snapshot (origin-x: {1}, origin-y: {2}).", file_name,
+                                             "is not a multiple of the resource unit size (100m) relative to grid of the snapshot (origin-x: {1}, origin-y: {2}).", fileName,
                                      grid.Origin.X, grid.Origin.Y, world_offset.X, world_offset.Y));
                 }
 
@@ -197,7 +202,8 @@ namespace iLand.output
 
                 List<string> tableNames = new List<string>();
                 SqliteCommand selectTableNames = new SqliteCommand("SELECT name FROM sqlite_schema WHERE type='table'", db);
-                for (SqliteDataReader tableNameReader = selectTableNames.ExecuteReader(); tableNameReader.HasRows; tableNameReader.Read())
+                SqliteDataReader tableNameReader = selectTableNames.ExecuteReader();
+                while (tableNameReader.Read())
                 {
                     tableNames.Add(tableNameReader.GetString(0));
                 }
@@ -295,7 +301,7 @@ namespace iLand.output
                 SaplingCellRunner scr = new SaplingCellRunner(stand_id, stand_grid);
                 for (SaplingCell sc = scr.MoveNext(); sc != null; sc = scr.MoveNext())
                 {
-                    for (int i = 0; i < SaplingCell.SaplingCells; ++i)
+                    for (int i = 0; i < SaplingCell.SaplingSlots; ++i)
                     {
                         if (sc.Saplings[i].IsOccupied())
                         {
@@ -334,14 +340,16 @@ namespace iLand.output
             tree_list.Clear();
 
             // load from database
-            RectangleF extent = GlobalSettings.Instance.Model.PhysicalExtent;
+            RectangleF extent = GlobalSettings.Instance.Model.WorldExtentUnbuffered;
             using SqliteCommand treeQuery = new SqliteCommand(String.Format("select standID, ID, posX, posY, species,  age, height, dbh, leafArea, opacity, " +
                            "foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex " +
                            "from trees_stand where standID={0}", stand_id), db);
             using SqliteDataReader treeReader = treeQuery.ExecuteReader();
             int n = 0;
-            for (; treeReader.HasRows; treeReader.Read(), ++n)
+            while (treeReader.Read())
             {
+                ++n;
+
                 PointF coord = GisGrid.WorldToModel(new PointF(treeReader.GetInt32(2), treeReader.GetInt32(3)));
                 if (!extent.Contains(coord))
                 {
@@ -389,7 +397,7 @@ namespace iLand.output
                 SqliteCommand saplingQuery = new SqliteCommand(String.Format("select posx, posy, species_index, age, height, stress_years, flags " +
                                "from saplings_stand where standID={0}", stand_id), db);
                 using SqliteDataReader saplingReader = saplingQuery.ExecuteReader();
-                for (; saplingReader.HasRows; saplingReader.Read())
+                while (saplingReader.Read())
                 {
                     PointF coord = GisGrid.WorldToModel(new PointF(saplingReader.GetInt32(0), saplingReader.GetInt32(1)));
                     if (!extent.Contains(coord))
@@ -490,7 +498,7 @@ namespace iLand.output
             SqliteConnection db = GlobalSettings.Instance.DatabaseSnapshot();
             using SqliteCommand treeQuery = new SqliteCommand("select ID, RUindex, posX, posY, species,  age, height, dbh, leafArea, opacity, foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex from trees", db);
             using SqliteDataReader treeReader = treeQuery.ExecuteReader();
-            for (; treeReader.HasRows; treeReader.Read())
+            while (treeReader.Read())
             {
                 new_ru = treeReader.GetInt32(1);
                 ++ntotal;
@@ -612,7 +620,7 @@ namespace iLand.output
             ResourceUnit ru = null;
             int n = 0;
             using SqliteDataReader soilReader = soilQuery.ExecuteReader();
-            for (; soilReader.HasRows; soilReader.Read())
+            while (soilReader.Read())
             {
                 ru_index = soilReader.GetInt32(0);
                 ru = mRUHash[ru_index];
@@ -775,8 +783,10 @@ namespace iLand.output
             int n = 0;
             using SqliteCommand snagQuery = new SqliteCommand("select RUIndex, climateFactor, SWD1C, SWD1N, SWD2C, SWD2N, SWD3C, SWD3N, totalSWDC, totalSWDN, NSnags1, NSnags2, NSnags3, dbh1, dbh2, dbh3, height1, height2, height3, volume1, volume2, volume3, tsd1, tsd2, tsd3, ksw1, ksw2, ksw3, halflife1, halflife2, halflife3, branch1C, branch1N, branch2C, branch2N, branch3C, branch3N, branch4C, branch4N, branch5C, branch5N, branchIndex from snag", db);
             using SqliteDataReader snagReader = snagQuery.ExecuteReader();
-            for (; snagReader.HasRows; snagReader.Read(), ++n)
+            while (snagReader.Read())
             {
+                ++n;
+
                 int ci = 0;
                 int ru_index = snagReader.GetInt32(ci++);
                 ResourceUnit ru = mRUHash[ru_index];
@@ -890,7 +900,7 @@ namespace iLand.output
             int posx, posy;
             Saplings saplings = GlobalSettings.Instance.Model.Saplings;
             SqliteDataReader saplingReader = saplingQuery.ExecuteReader();
-            for (; saplingReader.HasRows; saplingReader.Read())
+            while (saplingReader.Read())
             {
                 ci = 0;
                 int ru_index = saplingReader.GetInt32(ci++);

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     internal class RandomWeighted
     {

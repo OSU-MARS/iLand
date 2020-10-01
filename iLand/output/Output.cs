@@ -1,11 +1,11 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
-namespace iLand.output
+namespace iLand.Output
 {
     /** @class Output
         The Output class abstracts output data (database, textbased, ...).
@@ -60,30 +60,24 @@ namespace iLand.output
         }
         @endcode
         */
-    internal class Output
+    public abstract class Output
     {
-        private static readonly GlobalSettings gl = GlobalSettings.Instance;
-
-        private bool isDisposed;
-        private readonly OutputMode mMode;
+        private string mInsertRowSql;
         private readonly List<object> mRow; ///< current row
-        private SqliteCommand mInserter;
-        private int mCount;
-        private int mIndex;
 
         public bool IsOpen { get; private set; } ///< returns true if output is open, i.e. has a open database connection
         public bool IsEnabled { get; set; } ///< returns true if output is enabled, i.e. is "turned on"
-        public bool IsRowEmpty() { return mIndex == 0; } ///< returns true if the buffer of the current row is empty
+        public bool IsRowEmpty() { return this.mRow.Count == 0; } ///< returns true if the buffer of the current row is empty
 
-        public List<OutputColumn> Columns { get; protected set; }
+        public List<SqlColumn> Columns { get; protected set; }
 
         public string Name { get; set; } ///< descriptive name of the ouptut
         public string Description { get; protected set; } ///< description of output
         public string TableName { get; protected set; } ///< internal output name (no spaces allowed)
 
         //protected void Name(string name, string tableName) { Name = name; TableName = tableName; }
-        protected int CurrentYear() { return gl.CurrentYear; }
-        protected XmlHelper Settings() { return gl.Settings; } ///< access XML settings (see class description)
+        protected int CurrentYear() { return GlobalSettings.Instance.CurrentYear; }
+        protected XmlHelper Settings() { return GlobalSettings.Instance.Settings; } ///< access XML settings (see class description)
 
         protected void Add(double value1, double value2) { Add(value1); Add(value2); }
         protected void Add(double value1, double value2, double value3) { Add(value1, value2); Add(value3); }
@@ -92,194 +86,121 @@ namespace iLand.output
 
         public Output()
         {
-            this.Columns = new List<OutputColumn>();
-            this.mCount = 0;
-            this.IsEnabled = false;
-            this.mMode = OutputMode.OutDatabase;
-            this.IsOpen = false;
+            this.mInsertRowSql = null;
             this.mRow = new List<object>();
 
-            NewRow();
+            this.Columns = new List<SqlColumn>();
+            this.IsEnabled = false;
+            this.IsOpen = false;
+
+            this.NewRow();
         }
 
-        public virtual void Exec()
+        public void Add(object value)
         {
-            Debug.WriteLine("exec() called! (should be overrided!)");
+            Debug.Assert(this.mRow.Count < this.Columns.Count);
+            this.mRow.Add(value);
         }
 
-        public void Add(double value)
+        public void LogYear()
         {
-            Debug.WriteLineIf(mIndex >= mCount || mIndex < 0, "add(double)", "output index out of range!");
-            mRow[mIndex++] = value;
+            using SqliteTransaction insertTransaction = GlobalSettings.Instance.DatabaseOutput.BeginTransaction();
+            using SqliteCommand insertRow = new SqliteCommand(this.mInsertRowSql, GlobalSettings.Instance.DatabaseOutput, insertTransaction);
+            for (int columnIndex = 0; columnIndex < this.Columns.Count; columnIndex++)
+            {
+                insertRow.Parameters.Add("@" + this.Columns[columnIndex].Name, this.Columns[columnIndex].Datatype);
+            }
+
+            this.LogYear(insertRow);
+
+            insertTransaction.Commit();
         }
 
-        public void Add(string value)
+        protected abstract void LogYear(SqliteCommand insertRow);
+
+        private void NewRow()
         {
-            Debug.WriteLineIf(mIndex >= mCount || mIndex < 0, "add(string)", "output index out of range!");
-            mRow[mIndex++] = value;
+            this.mRow.Clear();
         }
 
-        public void Add(int value)
+        public void Open()
         {
-            Debug.WriteLineIf(mIndex >= mCount || mIndex < 0, "add(int)", "output index out of range!");
-            mRow[mIndex++] = value;
+            if (this.IsOpen)
+            {
+                return;
+            }
+
+            this.EnsureEmptySqlTable();
+            this.mRow.Capacity = this.Columns.Count;
+            this.NewRow();
+        }
+
+        /** create the database table and opens up the output.
+          */
+        private void EnsureEmptySqlTable()
+        {
+            SqliteConnection db = GlobalSettings.Instance.DatabaseOutput;
+            // create the "create table" statement
+            StringBuilder createTableCommand = new StringBuilder("create table " + this.TableName + "(");
+            List<string> columnNames = new List<string>(this.Columns.Count);
+            foreach (SqlColumn column in this.Columns)
+            {
+                switch (column.Datatype)
+                {
+                    case SqliteType.Integer: 
+                        createTableCommand.Append(column.Name + " integer,"); 
+                        break;
+                    case SqliteType.Real: 
+                        createTableCommand.Append(column.Name + " real,");
+                        break;
+                    case SqliteType.Text: 
+                        createTableCommand.Append(column.Name + " text,"); 
+                        break;
+                    default: 
+                        throw new NotSupportedException(); // blob
+                }
+                columnNames.Add(column.Name);
+            }
+
+            createTableCommand[^1] = ')'; // replace last "," with )
+
+            SqliteCommand dropTable = new SqliteCommand(String.Format("drop table if exists {0}", this.TableName), db);
+            dropTable.ExecuteNonQuery(); // drop table (if exists)
+            SqliteCommand createTable = new SqliteCommand(createTableCommand.ToString(), db);
+            createTable.ExecuteNonQuery(); // (re-)create table
+
+            this.mInsertRowSql = "insert into " + this.TableName + " (" + String.Join(", ", columnNames) + ") values (@" + String.Join(", @", columnNames) + ")";
+
+            this.IsOpen = true;
         }
 
         public virtual void Setup()
         {
         }
 
-        public void Dispose()
-        {
-            this.Dispose(true);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (this.isDisposed)
-            {
-                return;
-            }
-            if (disposing)
-            {
-                this.Close();
-            }
-
-            this.isDisposed = true;
-        }
-
-        /** create the database table and opens up the output.
-          */
-        private void OpenDatabase()
-        {
-            SqliteConnection db = GlobalSettings.Instance.DatabaseOutput;
-            // create the "create table" statement
-            StringBuilder sql = new StringBuilder("create table " + TableName + "(");
-            StringBuilder insert = new StringBuilder("insert into " + TableName + " (");
-            StringBuilder values = new StringBuilder();
-            foreach (OutputColumn col in Columns)
-            {
-                switch (col.mDatatype)
-                {
-                    case OutputDatatype.OutInteger: sql.Append(col.Name + " integer"); break;
-                    case OutputDatatype.OutDouble: sql.Append(col.Name + " real"); break;
-                    case OutputDatatype.OutString: sql.Append(col.Name + " text"); break;
-                    default: throw new NotSupportedException();
-                }
-                insert.Append(col.Name + ",");
-                values.Append(":" + col.Name + ",");
-                sql.Append(",");
-            }
-            sql[^1] = ')'; // replace last "," with )
-                                       //qDebug()<< sql;
-            SqliteCommand drop = new SqliteCommand(String.Format("drop table if exists {0}", TableName), db);
-            drop.ExecuteNonQuery(); // drop table (if exists)
-            SqliteCommand creator = new SqliteCommand(sql.ToString(), db);
-            creator.ExecuteNonQuery(); // (re-)create table
-                                       //creator.exec("delete from " + tableName()); // clear table??? necessary?
-
-            insert[^1] = ')';
-            values[^1] = ')';
-            insert.Append(" values (" + values);
-            mInserter = new SqliteCommand(insert.ToString(), db);
-            for (int i = 0; i < Columns.Count; i++)
-            {
-                mInserter.Parameters.AddWithValue(Columns[i].Name, mRow[i]);
-            }
-            IsOpen = true;
-        }
-
-        private void NewRow()
-        {
-            mIndex = 0;
-        }
-
-        public void WriteRow()
-        {
-            Debug.WriteLineIf(mIndex != mCount, "save()", "received invalid number of values!");
-            if (!IsOpen)
-            {
-                Open();
-            }
-
-            switch (mMode)
-            {
-                case OutputMode.OutDatabase:
-                    SaveDatabase();
-                    break;
-                default:
-                    throw new NotSupportedException("Invalid output mode");
-            }
-        }
-
-        public void Open()
-        {
-            if (IsOpen)
-            {
-                return;
-            }
-
-            // setup columns
-            mCount = Columns.Count;
-            mRow.Capacity = mCount;
-            IsOpen = true;
-            NewRow();
-            // setup output
-            switch (mMode)
-            {
-                case OutputMode.OutDatabase:
-                    OpenDatabase();
-                    break;
-                default:
-                    throw new NotSupportedException("Invalid output mode");
-            }
-        }
-
-        public void Close()
-        {
-            if (!IsOpen)
-            {
-                return;
-            }
-            IsOpen = false;
-            switch (mMode)
-            {
-                case OutputMode.OutDatabase:
-                    if (mInserter != null)
-                    {
-                        mInserter.Dispose();
-                    }
-                    mInserter = null;
-                    break;
-                default:
-                    Trace.TraceWarning("close with invalid mode");
-                    break;
-            }
-        }
-
-        private void SaveDatabase()
-        {
-            for (int i = 0; i < mCount; i++)
-            {
-                mInserter.Parameters[i].Value = mRow[i];
-            }
-            mInserter.ExecuteNonQuery();
-            NewRow();
-        }
-
-        public string WikiFormat()
+        public string WriteHeaderToWiki()
         {
             StringBuilder result = new StringBuilder();
             result.AppendLine(Name);
             result.AppendLine(String.Format("Table Name: {0}{2}{1}", Name, TableName, Description, Environment.NewLine));
             // loop over columns...
             result.AppendLine("||__caption__|__datatype__|__description__"); // table begin
-            foreach (OutputColumn col in Columns)
+            foreach (SqlColumn col in Columns)
             {
-                result.AppendLine(String.Format("{0}|{1}|{2}", col.Name, col.Datatype(), col.Description));
+                result.AppendLine(String.Format("{0}|{1}|{2}", col.Name, col.Datatype, col.Description));
             }
             result.AppendLine("||");
             return result.ToString();
+        }
+
+        protected void WriteRow(SqliteCommand insertRow)
+        {
+            for (int columnIndex = 0; columnIndex < this.Columns.Count; columnIndex++)
+            {
+                insertRow.Parameters[columnIndex].Value = this.mRow[columnIndex];
+            }
+            insertRow.ExecuteNonQuery();
+            this.NewRow();
         }
     }
 }

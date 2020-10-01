@@ -1,8 +1,8 @@
-﻿using iLand.core;
+﻿using iLand.Core;
 using System;
 using System.Collections.Generic;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /** StatData.
     * Helper class for statistics. This class calculates
@@ -78,7 +78,7 @@ namespace iLand.tools
                 Max = Math.Max(i, Max);
             }
             Mean = Sum / (double)mData.Count;
-            //qDebug() << QString("p25: %1 Median: %2 p75: %3 min: %4 max: %5").arg(mP25).arg(mMedian).arg(mP75).arg(mMin).arg(mMax);
+            //qDebug() << QString("p25: {0} Median: {1} p75: {2} min: {3] max: {4}").arg(mP25).arg(mMedian).arg(mP75).arg(mMin).arg(mMax);
         }
 
         public double CalculateSD()

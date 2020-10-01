@@ -1,4 +1,4 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class SeedDispersal
         @ingroup core
@@ -15,9 +15,8 @@ namespace iLand.core
         The dispersal algortihm operate on grids with a 20m resolution.
 
         See http://iland.boku.ac.at/dispersal
-
         */
-    internal class SeedDispersal
+    public class SeedDispersal
     {
         private static Grid<float> mExternalSeedBaseMap = null; ///< static intermediate data while setting up external seeds
         private static readonly Dictionary<string, List<double>> mExtSeedData; ///< holds definition of species and percentages for external seed input
@@ -94,16 +93,15 @@ namespace iLand.core
           */
         public void Setup()
         {
-            if (GlobalSettings.Instance.Model != null || GlobalSettings.Instance.Model.HeightGrid != null || Species != null)
+            if (GlobalSettings.Instance.Model == null || GlobalSettings.Instance.Model.HeightGrid == null || this.Species == null)
             {
                 return;
             }
             mProbMode = false;
 
-            float seedmap_size = 20.0F;
             // setup of seed map
             SeedMap.Clear();
-            SeedMap.Setup(GlobalSettings.Instance.Model.HeightGrid.PhysicalSize, seedmap_size);
+            SeedMap.Setup(GlobalSettings.Instance.Model.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
             SeedMap.Initialize(0.0F);
             if (!mProbMode)
             {
@@ -111,10 +109,10 @@ namespace iLand.core
                 mSourceMap.Initialize(0.0F);
             }
             mExternalSeedMap.Clear();
-            mIndexFactor = (int)(seedmap_size / Constant.LightSize); // ratio seed grid / lip-grid:
+            mIndexFactor = Constant.SeedmapSize / Constant.LightSize; // ratio seed grid / lip-grid:
             if (GlobalSettings.Instance.LogInfo())
             {
-                Debug.WriteLine("Seed map setup. Species: " + Species.ID + " kernel-size: " + SeedMap.SizeX + " x " + SeedMap.SizeY + " pixels.");
+                Debug.WriteLine("Seed map setup. Species: " + Species.ID + " kernel-size: " + SeedMap.CellsX + " x " + SeedMap.CellsY + " pixels.");
             }
 
             if (Species == null)
@@ -122,7 +120,7 @@ namespace iLand.core
                 throw new NotSupportedException("Setup of SeedDispersal: Species not defined.");
             }
 
-            if ((GlobalSettings.Instance.Settings.ValueDouble("model.world.buffer", 0) % seedmap_size) != 0.0)
+            if ((GlobalSettings.Instance.Settings.GetDouble("model.world.buffer", 0) % Constant.SeedmapSize) != 0.0)
             {
                 throw new NotSupportedException("SeedDispersal:setup(): The buffer (model.world.buffer) must be a integer multiple of the seed pixel size (currently 20m, e.g. 20,40,60,...)).");
             }
@@ -131,12 +129,12 @@ namespace iLand.core
             mTM_occupancy = 1.0; // is currently constant
                                  // copy values for the species parameters:
             Species.GetTreeMigKernel(ref mTM_as1, ref mTM_as2, ref mTM_ks);
-            mTM_fecundity_cell = Species.FecundityM2 * seedmap_size * seedmap_size * mTM_occupancy; // scale to production for the whole cell
+            mTM_fecundity_cell = Species.FecundityM2 * Constant.SeedmapSize * Constant.SeedmapSize * mTM_occupancy; // scale to production for the whole cell
             mNonSeedYearFraction = Species.NonSeedYearFraction;
             XmlHelper xml = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.settings.seedDispersal"));
-            mKernelThresholdArea = xml.ValueDouble(".longDistanceDispersal.thresholdArea", 0.0001);
-            mKernelThresholdLDD = xml.ValueDouble(".longDistanceDispersal.thresholdLDD", 0.0001);
-            mLDDSeedlings = (float)xml.ValueDouble(".longDistanceDispersal.LDDSeedlings", 0.0001);
+            mKernelThresholdArea = xml.GetDouble(".longDistanceDispersal.thresholdArea", 0.0001);
+            mKernelThresholdLDD = xml.GetDouble(".longDistanceDispersal.thresholdLDD", 0.0001);
+            mLDDSeedlings = (float)xml.GetDouble(".longDistanceDispersal.LDDSeedlings", 0.0001);
             mLDDRings = xml.ValueInt(".longDistanceDispersal.rings", 4);
 
             mLDDSeedlings = MathF.Max(mLDDSeedlings, (float)mKernelThresholdArea);
@@ -155,7 +153,7 @@ namespace iLand.core
             {
                 // an extra seed map is used for storing information related to post-fire seed rain
                 mSeedMapSerotiny.Clear();
-                mSeedMapSerotiny.Setup(GlobalSettings.Instance.Model.HeightGrid.PhysicalSize, seedmap_size);
+                mSeedMapSerotiny.Setup(GlobalSettings.Instance.Model.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
                 mSeedMapSerotiny.Initialize(0.0F);
 
                 // set up the special seed kernel for post fire seed rain
@@ -165,10 +163,10 @@ namespace iLand.core
             mHasPendingSerotiny = false;
 
             // debug info
-            mDumpSeedMaps = GlobalSettings.Instance.Settings.ValueBool("model.settings.seedDispersal.dumpSeedMapsEnabled", false);
+            mDumpSeedMaps = GlobalSettings.Instance.Settings.GetBool("model.settings.seedDispersal.dumpSeedMapsEnabled", false);
             if (mDumpSeedMaps)
             {
-                string path = GlobalSettings.Instance.Path(GlobalSettings.Instance.Settings.Value("model.settings.seedDispersal.dumpSeedMapsPath"));
+                string path = GlobalSettings.Instance.Path(GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.dumpSeedMapsPath"));
                 Helper.SaveToTextFile(String.Format("{0}/seedkernelYes_{1}.csv", path, Species.ID), Grid.ToString(mKernelSeedYear));
                 Helper.SaveToTextFile(String.Format("{0}/seedkernelNo_{1}.csv", path, Species.ID), Grid.ToString(mKernelNonSeedYear));
                 if (!mKernelSerotiny.IsEmpty())
@@ -182,9 +180,9 @@ namespace iLand.core
             mExternalSeedBuffer = 0;
             mExternalSeedDirection = 0;
             mExternalSeedBackgroundInput = 0.0;
-            if (GlobalSettings.Instance.Settings.ValueBool("model.settings.seedDispersal.externalSeedEnabled", false))
+            if (GlobalSettings.Instance.Settings.GetBool("model.settings.seedDispersal.externalSeedEnabled", false))
             {
-                if (GlobalSettings.Instance.Settings.ValueBool("model.settings.seedDispersal.seedBelt.enabled", false))
+                if (GlobalSettings.Instance.Settings.GetBool("model.settings.seedDispersal.seedBelt.enabled", false))
                 {
                     // external seed input specified by sectors and around the project area (seedbelt)
                     SetupExternalSeedsForSpecies(Species);
@@ -193,14 +191,14 @@ namespace iLand.core
                 {
                     // external seeds specified fixedly per cardinal direction
                     // current species in list??
-                    mHasExternalSeedInput = GlobalSettings.Instance.Settings.Value("model.settings.seedDispersal.externalSeedSpecies").Contains(Species.ID);
-                    string dir = GlobalSettings.Instance.Settings.Value("model.settings.seedDispersal.externalSeedSource").ToLowerInvariant();
+                    mHasExternalSeedInput = GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.externalSeedSpecies").Contains(Species.ID);
+                    string dir = GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.externalSeedSource").ToLowerInvariant();
                     // encode cardinal positions as bits: e.g: "e,w" . 6
                     mExternalSeedDirection += dir.Contains("n") ? 1 : 0;
                     mExternalSeedDirection += dir.Contains("e") ? 2 : 0;
                     mExternalSeedDirection += dir.Contains("s") ? 4 : 0;
                     mExternalSeedDirection += dir.Contains("w") ? 8 : 0;
-                    List<string> buffer_list = Regex.Matches(GlobalSettings.Instance.Settings.Value("model.settings.seedDispersal.externalSeedBuffer"), "([^\\.\\w]+)").Select(match => match.Value).ToList();
+                    List<string> buffer_list = Regex.Matches(GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.externalSeedBuffer"), "([^\\.\\w]+)").Select(match => match.Value).ToList();
                     int index = buffer_list.IndexOf(Species.ID);
                     if (index >= 0)
                     {
@@ -209,7 +207,7 @@ namespace iLand.core
                     }
 
                     // background seed rain (i.e. for the full landscape), use regexp
-                    List<string> background_input_list = Regex.Matches(GlobalSettings.Instance.Settings.Value("model.settings.seedDispersal.externalSeedBackgroundInput"), "([^\\.\\w]+)").Select(match => match.Value).ToList();
+                    List<string> background_input_list = Regex.Matches(GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.externalSeedBackgroundInput"), "([^\\.\\w]+)").Select(match => match.Value).ToList();
                     index = background_input_list.IndexOf(Species.ID);
                     if (index >= 0)
                     {
@@ -253,19 +251,19 @@ namespace iLand.core
         public static void SetupExternalSeeds()
         {
             mExternalSeedBaseMap = null;
-            if (!GlobalSettings.Instance.Settings.ValueBool("model.settings.seedDispersal.seedBelt.enabled", false))
+            if (!GlobalSettings.Instance.Settings.GetBool("model.settings.seedDispersal.seedBelt.enabled", false))
             {
                 return;
             }
 
-            using DebugTimer t = new DebugTimer("setup of external seed maps.");
+            using DebugTimer t = new DebugTimer("SeedDispertal.SetupExternalSeeds()");
             XmlHelper xml = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.settings.seedDispersal.seedBelt"));
             int seedbelt_width = xml.ValueInt(".width", 10);
             // setup of sectors
             // setup of base map
             float seedmap_size = 20.0F;
             mExternalSeedBaseMap = new Grid<float>();
-            mExternalSeedBaseMap.Setup(GlobalSettings.Instance.Model.HeightGrid.PhysicalSize, seedmap_size);
+            mExternalSeedBaseMap.Setup(GlobalSettings.Instance.Model.HeightGrid.PhysicalExtent, seedmap_size);
             mExternalSeedBaseMap.Initialize(0.0F);
             if (mExternalSeedBaseMap.Count * 4 != GlobalSettings.Instance.Model.HeightGrid.Count)
             {
@@ -273,9 +271,9 @@ namespace iLand.core
             }
             // make a copy of the 10m height grid in lower resolution and mark pixels that are forested and outside of
             // the project area.
-            for (int y = 0; y < mExternalSeedBaseMap.SizeY; y++)
+            for (int y = 0; y < mExternalSeedBaseMap.CellsY; y++)
             {
-                for (int x = 0; x < mExternalSeedBaseMap.SizeX; x++)
+                for (int x = 0; x < mExternalSeedBaseMap.CellsX; x++)
                 {
                     bool val = GlobalSettings.Instance.Model.HeightGrid[x * 2, y * 2].IsForestOutside();
                     mExternalSeedBaseMap[x, y] = val ? 1.0F : 0.0F;
@@ -285,20 +283,20 @@ namespace iLand.core
                     }
                 }
             }
-            string path = GlobalSettings.Instance.Path(GlobalSettings.Instance.Settings.Value("model.settings.seedDispersal.dumpSeedMapsPath"));
+            string path = GlobalSettings.Instance.Path(GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.dumpSeedMapsPath"));
 
             // now scan the pixels of the belt: paint all pixels that are close to the project area
             // we do this 4 times (for all cardinal direcitons)
-            for (int y = 0; y < mExternalSeedBaseMap.SizeY; y++)
+            for (int y = 0; y < mExternalSeedBaseMap.CellsY; y++)
             {
-                for (int x = 0; x < mExternalSeedBaseMap.SizeX; x++)
+                for (int x = 0; x < mExternalSeedBaseMap.CellsX; x++)
                 {
                     if (mExternalSeedBaseMap[x, y] != 1.0)
                     {
                         continue;
                     }
 
-                    int look_forward = Math.Min(x + seedbelt_width, mExternalSeedBaseMap.SizeX - 1);
+                    int look_forward = Math.Min(x + seedbelt_width, mExternalSeedBaseMap.CellsX - 1);
                     if (mExternalSeedBaseMap[look_forward, y] == -1.0F)
                     {
                         // fill pixels
@@ -314,9 +312,9 @@ namespace iLand.core
                 }
             }
             // right to left
-            for (int y = 0; y < mExternalSeedBaseMap.SizeY; y++)
+            for (int y = 0; y < mExternalSeedBaseMap.CellsY; y++)
             {
-                for (int x = mExternalSeedBaseMap.SizeX; x >= 0; --x)
+                for (int x = mExternalSeedBaseMap.CellsX; x >= 0; --x)
                 {
                     if (mExternalSeedBaseMap[x, y] != 1.0)
                     {
@@ -339,15 +337,15 @@ namespace iLand.core
             }
             // up and down ***
             // from top to bottom
-            for (int x = 0; x < mExternalSeedBaseMap.SizeX; x++)
+            for (int x = 0; x < mExternalSeedBaseMap.CellsX; x++)
             {
-                for (int y = 0; y < mExternalSeedBaseMap.SizeY; y++)
+                for (int y = 0; y < mExternalSeedBaseMap.CellsY; y++)
                 {
                     if (mExternalSeedBaseMap[x, y] != 1.0)
                     {
                         continue;
                     }
-                    int look_forward = Math.Min(y + seedbelt_width, mExternalSeedBaseMap.SizeY - 1);
+                    int look_forward = Math.Min(y + seedbelt_width, mExternalSeedBaseMap.CellsY - 1);
                     if (mExternalSeedBaseMap[x, look_forward] == -1.0)
                     {
                         // fill pixels
@@ -363,9 +361,9 @@ namespace iLand.core
                 }
             }
             // bottom to top ***
-            for (int y = 0; y < mExternalSeedBaseMap.SizeY; y++)
+            for (int y = 0; y < mExternalSeedBaseMap.CellsY; y++)
             {
-                for (int x = mExternalSeedBaseMap.SizeX; x >= 0; --x)
+                for (int x = mExternalSeedBaseMap.CellsX; x >= 0; --x)
                 {
                     if (mExternalSeedBaseMap[x, y] != 1.0)
                         continue;
@@ -390,7 +388,7 @@ namespace iLand.core
             int sectors_y = xml.ValueInt("sizeY", 0);
             if (sectors_x < 1 || sectors_y < 1)
             {
-                throw new NotSupportedException(String.Format("setup of external seed dispersal: invalid number of sectors x={0} y=%3", sectors_x, sectors_y));
+                throw new NotSupportedException(String.Format("setup of external seed dispersal: invalid number of sectors x={0} y={1]", sectors_x, sectors_y));
             }
 
             XmlNode elem = xml.Node(".");
@@ -411,7 +409,7 @@ namespace iLand.core
                     }
                     int index = y * sectors_x + x;
 
-                    string text = xml.Value("." + n.Name);
+                    string text = xml.GetString("." + n.Name);
                     Debug.WriteLine("processing element " + n.Name + " x,y: " + x + y + text);
                     // we assume pairs of name and fraction
                     List<string> species_list = text.Split(" ").ToList();
@@ -504,7 +502,7 @@ namespace iLand.core
             // some final statistics....
             if (GlobalSettings.Instance.LogInfo())
             {
-                Debug.WriteLine("kernel setup. Species: " + Species.ID + " kernel-size: " + kernel.SizeX + " x " + kernel.SizeY + " pixels, sum (after scaling): " + kernel.Sum());
+                Debug.WriteLine("kernel setup. Species: " + Species.ID + " kernel-size: " + kernel.CellsX + " x " + kernel.CellsY + " pixels, sum (after scaling): " + kernel.Sum());
             }
         }
 
@@ -617,10 +615,10 @@ namespace iLand.core
                 for (int sector_y = 0; sector_y < mExtSeedSizeY; ++sector_y)
                 {
                     int xmin, xmax, ymin, ymax;
-                    int fx = mExternalSeedMap.SizeX / mExtSeedSizeX; // number of cells per sector
+                    int fx = mExternalSeedMap.CellsX / mExtSeedSizeX; // number of cells per sector
                     xmin = sector_x * fx;
                     xmax = (sector_x + 1) * fx;
-                    fx = mExternalSeedMap.SizeY / mExtSeedSizeY; // number of cells per sector
+                    fx = mExternalSeedMap.CellsY / mExtSeedSizeY; // number of cells per sector
                     ymin = sector_y * fx;
                     ymax = (sector_y + 1) * fx;
                     // now loop over the whole sector
@@ -691,11 +689,11 @@ namespace iLand.core
                 if (buf_size > 0)
                 {
                     int ix, iy;
-                    for (iy = 0; iy < seed_map.SizeY; ++iy)
+                    for (iy = 0; iy < seed_map.CellsY; ++iy)
                     {
-                        for (ix = 0; ix < seed_map.SizeX; ++ix)
+                        for (ix = 0; ix < seed_map.CellsX; ++ix)
                         {
-                            if (iy < buf_size || iy >= seed_map.SizeY - buf_size || ix < buf_size || ix >= seed_map.SizeX - buf_size)
+                            if (iy < buf_size || iy >= seed_map.CellsY - buf_size || ix < buf_size || ix >= seed_map.CellsX - buf_size)
                             {
                                 if (mExternalSeedDirection == 0)
                                 {
@@ -706,10 +704,10 @@ namespace iLand.core
                                 {
                                     // seeds only from specific directions
                                     float value = 0.0F;
-                                    if (Global.IsBitSet(mExternalSeedDirection, 1) && ix >= seed_map.SizeX - buf_size) value = 1; // north
+                                    if (Global.IsBitSet(mExternalSeedDirection, 1) && ix >= seed_map.CellsX - buf_size) value = 1; // north
                                     if (Global.IsBitSet(mExternalSeedDirection, 2) && iy < buf_size) value = 1; // east
                                     if (Global.IsBitSet(mExternalSeedDirection, 3) && ix < buf_size) value = 1; // south
-                                    if (Global.IsBitSet(mExternalSeedDirection, 4) && iy >= seed_map.SizeY - buf_size) value = 1; // west
+                                    if (Global.IsBitSet(mExternalSeedDirection, 4) && iy >= seed_map.CellsY - buf_size) value = 1; // west
                                     seed_map[ix, iy] = value;
                                 }
                             }
@@ -731,7 +729,7 @@ namespace iLand.core
             }
             if (mProbMode)
             {
-                using DebugTimer t = new DebugTimer("seed dispersal", true);
+                using DebugTimer t = new DebugTimer("SeedDispersal.Execute()");
 
                 // (1) detect edges
                 if (EdgeDetection())
@@ -763,7 +761,7 @@ namespace iLand.core
             else
             {
                 // distribute actual values
-                using DebugTimer t = new DebugTimer("seed dispersal", true);
+                using DebugTimer t = new DebugTimer("SeedDispersal.DistributeSeeds()");
                 // fill seed map from source map
                 DistributeSeeds();
             }
@@ -775,8 +773,8 @@ namespace iLand.core
         public bool EdgeDetection(Grid<float> seed_map = null)
         {
             Grid<float> seedmap = seed_map == null ? seed_map : SeedMap; // switch to extra seed map if provided
-            int dy = seedmap.SizeY;
-            int dx = seedmap.SizeX;
+            int dy = seedmap.CellsY;
+            int dx = seedmap.CellsX;
             bool found = false;
 
             // fill mini-gaps
@@ -851,7 +849,7 @@ namespace iLand.core
                 kernel = mKernelSerotiny;
             }
 
-            int offset = kernel.SizeX / 2; // offset is the index of the center pixel
+            int offset = kernel.CellsX / 2; // offset is the index of the center pixel
             for (int p = 0; p < seedmap.Count; ++p)
             {
                 if (seedmap[p] == -1.0F)
@@ -950,7 +948,7 @@ namespace iLand.core
             //    } // debugtimer
             //    mSeedMap.initialize(0.0F); // just for debugging...
 
-            int offset = kernel.SizeX / 2; // offset is the index of the center pixel
+            int offset = kernel.CellsX / 2; // offset is the index of the center pixel
                                              // source mode
 
             // *** seed distribution (Kernel + long distance dispersal) ***
@@ -963,9 +961,9 @@ namespace iLand.core
                     {
                         Point sm = sourcemap.IndexOf(src).Subtract(offset);
                         int sx = sm.X, sy = sm.Y;
-                        for (int iy = 0; iy < kernel.SizeY; ++iy)
+                        for (int iy = 0; iy < kernel.CellsY; ++iy)
                         {
-                            for (int ix = 0; ix < kernel.SizeX; ++ix)
+                            for (int ix = 0; ix < kernel.CellsX; ++ix)
                             {
                                 if (SeedMap.Contains(sx + ix, sy + iy))
                                 {
@@ -1026,9 +1024,9 @@ namespace iLand.core
                         Point offset_in_ru = new Point((sm.X - seedmap_offset) % seedpx_per_ru, (sm.Y - seedmap_offset) % seedpx_per_ru);  // offset of current point within the RU
 
                         //Point sm=sourcemap.indexOf(src)-Point(offset, offset);
-                        for (int iy = 0; iy < kernel.SizeY; ++iy)
+                        for (int iy = 0; iy < kernel.CellsY; ++iy)
                         {
-                            for (int ix = 0; ix < kernel.SizeX; ++ix)
+                            for (int ix = 0; ix < kernel.CellsX; ++ix)
                             {
                                 torus_pos = offset_ru.Add(new Point(Global.Modulo((offset_in_ru.X - offset + ix), seedpx_per_ru), Global.Modulo((offset_in_ru.Y - offset + iy), seedpx_per_ru)));
 

@@ -1,7 +1,8 @@
-# build results
+# build and test results
 bin/
 obj/
 PerformanceResults/
+TestResults/
 
 # Visual Studio cache/options directory
 .vs/

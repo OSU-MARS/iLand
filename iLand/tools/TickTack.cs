@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     internal class TickTack
     {

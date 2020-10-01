@@ -1,11 +1,11 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class Sapling
         @ingroup core
@@ -69,9 +69,9 @@ namespace iLand.core
 
         public void UpdateBrowsingPressure()
         {
-            if (GlobalSettings.Instance.Settings.ValueBool("model.settings.browsing.enabled"))
+            if (GlobalSettings.Instance.Settings.GetBool("model.settings.browsing.enabled"))
             {
-                mBrowsingPressure = GlobalSettings.Instance.Settings.ValueDouble("model.settings.browsing.browsingPressure");
+                mBrowsingPressure = GlobalSettings.Instance.Settings.GetDouble("model.settings.browsing.browsingPressure");
             }
             else
             {
@@ -420,7 +420,7 @@ namespace iLand.core
 
                 CarbonLiving.AddBiomass(woody_bm * n, species.CNRatioWood);
                 CarbonLiving.AddBiomass(foliage * n, species.CNRatioFoliage);
-                CarbonLiving.AddBiomass(fineroot * n, species.CNRatioFineroot);
+                CarbonLiving.AddBiomass(fineroot * n, species.CNRatioFineRoot);
 
                 // turnover
                 if (mRUS.RU.Snags != null)
@@ -439,7 +439,7 @@ namespace iLand.core
                     {
                         dead_wood.AddBiomass(woody_bm * (n_before - n), species.CNRatioWood);
                         dead_fine.AddBiomass(foliage * (n_before - n), species.CNRatioFoliage);
-                        dead_fine.AddBiomass(fineroot * (n_before - n), species.CNRatioFineroot);
+                        dead_fine.AddBiomass(fineroot * (n_before - n), species.CNRatioFineRoot);
                     }
                 }
 
@@ -454,7 +454,7 @@ namespace iLand.core
                 double foliage = species.GetBiomassFoliage(avg_dbh_dead) * n;
 
                 dead_fine.AddBiomass(foliage, species.CNRatioFoliage);
-                dead_fine.AddBiomass(foliage * species.FinerootFoliageRatio, species.CNRatioFineroot);
+                dead_fine.AddBiomass(foliage * species.FinerootFoliageRatio, species.CNRatioFineRoot);
             }
             if (!dead_wood.IsEmpty() || !dead_fine.IsEmpty())
             {

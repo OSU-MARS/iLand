@@ -1,22 +1,16 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace iLand.core
+namespace iLand.Core
 {
     internal class ModelController
     {
         private static readonly List<string> AggList = new List<string>() { "mean" + "sum" + "min" + "max" + "p25" + "p50" + "p75" + "p5" + "p10" + "p90" + "p95" };
 
-        private bool mPaused;
-        private bool mRunning;
-        private bool mFinished;
-        private bool mCanceled;
-        private bool mHasError;
         private string mInitFile;
         private readonly List<string> mDynFieldList;
         private readonly List<string> mDynData;
@@ -32,9 +26,6 @@ namespace iLand.core
             mDynFieldList = new List<string>();
             mDynData = new List<string>();
             Model = null;
-            mPaused = false;
-            mRunning = false;
-            mHasError = false;
             YearsToRun = 0;
             DynamicOutputEnabled = false;
         }
@@ -86,20 +77,6 @@ namespace iLand.core
             return false;
         }
 
-        public bool IsRunning()
-        {
-            return mRunning;
-        }
-
-        public bool IsFinished()
-        {
-            if (Model != null)
-            {
-                return false;
-            }
-            return CanRun() && !IsRunning() && mFinished;
-        }
-
         public int CurrentYear()
         {
             return GlobalSettings.Instance.CurrentYear;
@@ -124,13 +101,11 @@ namespace iLand.core
             Debug.WriteLine("iLand " + this.GetType().Assembly.GetName().Version);
             Debug.WriteLine("**************************************************");
 
-            mHasError = false;
             DebugTimer.ClearAllTimers();
             Model = new Model();
             Model.LoadProject();
             if (!Model.IsSetup)
             {
-                mHasError = true;
                 LastError = "An error occured during the loading of the project. Please check the logs.";
                 return;
             }
@@ -153,120 +128,14 @@ namespace iLand.core
             }
         }
 
-        public void RunLoop()
-        {
-            DateTime sLastTime = DateTime.Now;
-            //   QCoreApplication::processEvents();
-            if (mPaused)
-            {
-                return;
-            }
-            bool doStop = false;
-            mHasError = false;
-            if (GlobalSettings.Instance.CurrentYear <= 1)
-            {
-                sLastTime = DateTime.Now; // reset clock at the beginning of the simulation
-            }
-
-            if (!mCanceled && GlobalSettings.Instance.CurrentYear < YearsToRun)
-            {
-                mHasError = RunYear(); // do the work!
-
-                mRunning = true;
-                if (!mHasError)
-                {
-                    int elapsed = (int)(DateTime.Now - sLastTime).TotalMilliseconds;
-                    int time = 0;
-                    if (CurrentYear() % 50 == 0 && elapsed > 10000)
-                    {
-                        time = 100; // a 100ms pause...
-                    }
-                    if (CurrentYear() % 100 == 0 && elapsed > 10000)
-                    {
-                        time = 500; // a 500ms pause...
-                    }
-                    if (time > 0)
-                    {
-                        Debug.WriteLine("--- little break ---- (after " + elapsed + "ms).");
-                        //QTimer::singleShot(time,this, SLOT(runloop()));
-                    }
-
-                }
-                else
-                {
-                    doStop = true; // an error occured
-                    LastError = "An error occured while running the model. Please check the logs.";
-                    mHasError = true;
-                }
-
-            }
-            else
-            {
-                doStop = true; // all years simulated
-            }
-
-            if (doStop || mCanceled)
-            {
-                // finished
-                InternalStop();
-            }
-        }
-
-        public bool InternalRun()
-        {
-            // main loop
-            while (mRunning && !mPaused && !mFinished)
-            {
-                RunLoop(); // start the running loop
-            }
-            return IsFinished();
-        }
-
-        public void InternalStop()
-        {
-            if (mRunning)
-            {
-                GlobalSettings.Instance.OutputManager.Save();
-                DebugTimer.PrintAllTimers();
-                SaveDebugOutputs();
-                //if (GlobalSettings.instance().dbout().isOpen())
-                //    GlobalSettings.instance().dbout().close();
-
-                mFinished = true;
-            }
-            mRunning = false;
-            mPaused = false; // in any case
-        }
-
-        public void Run(int years)
-        {
-            if (!CanRun())
-            {
-                return;
-            }
-
-            using DebugTimer many_runs = new DebugTimer(String.Format("Timer for {0} runs", years));
-            mPaused = false;
-            mFinished = false;
-            mCanceled = false;
-            YearsToRun = years;
-            //GlobalSettings.instance().setCurrentYear(1); // reset clock
-
-            DebugTimer.ClearAllTimers();
-            mRunning = true;
-
-            Debug.WriteLine("ModelControler: runloop started.");
-            InternalRun();
-        }
-
         public bool RunYear()
         {
             if (!CanRun())
             {
                 return false;
             }
-            using DebugTimer t = new DebugTimer("ModelController:runYear");
-            Debug.WriteLine(DateTime.Now.ToString("hh:mm:ss:") + "ModelController: run year " + CurrentYear());
+            using DebugTimer t = new DebugTimer("ModelController.RunYear()");
+            Debug.WriteLine(DateTime.Now.ToString("hh:mm:ss:") + " ModelController: run year " + CurrentYear());
 
             if (GlobalSettings.Instance.Settings.GetBooleanParameter("debug_clear"))
             {
@@ -278,28 +147,6 @@ namespace iLand.core
             FetchDynamicOutput();
 
             return err;
-        }
-
-        public bool ContinueRun()
-        {
-            mRunning = true;
-            return InternalRun();
-        }
-
-        public void Cancel()
-        {
-            mCanceled = true;
-            InternalStop();
-        }
-
-        // this function is called when exceptions occur in multithreaded code.
-        public void ThrowError(string msg)
-        {
-            Debug.WriteLine("ModelController: throwError reached:");
-            Debug.WriteLine(msg);
-            LastError = msg;
-            mHasError = true;
-            throw new NotSupportedException(msg); // raise error again
         }
 
         //////////////////////////////////////
@@ -336,7 +183,7 @@ namespace iLand.core
             {
                 return;
             }
-            using DebugTimer t = new DebugTimer("dynamic output");
+            using DebugTimer t = new DebugTimer("ModelController.FetchDynamicOutput()");
             List<string> var = new List<string>();
             string lastVar = "";
             List<double> data = new List<double>();
@@ -429,7 +276,7 @@ namespace iLand.core
         public void SaveDebugOutputs()
         {
             // save to files if switch is true
-            if (!GlobalSettings.Instance.Settings.ValueBool("system.settings.debugOutputAutoSave"))
+            if (!GlobalSettings.Instance.Settings.GetBool("system.settings.debugOutputAutoSave"))
             {
                 return;
             }
@@ -449,46 +296,6 @@ namespace iLand.core
             Helper.SaveToTextFile(p + "version.txt", this.GetType().Assembly.FullName);
 
             Debug.WriteLine("saved debug outputs to " + p);
-        }
-
-        public void SaveScreenshot(string file_name)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void PaintMap(MapGrid map, double min_value, double max_value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void AddGrid(Grid<float> grid, string name, GridViewType view_type, double min_value, double max_value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void AddLayers(LayeredGridBase layers, string name)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void RemoveLayers(LayeredGridBase layers)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetViewport(PointF center_point, double scale_px_per_m)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetUIShortcuts(object shortcuts)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Repaint()
-        {
-            throw new NotImplementedException();
         }
     }
 }

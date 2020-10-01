@@ -5,40 +5,240 @@
     <path>
       <home></home>
       <database>database</database>
+      <init>init</init>
       <lip>lip</lip>
+      <output>../../TestResults</output>
+      <script>scripts</script>
       <temp>temp</temp>
-      <!-- <script>scripts</script>
-           <init>init</init>
-           <output>output</output>-->
     </path>
     <database>
       <climate>Kalkalpen subset.sqlite</climate>
       <in>species_param_europe.sqlite</in>
-      <out></out>
+      <out>Kalkalpen subset output.sqlite</out>
     </database>
+    <settings>
+      <debugOutput>0</debugOutput>
+      <expressionLinearizationEnabled>true</expressionLinearizationEnabled>
+      <multithreading>false</multithreading>
+      <logLevel>Warning</logLevel>
+      <randomSeed>0</randomSeed>
+    </settings>
   </system>
 
   <model>
     <settings>
+      <regenerationEnabled>true</regenerationEnabled>
+      <mortalityEnabled>true</mortalityEnabled>
+      <growthEnabled>true</growthEnabled>
+      <carbonCycleEnabled>true</carbonCycleEnabled>
+      <epsilon>2.7</epsilon>
+      <lightExtinctionCoefficient>0.6</lightExtinctionCoefficient>
+      <lightExtinctionCoefficientOpacity>0.6</lightExtinctionCoefficientOpacity>
+      <temperatureTau>6</temperatureTau>
+      <airDensity>1.204</airDensity>
+      <laiThresholdForClosedStands>3</laiThresholdForClosedStands>
+      <boundaryLayerConductance>0.2</boundaryLayerConductance>
+      <interceptionStorageNeedle>4</interceptionStorageNeedle>
+      <interceptionStorageBroadleaf>4</interceptionStorageBroadleaf>
+      <snowMeltTemperature>2</snowMeltTemperature>
+      <waterUseSoilSaturation>true</waterUseSoilSaturation>
+      <usePARFractionBelowGroundAllocation>true</usePARFractionBelowGroundAllocation>
+      <seedDispersal>
+        <seedBelt>
+          <enabled>false</enabled>
+        </seedBelt>
+      </seedDispersal>
+      <soil>
+        <qb>5</qb>
+        <qh>14.5</qh>
+        <leaching>0.47</leaching>
+        <el>0.152</el>
+        <er>0.319</er>
+        <swdDBHClass12>20</swdDBHClass12>
+        <swdDBHClass23>100</swdDBHClass23>
+        <useDynamicAvailableNitrogen>false</useDynamicAvailableNitrogen>
+        <nitrogenDeposition>21.8</nitrogenDeposition>
+      </soil>
+      <grass>
+        <enabled>true</enabled>
+        <type>pixel</type>
+        <grassDuration>polygon(x, 0,0, 6,0, 6,1, 30,1, 30,0)</grassDuration>
+        <LIFThreshold>0.2</LIFThreshold>
+        <grassPotential>polygon(0.9999*x^0.15)</grassPotential>
+        <maxTimeLag>3</maxTimeLag>
+        <grassEffect>polygon(0.9999*x^0.15)</grassEffect>
+      </grass>
+      <browsing>
+        <enabled>false</enabled>
+        <browsingPressure>1</browsingPressure>
+        <!-- Scaling factor modifying the base probability (1=100% of the species specific parameter)-->
+      </browsing>
     </settings>
     <species>
       <source>species</source>
       <reader>readerstamp.bin</reader>
-      <enabledSpecies>
-        piab foobar prozac dunno
-      </enabledSpecies>
+      <nitrogenResponseClasses>
+        <class_1_a>-0.045</class_1_a>
+        <class_1_b>10</class_1_b>
+        <class_2_a>-0.055</class_2_a>
+        <class_2_b>25</class_2_b>
+        <class_3_a>-0.065</class_3_a>
+        <class_3_b>40</class_3_b>
+      </nitrogenResponseClasses>
+      <CO2Response>
+        <p0>1</p0>
+        <baseConcentration>380</baseConcentration>
+        <compensationPoint>80</compensationPoint>
+        <beta0>0.3</beta0>
+      </CO2Response>
+      <lightResponse>
+        <shadeTolerant>min(10*lri,max(0.1613*lri+0.7871,lri))</shadeTolerant>
+        <shadeIntolerant>1-exp(-5.5*(lri-0.05))</shadeIntolerant>
+        <LRImodifier>exp(ln(lri)/0.5*(1-0.5*relH))</LRImodifier>
+      </lightResponse>
+      <phenology>
+        <type id="1">
+          <!-- deciduous broadleaved -->
+          <vpdMin>0.9</vpdMin>
+          <vpdMax>4.1</vpdMax>
+          <dayLengthMin>10</dayLengthMin>
+          <dayLengthMax>11</dayLengthMax>
+          <tempMin>-2</tempMin>
+          <tempMax>5</tempMax>
+        </type>
+        <type id="2">
+          <!-- deciduous coniferous -->
+          <vpdMin>1</vpdMin>
+          <vpdMax>4.1</vpdMax>
+          <dayLengthMin>10</dayLengthMin>
+          <dayLengthMax>11</dayLengthMax>
+          <tempMin>-4</tempMin>
+          <tempMax>3</tempMax>
+        </type>
+      </phenology>
     </species>
     <world>
-      <cellSize>2</cellSize>
+      <!--<cellSize>2</cellSize>-->
+      <buffer>60</buffer> <!-- must be multiple of seed map cell size, which is hard coded to 20 m, if regeneration is enabled -->
       <width>100</width>
       <height>200</height>
-      <buffer>50</buffer>
+      <resourceUnitsAsGrid>true</resourceUnitsAsGrid> <!-- required by check in Model.SetupSpace() -->
+      <environmentEnabled>true</environmentEnabled>
+      <environmentFile>gis/Kalkalpen environment subset.txt</environmentFile>
+      <timeEventsEnabled>true</timeEventsEnabled>
+      <timeEventsFile>empty time event script.txt</timeEventsFile>
+      <location>
+      </location>
+      <standGrid>
+      </standGrid>
+      <DEM>
+      </DEM>
     </world>
+    <site>
+      <availableNitrogen>84</availableNitrogen>
+      <soilDepth>38</soilDepth>
+      <pctSand>9</pctSand>
+      <pctSilt>53</pctSilt>
+      <pctClay>38</pctClay>
+      <youngLabileC>12375</youngLabileC>
+      <youngLabileN>652.1</youngLabileN>
+      <youngLabileDecompRate>0.227</youngLabileDecompRate>
+      <youngRefractoryC>33832</youngRefractoryC>
+      <youngRefractoryN>121.2</youngRefractoryN>
+      <youngRefractoryDecompRate>0.071</youngRefractoryDecompRate>
+      <somC>128666</somC>
+      <somN>83.68</somN>
+      <somDecompRate>0.011656</somDecompRate>
+      <soilHumificationRate>0.2992</soilHumificationRate>
+    </site>
+    <climate>
+      <co2concentration>380</co2concentration>
+      <tableName>climate1</tableName>
+      <batchYears>61</batchYears>
+      <temperatureShift>0</temperatureShift>
+      <precipitationShift>1</precipitationShift>
+      <randomSamplingEnabled>false</randomSamplingEnabled>
+      <filter></filter>
+    </climate>
     <initialization>
-      <file>E:\Daten\iLand\Light\stands\crowded_medium.csv</file>
+      <mode>unit</mode>
+      <file>all European species.txt</file>
+      <type>picus</type>
+      <snags>
+      </snags>
     </initialization>
     <parameter>
-      
+      <!-- presence of model/parameter element required by XmlHelper.LoadFromFile() -->
+      <torus>true</torus>
+      <debugDumpStamps>false</debugDumpStamps>
     </parameter>
   </model>
+  <output>
+    <dynamic>
+      <enabled>true</enabled>
+    </dynamic>
+    <tree>
+      <enabled>true</enabled>
+    </tree>
+    <treeremoved>
+      <enabled>false</enabled> <!-- not currently supported due to chatty rather than buffered logging model -->
+    </treeremoved>
+    <stand>
+      <enabled>true</enabled>
+    </stand>
+    <standdead>
+      <enabled>true</enabled>
+    </standdead>
+    <production_month>
+      <enabled>true</enabled>
+    </production_month>
+    <management>
+      <enabled>true</enabled>
+    </management>
+    <sapling>
+      <enabled>true</enabled>
+    </sapling>
+    <saplingdetail>
+      <enabled>true</enabled>
+    </saplingdetail>
+    <carbon>
+      <enabled>true</enabled>
+    </carbon>
+    <carbonflow>
+      <enabled>true</enabled>
+    </carbonflow>
+    <water>
+      <enabled>true</enabled>
+    </water>
+    <landscape>
+      <enabled>true</enabled>
+    </landscape>
+    <dynamicstand>
+      <enabled>true</enabled>
+    </dynamicstand>
+    <barkbeetle>
+      <enabled>true</enabled>
+    </barkbeetle>
+    <wind>
+      <enabled>true</enabled>
+    </wind>
+    <fire>
+      <enabled>true</enabled>
+    </fire>
+    <landscape_removed>
+      <enabled>true</enabled>
+      <includeHarvest>true</includeHarvest>
+      <includeNatural>true</includeNatural>
+    </landscape_removed>
+  </output>
+  <modules>
+    <fire>
+    </fire>
+    <wind>
+    </wind>
+    <barkebeetle>
+    </barkebeetle>
+  </modules>
+  <user>
+  </user>
 </project>

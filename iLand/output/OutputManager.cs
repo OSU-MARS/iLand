@@ -1,10 +1,10 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
-namespace iLand.output
+namespace iLand.Output
 {
     /** @class OutputManager
        Global container that handles data output.
@@ -21,35 +21,21 @@ namespace iLand.output
             // add all the outputs
             mOutputs = new List<Output>() 
             {
-                new TreeOut(),
-                new TreeRemovedOut(),
-                new StandOut(),
-                new LandscapeOut(),
-                new LandscapeRemovedOut(),
-                new DynamicStandOut(),
-                new ProductionOut(),
-                new StandDeadOut(),
-                new ManagementOut(),
-                new SaplingOut(),
-                new SaplingDetailsOut(),
-                new CarbonOut(),
-                new CarbonFlowOut(),
-                new WaterOut()
+                new TreeOutput(),
+                new TreeRemovedOutput(),
+                new StandOutput(),
+                new LandscapeOutput(),
+                new LandscapeRemovedOutput(),
+                new DynamicStandOutput(),
+                new ProductionOutput(),
+                new StandDeadOutput(),
+                new ManagementOutput(),
+                new SaplingOutput(),
+                new SaplingDetailsOutput(),
+                new CarbonOutput(),
+                new CarbonFlowOutput(),
+                new WaterOutput()
             };
-        }
-
-        public void AddOutput(Output output)
-        {
-            mOutputs.Add(output);
-        }
-
-        public void RemoveOutput(string tableName)
-        {
-            Output o = Find(tableName);
-            if (o != null)
-            {
-                mOutputs.RemoveAt(mOutputs.IndexOf(o));
-            }
         }
 
         public void Setup()
@@ -60,10 +46,9 @@ namespace iLand.output
             foreach (Output o in mOutputs)
             {
                 nodepath = String.Format("output.{0}", o.TableName);
-                xml.SetCurrentNode(nodepath);
-                Debug.WriteLine("setup of output " + o.Name);
+                xml.TrySetCurrentNode(nodepath);
                 o.Setup();
-                o.IsEnabled = xml.ValueBool(".enabled", false);
+                o.IsEnabled = xml.GetBool(".enabled", false);
                 if (o.IsEnabled)
                 {
                     o.Open();
@@ -83,45 +68,22 @@ namespace iLand.output
             return null;
         }
 
-        public void Save()
+        public void LogYear()
         {
-        }
+            using DebugTimer timer = new DebugTimer("OutputManager.LogYear()");
 
-        public void Close()
-        {
-            Debug.WriteLine("outputs closed");
-            foreach (Output p in mOutputs)
+            foreach (Output output in this.mOutputs)
             {
-                p.Close();
+                if (output.IsEnabled && output.IsOpen)
+                {
+                    if (output.IsRowEmpty() == false)
+                    {
+                        Trace.TraceWarning("Output " + output.Name + " invalid (not at new row)!!!");
+                        continue;
+                    }
+                    output.LogYear();
+                }
             }
-        }
-
-        public bool Execute(string tableName)
-        {
-            using DebugTimer t = new DebugTimer("public execute()");
-            Output p = Find(tableName);
-            if (p != null)
-            {
-                if (!p.IsEnabled)
-                {
-                    return false;
-                }
-                if (!p.IsOpen)
-                {
-                    return false;
-                }
-                if (!p.IsRowEmpty())
-                {
-                    Trace.TraceWarning("Output " + p.Name + " invalid (not at new row)!!!");
-                    return false;
-                }
-
-                p.Exec();
-
-                return true;
-            }
-            Debug.WriteLine("output " + tableName + " not found!");
-            return false; // no output found
         }
 
         public string WikiFormat()
@@ -129,7 +91,7 @@ namespace iLand.output
             StringBuilder result = new StringBuilder();
             foreach (Output o in mOutputs)
             {
-                result.Append(o.WikiFormat() + System.Environment.NewLine);
+                result.Append(o.WriteHeaderToWiki() + System.Environment.NewLine);
             }
             return result.ToString();
         }

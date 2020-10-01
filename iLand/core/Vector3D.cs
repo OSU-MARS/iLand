@@ -1,6 +1,6 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
-    internal class Vector3D
+    public class Vector3D
     {
         public double X { get; set; }
         public double Y { get; set; }

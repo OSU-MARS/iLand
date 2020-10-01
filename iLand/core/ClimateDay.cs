@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace iLand.core
+namespace iLand.Core
 {
     // current climate variables of a day. @sa Climate.
     // http://iland.boku.ac.at/ClimateData
-    internal class ClimateDay
+    public class ClimateDay
     {
         public static double CarbonDioxidePpm = 350.0; // ambient CO2 content in ppm
 

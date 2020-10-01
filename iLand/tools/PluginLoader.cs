@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     internal class PluginLoader
     {

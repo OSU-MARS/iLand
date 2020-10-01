@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /** @class ClimateConverter
         Converts text-file-based data into the iLand climate data format.

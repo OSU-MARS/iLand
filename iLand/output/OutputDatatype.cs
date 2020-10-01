@@ -1,6 +1,7 @@
-﻿namespace iLand.output
+﻿namespace iLand.Output
 {
-    internal enum OutputDatatype
+    // TODO: remove and replace with SqliteType
+    public enum OutputDatatype
     { 
         OutInteger, 
         OutDouble, 

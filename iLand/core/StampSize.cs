@@ -1,8 +1,8 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
     /// @enum StampType defines different grid sizes for stamps (4x4 floats, ... 48x48 floats).
     /// the numeric value indicates also the size of the grid.
-    internal enum StampSize
+    public enum StampSize
     { 
         Grid4x4 = 4, 
         Grid8x8 = 8, 

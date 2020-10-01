@@ -1,8 +1,8 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace iLand.core
+namespace iLand.Core
 {
     internal class SaplingCellRunner
     {

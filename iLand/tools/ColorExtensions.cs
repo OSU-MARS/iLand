@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     internal static class ColorExtensions
     {

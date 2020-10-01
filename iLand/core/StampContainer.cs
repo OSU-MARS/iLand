@@ -1,4 +1,4 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,7 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** Collection of Stamp for one tree species.
         @ingroup core
@@ -14,14 +14,8 @@ namespace iLand.core
         encapsulates storage and access to these stamps. The design goal is to deliver high
         access speeds for the "stamp()" method.
         Use getStamp(bhd, hd) or getStamp(bhd, height) to access. */
-    internal class StampContainer
+    public class StampContainer
     {
-        // constants: comments may be wrong; conflicting information in C++
-        private const int BHDclassCount = 70; ///< class count, see getKey(): for lower dbhs classes are smaller
-        private const int HDclassWidth = 10;
-        private const int HDclassLow = 35; ///< hd classes offset is 35: class 0 = 35-45, class 1 = 45-55
-        private const int HDclassCount = 16; ///< class count. highest class:  185-195
-
         public static Grid<float> DistanceGrid { get; private set; } ///< grid holding precalculated distances to the stamp center
 
         private struct StampItem
@@ -33,7 +27,7 @@ namespace iLand.core
         }
 
         private string mFileName;
-        private readonly Grid<Stamp> mLookup;
+        private readonly Grid<Stamp> mStampsByClass;
         private readonly List<StampItem> mStamps;
 
         public string Description { get; set; }
@@ -46,13 +40,13 @@ namespace iLand.core
 
         public StampContainer()
         {
-            this.mLookup = new Grid<Stamp>();
+            this.mStampsByClass = new Grid<Stamp>();
             this.mStamps = new List<StampItem>();
 
-            this.mLookup.Setup(1.0F, // cellsize
-                                BHDclassCount, // count x
-                                HDclassCount); // count y
-            this.mLookup.Initialize(null);
+            this.mStampsByClass.Setup(1.0F, // cellsize
+                               Constant.Stamp.DbhClassCount, // count x
+                               Constant.Stamp.HeightDiameterClassCount); // count y
+            this.mStampsByClass.Initialize(null);
             //Debug.WriteLine("grid after init" << gridToString(m_lookup);
             this.UseLookup = true;
         }
@@ -61,9 +55,9 @@ namespace iLand.core
 
         /// getKey: decodes a floating point piar of dbh and hd-ratio to indices for the
         /// lookup table containing pointers to the actual stamps.
-        private void GetKey(float dbh, float hd_value, out int dbh_class, out int hd_class)
+        private void GetClasses(float dbh, float hd_value, out int diameterClass, out int heightDiameterClass)
         {
-            hd_class = (int)((hd_value - HDclassLow) / HDclassWidth);
+            heightDiameterClass = (int)((hd_value - Constant.Stamp.HeightDiameterClassMinimum) / Constant.Stamp.HeightDiameterClassSize);
             // dbh_class = int(dbh - cBHDclassLow) / cBHDclassWidth;
             // fixed scheme: smallest classification scheme for tree-diameters:
             // 1cm width from 4 up to 9cm,
@@ -71,92 +65,92 @@ namespace iLand.core
             // 4cm bins starting from 20cm, max DBH=255 (with 70 classes)
             if (dbh < 10.0F)
             {
-                dbh_class = Math.Max(0, (int)(dbh - 4.0F)); // classes from 0..5
+                diameterClass = Math.Max(0, (int)(dbh - 4.0F)); // classes from 0..5
             }
             else if (dbh < 20.0F)
             {
-                dbh_class = 6 + (int)((dbh - 10.0F) / 2.0F); // 10-12cm has index 6
+                diameterClass = 6 + (int)((dbh - 10.0F) / 2.0F); // 10-12cm has index 6
             }
             else
             {
-                dbh_class = 11 + (int)((dbh - 20.0F) / 4.0F); // 20-24cm has index 11
+                diameterClass = 11 + (int)((dbh - 20.0F) / 4.0F); // 20-24cm has index 11
             }
         }
 
         /** fill up the nulls in the lookup map */
         private void FinalizeSetup()
         {
-            if (!UseLookup)
+            if (!this.UseLookup)
             {
                 return;
             }
 
             int max_size = 0;
-            for (int b = 0; b < BHDclassCount; b++)
+            for (int b = 0; b < Constant.Stamp.DbhClassCount; b++)
             {
                 // find lowest value...
-                int h = 0;
-                Stamp s = null;
-                for (; h < HDclassCount; h++)
+                int hdIndex = 0;
+                Stamp stamp = null;
+                for (; hdIndex < Constant.Stamp.HeightDiameterClassCount; hdIndex++)
                 {
-                    s = mLookup[b, h];
-                    if (s != null)
+                    stamp = mStampsByClass[b, hdIndex];
+                    if (stamp != null)
                     {
                         // fill up values left from this value
-                        for (int hfill = 0; hfill < h; hfill++)
+                        for (int hfill = 0; hfill < hdIndex; hfill++)
                         {
-                            mLookup[b, hfill] = s;
+                            mStampsByClass[b, hfill] = stamp;
                         }
                         break;
                     }
                 }
                 // go to last filled cell...
-                for (; h < HDclassCount; h++)
+                for (; hdIndex < Constant.Stamp.HeightDiameterClassCount; hdIndex++)
                 {
-                    if (mLookup[b, h] == null)
+                    if (mStampsByClass[b, hdIndex] == null)
                     {
                         break;
                     }
-                    s = mLookup[b, h];
+                    stamp = mStampsByClass[b, hdIndex];
                 }
                 // fill up the rest...
-                for (; h < HDclassCount; h++)
+                for (; hdIndex < Constant.Stamp.HeightDiameterClassCount; hdIndex++)
                 {
-                    mLookup[b, h] = s;
+                    mStampsByClass[b, hdIndex] = stamp;
                 }
-                if (s != null)
+                if (stamp != null)
                 {
-                    max_size = Math.Max(max_size, s.DataSize);
+                    max_size = Math.Max(max_size, stamp.DataSize);
                 }
 
                 // if no stamps in this dbh-class, copy values (from last row)
-                if (s == null && b > 0)
+                if (stamp == null && b > 0)
                 {
-                    for (h = 0; h < HDclassCount; h++)
+                    for (hdIndex = 0; hdIndex < Constant.Stamp.HeightDiameterClassCount; hdIndex++)
                     {
-                        mLookup[b, h] = mLookup[b - 1, h];
+                        mStampsByClass[b, hdIndex] = mStampsByClass[b - 1, hdIndex];
                     }
                 }
             }
 
-            if (mLookup[0, 0] != null)
+            if (mStampsByClass[0, 0] != null)
             {
                 // first values are missing
                 int b = 0;
-                while (b < BHDclassCount && mLookup[b, 0] == null)
+                while (b < Constant.Stamp.DbhClassCount && mStampsByClass[b, 0] == null)
                 {
                     b++;
                 }
                 for (int fill = 0; fill < b; fill++)
                 {
-                    for (int h = 0; h < HDclassCount; h++)
+                    for (int h = 0; h < Constant.Stamp.HeightDiameterClassCount; h++)
                     {
-                        mLookup[fill, h] = mLookup[b, h];
+                        mStampsByClass[fill, h] = mStampsByClass[b, h];
                     }
                 }
             }
             // distance grid
-            if (DistanceGrid.SizeX < max_size)
+            if (DistanceGrid.CellsX < max_size)
             {
                 SetupDistanceGrid(max_size);
             }
@@ -173,23 +167,23 @@ namespace iLand.core
             }
         }
 
-        private void AddStamp(Stamp stamp, int cls_dbh, int cls_hd, float crown_radius_m, float dbh, float hd_value)
+        private void AddStamp(Stamp stamp, int diameterClass, int hdClass, float crownRadiusInM, float dbh, float hdRatio)
         {
-            if (UseLookup)
+            if (this.UseLookup)
             {
-                if (cls_dbh < 0 || cls_dbh >= BHDclassCount || cls_hd < 0 || cls_hd >= HDclassCount)
+                if (diameterClass < 0 || diameterClass >= Constant.Stamp.DbhClassCount || hdClass < 0 || hdClass >= Constant.Stamp.HeightDiameterClassCount)
                 {
-                    throw new NotSupportedException(String.Format("addStamp: Stamp out of range. dbh={0} hd={1}.", dbh, hd_value));
+                    throw new NotSupportedException(String.Format("addStamp: Stamp out of range. dbh={0} hd={1}.", dbh, hdRatio));
                 }
-                mLookup[cls_dbh, cls_hd] = stamp; // save address in look up table
+                mStampsByClass[diameterClass, hdClass] = stamp; // save address in look up table
             } // if (useLookup)
 
-            stamp.SetCrownRadius(crown_radius_m);
+            stamp.SetCrownRadius(crownRadiusInM);
             StampItem si = new StampItem()
             {
                 Dbh = dbh,
-                HD = hd_value,
-                CrownRadius = crown_radius_m,
+                HD = hdRatio,
+                CrownRadius = crownRadiusInM,
                 Stamp = stamp
             };
             mStamps.Add(si); // store entry in list of stamps
@@ -197,43 +191,43 @@ namespace iLand.core
 
         /** add a stamp to the internal storage.
             After loading the function finalizeSetup() must be called to ensure that gaps in the matrix get filled. */
-        public void AddStamp(Stamp stamp, float dbh, float hd_value, float crown_radius)
+        public void AddStamp(Stamp stamp, float dbh, float hdRatio, float crownRadius)
         {
-            GetKey(dbh, hd_value, out int cls_dbh, out int cls_hd); // decode dbh/hd-value
-            AddStamp(stamp, cls_dbh, cls_hd, crown_radius, dbh, hd_value); // dont set crownradius
+            this.GetClasses(dbh, hdRatio, out int diameterClass, out int hdClass); // decode dbh/hd-value
+            this.AddStamp(stamp, diameterClass, hdClass, crownRadius, dbh, hdRatio); // dont set crownradius
         }
 
-        public void AddReaderStamp(Stamp stamp, float crown_radius_m)
+        public void AddReaderStamp(Stamp stamp, float crownRadiusInMeters)
         {
-            double rest = (crown_radius_m % 1.0F) + 0.0001;
-            int cls_hd = (int)(rest * 10); // 0 .. 9.99999999
-            if (cls_hd >= HDclassCount)
+            double rest = (crownRadiusInMeters % 1.0F) + 0.0001;
+            int hdClass = (int)(rest * 10); // 0 .. 9.99999999
+            if (hdClass >= Constant.Stamp.HeightDiameterClassCount)
             {
-                cls_hd = HDclassCount - 1;
+                hdClass = Constant.Stamp.HeightDiameterClassCount - 1;
             }
-            int cls_dbh = (int)(crown_radius_m);
+            int diameterClass = (int)crownRadiusInMeters;
             //Debug.WriteLine("Readerstamp r="<< crown_radius_m<<" index dbh hd:" << cls_dbh << cls_hd;
-            stamp.SetCrownRadius(crown_radius_m);
+            stamp.SetCrownRadius(crownRadiusInMeters);
 
             // prepare special keys for reader stamps
-            AddStamp(stamp, cls_dbh, cls_hd, crown_radius_m, 0.0F, 0.0F); // set crownradius, but not dbh/hd
+            this.AddStamp(stamp, diameterClass, hdClass, crownRadiusInMeters, 0.0F, 0.0F); // set crownradius, but not dbh/hd
         }
 
         /** retrieve a read-out-stamp. Readers depend solely on a crown radius.
             Internally, readers are stored in the same lookup-table, but using a encoding/decoding trick.*/
-        public Stamp ReaderStamp(float crown_radius_m)
+        public Stamp GetReaderStamp(float crownRadiusInMeters)
         {
             // Readers: from 0..10m in 50 steps???
-            int cls_hd = (int)(((crown_radius_m % 1.0F) + 0.0001) * 10); // 0 .. 9.99999999
-            if (cls_hd >= HDclassCount)
+            int heightDiameterClass = (int)(((crownRadiusInMeters % 1.0F) + 0.0001) * 10); // 0 .. 9.99999999
+            if (heightDiameterClass >= Constant.Stamp.HeightDiameterClassCount)
             {
-                cls_hd = HDclassCount - 1;
+                heightDiameterClass = Constant.Stamp.HeightDiameterClassCount - 1;
             }
-            int cls_bhd = (int)crown_radius_m;
-            Stamp stamp = mLookup[cls_bhd, cls_hd];
+            int diameterClass = (int)crownRadiusInMeters;
+            Stamp stamp = mStampsByClass[diameterClass, heightDiameterClass];
             if (stamp == null)
             {
-                Debug.WriteLine("Stamp::readerStamp(): no stamp found for radius " + crown_radius_m);
+                throw new ArgumentOutOfRangeException(nameof(crownRadiusInMeters));
             }
             return stamp;
         }
@@ -241,75 +235,74 @@ namespace iLand.core
         /** fast access for an individual stamp using a lookup table.
             the dimensions of the lookup table are defined by class-constants.
             If stamp is not found there, the more complete list of stamps is searched. */
-        public Stamp Stamp(float bhd_cm, float height_m)
+        public Stamp GetStamp(float dbhInCm, float heightInM)
         {
-            float hd_value = 100.0F * height_m / bhd_cm;
-            GetKey(bhd_cm, hd_value, out int cls_dbh, out int cls_hd);
+            float hdRatio = 100.0F * heightInM / dbhInCm;
+            this.GetClasses(dbhInCm, hdRatio, out int diameterClass, out int hdClass);
 
-            // check loopup table
-            if (cls_dbh < BHDclassCount && cls_dbh >= 0 && cls_hd < HDclassCount && cls_hd >= 0)
+            // retrieve stamp from lookup table when tree is within the lookup table's size range
+            Stamp stamp = null;
+            if ((diameterClass < Constant.Stamp.DbhClassCount) && (diameterClass >= 0) && 
+                (hdClass < Constant.Stamp.HeightDiameterClassCount) && (hdClass >= 0))
             {
-                Stamp stamp = mLookup[cls_dbh, cls_hd];
-                if (stamp != null)
-                {
-                    return stamp;
-                }
-                if (GlobalSettings.Instance.LogDebug())
-                {
-                    Debug.WriteLine("stamp(): not in list: dbh height: " + bhd_cm + height_m + "in" + mFileName);
-                }
+                stamp = mStampsByClass[diameterClass, hdClass];
             }
-
-            // extra work: search in list...
-            // look for a stamp if the HD-ratio is out of range
-            if (cls_dbh < BHDclassCount && cls_dbh >= 0)
+            // find a stamp of matching diameter if the HD-ratio is out of range
+            else if ((diameterClass < Constant.Stamp.DbhClassCount) && (diameterClass >= 0))
             {
                 if (GlobalSettings.Instance.LogDebug())
                 {
-                    Debug.WriteLine("HD for stamp out of range dbh " + bhd_cm + " and h=" + height_m + " (using smallest/largeset HD)");
+                    Debug.WriteLine("HD for stamp out of range dbh " + dbhInCm + " and h=" + heightInM + " (using smallest/largeset HD)");
                 }
-                if (cls_hd >= HDclassCount)
+                if (hdClass >= Constant.Stamp.HeightDiameterClassCount)
                 {
-                    return mLookup[cls_dbh, HDclassCount - 1]; // highest
+                    stamp = mStampsByClass[diameterClass, Constant.Stamp.HeightDiameterClassCount - 1]; // tree is oversize
                 }
-                return mLookup[cls_dbh, 0]; // smallest
+                else
+                {
+                    stamp = mStampsByClass[diameterClass, 0]; // tree is underersize
+                }
             }
-            // look for a stamp if the DBH is out of range.
-            if (cls_hd < HDclassCount && cls_hd >= 0)
+            // find a stamp of matching height-diameter ratio if the DBH is out of range.
+            else if (hdClass < Constant.Stamp.HeightDiameterClassCount && hdClass >= 0)
             {
                 if (GlobalSettings.Instance.LogDebug())
                 {
-                    Debug.WriteLine("DBH for stamp out of range dbh " + bhd_cm + "and h=" + height_m + " -> using largest available DBH.");
+                    Debug.WriteLine("DBH for stamp out of range dbh " + dbhInCm + "and h=" + heightInM + " -> using largest available DBH.");
                 }
-                if (cls_dbh >= BHDclassCount)
+                if (diameterClass >= Constant.Stamp.DbhClassCount)
                 {
-                    return mLookup[BHDclassCount - 1, cls_hd]; // highest
+                    stamp = mStampsByClass[Constant.Stamp.DbhClassCount - 1, hdClass]; // tree is oversize
                 }
-                return mLookup[0, cls_hd]; // smallest
-
+                else
+                {
+                    stamp = mStampsByClass[0, hdClass]; // tree is undersize
+                }
             }
-
-            // handle the case DBH and HD are out of range
-            if (cls_dbh >= BHDclassCount && cls_hd < 0)
+            // both DBH and HD ratio are out of range
+            else if ((diameterClass >= Constant.Stamp.DbhClassCount) && (hdClass < 0))
             {
                 if (GlobalSettings.Instance.LogDebug())
                 {
-                    Debug.WriteLine("DBH AND HD for stamp out of range dbh " + bhd_cm + " and h=" + height_m + "-> using largest available DBH/smallest HD.");
+                    Debug.WriteLine("DBH AND HD for stamp out of range dbh " + dbhInCm + " and h=" + heightInM + "-> using largest available DBH/smallest HD.");
                 }
-                return mLookup[BHDclassCount - 1, 0];
+                stamp = mStampsByClass[Constant.Stamp.DbhClassCount - 1, 0];
             }
-
-            // handle the case that DBH is too high and HD is too high (not very likely)
-            if (cls_dbh >= BHDclassCount && cls_hd >= HDclassCount)
+            // handle the case that DBH is too high and HD ratio is too high (not very likely)
+            else if ((diameterClass >= Constant.Stamp.DbhClassCount) && (hdClass >= Constant.Stamp.HeightDiameterClassCount))
             {
                 if (GlobalSettings.Instance.LogDebug())
                 {
-                    Debug.WriteLine("DBH AND HD for stamp out of range dbh " + bhd_cm + " and h=" + height_m + "-> using largest available DBH.");
+                    Debug.WriteLine("DBH AND HD for stamp out of range dbh " + dbhInCm + " and h=" + heightInM + "-> using largest available DBH.");
                 }
-                return mLookup[BHDclassCount - 1, HDclassCount - 1];
+                stamp = mStampsByClass[Constant.Stamp.DbhClassCount - 1, Constant.Stamp.HeightDiameterClassCount - 1];
             }
 
-            throw new NotSupportedException(String.Format("No stamp defined for dbh " + bhd_cm + " and h=" + height_m));
+            if (stamp == null)
+            {
+                throw new ArgumentOutOfRangeException("Stamp for DBH " + dbhInCm + " and height " + heightInM + " not found.");
+            }
+            return stamp;
         }
 
         public void AttachReaderStamps(StampContainer source)
@@ -317,7 +310,7 @@ namespace iLand.core
             int found = 0, total = 0;
             foreach (StampItem si in mStamps)
             {
-                Stamp s = source.ReaderStamp(si.CrownRadius);
+                Stamp s = source.GetReaderStamp(si.CrownRadius);
                 si.Stamp.SetReader(s);
                 if (s != null)
                 {
@@ -348,71 +341,69 @@ namespace iLand.core
         /// convenience function that loads stamps directly from a single file.
         public void Load(string fileName)
         {
-            FileInfo readerfile = new FileInfo(fileName);
-            if (!readerfile.Exists)
+            FileInfo stampFile = new FileInfo(fileName);
+            if (!stampFile.Exists)
             {
                 throw new FileNotFoundException(String.Format("The LIP stampfile {0} cannot be found!", fileName));
             }
             mFileName = fileName;
 
-            using FileStream stream = readerfile.OpenRead();
-            using BinaryReaderBigEndian rin = new BinaryReaderBigEndian(stream);
-            Debug.WriteLine("loading stamp file" + fileName);
-            Load(rin);
-        }
-
-        public void Load(BinaryReader input)
-        {
+            using FileStream stampStream = stampFile.OpenRead();
+            using StampReaderBigEndian stampReader = new StampReaderBigEndian(stampStream);
+            // Debug.WriteLine("loading stamp file " + fileName);
             // LIP files are created with QDataStream, which iLand C++ uses with its big endian defaults
-            UInt32 magic = input.ReadUInt32();
+            UInt32 magic = stampReader.ReadUInt32();
             if (magic != 0xFEED0001)
             {
                 throw new NotSupportedException("StampContainer: invalid file type!");
             }
-            UInt16 version = input.ReadUInt16();
+            UInt16 version = stampReader.ReadUInt16();
             if (version != 100)
             {
                 throw new NotSupportedException(String.Format("StampContainer: invalid file version: {0}", version));
             }
 
-            int count = input.ReadInt32(); // read count of stamps
+            int stampCount = stampReader.ReadInt32(); // read count of stamps
+            if (stampCount <= 0)
+            {
+                throw new NotSupportedException("no stamps loaded!");
+            }
             if (GlobalSettings.Instance.LogInfo())
             {
-                Debug.WriteLine(count + " stamps to read");
+                Debug.WriteLine(stampCount + " stamps to read");
             }
 
             // TODO: does this interop or does Qt use different size and character encodings?
-            Description = input.ReadString(); // read textual description of stamp 
+            this.Description = stampReader.ReadString(); // read textual description of stamp 
             if (GlobalSettings.Instance.LogInfo())
             {
                 Debug.WriteLine("Stamp notes: " + Description);
             }
 
-            for (int i = 0; i < count; i++)
+            for (int stampIndex = 0; stampIndex < stampCount; stampIndex++)
             {
-                int type = input.ReadInt32(); // read type
-                float dbh = input.ReadSingle();
-                float hdvalue = input.ReadSingle();
-                float crownradius = input.ReadSingle();
+                int type = stampReader.ReadInt32(); // read type
+                float dbh = stampReader.ReadSingle();
+                float hdRatio = stampReader.ReadSingle();
+                float crownRadius = stampReader.ReadSingle();
+                Debug.Assert((dbh >= 0.0F) && (dbh < 200.0F)); // cm
+                Debug.Assert((hdRatio >= 0.0F) && (hdRatio < 200.0F)); // ratio
+                Debug.Assert((crownRadius >= 0.0F) && (crownRadius < 50.0F)); // m
                 //Debug.WriteLine("stamp bhd hdvalue type readsum dominance type" + bhd + hdvalue + type + readsum + domvalue + type;
 
                 Stamp stamp = new Stamp(type);
-                stamp.Load(input);
+                stamp.Load(stampReader);
 
                 if (dbh > 0.0F)
                 {
-                    AddStamp(stamp, dbh, hdvalue, crownradius);
+                    AddStamp(stamp, dbh, hdRatio, crownRadius);
                 }
                 else
                 {
-                    AddReaderStamp(stamp, crownradius);
+                    AddReaderStamp(stamp, crownRadius);
                 }
             }
             FinalizeSetup(); // fill up lookup grid
-            if (count == 0)
-            {
-                throw new NotSupportedException("no stamps loaded!");
-            }
         }
 
         /** Saves all stamps of the container to a binary stream.
@@ -468,14 +459,14 @@ namespace iLand.core
                 res.AppendLine("==============================================");
             }
             res.AppendLine("Dump of lookup map" + System.Environment.NewLine + "=====================");
-            for (int s = 0; s < mLookup.Count; ++s)
+            for (int s = 0; s < mStampsByClass.Count; ++s)
             {
-                if (mLookup[s] != null)
+                if (mStampsByClass[s] != null)
                 {
-                    res.AppendFormat("P: x/y: {0}/{1}{2}", mLookup.IndexOf(s).X, mLookup.IndexOf(s).Y, System.Environment.NewLine);
+                    res.AppendFormat("P: x/y: {0}/{1}{2}", mStampsByClass.IndexOf(s).X, mStampsByClass.IndexOf(s).Y, System.Environment.NewLine);
                 }
             }
-            res.AppendLine(System.Environment.NewLine + Grid.ToString(mLookup));
+            res.AppendLine(System.Environment.NewLine + Grid.ToString(mStampsByClass));
             return res.ToString();
         }
     }

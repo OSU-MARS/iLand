@@ -1,11 +1,11 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class Management Management executes management routines.
         @ingroup core
@@ -14,7 +14,7 @@ namespace iLand.core
         that really do the work.
         See http://iland.boku.ac.at/iLand+scripting, http://iland.boku.ac.at/Object+Management for management Javascript API.
         */
-    internal class Management
+    public class Management
     {
         private readonly List<MutableTuple<Tree, double>> mTrees;
 

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /** @class RandomCustomPDF provide random numbers with a user defined probaility density function.
         Call setup() or use the constructor to provide a function-expression with one variable (e.g. 'x^2').

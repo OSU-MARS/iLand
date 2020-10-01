@@ -1,10 +1,10 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class ResourceUnit
         ResourceUnit is the spatial unit that encapsulates a forest stand and links to several environmental components
@@ -15,7 +15,7 @@ namespace iLand.core
         Proceses on this level are, inter alia, NPP Production (see Production3PG), water calculations (WaterCycle), the modeling
         of dead trees (Snag) and soil processes (Soil).
         */
-    internal class ResourceUnit
+    public class ResourceUnit
     {
         private double mAggregatedWLA; ///< sum of lightResponse * LeafArea for all trees
         private double mAggregatedLR; ///< sum of lightresponse*LA of the current unit
@@ -63,70 +63,78 @@ namespace iLand.core
 
         public ResourceUnit(int index)
         {
-            this.TotalLeafArea = 0.0;
             this.mAggregatedLR = 0.0;
             this.mAggregatedWLA = 0.0;
-            this.Climate = null;
-            this.ProductiveArea = 0.0;
             this.mEffectiveArea_perWLA = 0.0;
+            this.mPixelCount = 0;
+            this.mStockedPixelCount = 0;
+
+            this.Climate = null;
             this.ID = 0;
             this.Index = index;
             this.LriModifier = 0.0;
-            this.mPixelCount = 0;
+            this.ProductiveArea = 0.0;
             this.Species = new List<ResourceUnitSpecies>();
             this.SaplingCells = null;
             this.Snags = null;
             this.Soil = null;
             this.SpeciesSet = null;
-            this.StockedArea = 0;
-            this.mStockedPixelCount = 0;
+            this.Statistics = new StandStatistics();
             this.StockableArea = 0;
+            this.StockedArea = 0;
+            this.TotalLeafArea = 0.0;
             this.Trees = new List<Tree>();
+            this.Variables = new ResourceUnitVariables();
             this.WaterCycle = new WaterCycle();
         }
 
         public void Setup()
         {
-            WaterCycle.Setup(this);
+            this.WaterCycle.Setup(this);
 
-            Snags = null;
-            Soil = null;
+            this.Snags = null;
+            this.Soil = null;
             if (GlobalSettings.Instance.Model.Settings.CarbonCycleEnabled)
             {
-                Soil = new Soil(this);
-                Snags = new Snag();
-                Snags.Setup(this);
+                this.Soil = new Soil(this);
+                this.Snags = new Snag();
+                this.Snags.Setup(this);
                 XmlHelper xml = GlobalSettings.Instance.Settings;
 
                 // setup contents of the soil of the RU; use values for C and N (kg/ha)
-                Soil.SetInitialState(new CNPool(xml.ValueDouble("model.site.youngLabileC", -1),
-                                              xml.ValueDouble("model.site.youngLabileN", -1),
-                                              xml.ValueDouble("model.site.youngLabileDecompRate", -1)),
-                                      new CNPool(xml.ValueDouble("model.site.youngRefractoryC", -1),
-                                              xml.ValueDouble("model.site.youngRefractoryN", -1),
-                                              xml.ValueDouble("model.site.youngRefractoryDecompRate", -1)),
-                                       new CNPair(xml.ValueDouble("model.site.somC", -1), xml.ValueDouble("model.site.somN", -1)));
+                this.Soil.SetInitialState(new CNPool(xml.GetDouble("model.site.youngLabileC", -1),
+                                                     xml.GetDouble("model.site.youngLabileN", -1),
+                                                     xml.GetDouble("model.site.youngLabileDecompRate", -1)),
+                                          new CNPool(xml.GetDouble("model.site.youngRefractoryC", -1),
+                                                     xml.GetDouble("model.site.youngRefractoryN", -1),
+                                                     xml.GetDouble("model.site.youngRefractoryDecompRate", -1)),
+                                          new CNPair(xml.GetDouble("model.site.somC", -1), 
+                                                     xml.GetDouble("model.site.somN", -1)));
             }
 
-            SaplingCells = null;
             if (GlobalSettings.Instance.Model.Settings.RegenerationEnabled)
             {
-                SaplingCells = new SaplingCell[Constant.LightCellsPerHectare];
+                this.SaplingCells = new SaplingCell[Constant.LightCellsPerHectare];
+                for (int cellIndex = 0; cellIndex < this.SaplingCells.Length; ++cellIndex)
+                {
+                    // BUGBUG: SoA
+                    this.SaplingCells[cellIndex] = new SaplingCell();
+                }
             }
 
             // setup variables
-            Variables.NitrogenAvailable = GlobalSettings.Instance.Settings.ValueDouble("model.site.availableNitrogen", 40);
+            this.Variables.NitrogenAvailable = GlobalSettings.Instance.Settings.GetDouble("model.site.availableNitrogen", 40);
 
             // if dynamic coupling of soil nitrogen is enabled, a starting value for available N is calculated
-            if (Soil != null && GlobalSettings.Instance.Model.Settings.UseDynamicAvailableNitrogen && GlobalSettings.Instance.Model.Settings.CarbonCycleEnabled)
+            if (this.Soil != null && GlobalSettings.Instance.Model.Settings.UseDynamicAvailableNitrogen && GlobalSettings.Instance.Model.Settings.CarbonCycleEnabled)
             {
-                Soil.ClimateFactor = 1.0;
-                Soil.CalculateYear();
-                Variables.NitrogenAvailable = Soil.AvailableNitrogen;
+                this.Soil.ClimateFactor = 1.0;
+                this.Soil.CalculateYear();
+                this.Variables.NitrogenAvailable = Soil.AvailableNitrogen;
             }
-            HasDeadTrees = false;
-            AverageAging = 0.0;
 
+            this.AverageAging = 0.0;
+            this.HasDeadTrees = false;
         }
 
         public void SetBoundingBox(RectangleF bb)
@@ -209,7 +217,6 @@ namespace iLand.core
             int last;
             for (last = Trees.Count - 1; last >= 0 && Trees[last].IsDead(); --last)
             {
-                --last;
             }
 
             int current = 0;
@@ -231,7 +238,7 @@ namespace iLand.core
             // free ressources
             if (last != Trees.Count)
             {
-                Trees.RemoveRange(last, Trees.Count - last);
+                Trees.RemoveRange(last, Trees.Count - last); // BUGBUG: assumes dead trees are at end of list
                 if (Trees.Capacity > 100)
                 {
                     if (Trees.Count / (double)Trees.Capacity < 0.2)
@@ -296,34 +303,34 @@ namespace iLand.core
             if (LeafAreaIndex() < 3.0)
             {
                 // estimate stocked area based on crown projections
-                double crown_area = 0.0;
+                double totalCrownArea = 0.0;
                 for (int i = 0; i < Trees.Count; ++i)
                 {
-                    crown_area += Trees[i].IsDead() ? 0.0 : Trees[i].Stamp.Reader.CrownArea;
+                    totalCrownArea += Trees[i].IsDead() ? 0.0 : Trees[i].Stamp.Reader.CrownArea;
                 }
                 if (GlobalSettings.Instance.LogDebug())
                 {
-                    Debug.WriteLine("crown area: lai " + LeafAreaIndex() + " stocked area (pixels) " + StockedArea + " area (crown) " + crown_area);
+                    Debug.WriteLine("crown area: lai " + LeafAreaIndex() + " stocked area (pixels) " + StockedArea + " area (crown) " + totalCrownArea);
                 }
                 if (LeafAreaIndex() < 1.0)
                 {
-                    StockedArea = Math.Min(crown_area, StockedArea);
+                    this.StockedArea = Math.Min(totalCrownArea, this.StockedArea);
                 }
                 else
                 {
                     // for LAI between 1 and 3:
                     // interpolate between sum of crown area of trees (at LAI=1) and the pixel-based value (at LAI=3 and above)
                     double px_frac = (LeafAreaIndex() - 1.0) / 2.0; // 0 at LAI=1, 1 at LAI=3
-                    StockedArea = StockedArea * px_frac + Math.Min(crown_area, StockedArea) * (1.0 - px_frac);
+                    this.StockedArea = this.StockedArea * px_frac + Math.Min(totalCrownArea, StockedArea) * (1.0 - px_frac);
                 }
-                if (StockedArea == 0.0)
+                if (this.StockedArea == 0.0)
                 {
                     return;
                 }
             }
 
             // calculate the leaf area index (LAI)
-            double LAI = TotalLeafArea / StockedArea;
+            double LAI = this.TotalLeafArea / this.StockedArea;
             // calculate the intercepted radiation fraction using the law of Beer Lambert
             double k = GlobalSettings.Instance.Model.Settings.LightExtinctionCoefficient;
             double interception_fraction = 1.0 - Math.Exp(-k * LAI);
@@ -342,24 +349,24 @@ namespace iLand.core
             }
 
             // calculate LAI fractions
-            double ru_lai = LeafAreaIndex();
-            if (ru_lai < 1.0)
+            double allSpeciesLeafAreaIndex = this.LeafAreaIndex(); // TODO: should this be the same as two LAI calculations above?
+            if (allSpeciesLeafAreaIndex < 1.0)
             {
-                ru_lai = 1.0;
+                allSpeciesLeafAreaIndex = 1.0;
             }
             // note: LAIFactors are only 1 if sum of LAI is > 1.0 (see WaterCycle)
-            for (int i = 0; i < Species.Count; ++i)
+            for (int speciesIndex = 0; speciesIndex < Species.Count; ++speciesIndex)
             {
-                double lai_factor = Species[i].Statistics.LeafAreaIndex / ru_lai;
+                double lai_factor = Species[speciesIndex].Statistics.LeafAreaIndex / allSpeciesLeafAreaIndex;
 
                 //DBGMODE(
                 if (lai_factor > 1.0)
                 {
-                    ResourceUnitSpecies rus = Species[i];
+                    ResourceUnitSpecies rus = Species[speciesIndex];
                     Debug.WriteLine("LAI factor > 1: species ru-index: " + rus.Species.Name + rus.RU.Index);
                 }
                 //);
-                Species[i].SetLaiFactor(lai_factor);
+                Species[speciesIndex].SetLaiFactor(lai_factor);
             }
 
             // soil water model - this determines soil water contents needed for response calculations
@@ -368,25 +375,25 @@ namespace iLand.core
             }
 
             // invoke species specific calculation (3PG)
-            for (int i = 0; i < Species.Count; ++i)
+            for (int speciesIndex = 0; speciesIndex < Species.Count; ++speciesIndex)
             {
                 //DBGMODE(
-                if (Species[i].LaiFactor > 1.0)
+                if (Species[speciesIndex].LaiFraction > 1.0)
                 {
-                    ResourceUnitSpecies rus = Species[i];
-                    Debug.WriteLine("LAI factor > 1: species ru-index value: " + rus.Species.Name + rus.RU.Index + rus.LaiFactor);
+                    ResourceUnitSpecies rus = Species[speciesIndex];
+                    Debug.WriteLine("LAI factor > 1: species ru-index value: " + rus.Species.Name + rus.RU.Index + rus.LaiFraction);
                 }
                 //);
-                Species[i].Calculate(); // CALCULATE 3PG
+                Species[speciesIndex].Calculate(); // CALCULATE 3PG
 
                 // debug output related to production
-                if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.StandGpp) && Species[i].LaiFactor > 0.0)
+                if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.StandGpp) && Species[speciesIndex].LaiFraction > 0.0)
                 {
                     List<object> output = GlobalSettings.Instance.DebugList(Index, DebugOutputs.StandGpp);
-                    output.AddRange(new object[] { Species[i].Species.ID,  Index,  ID,
-                                                   Species[i].LaiFactor,  Species[i].BiomassGrowth.GppPerArea, 
-                                                   ProductiveArea * Species[i].LaiFactor * Species[i].BiomassGrowth.GppPerArea, AverageAging,  
-                                                   Species[i].BiomassGrowth.EnvironmentalFactor });
+                    output.AddRange(new object[] { Species[speciesIndex].Species.ID,  Index,  ID,
+                                                   Species[speciesIndex].LaiFraction,  Species[speciesIndex].BiomassGrowth.GppPerArea, 
+                                                   ProductiveArea * Species[speciesIndex].LaiFraction * Species[speciesIndex].BiomassGrowth.GppPerArea, AverageAging,  
+                                                   Species[speciesIndex].BiomassGrowth.EnvironmentalFactor });
                 }
             }
         }

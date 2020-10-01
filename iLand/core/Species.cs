@@ -1,8 +1,9 @@
-﻿using iLand.tools;
+﻿using iLand.Input;
+using iLand.Tools;
 using System;
 using System.Diagnostics;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class Species
       @ingroup core
@@ -12,7 +13,7 @@ namespace iLand.core
       - store all the precalcualted patterns for light competition (LIP, stamps)
       - do most of the growth (3PG) calculation
       */
-    internal class Species
+    public class Species
     {
         private readonly StampContainer mLIPs; ///< ptr to the container of the LIP-pattern
 
@@ -62,7 +63,7 @@ namespace iLand.core
         public bool IsSeedYear { get; private set; }
         // cn ratios
         public double CNRatioFoliage { get; private set; }
-        public double CNRatioFineroot { get; private set; }
+        public double CNRatioFineRoot { get; private set; }
         public double CNRatioWood { get; private set; }
         // turnover rates
         public double TurnoverLeaf { get; private set; } ///< yearly turnover rate leafs
@@ -95,6 +96,11 @@ namespace iLand.core
 
         public Species(SpeciesSet set)
         {
+            if (set == null)
+            {
+                throw new ArgumentNullException(nameof(set));
+            }
+
             this.mAging = new Expression();
             this.EstablishmentParameters = new EstablishmentParameters();
             this.Index = set.SpeciesCount();
@@ -107,13 +113,7 @@ namespace iLand.core
             this.SpeciesSet = set;
         }
 
-        public bool Active { get; private set; } ///< active??? todo!
-
-        // helpers during setup
-        private bool GetBool(string s) { return (bool)SpeciesSet.GetVariable(s); } ///< during setup: get value of variable @p s as a boolean variable.
-        private double GetDouble(string s) { return (double)SpeciesSet.GetVariable(s); }///< during setup: get value of variable @p s as a double.
-        private int GetInt(string s) { return (int)SpeciesSet.GetVariable(s); } ///< during setup: get value of variable @p s as an integer.
-        private string GetString(string s) { return (string)SpeciesSet.GetVariable(s); } ///< during setup: get value of variable @p s as a string.
+        public bool Active { get; private set; }
 
         // allometries
         public double GetBarkThickness(double dbh) { return dbh * mBarkThicknessFactor; }
@@ -123,7 +123,7 @@ namespace iLand.core
         public double GetBiomassBranch(double dbh) { return mBranch_a * Math.Pow(dbh, mBranch_b); }
         public double GetWoodFoliageRatio() { return mWoody_b / mFoliage_b; }
 
-        public Stamp GetStamp(float dbh, float height) { return mLIPs.Stamp(dbh, height); }
+        public Stamp GetStamp(float dbh, float height) { return mLIPs.GetStamp(dbh, height); }
 
         public double GetLightResponse(double lightResourceIndex) { return SpeciesSet.LightResponse(lightResourceIndex, mLightResponseClass); }
         public double GetNitrogenResponse(double availableNitrogen) { return SpeciesSet.NitrogenResponse(availableNitrogen, mRespNitrogenClass); }
@@ -134,187 +134,202 @@ namespace iLand.core
             Data is fetched from the open query (or file, ...) in the parent SpeciesSet using xyzVar() functions.
             This is called
             */
-        public void Setup()
+        public static Species Load(SpeciesReader reader, SpeciesSet speciesSet)
         {
-            Debug.Assert(SpeciesSet != null);
-            // setup general information
-            ID = GetString("shortName");
-            Name = GetString("name");
-            string stampFile = GetString("LIPFile");
+            Species species = new Species(speciesSet)
+            {
+                Active = reader.Active(),
+                ID = reader.ID(),
+                Name = reader.Name()
+            };
+            string stampFile = reader.LipFile();
             // load stamps
-            mLIPs.Load(GlobalSettings.Instance.Path(stampFile, "lip"));
+            species.mLIPs.Load(GlobalSettings.Instance.Path(stampFile, "lip"));
             // attach writer stamps to reader stamps
-            mLIPs.AttachReaderStamps(SpeciesSet.ReaderStamps);
+            species.mLIPs.AttachReaderStamps(species.SpeciesSet.ReaderStamps);
             if (GlobalSettings.Instance.Settings.GetBooleanParameter("debugDumpStamps", false))
             {
-                Debug.WriteLine(mLIPs.Dump());
+                Debug.WriteLine(species.mLIPs.Dump());
             }
 
             // general properties
-            IsConiferous = GetBool("isConiferous");
-            IsEvergreen = GetBool("isEvergreen");
+            species.IsConiferous = reader.IsConiferous();
+            species.IsEvergreen = reader.IsEvergreen();
 
             // setup allometries
-            mFoliage_a = GetDouble("bmFoliage_a");
-            mFoliage_b = GetDouble("bmFoliage_b");
+            species.mFoliage_a = reader.BmFoliageA();
+            species.mFoliage_b = reader.BmFoliageB();
 
-            mWoody_a = GetDouble("bmWoody_a");
-            mWoody_b = GetDouble("bmWoody_b");
+            species.mWoody_a = reader.BmWoodyA();
+            species.mWoody_b = reader.BmWoodyB();
 
-            mRoot_a = GetDouble("bmRoot_a");
-            mRoot_b = GetDouble("bmRoot_b");
+            species.mRoot_a = reader.BmRootA();
+            species.mRoot_b = reader.BmRootB();
 
-            mBranch_a = GetDouble("bmBranch_a");
-            mBranch_b = GetDouble("bmBranch_b");
+            species.mBranch_a = reader.BmBranchA();
+            species.mBranch_b = reader.BmBranchB();
 
-            SpecificLeafArea = GetDouble("specificLeafArea");
-            FinerootFoliageRatio = GetDouble("finerootFoliageRatio");
+            species.SpecificLeafArea = reader.SpecificLeafArea();
+            species.FinerootFoliageRatio = reader.FinerootFoliageRatio();
 
-            mBarkThicknessFactor = GetDouble("barkThickness");
+            species.mBarkThicknessFactor = reader.BarkThickness();
 
             // cn-ratios
-            CNRatioFoliage = GetDouble("cnFoliage");
-            CNRatioFineroot = GetDouble("cnFineRoot");
-            CNRatioWood = GetDouble("cnWood");
-            if (CNRatioFineroot * CNRatioFoliage * CNRatioWood == 0.0)
+            species.CNRatioFoliage = reader.CnFoliage();
+            species.CNRatioFineRoot = reader.CnFineroot();
+            species.CNRatioWood = reader.CnWood();
+            if (species.CNRatioFineRoot * species.CNRatioFoliage * species.CNRatioWood == 0.0)
             {
-                throw new NotSupportedException(String.Format("Error setting up species {0}: CN ratio is 0.0", ID));
+                throw new NotSupportedException(String.Format("Error setting up species {0}: CN ratio is 0.0", species.ID));
             }
 
             // turnover rates
-            TurnoverLeaf = GetDouble("turnoverLeaf");
-            TurnoverRoot = GetDouble("turnoverRoot");
+            species.TurnoverLeaf = reader.TurnoverLeaf();
+            species.TurnoverRoot = reader.TurnoverRoot();
 
             // hd-relations
-            mHDlow.SetAndParse(GetString("HDlow"));
-            mHDhigh.SetAndParse(GetString("HDhigh"));
-            mHDlow.Linearize(0.0, 100.0); // input: dbh (cm). above 100cm the formula will be directly executed
-            mHDhigh.Linearize(0.0, 100.0);
+            species.mHDlow.SetAndParse(reader.HdLow());
+            species.mHDhigh.SetAndParse(reader.HdHigh());
+            species.mHDlow.Linearize(0.0, 100.0); // input: dbh (cm). above 100cm the formula will be directly executed
+            species.mHDhigh.Linearize(0.0, 100.0);
 
             // form/density
-            WoodDensity = GetDouble("woodDensity");
-            mFormFactor = GetDouble("formFactor");
+            species.WoodDensity = reader.WoodDensity();
+            species.mFormFactor = reader.FormFactor();
             // volume = formfactor*pi/4 *d^2*h -> volume = volumefactor * d^2 * h
-            VolumeFactor = mFormFactor * Constant.QuarterPi;
+            species.VolumeFactor = species.mFormFactor * Constant.QuarterPi;
 
             // snags
-            SnagKsw = GetDouble("snagKSW"); // decay rate of SWD
-            SnagHalflife = GetDouble("snagHalfLife");
-            SnagKyl = GetDouble("snagKYL"); // decay rate labile
-            SnagKyr = GetDouble("snagKYR"); // decay rate refractory matter
+            species.SnagKsw = reader.SnagKsw(); // decay rate of SWD
+            species.SnagHalflife = reader.SnagHalflife();
+            species.SnagKyl = reader.SnagKyl(); // decay rate labile
+            species.SnagKyr = reader.SnagKyr(); // decay rate refractory matter
 
-            if (mFoliage_a * mFoliage_b * mRoot_a * mRoot_b * mWoody_a * mWoody_b * mBranch_a * mBranch_b * WoodDensity * mFormFactor * SpecificLeafArea * FinerootFoliageRatio == 0.0)
+            if ((species.mFoliage_a == 0.0) ||
+                (species.mFoliage_b == 0.0) ||
+                (species.mRoot_a == 0.0) ||
+                (species.mRoot_b == 0.0) ||
+                (species.mWoody_a == 0.0) ||
+                (species.mWoody_b == 0.0) ||
+                (species.mBranch_a == 0.0) ||
+                (species.mBranch_b == 0.0) ||
+                (species.WoodDensity == 0.0) ||
+                (species.mFormFactor == 0.0) ||
+                (species.SpecificLeafArea == 0.0) ||
+                (species.FinerootFoliageRatio == 0.0))
             {
-                throw new NotSupportedException(String.Format("Error setting up species {0}: one value is NULL in database.", ID));
+                throw new NotSupportedException(String.Format("Error setting up species {0}: one value is NULL in database.", species.ID));
             }
             // Aging
-            mMaximumAge = GetDouble("maximumAge");
-            mMaximumHeight = GetDouble("maximumHeight");
-            mAging.SetAndParse(GetString("aging"));
-            mAging.Linearize(0.0, 1.0); // input is harmonic mean of relative age and relative height
-            if (mMaximumAge * mMaximumHeight == 0.0)
+            species.mMaximumAge = reader.MaximumAge();
+            species.mMaximumHeight = reader.MaximumHeight();
+            species.mAging.SetAndParse(reader.Aging());
+            species.mAging.Linearize(0.0, 1.0); // input is harmonic mean of relative age and relative height
+            if (species.mMaximumAge * species.mMaximumHeight == 0.0)
             {
-                throw new NotSupportedException(String.Format("Error setting up species {0}:invalid aging parameters.", ID));
+                throw new NotSupportedException(String.Format("Error setting up species {0}:invalid aging parameters.", species.ID));
             }
 
             // mortality
             // the probabilites (mDeathProb_...) are the yearly prob. of death.
             // from a population a fraction of p_lucky remains after ageMax years. see wiki: base+mortality
-            double p_lucky = GetDouble("probIntrinsic");
-            double p_lucky_stress = GetDouble("probStress");
+            double p_lucky = reader.ProbIntrinsic();
+            double p_lucky_stress = reader.ProbStress();
 
-            if (p_lucky * mMaximumAge * p_lucky_stress == 0.0)
+            if (p_lucky * species.mMaximumAge * p_lucky_stress == 0.0)
             {
-                throw new NotSupportedException(String.Format("Error setting up species {0}: invalid mortality parameters.", ID));
+                throw new NotSupportedException(String.Format("Error setting up species {0}: invalid mortality parameters.", species.ID));
             }
 
-            DeathProbabilityIntrinsic = 1.0 - Math.Pow(p_lucky, 1.0 / mMaximumAge);
-            mDeathProb_stress = p_lucky_stress;
+            species.DeathProbabilityIntrinsic = 1.0 - Math.Pow(p_lucky, 1.0 / species.mMaximumAge);
+            species.mDeathProb_stress = p_lucky_stress;
 
             if (GlobalSettings.Instance.LogInfo())
             {
-                Debug.WriteLine("species " + Name + " probStress " + p_lucky_stress + " resulting probability: " + mDeathProb_stress);
+                Debug.WriteLine("species " + species.Name + " probStress " + p_lucky_stress + " resulting probability: " + species.mDeathProb_stress);
             }
 
             // envirionmental responses
-            mRespVpdExponent = GetDouble("respVpdExponent");
-            mRespTempMin = GetDouble("respTempMin");
-            mRespTempMax = GetDouble("respTempMax");
-            if (mRespVpdExponent >= 0)
+            species.mRespVpdExponent = reader.RespVpdExponent();
+            species.mRespTempMin = reader.RespTempMin();
+            species.mRespTempMax = reader.RespTempMax();
+            if (species.mRespVpdExponent >= 0)
             {
-                throw new NotSupportedException(String.Format("Error: vpd exponent >=0 for species (must be a negative value).", ID));
+                throw new NotSupportedException(String.Format("Error: vpd exponent >=0 for species (must be a negative value).", species.ID));
             }
-            if (mRespTempMax == 0.0 || mRespTempMin >= mRespTempMax)
+            if (species.mRespTempMax == 0.0 || species.mRespTempMin >= species.mRespTempMax)
             {
-                throw new NotSupportedException(String.Format("temperature response parameters invalid for species", ID));
+                throw new NotSupportedException(String.Format("temperature response parameters invalid for species", species.ID));
             }
 
-            mRespNitrogenClass = GetDouble("respNitrogenClass");
-            if (mRespNitrogenClass < 1 || mRespNitrogenClass > 3)
+            species.mRespNitrogenClass = reader.RespNitrogenClass();
+            if (species.mRespNitrogenClass < 1 || species.mRespNitrogenClass > 3)
             {
-                throw new NotSupportedException(String.Format("nitrogen class invalid (must be >=1 and <=3) for species", ID));
+                throw new NotSupportedException(String.Format("nitrogen class invalid (must be >=1 and <=3) for species", species.ID));
             }
 
             // phenology
-            PhenologyClass = GetInt("phenologyClass");
+            species.PhenologyClass = reader.PhenologyClass();
 
             // water
-            MaxCanopyConductance = GetDouble("maxCanopyConductance");
-            PsiMin = -Math.Abs(GetDouble("psiMin")); // force a negative value
+            species.MaxCanopyConductance = reader.MaxCanopyConductance();
+            species.PsiMin = reader.PsiMin();
 
             // light
-            mLightResponseClass = GetDouble("lightResponseClass");
-            if (mLightResponseClass < 1.0 || mLightResponseClass > 5.0)
+            species.mLightResponseClass = reader.LightResponseClass();
+            if (species.mLightResponseClass < 1.0 || species.mLightResponseClass > 5.0)
             {
-                throw new NotSupportedException(String.Format("invalid light response class for species {0}. Allowed: 1..5.", ID));
+                throw new NotSupportedException(String.Format("invalid light response class for species {0}. Allowed: 1..5.", species.ID));
             }
 
             // regeneration
-            int seed_year_interval = GetInt("seedYearInterval");
+            int seed_year_interval = reader.SeedYearInterval();
             if (seed_year_interval == 0)
             {
-                throw new NotSupportedException(String.Format("seedYearInterval = 0 for {0}", ID));
+                throw new NotSupportedException(String.Format("seedYearInterval = 0 for {0}", species.ID));
             }
-            mSeedYearProbability = 1 / (double)(seed_year_interval);
-            mMaturityYears = GetInt("maturityYears");
-            mTM_as1 = GetDouble("seedKernel_as1");
-            mTM_as2 = GetDouble("seedKernel_as2");
-            mTM_ks = GetDouble("seedKernel_ks0");
-            FecundityM2 = GetDouble("fecundity_m2");
-            NonSeedYearFraction = GetDouble("nonSeedYearFraction");
+            species.mSeedYearProbability = 1 / (double)(seed_year_interval);
+            species.mMaturityYears = reader.MaturityYears();
+            species.mTM_as1 = reader.SeedKernelAs1();
+            species.mTM_as2 = reader.SeedKernelAs2();
+            species.mTM_ks = reader.SeedKernelKs0();
+            species.FecundityM2 = reader.FecundityM2();
+            species.NonSeedYearFraction = reader.NonSeedYearFraction();
             // special case for serotinous trees (US)
-            mSerotiny.SetExpression(GetString("serotinyFormula"));
-            FecunditySerotiny = GetDouble("serotinyFecundity");
+            species.mSerotiny.SetExpression(reader.SerotinyFormula());
+            species.FecunditySerotiny = reader.FecunditySerotiny();
 
             // establishment parameters
-            EstablishmentParameters.MinTemp = GetDouble("estMinTemp");
-            EstablishmentParameters.ChillRequirement = GetInt("estChillRequirement");
-            EstablishmentParameters.GddMin = GetInt("estGDDMin");
-            EstablishmentParameters.GddMax = GetInt("estGDDMax");
-            EstablishmentParameters.GddBaseTemperature = GetDouble("estGDDBaseTemp");
-            EstablishmentParameters.GddBudBurst = GetInt("estBudBirstGDD");
-            EstablishmentParameters.MinFrostFree = GetInt("estFrostFreeDays");
-            EstablishmentParameters.FrostTolerance = GetDouble("estFrostTolerance");
-            EstablishmentParameters.PsiMin = -Math.Abs(GetDouble("estPsiMin")); // force negative value
+            species.EstablishmentParameters.MinTemp = reader.EstablishmentParametersMinTemp();
+            species.EstablishmentParameters.ChillRequirement = reader.EstablishmentParametersChillRequirement();
+            species.EstablishmentParameters.GddMin = reader.EstablishmentParametersGddMin();
+            species.EstablishmentParameters.GddMax = reader.EstablishmentParametersGddMax();
+            species.EstablishmentParameters.GddBaseTemperature = reader.EstablishmentParametersGddBaseTemperature();
+            species.EstablishmentParameters.GddBudBurst = reader.EstablishmentParametersGddBudBurst();
+            species.EstablishmentParameters.MinFrostFree = reader.EstablishmentParametersMinFrostFree();
+            species.EstablishmentParameters.FrostTolerance = reader.EstablishmentParametersFrostTolerance();
+            species.EstablishmentParameters.PsiMin = reader.EstablishmentParametersPsiMin();
 
             // sapling and sapling growth parameters
-            SaplingGrowthParameters.HeightGrowthPotential.SetAndParse(GetString("sapHeightGrowthPotential"));
-            SaplingGrowthParameters.HeightGrowthPotential.Linearize(0.0, 4.0);
-            SaplingGrowthParameters.HdSapling = (float)GetDouble("sapHDSapling");
-            SaplingGrowthParameters.StressThreshold = GetDouble("sapStressThreshold");
-            SaplingGrowthParameters.MaxStressYears = GetInt("sapMaxStressYears");
-            SaplingGrowthParameters.ReferenceRatio = GetDouble("sapReferenceRatio");
-            SaplingGrowthParameters.ReinekesR = GetDouble("sapReinekesR");
-            SaplingGrowthParameters.BrowsingProbability = GetDouble("browsingProbability");
-            SaplingGrowthParameters.SproutGrowth = GetDouble("sapSproutGrowth");
-            if (SaplingGrowthParameters.SproutGrowth > 0.0)
+            species.SaplingGrowthParameters.HeightGrowthPotential.SetAndParse(reader.SaplingGrowthParametersHeightGrowthPotential());
+            species.SaplingGrowthParameters.HeightGrowthPotential.Linearize(0.0, 4.0);
+            species.SaplingGrowthParameters.HdSapling = reader.SaplingGrowthParametersHdSapling();
+            species.SaplingGrowthParameters.StressThreshold = reader.SaplingGrowthParametersStressThreshold();
+            species.SaplingGrowthParameters.MaxStressYears = reader.SaplingGrowthParametersMaxStressYears();
+            species.SaplingGrowthParameters.ReferenceRatio = reader.SaplingGrowthParametersReferenceRatio();
+            species.SaplingGrowthParameters.ReinekesR = reader.SaplingGrowthParametersReinekesR();
+            species.SaplingGrowthParameters.BrowsingProbability = reader.SaplingGrowthParametersBrowsingProbability();
+            species.SaplingGrowthParameters.SproutGrowth = reader.SaplingGrowthParametersSproutGrowth();
+            if (species.SaplingGrowthParameters.SproutGrowth > 0.0)
             {
-                if (SaplingGrowthParameters.SproutGrowth < 1.0 || SaplingGrowthParameters.SproutGrowth > 10)
+                if (species.SaplingGrowthParameters.SproutGrowth < 1.0 || species.SaplingGrowthParameters.SproutGrowth > 10)
                 {
-                    Debug.WriteLine("Value of 'sapSproutGrowth' dubious for species " + Name + "(value: " + SaplingGrowthParameters.SproutGrowth + ")");
+                    Debug.WriteLine("Value of 'sapSproutGrowth' dubious for species " + species.Name + "(value: " + species.SaplingGrowthParameters.SproutGrowth + ")");
                 }
             }
-            SaplingGrowthParameters.SetupReinekeLookup();
+            species.SaplingGrowthParameters.SetupReinekeLookup();
+
+            return species;
         }
 
         /** calculate fraction of stem wood increment base on dbh.

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /** @class SqlHelper
         @ingroup tools

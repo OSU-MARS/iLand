@@ -1,4 +1,4 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
     public enum TreeRemovalType 
     { 

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     internal class UpdateState
     {

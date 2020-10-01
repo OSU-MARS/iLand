@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
 
-namespace iLand.core
+namespace iLand.Core
 {
     internal static class GridExtensions
     {
@@ -29,9 +29,9 @@ namespace iLand.core
 
         public static void Limit(this Grid<int> grid, int min_value, int max_value)
         {
-            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     int value = grid[xIndex, yIndex];
                     if (value > max_value)
@@ -49,9 +49,9 @@ namespace iLand.core
         public static float Max(this Grid<float> grid)
         {
             float maxv = float.MinValue;
-            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     maxv = Math.Max(maxv, grid[xIndex, yIndex]);
                 }
@@ -61,9 +61,9 @@ namespace iLand.core
 
         public static void Multiply(this Grid<float> grid, float factor)
         {
-            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     grid[xIndex, yIndex] *= factor;
                 }
@@ -73,9 +73,9 @@ namespace iLand.core
         public static float Sum(this Grid<float> grid)
         {
             float total = 0;
-            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     total += grid[xIndex, yIndex];
                 }
@@ -86,15 +86,15 @@ namespace iLand.core
         public static Grid<double> ToDouble(this Grid<int> grid)
         {
             Grid<double> g = new Grid<double>();
-            g.Setup(grid.PhysicalSize, grid.CellSize);
+            g.Setup(grid.PhysicalExtent, grid.CellSize);
             if (g.IsEmpty())
             {
                 return g;
             }
 
-            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     g[xIndex, yIndex] = grid[xIndex, yIndex];
                 }

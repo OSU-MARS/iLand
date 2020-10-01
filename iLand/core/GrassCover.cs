@@ -1,12 +1,12 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace iLand.core
+namespace iLand.Core
 {
-    internal class GrassCover
+    public class GrassCover
     {
         private const int GRASSCOVERSTEPS = 32000;
 
@@ -35,14 +35,15 @@ namespace iLand.core
         public GrassCover()
         {
             this.mEffect = new double[GrassCover.GRASSCOVERSTEPS];
-            this.IsEnabled = false;
             this.mGrassEffect = new Expression();
             this.mGrassPotential = new Expression();
-            this.Grid = new Grid<short>();
             this.mLayers = new GrassCoverLayers();
             this.mLayers.SetGrid(Grid);
             this.mPDF = new RandomCustomPdf();
             this.mType = GrassAlgorithmType.Invalid;
+
+            this.Grid = new Grid<short>();
+            this.IsEnabled = false;
         }
 
         /// main function
@@ -60,17 +61,16 @@ namespace iLand.core
         public void Setup()
         {
             XmlHelper xml = GlobalSettings.Instance.Settings;
-            if (!xml.ValueBool("model.settings.grass.enabled"))
+            if (!xml.GetBool("model.settings.grass.enabled"))
             {
                 // clear grid
                 Grid.Clear();
-                GlobalSettings.Instance.ModelController.RemoveLayers(mLayers);
                 IsEnabled = false;
                 Debug.WriteLine("grass module not enabled");
                 return;
             }
             // create the grid
-            Grid.Setup(GlobalSettings.Instance.Model.LightGrid.PhysicalSize, GlobalSettings.Instance.Model.LightGrid.CellSize);
+            Grid.Setup(GlobalSettings.Instance.Model.LightGrid.PhysicalExtent, GlobalSettings.Instance.Model.LightGrid.CellSize);
             Grid.ClearDefault();
             // mask out out-of-project areas
             Grid<HeightGridValue> hg = GlobalSettings.Instance.Model.HeightGrid;
@@ -82,11 +82,11 @@ namespace iLand.core
                 }
             }
 
-            mType = Enum.Parse<GrassAlgorithmType>(xml.Value("model.settings.grass.type"));
+            mType = Enum.Parse<GrassAlgorithmType>(xml.GetString("model.settings.grass.type"), ignoreCase: true);
             if (mType == GrassAlgorithmType.Pixel)
             {
                 // setup of pixel based / discrete approach
-                string formula = xml.Value("model.settings.grass.grassDuration");
+                string formula = xml.GetString("model.settings.grass.grassDuration");
                 if (String.IsNullOrEmpty(formula))
                 {
                     throw new NotSupportedException("setup(): missing equation for 'grassDuration'.");
@@ -94,7 +94,7 @@ namespace iLand.core
                 mPDF.Setup(formula, 0.0, 100.0);
                 //mGrassEffect.setExpression(formula);
 
-                mGrassLIFThreshold = (float)xml.ValueDouble("model.settings.grass.LIFThreshold", 0.2);
+                mGrassLIFThreshold = (float)xml.GetDouble("model.settings.grass.LIFThreshold", 0.2);
 
                 // clear array
                 for (int i = 0; i < GRASSCOVERSTEPS; ++i)
@@ -105,7 +105,7 @@ namespace iLand.core
             else
             {
                 // setup of continuous grass concept
-                string formula = xml.Value("model.settings.grass.grassPotential");
+                string formula = xml.GetString("model.settings.grass.grassPotential");
                 if (String.IsNullOrEmpty(formula))
                 {
                     throw new NotSupportedException("setup of 'grass': required expression 'grassPotential' is missing.");
@@ -113,13 +113,13 @@ namespace iLand.core
                 mGrassPotential.SetExpression(formula);
                 mGrassPotential.Linearize(0.0, 1.0, Math.Min(GRASSCOVERSTEPS, 1000));
 
-                formula = xml.Value("model.settings.grass.grassEffect");
+                formula = xml.GetString("model.settings.grass.grassEffect");
                 if (String.IsNullOrEmpty(formula))
                 {
                     throw new NotSupportedException("setup of 'grass': required expression 'grassEffect' is missing.");
                 }
                 mGrassEffect.SetExpression(formula);
-                mMaxTimeLag = (int)(xml.ValueDouble("model.settings.grass.maxTimeLag"));
+                mMaxTimeLag = (int)(xml.GetDouble("model.settings.grass.maxTimeLag"));
                 if (mMaxTimeLag == 0)
                 {
                     throw new NotSupportedException("setup of 'grass': value of 'maxTimeLag' is invalid or missing.");
@@ -136,9 +136,8 @@ namespace iLand.core
                 mMaxState = (Int16)(Global.Limit(mGrassPotential.Calculate(1.0F), 0.0, 1.0) * (GRASSCOVERSTEPS - 1)); // the max value of the potential function
             }
 
-            GlobalSettings.Instance.ModelController.AddLayers(mLayers, "grass cover");
-            IsEnabled = true;
-            Debug.WriteLine("setup of grass cover complete.");
+            this.IsEnabled = true;
+            // Debug.WriteLine("setup of grass cover complete.");
         }
 
         public void SetInitialValues(List<KeyValuePair<int, float>> LIFpixels, int percent)
@@ -181,7 +180,7 @@ namespace iLand.core
             {
                 return;
             }
-            using DebugTimer t = new DebugTimer("GrassCover");
+            using DebugTimer t = new DebugTimer("GrassCover.Execute()");
 
             // Main function of the grass submodule
             Grid<float> lifGrid = GlobalSettings.Instance.Model.LightGrid;

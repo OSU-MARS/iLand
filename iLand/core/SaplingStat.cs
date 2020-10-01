@@ -1,12 +1,12 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Diagnostics;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** The SaplingStat class stores statistics on the resource unit x species level.
       */
-    internal class SaplingStat
+    public class SaplingStat
     {
         private double mSumDbhDied; ///< running sum of dbh of died trees (used to calculate detritus)
 
@@ -83,7 +83,7 @@ namespace iLand.core
 
                 CarbonLiving.AddBiomass(woody_bm * n, species.CNRatioWood);
                 CarbonLiving.AddBiomass(foliage * n, species.CNRatioFoliage);
-                CarbonLiving.AddBiomass(fineroot * n, species.CNRatioFineroot);
+                CarbonLiving.AddBiomass(fineroot * n, species.CNRatioFineRoot);
 
                 Debug.WriteLineIf(Double.IsNaN(CarbonLiving.C), "carbon NaN in calculate (living trees).");
 
@@ -103,7 +103,7 @@ namespace iLand.core
                     {
                         dead_wood.AddBiomass(woody_bm * (n_before - n), species.CNRatioWood);
                         dead_fine.AddBiomass(foliage * (n_before - n), species.CNRatioFoliage);
-                        dead_fine.AddBiomass(fineroot * (n_before - n), species.CNRatioFineroot);
+                        dead_fine.AddBiomass(fineroot * (n_before - n), species.CNRatioFineRoot);
                         Debug.WriteLineIf(Double.IsNaN(dead_fine.C), "carbon NaN in calculate (self thinning).");
                     }
                 }
@@ -119,7 +119,7 @@ namespace iLand.core
                 double foliage = species.GetBiomassFoliage(avg_dbh_dead) * n;
 
                 dead_fine.AddBiomass(foliage, species.CNRatioFoliage);
-                dead_fine.AddBiomass(foliage * species.FinerootFoliageRatio, species.CNRatioFineroot);
+                dead_fine.AddBiomass(foliage * species.FinerootFoliageRatio, species.CNRatioFineRoot);
                 Debug.WriteLineIf(Double.IsNaN(dead_fine.C), "carbon NaN in calculate (died trees).");
             }
             if (!dead_wood.IsEmpty() || !dead_fine.IsEmpty())

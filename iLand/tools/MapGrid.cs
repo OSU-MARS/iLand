@@ -1,11 +1,11 @@
-﻿using iLand.core;
+﻿using iLand.Core;
 using Microsoft.Collections.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /** MapGrid encapsulates maps that classify the area in 10m resolution (e.g. for stand-types, management-plans, ...)
       @ingroup tools
@@ -17,7 +17,7 @@ namespace iLand.tools
       location (in LIF-coordinates).
 
       */
-    internal class MapGrid
+    public class MapGrid
     {
         private static readonly MapGridRULock mapGridLock;
 
@@ -86,9 +86,9 @@ namespace iLand.tools
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
             Grid.Clear();
-            Grid.Setup(h_grid.PhysicalSize, h_grid.CellSize);
+            Grid.Setup(h_grid.PhysicalExtent, h_grid.CellSize);
 
-            RectangleF world = GlobalSettings.Instance.Model.PhysicalExtent;
+            RectangleF world = GlobalSettings.Instance.Model.WorldExtentUnbuffered;
             for (int i = 0; i < Grid.Count; i++)
             {
                 PointF p = Grid.GetCellCenterPoint(Grid.IndexOf(i));
@@ -123,7 +123,7 @@ namespace iLand.tools
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
             Grid.Clear();
-            Grid.Setup(h_grid.PhysicalSize, h_grid.CellSize);
+            Grid.Setup(h_grid.PhysicalExtent, h_grid.CellSize);
 
             for (int i = 0; i < Grid.Count; i++)
             {
@@ -338,7 +338,7 @@ namespace iLand.tools
         public void UpdateNeighborList()
         {
             mNeighborList.Clear();
-            GridRunner<int> gr = new GridRunner<int>(Grid, Grid.Size()); // the full grid
+            GridRunner<int> gr = new GridRunner<int>(Grid, Grid.CellExtent()); // the full grid
             int[] n4 = new int[4];
             for (gr.MoveNext(); gr.IsValid(); gr.MoveNext())
             {

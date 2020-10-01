@@ -1,16 +1,16 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class Soil provides an implementation of the ICBM/2N soil carbon and nitrogen dynamics model.
         @ingroup core
         The ICBM/2N model was developed by Kaetterer and Andren (2001) and used by others (e.g. Xenakis et al, 2008).
         See http://iland.boku.ac.at/soil+C+and+N+cycling for a model overview and the rationale of the model choice.
         */
-    internal class Soil
+    public class Soil
     {
         private static readonly SoilParams global_soilpar = new SoilParams();
         private static readonly SoilParams mParams = global_soilpar;
@@ -65,43 +65,53 @@ namespace iLand.core
 
         public Soil(ResourceUnit ru = null)
         {
-            mRU = ru;
-            ClimateFactor = 0.0;
-            AvailableNitrogen = 0.0;
-            mKyl = 0.0;
-            mKyr = 0.0;
-            mH = 0.0;
-            mKo = 0.0;
-            FetchParameters();
+            this.mKo = 0.0;
+            this.mKyl = 0.0;
+            this.mKyr = 0.0;
+            this.mH = 0.0;
+            this.mRU = ru;
+
+            this.mInputLab = null;
+            this.mInputRef = null;
+
+            this.AvailableNitrogen = 0.0;
+            this.ClimateFactor = 0.0;
+            this.FluxToAtmosphere = new CNPair();
+            this.FluxToDisturbance = new CNPair();
+            this.OrganicMatter = new CNPair();
+            this.YoungLabile = new CNPool();
+            this.YoungRefractory = new CNPool();
+
+            this.FetchParameters();
         }
 
         private void FetchParameters()
         {
             XmlHelper xml_site = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.site"));
-            mKo = xml_site.ValueDouble("somDecompRate", 0.02);
-            mH = xml_site.ValueDouble("soilHumificationRate", 0.3);
+            mKo = xml_site.GetDouble("somDecompRate", 0.02);
+            mH = xml_site.GetDouble("soilHumificationRate", 0.3);
 
             if (mParams.is_setup || GlobalSettings.Instance.Model != null)
             {
                 return;
             }
             XmlHelper xml = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.settings.soil"));
-            mParams.qb = xml.ValueDouble("qb", 5.0);
-            mParams.qh = xml.ValueDouble("qh", 25.0);
-            mParams.leaching = xml.ValueDouble("leaching", 0.15);
-            mParams.el = xml.ValueDouble("el", 0.0577);
-            mParams.er = xml.ValueDouble("er", 0.073);
+            mParams.qb = xml.GetDouble("qb", 5.0);
+            mParams.qh = xml.GetDouble("qh", 25.0);
+            mParams.leaching = xml.GetDouble("leaching", 0.15);
+            mParams.el = xml.GetDouble("el", 0.0577);
+            mParams.er = xml.GetDouble("er", 0.073);
 
             mParams.is_setup = true;
 
-            mNitrogenDeposition = xml.ValueDouble("nitrogenDeposition", 0.0);
+            mNitrogenDeposition = xml.GetDouble("nitrogenDeposition", 0.0);
         }
 
         // reset of bookkeeping variables
         public void NewYear()
         {
-            FluxToDisturbance.Clear();
             FluxToAtmosphere.Clear();
+            FluxToDisturbance.Clear();
         }
 
         /// setup initial content of the soil pool (call before model start)

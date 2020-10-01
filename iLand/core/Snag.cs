@@ -1,11 +1,12 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Xml;
 
-namespace iLand.core
+namespace iLand.Core
 {
-    internal class Snag
+    public class Snag
     {
         private static double mDBHLower = -1.0;
         private static double mDBHHigher = 0.0; ///< thresholds used to classify to SWD-Pools
@@ -51,12 +52,18 @@ namespace iLand.core
             this.mNumberOfSnags = new double[3];
             this.mOtherWood = new CNPool[5];
             this.mRU = null;
-            this.mSWD = new CNPool[3];
+            this.mSWD = new CNPool[] { new CNPool(), new CNPool(), new CNPool() };
+            this.mSWDtoSoil = new CNPair();
             this.mTimeSinceDeath = new double[3];
-            this.mToSWD = new CNPool[3];
+            this.mToSWD = new CNPool[3] { new CNPool(), new CNPool(), new CNPool() };
             this.mTotalIn = new CNPair();
+
             this.FluxToAtmosphere = new CNPair();
+            this.FluxToDisturbance = new CNPair();
             this.FluxToExtern = new CNPair();
+            this.RefractoryFlux = new CNPool();
+            this.TotalOtherWood = null;
+            this.TotalSwd = null;
         }
 
         public bool IsEmpty()
@@ -135,17 +142,20 @@ namespace iLand.core
 
             // Inital values from XML file
             XmlHelper xml = GlobalSettings.Instance.Settings;
-            double kyr = xml.ValueDouble("model.site.youngRefractoryDecompRate", -1);
+            double kyr = xml.GetDouble("model.site.youngRefractoryDecompRate", -1);
             // put carbon of snags to the middle size class
-            xml.SetCurrentNode("model.initialization.snags");
-            mSWD[1].C = xml.ValueDouble(".swdC");
-            mSWD[1].N = mSWD[1].C / xml.ValueDouble(".swdCN", 50.0);
+            if (xml.TrySetCurrentNode("model.initialization.snags") == false)
+            {
+                throw new XmlException("/project/model/initialization/snags element not found.");
+            }
+            mSWD[1].C = xml.GetDouble(".swdC");
+            mSWD[1].N = mSWD[1].C / xml.GetDouble(".swdCN", 50.0);
             mSWD[1].Parameter = kyr;
-            mKSW[1] = xml.ValueDouble(".swdDecompRate");
-            mNumberOfSnags[1] = xml.ValueDouble(".swdCount");
-            mHalfLife[1] = xml.ValueDouble(".swdHalfLife");
+            mKSW[1] = xml.GetDouble(".swdDecompRate");
+            mNumberOfSnags[1] = xml.GetDouble(".swdCount");
+            mHalfLife[1] = xml.GetDouble(".swdHalfLife");
             // and for the Branch/coarse root pools: split the init value into five chunks
-            CNPool other = new CNPool(xml.ValueDouble(".otherC"), xml.ValueDouble(".otherC") / xml.ValueDouble(".otherCN", 50.0), kyr);
+            CNPool other = new CNPool(xml.GetDouble(".otherC"), xml.GetDouble(".otherC") / xml.GetDouble(".otherCN", 50.0), kyr);
 
             mTotalCarbon = other.C + mSWD[1].C;
 
@@ -210,13 +220,15 @@ namespace iLand.core
                 mToSWD[i].Clear(); // clear transfer pools to standing-woody-debris
                 mCurrentKSW[i] = 0.0;
             }
+
+            mSWDtoSoil.Clear();
+            mTotalIn.Clear();
+
             LabileFlux.Clear();
-            RefractoryFlux.Clear();
             FluxToAtmosphere.Clear();
             FluxToExtern.Clear();
             FluxToDisturbance.Clear();
-            mTotalIn.Clear();
-            mSWDtoSoil.Clear();
+            RefractoryFlux.Clear();
         }
 
         /// calculate the dynamic climate modifier for decomposition 're'
@@ -363,15 +375,15 @@ namespace iLand.core
             // total carbon in the snag-container on the RU *after* processing is the content of the
             // standing woody debris pools + the branches
             mTotalCarbon = mSWD[0].C + mSWD[1].C + mSWD[2].C + mOtherWood[0].C + mOtherWood[1].C + mOtherWood[2].C + mOtherWood[3].C + mOtherWood[4].C;
-            TotalSwd = mSWD[0] + mSWD[1] + mSWD[2];
-            TotalOtherWood = mOtherWood[0] + mOtherWood[1] + mOtherWood[2] + mOtherWood[3] + mOtherWood[4];
+            this.TotalSwd = mSWD[0] + mSWD[1] + mSWD[2];
+            this.TotalOtherWood = mOtherWood[0] + mOtherWood[1] + mOtherWood[2] + mOtherWood[3] + mOtherWood[4];
         }
 
         /// foliage and fineroot litter is transferred during tree growth.
         public void AddTurnoverLitter(Species species, double litter_foliage, double litter_fineroot)
         {
             LabileFlux.AddBiomass(litter_foliage, species.CNRatioFoliage, species.SnagKyl);
-            LabileFlux.AddBiomass(litter_fineroot, species.CNRatioFineroot, species.SnagKyl);
+            LabileFlux.AddBiomass(litter_fineroot, species.CNRatioFineRoot, species.SnagKyl);
             Debug.WriteLineIf(Double.IsNaN(LabileFlux.C), "addTurnoverLitter: NaN");
         }
 
@@ -396,7 +408,7 @@ namespace iLand.core
 
             double branch_biomass = tree.GetBranchBiomass();
             // fine roots go to the labile pool
-            LabileFlux.AddBiomass(tree.FineRootMass, species.CNRatioFineroot, species.SnagKyl);
+            LabileFlux.AddBiomass(tree.FineRootMass, species.CNRatioFineRoot, species.SnagKyl);
 
             // a part of the foliage goes to the soil
             LabileFlux.AddBiomass(tree.FoliageMass * foliage_to_soil, species.CNRatioFoliage, species.SnagKyl);

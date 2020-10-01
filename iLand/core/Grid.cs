@@ -1,9 +1,10 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Text;
 
-namespace iLand.core
+namespace iLand.Core
 {
     internal class Grid
     {
@@ -14,22 +15,22 @@ namespace iLand.core
 
         public static string ToEsriRaster<T>(Grid<T> grid, Func<T, string> valueFunction)
         {
-            Vector3D model = new Vector3D(grid.PhysicalSize.Left, grid.PhysicalSize.Top, 0.0);
+            Vector3D model = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
             Vector3D world = new Vector3D();
             GisGrid.ModelToWorld(model, world);
             string result = String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
-                                           grid.SizeX, grid.SizeY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine);
+                                           grid.CellsX, grid.CellsY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine);
             string line = Grid.ToString(grid, valueFunction, ' '); // for special grids
             return result + line;
         }
 
         public static string ToEsriRaster<T>(Grid<T> grid)
         {
-            Vector3D model = new Vector3D(grid.PhysicalSize.Left, grid.PhysicalSize.Top, 0.0);
+            Vector3D model = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
             Vector3D world = new Vector3D();
             GisGrid.ModelToWorld(model, world);
             string result = String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
-                    grid.SizeX, grid.SizeY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine);
+                    grid.CellsX, grid.CellsY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine);
             string line = Grid.ToString(grid, ' '); // for normal grids (e.g. float)
             return result + line;
         }
@@ -40,9 +41,9 @@ namespace iLand.core
         {
             StringBuilder res = new StringBuilder();
             int newl_counter = newline_after;
-            for (int y = grid.SizeY - 1; y >= 0; --y)
+            for (int y = grid.CellsY - 1; y >= 0; --y)
             {
-                for (int x = 0; x < grid.SizeX; x++)
+                for (int x = 0; x < grid.CellsX; x++)
                 {
                     res.Append(grid[x, y].ToString() + sep);
                     if (--newl_counter == 0)
@@ -65,9 +66,9 @@ namespace iLand.core
             StringBuilder ts = new StringBuilder();
 
             int newl_counter = newline_after;
-            for (int y = grid.SizeY - 1; y >= 0; --y)
+            for (int y = grid.CellsY - 1; y >= 0; --y)
             {
-                for (int x = 0; x < grid.SizeX; x++)
+                for (int x = 0; x < grid.CellsX; x++)
                 {
                     ts.Append(valueFunction(grid[x, y]) + sep);
 
@@ -95,7 +96,7 @@ namespace iLand.core
           (0/0) (1/0) (2/0)
                   S
         */
-    internal class Grid<T>
+    public class Grid<T>
     {
         private T[] mData;
 
@@ -104,17 +105,18 @@ namespace iLand.core
         ///< returns the number of elements of the grid
         public int Count { get; private set; } 
         /// get the metric rectangle of the grid
-        public RectangleF PhysicalSize { get; private set; }
-        public int SizeX { get; private set; }
-        public int SizeY { get; private set; }
+        public RectangleF PhysicalExtent { get; private set; }
+        public int CellsX { get; private set; }
+        public int CellsY { get; private set; }
 
         public Grid()
         {
-            mData = null;
-            CellSize = 0.0F;
-            SizeX = 0;
-            SizeY = 0;
-            Count = 0;
+            this.mData = null;
+            this.CellSize = 0.0F;
+            this.CellsX = 0;
+            this.CellsY = 0;
+            this.Count = 0;
+            this.PhysicalExtent = default;
         }
 
         public Grid(float cellsize, int sizex, int sizey)
@@ -123,18 +125,17 @@ namespace iLand.core
             Setup(cellsize, sizex, sizey);
         }
 
-        /// create from a metric rect
-        public Grid(RectangleF rect_metric, float cellsize)
+        public Grid(RectangleF extent, float cellsize)
         {
             mData = null;
-            Setup(rect_metric, cellsize);
+            Setup(extent, cellsize);
         }
 
         public Grid(Grid<T> toCopy)
         {
             mData = null;
-            PhysicalSize = toCopy.PhysicalSize;
-            Setup(toCopy.PhysicalSize, toCopy.CellSize);
+            PhysicalExtent = toCopy.PhysicalExtent;
+            Setup(toCopy.PhysicalExtent, toCopy.CellSize);
             //setup(toCopy.cellsize(), toCopy.sizeX(), toCopy.sizeY());
             Array.Copy(toCopy.mData, 0, this.mData, 0, toCopy.mData.Length);
         }
@@ -148,8 +149,8 @@ namespace iLand.core
         /// access (const) with index variables. use int.
         public T this[int ix, int iy]
         {
-            get { return this.mData[iy * this.SizeX + ix]; }
-            set { this.mData[iy * this.SizeX + ix] = value; }
+            get { return this.mData[iy * this.CellsX + ix]; }
+            set { this.mData[iy * this.CellsX + ix] = value; }
         }
         /// access (const) using metric variables. use float.
         public T this[float x, float y]
@@ -173,13 +174,13 @@ namespace iLand.core
 
         public bool Contains(float x, float y)
         {
-            return x >= PhysicalSize.Left && x < PhysicalSize.Right && y >= PhysicalSize.Top && y < PhysicalSize.Bottom;
+            return x >= PhysicalExtent.Left && x < PhysicalExtent.Right && y >= PhysicalExtent.Top && y < PhysicalExtent.Bottom;
         }
 
         ///< return true, if index is within the grid
         public bool Contains(int x, int y)
         {
-            return (x >= 0 && x < SizeX && y >= 0 && y < SizeY);
+            return (x >= 0 && x < CellsX && y >= 0 && y < CellsY);
         }
 
         public bool Contains(Point pos)
@@ -195,20 +196,20 @@ namespace iLand.core
         /// get the (metric) centerpoint of cell with index @p pos
         public PointF GetCellCenterPoint(Point pos) ///< get metric coordinates of the cells center
         {
-            return new PointF((pos.X + 0.5F) * CellSize + PhysicalSize.Left, (pos.Y + 0.5F) * CellSize + PhysicalSize.Top);
+            return new PointF((pos.X + 0.5F) * CellSize + PhysicalExtent.Left, (pos.Y + 0.5F) * CellSize + PhysicalExtent.Top);
         }
 
         /// get the metric cell center point of the cell given by index 'index'
         public PointF GetCellCenterPoint(int index)
         {
             Point pos = IndexOf(index);
-            return new PointF((pos.X + 0.5F) * CellSize + PhysicalSize.Left, (pos.Y + 0.5F) * CellSize + PhysicalSize.Top);
+            return new PointF((pos.X + 0.5F) * CellSize + PhysicalExtent.Left, (pos.Y + 0.5F) * CellSize + PhysicalExtent.Top);
         }
 
         /// get the metric rectangle of the cell with index @pos
         public RectangleF GetCellRect(Point pos) ///< return coordinates of rect given by @param pos.
         {
-            RectangleF r = new RectangleF(new PointF(PhysicalSize.Left + CellSize * pos.X, PhysicalSize.Top + pos.Y * CellSize), new SizeF(CellSize, CellSize));
+            RectangleF r = new RectangleF(PhysicalExtent.Left + CellSize * pos.X, PhysicalExtent.Top + pos.Y * CellSize, CellSize, CellSize);
             return r;
         }
 
@@ -220,13 +221,13 @@ namespace iLand.core
 
         public Point IndexAt(float x, float y)
         {
-            return new Point((int)((x - this.PhysicalSize.Left) / this.CellSize), (int)((y - this.PhysicalSize.Top) / this.CellSize));
+            return new Point((int)((x - this.PhysicalExtent.Left) / this.CellSize), (int)((y - this.PhysicalExtent.Top) / this.CellSize));
         }
 
         /// get index (x/y) of the (linear) index 'index' (0..count-1)
         public Point IndexOf(int index)
         {
-            return new Point(index % SizeX, index / SizeX);
+            return new Point(index % CellsX, index / CellsX);
         }
 
         ///< returns false if the grid was not setup
@@ -235,26 +236,22 @@ namespace iLand.core
         /// returns the index of an aligned grid (with the same size and matching origin) with the double cell size (e.g. to scale from a 10m grid to a 20m grid)
         // public int index2(int idx) { return ((idx / mSizeX) / 2) * (mSizeX / 2) + (idx % mSizeX) / 2; }
         /// returns the index of an aligned grid (the same size) with the 5 times bigger cells (e.g. to scale from a 2m grid to a 10m grid)
-        public int Index5(int idx) { return ((idx / SizeX) / 5) * (SizeX / 5) + (idx % SizeX) / 5; }
+        public int Index5(int idx) { return ((idx / CellsX) / 5) * (CellsX / 5) + (idx % CellsX) / 5; }
         /// returns the index of an aligned grid (the same size) with the 10 times bigger cells (e.g. to scale from a 2m grid to a 20m grid)
-        public int Index10(int idx) { return ((idx / SizeX) / 10) * (SizeX / 10) + (idx % SizeX) / 10; }
+        public int Index10(int idx) { return ((idx / CellsX) / 10) * (CellsX / 10) + (idx % CellsX) / 10; }
 
-        public int IndexOf(int ix, int iy) { return iy * SizeX + ix; } ///< get the 0-based index of the cell with indices ix and iy.
-        public int IndexOf(Point pos) { return pos.Y * SizeX + pos.X; } ///< get the 0-based index of the cell at 'pos'.
+        public int IndexOf(int ix, int iy) { return iy * CellsX + ix; } ///< get the 0-based index of the cell with indices ix and iy.
+        public int IndexOf(Point pos) { return pos.Y * CellsX + pos.X; } ///< get the 0-based index of the cell at 'pos'.
 
         /// force @param pos to contain valid indices with respect to this grid.
         public void MakeValid(Point pos) ///< ensure that "pos" is a valid key. if out of range, pos is set to minimum/maximum values.
         {
-            pos.X = Math.Max(Math.Min(pos.X, SizeX - 1), 0);
-            pos.Y = Math.Max(Math.Min(pos.Y, SizeY - 1), 0);
+            pos.X = Math.Max(Math.Min(pos.X, CellsX - 1), 0);
+            pos.Y = Math.Max(Math.Min(pos.Y, CellsY - 1), 0);
         }
 
-        // get the size of the grid in metric coordinates (x and y direction)
-        public float PhysicalSizeX() { return SizeX * CellSize; }
-        public float PhysicalSizeY() { return SizeY * CellSize; }
-
         /// get the rectangle of the grid in terms of indices
-        public Rectangle Size() { return new Rectangle(0, 0, SizeX, SizeY); }
+        public Rectangle CellExtent() { return new Rectangle(0, 0, CellsX, CellsY); }
 
         public void Clear()
         {
@@ -278,51 +275,47 @@ namespace iLand.core
 
         public bool Setup(Grid<T> source)
         {
-            Clear();
-            PhysicalSize = source.PhysicalSize; // BUGBUG: deep copy?
-            return Setup(source.PhysicalSize, source.CellSize);
+            this.Clear();
+            return this.Setup(source.PhysicalExtent, source.CellSize);
         }
 
-        public bool Setup(float cellsize, int sizex, int sizey)
+        public bool Setup(float cellSize, int cellsX, int cellsY)
         {
-            SizeX = sizex;
-            SizeY = sizey;
-            if (PhysicalSize != null) // only set rect if not set before (e.g. by call to setup(RectangleF, double))
-            {
-                PhysicalSize = new RectangleF(0.0F, 0.0F, cellsize * sizex, cellsize * sizey);
-            }
-            if (mData != null)
+            this.CellsX = cellsX;
+            this.CellsY = cellsY;
+            this.PhysicalExtent = new RectangleF(this.PhysicalExtent.X, this.PhysicalExtent.Y, cellSize * cellsX, cellSize * cellsY);
+            if (this.mData != null)
             {
                 // test if we can re-use the allocated memory.
-                if (SizeX * SizeY > Count || CellSize != cellsize)
+                if (this.CellsX * this.CellsY > this.Count)
                 {
                     // we cannot re-use the memory - create new data
-                    mData = null;
+                    this.mData = null;
                 }
             }
-            CellSize = cellsize;
-            Count = SizeX * SizeY;
-            if (Count == 0)
+            this.CellSize = cellSize;
+            this.Count = this.CellsX * this.CellsY;
+            if (this.Count == 0)
             {
                 return false;
             }
-            if (mData == null)
+            if (this.mData == null)
             {
-                mData = new T[Count];
+                this.mData = new T[this.Count];
             }
             return true;
         }
 
-        public bool Setup(RectangleF rect, double cellsize)
+        public bool Setup(RectangleF extent, double cellsize)
         {
-            PhysicalSize = rect;
-            int dx = (int)(rect.Width / cellsize);
-            if (PhysicalSize.Left + cellsize * dx < rect.Right)
+            this.PhysicalExtent = extent;
+            int dx = (int)(extent.Width / cellsize);
+            if (this.PhysicalExtent.Left + cellsize * dx < extent.Right)
             {
                 dx++;
             }
-            int dy = (int)(rect.Height / cellsize);
-            if (PhysicalSize.Top + cellsize * dy < rect.Bottom)
+            int dy = (int)(extent.Height / cellsize);
+            if (this.PhysicalExtent.Top + cellsize * dy < extent.Bottom)
             {
                 dy++;
             }

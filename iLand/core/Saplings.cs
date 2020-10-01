@@ -1,15 +1,15 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** The Saplings class the container for the establishment and sapling growth in iLand.
      *
      */
-    internal class Saplings
+    public class Saplings
     {
         private static double BrowsingPressure = 0.0;
         public static double RecruitmentVariation { get; set; }
@@ -33,11 +33,11 @@ namespace iLand.core
                 {
                     if (!hg[lif_grid.Index5(i)].IsValid())
                     {
-                        s.State = SaplingCell.ECellState.CellInvalid;
+                        s.State = SaplingCell.SaplingCellState.Invalid;
                     }
                     else
                     {
-                        s.State = SaplingCell.ECellState.CellFree;
+                        s.State = SaplingCell.SaplingCellState.Free;
                     }
                 }
             }
@@ -53,10 +53,10 @@ namespace iLand.core
             for (int i = 0; i < Constant.LightCellsPerHectare; ++i)
             {
                 SaplingCell s = sap_cells[i];
-                if (s.State != SaplingCell.ECellState.CellInvalid)
+                if (s.State != SaplingCell.SaplingCellState.Invalid)
                 {
                     int cohorts_on_px = s.GetOccupiedSlotCount();
-                    for (int j = 0; j < SaplingCell.SaplingCells; ++j)
+                    for (int j = 0; j < SaplingCell.SaplingSlots; ++j)
                     {
                         if (s.Saplings[j].IsOccupied())
                         {
@@ -98,11 +98,12 @@ namespace iLand.core
                 lif_corr[i] = -1.0;
             }
 
-            ru.SpeciesSet.RandomSpeciesOrder(out int sbegin, out int send);
-            for (int species_idx = sbegin; species_idx != send; ++species_idx)
+            ru.SpeciesSet.GetRandomSpeciesSampleIndices(out int sampleBegin, out int sampleEnd);
+            for (int sampleIndex = sampleBegin; sampleIndex != sampleEnd; ++sampleIndex)
             {
                 // start from a random species (and cycle through the available species)
-                ResourceUnitSpecies rus = ru.Species[species_idx];
+                int speciesIndex = ru.SpeciesSet.RandomSpeciesOrder[sampleIndex];
+                ResourceUnitSpecies rus = ru.Species[speciesIndex];
                 rus.Establishment.Clear();
 
                 // check if there are seeds of the given species on the resource unit
@@ -139,20 +140,20 @@ namespace iLand.core
                     for (int ix = 0; ix < Constant.LightPerRUsize; ++ix, ++isc)
                     {
                         SaplingCell s = sap_cells[iy * Constant.LightPerRUsize + ix]; // pointer to a row
-                        if (s.State == SaplingCell.ECellState.CellFree)
+                        if (s.State == SaplingCell.SaplingCellState.Free)
                         {
                             // is a sapling of the current species already on the pixel?
                             // * test for sapling height already in cell state
                             // * test for grass-cover already in cell state
                             SaplingTree stree = null;
                             SaplingTree[] slots = s.Saplings;
-                            for (int i = 0; i < SaplingCell.SaplingCells; ++i)
+                            for (int i = 0; i < SaplingCell.SaplingSlots; ++i)
                             {
                                 if (stree == null && !slots[i].IsOccupied())
                                 {
                                     stree = slots[i];
                                 }
-                                if (slots[i].SpeciesIndex == species_idx)
+                                if (slots[i].SpeciesIndex == speciesIndex)
                                 {
                                     stree = null;
                                     break;
@@ -180,7 +181,7 @@ namespace iLand.core
                                 if (RandomGenerator.Random() < seed_map_value * lif_corrected * abiotic_env)
                                 {
                                     // ok, lets add a sapling at the given position (age is incremented later)
-                                    stree.SetSapling(0.05f, 0, species_idx);
+                                    stree.SetSapling(0.05f, 0, speciesIndex);
                                     s.CheckState();
                                     rus.SaplingStats.NewSaplings++;
                                 }
@@ -208,11 +209,11 @@ namespace iLand.core
                 for (int ix = 0; ix < Constant.LightPerRUsize; ++ix, ++isc)
                 {
                     SaplingCell s = sap_cells[iy * Constant.LightPerRUsize + ix]; // ptr to row
-                    if (s.State != SaplingCell.ECellState.CellInvalid)
+                    if (s.State != SaplingCell.SaplingCellState.Invalid)
                     {
                         bool need_check = false;
                         int n_on_px = s.GetOccupiedSlotCount();
-                        for (int i = 0; i < SaplingCell.SaplingCells; ++i)
+                        for (int i = 0; i < SaplingCell.SaplingSlots; ++i)
                         {
                             if (s.Saplings[i].IsOccupied())
                             {
@@ -283,7 +284,7 @@ namespace iLand.core
                 int idx = local_coords.Y * Constant.LightPerRUsize + local_coords.X;
                 Debug.WriteLineIf(idx < 0 || idx >= Constant.LightCellsPerHectare, "invalid coords in cell");
                 SaplingCell s = ru.SaplingCells[idx];
-                if (s != null && (!only_valid || s.State != SaplingCell.ECellState.CellInvalid))
+                if (s != null && (!only_valid || s.State != SaplingCell.SaplingCellState.Invalid))
                 {
                     return s;
                 }
@@ -309,7 +310,7 @@ namespace iLand.core
         {
             if (s != null)
             {
-                for (int i = 0; i < SaplingCell.SaplingCells; ++i)
+                for (int i = 0; i < SaplingCell.SaplingSlots; ++i)
                 {
                     if (s.Saplings[i].IsOccupied())
                     {
@@ -381,9 +382,9 @@ namespace iLand.core
 
         public static void UpdateBrowsingPressure()
         {
-            if (GlobalSettings.Instance.Settings.ValueBool("model.settings.browsing.enabled"))
+            if (GlobalSettings.Instance.Settings.GetBool("model.settings.browsing.enabled"))
             {
-                BrowsingPressure = GlobalSettings.Instance.Settings.ValueDouble("model.settings.browsing.browsingPressure");
+                BrowsingPressure = GlobalSettings.Instance.Settings.GetDouble("model.settings.browsing.browsingPressure");
             }
             else
             {
@@ -496,7 +497,7 @@ namespace iLand.core
                 }
                 // clear all regeneration from this pixel (including this tree)
                 tree.Clear(); // clear this tree (no carbon flow to the ground)
-                for (int i = 0; i < SaplingCell.SaplingCells; ++i)
+                for (int i = 0; i < SaplingCell.SaplingSlots; ++i)
                 {
                     if (scell.Saplings[i].IsOccupied())
                     {

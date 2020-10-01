@@ -1,18 +1,19 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** Represents the input of various variables with regard to climate, soil properties and more.
         @ingroup tools
         Data is read from various sources and presented to the core model with a standardized interface.
         see http://iland.boku.ac.at/simulation+extent
         */
-    internal class Environment
+    public class Environment
     {
         // ******** specific keys *******
         private const string SpeciesKey = "model.species.source";
@@ -36,15 +37,16 @@ namespace iLand.core
 
         public Environment()
         {
-            this.Climates = new List<Climate>();
             this.mCreatedObjects = new Dictionary<string, object>();
-            this.CurrentClimate = null;
-            this.CurrentID = 0;
-            this.CurrentSpeciesSet = null;
             this.mGrid = null;
             this.mGridMode = false;
             this.mInfile = null;
             this.mRowCoordinates = new Dictionary<string, int>();
+
+            this.Climates = new List<Climate>();
+            this.CurrentClimate = null;
+            this.CurrentID = 0;
+            this.CurrentSpeciesSet = null;
             this.SpeciesSets = new List<SpeciesSet>();
         }
 
@@ -107,7 +109,7 @@ namespace iLand.core
             // ******** setup of Species Sets *******
             if ((index = mKeys.IndexOf(SpeciesKey)) > -1)
             {
-                using DebugTimer t = new DebugTimer("environment:load species");
+                using DebugTimer t = new DebugTimer("Environment.LoadFromString(species)");
                 List<string> speciesNames = mInfile.Column(index).Distinct().ToList();
                 Debug.WriteLine("creating species sets: " + speciesNames);
                 foreach (string name in speciesNames)
@@ -133,13 +135,13 @@ namespace iLand.core
             // ******** setup of Climate *******
             if ((index = mKeys.IndexOf(ClimateKey)) > -1)
             {
-                using DebugTimer t = new DebugTimer("environment:load climate");
+                using DebugTimer t = new DebugTimer("Environment.LoadFromString(climate)");
                 List<string> climateNames = mInfile.Column(index).Distinct().ToList();
                 if (GlobalSettings.Instance.LogDebug())
                 {
                     Debug.WriteLine("creating climate: " + climateNames);
+                    Debug.WriteLine("Environment: climate: # of climates in environment file:" + climateNames.Count);
                 }
-                Debug.WriteLine("Environment: climate: # of climates in environment file:" + climateNames.Count);
                 foreach (string name in climateNames)
                 {
                     // create an entry in the list of created objects, but
@@ -196,69 +198,67 @@ namespace iLand.core
             else
             {
                 // access data in the matrix by resource unit indices
-                ix = (int)(position.X / 100.0); // suppose size of 1 ha for each coordinate
-                iy = (int)(position.Y / 100.0);
+                ix = (int)(position.X / Constant.RUSize);
+                iy = (int)(position.Y / Constant.RUSize);
                 CurrentID++; // to have Ids for each resource unit
 
                 key = String.Format("{0}_{1}", ix, iy);
             }
 
-            if (mRowCoordinates.ContainsKey(key))
-            {
-                XmlHelper xml = GlobalSettings.Instance.Settings;
-                int row = mRowCoordinates[key];
-                string value;
-                if (GlobalSettings.Instance.LogInfo())
-                {
-                    Debug.WriteLine("settting up point " + position + " with row " + row);
-                }
-                for (int col = 0; col < mInfile.ColCount; col++)
-                {
-                    if (mKeys[col] == "id")
-                    {
-                        CurrentID = Int32.Parse(mInfile.Value(row, col));
-                        continue;
-                    }
-                    if (mKeys[col] == "x" || mKeys[col] == "y") // ignore "x" and "y" keys
-                    {
-                        continue;
-                    }
-                    value = mInfile.Value(row, col).ToString();
-                    if (GlobalSettings.Instance.LogInfo())
-                    {
-                        Debug.WriteLine("set " + mKeys[col] + " to " + value);
-                    }
-                    xml.SetNodeValue(mKeys[col], value);
-                    // special handling for constructed objects:
-                    if (mKeys[col] == SpeciesKey)
-                        CurrentSpeciesSet = (SpeciesSet)mCreatedObjects[value];
-                    if (mKeys[col] == ClimateKey)
-                    {
-                        CurrentClimate = (Climate)mCreatedObjects[value];
-                        if (CurrentClimate == null)
-                        {
-                            // create only those climate sets that are really used in the current landscape
-                            Climate climate = new Climate();
-                            Climates.Add(climate);
-                            mCreatedObjects[value] = (object)climate;
-                            climate.Setup();
-                            CurrentClimate = climate;
-
-                        }
-                    }
-                }
-            }
-            else
+            if (mRowCoordinates.ContainsKey(key) == false)
             {
                 if (mGridMode)
                 {
-                    throw new NotSupportedException(String.Format("Environment:setposition: invalid grid id (or not present in input file): {0}m/{1}m (mapped to id {2}).",
-                                 position.X, position.Y, id));
+                    throw new FileLoadException(String.Format("Resource unit {0} (position ({1}, {2}) m) not found in environment file.", id, position.X, position.Y));
                 }
                 else
                 {
-                    throw new NotSupportedException(String.Format("Environment:setposition: invalid coordinates (or not present in input file): {0}m/{1}m (mapped to indices {2}/{3}).",
-                                     position.X, position.Y, ix, iy));
+                    throw new FileLoadException(String.Format("Resource unit not found at coordinates {0}, {1} in environment file (physical position {2}, {3} m).", ix, iy, position.X, position.Y));
+                }
+            }
+
+            XmlHelper xml = GlobalSettings.Instance.Settings;
+            int row = mRowCoordinates[key];
+            string value;
+            if (GlobalSettings.Instance.LogInfo())
+            {
+                Debug.WriteLine("settting up point " + position + " with row " + row);
+            }
+            for (int col = 0; col < mInfile.ColCount; col++)
+            {
+                if (mKeys[col] == "id")
+                {
+                    CurrentID = Int32.Parse(mInfile.Value(row, col));
+                    continue;
+                }
+                if (mKeys[col] == "x" || mKeys[col] == "y") // ignore "x" and "y" keys
+                {
+                    continue;
+                }
+                value = mInfile.Value(row, col).ToString();
+                if (GlobalSettings.Instance.LogInfo())
+                {
+                    Debug.WriteLine("set " + mKeys[col] + " to " + value);
+                }
+                xml.SetNodeValue(mKeys[col], value);
+                // special handling for constructed objects:
+                if (mKeys[col] == SpeciesKey)
+                {
+                    CurrentSpeciesSet = (SpeciesSet)mCreatedObjects[value];
+                }
+                if (mKeys[col] == ClimateKey)
+                {
+                    CurrentClimate = (Climate)mCreatedObjects[value];
+                    if (CurrentClimate == null)
+                    {
+                        // create only those climate sets that are really used in the current landscape
+                        Climate climate = new Climate();
+                        Climates.Add(climate);
+                        mCreatedObjects[value] = (object)climate;
+                        climate.Setup();
+                        CurrentClimate = climate;
+
+                    }
                 }
             }
         }

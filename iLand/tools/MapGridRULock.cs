@@ -1,9 +1,9 @@
-﻿using iLand.core;
+﻿using iLand.Core;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     internal class MapGridRULock
     {

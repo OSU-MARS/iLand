@@ -1,8 +1,8 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Drawing;
 
-namespace iLand.core
+namespace iLand.Core
 {
     // TODO: consolidate into SaplingTree
     internal class SaplingTreeOld

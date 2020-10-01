@@ -1,5 +1,5 @@
-﻿using iLand.core;
-using iLand.output;
+﻿using iLand.Core;
+using iLand.Output;
 using Microsoft.Collections.Extensions;
 using Microsoft.Data.Sqlite;
 using System;
@@ -63,21 +63,17 @@ using System.Xml;
   @endcode
 
 */
-namespace iLand.tools
+namespace iLand.Tools
 {
     internal class GlobalSettings : IDisposable
     {
-        // storing the names of debug outputs
-        //    enum DebugOutputs { dTreeNPP=1, dTreePartition=2, dTreeGrowth=4,
-        // dStandNPP=8, dWaterCycle=16, dDailyResponses=32, dEstablishment=64, dCarbonCycle=128 }; ///< defines available debug output types.
         private static readonly ReadOnlyCollection<string> DebugOutputNames = new List<string>() { "treeNPP", "treePartition", "treeGrowth", "waterCycle", "dailyResponse", "establishment", "carbonCycle", "performance" }.AsReadOnly();
         public static GlobalSettings Instance { get; private set; }
 
         private bool isDisposed;
-        private int _loglevel;
-        // special debug outputs
         private readonly MultiValueDictionary<int, List<object>> mDebugLists;
         private readonly Dictionary<string, string> mFilePath; ///< storage for file paths
+        private int mLoglevel;
         private readonly Dictionary<string, SettingMetaData> mSettingMetaData; ///< storage container (QHash) for settings.
 
         public int CurrentYear { get; set; }
@@ -104,13 +100,13 @@ namespace iLand.tools
             // this.databaseClimate
             // this.databaseIn
             // this.databaseOut
-            this._loglevel = 0;
+            this.mLoglevel = 0;
             this.isDisposed = false;
             this.mDebugLists = new MultiValueDictionary<int, List<object>>();
             this.DebugOutputs = 0;
             this.mFilePath = new Dictionary<string, string>();
             this.Model = null;
-            this.ModelController = null;
+            this.ModelController = new ModelController();
             this.OutputManager = new OutputManager();
             // initialized externall
             // this.mRunYear
@@ -221,7 +217,7 @@ namespace iLand.tools
                 int id = ID;
                 // use negative values for debug-outputs on RU - level
                 // Note: at some point we will also have to handle RUS-level...
-                if (dbg == tools.DebugOutputs.Establishment || dbg == tools.DebugOutputs.CarbonCycle || dbg == tools.DebugOutputs.SaplingGrowth)
+                if (dbg == Tools.DebugOutputs.Establishment || dbg == Tools.DebugOutputs.CarbonCycle || dbg == Tools.DebugOutputs.SaplingGrowth)
                 {
                     id = -id;
                 }
@@ -247,39 +243,39 @@ namespace iLand.tools
             // TODO: what if multiple flags are set?
             switch (dbg)
             {
-                case tools.DebugOutputs.TreeNpp:
+                case Tools.DebugOutputs.TreeNpp:
                     List<string> treeNpp = new List<string>() { "id", "type", "year" };
                     treeNpp.AddRange(treeCaps);
                     treeNpp.AddRange(new string[] { "LRI_modRU", "lightResponse", "effective_area", "raw_gpp", "gpp", "npp", "aging" });
                     return treeNpp;
-                case tools.DebugOutputs.TreeGrowth:
+                case Tools.DebugOutputs.TreeGrowth:
                     List<string> treeGrowth = new List<string>() { "id", "type", "year" };
                     treeGrowth.AddRange(treeCaps);
                     treeGrowth.AddRange(new string[] { "netNPPStem", "massStemOld", "hd_growth", "factor_diameter", "delta_d_estimate", "d_increment" });
                     return treeGrowth;
-                case tools.DebugOutputs.TreePartition:
+                case Tools.DebugOutputs.TreePartition:
                     List<string> treePartition = new List<string>() { "id", "type", "year" };
                     treePartition.AddRange(treeCaps);
                     treePartition.AddRange(new string[] { "npp_kg", "apct_foliage", "apct_wood", "apct_root", "delta_foliage", "delta_woody", "delta_root", "mNPPReserve", "netStemInc", "stress_index" });
                     return treePartition;
-                case tools.DebugOutputs.StandGpp:
+                case Tools.DebugOutputs.StandGpp:
                     return new List<string>() { "id", "type", "year", "species", "RU_index", "rid", "lai_factor", "gpp_kg_m2", "gpp_kg", "avg_aging", "f_env_yr" };
-                case tools.DebugOutputs.WaterCycle:
+                case Tools.DebugOutputs.WaterCycle:
                     return new List<string>() { "id", "type", "year", "date", "ruindex", "rid", "temp", "vpd", "prec", "rad", "combined_response"
                                         , "after_intercept", "after_snow", "et_canopy", "evapo_intercepted"
                                         , "content", "psi_kpa", "excess_mm", "snow_height" };
-                case tools.DebugOutputs.DailyResponses:
+                case Tools.DebugOutputs.DailyResponses:
                     return new List<string>() { "id", "type", "year", "species", "date", "RU_index", "rid"
                                         , "waterResponse", "tempResponse", "VpdResponse", "Radiation of day", "util.Radiation" };
-                case tools.DebugOutputs.Establishment:
+                case Tools.DebugOutputs.Establishment:
                     return new List<string>() { "id", "type", "year", "species", "RU_index", "rid"
                                         , "avgProbDensity", "TACAminTemp", "TACAchill", "TACAfrostFree", "TACAgdd", "TACAFrostAfterBud", "waterLimitation", "TACAAbioticEnv"
                                         , "fEnvYr", "N_Established" };
-                case tools.DebugOutputs.SaplingGrowth:
+                case Tools.DebugOutputs.SaplingGrowth:
                     return new List<string>() { "id", "type", "year", "species", "RU_index", "rid"
                                         , "Living_cohorts", "averageHeight", "averageAge", "avgDeltaHPot", "avgDeltaHRealized"
                                         , "Added", "Died", "Recruited", "refRatio" };
-                case tools.DebugOutputs.CarbonCycle:
+                case Tools.DebugOutputs.CarbonCycle:
                     return new List<string>() { "id", "type", "year", "RU_index", "rid"
                                         , "SnagState_c", "TotalC_in", "TotalC_toAtm", "SWDtoDWD_c", "SWDtoDWD_n", "toLabile_c", "toLabile_n", "toRefr_c", "toRefr_n"
                                         , "swd1_c", "swd1_n", "swd1_count", "swd1_tsd", "toSwd1_c", "toSwd1_n", "dbh1", "height1", "volume1"  // pool of small dbhs
@@ -288,7 +284,7 @@ namespace iLand.tools
                                         , "otherWood1_c", "otherWood1_n", "otherWood2_c", "otherWood2_n", "otherWood3_c", "otherWood3_n", "otherWood4_c", "otherWood4_n", "otherWood5_c", "otherWood5_n"
                                         , "iLabC", "iLabN", "iKyl", "iRefC", "iRefN", "iKyr", "re", "kyl", "kyr", "ylC", "ylN", "yrC", "yrN", "somC", "somN"
                                         , "NAvailable", "NAVLab", "NAVRef", "NAVSom" };
-                case tools.DebugOutputs.Performance:
+                case Tools.DebugOutputs.Performance:
                     return new List<string>() { "id", "type", "year", "treeCount", "saplingCount", "newSaplings", "management"
                                         , "applyPattern", "readPattern", "treeGrowth", "seedDistribution", "establishment", "saplingGrowth", "carbonCycle"
                                         , "writeOutput", "totalYear" };
@@ -430,11 +426,11 @@ namespace iLand.tools
         // xml project settings
         public void LoadProjectFile(string fileName)
         {
-            Debug.WriteLine("Loading Project file " + fileName);
             if (File.Exists(fileName) == false)
             {
                 throw new ArgumentException(String.Format("The project file {0} does not exist!", fileName), nameof(fileName));
             }
+            Debug.WriteLine("Loading project file " + fileName);
             Settings.LoadFromFile(fileName);
             SetupDirectories(Settings.Node("system.path"), new FileInfo(fileName).FullName);
         }
@@ -466,7 +462,7 @@ namespace iLand.tools
                     throw new NotSupportedException();
                 }
 
-                SettingMetaData md = new SettingMetaData(tools.SettingMetaData.TypeFromName(elt.Attributes["type"].Value), // type
+                SettingMetaData md = new SettingMetaData(Tools.SettingMetaData.TypeFromName(elt.Attributes["type"].Value), // type
                               settingName, // name
                               ChildText(elt, "description"), // description
                               ChildText(elt, "url"), // url
@@ -523,7 +519,7 @@ namespace iLand.tools
                 Mode = fileMustExist ? SqliteOpenMode.ReadWrite : SqliteOpenMode.ReadWriteCreate,
             };
             SqliteConnection db = new SqliteConnection(connectionString.ConnectionString);
-            Trace.WriteLine("setup database connection " + dbname + " to " + databaseFilePath);
+            // Debug.WriteLine("setup database connection " + dbname + " to " + databaseFilePath);
             db.Open();
             if (!fileMustExist)
             {
@@ -556,19 +552,19 @@ namespace iLand.tools
         // true, if detailed debug information is logged
         public bool LogDebug()
         {
-            return _loglevel < 1;
+            return mLoglevel < 1;
         }
 
         // true, if only important aggreate info is logged
         public bool LogInfo()
         {
-            return _loglevel < 2;
+            return mLoglevel < 2;
         }
 
         // true if only severe warnings/errors are logged.
         public bool LogWarnings()
         {
-            return _loglevel < 3;
+            return mLoglevel < 3;
         }
 
         // path
@@ -583,20 +579,26 @@ namespace iLand.tools
 
         public void SetupDirectories(XmlNode pathNode, string projectFilePath)
         {
+
             mFilePath.Clear();
             mFilePath.Add("exe", this.GetType().Assembly.Location);
             XmlHelper xml = new XmlHelper(pathNode);
-            string homePath = xml.Value("home", System.IO.Path.GetDirectoryName(projectFilePath));
+            string homePath = xml.GetString("home", System.IO.Path.GetDirectoryName(projectFilePath));
+            if (String.IsNullOrEmpty(homePath))
+            {
+                throw new ArgumentOutOfRangeException(projectFilePath);
+            }
+
             mFilePath.Add("home", homePath);
             // make other paths relative to "home" if given as relative paths
             // BUGBUG: doesn't detect missing entries in project file
-            mFilePath.Add("lip", Path(xml.Value("lip", "lip"), "home"));
-            mFilePath.Add("database", Path(xml.Value("database", "database"), "home"));
-            mFilePath.Add("temp", Path(xml.Value("temp", ""), "home"));
-            mFilePath.Add("log", Path(xml.Value("log", ""), "home"));
-            mFilePath.Add("script", Path(xml.Value("script", ""), "home"));
-            mFilePath.Add("init", Path(xml.Value("init", ""), "home"));
-            mFilePath.Add("output", Path(xml.Value("output", "output"), "home"));
+            mFilePath.Add("lip", this.Path(xml.GetString("lip", "lip"), "home"));
+            mFilePath.Add("database", this.Path(xml.GetString("database", "database"), "home"));
+            mFilePath.Add("temp", this.Path(xml.GetString("temp", ""), "home"));
+            mFilePath.Add("log", this.Path(xml.GetString("log", ""), "home"));
+            mFilePath.Add("script", this.Path(xml.GetString("script", ""), "home"));
+            mFilePath.Add("init", this.Path(xml.GetString("init", ""), "home"));
+            mFilePath.Add("output", this.Path(xml.GetString("output", "output"), "home"));
         }
 
         public void SetDebugOutput(DebugOutputs dbg, bool enable = true) ///< enable/disable a specific output type.
@@ -613,13 +615,13 @@ namespace iLand.tools
 
         public void SetLogLevel(int loglevel)
         {
-            _loglevel = loglevel;
+            mLoglevel = loglevel;
             switch (loglevel)
             {
-                case 0: Debug.WriteLine("Loglevel set to Debug."); break;
-                case 1: Debug.WriteLine("Loglevel set to Info."); break;
-                case 2: Debug.WriteLine("Loglevel set to Warning."); break;
-                case 3: Debug.WriteLine("Loglevel set to Error/Quiet."); break;
+                case 0: Debug.WriteLine("Log level set to debug."); break;
+                case 1: Debug.WriteLine("Log level set to info."); break;
+                case 2: Debug.WriteLine("Log level set to warning."); break;
+                case 3: Debug.WriteLine("Log level set to error/quiet."); break;
                 default: throw new NotSupportedException("invalid log level " + loglevel);
             }
         }

@@ -1,7 +1,7 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System.Diagnostics;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class ResourceUnitSpecies
       @ingroup core
@@ -14,14 +14,14 @@ namespace iLand.core
         * Growth and Recruitment of Saplings
         * Snag dynamics
       */
-    internal class ResourceUnitSpecies
+    public class ResourceUnitSpecies
     {
         private int mLastYear;
 
         public Production3PG BiomassGrowth { get; private set; } ///< the 3pg production model of this species x resourceunit
         public Establishment Establishment { get; private set; } ///< establishment submodel
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
-        public double LaiFactor { get; private set; }
+        public double LaiFraction { get; private set; }
         public double RemovedVolume { get; private set; } ///< sum of volume with was remvoved because of death/management (m3/ha)
         public SpeciesResponse Response { get; private set; }
         public ResourceUnit RU { get; private set; } ///< return pointer to resource unit
@@ -31,21 +31,18 @@ namespace iLand.core
         public StandStatistics StatisticsDead { get; private set; } ///< statistics of died trees
         public StandStatistics StatisticsMgmt { get; private set; } ///< statistics of removed trees
         
-        public void SetLaiFactor(double newLAIfraction)
+        public void SetLaiFactor(double laiFraction)
         {
-            LaiFactor = newLAIfraction;
-            if (LaiFactor < 0 || LaiFactor > 1.00001)
+            if (laiFraction < 0 || laiFraction > 1.00001)
             {
-                Debug.WriteLine("invalid LAIfactor " + LaiFactor);
+                Debug.WriteLine("invalid LAIfactor " + LaiFraction);
             }
+            this.LaiFraction = laiFraction;
         }
 
         public ResourceUnitSpecies(Species species, ResourceUnit ru)
         {
-            this.BiomassGrowth = new Production3PG()
-            {
-                SpeciesResponse = Response
-            };
+            this.BiomassGrowth = new Production3PG();
             this.Establishment = new Establishment();
             this.mLastYear = -1;
             this.RemovedVolume = 0.0;
@@ -57,6 +54,7 @@ namespace iLand.core
             this.StatisticsDead = new StandStatistics();
             this.StatisticsMgmt = new StandStatistics();
 
+            this.BiomassGrowth.SpeciesResponse = this.Response;
             this.Establishment.Setup(ru.Climate, this);
             this.Response.Setup(this);
             this.Statistics.ResourceUnitSpecies = this;
@@ -80,14 +78,14 @@ namespace iLand.core
                 return;
             }
 
-            if (LaiFactor > 0.0 || fromEstablishment == true)
+            if (LaiFraction > 0.0 || fromEstablishment == true)
             {
                 // execute the water calculation...
                 if (fromEstablishment)
                 {
                     RU.WaterCycle.Run(); // run the water sub model (only if this has not be done already)
                 }
-                using DebugTimer rst = new DebugTimer("response+3pg");
+                using DebugTimer rst = new DebugTimer("ResourceUnitSpecies.Calculate(Response + BiomassGrowth)");
                 Response.Calculate();// calculate environmental responses per species (vpd, temperature, ...)
                 BiomassGrowth.Calculate();// production of NPP
                 mLastYear = GlobalSettings.Instance.CurrentYear; // mark this year as processed
@@ -104,7 +102,7 @@ namespace iLand.core
         {
             // Leaf area of the species:
             // total leaf area on the RU * fraction of leafarea
-            return LaiFactor * RU.LeafAreaIndex();
+            return LaiFraction * RU.LeafAreaIndex();
         }
 
         public void UpdateGwl()

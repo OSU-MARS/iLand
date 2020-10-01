@@ -1,6 +1,6 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
-    internal class WaterCycleData
+    public class WaterCycleData
     {
         /// height of snow cover [mm water column]
         public double[] SnowCover { get; private set; }
@@ -9,8 +9,8 @@
 
         public WaterCycleData()
         {
-            this.SnowCover = new double[366];
-            this.WaterReachingGround = new double[366];
+            this.SnowCover = new double[Constant.DaysInLeapYear];
+            this.WaterReachingGround = new double[Constant.DaysInLeapYear];
         }
     }
 }

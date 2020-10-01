@@ -1,12 +1,12 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Xml;
 
-namespace iLand.core
+namespace iLand.Core
 {
-    internal class ModelSettings
+    public class ModelSettings
     {
         // list of settings
         // general on/off switches
@@ -39,26 +39,26 @@ namespace iLand.core
             {
                 throw new XmlException("/project/model/settings element not found in project file.");
             }
-            GrowthEnabled = xml.ValueBool("growthEnabled", true);
-            MortalityEnabled = xml.ValueBool("mortalityEnabled", true);
-            LightExtinctionCoefficient = xml.ValueDouble("lightExtinctionCoefficient", 0.5);
-            LightExtinctionCoefficientOpacity = xml.ValueDouble("lightExtinctionCoefficientOpacity", 0.5);
-            TemperatureTau = xml.ValueDouble("temperatureTau", 5);
-            Epsilon = xml.ValueDouble("epsilon", 1.8); // max light use efficiency (aka alpha_c)
-            AirDensity = xml.ValueDouble("airDensity", 1.2);
-            LaiThresholdForClosedStands = xml.ValueDouble("laiThresholdForClosedStands", 3.0);
-            BoundaryLayerConductance = xml.ValueDouble("boundaryLayerConductance", 0.2);
+            GrowthEnabled = xml.GetBool("growthEnabled", true);
+            MortalityEnabled = xml.GetBool("mortalityEnabled", true);
+            LightExtinctionCoefficient = xml.GetDouble("lightExtinctionCoefficient", 0.5);
+            LightExtinctionCoefficientOpacity = xml.GetDouble("lightExtinctionCoefficientOpacity", 0.5);
+            TemperatureTau = xml.GetDouble("temperatureTau", 5);
+            Epsilon = xml.GetDouble("epsilon", 1.8); // max light use efficiency (aka alpha_c)
+            AirDensity = xml.GetDouble("airDensity", 1.2);
+            LaiThresholdForClosedStands = xml.GetDouble("laiThresholdForClosedStands", 3.0);
+            BoundaryLayerConductance = xml.GetDouble("boundaryLayerConductance", 0.2);
             XmlHelper world = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.world"));
-            Latitude = Global.ToRadians(world.ValueDouble("latitude", 48.0));
-            UseParFractionBelowGroundAllocation = xml.ValueBool("usePARFractionBelowGroundAllocation", true);
+            Latitude = Global.ToRadians(world.GetDouble("latitude", 48.0));
+            UseParFractionBelowGroundAllocation = xml.GetBool("usePARFractionBelowGroundAllocation", true);
             //useDynamicAvailableNitrogen = xml.valueBool("model.settings.soil.useDynamicAvailableNitrogen", false); // TODO: there is a bug in using a xml helper that whose top-node is set
-            UseDynamicAvailableNitrogen = GlobalSettings.Instance.Settings.ValueBool("model.settings.soil.useDynamicAvailableNitrogen", false);
+            UseDynamicAvailableNitrogen = GlobalSettings.Instance.Settings.GetBool("model.settings.soil.useDynamicAvailableNitrogen", false);
             TorusMode = GlobalSettings.Instance.Settings.GetBooleanParameter("torus", false);
         }
 
         public void Print()
         {
-            if (GlobalSettings.Instance.LogInfo() == false)
+            if (GlobalSettings.Instance.LogDebug() == false)
             {
                 return;
             }

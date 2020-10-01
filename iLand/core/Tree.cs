@@ -1,11 +1,11 @@
-﻿using iLand.output;
-using iLand.tools;
+﻿using iLand.Output;
+using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class Tree
         @ingroup core
@@ -15,16 +15,16 @@ namespace iLand.core
         A Tree has a height of at least 4m; trees below this threshold are covered by the regeneration layer (see Sapling).
         Trees are stored in lists managed at the resource unit level.
       */
-    internal class Tree
+    public class Tree
     {
-        private static Grid<float> mGrid = null;
-        private static Grid<HeightGridValue> mHeightGrid = null;
-        private static int mNextId = 0;
+        private static Grid<float> LightGrid = null; // BUGBUG: threading
+        private static Grid<HeightGridValue> HeightGrid = null;  // BUGBUG: threading
+        private static int NextID = 0;
 
-        public static LandscapeRemovedOut LandscapeRemovalOutput { get; set; }
-        public static int StatPrints { get; set; }
-        public static int StatsCreated { get; set; }
-        public static TreeRemovedOut TreeRemovalOutput { get; set; }
+        public static LandscapeRemovedOutput LandscapeRemovalOutput { get; set; }
+        public static int StampApplications { get; set; }
+        public static int TreesCreated { get; set; }
+        public static TreeRemovedOutput TreeRemovalOutput { get; set; }
 
         // biomass compartements
         public float mOpacity; ///< multiplier on LIP weights, depending on leaf area status (opacity of the crown)
@@ -77,15 +77,15 @@ namespace iLand.core
             mDbhDelta = mNPPReserve = LightResourceIndex = StressIndex = 0.0F;
             mLightResponse = 0.0F;
             Stamp = null;
-            ID = mNextId++;
-            StatsCreated++;
+            ID = Tree.NextID++; // BUGBUG: thread safety
+            Tree.TreesCreated++; // BUGBUG: thread safety
         }
 
         /// @property position The tree does not store the floating point coordinates but only the index of pixel on the LIF grid
         /// BUGBUG?
-        public PointF GetCellCenterPoint() { Debug.Assert(mGrid != null); return mGrid.GetCellCenterPoint(PositionIndex); }
+        public PointF GetCellCenterPoint() { Debug.Assert(Tree.LightGrid != null); return Tree.LightGrid.GetCellCenterPoint(PositionIndex); }
 
-        public void SetLightCellIndex(PointF pos) { Debug.Assert(mGrid != null); PositionIndex = mGrid.IndexAt(pos); }
+        public void SetLightCellIndex(PointF pos) { Debug.Assert(Tree.LightGrid != null); PositionIndex = Tree.LightGrid.IndexAt(pos); }
 
         // death reasons
         public bool IsCutDown() { return IsFlagSet(Flags.TreeDeadKillAndDrop); }
@@ -111,7 +111,7 @@ namespace iLand.core
         public void MarkAsCropCompetitor(bool do_mark) { SetFlag(Flags.MarkCropCompetitor, do_mark); }
         public bool IsMarkedAsCropCompetitor() { return IsFlagSet(Flags.MarkCropCompetitor); }
 
-        public void SetNewID() { ID = mNextId++; } ///< force a new id for this object (after copying trees) BUGBUG thread safety
+        public void SetNewID() { ID = Tree.NextID++; } ///< force a new id for this object (after copying trees) BUGBUG thread safety
 
         /// set a Flag 'flag' to the value 'value'.
         private void SetFlag(Flags flag, bool value)
@@ -142,18 +142,19 @@ namespace iLand.core
 
         public float GetCrownRadius()
         {
-            Debug.Assert(Stamp != null);
-            return Stamp.CrownRadius;
+            Debug.Assert(this.Stamp != null);
+            return this.Stamp.CrownRadius;
         }
 
         public float GetBranchBiomass()
         {
-            return (float)Species.GetBiomassBranch(Dbh);
+            return (float)this.Species.GetBiomassBranch(Dbh);
         }
 
-        public static void SetGrid(Grid<float> gridToStamp, Grid<HeightGridValue> dominanceGrid)
+        public static void SetGrids(Grid<float> gridToStamp, Grid<HeightGridValue> dominanceGrid)
         {
-            mGrid = gridToStamp; mHeightGrid = dominanceGrid;
+            Tree.LightGrid = gridToStamp; 
+            Tree.HeightGrid = dominanceGrid;
         }
 
         /// dumps some core variables of a tree to a string.
@@ -217,7 +218,7 @@ namespace iLand.core
             {
                 return;
             }
-            Debug.Assert(mGrid != null && Stamp != null && RU != null);
+            Debug.Assert(Tree.LightGrid != null && Stamp != null && RU != null);
             Point pos = PositionIndex;
             int offset = Stamp.DistanceOffset;
             pos.X -= offset;
@@ -228,7 +229,7 @@ namespace iLand.core
             float value, z, z_zstar;
             int gr_stamp = Stamp.Size();
 
-            if (!mGrid.Contains(pos) || !mGrid.Contains(new Point(pos.X + gr_stamp, pos.Y + gr_stamp)))
+            if (!Tree.LightGrid.Contains(pos) || !Tree.LightGrid.Contains(new Point(pos.X + gr_stamp, pos.Y + gr_stamp)))
             {
                 // this should not happen because of the buffer
                 return;
@@ -237,14 +238,14 @@ namespace iLand.core
             for (y = 0; y < gr_stamp; ++y)
             {
 
-                float grid_value_ptr = mGrid[pos.X, grid_y];
+                float grid_value_ptr = Tree.LightGrid[pos.X, grid_y];
                 int grid_x = pos.X;
                 for (x = 0; x < gr_stamp; ++x, ++grid_x, ++grid_value_ptr)
                 {
                     // suppose there is no stamping outside
                     value = Stamp[x, y]; // stampvalue
                                              //if (value>0.f) {
-                    local_dom = mHeightGrid[grid_x / Constant.LightPerHeightSize, grid_y / Constant.LightPerHeightSize].Height;
+                    local_dom = Tree.HeightGrid[grid_x / Constant.LightPerHeightSize, grid_y / Constant.LightPerHeightSize].Height;
                     z = MathF.Max(Height - Stamp.GetDistanceToCenter(x, y), 0.0F); // distance to center = height (45 degree line)
                     z_zstar = (z >= local_dom) ? 1.0F : z / local_dom;
                     value = 1.0F - value * mOpacity * z_zstar; // calculated value
@@ -255,7 +256,7 @@ namespace iLand.core
                 grid_y++;
             }
 
-            StatPrints++; // count # of stamp applications...
+            ++Tree.StampApplications; // BUGBUG: not thread safe
         }
 
         /// helper function for gluing the edges together
@@ -271,56 +272,52 @@ namespace iLand.core
           */
         public void ApplyLightIntensityPatternTorus()
         {
-            if (Stamp == null)
+            if (this.Stamp == null)
             {
                 return;
             }
-            Debug.Assert(mGrid != null && Stamp != null && RU != null);
-            int bufferOffset = mGrid.IndexAt(new PointF(0.0F, 0.0F)).X; // offset of buffer
-            Point pos = new Point((PositionIndex.X - bufferOffset) % Constant.LightPerRUsize + bufferOffset,
-                                  (PositionIndex.Y - bufferOffset) % Constant.LightPerRUsize + bufferOffset); // offset within the ha
-            Point ru_offset = new Point(PositionIndex.X - pos.X, PositionIndex.Y - pos.Y); // offset of the corner of the resource index
+            Debug.Assert(Tree.LightGrid != null && this.Stamp != null && this.RU != null);
+            int bufferOffset = Tree.LightGrid.IndexAt(new PointF(0.0F, 0.0F)).X; // offset of buffer
+            Point pos = new Point((this.PositionIndex.X - bufferOffset) % Constant.LightPerRUsize + bufferOffset,
+                                  (this.PositionIndex.Y - bufferOffset) % Constant.LightPerRUsize + bufferOffset); // offset within the ha
+            Point ruOffset = new Point(this.PositionIndex.X - pos.X, this.PositionIndex.Y - pos.Y); // offset of the corner of the resource index
 
-            int offset = Stamp.DistanceOffset;
+            int offset = this.Stamp.DistanceOffset;
             pos.X -= offset;
             pos.Y -= offset;
 
-            float local_dom; // height of Z* on the current position
-            int x, y;
-            float value;
-            int gr_stamp = Stamp.Size();
-            int grid_x, grid_y;
-            if (!mGrid.Contains(pos) || !mGrid.Contains(new Point(gr_stamp + pos.X, gr_stamp + pos.Y)))
+            int stampSize = this.Stamp.Size();
+            if (!Tree.LightGrid.Contains(pos) || !Tree.LightGrid.Contains(new Point(stampSize + pos.X, stampSize + pos.Y)))
             {
                 // todo: in this case we should use another algorithm!!! necessary????
                 return;
             }
-            float z, z_zstar;
-            int xt, yt; // wraparound coordinates
-            for (y = 0; y < gr_stamp; ++y)
+
+            float local_dom; // height of Z* on the current position
+            for (int y = 0; y < stampSize; ++y)
             {
-                grid_y = pos.Y + y;
-                yt = TorusIndex(grid_y, Constant.LightPerRUsize, bufferOffset, ru_offset.Y); // 50 cells per 100m
-                for (x = 0; x < gr_stamp; ++x)
+                int grid_y = pos.Y + y;
+                int yt = TorusIndex(grid_y, Constant.LightPerRUsize, bufferOffset, ruOffset.Y); // 50 cells per 100m
+                for (int x = 0; x < stampSize; ++x)
                 {
                     // suppose there is no stamping outside
-                    grid_x = pos.X + x;
-                    xt = TorusIndex(grid_x, Constant.LightPerRUsize, bufferOffset, ru_offset.X);
+                    int grid_x = pos.X + x;
+                    int xt = TorusIndex(grid_x, Constant.LightPerRUsize, bufferOffset, ruOffset.X);
 
-                    local_dom = mHeightGrid[xt / Constant.LightPerHeightSize, yt / Constant.LightPerHeightSize].Height;
+                    local_dom = Tree.HeightGrid[xt / Constant.LightPerHeightSize, yt / Constant.LightPerHeightSize].Height;
 
-                    z = MathF.Max(Height - Stamp.GetDistanceToCenter(x, y), 0.0F); // distance to center = height (45 degree line)
-                    z_zstar = (z >= local_dom) ? 1.0F : z / local_dom;
-                    value = Stamp[x, y]; // stampvalue
+                    float z = MathF.Max(Height - Stamp.GetDistanceToCenter(x, y), 0.0F); // distance to center = height (45 degree line)
+                    float z_zstar = (z >= local_dom) ? 1.0F : z / local_dom;
+                    float value = this.Stamp[x, y]; // stampvalue
                     value = 1.0F - value * mOpacity * z_zstar; // calculated value
                                                                // old: value = 1. - value*mOpacity / local_dom; // calculated value
                     value = MathF.Max(value, 0.02f); // limit value
 
-                    mGrid[xt, yt] *= value; // use wraparound coordinates
+                    Tree.LightGrid[xt, yt] *= value; // use wraparound coordinates
                 }
             }
 
-            StatPrints++; // count # of stamp applications...
+            ++Tree.StampApplications; // BUGBUG: not thread safe
         }
 
         /** heightGrid()
@@ -331,10 +328,10 @@ namespace iLand.core
             Point p = new Point(PositionIndex.X / Constant.LightPerHeightSize, PositionIndex.Y / Constant.LightPerHeightSize); // pos of tree on height grid
 
             // count trees that are on height-grid cells (used for stockable area)
-            mHeightGrid[p].IncreaseCount();
-            if (Height > mHeightGrid[p].Height)
+            Tree.HeightGrid[p].IncreaseCount();
+            if (Height > Tree.HeightGrid[p].Height)
             {
-                mHeightGrid[p].Height = Height;
+                Tree.HeightGrid[p].Height = Height;
             }
 
             int r = Stamp.Reader.DistanceOffset; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
@@ -342,24 +339,24 @@ namespace iLand.core
             int index_northsouth = PositionIndex.Y % Constant.LightPerHeightSize; // 4: northern edge, 0: southern edge
             if (index_eastwest - r < 0)
             { // east
-                mHeightGrid[p.X - 1, p.Y].Height = MathF.Max(mHeightGrid[p.X - 1, p.Y].Height, Height);
+                Tree.HeightGrid[p.X - 1, p.Y].Height = MathF.Max(Tree.HeightGrid[p.X - 1, p.Y].Height, Height);
             }
             if (index_eastwest + r >= Constant.LightPerHeightSize)
             {  // west
-                mHeightGrid[p.X + 1, p.Y].Height = MathF.Max(mHeightGrid[p.X + 1, p.Y].Height, Height);
+                Tree.HeightGrid[p.X + 1, p.Y].Height = MathF.Max(Tree.HeightGrid[p.X + 1, p.Y].Height, Height);
             }
             if (index_northsouth - r < 0)
             {  // south
-                mHeightGrid[p.X, p.Y - 1].Height = MathF.Max(mHeightGrid[p.X, p.Y - 1].Height, Height);
+                Tree.HeightGrid[p.X, p.Y - 1].Height = MathF.Max(Tree.HeightGrid[p.X, p.Y - 1].Height, Height);
             }
             if (index_northsouth + r >= Constant.LightPerHeightSize)
             {  // north
-                mHeightGrid[p.X, p.Y + 1].Height = MathF.Max(mHeightGrid[p.X, p.Y + 1].Height, Height);
+                Tree.HeightGrid[p.X, p.Y + 1].Height = MathF.Max(Tree.HeightGrid[p.X, p.Y + 1].Height, Height);
             }
 
             // without spread of the height grid
             //    // height of Z*
-            //    float cellsize = mHeightGrid.cellsize();
+            //    float cellsize = Tree.mHeightGrid.cellsize();
             //
             //    int index_eastwest = mPositionIndex.X % cPxPerHeight; // 4: very west, 0 east edge
             //    int index_northsouth = mPositionIndex.Y % cPxPerHeight; // 4: northern edge, 0: southern edge
@@ -388,8 +385,8 @@ namespace iLand.core
             //        for (iy=-ringcount; iy<=+ringcount; iy++) {
             //        ring = MathF.Max(abs(ix), abs(iy));
             //        Point pos(ix+p.X, iy+p.Y);
-            //        if (mHeightGrid.isIndexValid(pos)) {
-            //            float &rHGrid = mHeightGrid[pos).height;
+            //        if (Tree.mHeightGrid.isIndexValid(pos)) {
+            //            float &rHGrid = Tree.mHeightGrid[pos).height;
             //            if (rHGrid > mHeight) // skip calculation if grid is higher than tree
             //                continue;
             //            int direction = 4 + (ix?(ix<0?-3:3):0) + (iy?(iy<0?-1:1):0); // 4 + 3*sgn(x) + sgn(y)
@@ -406,15 +403,15 @@ namespace iLand.core
         {
             // height of Z*
             Point p = new Point(PositionIndex.X / Constant.LightPerHeightSize, PositionIndex.Y / Constant.LightPerHeightSize); // pos of tree on height grid
-            int bufferOffset = mHeightGrid.IndexAt(new PointF(0.0F, 0.0F)).X; // offset of buffer (i.e.: size of buffer in height-pixels)
-            p.X = ((p.X - bufferOffset) % 10 + bufferOffset); // 10: 10 x 10m pixeln in 100m
-            p.Y = ((p.Y - bufferOffset) % 10 + bufferOffset);
+            int bufferOffset = Tree.HeightGrid.IndexAt(new PointF(0.0F, 0.0F)).X; // offset of buffer (i.e.: size of buffer in height-pixels)
+            p.X = ((p.X - bufferOffset) % Constant.HeightSize + bufferOffset); // 10: 10 x 10m pixeln in 100m
+            p.Y = ((p.Y - bufferOffset) % Constant.HeightSize + bufferOffset);
 
             // torus coordinates: ru_offset = coords of lower left corner of 1ha patch
             Point ru_offset = new Point(PositionIndex.X / Constant.LightPerHeightSize - p.X, PositionIndex.Y / Constant.LightPerHeightSize - p.Y);
 
             // count trees that are on height-grid cells (used for stockable area)
-            HeightGridValue v = mHeightGrid[TorusIndex(p.X, 10, bufferOffset, ru_offset.X), TorusIndex(p.Y, 10, bufferOffset, ru_offset.Y)];
+            HeightGridValue v = Tree.HeightGrid[TorusIndex(p.X, 10, bufferOffset, ru_offset.X), TorusIndex(p.Y, 10, bufferOffset, ru_offset.Y)];
             v.IncreaseCount();
             v.Height = MathF.Max(v.Height, Height);
 
@@ -424,22 +421,22 @@ namespace iLand.core
             int index_northsouth = PositionIndex.Y % Constant.LightPerHeightSize; // 4: northern edge, 0: southern edge
             if (index_eastwest - r < 0)
             { // east
-                v = mHeightGrid[TorusIndex(p.X - 1, 10, bufferOffset, ru_offset.X), TorusIndex(p.Y, 10, bufferOffset, ru_offset.Y)];
+                v = Tree.HeightGrid[TorusIndex(p.X - 1, 10, bufferOffset, ru_offset.X), TorusIndex(p.Y, 10, bufferOffset, ru_offset.Y)];
                 v.Height = MathF.Max(v.Height, Height);
             }
             if (index_eastwest + r >= Constant.LightPerHeightSize)
             {  // west
-                v = mHeightGrid[TorusIndex(p.X + 1, 10, bufferOffset, ru_offset.X), TorusIndex(p.Y, 10, bufferOffset, ru_offset.Y)];
+                v = Tree.HeightGrid[TorusIndex(p.X + 1, 10, bufferOffset, ru_offset.X), TorusIndex(p.Y, 10, bufferOffset, ru_offset.Y)];
                 v.Height = MathF.Max(v.Height, Height);
             }
             if (index_northsouth - r < 0)
             {  // south
-                v = mHeightGrid[TorusIndex(p.X, 10, bufferOffset, ru_offset.X), TorusIndex(p.Y - 1, 10, bufferOffset, ru_offset.Y)];
+                v = Tree.HeightGrid[TorusIndex(p.X, 10, bufferOffset, ru_offset.X), TorusIndex(p.Y - 1, 10, bufferOffset, ru_offset.Y)];
                 v.Height = MathF.Max(v.Height, Height);
             }
             if (index_northsouth + r >= Constant.LightPerHeightSize)
             {  // north
-                v = mHeightGrid[TorusIndex(p.X, 10, bufferOffset, ru_offset.X), TorusIndex(p.Y + 1, 10, bufferOffset, ru_offset.Y)];
+                v = Tree.HeightGrid[TorusIndex(p.X, 10, bufferOffset, ru_offset.X), TorusIndex(p.Y + 1, 10, bufferOffset, ru_offset.Y)];
                 v.Height = MathF.Max(v.Height, Height);
             }
 
@@ -471,8 +468,8 @@ namespace iLand.core
             //        Point pos(ix+p.X, iy+p.Y);
             //        Point p_torus(torusIndex(pos.x(),10,bufferOffset,ru_offset.x()),
             //                       torusIndex(pos.y(),10,bufferOffset,ru_offset.y()));
-            //        if (mHeightGrid.isIndexValid(p_torus)) {
-            //            float &rHGrid = mHeightGrid[p_torus.x(),p_torus.y()).height;
+            //        if (Tree.mHeightGrid.isIndexValid(p_torus)) {
+            //            float &rHGrid = Tree.mHeightGrid[p_torus.x(),p_torus.y()).height;
             //            if (rHGrid > mHeight) // skip calculation if grid is higher than tree
             //                continue;
             //            int direction = 4 + (ix?(ix<0?-3:3):0) + (iy?(iy<0?-1:1):0); // 4 + 3*sgn(x) + sgn(y)
@@ -525,11 +522,11 @@ namespace iLand.core
             int ry = pos_reader.Y;
             for (y = 0; y < reader_size; ++y, ++ry)
             {
-                grid_value = mGrid[rx, ry];
+                grid_value = Tree.LightGrid[rx, ry];
                 for (x = 0; x < reader_size; ++x)
                 {
 
-                    HeightGridValue hgv = mHeightGrid[(rx + x) / Constant.LightPerHeightSize, ry / Constant.LightPerHeightSize]; // the height grid value, ry: gets ++ed in outer loop, rx not
+                    HeightGridValue hgv = Tree.HeightGrid[(rx + x) / Constant.LightPerHeightSize, ry / Constant.LightPerHeightSize]; // the height grid value, ry: gets ++ed in outer loop, rx not
                     local_dom = hgv.Height;
                     z = MathF.Max(Height - reader.GetDistanceToCenter(x, y), 0.0F); // distance to center = height (45 degree line)
                     z_zstar = (z >= local_dom) ? 1.0F : z / local_dom;
@@ -549,7 +546,7 @@ namespace iLand.core
             }
             LightResourceIndex = (float)(sum);
             // LRI correction...
-            double hrel = Height / mHeightGrid[PositionIndex.X / Constant.LightPerHeightSize, PositionIndex.Y / Constant.LightPerHeightSize].Height;
+            double hrel = Height / Tree.HeightGrid[PositionIndex.X / Constant.LightPerHeightSize, PositionIndex.Y / Constant.LightPerHeightSize].Height;
             if (hrel < 1.0F)
             {
                 LightResourceIndex = (float)Species.SpeciesSet.LriCorrection(LightResourceIndex, hrel);
@@ -568,16 +565,16 @@ namespace iLand.core
         /// Torus version of read stamp (glued edges)
         public void ReadLightIntensityFieldTorus()
         {
-            if (Stamp == null)
+            if (this.Stamp == null)
             {
                 return;
             }
-            Stamp reader = Stamp.Reader;
+            Stamp reader = this.Stamp.Reader;
             if (reader == null)
             {
                 return;
             }
-            int bufferOffset = mGrid.IndexAt(new PointF(0.0F, 0.0F)).X; // offset of buffer
+            int bufferOffset = Tree.LightGrid.IndexAt(new PointF(0.0F, 0.0F)).X; // offset of buffer
 
             Point pos_reader = new Point((PositionIndex.X - bufferOffset) % Constant.LightPerRUsize + bufferOffset,
                                          (PositionIndex.Y - bufferOffset) % Constant.LightPerRUsize + bufferOffset); // offset within the ha
@@ -608,9 +605,9 @@ namespace iLand.core
                 for (x = 0; x < reader_size; ++x)
                 {
                     xt = TorusIndex(rx + x, Constant.LightPerRUsize, bufferOffset, ru_offset.X);
-                    grid_value = mGrid[xt, yt];
+                    grid_value = Tree.LightGrid[xt, yt];
 
-                    local_dom = mHeightGrid[xt / Constant.LightPerHeightSize, yt / Constant.LightPerHeightSize].Height; // ry: gets ++ed in outer loop, rx not
+                    local_dom = Tree.HeightGrid[xt / Constant.LightPerHeightSize, yt / Constant.LightPerHeightSize].Height; // ry: gets ++ed in outer loop, rx not
                     z = MathF.Max(Height - reader.GetDistanceToCenter(x, y), 0.0F); // distance to center = height (45 degree line)
                     z_zstar = (z >= local_dom) ? 1.0F : z / local_dom;
 
@@ -636,7 +633,7 @@ namespace iLand.core
             LightResourceIndex = (float)(sum);
 
             // LRI correction...
-            double hrel = Height / mHeightGrid[PositionIndex.X / Constant.LightPerHeightSize, PositionIndex.Y / Constant.LightPerHeightSize].Height;
+            double hrel = Height / Tree.HeightGrid[PositionIndex.X / Constant.LightPerHeightSize, PositionIndex.Y / Constant.LightPerHeightSize].Height;
             if (hrel < 1.0)
             {
                 LightResourceIndex = (float)Species.SpeciesSet.LriCorrection(LightResourceIndex, hrel);
@@ -660,9 +657,9 @@ namespace iLand.core
 
         public static void ResetStatistics()
         {
-            StatPrints = 0;
-            StatsCreated = 0;
-            mNextId = 1;
+            Tree.NextID = 1;
+            Tree.StampApplications = 0;
+            Tree.TreesCreated = 0;
         }
 
         //#ifdef ALT_TREE_MORTALITY
@@ -1155,11 +1152,11 @@ namespace iLand.core
             // create output for tree removals
             if (TreeRemovalOutput != null && TreeRemovalOutput.IsEnabled)
             {
-                TreeRemovalOutput.ExecRemovedTree(this, (int)reason);
+                TreeRemovalOutput.LogTreeRemoval(this, (int)reason);
             }
             if (LandscapeRemovalOutput != null && LandscapeRemovalOutput.IsEnabled)
             {
-                LandscapeRemovalOutput.ExecRemovedTree(this, (int)reason);
+                LandscapeRemovalOutput.AccumulateTreeRemoval(this, (int)reason);
             }
         }
 

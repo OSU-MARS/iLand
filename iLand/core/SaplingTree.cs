@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace iLand.core
+namespace iLand.Core
 {
-    internal class SaplingTree
+    public class SaplingTree
     {
         public UInt16 Age { get; set; }  // number of consectuive years the sapling suffers from dire conditions
         public byte Flags { get; set; } // flags, e.g. whether sapling stems from sprouting

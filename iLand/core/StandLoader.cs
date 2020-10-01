@@ -1,5 +1,5 @@
-﻿using iLand.output;
-using iLand.tools;
+﻿using iLand.Output;
+using iLand.Tools;
 using Microsoft.Collections.Extensions;
 using System;
 using System.Collections.Generic;
@@ -8,8 +8,9 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Xml;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class StandLoader
         @ingroup tools
@@ -78,7 +79,7 @@ namespace iLand.core
             }
             if (GlobalSettings.Instance.LogInfo())
             {
-                Debug.WriteLine(Tree.StatsCreated + " trees loaded / copied.");
+                Debug.WriteLine(Tree.TreesCreated + " trees loaded / copied.");
             }
         }
 
@@ -89,25 +90,25 @@ namespace iLand.core
             GlobalSettings g = GlobalSettings.Instance;
             XmlHelper xml = new XmlHelper(g.Settings.Node("model.initialization"));
 
-            string copy_mode = xml.Value("mode", "copy");
-            string type = xml.Value("type", "");
-            string fileName = xml.Value("file", "");
+            string initializationMode = xml.GetString("mode", "copy");
+            string type = xml.GetString("type", "");
+            string fileName = xml.GetString("file", "");
 
-            bool height_grid_enabled = xml.ValueBool("heightGrid.enabled", false);
+            bool heightGridEnabled = xml.GetBool("heightGrid.enabled", false);
             mHeightGridTries = xml.ValueInt("heightGrid.maxTries", 10);
-            if (height_grid_enabled)
+            if (heightGridEnabled)
             {
-                string init_height_grid_file = GlobalSettings.Instance.Path(xml.Value("heightGrid.fileName"), "init");
-                Debug.WriteLine("initialization: using predefined tree heights map " + init_height_grid_file);
+                string initHeightGridFile = GlobalSettings.Instance.Path(xml.GetString("heightGrid.fileName"), "init");
+                Debug.WriteLine("initialization: using predefined tree heights map " + initHeightGridFile);
 
-                MapGrid p = new MapGrid(init_height_grid_file, false);
+                MapGrid p = new MapGrid(initHeightGridFile, false);
                 if (!p.IsValid())
                 {
-                    throw new NotSupportedException(String.Format("Error when loading grid with tree heights for stand initalization: file {0} not found or not valid.", init_height_grid_file));
+                    throw new NotSupportedException(String.Format("Error when loading grid with tree heights for stand initalization: file {0} not found or not valid.", initHeightGridFile));
                 }
                 InitHeightGrid = p;
 
-                string expr = xml.Value("heightGrid.fitFormula", "polygon(x, 0,0, 0.8,1, 1.1, 1, 1.25,0)");
+                string expr = xml.GetString("heightGrid.fitFormula", "polygon(x, 0,0, 0.8,1, 1.1, 1, 1.25,0)");
                 mHeightGridResponse = new Expression(expr);
                 mHeightGridResponse.Linearize(0.0, 2.0);
             }
@@ -115,7 +116,7 @@ namespace iLand.core
             Tree.ResetStatistics();
 
             // one global init-file for the whole area:
-            if (copy_mode == "single")
+            if (initializationMode == "single")
             {
                 // useful for 1ha simulations only...
                 if (GlobalSettings.Instance.Model.ResourceUnits.Count > 1)
@@ -129,14 +130,14 @@ namespace iLand.core
             }
 
             // call a single tree init for each resource unit
-            if (copy_mode == "unit")
+            if (initializationMode == "unit")
             {
                 foreach (ResourceUnit ru in g.Model.ResourceUnits)
                 {
                     // set environment
                     g.Model.Environment.SetPosition(ru.BoundingBox.Center());
-                    type = xml.Value("type", "");
-                    fileName = xml.Value("file", "");
+                    type = xml.GetString("type", "");
+                    fileName = xml.GetString("file", "");
                     if (String.IsNullOrEmpty(fileName))
                     {
                         continue;
@@ -152,13 +153,13 @@ namespace iLand.core
             }
 
             // map-modus: load a init file for each "polygon" in the standgrid
-            if (copy_mode == "map")
+            if (initializationMode == "map")
             {
                 if (g.Model.StandGrid != null || !g.Model.StandGrid.IsValid())
                 {
                     throw new NotSupportedException("Stand-Initialization: model.initialization.mode is 'map' but there is no valid stand grid defined (model.world.standGrid)");
                 }
-                string map_file_name = GlobalSettings.Instance.Path(xml.Value("mapFileName"), "init");
+                string map_file_name = GlobalSettings.Instance.Path(xml.GetString("mapFileName"), "init");
 
                 CsvFile map_file = new CsvFile(map_file_name);
                 if (map_file.RowCount == 0)
@@ -194,7 +195,7 @@ namespace iLand.core
             }
 
             // standgrid mode: load one large init file
-            if (copy_mode == "standgrid")
+            if (initializationMode == "standgrid")
             {
                 fileName = GlobalSettings.Instance.Path(fileName, "init");
                 if (!File.Exists(fileName))
@@ -207,7 +208,7 @@ namespace iLand.core
                 ParseInitFile(content, fileName);
 
                 // setup the random distribution
-                string density_func = xml.Value("model.initialization.randomFunction", "1-x^2");
+                string density_func = xml.GetString("model.initialization.randomFunction", "1-x^2");
                 if (GlobalSettings.Instance.LogInfo())
                 {
                     Debug.WriteLine("density function: " + density_func);
@@ -237,12 +238,12 @@ namespace iLand.core
                 return;
             }
 
-            if (copy_mode == "snapshot")
+            if (initializationMode == "snapshot")
             {
                 // load a snapshot from a file
                 Snapshot shot = new Snapshot();
                 string input_db = GlobalSettings.Instance.Path(fileName);
-                shot.LoadSnapshot(input_db);
+                shot.Load(input_db);
                 return;
             }
             throw new NotSupportedException("processInit: invalid initalization.mode!");
@@ -252,11 +253,11 @@ namespace iLand.core
         {
             XmlHelper xml = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.initialization"));
 
-            string mode = xml.Value("mode", "copy");
+            string mode = xml.GetString("mode", "copy");
             if (mode == "standgrid")
             {
                 // load a file with saplings per polygon
-                string filename = xml.Value("saplingFile", "");
+                string filename = xml.GetString("saplingFile", "");
                 if (String.IsNullOrEmpty(filename))
                 {
                     return;
@@ -343,27 +344,27 @@ namespace iLand.core
         /// load a single init file. Calls loadPicusFile() or loadiLandFile()
         /// @param fileName file to load
         /// @param type init mode. allowed: "picus"/"single" or "iland"/"distribution"
-        public int LoadInitFile(string fileName, string type, int stand_id, ResourceUnit ru = null)
+        public int LoadInitFile(string fileName, string type, int standID, ResourceUnit ru = null)
         {
             string pathFileName = GlobalSettings.Instance.Path(fileName, "init");
             if (!File.Exists(pathFileName))
             {
-                throw new NotSupportedException(String.Format("loadInitFile: File {0} does not exist!", pathFileName));
+                throw new FileNotFoundException(String.Format("File '{0}' does not exist!", pathFileName));
             }
 
             if (type == "picus" || type == "single")
             {
-                if (stand_id > 0)
+                if (standID > 0)
                 {
-                    throw new NotSupportedException(String.Format("loadInitFile: initialization type {0} currently not supported for stand initilization mode!" + type));
+                    throw new XmlException(String.Format("Initialization type '{0}' currently not supported for stand initilization mode!" + type));
                 }
                 return LoadPicusFile(pathFileName, ru);
             }
             if (type == "iland" || type == "distribution")
             {
-                return LoadiLandFile(pathFileName, ru, stand_id);
+                return LoadiLandFile(pathFileName, ru, standID);
             }
-            throw new NotSupportedException("loadInitFile: unknown initalization.type: " + type);
+            throw new XmlException("Unknown initialization type '" + type + "'. Is a /project/model/initialization/type element present in the project file?");
         }
 
         public int LoadPicusFile(string fileName, ResourceUnit ru)
@@ -380,7 +381,7 @@ namespace iLand.core
         /** load a list of trees (given by content) to a resource unit. Param fileName is just for error reporting.
           returns the number of loaded trees.
           */
-        public int LoadSingleTreeList(string content, ResourceUnit ru, string fileName)
+        public int LoadSingleTreeList(string treeList, ResourceUnit ru, string fileName)
         {
             if (ru == null)
             {
@@ -391,21 +392,17 @@ namespace iLand.core
             PointF offset = ru.BoundingBox.TopLeft();
             SpeciesSet speciesSet = ru.SpeciesSet; // of default RU
 
-            string my_content = content;
+            string trimmedList = treeList;
             // cut out the <trees> </trees> part if present
-            if (content.Contains("<trees>"))
+            int treesElementStart = treeList.IndexOf("<trees>", StringComparison.Ordinal);
+            if (treesElementStart > -1)
             {
-                Regex rx = new Regex(".*<trees>(.*)</trees>.*");
-                MatchCollection matches = rx.Matches(content, 0);
-                if (matches.Count < 1)
-                {
-                    return 0;
-                }
-                my_content = matches[1].Value.Trim();
+                int treesElementStop = treeList.IndexOf("</trees>", StringComparison.Ordinal);
+                trimmedList = treeList[(treesElementStart + "<trees>".Length)..(treesElementStop - 1)];
             }
 
             CsvFile infile = new CsvFile();
-            infile.LoadFromString(my_content);
+            infile.LoadFromString(trimmedList);
 
             int iID = infile.GetColumnIndex("id");
             int iX = infile.GetColumnIndex("x");
@@ -514,7 +511,7 @@ namespace iLand.core
             }
 
             // setup the random distribution
-            string density_func = GlobalSettings.Instance.Settings.Value("model.initialization.randomFunction", "1-x^2");
+            string density_func = GlobalSettings.Instance.Settings.GetString("model.initialization.randomFunction", "1-x^2");
             if (GlobalSettings.Instance.LogInfo())
             {
                 Debug.WriteLine("density function: " + density_func);

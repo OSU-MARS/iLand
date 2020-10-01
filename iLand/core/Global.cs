@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace iLand.core
+namespace iLand.Core
 {
     internal class Global
     {

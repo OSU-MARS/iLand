@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class ThreadRunner
         Encapsulates the invokation of multiple threads for paralellized tasks.
@@ -11,7 +11,7 @@ namespace iLand.core
         are divided in two lists based on the index (even vs. uneven). These (for almost all cases)
         ensures, that no directly neighboring resourceUnits are processed.
         */
-    internal class ThreadRunner
+    public class ThreadRunner
     {
         public static bool IsMultithreaded { get; set; }
 
@@ -35,11 +35,6 @@ namespace iLand.core
             : this()
         {
             this.SpeciesMap = speciesList;
-        }
-
-        public void Print()
-        {
-            Debug.WriteLine("Multithreading enabled: " + IsMultithreaded + "thread count: " + System.Environment.ProcessorCount);
         }
 
         public void Setup(List<ResourceUnit> resourceUnitList)

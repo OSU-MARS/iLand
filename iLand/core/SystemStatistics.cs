@@ -1,7 +1,8 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
+using System;
 using System.Collections.Generic;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** holds system statistics primarily aimed for performance and memory analyis.
       */
@@ -11,16 +12,16 @@ namespace iLand.core
         public int SaplingCount { get; set; }
         public int TreeCount { get; set; }
 
-        public double ApplyPatternTime { get; set; }
-        public double CarbonCycleTime { get; set; }
-        public double EstablishmentTime { get; set; }
-        public double ManagementTime { get; set; }
-        public double ReadPatternTime { get; set; }
-        public double SeedDistributionTime { get; set; }
-        public double SaplingTime { get; set; }
-        public double TotalYearTime { get; set; }
-        public double TreeGrowthTime { get; set; }
-        public double WriteOutputTime { get; set; }
+        public TimeSpan ApplyPatternTime { get; set; }
+        public TimeSpan CarbonCycleTime { get; set; }
+        public TimeSpan EstablishmentTime { get; set; }
+        public TimeSpan ManagementTime { get; set; }
+        public TimeSpan ReadPatternTime { get; set; }
+        public TimeSpan SeedDistributionTime { get; set; }
+        public TimeSpan SaplingTime { get; set; }
+        public TimeSpan TotalYearTime { get; set; }
+        public TimeSpan TreeGrowthTime { get; set; }
+        public TimeSpan WriteOutputTime { get; set; }
 
         public SystemStatistics()
         {
@@ -32,9 +33,9 @@ namespace iLand.core
             TreeCount = 0; 
             SaplingCount = 0; 
             NewSaplings = 0;
-            ManagementTime = 0.0; 
-            ApplyPatternTime = ReadPatternTime = TreeGrowthTime = 0.0;
-            SeedDistributionTime = SaplingTime = EstablishmentTime = CarbonCycleTime = WriteOutputTime = TotalYearTime = 0.0;
+            ManagementTime = TimeSpan.Zero; 
+            ApplyPatternTime = ReadPatternTime = TreeGrowthTime = TimeSpan.Zero;
+            SeedDistributionTime = SaplingTime = EstablishmentTime = CarbonCycleTime = WriteOutputTime = TotalYearTime = TimeSpan.Zero;
         }
 
         public void WriteOutput()

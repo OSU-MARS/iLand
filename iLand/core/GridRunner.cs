@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 
-namespace iLand.core
+namespace iLand.Core
 {
     internal class GridRunner<T>
     {
@@ -22,7 +22,7 @@ namespace iLand.core
         public GridRunner(Grid<T> target_grid) 
         { 
             // run over whole grid
-            Setup(target_grid, target_grid.Size()); 
+            Setup(target_grid, target_grid.CellExtent()); 
         }
       
         public T Current
@@ -129,7 +129,7 @@ namespace iLand.core
             mCurrent--; // point to first element -1
             mLast = target_grid.IndexOf(lower_right.X - 1, lower_right.Y - 1);
             mCols = lower_right.X - upper_left.X; //
-            mLineLength = target_grid.SizeX - mCols;
+            mLineLength = target_grid.CellsX - mCols;
             mCurrentCol = -1;
             mGrid = target_grid;
             //    qDebug() << "GridRunner: rectangle:" << rectangle
@@ -139,8 +139,9 @@ namespace iLand.core
 
         public void Setup(Grid<T> target_grid, RectangleF rectangle_metric)
         {
-            Rectangle rect = new Rectangle(target_grid.IndexAt(new PointF(rectangle_metric.Left, rectangle_metric.Top)),
-                                           new Size(target_grid.IndexAt(new PointF(rectangle_metric.Right, rectangle_metric.Bottom))));
+            Point topLeft = target_grid.IndexAt(rectangle_metric.Left, rectangle_metric.Top);
+            Point bottomRight = target_grid.IndexAt(rectangle_metric.Right, rectangle_metric.Bottom);
+            Rectangle rect = new Rectangle(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
             Setup(target_grid, rect);
         }
     }

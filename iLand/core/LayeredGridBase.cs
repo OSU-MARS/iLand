@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Drawing;
 
-namespace iLand.core
+namespace iLand.Core
 {
     internal abstract class LayeredGridBase
     {

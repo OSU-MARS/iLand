@@ -1,6 +1,6 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
-    internal class HeightGridValue
+    public class HeightGridValue
     {
         private int mCount; // the lower 16 bits are to count, the higher for flags. bit 16: valid (0=valid, 1=outside of project area)
 

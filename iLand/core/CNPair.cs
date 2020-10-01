@@ -1,8 +1,8 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
     /** CNPair stores a duple of carbon and nitrogen (kg/ha)
         use addBiomass(biomass, cnratio) to add biomass; use operators (+, +=, *, *=) for simple operations. */
-    internal class CNPair
+    public class CNPair
     {
         ///< set the global fraction of carbon of biomass
         public static double BiomassCFraction { get; set; }

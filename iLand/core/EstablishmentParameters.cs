@@ -1,6 +1,6 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
-    internal class EstablishmentParameters
+    public class EstablishmentParameters
     {
         public double MinTemp { get; set; } //degC
         public int ChillRequirement { get; set; } // days of chilling requirement

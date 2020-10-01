@@ -1,9 +1,9 @@
-﻿using iLand.core;
+﻿using iLand.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     internal class TreeWrapper : ExpressionWrapper
     {

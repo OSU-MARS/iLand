@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace iLand.core
+namespace iLand.Core
 {
     internal class SnowPack
     {

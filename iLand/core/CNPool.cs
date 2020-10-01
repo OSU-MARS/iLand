@@ -1,7 +1,7 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
     /** CNPool provides (in addition to CNPair) also a weighted parameter value (e.g. a decay rate) */
-    internal class CNPool : CNPair
+    public class CNPool : CNPair
     {
         public double Parameter { get; set; } ///< get weighting parameter
 

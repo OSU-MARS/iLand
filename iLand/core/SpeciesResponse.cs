@@ -1,8 +1,8 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class SpeciesResponse
         @ingroup core
@@ -19,7 +19,7 @@ namespace iLand.core
         - CO2: @sa SpeciesSet::co2Response() based on ambient CO2 level (climate data), nitrogen and soil water responses (yearly)
         - nitrogen: based on the amount of available nitrogen (yearly)
         */
-    internal class SpeciesResponse
+    public class SpeciesResponse
     {
         public Species Species { get; private set; }
         public ResourceUnit ResourceUnit { get; private set; }
@@ -80,7 +80,7 @@ namespace iLand.core
         /// Main function that calculates monthly / annual species responses
         public void Calculate()
         {
-            using DebugTimer tpg = new DebugTimer("calculate");
+            using DebugTimer tpg = new DebugTimer("SpeciesResponse.Calculate()");
             Clear(); // reset values
 
             // calculate yearly responses

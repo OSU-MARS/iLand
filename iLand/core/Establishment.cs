@@ -1,19 +1,19 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class Establishment
-    Establishment deals with the establishment process of saplings.
-    http://iland.boku.ac.at/establishment
-    Prerequisites for establishment are:
-    the availability of seeds: derived from the seed-maps per Species (@sa SeedDispersal)
-    the quality of the abiotic environment (TACA-model): calculations are performend here, based on climate and species responses
-    the quality of the biotic environment, mainly light: based on the LIF-values
-    */
-    internal class Establishment
+        Establishment deals with the establishment process of saplings.
+        http://iland.boku.ac.at/establishment
+        Prerequisites for establishment are:
+        the availability of seeds: derived from the seed-maps per Species (@sa SeedDispersal)
+        the quality of the abiotic environment (TACA-model): calculations are performend here, based on climate and species responses
+        the quality of the biotic environment, mainly light: based on the LIF-values
+        */
+    public class Establishment
     {
         private Climate mClimate; ///< link to the current climate
         private ResourceUnitSpecies mRUS; ///< link to the resource unit species (links to production data and species respones)

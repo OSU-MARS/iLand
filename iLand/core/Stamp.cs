@@ -1,12 +1,9 @@
-﻿using iLand.tools;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** Stamp is the basic class for the LIP field of a individual tree.
         @ingroup core
@@ -14,10 +11,8 @@ namespace iLand.core
         and stand for a field of influence (w.r.t. light) of a individual tree of a given size and species.
         see http://iland.boku.ac.at/competition+for+light
     */
-    internal class Stamp
+    public class Stamp
     {
-        public static Grid<float> DistanceGrid { get; set; } // BUGBUG
-
         public float CrownArea { get; private set; }
         public float CrownRadius { get; private set; }
         public float[] Data { get; private set; }
@@ -25,15 +20,30 @@ namespace iLand.core
         public int DistanceOffset { get; set; } ///< delta between edge of the stamp and the logical center point (of the tree). e.g. a 5x5 stamp in an 8x8-grid has an offset from 2.
         public Stamp Reader { get; private set; } ///< pointer to the appropriate reader stamp (if available)
 
-        public Stamp()
+        public Stamp(int dataSize)
         {
-            Data = null;
-        }
+            StampSize size = (StampSize)dataSize;
+            switch (size)
+            {
+                case StampSize.Grid4x4:
+                case StampSize.Grid8x8:
+                case StampSize.Grid12x12:
+                case StampSize.Grid16x16:
+                case StampSize.Grid24x24:
+                case StampSize.Grid32x32:
+                case StampSize.Grid48x48:
+                case StampSize.Grid64x64:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(dataSize));
+            }
 
-        public Stamp(int size)
-        {
-            Data = null;
-            Setup(size);
+            this.Data = new float[dataSize * dataSize];
+            this.DataSize = dataSize;
+            this.DistanceOffset = 0;
+            this.Reader = null;
+            this.CrownArea = 0.0F;
+            this.CrownRadius = 0.0F;
         }
 
         /// get pointer to the element after the last element (iterator style)
@@ -74,20 +84,7 @@ namespace iLand.core
 
         public float GetDistanceToCenter(int ix, int iy)
         {
-            return DistanceGrid[Math.Abs(ix - DistanceOffset), Math.Abs(iy - DistanceOffset)];
-        }
-
-        private void Setup(int size)
-        {
-            int c = size * size;
-            DataSize = size;
-            DistanceOffset = 0;
-            Reader = null;
-            CrownArea = 0.0F;
-            CrownRadius = 0.0F;
-            Data = new float[c];
-            // set static variable values
-            DistanceGrid = StampContainer.DistanceGrid;
+            return StampContainer.DistanceGrid[Math.Abs(ix - DistanceOffset), Math.Abs(iy - DistanceOffset)];
         }
 
         //float distanceToCenter(int ix, int iy)
@@ -112,88 +109,98 @@ namespace iLand.core
             return result.ToString();
         }
 
-        public void LoadFromFile(string fileName)
-        {
-            string txt = Helper.LoadTextFile(fileName);
-            List<string> lines = txt.Split("\n").ToList();
+        //public void LoadFromTextFile(string fileName)
+        //{
+        //    string txt = Helper.LoadTextFile(fileName);
+        //    List<string> lines = txt.Split("\n").ToList();
 
-            Setup(lines.Count);
-            int l = 0;
-            foreach (string line in lines)
-            {
-                List<string> cols = line.Split(";").ToList();
-                if (cols.Count != lines.Count)
-                {
-                    Debug.WriteLine("loadFromFile: invalid count of rows/cols.");
-                    return;
-                }
-                for (int i = 0; i < cols.Count; i++)
-                {
-                    this[i, l] = Single.Parse(cols[i]);
-                }
-                l++;
-            }
-        }
+        //    Setup(lines.Count);
+        //    int l = 0;
+        //    foreach (string line in lines)
+        //    {
+        //        List<string> cols = line.Split(";").ToList();
+        //        if (cols.Count != lines.Count)
+        //        {
+        //            Debug.WriteLine("loadFromFile: invalid count of rows/cols.");
+        //            return;
+        //        }
+        //        for (int i = 0; i < cols.Count; i++)
+        //        {
+        //            this[i, l] = Single.Parse(cols[i]);
+        //        }
+        //        l++;
+        //    }
+        //}
 
         // load from stream....
         public void Load(BinaryReader input)
         {
             // see StampContainer doc for file stamp binary format
-            DistanceOffset = input.ReadInt32();
+            this.DistanceOffset = input.ReadInt32();
+            Debug.Assert((this.DistanceOffset >= 0) && (this.DistanceOffset <= this.DataSize / 2));
             // load data
-            for (int i = 0; i < Count(); i++)
+            for (int index = 0; index < this.Count(); index++)
             {
-                Data[i] = input.ReadSingle();
+                this.Data[index] = input.ReadSingle();
+                Debug.Assert((this.Data[index] >= 0.0F) && (this.Data[index] <= 1.0F));
             }
         }
 
         public void Save(BinaryWriter output)
         {
             // see StampContainer doc for file stamp binary format
-            output.Write(DistanceOffset);
-            for (int i = 0; i < Count(); i++)
+            output.Write(this.DistanceOffset);
+            for (int i = 0; i < this.Count(); i++)
             {
-                output.Write(Data[i]);
+                output.Write(this.Data[i]);
             }
         }
 
-        public Stamp StampFromGrid(Grid<float> grid, int width)
-        {
-            int c = grid.SizeX; // total size of input grid
-            if (c % 2 == 0 || width % 2 == 0)
-            {
-                Debug.WriteLine("both grid and width should be uneven!!! returning null.");
-                return null;
-            }
+        //public Stamp StampFromGrid(Grid<float> grid, int width)
+        //{
+        //    int c = grid.CellsX; // total size of input grid
+        //    if (c % 2 == 0 || width % 2 == 0)
+        //    {
+        //        Debug.WriteLine("both grid and width should be uneven!!! returning null.");
+        //        return null;
+        //    }
 
-            StampSize type;
-            if (width <= 4) type = StampSize.Grid4x4;
-            else if (width <= 8) type = StampSize.Grid8x8;
-            else if (width <= 12) type = StampSize.Grid12x12;
-            else if (width <= 16) type = StampSize.Grid16x16;
-            else if (width <= 24) type = StampSize.Grid24x24;
-            else if (width <= 32) type = StampSize.Grid32x32;
-            else if (width <= 48) type = StampSize.Grid48x48;
-            else type = StampSize.Grid64x64;
+        //    StampSize type;
+        //    if (width <= 4) 
+        //        type = StampSize.Grid4x4;
+        //    else if (width <= 8) 
+        //        type = StampSize.Grid8x8;
+        //    else if (width <= 12) 
+        //        type = StampSize.Grid12x12;
+        //    else if (width <= 16) 
+        //        type = StampSize.Grid16x16;
+        //    else if (width <= 24)
+        //        type = StampSize.Grid24x24;
+        //    else if (width <= 32) 
+        //        type = StampSize.Grid32x32;
+        //    else if (width <= 48)
+        //        type = StampSize.Grid48x48;
+        //    else
+        //        type = StampSize.Grid64x64;
 
-            Stamp stamp = new Stamp((int)type);
-            int swidth = width;
-            if (width > 63)
-            {
-                Debug.WriteLine("Warning: grid too big, truncated stamp to 63x63px!");
-                swidth = 63;
-            }
-            stamp.DistanceOffset = swidth / 2;
-            int coff = c / 2 - swidth / 2; // e.g.: grid=25, width=7 -> coff = 12 - 3 = 9
-            int x, y;
-            for (x = 0; x < swidth; x++)
-            {
-                for (y = 0; y < swidth; y++)
-                {
-                    stamp[x, y] = grid[coff + x, coff + y]; // copy data (from a different rectangle)
-                }
-            }
-            return stamp;
-        }
+        //    Stamp stamp = new Stamp((int)type);
+        //    int swidth = width;
+        //    if (width > 63)
+        //    {
+        //        Debug.WriteLine("Warning: grid too big, truncated stamp to 63x63px!");
+        //        swidth = 63;
+        //    }
+        //    stamp.DistanceOffset = swidth / 2;
+        //    int coff = c / 2 - swidth / 2; // e.g.: grid=25, width=7 -> coff = 12 - 3 = 9
+        //    int x, y;
+        //    for (x = 0; x < swidth; x++)
+        //    {
+        //        for (y = 0; y < swidth; y++)
+        //        {
+        //            stamp[x, y] = grid[coff + x, coff + y]; // copy data (from a different rectangle)
+        //        }
+        //    }
+        //    return stamp;
+        //}
     }
 }

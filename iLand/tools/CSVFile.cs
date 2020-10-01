@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /** @class CSVFile
         @ingroup tools
@@ -91,7 +91,8 @@ namespace iLand.tools
             Clear();
             // split into rows: use either with windows or unix style delimiter
             string[] rows;
-            if (content.Substring(0, 1000).Contains("\r\n", StringComparison.Ordinal))
+            ReadOnlySpan<char> contentSampleForNewlineDetection = content.AsSpan(0, Math.Min(content.Length, 1000));
+            if (contentSampleForNewlineDetection.Contains("\r\n", StringComparison.Ordinal))
             {
                 rows = content.Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
             }

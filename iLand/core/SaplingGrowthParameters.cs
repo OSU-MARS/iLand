@@ -1,10 +1,10 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 
-namespace iLand.core
+namespace iLand.Core
 {
-    internal class SaplingGrowthParameters
+    public class SaplingGrowthParameters
     {
         public double BrowsingProbability { get; set; }
         public float HdSapling { get; set; } ///< fixed height-diameter ratio used for saplings
@@ -19,10 +19,11 @@ namespace iLand.core
         public SaplingGrowthParameters()
         {
             this.BrowsingProbability = 0.0;
+            this.HdSapling = 80.0F;
+            this.HeightGrowthPotential = new Expression();
+            this.MaxStressYears = 3;
             this.ReinekesR = 1450.0;
             this.ReferenceRatio = 1.0;
-            this.HdSapling = 80.0F;
-            this.MaxStressYears = 3;
             this.RepresentedClasses = new List<double>();
             this.SproutGrowth = 0.0;
             this.StressThreshold = 0.1;

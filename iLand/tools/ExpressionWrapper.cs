@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /** @class ExpressionWrapper
       @ingroup tools
@@ -17,7 +17,7 @@ namespace iLand.tools
     /** ExpressionWrapper is the base class for exposing C++ elements
      *  to the built-in Expression engine. See TreeWrapper for an example.
      */
-    internal abstract class ExpressionWrapper
+    public abstract class ExpressionWrapper
     {
         protected static readonly List<string> BaseVarList;
 

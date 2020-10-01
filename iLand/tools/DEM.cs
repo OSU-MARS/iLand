@@ -1,10 +1,10 @@
-﻿using iLand.core;
+﻿using iLand.Core;
 using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /** DEM is a digital elevation model class.
      @ingroup tools
@@ -21,7 +21,7 @@ namespace iLand.tools
       Values for height of -1 indicate "out of scope", "invalid" values
 
      */
-    internal class DEM : Grid<float>
+    public class DEM : Grid<float>
     {
         private readonly Grid<float> aspect_grid;
         private readonly Grid<float> slope_grid;
@@ -98,9 +98,9 @@ namespace iLand.tools
             slope_grid.Clear();
             view_grid.Clear();
 
-            Setup(h_grid.PhysicalSize, h_grid.CellSize);
+            Setup(h_grid.PhysicalExtent, h_grid.CellSize);
 
-            RectangleF world = GlobalSettings.Instance.Model.PhysicalExtent;
+            RectangleF world = GlobalSettings.Instance.Model.WorldExtentUnbuffered;
 
             if ((gis_grid.CellSize % CellSize) != 0.0)
             {
@@ -174,13 +174,13 @@ namespace iLand.tools
         public float GetOrientation(PointF point, out float rslope_angle, out float rslope_aspect)
         {
             Point pt = IndexAt(point);
-            if (pt.X > 0 && pt.X < SizeX + 1 && pt.Y > 0 && pt.Y < SizeY - 1)
+            if (pt.X > 0 && pt.X < CellsX + 1 && pt.Y > 0 && pt.Y < CellsY - 1)
             {
                 int p = this.IndexOf(pt);
-                float z2 = this[p - SizeX];
+                float z2 = this[p - CellsX];
                 float z4 = this[p - 1];
                 float z6 = this[p + 1];
-                float z8 = this[p + SizeX];
+                float z8 = this[p + CellsX];
                 float g = (-z4 + z6) / (2 * CellSize);
                 float h = (z2 - z8) / (2 * CellSize);
 

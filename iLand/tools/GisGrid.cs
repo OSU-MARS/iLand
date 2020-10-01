@@ -1,20 +1,19 @@
-﻿using iLand.core;
+﻿using iLand.Core;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
     /** @class GisGrid
       @ingroup tools
       GisGrid encapsulates a simple grid of values based on GIS data.
       GisGrid can load input files in ESRI text file format (loadFromFile()) and transforms
       coordinates to the current reference in iLand.
-
       */
-    internal class GisGrid
+    public class GisGrid
     {
         // global transformation record:
         private static readonly SCoordTrans GISCoordTrans;

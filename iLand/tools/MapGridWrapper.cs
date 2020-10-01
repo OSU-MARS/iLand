@@ -1,11 +1,11 @@
-﻿using iLand.core;
+﻿using iLand.Core;
 using System;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace iLand.tools
+namespace iLand.Tools
 {
-    internal class MapGridWrapper
+    public class MapGridWrapper
     {
         private bool mCreated;
 
@@ -30,18 +30,6 @@ namespace iLand.tools
         public bool IsValid()
         {
             return Map.IsValid();
-        }
-
-        public void Paint(double min_value, double max_value)
-        {
-            //gridToImage(mMap.grid(), false, min_value, max_value).save(file_name);
-            if (Map != null)
-            {
-                if (GlobalSettings.Instance.ModelController != null)
-                {
-                    GlobalSettings.Instance.ModelController.PaintMap(Map, min_value, max_value);
-                }
-            }
         }
 
         public void Clear()
@@ -107,8 +95,8 @@ namespace iLand.tools
             {
                 // WRAP AROUND MODE
                 // now loop over all cells ...
-                double delta_x = GlobalSettings.Instance.Model.PhysicalExtent.Width;
-                double delta_y = GlobalSettings.Instance.Model.PhysicalExtent.Height;
+                double delta_x = GlobalSettings.Instance.Model.WorldExtentUnbuffered.Width;
+                double delta_y = GlobalSettings.Instance.Model.WorldExtentUnbuffered.Height;
                 for (int p = 0; p != Map.Grid.Count; ++p)
                 {
                     Point pt = Map.Grid.IndexOf(p);
@@ -141,7 +129,7 @@ namespace iLand.tools
         {
             Grid<int> src = source.Map.Grid;
             Grid<int> dest = this.Map.Grid;
-            Rectangle destRectangle = dest.Size();
+            Rectangle destRectangle = dest.CellExtent();
             Rectangle r = new Rectangle(destRectangle.X, destRectangle.Y, destRectangle.Width, destRectangle.Height);
             Point rsize = dest.IndexAt(new PointF((float)(destx + (x2 - x1)), (float)(desty + (y2 - y1))));
             r.Intersect(new Rectangle(dest.IndexAt(new PointF((float)destx, (float)desty)), new Size(rsize)));

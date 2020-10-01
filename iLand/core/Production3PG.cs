@@ -1,9 +1,9 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System.Diagnostics;
 
-namespace iLand.core
+namespace iLand.Core
 {
-    internal class Production3PG
+    public class Production3PG
     {
         public double[] mUPAR; ///< utilizable radiation MJ/m2 and month
         public double[] mGPP; ///< monthly Gross Primary Production [kg Biomass / m2]
@@ -20,11 +20,13 @@ namespace iLand.core
 
         public Production3PG()
         {
-            Clear();
-            SpeciesResponse = null;
-            EnvironmentalFactor = 0.0;
             mUPAR = new double[12];
             mGPP = new double[12];
+
+            EnvironmentalFactor = 0.0;
+            GppPerArea = 0.0;
+            SpeciesResponse = null;
+            RootFraction = 0.0;
         }
 
         /**
@@ -78,9 +80,11 @@ namespace iLand.core
                 mGPP[i] = 0.0; 
                 mUPAR[i] = 0.0;
             }
+
             EnvironmentalFactor = 0.0;
             GppPerArea = 0.0;
             RootFraction = 0.0;
+            // BUGBUG: speciesResponse?
         }
 
         /** calculate the stand-level NPP

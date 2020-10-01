@@ -1,14 +1,13 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using Microsoft.Collections.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 
-namespace iLand.core
+namespace iLand.Core
 {
-    internal class TimeEvents
+    public class TimeEvents
     {
         private readonly MultiValueDictionary<int, MutableTuple<string, object>> mData;
 
@@ -27,7 +26,7 @@ namespace iLand.core
             string source = Helper.LoadTextFile(GlobalSettings.Instance.Path(fileName));
             if (String.IsNullOrEmpty(source))
             {
-                throw new FileNotFoundException(String.Format("TimeEvents: input file does not exist or is empty (%1)", fileName));
+                throw new FileNotFoundException(String.Format("TimeEvents: input file does not exist or is empty ({0})", fileName));
             }
 
             CsvFile infile = new CsvFile();
@@ -38,7 +37,8 @@ namespace iLand.core
             {
                 throw new NotSupportedException(String.Format("TimeEvents: input file '{0}' has no 'year' column.", fileName));
             }
-            for (int row = 0; row < infile.RowCount; row++)
+            // BUGBUG: no checking of header line
+            for (int row = 1; row < infile.RowCount; row++)
             {
                 int year = Int32.Parse(infile.Value(row, yearcol));
                 List<object> line = infile.Values(row);
@@ -57,44 +57,43 @@ namespace iLand.core
 
         public void Run()
         {
-            int current_year = GlobalSettings.Instance.CurrentYear;
-            List<MutableTuple<string, object>> entries = mData[current_year].ToList();
-            if (entries.Count == 0)
+            int currentYear = GlobalSettings.Instance.CurrentYear;
+            if (mData.TryGetValue(currentYear, out IReadOnlyCollection<MutableTuple<string, object>> currentEvents) == false || currentEvents.Count == 0)
             {
                 return;
             }
 
-            string key;
-            int values_set = 0;
-            for (int i = 0; i < entries.Count; i++)
+            int valuesSet = 0;
+            foreach (MutableTuple<string, object> eventInYear in currentEvents)
             {
-                key = entries[i].Item1; // key
-                                        // special values: if (key=="xxx" ->
+                string key = eventInYear.Item1; // key
+                // special values: if (key=="xxx" ->
                 if (key == "script" || key == "javascript")
                 {
                     // execute as javascript expression within the management script context...
-                    if (String.IsNullOrEmpty(entries[i].Item2.ToString()) == false)
+                    if (String.IsNullOrEmpty(eventInYear.Item2.ToString()) == false)
                     {
-                        Debug.WriteLine("executing Javascript time event: " + entries[i].Item2.ToString());
+                        Debug.WriteLine("executing Javascript time event: " + eventInYear.Item2.ToString());
                     }
                 }
                 else
                 {
                     // no special value: a xml node...
-                    if (GlobalSettings.Instance.Settings.SetNodeValue(key, entries[i].Item2.ToString()))
+                    if (GlobalSettings.Instance.Settings.SetNodeValue(key, eventInYear.Item2.ToString()))
                     {
-                        Debug.WriteLine("TimeEvents: Error: Key " + key + "not found! (tried to set to " + entries[i].Item2.ToString() + ")");
+                        Debug.WriteLine("TimeEvents: Error: Key " + key + "not found! (tried to set to " + eventInYear.Item2.ToString() + ")");
                     }
                     else
                     {
-                        Debug.WriteLine("TimeEvents: set " + key + "to" + entries[i].Item2.ToString());
+                        Debug.WriteLine("TimeEvents: set " + key + "to" + eventInYear.Item2.ToString());
                     }
                 }
-                values_set++;
+                valuesSet++;
             }
-            if (values_set != 0)
+
+            if (valuesSet != 0)
             {
-                Debug.WriteLine("TimeEvents: year " + current_year + ": " + values_set + " values set.");
+                Debug.WriteLine("TimeEvents: year " + currentYear + ": " + valuesSet + " values set.");
             }
         }
 

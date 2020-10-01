@@ -1,6 +1,6 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
-    internal class TreeGrowthData
+    public class TreeGrowthData
     {
         public double NppAboveground { get; set; } ///< NPP aboveground (kg) (NPP - fraction roots), no consideration of tree senescence
         public double NppStem { get; set; }  ///< NPP used for growth of stem (dbh,h)

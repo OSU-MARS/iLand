@@ -1,4 +1,4 @@
-﻿namespace iLand.core
+﻿namespace iLand.Core
 {
     /** WaterInterface allows accessing intermediate water variables (e.g. interception)
      */

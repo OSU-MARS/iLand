@@ -1,9 +1,9 @@
-﻿using iLand.tools;
+﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace iLand.core
+namespace iLand.Core
 {
     /** @class WaterCycle
         @ingroup core
@@ -15,7 +15,7 @@ namespace iLand.core
 
         See http://iland.boku.ac.at/water+cycle
         */
-    internal class WaterCycle
+    public class WaterCycle
     {
         private int mLastYear; ///< last year of execution
         private double mPsi_koeff_b; ///< see psiFromHeight()
@@ -44,7 +44,7 @@ namespace iLand.core
         {
             this.mCanopy = new Canopy();
             this.mLastYear = -1;
-            this.mPsi = new double[366];
+            this.mPsi = new double[Constant.DaysInLeapYear];
             this.mSnowPack = new SnowPack();
             this.mSoilDepth = 0;
         }
@@ -61,13 +61,13 @@ namespace iLand.core
             // get values...
             FieldCapacity = 0.0; // on top
             XmlHelper xml = GlobalSettings.Instance.Settings;
-            mSoilDepth = xml.ValueDouble("model.site.soilDepth", 0.0) * 10; // convert from cm to mm
-            double pct_sand = xml.ValueDouble("model.site.pctSand");
-            double pct_silt = xml.ValueDouble("model.site.pctSilt");
-            double pct_clay = xml.ValueDouble("model.site.pctClay");
+            mSoilDepth = xml.GetDouble("model.site.soilDepth", 0.0) * 10; // convert from cm to mm
+            double pct_sand = xml.GetDouble("model.site.pctSand");
+            double pct_silt = xml.GetDouble("model.site.pctSilt");
+            double pct_clay = xml.GetDouble("model.site.pctClay");
             if (Math.Abs(100.0 - (pct_sand + pct_silt + pct_clay)) > 0.01)
             {
-                throw new NotSupportedException(String.Format("Setup Watercycle: soil composition percentages do not sum up to 100. Sand: {0}, Silt: {1} Clay: {2}", pct_sand, pct_silt, pct_clay));
+                throw new NotSupportedException(String.Format("Setup WaterCycle: soil textures do not sum to 100% within 0.01%. Sand: {0}%, silt: {1}%, clay: {2}%. Are these values specified in /project/model/site?", pct_sand, pct_silt, pct_clay));
             }
 
             // calculate soil characteristics based on empirical functions (Schwalm & Ek, 2004)
@@ -78,7 +78,7 @@ namespace iLand.core
             mCanopy.Setup();
 
             mPermanentWiltingPoint = HeightFromPsi(-4000); // maximum psi is set to a constant of -4MPa
-            if (xml.ValueBool("model.settings.waterUseSoilSaturation", false) == false)
+            if (xml.GetBool("model.settings.waterUseSoilSaturation", false) == false)
             {
                 FieldCapacity = HeightFromPsi(-15);
             }
@@ -102,9 +102,9 @@ namespace iLand.core
             mLastYear = -1;
 
             // canopy settings
-            mCanopy.NeedleFactor = xml.ValueDouble("model.settings.interceptionStorageNeedle", 4.0);
-            mCanopy.DecidousFactor = xml.ValueDouble("model.settings.interceptionStorageBroadleaf", 2.0);
-            mSnowPack.Temperature = xml.ValueDouble("model.settings.snowMeltTemperature", 0.0);
+            mCanopy.NeedleFactor = xml.GetDouble("model.settings.interceptionStorageNeedle", 4.0);
+            mCanopy.DecidousFactor = xml.GetDouble("model.settings.interceptionStorageBroadleaf", 2.0);
+            mSnowPack.Temperature = xml.GetDouble("model.settings.snowMeltTemperature", 0.0);
 
             TotalEvapotranspiration = TotalWaterLoss = SnowDayRad = 0.0;
             SnowDays = 0;
@@ -209,12 +209,12 @@ namespace iLand.core
             double total_lai_factor = 0.0;
             foreach (ResourceUnitSpecies rus in mRU.Species)
             {
-                if (rus.LaiFactor > 0.0)
+                if (rus.LaiFraction > 0.0)
                 {
                     // retrieve the minimum of VPD / soil water response for that species
                     rus.Response.SoilAtmosphereResponses(psi_kpa, vpd_kpa, out double min_response);
-                    total_response += min_response * rus.LaiFactor;
-                    total_lai_factor += rus.LaiFactor;
+                    total_response += min_response * rus.LaiFraction;
+                    total_lai_factor += rus.LaiFraction;
                 }
             }
 
@@ -255,7 +255,7 @@ namespace iLand.core
             {
                 return;
             }
-            using DebugTimer tw = new DebugTimer("water:run");
+            using DebugTimer tw = new DebugTimer("WaterCycle.Run()");
             WaterCycleData add_data = new WaterCycleData();
 
             // preparations (once a year)
