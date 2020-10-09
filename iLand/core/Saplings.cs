@@ -7,31 +7,22 @@ using System.Drawing;
 namespace iLand.Core
 {
     /** The Saplings class the container for the establishment and sapling growth in iLand.
-     *
      */
     public class Saplings
     {
-        private static double BrowsingPressure = 0.0;
-        public static double RecruitmentVariation { get; set; }
-
-        static Saplings()
-        {
-            Saplings.RecruitmentVariation = 0.1; // +/- 10%
-        }
-
-        public void Setup()
+        public void Setup(Model model)
         {
             //mGrid.setup(GlobalSettings.instance().model().grid().metricRect(), GlobalSettings.instance().model().grid().cellsize());
-            Grid<float> lif_grid = GlobalSettings.Instance.Model.LightGrid;
+            Grid<float> lif_grid = model.LightGrid;
             // mask out out-of-project areas
-            Grid<HeightGridValue> hg = GlobalSettings.Instance.Model.HeightGrid;
+            Grid<HeightGridValue> hg = model.HeightGrid;
             for (int i = 0; i < lif_grid.Count; ++i)
             {
                 ResourceUnit ru = null;
-                SaplingCell s = Cell(lif_grid.IndexOf(i), false, ref ru); // false: retrieve also invalid cells
+                SaplingCell s = Cell(lif_grid.IndexOf(i), model, false, ref ru); // false: retrieve also invalid cells
                 if (s != null)
                 {
-                    if (!hg[lif_grid.Index5(i)].IsValid())
+                    if (!hg[lif_grid.Index5(i)].IsInWorld())
                     {
                         s.State = SaplingCell.SaplingCellState.Invalid;
                     }
@@ -56,7 +47,7 @@ namespace iLand.Core
                 if (s.State != SaplingCell.SaplingCellState.Invalid)
                 {
                     int cohorts_on_px = s.GetOccupiedSlotCount();
-                    for (int j = 0; j < SaplingCell.SaplingSlots; ++j)
+                    for (int j = 0; j < SaplingCell.SaplingsPerCell; ++j)
                     {
                         if (s.Saplings[j].IsOccupied())
                         {
@@ -81,9 +72,9 @@ namespace iLand.Core
             }
         }
 
-        public void Establishment(ResourceUnit ru)
+        public void Establishment(ResourceUnit ru, Model model)
         {
-            Grid<float> lif_grid = GlobalSettings.Instance.Model.LightGrid;
+            Grid<float> lif_grid = model.LightGrid;
 
             Point imap = ru.CornerPointOffset; // offset on LIF/saplings grid
             Point iseedmap = new Point(imap.X / 10, imap.Y / 10); // seed-map has 20m resolution, LIF 2m . factor 10
@@ -124,11 +115,11 @@ namespace iLand.Core
                 }
 
                 // calculate the abiotic environment (TACA)
-                rus.Establishment.CalculateAbioticEnvironment();
+                rus.Establishment.CalculateAbioticEnvironment(model);
                 double abiotic_env = rus.Establishment.AbioticEnvironment;
                 if (abiotic_env == 0.0)
                 {
-                    rus.Establishment.WriteDebugOutputs();
+                    // rus.Establishment.WriteDebugOutputs();
                     continue;
                 }
 
@@ -147,7 +138,7 @@ namespace iLand.Core
                             // * test for grass-cover already in cell state
                             SaplingTree stree = null;
                             SaplingTree[] slots = s.Saplings;
-                            for (int i = 0; i < SaplingCell.SaplingSlots; ++i)
+                            for (int i = 0; i < SaplingCell.SaplingsPerCell; ++i)
                             {
                                 if (stree == null && !slots[i].IsOccupied())
                                 {
@@ -174,7 +165,7 @@ namespace iLand.Core
                                 // calculate the LIFcorrected only once per pixel; the relative height is 0 (light level on the forest floor)
                                 if (lif_corrected < 0.0)
                                 {
-                                    lif_corrected = rus.Species.SpeciesSet.LriCorrection(lif_value, 0.0);
+                                    lif_corrected = rus.Species.SpeciesSet.GetLriCorrection(model.GlobalSettings, lif_value, 0.0);
                                 }
 
                                 // check for the combination of seed availability and light on the forest floor
@@ -191,14 +182,14 @@ namespace iLand.Core
                     }
                 }
                 // create debug output related to establishment
-                rus.Establishment.WriteDebugOutputs();
+                // rus.Establishment.WriteDebugOutputs();
             }
         }
 
-        public void SaplingGrowth(ResourceUnit ru)
+        public void SaplingGrowth(ResourceUnit ru, Model model)
         {
-            Grid<HeightGridValue> height_grid = GlobalSettings.Instance.Model.HeightGrid;
-            Grid<float> lif_grid = GlobalSettings.Instance.Model.LightGrid;
+            Grid<HeightGridValue> height_grid = model.HeightGrid;
+            Grid<float> lif_grid = model.LightGrid;
 
             Point imap = ru.CornerPointOffset;
             SaplingCell[] sap_cells = ru.SaplingCells;
@@ -213,7 +204,7 @@ namespace iLand.Core
                     {
                         bool need_check = false;
                         int n_on_px = s.GetOccupiedSlotCount();
-                        for (int i = 0; i < SaplingCell.SaplingSlots; ++i)
+                        for (int i = 0; i < SaplingCell.SaplingsPerCell; ++i)
                         {
                             if (s.Saplings[i].IsOccupied())
                             {
@@ -221,7 +212,7 @@ namespace iLand.Core
                                 HeightGridValue hgv = height_grid[height_grid.Index5(isc)];
                                 float lif_value = lif_grid[isc];
 
-                                need_check |= GrowSapling(ru, s, s.Saplings[i], isc, hgv.Height, lif_value, n_on_px);
+                                need_check |= GrowSapling(ru, model, s, s.Saplings[i], isc, hgv.Height, lif_value, n_on_px);
                             }
                         }
                         if (need_check)
@@ -236,43 +227,42 @@ namespace iLand.Core
             for (int i = 0; i < ru.Species.Count; ++i)
             {
                 ResourceUnitSpecies species = ru.Species[i];
-                species.SaplingStats.Calculate(species.Species, ru);
+                species.SaplingStats.Calculate(species.Species, ru, model.GlobalSettings);
                 species.Statistics.Add(species.SaplingStats);
             }
 
             // debug output related to saplings
-            if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.SaplingGrowth))
-            {
-                // establishment details
-                for (int it = 0; it != ru.Species.Count; ++it)
-                {
-                    ResourceUnitSpecies species = ru.Species[it];
-                    if (species.SaplingStats.LivingCohorts == 0)
-                    {
-                        continue;
-                    }
+            //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.SaplingGrowth))
+            //{
+            //    // establishment details
+            //    for (int it = 0; it != ru.Species.Count; ++it)
+            //    {
+            //        ResourceUnitSpecies species = ru.Species[it];
+            //        if (species.SaplingStats.LivingCohorts == 0)
+            //        {
+            //            continue;
+            //        }
 
-                    List<object> output = GlobalSettings.Instance.DebugList(ru.Index, DebugOutputs.SaplingGrowth);
-                    output.AddRange(new object[] { species.Species.ID, ru.Index, ru.ID,
-                                                   species.SaplingStats.LivingCohorts, species.SaplingStats.AverageHeight, species.SaplingStats.AverageAge,
-                                                   species.SaplingStats.AverageDeltaHPot, species.SaplingStats.AverageDeltaHRealized,
-                                                   species.SaplingStats.NewSaplings, species.SaplingStats.DeadSaplings,
-                                                   species.SaplingStats.RecruitedSaplings, species.Species.SaplingGrowthParameters.ReferenceRatio });
-                }
-            }
-
+            //        List<object> output = GlobalSettings.Instance.DebugList(ru.Index, DebugOutputs.SaplingGrowth);
+            //        output.AddRange(new object[] { species.Species.ID, ru.Index, ru.ID,
+            //                                       species.SaplingStats.LivingCohorts, species.SaplingStats.AverageHeight, species.SaplingStats.AverageAge,
+            //                                       species.SaplingStats.AverageDeltaHPot, species.SaplingStats.AverageDeltaHRealized,
+            //                                       species.SaplingStats.NewSaplings, species.SaplingStats.DeadSaplings,
+            //                                       species.SaplingStats.RecruitedSaplings, species.Species.SaplingGrowthParameters.ReferenceRatio });
+            //    }
+            //}
         }
 
         /// return the SaplingCell (i.e. container for the ind. saplings) for the given 2x2m coordinates
         /// if 'only_valid' is true, then 0 is returned if no living saplings are on the cell
         /// 'rRUPtr' is a pointer to a RU-ptr: if provided, a pointer to the resource unit is stored
-        public SaplingCell Cell(Point lif_coords, bool only_valid, ref ResourceUnit rRUPtr)
+        public SaplingCell Cell(Point lif_coords, Model model, bool only_valid, ref ResourceUnit rRUPtr)
         {
-            Grid<float> lif_grid = GlobalSettings.Instance.Model.LightGrid;
+            Grid<float> lif_grid = model.LightGrid;
 
             // in this case, getting the actual cell is quite cumbersome: first, retrieve the resource unit, then the
             // cell based on the offset of the given coordiantes relative to the corner of the resource unit.
-            ResourceUnit ru = GlobalSettings.Instance.Model.GetResourceUnit(lif_grid.GetCellCenterPoint(lif_coords));
+            ResourceUnit ru = model.GetResourceUnit(lif_grid.GetCellCenterPoint(lif_coords));
             if (rRUPtr != null)
             {
                 rRUPtr = ru;
@@ -292,13 +282,13 @@ namespace iLand.Core
             return null;
         }
 
-        public void ClearSaplings(RectangleF rectangle, bool remove_biomass)
+        public void ClearSaplings(RectangleF rectangle, Model model, bool remove_biomass)
         {
-            GridRunner<float> runner = new GridRunner<float>(GlobalSettings.Instance.Model.LightGrid, rectangle);
+            GridRunner<float> runner = new GridRunner<float>(model.LightGrid, rectangle);
             for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
             {
                 ResourceUnit ru = null;
-                SaplingCell s = Cell(runner.CurrentIndex(), true, ref ru);
+                SaplingCell s = Cell(runner.CurrentIndex(), model, true, ref ru);
                 if (s != null)
                 {
                     ClearSaplings(s, ru, remove_biomass);
@@ -310,7 +300,7 @@ namespace iLand.Core
         {
             if (s != null)
             {
-                for (int i = 0; i < SaplingCell.SaplingSlots; ++i)
+                for (int i = 0; i < SaplingCell.SaplingsPerCell; ++i)
                 {
                     if (s.Saplings[i].IsOccupied())
                     {
@@ -331,14 +321,14 @@ namespace iLand.Core
             }
         }
 
-        public int AddSprout(Tree t)
+        public int AddSprout(Tree t, Model model)
         {
             if (t.Species.SaplingGrowthParameters.SproutGrowth == 0.0)
             {
                 return 0;
             }
             ResourceUnit ru = null;
-            SaplingCell sc = Cell(t.LightCellIndex, true, ref ru);
+            SaplingCell sc = Cell(t.LightCellIndex, model, true, ref ru);
             if (sc == null)
             {
                 return 0;
@@ -363,7 +353,7 @@ namespace iLand.Core
                 ru = null;
                 while (n_cells > 0)
                 {
-                    sc = Cell(t.LightCellIndex.Add(new Point(offsets_x[s], offsets_y[s])), true, ref ru);
+                    sc = Cell(t.LightCellIndex.Add(new Point(offsets_x[s], offsets_y[s])), model, true, ref ru);
                     if (sc != null)
                     {
                         ClearSaplings(sc, ru, false);
@@ -380,25 +370,13 @@ namespace iLand.Core
             return 1;
         }
 
-        public static void UpdateBrowsingPressure()
-        {
-            if (GlobalSettings.Instance.Settings.GetBool("model.settings.browsing.enabled"))
-            {
-                BrowsingPressure = GlobalSettings.Instance.Settings.GetDouble("model.settings.browsing.browsingPressure");
-            }
-            else
-            {
-                BrowsingPressure = 0.0;
-            }
-        }
-
-        private bool GrowSapling(ResourceUnit ru, SaplingCell scell, SaplingTree tree, int isc, float dom_height, float lif_value, int cohorts_on_px)
+        private bool GrowSapling(ResourceUnit ru, Model model, SaplingCell scell, SaplingTree tree, int isc, float dom_height, float lif_value, int cohorts_on_px)
         {
             ResourceUnitSpecies rus = tree.ResourceUnitSpecies(ru);
             Species species = rus.Species;
 
             // (1) calculate height growth potential for the tree (uses linerization of expressions...)
-            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(tree.Height);
+            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model.GlobalSettings, tree.Height);
             double delta_h_pot = h_pot - tree.Height;
 
             // (2) reduce height growth potential with species growth response f_env_yr and with light state (i.e. LIF-value) of home-pixel.
@@ -409,11 +387,11 @@ namespace iLand.Core
 
             double rel_height = tree.Height / dom_height;
 
-            double lif_corrected = species.SpeciesSet.LriCorrection(lif_value, rel_height); // correction based on height
+            double lif_corrected = species.SpeciesSet.GetLriCorrection(model.GlobalSettings, lif_value, rel_height); // correction based on height
 
-            double lr = species.GetLightResponse(lif_corrected); // species specific light response (LUI, light utilization index)
+            double lr = species.GetLightResponse(model.GlobalSettings, lif_corrected); // species specific light response (LUI, light utilization index)
 
-            rus.Calculate(true); // calculate the 3pg module (this is done only once per RU); true: call comes from regeneration
+            rus.Calculate(model, true); // calculate the 3pg module (this is done only once per RU); true: call comes from regeneration
             double f_env_yr = rus.BiomassGrowth.EnvironmentalFactor;
 
             double delta_h_factor = f_env_yr * lr; // relative growth
@@ -430,12 +408,12 @@ namespace iLand.Core
             }
 
             // check browsing
-            if (BrowsingPressure > 0.0 && tree.Height <= 2.0F)
+            if (model.ModelSettings.BrowsingPressure > 0.0 && tree.Height <= 2.0F)
             {
                 double p = rus.Species.SaplingGrowthParameters.BrowsingProbability;
                 // calculate modifed annual browsing probability via odds-ratios
                 // odds = p/(1-p) . odds_mod = odds * browsingPressure . p_mod = odds_mod /( 1 + odds_mod) === p*pressure/(1-p+p*pressure)
-                double p_browse = p * BrowsingPressure / (1.0 - p + p * BrowsingPressure);
+                double p_browse = p * model.ModelSettings.BrowsingPressure / (1.0 - p + p * model.ModelSettings.BrowsingPressure);
                 if (RandomGenerator.Random() < p_browse)
                 {
                     delta_h_factor = 0.0;
@@ -484,20 +462,20 @@ namespace iLand.Core
                 // add a new tree
                 for (int i = 0; i < to_establish; i++)
                 {
-                    Tree bigtree = ru.NewTree();
-                    bigtree.LightCellIndex = GlobalSettings.Instance.Model.LightGrid.IndexOf(isc);
+                    Tree bigtree = ru.AddNewTree();
+                    bigtree.LightCellIndex = model.LightGrid.IndexOf(isc);
                     // add variation: add +/-N% to dbh and *independently* to height.
-                    bigtree.Dbh = (float)(dbh * RandomGenerator.Random(1.0 - RecruitmentVariation, 1.0 + RecruitmentVariation));
-                    bigtree.SetHeight((float)(tree.Height * RandomGenerator.Random(1.0 - RecruitmentVariation, 1.0 + RecruitmentVariation)));
+                    bigtree.Dbh = (float)(dbh * RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation));
+                    bigtree.SetHeight((float)(tree.Height * RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation)));
                     bigtree.Species = species;
                     bigtree.SetAge(tree.Age, tree.Height);
                     bigtree.RU = ru;
-                    bigtree.Setup();
+                    bigtree.Setup(model);
                     rus.Statistics.Add(bigtree, null); // count the newly created trees already in the stats
                 }
                 // clear all regeneration from this pixel (including this tree)
                 tree.Clear(); // clear this tree (no carbon flow to the ground)
-                for (int i = 0; i < SaplingCell.SaplingSlots; ++i)
+                for (int i = 0; i < SaplingCell.SaplingsPerCell; ++i)
                 {
                     if (scell.Saplings[i].IsOccupied())
                     {

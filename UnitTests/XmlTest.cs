@@ -8,27 +8,20 @@ namespace iLand.Test
     [TestClass]
     public class XmlTest
     {
-        private static XmlHelper Xml;
-        private static string XmlFilePath;
-
-        [ClassInitialize]
-        public static void ClassInitialize(TestContext testContext)
-        {
-            XmlTest.XmlFilePath = Path.Combine(testContext.TestDir, "..", "..", "UnitTests", "xmlHelpertest.xml");
-            XmlTest.Xml = new XmlHelper();
-            XmlTest.Xml.LoadFromFile(XmlTest.XmlFilePath);
-        }
+        public TestContext TestContext { get; set; }
 
         [TestMethod]
         public void DirectoryPaths()
         {
             // string path = xml.Dump("path");
-            GlobalSettings.Instance.SetupDirectories(XmlTest.Xml.Node("path"), XmlTest.XmlFilePath);
+            GlobalSettings globalSettings = new GlobalSettings();
+            XmlHelper xml = this.LoadXml();
+            globalSettings.SetupDirectories(xml.Node("path"), this.GetXmlFilePath());
 
-            string home = GlobalSettings.Instance.Path(null, "home");
-            string database = GlobalSettings.Instance.Path("database");
-            string lip = GlobalSettings.Instance.Path("lip");
-            string temp = GlobalSettings.Instance.Path("temp");
+            string home = globalSettings.Path(null, "home");
+            string database = globalSettings.Path("database");
+            string lip = globalSettings.Path("lip");
+            string temp = globalSettings.Path("temp");
 
             Assert.IsTrue(String.IsNullOrWhiteSpace(home) == false);
             Assert.IsTrue(String.IsNullOrWhiteSpace(database) == false);
@@ -43,9 +36,10 @@ namespace iLand.Test
         [TestMethod]
         public void Dump()
         {
-            string test = XmlTest.Xml.Dump("test");
-            string path = XmlTest.Xml.Dump("path");
-            string species = XmlTest.Xml.Dump("species");
+            XmlHelper xml = this.LoadXml();
+            string test = xml.Dump("test");
+            string path = xml.Dump("path");
+            string species = xml.Dump("species");
 
             Assert.IsTrue(String.IsNullOrWhiteSpace(test) == false);
             Assert.IsTrue(String.IsNullOrWhiteSpace(path) == false);
@@ -56,12 +50,22 @@ namespace iLand.Test
             Assert.IsTrue(species.StartsWith("species.source[0]", StringComparison.Ordinal));
         }
 
+        private string GetXmlFilePath()
+        {
+            return Path.Combine(this.TestContext.TestDir, "..", "..", "UnitTests", "xmlHelpertest.xml");
+        }
+
+        private XmlHelper LoadXml()
+        {
+            XmlHelper xml = new XmlHelper();
+            xml.LoadFromFile(this.GetXmlFilePath());
+            return xml;
+        }
+
         [TestMethod]
         public void Traverse()
         {
-            XmlHelper xml = new XmlHelper();
-            xml.LoadFromFile(XmlTest.XmlFilePath);
-
+            XmlHelper xml = this.LoadXml();
             Assert.IsTrue(Object.ReferenceEquals(xml.Node(""), xml.TopNode)); // top node
             Assert.IsTrue(String.Equals(xml.Node("test.block.a").Name, "a", StringComparison.Ordinal)); // traverse
 

@@ -22,7 +22,7 @@ namespace iLand.Core
         public Establishment Establishment { get; private set; } ///< establishment submodel
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
         public double LaiFraction { get; private set; }
-        public double RemovedVolume { get; private set; } ///< sum of volume with was remvoved because of death/management (m3/ha)
+        public double RemovedStemVolume { get; private set; } ///< sum of volume with was remvoved because of death/management (m3/ha)
         public SpeciesResponse Response { get; private set; }
         public ResourceUnit RU { get; private set; } ///< return pointer to resource unit
         public SaplingStat SaplingStats { get; private set; } ///< statistics for the sapling sub module
@@ -45,7 +45,7 @@ namespace iLand.Core
             this.BiomassGrowth = new Production3PG();
             this.Establishment = new Establishment();
             this.mLastYear = -1;
-            this.RemovedVolume = 0.0;
+            this.RemovedStemVolume = 0.0;
             this.Response = new SpeciesResponse();
             this.RU = ru;
             this.SaplingStats = new SaplingStat();
@@ -64,7 +64,7 @@ namespace iLand.Core
             Debug.WriteLineIf(Species.Index > 1000 || Species.Index < 0, "suspicious species?? in RUS::setup()");
         }
 
-        public void Calculate(bool fromEstablishment = false)
+        public void Calculate(Model model, bool fromEstablishment = false)
         {
             // if *not* called from establishment, clear the species-level-stats
             if (!fromEstablishment)
@@ -73,7 +73,7 @@ namespace iLand.Core
             }
 
             // if already processed in this year, do not repeat
-            if (mLastYear == GlobalSettings.Instance.CurrentYear)
+            if (mLastYear == model.GlobalSettings.CurrentYear)
             {
                 return;
             }
@@ -83,12 +83,12 @@ namespace iLand.Core
                 // execute the water calculation...
                 if (fromEstablishment)
                 {
-                    RU.WaterCycle.Run(); // run the water sub model (only if this has not be done already)
+                    RU.WaterCycle.Run(model); // run the water sub model (only if this has not be done already)
                 }
                 using DebugTimer rst = new DebugTimer("ResourceUnitSpecies.Calculate(Response + BiomassGrowth)");
-                Response.Calculate();// calculate environmental responses per species (vpd, temperature, ...)
-                BiomassGrowth.Calculate();// production of NPP
-                mLastYear = GlobalSettings.Instance.CurrentYear; // mark this year as processed
+                Response.Calculate(this.RU.Climate);// calculate environmental responses per species (vpd, temperature, ...)
+                BiomassGrowth.Calculate(model);// production of NPP
+                mLastYear = model.GlobalSettings.CurrentYear; // mark this year as processed
             }
             else
             {
@@ -110,7 +110,7 @@ namespace iLand.Core
             // removed growth is the running sum of all removed
             // tree volume. the current "GWL" therefore is current volume (standing) + mRemovedGrowth.
             // important: statisticsDead() and statisticsMgmt() need to calculate() before -> volume() is already scaled to ha
-            RemovedVolume += StatisticsDead.Volume + StatisticsMgmt.Volume;
+            RemovedStemVolume += StatisticsDead.StemVolume + StatisticsMgmt.StemVolume;
         }
     }
 }

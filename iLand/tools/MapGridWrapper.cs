@@ -9,85 +9,85 @@ namespace iLand.Tools
     {
         private bool mCreated;
 
-        public MapGrid Map { get; private set; } ///< acccess for C++ classes
+        public MapGrid StandGrid { get; private set; }
 
-        public MapGridWrapper()
+        public MapGridWrapper(Model model)
         {
-            mCreated = false;
-            if (GlobalSettings.Instance.Model == null)
+            this.mCreated = false;
+            if (model == null)
             {
                 return;
             }
-            Map = GlobalSettings.Instance.Model.StandGrid;
+            this.StandGrid = model.StandGrid;
         }
 
-        public void Load(string file_name)
-        {
-            Map = new MapGrid(file_name);
-            mCreated = true;
-        }
+        //public void Load(Model model, string fileName)
+        //{
+        //    this.StandGrid = new MapGrid(model, fileName);
+        //    this.mCreated = true;
+        //}
 
         public bool IsValid()
         {
-            return Map.IsValid();
+            return StandGrid.IsValid();
         }
 
-        public void Clear()
+        public void Clear(Model model)
         {
             if (!mCreated)
             {
                 // create a empty map
-                Map = new MapGrid();
-                Map.CreateEmptyGrid();
+                StandGrid = new MapGrid();
+                StandGrid.CreateEmptyGrid(model);
                 mCreated = true;
             }
-            Map.Grid.Initialize(0); // clear all data and set to 0
+            StandGrid.Grid.Initialize(0); // clear all data and set to 0
         }
 
-        public void ClearProjectArea()
+        public void ClearProjectArea(Model model)
         {
             if (!mCreated)
             {
                 // create a empty map
-                Map = new MapGrid();
-                Map.CreateEmptyGrid();
+                StandGrid = new MapGrid();
+                StandGrid.CreateEmptyGrid(model);
                 mCreated = true;
             }
-            MapGrid stand_grid = GlobalSettings.Instance.Model.StandGrid;
-            if (stand_grid == null)
+            MapGrid standGrid = model.StandGrid;
+            if (standGrid == null)
             {
                 Debug.WriteLine("clearProjectArea: no valid stand grid to copy from!");
                 return;
             }
-            for (int index = 0; index < stand_grid.Grid.Count; ++index)
+            for (int index = 0; index < standGrid.Grid.Count; ++index)
             {
-                Map.Grid[index] = stand_grid.Grid[index] < 0 ? stand_grid.Grid[index] : 0;
+                StandGrid.Grid[index] = standGrid.Grid[index] < 0 ? standGrid.Grid[index] : 0;
             }
         }
 
-        public void CreateStand(int stand_id, string paint_function, bool wrap_around)
+        public void CreateStand(Model model, int standID, string paintFunction, bool wrapAround)
         {
-            if (Map == null)
+            if (StandGrid == null)
             {
                 throw new NotSupportedException("no valid map to paint on");
             }
-            Expression expr = new Expression(paint_function);
+            Expression expr = new Expression(paintFunction);
             expr.AddVariable("x");
             expr.AddVariable("y");
             expr.CatchExceptions = true;
-            if (!wrap_around)
+            if (!wrapAround)
             {
                 // now loop over all cells ...
-                for (int p = 0; p < Map.Grid.Count; ++p)
+                for (int p = 0; p < StandGrid.Grid.Count; ++p)
                 {
-                    Point pt = Map.Grid.IndexOf(p);
-                    PointF ptf = Map.Grid.GetCellCenterPoint(pt);
+                    Point pt = StandGrid.Grid.IndexOf(p);
+                    PointF ptf = StandGrid.Grid.GetCellCenterPoint(pt);
                     // set the variable values and evaluate the expression
                     expr.SetVariable("x", ptf.X);
                     expr.SetVariable("y", ptf.Y);
-                    if (expr.Execute() != 0)
+                    if (expr.Execute(model.GlobalSettings) != 0)
                     {
-                        p = stand_id;
+                        p = standID;
                     }
                 }
             }
@@ -95,12 +95,12 @@ namespace iLand.Tools
             {
                 // WRAP AROUND MODE
                 // now loop over all cells ...
-                double delta_x = GlobalSettings.Instance.Model.WorldExtentUnbuffered.Width;
-                double delta_y = GlobalSettings.Instance.Model.WorldExtentUnbuffered.Height;
-                for (int p = 0; p != Map.Grid.Count; ++p)
+                double delta_x = model.WorldExtentUnbuffered.Width;
+                double delta_y = model.WorldExtentUnbuffered.Height;
+                for (int p = 0; p != StandGrid.Grid.Count; ++p)
                 {
-                    Point pt = Map.Grid.IndexOf(p);
-                    PointF ptf = Map.Grid.GetCellCenterPoint(pt);
+                    Point pt = StandGrid.Grid.IndexOf(p);
+                    PointF ptf = StandGrid.Grid.GetCellCenterPoint(pt);
                     if (ptf.X < 0.0 || ptf.X > delta_x || ptf.Y < 0.0 || ptf.Y > delta_y)
                     {
                         continue;
@@ -113,26 +113,27 @@ namespace iLand.Tools
                         {
                             expr.SetVariable("x", ptf.X + dx * delta_x);
                             expr.SetVariable("y", ptf.Y + dy * delta_y);
-                            if (expr.Execute() != 0)
+                            if (expr.Execute(model.GlobalSettings) != 0)
                             {
-                                p = stand_id;
+                                p = standID;
                             }
                         }
                     }
                 }
             }
             // after changing the map, recreate the index
-            Map.CreateIndex();
+            StandGrid.CreateIndex(model);
         }
 
         public double CopyPolygonFromRect(MapGridWrapper source, int id_in, int id, double destx, double desty, double x1, double y1, double x2, double y2)
         {
-            Grid<int> src = source.Map.Grid;
-            Grid<int> dest = this.Map.Grid;
+            Grid<int> src = source.StandGrid.Grid;
+            Grid<int> dest = this.StandGrid.Grid;
             Rectangle destRectangle = dest.CellExtent();
             Rectangle r = new Rectangle(destRectangle.X, destRectangle.Y, destRectangle.Width, destRectangle.Height);
             Point rsize = dest.IndexAt(new PointF((float)(destx + (x2 - x1)), (float)(desty + (y2 - y1))));
-            r.Intersect(new Rectangle(dest.IndexAt(new PointF((float)destx, (float)desty)), new Size(rsize)));
+            Point destination = dest.IndexAt((float)destx, (float)desty);
+            r.Intersect(new Rectangle(destination.X, destination.Y, rsize.X, rsize.Y));
             Point dest_coord = dest.IndexAt(new PointF((float)destx, (float)desty));
             Point offset = dest.IndexAt(new PointF((float)x1, (float)y1));
             offset.X -= dest_coord.X;
@@ -167,19 +168,19 @@ namespace iLand.Tools
             return (double)j / 100.0; // in ha
         }
 
-        public void CreateMapIndex()
+        public void CreateMapIndex(Model model)
         {
-            if (Map != null)
+            if (StandGrid != null)
             {
-                Map.CreateIndex();
+                StandGrid.CreateIndex(model);
             }
         }
 
         public string Name()
         {
-            if (Map != null)
+            if (StandGrid != null)
             {
-                return Map.Name;
+                return StandGrid.Name;
             }
             else
             {
@@ -189,9 +190,9 @@ namespace iLand.Tools
 
         public double Area(int id)
         {
-            if (Map != null && Map.IsValid())
+            if (StandGrid != null && StandGrid.IsValid())
             {
-                return Map.Area(id);
+                return StandGrid.Area(id);
             }
             else
             {

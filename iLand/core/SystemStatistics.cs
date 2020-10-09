@@ -1,12 +1,10 @@
-﻿using iLand.Tools;
-using System;
-using System.Collections.Generic;
+﻿using System;
 
 namespace iLand.Core
 {
     /** holds system statistics primarily aimed for performance and memory analyis.
       */
-    internal class SystemStatistics
+    public class SystemStatistics
     {
         public int NewSaplings { get; set; }
         public int SaplingCount { get; set; }
@@ -38,14 +36,14 @@ namespace iLand.Core
             SeedDistributionTime = SaplingTime = EstablishmentTime = CarbonCycleTime = WriteOutputTime = TotalYearTime = TimeSpan.Zero;
         }
 
-        public void WriteOutput()
-        {
-            if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.Performance))
-            {
-                List<object> output = GlobalSettings.Instance.DebugList(0, DebugOutputs.Performance);
-                output.AddRange(new object[] { TreeCount, SaplingCount, NewSaplings, ManagementTime, ApplyPatternTime, ReadPatternTime, TreeGrowthTime,
-                                               SeedDistributionTime, EstablishmentTime, SaplingTime, CarbonCycleTime, WriteOutputTime, TotalYearTime } );
-            }
-        }
+        //public void AddToDebugList()
+        //{
+        //    if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.Performance))
+        //    {
+        //        List<object> output = GlobalSettings.Instance.DebugList(0, DebugOutputs.Performance);
+        //        output.AddRange(new object[] { TreeCount, SaplingCount, NewSaplings, ManagementTime, ApplyPatternTime, ReadPatternTime, TreeGrowthTime,
+        //                                       SeedDistributionTime, EstablishmentTime, SaplingTime, CarbonCycleTime, WriteOutputTime, TotalYearTime } );
+        //    }
+        //}
     }
 }

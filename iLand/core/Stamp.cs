@@ -13,11 +13,11 @@ namespace iLand.Core
     */
     public class Stamp
     {
+        public int CenterCellPosition { get; set; } ///< delta between edge of the stamp and the logical center point (of the tree). e.g. a 5x5 stamp in an 8x8-grid has an offset from 2.
         public float CrownArea { get; private set; }
         public float CrownRadius { get; private set; }
         public float[] Data { get; private set; }
         public int DataSize { get; private set; } ///< internal size of the stamp; e.g. 4 -> 4x4 stamp with 16 pixels.
-        public int DistanceOffset { get; set; } ///< delta between edge of the stamp and the logical center point (of the tree). e.g. a 5x5 stamp in an 8x8-grid has an offset from 2.
         public Stamp Reader { get; private set; } ///< pointer to the appropriate reader stamp (if available)
 
         public Stamp(int dataSize)
@@ -40,7 +40,7 @@ namespace iLand.Core
 
             this.Data = new float[dataSize * dataSize];
             this.DataSize = dataSize;
-            this.DistanceOffset = 0;
+            this.CenterCellPosition = 0;
             this.Reader = null;
             this.CrownArea = 0.0F;
             this.CrownRadius = 0.0F;
@@ -80,11 +80,11 @@ namespace iLand.Core
             CrownArea = r * r * MathF.PI;
         }
 
-        public int Size() { return DistanceOffset * 2 + 1; } ///< logical size of the stamp
+        public int Size() { return CenterCellPosition * 2 + 1; } ///< logical size of the stamp
 
         public float GetDistanceToCenter(int ix, int iy)
         {
-            return StampContainer.DistanceGrid[Math.Abs(ix - DistanceOffset), Math.Abs(iy - DistanceOffset)];
+            return SpeciesStamps.DistanceGrid[Math.Abs(ix - CenterCellPosition), Math.Abs(iy - CenterCellPosition)];
         }
 
         //float distanceToCenter(int ix, int iy)
@@ -136,8 +136,8 @@ namespace iLand.Core
         public void Load(BinaryReader input)
         {
             // see StampContainer doc for file stamp binary format
-            this.DistanceOffset = input.ReadInt32();
-            Debug.Assert((this.DistanceOffset >= 0) && (this.DistanceOffset <= this.DataSize / 2));
+            this.CenterCellPosition = input.ReadInt32();
+            Debug.Assert((this.CenterCellPosition >= 0) && (this.CenterCellPosition <= this.DataSize / 2));
             // load data
             for (int index = 0; index < this.Count(); index++)
             {
@@ -149,7 +149,7 @@ namespace iLand.Core
         public void Save(BinaryWriter output)
         {
             // see StampContainer doc for file stamp binary format
-            output.Write(this.DistanceOffset);
+            output.Write(this.CenterCellPosition);
             for (int i = 0; i < this.Count(); i++)
             {
                 output.Write(this.Data[i]);

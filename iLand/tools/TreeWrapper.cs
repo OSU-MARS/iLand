@@ -1,22 +1,25 @@
 ﻿using iLand.Core;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 
 namespace iLand.Tools
 {
     internal class TreeWrapper : ExpressionWrapper
     {
-        private static readonly List<string> treeVarList;
+        private static readonly ReadOnlyCollection<string> TreeVariableNames;
 
         public Tree Tree { get; set; }
 
         static TreeWrapper()
         {
-            treeVarList = new List<string>(BaseVarList);
-            treeVarList.AddRange(new string[] { "id", "dbh", "height", "ruindex" /* 0..3*/, "x", "y", "volume", "lri", "leafarea", "lightresponse", // 4-9
-                               "woodymass", "rootmass", "foliagemass", "age", "opacity" /* 10-14 */, "dead", "stress", "deltad", //15-17
-                               "afoliagemass", "species" /* 18, 19 */, "basalarea", "crownarea" /* 20, 21 */, "markharvest", "markcut", "markcrop", "markcompetitor" }); // 22-25
+            TreeWrapper.TreeVariableNames = new List<string>(BaseVariableNames)
+            {
+                "id", "dbh", "height", "ruindex" /* 0..3*/, "x", "y", "volume", "lri", "leafarea", "lightresponse", // 4-9
+                "woodymass", "rootmass", "foliagemass", "age", "opacity" /* 10-14 */, "dead", "stress", "deltad", //15-17
+                "afoliagemass", "species" /* 18, 19 */, "basalarea", "crownarea" /* 20, 21 */, "markharvest", "markcut", "markcrop", "markcompetitor"
+            }.AsReadOnly(); // 22-25
         }
 
         public TreeWrapper()
@@ -29,16 +32,16 @@ namespace iLand.Tools
             Tree = tree;
         }
 
-        public override List<string> GetVariablesList()
+        public override ReadOnlyCollection<string> GetVariablesList()
         {
-            return treeVarList;
+            return TreeVariableNames;
         }
 
-        public override double Value(int variableIndex)
+        public override double Value(int variableIndex, GlobalSettings globalSettings)
         {
             Debug.Assert(Tree != null);
 
-            return (variableIndex - BaseVarList.Count) switch
+            return (variableIndex - BaseVariableNames.Count) switch
             {
                 0 => Tree.ID,// id
                 1 => Tree.Dbh,// dbh
@@ -66,7 +69,7 @@ namespace iLand.Tools
                 23 => Tree.IsMarkedForCut() ? 1 : 0,// markcut
                 24 => Tree.IsMarkedAsCropTree() ? 1 : 0,// markcrop
                 25 => Tree.IsMarkedAsCropCompetitor() ? 1 : 0,// markcompetitor
-                _ => base.Value(variableIndex),
+                _ => base.Value(variableIndex, globalSettings),
             };
         }
     }

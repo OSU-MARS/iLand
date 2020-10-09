@@ -3,8 +3,8 @@
     // TODO: remove and replace with SqliteType
     public enum OutputDatatype
     { 
-        OutInteger, 
-        OutDouble, 
-        OutString 
+        Integer, 
+        Double, 
+        String 
     }
 }

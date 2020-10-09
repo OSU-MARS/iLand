@@ -15,7 +15,7 @@ namespace iLand.Core
       */
     public class Species
     {
-        private readonly StampContainer mLIPs; ///< ptr to the container of the LIP-pattern
+        private readonly SpeciesStamps mLIPs; ///< ptr to the container of the LIP-pattern
 
         // biomass allometries:
         private double mFoliage_a, mFoliage_b;  ///< allometry (biomass = a * dbh^b) for foliage
@@ -104,7 +104,7 @@ namespace iLand.Core
             this.mAging = new Expression();
             this.EstablishmentParameters = new EstablishmentParameters();
             this.Index = set.SpeciesCount();
-            this.mLIPs = new StampContainer();
+            this.mLIPs = new SpeciesStamps();
             this.mHDhigh = new Expression();
             this.mHDlow = new Expression();
             this.SaplingGrowthParameters = new SaplingGrowthParameters();
@@ -125,8 +125,16 @@ namespace iLand.Core
 
         public Stamp GetStamp(float dbh, float height) { return mLIPs.GetStamp(dbh, height); }
 
-        public double GetLightResponse(double lightResourceIndex) { return SpeciesSet.LightResponse(lightResourceIndex, mLightResponseClass); }
-        public double GetNitrogenResponse(double availableNitrogen) { return SpeciesSet.NitrogenResponse(availableNitrogen, mRespNitrogenClass); }
+        public double GetLightResponse(GlobalSettings globalSettings, double lightResourceIndex) 
+        { 
+            return SpeciesSet.LightResponse(globalSettings, lightResourceIndex, mLightResponseClass); 
+        }
+
+        public double GetNitrogenResponse(double availableNitrogen) 
+        {
+            return SpeciesSet.NitrogenResponse(availableNitrogen, mRespNitrogenClass); 
+        }
+
         // parameters for seed dispersal
         public void GetTreeMigKernel(ref double ras1, ref double ras2, ref double ks) { ras1 = mTM_as1; ras2 = mTM_as2; ks = mTM_ks; }
 
@@ -134,7 +142,7 @@ namespace iLand.Core
             Data is fetched from the open query (or file, ...) in the parent SpeciesSet using xyzVar() functions.
             This is called
             */
-        public static Species Load(SpeciesReader reader, SpeciesSet speciesSet)
+        public static Species Load(SpeciesReader reader, SpeciesSet speciesSet, GlobalSettings globalSettings)
         {
             Species species = new Species(speciesSet)
             {
@@ -144,10 +152,10 @@ namespace iLand.Core
             };
             string stampFile = reader.LipFile();
             // load stamps
-            species.mLIPs.Load(GlobalSettings.Instance.Path(stampFile, "lip"));
+            species.mLIPs.Load(globalSettings.Path(stampFile, "lip"));
             // attach writer stamps to reader stamps
             species.mLIPs.AttachReaderStamps(species.SpeciesSet.ReaderStamps);
-            if (GlobalSettings.Instance.Settings.GetBooleanParameter("debugDumpStamps", false))
+            if (globalSettings.Settings.GetBooleanParameter("debugDumpStamps", false))
             {
                 Debug.WriteLine(species.mLIPs.Dump());
             }
@@ -190,8 +198,8 @@ namespace iLand.Core
             // hd-relations
             species.mHDlow.SetAndParse(reader.HdLow());
             species.mHDhigh.SetAndParse(reader.HdHigh());
-            species.mHDlow.Linearize(0.0, 100.0); // input: dbh (cm). above 100cm the formula will be directly executed
-            species.mHDhigh.Linearize(0.0, 100.0);
+            species.mHDlow.Linearize(globalSettings, 0.0, 100.0); // input: dbh (cm). above 100cm the formula will be directly executed
+            species.mHDhigh.Linearize(globalSettings, 0.0, 100.0);
 
             // form/density
             species.WoodDensity = reader.WoodDensity();
@@ -224,7 +232,7 @@ namespace iLand.Core
             species.mMaximumAge = reader.MaximumAge();
             species.mMaximumHeight = reader.MaximumHeight();
             species.mAging.SetAndParse(reader.Aging());
-            species.mAging.Linearize(0.0, 1.0); // input is harmonic mean of relative age and relative height
+            species.mAging.Linearize(globalSettings, 0.0, 1.0); // input is harmonic mean of relative age and relative height
             if (species.mMaximumAge * species.mMaximumHeight == 0.0)
             {
                 throw new NotSupportedException(String.Format("Error setting up species {0}:invalid aging parameters.", species.ID));
@@ -244,7 +252,7 @@ namespace iLand.Core
             species.DeathProbabilityIntrinsic = 1.0 - Math.Pow(p_lucky, 1.0 / species.mMaximumAge);
             species.mDeathProb_stress = p_lucky_stress;
 
-            if (GlobalSettings.Instance.LogInfo())
+            if (globalSettings.LogInfo())
             {
                 Debug.WriteLine("species " + species.Name + " probStress " + p_lucky_stress + " resulting probability: " + species.mDeathProb_stress);
             }
@@ -312,7 +320,7 @@ namespace iLand.Core
 
             // sapling and sapling growth parameters
             species.SaplingGrowthParameters.HeightGrowthPotential.SetAndParse(reader.SaplingGrowthParametersHeightGrowthPotential());
-            species.SaplingGrowthParameters.HeightGrowthPotential.Linearize(0.0, 4.0);
+            species.SaplingGrowthParameters.HeightGrowthPotential.Linearize(globalSettings, 0.0, 4.0);
             species.SaplingGrowthParameters.HdSapling = reader.SaplingGrowthParametersHdSapling();
             species.SaplingGrowthParameters.StressThreshold = reader.SaplingGrowthParametersStressThreshold();
             species.SaplingGrowthParameters.MaxStressYears = reader.SaplingGrowthParametersMaxStressYears();
@@ -347,7 +355,7 @@ namespace iLand.Core
            see http://iland.boku.ac.at/primary+production#respiration_and_aging
            @param useAge set to true if "real" tree age is available. If false, only the tree height is used.
           */
-        public double Aging(float height, int age)
+        public double Aging(GlobalSettings globalSettings, float height, int age)
         {
             double rel_height = Math.Min(height / mMaximumHeight, 0.999999); // 0.999999 -> avoid div/0
             double rel_age = Math.Min(age / mMaximumAge, 0.999999);
@@ -355,7 +363,7 @@ namespace iLand.Core
             // harmonic mean: http://en.wikipedia.org/wiki/Harmonic_mean
             double x = 1.0 - 2.0 / (1.0 / (1.0 - rel_height) + 1.0 / (1.0 - rel_age)); // Note:
 
-            double aging_factor = mAging.Calculate(x);
+            double aging_factor = mAging.Calculate(globalSettings, x);
 
             return Global.Limit(aging_factor, 0.0, 1.0); // limit to [0..1]
         }
@@ -371,15 +379,15 @@ namespace iLand.Core
            If seeds are produced, this information is stored in a "SeedMap"
           */
         /// check the maturity of the tree and flag the position as seed source appropriately
-        public void SeedProduction(Tree tree)
+        public void SeedProduction(GlobalSettings globalSettings, Tree tree)
         {
-            if (SeedDispersal == null)
+            if (this.SeedDispersal == null)
             {
                 return; // regeneration is disabled
             }
 
             // if the tree is considered as serotinous (i.e. seeds need external trigger such as fire)
-            if (IsTreeSerotinous(tree.Age))
+            if (this.IsTreeSerotinous(globalSettings, tree.Age))
             {
                 return;
             }
@@ -392,14 +400,14 @@ namespace iLand.Core
         }
 
         /// returns true of a tree with given age/height is serotinous (i.e. seed release after fire)
-        public bool IsTreeSerotinous(int age)
+        public bool IsTreeSerotinous(GlobalSettings globalSettings, int age)
         {
             if (mSerotiny.IsEmpty)
             {
                 return false;
             }
             // the function result (e.g. from a logistic regression model, e.g. Schoennagel 2013) is interpreted as probability
-            double p_serotinous = mSerotiny.Calculate(age);
+            double p_serotinous = mSerotiny.Calculate(globalSettings, age);
             if (RandomGenerator.Random() < p_serotinous)
             {
                 return true;
@@ -413,25 +421,25 @@ namespace iLand.Core
         /** newYear is called by the SpeciesSet at the beginning of a year before any growth occurs.
           This is used for various initializations, e.g. to clear seed dispersal maps
           */
-        public void NewYear()
+        public void NewYear(GlobalSettings globalSettings)
         {
             if (SeedDispersal != null)
             {
                 // decide whether current year is a seed year
                 IsSeedYear = (RandomGenerator.Random() < mSeedYearProbability);
-                if (IsSeedYear && GlobalSettings.Instance.LogDebug())
+                if (IsSeedYear && globalSettings.LogDebug())
                 {
                     Debug.WriteLine("species " + ID + " has a seed year.");
                 }
                 // clear seed map
-                SeedDispersal.Clear();
+                SeedDispersal.Clear(globalSettings);
             }
         }
 
-        public void GetHeightDiameterRatioLimits(double dbh, out double rLowHD, out double rHighHD)
+        public void GetHeightDiameterRatioLimits(GlobalSettings globalSettings, double dbh, out double rLowHD, out double rHighHD)
         {
-            rLowHD = mHDlow.Calculate(dbh);
-            rHighHD = mHDhigh.Calculate(dbh);
+            rLowHD = mHDlow.Calculate(globalSettings, dbh);
+            rHighHD = mHDhigh.Calculate(globalSettings, dbh);
         }
 
         /** vpdResponse calculates response on vpd.
@@ -455,7 +463,7 @@ namespace iLand.Core
 
         /** soilwaterResponse is a function of the current matrix potential of the soil.
           */
-        public double SoilwaterResponse(double psi_kPa)
+        public double SoilWaterResponse(double psi_kPa)
         {
             double psi_mpa = psi_kPa / 1000.0; // convert to MPa
             double result = Global.Limit((psi_mpa - PsiMin) / (-0.015 - PsiMin), 0.0, 1.0);

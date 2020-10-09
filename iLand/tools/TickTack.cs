@@ -2,6 +2,7 @@
 
 namespace iLand.Tools
 {
+    // TODO: remove and convert to Stopwatch()
     internal class TickTack
     {
         private readonly Stopwatch t;

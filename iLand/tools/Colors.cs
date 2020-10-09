@@ -100,7 +100,7 @@ namespace iLand.Tools
 
             HasFactors = false;
             int n = 50;
-            if (type >= GridViewType.GridViewBrewerDiv)
+            if (type >= GridViewType.rewerDiv)
             {
                 // categorical values...
                 HasFactors = true;
@@ -114,7 +114,7 @@ namespace iLand.Tools
                     }
                 }
             }
-            if (type != GridViewType.GridViewCustom)
+            if (type != GridViewType.Custom)
             {
                 FactorColors.Clear();
                 for (int i = 0; i < n; ++i)
@@ -160,7 +160,7 @@ namespace iLand.Tools
             //setPalette(GridViewType.GridViewRainbow, 0, 1);
             // factors test
             SetCaptionAndDescription(String.Empty);
-            SetPalette(GridViewType.GridViewTerrain, 0, 4);
+            SetPalette(GridViewType.Terrain, 0, 4);
         }
 
         public Color ColorFromPalette(int value, GridViewType view_type)
@@ -173,13 +173,13 @@ namespace iLand.Tools
             Color col;
             switch (view_type)
             {
-                case GridViewType.GridViewBrewerDiv:
+                case GridViewType.rewerDiv:
                     col = mBrewerDiv[n];
                     break;
-                case GridViewType.GridViewBrewerQual: 
+                case GridViewType.BrewerQual: 
                     col = mBrewerQual[n]; 
                     break;
-                case GridViewType.GridViewTerrain: 
+                case GridViewType.Terrain: 
                     col = mTerrainCol[n]; 
                     break;
                 default: 
@@ -258,17 +258,17 @@ namespace iLand.Tools
 
         public Color ColorFromValue(float value, GridViewType view_type, float min_value, float max_value)
         {
-            if (view_type == GridViewType.GridViewGray || view_type == GridViewType.GridViewGrayReverse)
+            if (view_type == GridViewType.Grey || view_type == GridViewType.GreyReverse)
             {
-                return ColorFromValue(value, min_value, max_value, view_type == GridViewType.GridViewGrayReverse, true);
+                return ColorFromValue(value, min_value, max_value, view_type == GridViewType.GreyReverse, true);
             }
 
-            if (view_type == GridViewType.GridViewRainbow || view_type == GridViewType.GridViewRainbowReverse)
+            if (view_type == GridViewType.Rainbow || view_type == GridViewType.RainbowReverse)
             {
-                return ColorFromValue(value, min_value, max_value, view_type == GridViewType.GridViewRainbowReverse, false);
+                return ColorFromValue(value, min_value, max_value, view_type == GridViewType.RainbowReverse, false);
             }
 
-            if (view_type == GridViewType.GridViewGreens || view_type == GridViewType.GridViewBlues || view_type == GridViewType.GridViewReds)
+            if (view_type == GridViewType.Greens || view_type == GridViewType.Blues || view_type == GridViewType.Reds)
             {
                 float rval = value;
                 rval = Math.Max(min_value, rval);
@@ -277,17 +277,17 @@ namespace iLand.Tools
                 int r, g, b;
                 switch (view_type)
                 {
-                    case GridViewType.GridViewGreens:  // 11,111,19
+                    case GridViewType.Greens:  // 11,111,19
                         r = (int)(220 - rel_value * (220 - 11));
                         g = (int)(220 - rel_value * (220 - 111)); 
                         b = (int)(220 - rel_value * (220 - 19)); 
                         break;
-                    case GridViewType.GridViewBlues: //15,67,138
+                    case GridViewType.Blues: //15,67,138
                         r = (int)(220 - rel_value * (220 - 15)); 
                         g = (int)(220 - rel_value * (220 - 67)); 
                         b = (int)(220 - rel_value * (220 - 138));
                         break;
-                    case GridViewType.GridViewReds: //219,31,72
+                    case GridViewType.Reds: //219,31,72
                         r = (int)(240 - rel_value * (220 - 219)); 
                         g = (int)(240 - rel_value * (220 - 31)); 
                         b = (int)(240 - rel_value * (220 - 72)); 
@@ -299,7 +299,7 @@ namespace iLand.Tools
                 return Color.FromArgb(r, g, b);
             }
 
-            if (view_type == GridViewType.GridViewHeat)
+            if (view_type == GridViewType.Heat)
             {
                 float rval = value;
                 rval = Math.Max(min_value, rval);

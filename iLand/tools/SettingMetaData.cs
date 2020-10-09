@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace iLand.Tools
 {
@@ -9,9 +10,9 @@ namespace iLand.Tools
     /** @class SettingMetaData
      This is some help text for the SettingMetaData class.
         */
-    internal class SettingMetaData
+    public class SettingMetaData
     {
-        private static readonly List<string> TypeNames = new List<string>() { "invalid", "species", "model" };
+        private static readonly ReadOnlyCollection<string> TypeNames = new List<string>() { "invalid", "species", "model" }.AsReadOnly();
 
         public enum Type { SettingInvalid, SpeciesSetting, ModelSetting };
         private Type mType;

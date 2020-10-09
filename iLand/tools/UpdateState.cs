@@ -7,12 +7,12 @@ namespace iLand.Tools
     {
         private int mCurrentVal; // state of last explicit "update"
         private int mVal; // current state
-        private readonly List<UpdateState> mChilds;
+        private readonly List<UpdateState> mChildren;
         private readonly Dictionary<UpdateState, int> mSavedStates;
 
         public UpdateState()
         {
-            mChilds = new List<UpdateState>();
+            mChildren = new List<UpdateState>();
             mCurrentVal = 0;
             mSavedStates = new Dictionary<UpdateState, int>();
             mVal = 0;
@@ -20,7 +20,7 @@ namespace iLand.Tools
 
         public void AddChild(UpdateState state) 
         {
-            mChilds.Add(state); 
+            mChildren.Add(state); 
         }
 
         public void Invalidate(bool self)
@@ -29,7 +29,7 @@ namespace iLand.Tools
             {
                 mVal++;
             }
-            foreach (UpdateState s in mChilds)
+            foreach (UpdateState s in mChildren)
             {
                 s.Invalidate(true);
             }

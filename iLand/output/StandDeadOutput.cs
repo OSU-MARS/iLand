@@ -17,20 +17,18 @@ namespace iLand.Output
             Columns.Add(SqlColumn.CreateResourceUnit());
             Columns.Add(SqlColumn.CreateID());
             Columns.Add(SqlColumn.CreateSpecies());
-            Columns.Add(new SqlColumn("count_ha", "tree count (that died this year)", OutputDatatype.OutInteger));
-            Columns.Add(new SqlColumn("dbh_avg_cm", "average dbh (cm)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("height_avg_m", "average tree height (m)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("volume_m3", "volume (geomery, taper factor) in m3", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("NPP_kg", "sum of NPP (aboveground + belowground) kg Biomass/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("NPPabove_kg", "sum of NPP (abovegroundground) kg Biomass/ha", OutputDatatype.OutDouble));
+            Columns.Add(new SqlColumn("count_ha", "tree count (that died this year)", OutputDatatype.Integer));
+            Columns.Add(new SqlColumn("dbh_avg_cm", "average dbh (cm)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("height_avg_m", "average tree height (m)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("volume_m3", "volume (geomery, taper factor) in m3", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("NPP_kg", "sum of NPP (aboveground + belowground) kg Biomass/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("NPPabove_kg", "sum of NPP (abovegroundground) kg Biomass/ha", OutputDatatype.Double));
         }
 
-        protected override void LogYear(SqliteCommand insertRow)
+        protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            Model m = GlobalSettings.Instance.Model;
-
-            foreach (ResourceUnit ru in m.ResourceUnits)
+            foreach (ResourceUnit ru in model.ResourceUnits)
             {
                 if (ru.ID == -1)
                 {
@@ -43,14 +41,14 @@ namespace iLand.Output
                     {
                         continue;
                     }
-                    this.Add(CurrentYear());
+                    this.Add(model.GlobalSettings.CurrentYear);
                     this.Add(ru.Index);
                     this.Add(ru.ID);
                     this.Add(rus.Species.ID); // keys
                     this.Add(stat.Count);
                     this.Add(stat.AverageDbh);
                     this.Add(stat.AverageHeight);
-                    this.Add(stat.Volume);
+                    this.Add(stat.StemVolume);
                     this.Add(stat.BasalArea);
                     this.Add(stat.Npp);
                     this.Add(stat.NppAbove);

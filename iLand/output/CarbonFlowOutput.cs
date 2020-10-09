@@ -1,7 +1,6 @@
 ﻿using iLand.Core;
 using iLand.Tools;
 using Microsoft.Data.Sqlite;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace iLand.Output
@@ -30,53 +29,51 @@ namespace iLand.Output
             Columns.Add(SqlColumn.CreateYear());
             Columns.Add(SqlColumn.CreateResourceUnit());
             Columns.Add(SqlColumn.CreateID());
-            Columns.Add(new SqlColumn("area_ha", "total stockable area of the resource unit (or landscape) (ha)", OutputDatatype.OutDouble));
+            Columns.Add(new SqlColumn("area_ha", "total stockable area of the resource unit (or landscape) (ha)", OutputDatatype.Double));
             Columns.Add(new SqlColumn("GPP", "actually realized gross primary production, kg C; ((primary production|GPP)) including " +
                                          "the effect of decreasing productivity with age; note that a rough estimate of " +
-                                         "((sapling growth and competition|#sapling C and N dynamics|sapling GPP)) is added to the GPP of adult trees here.", OutputDatatype.OutDouble));
+                                         "((sapling growth and competition|#sapling C and N dynamics|sapling GPP)) is added to the GPP of adult trees here.", OutputDatatype.Double));
             Columns.Add(new SqlColumn("NPP", "net primary production, kg C; calculated as NPP=GPP-Ra; Ra, the autotrophic respiration (kg C/ha) is calculated as" +
-                                         " a fixed fraction of GPP in iLand (see ((primary production|here)) for details). ", OutputDatatype.OutDouble));
+                                         " a fixed fraction of GPP in iLand (see ((primary production|here)) for details). ", OutputDatatype.Double));
             Columns.Add(new SqlColumn("Rh", "heterotrophic respiration, kg C; sum of C released to the atmosphere from detrital pools, i.e." +
-                                         " ((snag dynamics|#Snag decomposition|snags)), ((soil C and N cycling|downed deadwood, litter, and mineral soil)).", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("dist_loss", "disturbance losses, kg C; C that leaves the ecosystem as a result of disturbances, e.g. fire consumption", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("mgmt_loss", "management losses, kg C; C that leaves the ecosystem as a result of management interventions, e.g. harvesting", OutputDatatype.OutDouble));
+                                         " ((snag dynamics|#Snag decomposition|snags)), ((soil C and N cycling|downed deadwood, litter, and mineral soil)).", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("dist_loss", "disturbance losses, kg C; C that leaves the ecosystem as a result of disturbances, e.g. fire consumption", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("mgmt_loss", "management losses, kg C; C that leaves the ecosystem as a result of management interventions, e.g. harvesting", OutputDatatype.Double));
             Columns.Add(new SqlColumn("NEP", "net ecosytem productivity kg C, NEP=NPP - Rh - disturbance losses - management losses. " +
                                          "Note that NEP is also equal to the total net changes over all ecosystem C pools, as reported in the " +
-                                         "carbon output (cf. [http://www.jstor.org/stable/3061028|Randerson et al. 2002])", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("cumNPP", "cumulative NPP, kg C. This is a running sum of NPP (including tree NPP and sapling carbon gain).", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("cumRh", "cumulative flux to atmosphere (heterotrophic respiration), kg C. This is a running sum of Rh.", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("cumNEP", "cumulative NEP (net ecosystem productivity), kg C. This is a running sum of NEP (positive values: carbon gain, negative values: carbon loss).", OutputDatatype.OutDouble));
+                                         "carbon output (cf. [http://www.jstor.org/stable/3061028|Randerson et al. 2002])", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("cumNPP", "cumulative NPP, kg C. This is a running sum of NPP (including tree NPP and sapling carbon gain).", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("cumRh", "cumulative flux to atmosphere (heterotrophic respiration), kg C. This is a running sum of Rh.", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("cumNEP", "cumulative NEP (net ecosystem productivity), kg C. This is a running sum of NEP (positive values: carbon gain, negative values: carbon loss).", OutputDatatype.Double));
         }
 
-        public override void Setup()
+        public override void Setup(GlobalSettings globalSettings)
         {
             // use a condition for to control execuation for the current year
-            string condition = Settings().GetString(".condition", "");
+            string condition = globalSettings.Settings.GetString(".condition", "");
             mFilter.SetExpression(condition);
 
-            condition = Settings().GetString(".conditionRU", "");
+            condition = globalSettings.Settings.GetString(".conditionRU", "");
             mResourceUnitFilter.SetExpression(condition);
         }
 
-        protected override void LogYear(SqliteCommand insertRow)
+        protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            Model m = GlobalSettings.Instance.Model;
-
             // global condition
-            if (!mFilter.IsEmpty && mFilter.Calculate(GlobalSettings.Instance.CurrentYear) == 0.0)
+            if (!mFilter.IsEmpty && mFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
             {
                 return;
             }
             bool ru_level = true;
             // switch off details if this is indicated in the conditionRU option
-            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(GlobalSettings.Instance.CurrentYear) == 0.0)
+            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
             {
                 ru_level = false;
             }
 
             int ru_count = 0;
             double[] accumulatedValues = new double[10]; // 11? data values per RU
-            foreach (ResourceUnit ru in m.ResourceUnits) 
+            foreach (ResourceUnit ru in model.ResourceUnits) 
             {
                 if (ru.ID == -1)
                 {
@@ -107,7 +104,7 @@ namespace iLand.Output
                 if (ru_level)
                 {
                     // keys
-                    this.Add(CurrentYear());
+                    this.Add(model.GlobalSettings.CurrentYear);
                     this.Add(ru.Index);
                     this.Add(ru.ID);
                     this.Add(areaFactor);
@@ -145,7 +142,7 @@ namespace iLand.Output
             {
                 return;
             }
-            this.Add(CurrentYear());
+            this.Add(model.GlobalSettings.CurrentYear);
             this.Add(-1);
             this.Add(-1); // codes -1/-1 for landscape level
             this.Add(accumulatedValues[0]); // stockable area [m2]

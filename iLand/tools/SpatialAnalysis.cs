@@ -28,20 +28,20 @@ namespace iLand.Tools
             this.mRumple = null;
         }
 
-        public double RumpleIndexFullArea()
+        public double RumpleIndexFullArea(Model model)
         {
             if (mRumple == null)
             {
                 mRumple = new RumpleIndex();
             }
-            double rum = mRumple.Value();
+            double rum = mRumple.Value(model);
             return rum;
         }
 
         /// extract patches (clumps) from the grid 'src'.
         /// Patches are defined as adjacent pixels (8-neighborhood)
         /// Return: vector with number of pixels per patch (first element: patch 1, second element: patch 2, ...)
-        public List<int> ExtractPatches(Grid<double> src, int min_size, string fileName)
+        public List<int> ExtractPatches(GlobalSettings globalSettings, Grid<double> src, int min_size, string fileName)
         {
             mClumpGrid.Setup(src.PhysicalExtent, src.CellSize);
             mClumpGrid.ClearDefault();
@@ -126,46 +126,45 @@ namespace iLand.Tools
             Debug.WriteLine("extractPatches: found " + patch_index + " patches, total valid pixels: " + total_size + " skipped" + patches_skipped);
             if (String.IsNullOrEmpty(fileName) == false)
             {
-                Debug.WriteLine("extractPatches: save to file: " + GlobalSettings.Instance.Path(fileName));
-                Helper.SaveToTextFile(GlobalSettings.Instance.Path(fileName), Grid.ToEsriRaster(mClumpGrid));
+                Debug.WriteLine("extractPatches: save to file: " + globalSettings.Path(fileName));
+                Helper.SaveToTextFile(globalSettings.Path(fileName), Grid.ToEsriRaster(mClumpGrid));
             }
             return counts;
 
         }
 
-        public void SaveRumpleGrid(string fileName)
+        public void SaveRumpleGrid(Model model, string fileName)
         {
             if (mRumple == null)
             {
                 mRumple = new RumpleIndex();
             }
-            Helper.SaveToTextFile(GlobalSettings.Instance.Path(fileName), Grid.ToEsriRaster(mRumple.RumpleGrid()));
+            Helper.SaveToTextFile(model.GlobalSettings.Path(fileName), Grid.ToEsriRaster(mRumple.RumpleGrid(model)));
         }
 
-        public void SaveCrownCoverGrid(string fileName)
+        public void SaveCrownCoverGrid(Model model, string fileName)
         {
-            CalculateCrownCover();
-            Helper.SaveToTextFile(GlobalSettings.Instance.Path(fileName), Grid.ToEsriRaster(mCrownCoverGrid));
+            CalculateCrownCover(model);
+            Helper.SaveToTextFile(model.GlobalSettings.Path(fileName), Grid.ToEsriRaster(mCrownCoverGrid));
         }
 
-        private void CalculateCrownCover()
+        private void CalculateCrownCover(Model model)
         {
-            mCrownCoverGrid.Setup(GlobalSettings.Instance.Model.ResourceUnitGrid.PhysicalExtent,
-                                  GlobalSettings.Instance.Model.ResourceUnitGrid.CellSize);
+            mCrownCoverGrid.Setup(model.ResourceUnitGrid.PhysicalExtent, model.ResourceUnitGrid.CellSize);
 
             // calculate the crown cover per resource unit. We use the "reader"-stamps of the individual trees
             // as they represent the crown (size). We also simply hijack the LIF grid for our calculations.
-            Grid<float> grid = GlobalSettings.Instance.Model.LightGrid;
+            Grid<float> grid = model.LightGrid;
             grid.Initialize(0.0F);
             // we simply iterate over all trees of all resource units (not bothering about multithreading here)
-            AllTreeIterator ati = new AllTreeIterator(GlobalSettings.Instance.Model);
+            AllTreeIterator ati = new AllTreeIterator(model);
             for (Tree t = ati.MoveNextLiving(); t != null; t = ati.MoveNextLiving())
             {
                 // apply the reader-stamp
                 Stamp reader = t.Stamp.Reader;
                 Point pos_reader = t.LightCellIndex; // tree position
-                pos_reader.X -= reader.DistanceOffset;
-                pos_reader.Y -= reader.DistanceOffset;
+                pos_reader.X -= reader.CenterCellPosition;
+                pos_reader.Y -= reader.CenterCellPosition;
                 int reader_size = reader.Size();
                 int rx = pos_reader.X;
                 int ry = pos_reader.Y;
@@ -185,32 +184,32 @@ namespace iLand.Tools
                 }
             }
             // now aggregate values for each resource unit
-            Model model = GlobalSettings.Instance.Model;
-            for (int rg = 0; rg < mCrownCoverGrid.Count; ++rg)
+            for (int crownIndex = 0; crownIndex < mCrownCoverGrid.Count; ++crownIndex)
             {
-                ResourceUnit ru = model.ResourceUnitGrid[mCrownCoverGrid.IndexOf(rg)];
+                ResourceUnit ru = model.ResourceUnitGrid[mCrownCoverGrid.IndexOf(crownIndex)];
                 if (ru == null)
                 {
-                    mCrownCoverGrid[rg] = 0.0F;
+                    mCrownCoverGrid[crownIndex] = 0.0F;
                     continue;
                 }
-                float cc_sum = 0.0F;
-                GridRunner<float> runner = new GridRunner<float>(grid, mCrownCoverGrid.GetCellRect(mCrownCoverGrid.IndexOf(rg)));
-                for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
+                int cellsWithCrownCoverage = 0;
+                GridRunner<float> coverRunner = new GridRunner<float>(grid, mCrownCoverGrid.GetCellRect(mCrownCoverGrid.IndexOf(crownIndex)));
+                for (coverRunner.MoveNext(); coverRunner.IsValid(); coverRunner.MoveNext())
                 {
-                    float gv = runner.Current;
-                    if (model.HeightGridValue(runner.CurrentIndex().X, runner.CurrentIndex().Y).IsValid())
+                    float canopyCover = coverRunner.Current;
+                    if (model.HeightGridValue(coverRunner.CurrentIndex().X, coverRunner.CurrentIndex().Y).IsInWorld())
                     {
-                        if (gv >= 0.5F) // 0.5: half of a 2m cell is covered by a tree crown; is a bit pragmatic but seems reasonable (and works)
+                        if (canopyCover >= 0.5F) // 0.5: half of a 2m cell is covered by a tree crown; is a bit pragmatic but seems reasonable (and works)
                         {
-                            cc_sum++;
+                            // TODO: why not sum the canopy cover?
+                            cellsWithCrownCoverage++;
                         }
                     }
                 }
                 if (ru.StockableArea > 0.0)
                 {
-                    double value = Constant.LightSize * Constant.LightSize * cc_sum / ru.StockableArea;
-                    mCrownCoverGrid[rg] = (float)Global.Limit(value, 0.0, 1.0);
+                    double value = Constant.LightSize * Constant.LightSize * cellsWithCrownCoverage / ru.StockableArea;
+                    mCrownCoverGrid[crownIndex] = (float)Global.Limit(value, 0.0, 1.0);
                 }
             }
         }

@@ -19,7 +19,6 @@ namespace iLand.Core
     {
         private static Grid<float> LightGrid = null; // BUGBUG: threading
         private static Grid<HeightGridValue> HeightGrid = null;  // BUGBUG: threading
-        private static int NextID = 0;
 
         public static LandscapeRemovedOutput LandscapeRemovalOutput { get; set; }
         public static int StampApplications { get; set; }
@@ -77,7 +76,7 @@ namespace iLand.Core
             mDbhDelta = mNPPReserve = LightResourceIndex = StressIndex = 0.0F;
             mLightResponse = 0.0F;
             Stamp = null;
-            ID = Tree.NextID++; // BUGBUG: thread safety
+            ID = 0; // set by ResourceUnit
             Tree.TreesCreated++; // BUGBUG: thread safety
         }
 
@@ -110,8 +109,6 @@ namespace iLand.Core
         public bool IsMarkedAsCropTree() { return IsFlagSet(Flags.MarkCropTree); }
         public void MarkAsCropCompetitor(bool do_mark) { SetFlag(Flags.MarkCropCompetitor, do_mark); }
         public bool IsMarkedAsCropCompetitor() { return IsFlagSet(Flags.MarkCropCompetitor); }
-
-        public void SetNewID() { ID = Tree.NextID++; } ///< force a new id for this object (after copying trees) BUGBUG thread safety
 
         /// set a Flag 'flag' to the value 'value'.
         private void SetFlag(Flags flag, bool value)
@@ -173,7 +170,7 @@ namespace iLand.Core
                                                 StemMass, CoarseRootMass + FoliageMass + LeafArea } );
         }
 
-        public void Setup()
+        public void Setup(Model model)
         {
             if (Dbh <= 0 || Height <= 0)
             {
@@ -194,7 +191,7 @@ namespace iLand.Core
 
             // LeafArea[m2] = LeafMass[kg] * specificLeafArea[m2/kg]
             LeafArea = (float)(FoliageMass * Species.SpecificLeafArea);
-            mOpacity = (float)(1.0F - MathF.Exp(-(float)GlobalSettings.Instance.Model.Settings.LightExtinctionCoefficientOpacity * LeafArea / Stamp.CrownArea));
+            mOpacity = (float)(1.0F - MathF.Exp(-(float)model.ModelSettings.LightExtinctionCoefficientOpacity * LeafArea / Stamp.CrownArea));
             mNPPReserve = (float)((1 + Species.FinerootFoliageRatio) * FoliageMass); // initial value
             mDbhDelta = 0.1F; // initial value: used in growth() to estimate diameter increment
         }
@@ -220,7 +217,7 @@ namespace iLand.Core
             }
             Debug.Assert(Tree.LightGrid != null && Stamp != null && RU != null);
             Point pos = PositionIndex;
-            int offset = Stamp.DistanceOffset;
+            int offset = Stamp.CenterCellPosition;
             pos.X -= offset;
             pos.Y -= offset;
 
@@ -282,7 +279,7 @@ namespace iLand.Core
                                   (this.PositionIndex.Y - bufferOffset) % Constant.LightPerRUsize + bufferOffset); // offset within the ha
             Point ruOffset = new Point(this.PositionIndex.X - pos.X, this.PositionIndex.Y - pos.Y); // offset of the corner of the resource index
 
-            int offset = this.Stamp.DistanceOffset;
+            int offset = this.Stamp.CenterCellPosition;
             pos.X -= offset;
             pos.Y -= offset;
 
@@ -334,7 +331,7 @@ namespace iLand.Core
                 Tree.HeightGrid[p].Height = Height;
             }
 
-            int r = Stamp.Reader.DistanceOffset; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
+            int r = Stamp.Reader.CenterCellPosition; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
             int index_eastwest = PositionIndex.X % Constant.LightPerHeightSize; // 4: very west, 0 east edge
             int index_northsouth = PositionIndex.Y % Constant.LightPerHeightSize; // 4: northern edge, 0: southern edge
             if (index_eastwest - r < 0)
@@ -416,7 +413,7 @@ namespace iLand.Core
             v.Height = MathF.Max(v.Height, Height);
 
 
-            int r = Stamp.Reader.DistanceOffset; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
+            int r = Stamp.Reader.CenterCellPosition; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
             int index_eastwest = PositionIndex.X % Constant.LightPerHeightSize; // 4: very west, 0 east edge
             int index_northsouth = PositionIndex.Y % Constant.LightPerHeightSize; // 4: northern edge, 0: southern edge
             if (index_eastwest - r < 0)
@@ -489,7 +486,7 @@ namespace iLand.Core
             Finally, the "LRI correction" is applied.
             see http://iland.boku.ac.at/competition+for+light for details.
           */
-        public void ReadLightInfluenceField()
+        public void ReadLightInfluenceField(GlobalSettings globalSettings)
         {
             if (Stamp == null)
             {
@@ -503,8 +500,8 @@ namespace iLand.Core
             Point pos_reader = PositionIndex;
             float outside_area_factor = 0.1F;
 
-            int offset_reader = reader.DistanceOffset;
-            int offset_writer = Stamp.DistanceOffset;
+            int offset_reader = reader.CenterCellPosition;
+            int offset_writer = Stamp.CenterCellPosition;
             int d_offset = offset_writer - offset_reader; // offset on the *stamp* to the crown-cells
 
             pos_reader.X -= offset_reader;
@@ -535,7 +532,7 @@ namespace iLand.Core
                     own_value = Math.Max(own_value, 0.02);
                     value = grid_value++ / own_value; // remove impact of focal tree
                                                       // additional punishment if pixel is outside:
-                    if (hgv.IsForestOutside())
+                    if (hgv.IsOutsideWorld())
                     {
                         value *= outside_area_factor;
                     }
@@ -549,7 +546,7 @@ namespace iLand.Core
             double hrel = Height / Tree.HeightGrid[PositionIndex.X / Constant.LightPerHeightSize, PositionIndex.Y / Constant.LightPerHeightSize].Height;
             if (hrel < 1.0F)
             {
-                LightResourceIndex = (float)Species.SpeciesSet.LriCorrection(LightResourceIndex, hrel);
+                LightResourceIndex = (float)Species.SpeciesSet.GetLriCorrection(globalSettings, LightResourceIndex, hrel);
             }
 
             if (LightResourceIndex > 1.0F)
@@ -563,7 +560,7 @@ namespace iLand.Core
         }
 
         /// Torus version of read stamp (glued edges)
-        public void ReadLightIntensityFieldTorus()
+        public void ReadLightIntensityFieldTorus(GlobalSettings globalSettings)
         {
             if (this.Stamp == null)
             {
@@ -580,8 +577,8 @@ namespace iLand.Core
                                          (PositionIndex.Y - bufferOffset) % Constant.LightPerRUsize + bufferOffset); // offset within the ha
             Point ru_offset = new Point(PositionIndex.X - pos_reader.X, PositionIndex.Y - pos_reader.Y); // offset of the corner of the resource index
 
-            int offset_reader = reader.DistanceOffset;
-            int offset_writer = Stamp.DistanceOffset;
+            int offset_reader = reader.CenterCellPosition;
+            int offset_writer = Stamp.CenterCellPosition;
             int d_offset = offset_writer - offset_reader; // offset on the *stamp* to the crown-cells
 
             pos_reader.X -= offset_reader;
@@ -636,7 +633,7 @@ namespace iLand.Core
             double hrel = Height / Tree.HeightGrid[PositionIndex.X / Constant.LightPerHeightSize, PositionIndex.Y / Constant.LightPerHeightSize].Height;
             if (hrel < 1.0)
             {
-                LightResourceIndex = (float)Species.SpeciesSet.LriCorrection(LightResourceIndex, hrel);
+                LightResourceIndex = (float)Species.SpeciesSet.GetLriCorrection(globalSettings, LightResourceIndex, hrel);
             }
 
             if (Double.IsNaN(LightResourceIndex))
@@ -657,7 +654,6 @@ namespace iLand.Core
 
         public static void ResetStatistics()
         {
-            Tree.NextID = 1;
             Tree.StampApplications = 0;
             Tree.TreesCreated = 0;
         }
@@ -672,12 +668,12 @@ namespace iLand.Core
         //}
         //#endif
 
-        public void CalcLightResponse()
+        public void CalcLightResponse(GlobalSettings globalSettings)
         {
             // calculate a light response from lri:
             // http://iland.boku.ac.at/individual+tree+light+availability
             double lri = Global.Limit(LightResourceIndex * RU.LriModifier, 0.0, 1.0); // Eq. (3)
-            mLightResponse = (float)(Species.GetLightResponse(lri)); // Eq. (4)
+            mLightResponse = (float)(Species.GetLightResponse(globalSettings, lri)); // Eq. (4)
             RU.AddLightResponse(LeafArea, mLightResponse);
         }
 
@@ -693,13 +689,13 @@ namespace iLand.Core
           Further activties: * the age of the tree is increased
                              * the mortality sub routine is executed
                              * seeds are produced */
-        public void Grow()
+        public void Grow(Model model)
         {
             TreeGrowthData d = new TreeGrowthData();
             Age++; // increase age
                     // step 1: get "interception area" of the tree individual [m2]
                     // the sum of all area of all trees of a unit equal the total stocked area * interception_factor(Beer-Lambert)
-            double effective_area = RU.InterceptedArea(LeafArea, mLightResponse);
+            double effective_area = RU.InterceptedArea(this.LeafArea, mLightResponse);
 
             // step 2: calculate GPP of the tree based
             // (1) get the amount of GPP for a "unit area" of the tree species
@@ -708,24 +704,24 @@ namespace iLand.Core
             double raw_gpp = raw_gpp_per_area * effective_area;
 
             // apply aging according to the state of the individuum
-            double aging_factor = Species.Aging(Height, Age);
-            RU.AddTreeAging(LeafArea, aging_factor);
-            double gpp = raw_gpp * aging_factor; //
+            double agingFactor = this.Species.Aging(model.GlobalSettings, this.Height, this.Age);
+            RU.AddTreeAging(this.LeafArea, agingFactor);
+            double gpp = raw_gpp * agingFactor; //
             d.NppTotal = gpp * Constant.AutotrophicRespiration; // respiration loss (0.47), cf. Waring et al 1998.
 
             //DBGMODE(
-            if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.TreeNpp) && IsDebugging())
+            if (model.GlobalSettings.IsDebugEnabled(DebugOutputs.TreeNpp) && IsDebugging())
             {
-                List<object> outList = GlobalSettings.Instance.DebugList(ID, DebugOutputs.TreeNpp);
+                List<object> outList = model.GlobalSettings.DebugList(ID, DebugOutputs.TreeNpp);
                 DumpList(outList); // add tree headers
-                outList.AddRange(new object[] { LightResourceIndex * RU.LriModifier, mLightResponse, effective_area, raw_gpp, gpp, d.NppTotal, aging_factor });
+                outList.AddRange(new object[] { LightResourceIndex * RU.LriModifier, mLightResponse, effective_area, raw_gpp, gpp, d.NppTotal, agingFactor });
             }
             //); // DBGMODE()
-            if (GlobalSettings.Instance.Model.Settings.GrowthEnabled)
+            if (model.ModelSettings.GrowthEnabled)
             {
                 if (d.NppTotal > 0.0)
                 {
-                    PartitionBiomass(d); // split npp to compartments and grow (diameter, height)
+                    PartitionBiomass(d, model); // split npp to compartments and grow (diameter, height)
                 }
             }
 
@@ -735,9 +731,9 @@ namespace iLand.Core
             //    altMortality(d);
 
             //#else
-            if (GlobalSettings.Instance.Model.Settings.MortalityEnabled)
+            if (model.ModelSettings.MortalityEnabled)
             {
-                Mortality(d);
+                Mortality(model, d);
             }
             StressIndex = (float)d.StressIndex;
             //#endif
@@ -748,13 +744,13 @@ namespace iLand.Core
             }
 
             // regeneration
-            Species.SeedProduction(this);
+            Species.SeedProduction(model.GlobalSettings, this);
         }
 
         /** partitioning of this years assimilates (NPP) to biomass compartments.
           Conceptionally, the algorithm is based on Duursma, 2007.
           @sa http://iland.boku.ac.at/allocation */
-        private void PartitionBiomass(TreeGrowthData d)
+        private void PartitionBiomass(TreeGrowthData d, Model model)
         {
             double npp = d.NppTotal;
             // add content of reserve pool
@@ -784,17 +780,16 @@ namespace iLand.Core
 
             apct_foliage = 1.0 - apct_root - apct_wood;
 
-
-#if DEBUG
-            if (apct_foliage < 0 || apct_wood < 0)
-            {
-                Debug.WriteLine("transfer to foliage or wood < 0");
-            }
-            if (npp < 0)
-            {
-                Debug.WriteLine("NPP < 0");
-            }
-#endif
+            //#if DEBUG
+            //if (apct_foliage < 0 || apct_wood < 0)
+            //{
+            //    Debug.WriteLine("transfer to foliage or wood < 0");
+            //}
+            //if (npp < 0)
+            //{
+            //    Debug.WriteLine("NPP < 0");
+            //}
+            //#endif
 
             // Change of biomass compartments
             double sen_root = FineRootMass * to_root;
@@ -856,36 +851,35 @@ namespace iLand.Core
             double to_reserve = Math.Min(reserve_size, gross_woody);
             mNPPReserve = (float)(to_reserve);
             double net_woody = gross_woody - to_reserve;
-            double net_stem = 0.0;
             mDbhDelta = 0.0F;
 
             if (net_woody > 0.0)
             {
                 // (2) calculate part of increment that is dedicated to the stem (which is a function of diameter)
-                net_stem = net_woody * Species.AllometricFractionStem(Dbh);
+                double net_stem = net_woody * Species.AllometricFractionStem(Dbh);
                 d.NppStem = net_stem;
                 StemMass += (float)net_woody;
                 //  (3) growth of diameter and height baseed on net stem increment
-                GrowHeightAndDiameter(d);
+                this.GrowHeightAndDiameter(d, model);
             }
 
-            if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.TreePartition) && IsDebugging())
-            {
-                List<object> outList = GlobalSettings.Instance.DebugList(ID, DebugOutputs.TreePartition);
-                DumpList(outList); // add tree headers
-                outList.AddRange(new object[] { npp, apct_foliage, apct_wood, apct_root, delta_foliage, net_woody, delta_root, mNPPReserve, net_stem, d.StressIndex });
-            }
+            //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.TreePartition) && IsDebugging())
+            //{
+            //    List<object> outList = GlobalSettings.Instance.DebugList(ID, DebugOutputs.TreePartition);
+            //    DumpList(outList); // add tree headers
+            //    outList.AddRange(new object[] { npp, apct_foliage, apct_wood, apct_root, delta_foliage, net_woody, delta_root, mNPPReserve, net_stem, d.StressIndex });
+            //}
 
-            #if DEBUG
-            if (StemMass < 0.0 || StemMass > 50000 || FoliageMass < 0.0 || FoliageMass > 2000.0 || CoarseRootMass < 0.0 || CoarseRootMass > 30000 || mNPPReserve > 4000.0)
-            {
-                Debug.WriteLine("Tree:partitioning: invalid or unlikely pools.");
-                Debug.WriteLine(GlobalSettings.Instance.DebugListCaptions((DebugOutputs)0));
-                List<object> dbg = new List<object>();
-                DumpList(dbg);
-                Debug.WriteLine(dbg);
-            }
-            #endif
+            //#if DEBUG
+            //if (StemMass < 0.0 || StemMass > 50000 || FoliageMass < 0.0 || FoliageMass > 2000.0 || CoarseRootMass < 0.0 || CoarseRootMass > 30000 || mNPPReserve > 4000.0)
+            //{
+            //    Debug.WriteLine("Tree:partitioning: invalid or unlikely pools.");
+            //    Debug.WriteLine(GlobalSettings.Instance.DebugListCaptions((DebugOutputs)0));
+            //    List<object> dbg = new List<object>();
+            //    DumpList(dbg);
+            //    Debug.WriteLine(dbg);
+            //}
+            //#endif
             /*Debug.WriteLineIf(mId == 1 , "partitioning", "dump", dump()
                      + String.Format("npp {0} npp_reserve %9 sen_fol {1} sen_stem {2} sen_root {3} net_fol {4} net_stem {5} net_root %7 to_reserve %8")
                        .arg(npp, senescence_foliage, senescence_stem, senescence_root)
@@ -896,11 +890,11 @@ namespace iLand.Core
             Refer to XXX for equations and variables.
             This function updates the dbh and height of the tree.
             The equations are based on dbh in meters! */
-        private void GrowHeightAndDiameter(TreeGrowthData d)
+        private void GrowHeightAndDiameter(TreeGrowthData d, Model model)
         {
             // determine dh-ratio of increment
             // height increment is a function of light competition:
-            double hd_growth = RelativeHeightGrowth(); // hd of height growth
+            double hd_growth = this.RelativeHeightGrowth(model.GlobalSettings); // hd of height growth
             double d_m = Dbh / 100.0; // current diameter in [m]
             double net_stem_npp = d.NppStem;
 
@@ -919,12 +913,10 @@ namespace iLand.Core
 
             // the final increment is then:
             double d_increment = factor_diameter * (net_stem_npp - stem_residual); // Eq. (11)
-            double res_final = 0.0;
             if (Math.Abs(stem_residual) > Math.Min(1.0, stem_mass))
             {
-
                 // calculate final residual in stem
-                res_final = mass_factor * (d_m + d_increment) * (d_m + d_increment) * (Height + d_increment * hd_growth) - ((stem_mass + net_stem_npp));
+                double res_final = mass_factor * (d_m + d_increment) * (d_m + d_increment) * (Height + d_increment * hd_growth) - ((stem_mass + net_stem_npp));
                 if (Math.Abs(res_final) > Math.Min(1.0, stem_mass))
                 {
                     // for large errors in stem biomass due to errors in diameter increment (> 1kg or >stem mass), we solve the increment iteratively.
@@ -969,17 +961,17 @@ namespace iLand.Core
 
             //DBGMODE(
             // do not calculate res_final twice if already done
-            Debug.WriteLineIf((res_final == 0.0 ? Math.Abs(mass_factor * (d_m + d_increment) * (d_m + d_increment) * (Height + d_increment * hd_growth) - ((stem_mass + net_stem_npp))) : res_final) > 1, Dump(),
-                "grow_diameter: final residual stem estimate > 1kg");
-            Debug.WriteLineIf(d_increment > 10.0 || d_increment * hd_growth > 10.0, String.Format("d-increment {0} h-increment {1} ", d_increment, d_increment * hd_growth / 100.0) + Dump(),
-                "grow_diameter growth out of bound");
+            //Debug.WriteLineIf((res_final == 0.0 ? Math.Abs(mass_factor * (d_m + d_increment) * (d_m + d_increment) * (Height + d_increment * hd_growth) - ((stem_mass + net_stem_npp))) : res_final) > 1, Dump(),
+            //    "grow_diameter: final residual stem estimate > 1kg");
+            //Debug.WriteLineIf(d_increment > 10.0 || d_increment * hd_growth > 10.0, String.Format("d-increment {0} h-increment {1} ", d_increment, d_increment * hd_growth / 100.0) + Dump(),
+            //    "grow_diameter growth out of bound");
 
-            if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.TreeGrowth) && IsDebugging())
-            {
-                List<object> outList = GlobalSettings.Instance.DebugList(ID, DebugOutputs.TreeGrowth);
-                DumpList(outList); // add tree headers
-                outList.AddRange(new object[] { net_stem_npp, stem_mass, hd_growth, factor_diameter, delta_d_estimate * 100, d_increment * 100 });
-            }
+            //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.TreeGrowth) && IsDebugging())
+            //{
+            //    List<object> outList = GlobalSettings.Instance.DebugList(ID, DebugOutputs.TreeGrowth);
+            //    DumpList(outList); // add tree headers
+            //    outList.AddRange(new object[] { net_stem_npp, stem_mass, hd_growth, factor_diameter, delta_d_estimate * 100, d_increment * 100 });
+            //}
 
             d_increment = Math.Max(d_increment, 0.0);
 
@@ -991,14 +983,14 @@ namespace iLand.Core
             // update state of LIP stamp and opacity
             Stamp = Species.GetStamp(Dbh, Height); // get new stamp for updated dimensions
             // calculate the CrownFactor which reflects the opacity of the crown
-            float k = (float)GlobalSettings.Instance.Model.Settings.LightExtinctionCoefficientOpacity;
+            float k = (float)model.ModelSettings.LightExtinctionCoefficientOpacity;
             mOpacity = 1.0F - MathF.Exp(-k * LeafArea / Stamp.CrownArea);
         }
 
         /// return the HD ratio of this year's increment based on the light status.
-        private double RelativeHeightGrowth()
+        private double RelativeHeightGrowth(GlobalSettings globalSettings)
         {
-            Species.GetHeightDiameterRatioLimits(Dbh, out double hd_low, out double hd_high);
+            Species.GetHeightDiameterRatioLimits(globalSettings, this.Dbh, out double hd_low, out double hd_high);
 
             Debug.WriteLineIf(hd_low > hd_high, Dump(), "relative_height_growth: hd low higher than hd_high");
             Debug.WriteLineIf(hd_low < 10 || hd_high > 250, Dump() + String.Format(" hd-low: {0} hd-high: {1}", hd_low, hd_high), "relative_height_growth: hd out of range ");
@@ -1012,13 +1004,13 @@ namespace iLand.Core
 
         /** This function is called if a tree dies.
           @sa ResourceUnit::cleanTreeList(), remove() */
-        public void Die(TreeGrowthData d = null)
+        public void Die(Model model, TreeGrowthData d = null)
         {
             SetFlag(Flags.TreeDead, true); // set flag that tree is dead
             RU.TreeDied();
             ResourceUnitSpecies rus = RU.ResourceUnitSpecies(Species);
             rus.StatisticsDead.Add(this, d); // add tree to statistics
-            NotifyTreeRemoved(TreeRemovalType.TreeDeath);
+            NotifyTreeRemoved(model, MortalityCause.Stress);
             if (RU.Snags != null)
             {
                 RU.Snags.AddMortality(this);
@@ -1026,7 +1018,7 @@ namespace iLand.Core
         }
 
         /// remove a tree (most likely due to harvest) from the system.
-        public void Remove(double removeFoliage = 0.0, double removeBranch = 0.0, double removeStem = 0.0)
+        public void Remove(Model model, double removeFoliage = 0.0, double removeBranch = 0.0, double removeStem = 0.0)
         {
             SetFlag(Flags.TreeDead, true); // set flag that tree is dead
             SetDeathReasonHarvested();
@@ -1035,15 +1027,15 @@ namespace iLand.Core
             rus.StatisticsMgmt.Add(this, null);
             if (IsCutDown())
             {
-                NotifyTreeRemoved(TreeRemovalType.TreeCutDown);
+                NotifyTreeRemoved(model, MortalityCause.CutDown);
             }
             else
             {
-                NotifyTreeRemoved(TreeRemovalType.TreeHarvest);
+                NotifyTreeRemoved(model, MortalityCause.Harvest);
             }
-            if (GlobalSettings.Instance.Model.Saplings != null)
+            if (model.Saplings != null)
             {
-                GlobalSettings.Instance.Model.Saplings.AddSprout(this);
+                model.Saplings.AddSprout(this, model);
             }
             if (RU.Snags != null)
             {
@@ -1053,17 +1045,17 @@ namespace iLand.Core
 
         /// remove the tree due to an special event (disturbance)
         /// this is +- the same as die().
-        public void RemoveDisturbance(double stem_to_soil_fraction, double stem_to_snag_fraction, double branch_to_soil_fraction, double branch_to_snag_fraction, double foliage_to_soil_fraction)
+        public void RemoveDisturbance(Model model, double stem_to_soil_fraction, double stem_to_snag_fraction, double branch_to_soil_fraction, double branch_to_snag_fraction, double foliage_to_soil_fraction)
         {
             SetFlag(Flags.TreeDead, true); // set flag that tree is dead
             RU.TreeDied();
             ResourceUnitSpecies rus = RU.ResourceUnitSpecies(Species);
             rus.StatisticsDead.Add(this, null);
-            NotifyTreeRemoved(TreeRemovalType.TreeDisturbance);
+            NotifyTreeRemoved(model, MortalityCause.Disturbance);
 
-            if (GlobalSettings.Instance.Model.Saplings != null)
+            if (model.Saplings != null)
             {
-                GlobalSettings.Instance.Model.Saplings.AddSprout(this);
+                model.Saplings.AddSprout(this, model);
             }
             if (RU.Snags != null)
             {
@@ -1087,12 +1079,12 @@ namespace iLand.Core
             Height = height;
         }
 
-        private void Mortality(TreeGrowthData d)
+        private void Mortality(Model model, TreeGrowthData d)
         {
             // death if leaf area is 0
             if (FoliageMass < 0.00001)
             {
-                Die();
+                Die(model);
             }
 
             double p_death, p_stress, p_intrinsic;
@@ -1103,7 +1095,7 @@ namespace iLand.Core
             if (p < p_death)
             {
                 // die...
-                Die();
+                Die(model);
             }
         }
 
@@ -1135,24 +1127,24 @@ namespace iLand.Core
         //}
         //#endif
 
-        private void NotifyTreeRemoved(TreeRemovalType reason)
+        private void NotifyTreeRemoved(Model model, MortalityCause reason)
         {
             // tell disturbance modules that a tree died
-            GlobalSettings.Instance.Model.Modules.TreeDeath(this, (int)reason);
+            model.Modules.TreeDeath(this, (int)reason);
 
             // update reason, if ABE handled the tree
-            if (reason == TreeRemovalType.TreeDisturbance && IsHarvested())
+            if (reason == MortalityCause.Disturbance && IsHarvested())
             {
-                reason = TreeRemovalType.TreeSalavaged;
+                reason = MortalityCause.Salavaged;
             }
             if (IsCutDown())
             {
-                reason = TreeRemovalType.TreeCutDown;
+                reason = MortalityCause.CutDown;
             }
             // create output for tree removals
             if (TreeRemovalOutput != null && TreeRemovalOutput.IsEnabled)
             {
-                TreeRemovalOutput.LogTreeRemoval(this, (int)reason);
+                TreeRemovalOutput.LogTreeRemoval(model.GlobalSettings, this, (int)reason);
             }
             if (LandscapeRemovalOutput != null && LandscapeRemovalOutput.IsEnabled)
             {

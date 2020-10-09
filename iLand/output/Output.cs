@@ -1,4 +1,5 @@
-﻿using iLand.Tools;
+﻿using iLand.Core;
+using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
@@ -75,15 +76,6 @@ namespace iLand.Output
         public string Description { get; protected set; } ///< description of output
         public string TableName { get; protected set; } ///< internal output name (no spaces allowed)
 
-        //protected void Name(string name, string tableName) { Name = name; TableName = tableName; }
-        protected int CurrentYear() { return GlobalSettings.Instance.CurrentYear; }
-        protected XmlHelper Settings() { return GlobalSettings.Instance.Settings; } ///< access XML settings (see class description)
-
-        protected void Add(double value1, double value2) { Add(value1); Add(value2); }
-        protected void Add(double value1, double value2, double value3) { Add(value1, value2); Add(value3); }
-        protected void Add(double value1, double value2, double value3, double value4) { Add(value1, value2); Add(value3, value4); }
-        protected void Add(double value1, double value2, double value3, double value4, double value5) { Add(value1, value2); Add(value3, value4, value5); }
-
         public Output()
         {
             this.mInsertRowSql = null;
@@ -102,44 +94,64 @@ namespace iLand.Output
             this.mRow.Add(value);
         }
 
-        public void LogYear()
+        protected void Add(double value1, double value2) 
+        { 
+            Add(value1); Add(value2); 
+        }
+
+        protected void Add(double value1, double value2, double value3) 
+        { 
+            Add(value1, value2); Add(value3); 
+        }
+
+        protected void Add(double value1, double value2, double value3, double value4) 
+        { 
+            Add(value1, value2); Add(value3, value4); 
+        }
+
+        protected void Add(double value1, double value2, double value3, double value4, double value5)
+        { 
+            Add(value1, value2); Add(value3, value4, value5); 
+        }
+
+        public void LogYear(Model model)
         {
-            using SqliteTransaction insertTransaction = GlobalSettings.Instance.DatabaseOutput.BeginTransaction();
-            using SqliteCommand insertRow = new SqliteCommand(this.mInsertRowSql, GlobalSettings.Instance.DatabaseOutput, insertTransaction);
+            using SqliteTransaction insertTransaction = model.GlobalSettings.DatabaseOutput.BeginTransaction();
+            using SqliteCommand insertRow = new SqliteCommand(this.mInsertRowSql, model.GlobalSettings.DatabaseOutput, insertTransaction);
             for (int columnIndex = 0; columnIndex < this.Columns.Count; columnIndex++)
             {
                 insertRow.Parameters.Add("@" + this.Columns[columnIndex].Name, this.Columns[columnIndex].Datatype);
             }
 
-            this.LogYear(insertRow);
+            this.LogYear(model, insertRow);
 
             insertTransaction.Commit();
         }
 
-        protected abstract void LogYear(SqliteCommand insertRow);
+        protected abstract void LogYear(Model model, SqliteCommand insertRow);
 
         private void NewRow()
         {
             this.mRow.Clear();
         }
 
-        public void Open()
+        public void Open(GlobalSettings globalSettings)
         {
             if (this.IsOpen)
             {
                 return;
             }
 
-            this.EnsureEmptySqlTable();
+            this.EnsureEmptySqlTable(globalSettings);
             this.mRow.Capacity = this.Columns.Count;
             this.NewRow();
         }
 
         /** create the database table and opens up the output.
           */
-        private void EnsureEmptySqlTable()
+        private void EnsureEmptySqlTable(GlobalSettings globalSettings)
         {
-            SqliteConnection db = GlobalSettings.Instance.DatabaseOutput;
+            SqliteConnection db = globalSettings.DatabaseOutput;
             // create the "create table" statement
             StringBuilder createTableCommand = new StringBuilder("create table " + this.TableName + "(");
             List<string> columnNames = new List<string>(this.Columns.Count);
@@ -174,7 +186,7 @@ namespace iLand.Output
             this.IsOpen = true;
         }
 
-        public virtual void Setup()
+        public virtual void Setup(GlobalSettings globalSettings)
         {
         }
 
@@ -182,7 +194,7 @@ namespace iLand.Output
         {
             StringBuilder result = new StringBuilder();
             result.AppendLine(Name);
-            result.AppendLine(String.Format("Table Name: {0}{2}{1}", Name, TableName, Description, Environment.NewLine));
+            result.AppendLine(String.Format("Table Name: {0}{2}{1}", Name, TableName, Description, System.Environment.NewLine));
             // loop over columns...
             result.AppendLine("||__caption__|__datatype__|__description__"); // table begin
             foreach (SqlColumn col in Columns)

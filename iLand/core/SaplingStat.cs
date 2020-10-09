@@ -48,7 +48,7 @@ namespace iLand.Core
             NewSaplings = 0;
         }
 
-        public void Calculate(Species species, ResourceUnit ru)
+        public void Calculate(Species species, ResourceUnit ru, GlobalSettings globalSettings)
         {
             if (LivingCohorts != 0)
             {
@@ -57,7 +57,7 @@ namespace iLand.Core
                 AverageDeltaHPot /= (double)LivingCohorts;
                 AverageDeltaHRealized /= (double)LivingCohorts;
             }
-            if (GlobalSettings.Instance.CurrentYear == 0)
+            if (globalSettings.CurrentYear == 0)
             {
                 return; // no need for carbon flows in initial run
             }
@@ -138,8 +138,8 @@ namespace iLand.Core
                 CarbonGain.Clear();
             }
 
-            GlobalSettings.Instance.SystemStatistics.SaplingCount += LivingCohorts;
-            GlobalSettings.Instance.SystemStatistics.NewSaplings += NewSaplings;
+            globalSettings.SystemStatistics.SaplingCount += LivingCohorts;
+            globalSettings.SystemStatistics.NewSaplings += NewSaplings;
         }
 
         ///  returns the *represented* (Reineke's Law) number of trees (N/ha) and the mean dbh/height (cm/m)

@@ -26,28 +26,26 @@ namespace iLand.Output
             Columns.Add(SqlColumn.CreateYear());
             Columns.Add(SqlColumn.CreateResourceUnit());
             Columns.Add(SqlColumn.CreateID());
-            Columns.Add(new SqlColumn("stocked_area", "area (ha/ha) which is stocked (covered by crowns, absorbing radiation)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("stockable_area", "area (ha/ha) which is stockable (and within the project area)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("precipitation_mm", "Annual precipitation sum (mm)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("et_mm", "Evapotranspiration (mm)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("excess_mm", "annual sum of water loss due to lateral outflow/groundwater flow (mm)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("snowcover_days", "days with snowcover >0mm", OutputDatatype.OutInteger));
-            Columns.Add(new SqlColumn("total_radiation", "total incoming radiation over the year (MJ/m2), sum of data in climate input)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("radiation_snowcover", "sum of radiation input (MJ/m2) for days with snow cover", OutputDatatype.OutInteger));
+            Columns.Add(new SqlColumn("stocked_area", "area (ha/ha) which is stocked (covered by crowns, absorbing radiation)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("stockable_area", "area (ha/ha) which is stockable (and within the project area)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("precipitation_mm", "Annual precipitation sum (mm)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("et_mm", "Evapotranspiration (mm)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("excess_mm", "annual sum of water loss due to lateral outflow/groundwater flow (mm)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("snowcover_days", "days with snowcover >0mm", OutputDatatype.Integer));
+            Columns.Add(new SqlColumn("total_radiation", "total incoming radiation over the year (MJ/m2), sum of data in climate input)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("radiation_snowcover", "sum of radiation input (MJ/m2) for days with snow cover", OutputDatatype.Integer));
         }
 
-        protected override void LogYear(SqliteCommand insertRow)
+        protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            Model m = GlobalSettings.Instance.Model;
-
             // global condition
-            if (!mFilter.IsEmpty && mFilter.Calculate(GlobalSettings.Instance.CurrentYear) == 0.0)
+            if (!mFilter.IsEmpty && mFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
             {
                 return;
             }
             bool ru_level = true;
             // switch off details if this is indicated in the conditionRU option
-            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(GlobalSettings.Instance.CurrentYear) == 0.0)
+            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
             {
                 ru_level = false;
             }
@@ -56,7 +54,7 @@ namespace iLand.Output
             int snow_days = 0;
             double et = 0.0, excess = 0.0, rad = 0.0, snow_rad = 0.0, p = 0.0;
             double stockable = 0.0, stocked = 0.0;
-            foreach (ResourceUnit ru in m.ResourceUnits)
+            foreach (ResourceUnit ru in model.ResourceUnits)
             {
                 if (ru.ID == -1)
                 {
@@ -65,7 +63,7 @@ namespace iLand.Output
                 WaterCycle wc = ru.WaterCycle;
                 if (ru_level)
                 {
-                    this.Add(CurrentYear());
+                    this.Add(model.GlobalSettings.CurrentYear);
                     this.Add(ru.Index);
                     this.Add(ru.ID);
                     this.Add(ru.StockedArea / Constant.RUArea);
@@ -74,7 +72,7 @@ namespace iLand.Output
                     this.Add(wc.TotalEvapotranspiration);
                     this.Add(wc.TotalWaterLoss);
                     this.Add(wc.SnowDays);
-                    this.Add(ru.Climate.TotalRadiation);
+                    this.Add(ru.Climate.TotalAnnualRadiation);
                     this.Add(wc.SnowDayRad);
                     this.WriteRow(insertRow);
                 }
@@ -84,7 +82,7 @@ namespace iLand.Output
                 p += ru.Climate.AnnualPrecipitation();
                 et += wc.TotalEvapotranspiration; excess += wc.TotalWaterLoss; 
                 snow_days += (int)wc.SnowDays;
-                rad += ru.Climate.TotalRadiation;
+                rad += ru.Climate.TotalAnnualRadiation;
                 snow_rad += wc.SnowDayRad;
             }
 
@@ -93,7 +91,7 @@ namespace iLand.Output
             {
                 return;
             }
-            this.Add(CurrentYear(), -1, -1); // codes -1/-1 for landscape level
+            this.Add(model.GlobalSettings.CurrentYear, -1, -1); // codes -1/-1 for landscape level
             this.Add(stocked / ru_count / Constant.RUArea);
             this.Add(stockable / ru_count / Constant.RUArea);
             this.Add(p / ru_count); // mean precip
@@ -105,13 +103,13 @@ namespace iLand.Output
             this.WriteRow(insertRow);
         }
 
-        public override void Setup()
+        public override void Setup(GlobalSettings globalSettings)
         {
             // use a condition for to control execuation for the current year
-            string condition = Settings().GetString(".condition", "");
+            string condition = globalSettings.Settings.GetString(".condition", "");
             mFilter.SetExpression(condition);
 
-            condition = Settings().GetString(".conditionRU", "");
+            condition = globalSettings.Settings.GetString(".conditionRU", "");
             mResourceUnitFilter.SetExpression(condition);
         }
     }

@@ -21,9 +21,9 @@ namespace iLand.Core
             mData.Clear(); 
         }
 
-        public bool LoadFromFile(string fileName)
+        public bool LoadFromFile(string fileName, GlobalSettings globalSettings)
         {
-            string source = Helper.LoadTextFile(GlobalSettings.Instance.Path(fileName));
+            string source = Helper.LoadTextFile(globalSettings.Path(fileName));
             if (String.IsNullOrEmpty(source))
             {
                 throw new FileNotFoundException(String.Format("TimeEvents: input file does not exist or is empty ({0})", fileName));
@@ -55,9 +55,9 @@ namespace iLand.Core
             return true;
         }
 
-        public void Run()
+        public void Run(GlobalSettings globalSettings)
         {
-            int currentYear = GlobalSettings.Instance.CurrentYear;
+            int currentYear = globalSettings.CurrentYear;
             if (mData.TryGetValue(currentYear, out IReadOnlyCollection<MutableTuple<string, object>> currentEvents) == false || currentEvents.Count == 0)
             {
                 return;
@@ -79,7 +79,7 @@ namespace iLand.Core
                 else
                 {
                     // no special value: a xml node...
-                    if (GlobalSettings.Instance.Settings.SetNodeValue(key, eventInYear.Item2.ToString()))
+                    if (globalSettings.Settings.SetNodeValue(key, eventInYear.Item2.ToString()))
                     {
                         Debug.WriteLine("TimeEvents: Error: Key " + key + "not found! (tried to set to " + eventInYear.Item2.ToString() + ")");
                     }

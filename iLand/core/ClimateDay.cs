@@ -6,8 +6,6 @@ namespace iLand.Core
     // http://iland.boku.ac.at/ClimateData
     public class ClimateDay
     {
-        public static double CarbonDioxidePpm = 350.0; // ambient CO2 content in ppm
-
         public int Year { get; set; } // year
         public int Month { get; set; } // month (1..12)
         public int DayOfMonth { get; set; } // day of the month (1..31)

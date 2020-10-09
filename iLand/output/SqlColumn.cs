@@ -15,31 +15,31 @@ namespace iLand.Output
             this.Description = description;
             this.Datatype = datatype switch
             {
-                OutputDatatype.OutInteger => SqliteType.Integer,
-                OutputDatatype.OutDouble => SqliteType.Real,
-                OutputDatatype.OutString => SqliteType.Text,
+                OutputDatatype.Integer => SqliteType.Integer,
+                OutputDatatype.Double => SqliteType.Real,
+                OutputDatatype.String => SqliteType.Text,
                 _ => throw new NotSupportedException() // blob
             };
         }
 
         public static SqlColumn CreateID()
         {
-            return new SqlColumn("rid", "id of ressource unit (-1: no ids set)", OutputDatatype.OutInteger);
+            return new SqlColumn("rid", "id of ressource unit (-1: no ids set)", OutputDatatype.Integer);
         }
 
         public static SqlColumn CreateResourceUnit()
         {
-            return new SqlColumn("ru", "index of ressource unit", OutputDatatype.OutInteger);
+            return new SqlColumn("ru", "index of ressource unit", OutputDatatype.Integer);
         }
 
         public static SqlColumn CreateSpecies()
         {
-            return new SqlColumn("species", "tree species", OutputDatatype.OutString);
+            return new SqlColumn("species", "tree species", OutputDatatype.String);
         }
 
         public static SqlColumn CreateYear() 
         { 
-            return new SqlColumn("year", "simulation year", OutputDatatype.OutInteger); 
+            return new SqlColumn("year", "simulation year", OutputDatatype.Integer); 
         }
     }
 }

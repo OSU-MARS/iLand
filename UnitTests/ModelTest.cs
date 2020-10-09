@@ -1,8 +1,10 @@
 ﻿using iLand.Core;
 using iLand.Tools;
+using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace iLand.Test
 {
@@ -11,10 +13,121 @@ namespace iLand.Test
     {
         public TestContext TestContext { get; set; }
 
-        [ClassInitialize]
-        public static void ClassInitialize(TestContext testContext)
+        [TestMethod]
+        public void MalcolmKnapp()
         {
-            LandTest.EnsureModel(testContext);
+            string projectDirectory = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "OSU", "iLand", "Malcolm Knapp");
+            // spacing trials
+            using Model plot14 = this.LoadProject(Path.Combine(projectDirectory, "plot 14.xml"));
+            using Model plot16 = this.LoadProject(Path.Combine(projectDirectory, "plot 16.xml"));
+
+            // check soil properties at initial load
+            foreach (ResourceUnit ru in plot16.ResourceUnits)
+            {
+                // resource unit variables read from climate file which are aren't currently test accessible
+                //   ru.Snags: swdC, swdCount, swdCN, swdHalfLife, swdDecomRate, otherC, other CN
+                // resource unit variables read from project file which are aren't currently test accessible
+                //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilDepth,
+                //            mKo (decomposition rate), mH (humification rate0
+                //   ru.WaterCycle.Canopy: interceptionStorageNeedle, interceptionStorageBroadleaf, snowMeltTemperature,
+                //                         waterUseSoilSaturation, pctSand, pctSilt, pctClay
+                //   ru.SpeciesSet: nitrogenResponseClasses 1a, 1b, 2a, 2b, 3a, 3b
+                //                  CO2 baseConcentration, compensationPoint, beta0, p0
+                //                  lightResponse shadeIntolerant, shadeTolerant, LRImodifier
+                //ru.Snags.ClimateFactor;
+                //ru.Snags.FluxToAtmosphere;
+                //ru.Snags.FluxToDisturbance;
+                //ru.Snags.FluxToExtern;
+                //ru.Snags.RefractoryFlux;
+                //ru.Snags.RemoveCarbon;
+                //ru.Soil.ClimateFactor;
+                //ru.Soil.FluxToAtmosphere;
+                //ru.Soil.FluxToDisturbance;
+                // settings from project file are ignored and values from climate file are used 
+                //Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.C - 128.666) < 0.001);
+                //Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.N - 0.08368) < 0.00001);
+                //Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.C - 12.375) < 0.001);
+                //Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.N - 0.6521) < 0.0001);
+                //Assert.IsTrue(ru.Soil.YoungLabile.Weight == 0.227); // TODO: why is decomposition rate read as weight?
+                //Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.C - 33.832) < 0.001);
+                //Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.N - 0.1212) < 0.0001);
+                //Assert.IsTrue(ru.Soil.YoungRefractory.Weight == 0.071); // decomposition rate
+                // Assert.IsTrue(Math.Abs(ru.Soil.AvailableNitrogen - 56.18682579) < 0.001); // BUGBUG: ignored in climate file
+                Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.C - 161.086884) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.N - 17.73954044) < 0.00001);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.C - 4.841498397) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.N - 0.2554353319) < 0.0001);
+                Assert.IsTrue(ru.Soil.YoungLabile.Weight == 0.322);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.C - 45.97414423) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.N - 0.261731921) < 0.0001);
+                Assert.IsTrue(ru.Soil.YoungRefractory.Weight == 0.1790625);
+                //ru.Variables.CarbonToAtm;
+                //ru.Variables.CarbonUptake;
+                //ru.Variables.CumCarbonToAtm;
+                //ru.Variables.CumCarbonUptake;
+                //ru.Variables.CumNep;
+                //ru.Variables.Nep;
+                Assert.IsTrue(Math.Abs(ru.Variables.NitrogenAvailable - 56.18682579) < 0.0001); // BUGBUG: read from climate file but never used, project file setting is silently ignored
+            }
+
+            for (int year = 0; year < 28; ++year)
+            {
+                plot14.RunYear();
+                plot16.RunYear();
+            }
+
+            Assert.IsTrue(plot16.ModelSettings.RegenerationEnabled == false);
+            Assert.IsTrue(plot16.ModelSettings.MortalityEnabled == true);
+            Assert.IsTrue(plot16.ModelSettings.GrowthEnabled == true);
+            Assert.IsTrue(plot16.ModelSettings.CarbonCycleEnabled == true);
+            Assert.IsTrue(plot16.ModelSettings.Epsilon == 2.7);
+            Assert.IsTrue(plot16.ModelSettings.LightExtinctionCoefficient == 0.6);
+            Assert.IsTrue(plot16.ModelSettings.LightExtinctionCoefficientOpacity == 0.6);
+            Assert.IsTrue(plot16.ModelSettings.TemperatureTau == 6.0);
+            Assert.IsTrue(plot16.ModelSettings.AirDensity == 1.204);
+            Assert.IsTrue(plot16.ModelSettings.LaiThresholdForClosedStands == 3.0);
+            Assert.IsTrue(plot16.ModelSettings.BoundaryLayerConductance == 0.2);
+            Assert.IsTrue(plot16.ModelSettings.UseDynamicAvailableNitrogen == false);
+            Assert.IsTrue(plot16.ModelSettings.UseParFractionBelowGroundAllocation == true);
+            Assert.IsTrue(plot16.ModelSettings.TorusMode == true);
+            Assert.IsTrue(Math.Abs(plot16.ModelSettings.Latitude - Global.ToRadians(49.259)) < 0.0001);
+
+            foreach (Climate climate in plot16.Climates)
+            {
+                Phenology conifer = climate.Phenology(0);
+                // private phenology variables read from the project file
+                //   vpdMin, vpdMax, dayLengthMin, dayLengthMax, tempMintempMax
+                //conifer.ChillingDaysLastYear;
+                //conifer.ID;
+                //conifer.LeafOnEnd;
+                //conifer.LeafOnFraction;
+                //conifer.LeafOnStart;
+                Phenology broadleaf = climate.Phenology(1);
+                Phenology deciduousConifer = climate.Phenology(2);
+
+                // private climate variables
+                //   tableName, batchYears, temperatureShift, precipitationShift, randomSamplingEnabled, randomSamplingList, filter
+                Assert.IsTrue(climate.CarbonDioxidePpm == 360.0);
+                Assert.IsTrue((climate.MeanAnnualTemperature > 0.0) && (climate.MeanAnnualTemperature < 30.0));
+                Assert.IsTrue(String.Equals(climate.Name, "HaneyUBC", StringComparison.OrdinalIgnoreCase));
+                Assert.IsTrue(conifer.ID == 0);
+                Assert.IsTrue(broadleaf.ID == 1);
+                Assert.IsTrue(deciduousConifer.ID == 2);
+                // climate.PrecipitationMonth;
+                Assert.IsTrue((climate.Sun.LastDayLongerThan10_5Hours > 0) && (climate.Sun.LastDayLongerThan10_5Hours < 365));
+                Assert.IsTrue((climate.Sun.LastDayLongerThan14_5Hours > 0) && (climate.Sun.LastDayLongerThan14_5Hours < 365));
+                Assert.IsTrue(climate.Sun.LongestDay == 172);
+                Assert.IsTrue(climate.Sun.NorthernHemisphere());
+                // climate.TemperatureMonth;
+                Assert.IsTrue((climate.TotalAnnualRadiation > 4000.0) && (climate.TotalAnnualRadiation < 5000.0));
+            }
+
+            // Nelder plot
+            using Model nelder1 = this.LoadProject(Path.Combine(projectDirectory, "Nelder 1.xml"));
+            for (int year = 0; year < 26; ++year) // age 25 to 51
+            {
+                nelder1.RunYear();
+            }
         }
 
         /// <summary>
@@ -23,13 +136,14 @@ namespace iLand.Test
         [TestMethod]
         public void Species()
         {
-            Species species = LandTest.Model.FirstResourceUnit().SpeciesSet.GetSpecies("piab");
+            using Model model = this.LoadProject(this.GetDefaultProjectPath(this.TestContext));
+            Species species = model.FirstResourceUnit().SpeciesSet.GetSpecies("piab");
             Assert.IsTrue(species != null);
 
             // PIAB: 1/(1 + (x/0.55)^2)
-            double youngAgingFactor = species.Aging(10.0F, 10);
-            double middleAgingFactor = species.Aging(40.0F, 80);
-            double oldAgingFactor = species.Aging(55.5F, 575);
+            double youngAgingFactor = species.Aging(model.GlobalSettings, 10.0F, 10);
+            double middleAgingFactor = species.Aging(model.GlobalSettings, 40.0F, 80);
+            double oldAgingFactor = species.Aging(model.GlobalSettings, 55.5F, 575);
 
             Assert.IsTrue(Math.Abs(youngAgingFactor - 0.964912) < 0.001);
             Assert.IsTrue(Math.Abs(middleAgingFactor - 0.481931) < 0.001);
@@ -46,9 +160,9 @@ namespace iLand.Test
             // PIAB: HDlow = 170*(1)*d^-0.5, HDhigh = (195.547*1.004*(-0.2396+1)*d^-0.2396)*1
             // round(170*(1)*c(3.3, 10, 33)^-0.5, 2)
             // round((195.547*1.004*(-0.2396+1)*c(3.3, 10, 33)^-0.2396)*1, 2)
-            species.GetHeightDiameterRatioLimits(3.3, out double lowLimitSmall, out double highLimitSmall);
-            species.GetHeightDiameterRatioLimits(10.0, out double lowLimitMedium, out double highLimitMedium);
-            species.GetHeightDiameterRatioLimits(33, out double lowLimitLarge, out double highLimitLarge);
+            species.GetHeightDiameterRatioLimits(model.GlobalSettings, 3.3, out double lowLimitSmall, out double highLimitSmall);
+            species.GetHeightDiameterRatioLimits(model.GlobalSettings, 10.0, out double lowLimitMedium, out double highLimitMedium);
+            species.GetHeightDiameterRatioLimits(model.GlobalSettings, 33, out double lowLimitLarge, out double highLimitLarge);
               
             Assert.IsTrue(Math.Abs(lowLimitSmall - 93.58) < 0.01);
             Assert.IsTrue(Math.Abs(lowLimitMedium - 53.76) < 0.01);
@@ -59,9 +173,9 @@ namespace iLand.Test
 
             // PIAB: 44.7*(1-(1-(h/44.7)^(1/3))*exp(-0.044))^3
             // round(44.7*(1-(1-(c(0.25, 1, 4.5)/44.7)^(1/3))*exp(-0.044))^3, 3)
-            double shortPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(0.25);
-            double mediumPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(1);
-            double tallPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(4.5);
+            double shortPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model.GlobalSettings, 0.25);
+            double mediumPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model.GlobalSettings, 1);
+            double tallPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model.GlobalSettings, 4.5);
               
             Assert.IsTrue(Math.Abs(shortPotential - 0.431) < 0.01);
             Assert.IsTrue(Math.Abs(mediumPotential - 1.367) < 0.01);
@@ -71,30 +185,32 @@ namespace iLand.Test
         [TestMethod]
         public void YearSteps()
         {
-            Assert.IsTrue(LandTest.Model.Climates.Count == 1);
-            Assert.IsTrue(LandTest.Model.Dem == null);
-            Assert.IsTrue(LandTest.Model.HeightGrid.PhysicalExtent.Height == 260.0);
-            Assert.IsTrue(LandTest.Model.HeightGrid.PhysicalExtent.Width == 160.0);
-            Assert.IsTrue(LandTest.Model.HeightGrid.PhysicalExtent.X == -60.0);
-            Assert.IsTrue(LandTest.Model.HeightGrid.PhysicalExtent.Y == -60.0);
-            Assert.IsTrue(LandTest.Model.HeightGrid.CellsX == 16);
-            Assert.IsTrue(LandTest.Model.HeightGrid.CellsY == 26);
-            Assert.IsTrue(LandTest.Model.IsSetup == true);
-            Assert.IsTrue(LandTest.Model.LightGrid.PhysicalExtent.Height == 2.0 * 130); // 100 x 200 m world + 60 m buffering = 160 x 260 m
-            Assert.IsTrue(LandTest.Model.LightGrid.PhysicalExtent.Width == 2.0 * 80);
-            Assert.IsTrue(LandTest.Model.LightGrid.PhysicalExtent.X == -60.0);
-            Assert.IsTrue(LandTest.Model.LightGrid.PhysicalExtent.Y == -60.0);
-            Assert.IsTrue(LandTest.Model.LightGrid.CellsX == 80);
-            Assert.IsTrue(LandTest.Model.LightGrid.CellsY == 130);
-            Assert.IsTrue(LandTest.Model.ResourceUnits.Count == 2);
-            Assert.IsTrue(LandTest.Model.ResourceUnitGrid.PhysicalExtent.Height == 200.0);
-            Assert.IsTrue(LandTest.Model.ResourceUnitGrid.PhysicalExtent.Width == 100.0);
-            Assert.IsTrue(LandTest.Model.ResourceUnitGrid.PhysicalExtent.X == 0.0);
-            Assert.IsTrue(LandTest.Model.ResourceUnitGrid.PhysicalExtent.Y == 0.0);
-            Assert.IsTrue(LandTest.Model.ResourceUnitGrid.CellsX == 1);
-            Assert.IsTrue(LandTest.Model.ResourceUnitGrid.CellsY == 2);
-            Assert.IsTrue(LandTest.Model.StandGrid == null);
-            Assert.IsTrue(ThreadRunner.IsMultithreaded == false);
+            using Model model = this.LoadProject(this.GetDefaultProjectPath(this.TestContext));
+
+            Assert.IsTrue(model.Climates.Count == 1);
+            Assert.IsTrue(model.Dem == null);
+            Assert.IsTrue(model.HeightGrid.PhysicalExtent.Height == 200.0F + 2.0F * 60.0F);
+            Assert.IsTrue(model.HeightGrid.PhysicalExtent.Width == 100.0F + 2.0F * 60.0F);
+            Assert.IsTrue(model.HeightGrid.PhysicalExtent.X == -60.0);
+            Assert.IsTrue(model.HeightGrid.PhysicalExtent.Y == -60.0);
+            Assert.IsTrue(model.HeightGrid.CellsX == 22);
+            Assert.IsTrue(model.HeightGrid.CellsY == 32);
+            Assert.IsTrue(model.IsSetup == true);
+            Assert.IsTrue(model.LightGrid.PhysicalExtent.Height == 200.0F + 2.0F * 60.0F); // 100 x 200 m world + 60 m buffering = 220 x 320 m
+            Assert.IsTrue(model.LightGrid.PhysicalExtent.Width == 100.0F + 2.0F * 60.0F);
+            Assert.IsTrue(model.LightGrid.PhysicalExtent.X == -60.0);
+            Assert.IsTrue(model.LightGrid.PhysicalExtent.Y == -60.0);
+            Assert.IsTrue(model.LightGrid.CellsX == 110);
+            Assert.IsTrue(model.LightGrid.CellsY == 160);
+            Assert.IsTrue(model.ResourceUnits.Count == 2);
+            Assert.IsTrue(model.ResourceUnitGrid.PhysicalExtent.Height == 200.0);
+            Assert.IsTrue(model.ResourceUnitGrid.PhysicalExtent.Width == 100.0);
+            Assert.IsTrue(model.ResourceUnitGrid.PhysicalExtent.X == 0.0);
+            Assert.IsTrue(model.ResourceUnitGrid.PhysicalExtent.Y == 0.0);
+            Assert.IsTrue(model.ResourceUnitGrid.CellsX == 1);
+            Assert.IsTrue(model.ResourceUnitGrid.CellsY == 2);
+            Assert.IsTrue(model.StandGrid == null);
+            Assert.IsTrue(model.ThreadRunner.IsMultithreaded == false);
 
             Dictionary<int, float> initialDiameters = new Dictionary<int, float>();
             Dictionary<int, float> initialHeights = new Dictionary<int, float>();
@@ -104,26 +220,50 @@ namespace iLand.Test
             {
                 initialDiameters.Clear();
                 initialHeights.Clear();
-                foreach (Tree tree in LandTest.Model.ResourceUnits[0].Trees)
+                foreach (Tree tree in model.ResourceUnits[0].Trees)
                 {
                     initialDiameters.Add(tree.ID, tree.Dbh);
                     initialHeights.Add(tree.ID, tree.Height);
                 }
 
-                LandTest.Model.RunYear();
+                model.RunYear();
+
+                foreach (ResourceUnit ru in model.ResourceUnits)
+                {
+                    // not currently checked
+                    //ru.CornerPointOffset;
+                    //ru.HasDeadTrees;
+                    //ru.SaplingCells;
+                    //ru.Snags;
+                    //ru.Soil;
+                    //ru.Species;
+                    //ru.SpeciesSet;
+                    //ru.Trees;
+                    //ru.Variables;
+                    Assert.IsTrue(model.ResourceUnitGrid.PhysicalExtent.Contains(ru.BoundingBox));
+                    Assert.IsTrue((ru.AverageAging > 0.0) && (ru.AverageAging < 1.0));
+                    Assert.IsTrue((ru.EffectiveAreaPerWla > 0.0) && (ru.EffectiveAreaPerWla <= 1.0));
+                    Assert.IsTrue(ru.ID >= 0);
+                    Assert.IsTrue(ru.Index >= 0);
+                    Assert.IsTrue((ru.LriModifier > 0.0) && (ru.LriModifier <= 1.0));
+                    Assert.IsTrue((ru.ProductiveArea > 0.0) && (ru.ProductiveArea <= Constant.RUArea));
+                    Assert.IsTrue(ru.StockableArea == Constant.RUArea);
+                    Assert.IsTrue((ru.StockedArea > 0.0) && (ru.StockedArea <= Constant.RUArea));
+                    Assert.IsTrue((ru.TotalLeafArea > 0.0) && (ru.TotalLeafArea < 20.0 * Constant.RUArea));
+                }
 
                 finalDiameters.Clear();
                 finalHeights.Clear();
-                foreach (Tree tree in LandTest.Model.ResourceUnits[0].Trees)
+                foreach (Tree tree in model.ResourceUnits[0].Trees)
                 {
                     finalDiameters.Add(tree.ID, tree.Dbh);
                     finalHeights.Add(tree.ID, tree.Height);
                 }
 
                 int minimumTreeCount = 31 - 4 * year;
-                int resourceUnit0treeCount = LandTest.Model.ResourceUnits[0].Trees.Count;
+                int resourceUnit0treeCount = model.ResourceUnits[0].Trees.Count;
                 Assert.IsTrue(resourceUnit0treeCount >= minimumTreeCount);
-                Assert.IsTrue(LandTest.Model.ResourceUnits[1].Trees.Count >= minimumTreeCount);
+                Assert.IsTrue(model.ResourceUnits[1].Trees.Count >= minimumTreeCount);
                 Assert.IsTrue(initialDiameters.Count >= minimumTreeCount);
                 Assert.IsTrue(initialHeights.Count >= minimumTreeCount);
                 Assert.IsTrue(finalDiameters.Count >= minimumTreeCount);
@@ -151,26 +291,26 @@ namespace iLand.Test
                 float maxLight = Single.MinValue;
                 float meanLight = 0.0F;
                 float minLight = Single.MaxValue;
-                for (int lightIndex = 0; lightIndex < LandTest.Model.LightGrid.Count; ++lightIndex)
+                for (int lightIndex = 0; lightIndex < model.LightGrid.Count; ++lightIndex)
                 {
-                    float light = LandTest.Model.LightGrid[lightIndex];
+                    float light = model.LightGrid[lightIndex];
                     maxLight = MathF.Max(light, maxLight);
                     meanLight += light;
                     minLight = MathF.Min(light, minLight);
                 }
-                meanLight /= LandTest.Model.LightGrid.Count;
+                meanLight /= model.LightGrid.Count;
 
                 float maxGridHeight = Single.MinValue;
                 float meanGridHeight = 0.0F;
                 float minGridHeight = Single.MaxValue;
-                for (int heightIndex = 0; heightIndex < LandTest.Model.HeightGrid.Count; ++heightIndex)
+                for (int heightIndex = 0; heightIndex < model.HeightGrid.Count; ++heightIndex)
                 {
-                    float height = LandTest.Model.HeightGrid[heightIndex].Height;
+                    float height = model.HeightGrid[heightIndex].Height;
                     maxGridHeight = MathF.Max(height, maxGridHeight);
                     meanGridHeight += height;
                     minGridHeight = MathF.Min(height, minGridHeight);
                 }
-                meanGridHeight /= LandTest.Model.HeightGrid.Count;
+                meanGridHeight /= model.HeightGrid.Count;
 
                 Assert.IsTrue(averageDiameterGrowth > 0.2F);
                 Assert.IsTrue(averageHeightGrowth > 0.2F);

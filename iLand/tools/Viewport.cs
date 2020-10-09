@@ -83,15 +83,14 @@ namespace iLand.Tools
         {
             PointF worldBottomLeft = ToWorld(new Point(m_screen.Left, m_screen.Top));
             PointF worldTopRight = ToWorld(new Point(m_screen.Right, m_screen.Bottom));
-            SizeF worldSize = new SizeF(worldTopRight.X - worldBottomLeft.X, worldTopRight.Y - worldTopRight.Y);
-            return new RectangleF(worldBottomLeft.X, worldBottomLeft.Y, worldSize.Width, worldSize.Height);
+            return new RectangleF(worldBottomLeft.X, worldBottomLeft.Y, worldTopRight.X - worldBottomLeft.X, worldTopRight.Y - worldTopRight.Y);
         }
 
         public Rectangle ToScreen(RectangleF world)
         {
             Point p1 = ToScreen(new PointF(world.Left, world.Bottom));
             Point p2 = ToScreen(new PointF(world.Right, world.Top));
-            Rectangle r = new Rectangle(p1, new Size(p2.X - p1.X, p2.Y - p1.Y));
+            Rectangle r = new Rectangle(p1.X, p2.Y, p2.X - p1.X, p2.Y - p1.Y);
             return r;
         }
 

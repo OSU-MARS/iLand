@@ -15,8 +15,8 @@ namespace iLand.Core
             {
                 mNames = new List<LayerElement>()
                 {
-                    new LayerElement("effect", "prohibiting effect on regeneration [0..1]", GridViewType.GridViewGreens),
-                    new LayerElement("cover", "current grass cover on pixels [0..1 for continuous, or #(years+2) for pixel mode]", GridViewType.GridViewGreens)
+                    new LayerElement("effect", "prohibiting effect on regeneration [0..1]", GridViewType.Greens),
+                    new LayerElement("cover", "current grass cover on pixels [0..1 for continuous, or #(years+2) for pixel mode]", GridViewType.Greens)
                 };
             }
             return mNames;

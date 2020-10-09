@@ -1,7 +1,6 @@
 ﻿using iLand.Core;
 using iLand.Tools;
 using Microsoft.Data.Sqlite;
-using System.Collections.Generic;
 
 namespace iLand.Output
 {
@@ -28,61 +27,59 @@ namespace iLand.Output
             Columns.Add(SqlColumn.CreateYear());
             Columns.Add(SqlColumn.CreateResourceUnit());
             Columns.Add(SqlColumn.CreateID());
-            Columns.Add(new SqlColumn("area_ha", "total stockable area of the resource unit (ha)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("stem_c", "Stem carbon kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("stem_n", "Stem nitrogen kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("branch_c", "branches carbon kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("branch_n", "branches nitrogen kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("foliage_c", "Foliage carbon kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("foliage_n", "Foliage nitrogen kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("coarseRoot_c", "coarse root carbon kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("coarseRoot_n", "coarse root nitrogen kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("fineRoot_c", "fine root carbon kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("fineRoot_n", "fine root nitrogen kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("regeneration_c", "total carbon in regeneration layer (h<4m) kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("regeneration_n", "total nitrogen in regeneration layer (h<4m) kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("snags_c", "standing dead wood carbon kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("snags_n", "standing dead wood nitrogen kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("snagsOther_c", "branches and coarse roots of standing dead trees, carbon kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("snagsOther_n", "branches and coarse roots of standing dead trees, nitrogen kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("downedWood_c", "downed woody debris (yR), carbon kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("downedWood_n", "downed woody debris (yR), nitrogen kg/ga", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("litter_c", "soil litter (yl), carbon kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("litter_n", "soil litter (yl), nitrogen kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("soil_c", "soil organic matter (som), carbon kg/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("soil_n", "soil organic matter (som), nitrogen kg/ha", OutputDatatype.OutDouble));
+            Columns.Add(new SqlColumn("area_ha", "total stockable area of the resource unit (ha)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("stem_c", "Stem carbon kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("stem_n", "Stem nitrogen kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("branch_c", "branches carbon kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("branch_n", "branches nitrogen kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("foliage_c", "Foliage carbon kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("foliage_n", "Foliage nitrogen kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("coarseRoot_c", "coarse root carbon kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("coarseRoot_n", "coarse root nitrogen kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("fineRoot_c", "fine root carbon kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("fineRoot_n", "fine root nitrogen kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("regeneration_c", "total carbon in regeneration layer (h<4m) kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("regeneration_n", "total nitrogen in regeneration layer (h<4m) kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("snags_c", "standing dead wood carbon kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("snags_n", "standing dead wood nitrogen kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("snagsOther_c", "branches and coarse roots of standing dead trees, carbon kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("snagsOther_n", "branches and coarse roots of standing dead trees, nitrogen kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("downedWood_c", "downed woody debris (yR), carbon kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("downedWood_n", "downed woody debris (yR), nitrogen kg/ga", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("litter_c", "soil litter (yl), carbon kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("litter_n", "soil litter (yl), nitrogen kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("soil_c", "soil organic matter (som), carbon kg/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("soil_n", "soil organic matter (som), nitrogen kg/ha", OutputDatatype.Double));
         }
 
-        public override void Setup()
+        public override void Setup(GlobalSettings globalSettings)
         {
             // use a condition for to control execuation for the current year
-            string condition = Settings().GetString(".condition", "");
+            string condition = globalSettings.Settings.GetString(".condition", "");
             mFilter.SetExpression(condition);
 
-            condition = Settings().GetString(".conditionRU", "");
+            condition = globalSettings.Settings.GetString(".conditionRU", "");
             mResourceUnitFilter.SetExpression(condition);
         }
 
-        protected override void LogYear(SqliteCommand insertRow)
+        protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            Model m = GlobalSettings.Instance.Model;
-
             // global condition
-            if (!mFilter.IsEmpty && mFilter.Calculate(GlobalSettings.Instance.CurrentYear) == 0.0)
+            if (!mFilter.IsEmpty && mFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
             {
                 return;
             }
 
             bool isRUlevel = true;
             // switch off details if this is indicated in the conditionRU option
-            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(GlobalSettings.Instance.CurrentYear) == 0.0)
+            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
             {
                 isRUlevel = false;
             }
 
 
             double[] accumulatedValues   = new double[23]; // 8 data values
-            foreach (ResourceUnit ru in m.ResourceUnits)
+            foreach (ResourceUnit ru in model.ResourceUnits)
             {
                 if (ru.ID == -1 || ru.Snags == null)
                 {
@@ -93,7 +90,7 @@ namespace iLand.Output
                 double areaFactor = ru.StockableArea / Constant.RUArea; // conversion factor from real area to per ha values
                 if (isRUlevel)
                 {
-                    this.Add(CurrentYear());
+                    this.Add(model.GlobalSettings.CurrentYear);
                     this.Add(ru.Index);
                     this.Add(ru.ID);
                     this.Add(areaFactor); // keys
@@ -182,7 +179,7 @@ namespace iLand.Output
 
             // write landscape sums
             double totalStockableArea = accumulatedValues[0]; // convert to ha of stockable area
-            this.Add(CurrentYear(), -1, -1); // keys
+            this.Add(model.GlobalSettings.CurrentYear, -1, -1); // keys
             this.Add(accumulatedValues[0]); // stockable area [m2]
             for (int valueIndex = 1; valueIndex < accumulatedValues.Length; ++valueIndex)
             {

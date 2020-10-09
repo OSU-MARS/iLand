@@ -1,4 +1,5 @@
-﻿using iLand.Tools;
+﻿using iLand.Core;
+using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,7 +10,7 @@ namespace iLand.Output
     /** @class OutputManager
        Global container that handles data output.
       */
-    internal class OutputManager
+    public class OutputManager
     {
         private readonly List<Output> mOutputs; ///< list of outputs in system
 
@@ -38,20 +39,20 @@ namespace iLand.Output
             };
         }
 
-        public void Setup()
+        public void Setup(GlobalSettings globalSettings)
         {
             //close();
-            XmlHelper xml = GlobalSettings.Instance.Settings;
+            XmlHelper xml = globalSettings.Settings;
             string nodepath;
             foreach (Output o in mOutputs)
             {
                 nodepath = String.Format("output.{0}", o.TableName);
                 xml.TrySetCurrentNode(nodepath);
-                o.Setup();
+                o.Setup(globalSettings);
                 o.IsEnabled = xml.GetBool(".enabled", false);
                 if (o.IsEnabled)
                 {
-                    o.Open();
+                    o.Open(globalSettings);
                 }
             }
         }
@@ -68,7 +69,7 @@ namespace iLand.Output
             return null;
         }
 
-        public void LogYear()
+        public void LogYear(Model model)
         {
             using DebugTimer timer = new DebugTimer("OutputManager.LogYear()");
 
@@ -81,7 +82,7 @@ namespace iLand.Output
                         Trace.TraceWarning("Output " + output.Name + " invalid (not at new row)!!!");
                         continue;
                     }
-                    output.LogYear();
+                    output.LogYear(model);
                 }
             }
         }

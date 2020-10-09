@@ -55,12 +55,12 @@ namespace iLand.Core
         public double[] ReferenceEvapotranspiration() { return mCanopy.ReferenceEvapotranspiration; }
         public void SetContent(double content, double snow_mm) { CurrentContent = content; mSnowPack.WaterEquivalent = snow_mm; }
 
-        public void Setup(ResourceUnit ru)
+        public void Setup(ResourceUnit ru, Model model)
         {
             mRU = ru;
             // get values...
             FieldCapacity = 0.0; // on top
-            XmlHelper xml = GlobalSettings.Instance.Settings;
+            XmlHelper xml = model.GlobalSettings.Settings;
             mSoilDepth = xml.GetDouble("model.site.soilDepth", 0.0) * 10; // convert from cm to mm
             double pct_sand = xml.GetDouble("model.site.pctSand");
             double pct_silt = xml.GetDouble("model.site.pctSilt");
@@ -75,7 +75,7 @@ namespace iLand.Core
             mPsi_sat = -Math.Exp((1.54 - 0.0095 * pct_sand + 0.0063 * pct_silt) * Math.Log(10)) * 0.000098; // Eq. 83
             mPsi_koeff_b = -(3.1 + 0.157 * pct_clay - 0.003 * pct_sand);  // Eq. 84
             mTheta_sat = 0.01 * (50.5 - 0.142 * pct_sand - 0.037 * pct_clay); // Eq. 78
-            mCanopy.Setup();
+            mCanopy.Setup(model);
 
             mPermanentWiltingPoint = HeightFromPsi(-4000); // maximum psi is set to a constant of -4MPa
             if (xml.GetBool("model.settings.waterUseSoilSaturation", false) == false)
@@ -87,14 +87,14 @@ namespace iLand.Core
                 // =-EXP((1.54-0.0095* pctSand +0.0063* pctSilt)*LN(10))*0.000098
                 double psi_sat = -Math.Exp((1.54 - 0.0095 * pct_sand + 0.0063 * pct_silt) * Math.Log(10.0)) * 0.000098;
                 FieldCapacity = HeightFromPsi(psi_sat);
-                if (GlobalSettings.Instance.LogDebug())
+                if (model.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("psi: saturation " + psi_sat + " field capacity: " + FieldCapacity);
                 }
             }
 
             CurrentContent = FieldCapacity; // start with full water content (in the middle of winter)
-            if (GlobalSettings.Instance.LogDebug())
+            if (model.GlobalSettings.LogDebug())
             {
                 Debug.WriteLine("setup of water: Psi_sat (kPa) " + mPsi_sat + " Theta_sat " + mTheta_sat + " coeff. b " + mPsi_koeff_b);
             }
@@ -136,7 +136,7 @@ namespace iLand.Core
 
         /// get canopy characteristics of the resource unit.
         /// It is important, that species-statistics are valid when this function is called (LAI)!
-        public void GetStandValues()
+        private void GetStandValues(Model model)
         {
             mLAINeedle = mLAIBroadleaved = 0.0;
             CanopyConductance = 0.0;
@@ -169,13 +169,13 @@ namespace iLand.Core
             }
             CanopyConductance /= total_lai;
 
-            if (total_lai < GlobalSettings.Instance.Model.Settings.LaiThresholdForClosedStands)
+            if (total_lai < model.ModelSettings.LaiThresholdForClosedStands)
             {
                 // following Landsberg and Waring: when LAI is < 3 (default for laiThresholdForClosedStands), a linear "ramp" from 0 to 3 is assumed
                 // http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance
-                CanopyConductance *= total_lai / GlobalSettings.Instance.Model.Settings.LaiThresholdForClosedStands;
+                CanopyConductance *= total_lai / model.ModelSettings.LaiThresholdForClosedStands;
             }
-            if (GlobalSettings.Instance.LogInfo())
+            if (model.GlobalSettings.LogInfo())
             {
                 Debug.WriteLine("WaterCycle:getStandValues: LAI needle " + mLAINeedle + " LAI Broadl: " + mLAIBroadleaved + " weighted avg. Conductance (m/2): " + CanopyConductance);
             }
@@ -248,10 +248,10 @@ namespace iLand.Core
         /// Main Water Cycle function. This function triggers all water related tasks for
         /// one simulation year.
         /// @sa http://iland.boku.ac.at/water+cycle
-        public void Run()
+        public void Run(Model model)
         {
             // necessary?
-            if (GlobalSettings.Instance.CurrentYear == mLastYear)
+            if (model.GlobalSettings.CurrentYear == mLastYear)
             {
                 return;
             }
@@ -259,7 +259,7 @@ namespace iLand.Core
             WaterCycleData add_data = new WaterCycleData();
 
             // preparations (once a year)
-            GetStandValues(); // fetch canopy characteristics from iLand (including weighted average for mCanopyConductance)
+            GetStandValues(model); // fetch canopy characteristics from iLand (including weighted average for mCanopyConductance)
             mCanopy.SetStandParameters(mLAINeedle, mLAIBroadleaved, CanopyConductance);
 
             // main loop over all days of the year
@@ -271,7 +271,7 @@ namespace iLand.Core
             TotalEvapotranspiration = 0.0;
             SnowDayRad = 0.0;
             SnowDays = 0;
-            for (int index = climate.Begin; index < climate.End; ++index, ++doy)
+            for (int index = climate.CurrentJanuary1; index < climate.NextJanuary1; ++index, ++doy)
             {
                 ClimateDay day = climate[index];
                 // (1) precipitation of the day
@@ -308,7 +308,7 @@ namespace iLand.Core
                 // calculate the LAI-weighted response values for soil water and vpd:
                 double interception_before_transpiration = mCanopy.Interception;
                 double combined_response = CalculateSoilAtmosphereResponse(current_psi, day.Vpd);
-                et = mCanopy.Evapotranspiration3PG(day, climate.DayLengthInHours(doy), combined_response);
+                et = mCanopy.Evapotranspiration3PG(day, model, climate.DayLengthInHours(doy), combined_response);
                 // if there is some flow from intercepted water to the ground -> add to "water_to_the_ground"
                 if (mCanopy.Interception < interception_before_transpiration)
                 {
@@ -329,9 +329,9 @@ namespace iLand.Core
                 TotalEvapotranspiration += et;
 
                 //DBGMODE(
-                if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.WaterCycle))
+                if (model.GlobalSettings.IsDebugEnabled(DebugOutputs.WaterCycle))
                 {
-                    List<object> output = GlobalSettings.Instance.DebugList(day.ID(), DebugOutputs.WaterCycle);
+                    List<object> output = model.GlobalSettings.DebugList(day.ID(), DebugOutputs.WaterCycle);
                     // climatic variables
                     output.AddRange(new object[] { day.ID(), mRU.Index, mRU.ID, day.MeanDaytimeTemperature, day.Vpd, day.Preciptitation, day.Radiation });
                     output.Add(combined_response); // combined response of all species on RU (min(water, vpd))
@@ -351,8 +351,8 @@ namespace iLand.Core
                 //); // DBGMODE()
             }
             // call external modules
-            GlobalSettings.Instance.Model.Modules.CalculateWater(mRU, add_data);
-            mLastYear = GlobalSettings.Instance.CurrentYear;
+            model.Modules.CalculateWater(mRU, add_data);
+            mLastYear = model.GlobalSettings.CurrentYear;
         }
     }
 }

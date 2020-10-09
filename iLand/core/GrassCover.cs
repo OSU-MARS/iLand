@@ -8,7 +8,7 @@ namespace iLand.Core
 {
     public class GrassCover
     {
-        private const int GRASSCOVERSTEPS = 32000;
+        private const int Steps = 32000;
 
         private GrassAlgorithmType mType;
         private readonly Expression mGrassPotential; ///< function defining max. grass cover [0..1] as function of the LIF pixel value
@@ -27,14 +27,14 @@ namespace iLand.Core
         public bool IsEnabled { get; private set; }
         ///
         public double Effect(Int16 level) { return mEffect[level]; }
-        public double Cover(Int16 data) { return mType == GrassAlgorithmType.Pixel ? data : data / (double)(GRASSCOVERSTEPS - 1); }
+        public double Cover(Int16 data) { return mType == GrassAlgorithmType.Pixel ? data : data / (double)(Steps - 1); }
 
         /// retrieve the grid of current grass cover
         public Grid<Int16> Grid { get; private set; }
 
         public GrassCover()
         {
-            this.mEffect = new double[GrassCover.GRASSCOVERSTEPS];
+            this.mEffect = new double[GrassCover.Steps];
             this.mGrassEffect = new Expression();
             this.mGrassPotential = new Expression();
             this.mLayers = new GrassCoverLayers();
@@ -58,9 +58,9 @@ namespace iLand.Core
             return IsEnabled ? Effect(Grid[lif_index]) : 0.0;
         }
 
-        public void Setup()
+        public void Setup(Model model)
         {
-            XmlHelper xml = GlobalSettings.Instance.Settings;
+            XmlHelper xml = model.GlobalSettings.Settings;
             if (!xml.GetBool("model.settings.grass.enabled"))
             {
                 // clear grid
@@ -70,13 +70,13 @@ namespace iLand.Core
                 return;
             }
             // create the grid
-            Grid.Setup(GlobalSettings.Instance.Model.LightGrid.PhysicalExtent, GlobalSettings.Instance.Model.LightGrid.CellSize);
+            Grid.Setup(model.LightGrid.PhysicalExtent, model.LightGrid.CellSize);
             Grid.ClearDefault();
             // mask out out-of-project areas
-            Grid<HeightGridValue> hg = GlobalSettings.Instance.Model.HeightGrid;
+            Grid<HeightGridValue> heightGrid = model.HeightGrid;
             for (int i = 0; i < Grid.Count; ++i)
             {
-                if (!hg[Grid.Index5(i)].IsValid())
+                if (!heightGrid[Grid.Index5(i)].IsInWorld())
                 {
                     Grid[i] = -1;
                 }
@@ -91,15 +91,15 @@ namespace iLand.Core
                 {
                     throw new NotSupportedException("setup(): missing equation for 'grassDuration'.");
                 }
-                mPDF.Setup(formula, 0.0, 100.0);
+                mPDF.Setup(model.GlobalSettings, formula, 0.0, 100.0);
                 //mGrassEffect.setExpression(formula);
 
                 mGrassLIFThreshold = (float)xml.GetDouble("model.settings.grass.LIFThreshold", 0.2);
 
                 // clear array
-                for (int i = 0; i < GRASSCOVERSTEPS; ++i)
+                for (int stepIndex = 0; stepIndex < Steps; ++stepIndex)
                 {
-                    mEffect[i] = 0.0;
+                    mEffect[stepIndex] = 0.0;
                 }
             }
             else
@@ -111,7 +111,7 @@ namespace iLand.Core
                     throw new NotSupportedException("setup of 'grass': required expression 'grassPotential' is missing.");
                 }
                 mGrassPotential.SetExpression(formula);
-                mGrassPotential.Linearize(0.0, 1.0, Math.Min(GRASSCOVERSTEPS, 1000));
+                mGrassPotential.Linearize(model.GlobalSettings, 0.0, 1.0, Math.Min(Steps, 1000));
 
                 formula = xml.GetString("model.settings.grass.grassEffect");
                 if (String.IsNullOrEmpty(formula))
@@ -124,16 +124,16 @@ namespace iLand.Core
                 {
                     throw new NotSupportedException("setup of 'grass': value of 'maxTimeLag' is invalid or missing.");
                 }
-                mGrowthRate = GRASSCOVERSTEPS / mMaxTimeLag;
+                mGrowthRate = Steps / mMaxTimeLag;
 
                 // set up the effect on regeneration in NSTEPS steps
-                for (int i = 0; i < GRASSCOVERSTEPS; ++i)
+                for (int stepIndex = 0; stepIndex < Steps; ++stepIndex)
                 {
-                    double effect = mGrassEffect.Calculate(i / (double)(GRASSCOVERSTEPS - 1));
-                    mEffect[i] = Global.Limit(effect, 0.0, 1.0);
+                    double effect = mGrassEffect.Calculate(model.GlobalSettings, stepIndex / (double)(Steps - 1));
+                    mEffect[stepIndex] = Global.Limit(effect, 0.0, 1.0);
                 }
 
-                mMaxState = (Int16)(Global.Limit(mGrassPotential.Calculate(1.0F), 0.0, 1.0) * (GRASSCOVERSTEPS - 1)); // the max value of the potential function
+                mMaxState = (Int16)(Global.Limit(mGrassPotential.Calculate(model.GlobalSettings, 1.0F), 0.0, 1.0) * (Steps - 1)); // the max value of the potential function
             }
 
             this.IsEnabled = true;
@@ -148,7 +148,7 @@ namespace iLand.Core
             }
             if (mType == GrassAlgorithmType.Continuous)
             {
-                Int16 cval = (Int16)(Global.Limit(percent / 100.0, 0.0, 1.0) * (GRASSCOVERSTEPS - 1));
+                Int16 cval = (Int16)(Global.Limit(percent / 100.0, 0.0, 1.0) * (Steps - 1));
                 if (cval > mMaxState)
                 {
                     cval = mMaxState;
@@ -174,7 +174,7 @@ namespace iLand.Core
             }
         }
 
-        public void Execute()
+        public void Execute(Model model)
         {
             if (!IsEnabled)
             {
@@ -183,7 +183,7 @@ namespace iLand.Core
             using DebugTimer t = new DebugTimer("GrassCover.Execute()");
 
             // Main function of the grass submodule
-            Grid<float> lifGrid = GlobalSettings.Instance.Model.LightGrid;
+            Grid<float> lifGrid = model.LightGrid;
             int gr = 0;
             if (mType == GrassAlgorithmType.Continuous)
             {
@@ -198,7 +198,7 @@ namespace iLand.Core
                         continue;
                     }
 
-                    int potential = (int)(Global.Limit(mGrassPotential.Calculate(lifGrid[lif]), 0.0, 1.0) * (GRASSCOVERSTEPS - 1));
+                    int potential = (int)(Global.Limit(mGrassPotential.Calculate(model.GlobalSettings, lifGrid[lif]), 0.0, 1.0) * (Steps - 1));
                     Grid[gr] = (Int16)(Math.Min(Grid[gr] + mGrowthRate, potential));
 
                 }

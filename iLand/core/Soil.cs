@@ -12,9 +12,8 @@ namespace iLand.Core
         */
     public class Soil
     {
-        private static readonly SoilParams global_soilpar = new SoilParams();
-        private static readonly SoilParams mParams = global_soilpar;
-        private static double mNitrogenDeposition = 0.0; ///< annual nitrogen deposition (kg N/ha*yr)
+        private readonly SoilParams mParams;
+        private double mNitrogenDeposition = 0.0; ///< annual nitrogen deposition (kg N/ha*yr)
 
         public ResourceUnit mRU; ///< link to containing resource unit
         // variables
@@ -49,7 +48,7 @@ namespace iLand.Core
             public double leaching; ///< how many percent of the mineralized nitrogen in O is not available for plants but is leached
             public double el; ///< microbal efficiency in the labile pool, auxiliary parameter (see parameterization example)
             public double er; ///< microbal efficiency in the refractory pool, auxiliary parameter (see parameterization example)
-            public bool is_setup;
+            public bool isSetup;
 
             // ICBM/2N parameters
             public SoilParams()
@@ -59,11 +58,11 @@ namespace iLand.Core
                 leaching = 0.15;
                 el = 0.0577;
                 er = 0.073;
-                is_setup = false;
+                isSetup = false;
             }
         }
 
-        public Soil(ResourceUnit ru = null)
+        public Soil(GlobalSettings globalSettings, ResourceUnit ru = null)
         {
             this.mKo = 0.0;
             this.mKyl = 0.0;
@@ -73,6 +72,7 @@ namespace iLand.Core
 
             this.mInputLab = null;
             this.mInputRef = null;
+            this.mParams = new SoilParams();
 
             this.AvailableNitrogen = 0.0;
             this.ClimateFactor = 0.0;
@@ -82,27 +82,27 @@ namespace iLand.Core
             this.YoungLabile = new CNPool();
             this.YoungRefractory = new CNPool();
 
-            this.FetchParameters();
+            this.FetchParameters(globalSettings);
         }
 
-        private void FetchParameters()
+        private void FetchParameters(GlobalSettings globalSettings)
         {
-            XmlHelper xml_site = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.site"));
+            XmlHelper xml_site = new XmlHelper(globalSettings.Settings.Node("model.site"));
             mKo = xml_site.GetDouble("somDecompRate", 0.02);
             mH = xml_site.GetDouble("soilHumificationRate", 0.3);
 
-            if (mParams.is_setup || GlobalSettings.Instance.Model != null)
+            if (mParams.isSetup)
             {
                 return;
             }
-            XmlHelper xml = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.settings.soil"));
+            XmlHelper xml = new XmlHelper(globalSettings.Settings.Node("model.settings.soil"));
             mParams.qb = xml.GetDouble("qb", 5.0);
             mParams.qh = xml.GetDouble("qh", 25.0);
             mParams.leaching = xml.GetDouble("leaching", 0.15);
             mParams.el = xml.GetDouble("el", 0.0577);
             mParams.er = xml.GetDouble("er", 0.073);
 
-            mParams.is_setup = true;
+            mParams.isSetup = true;
 
             mNitrogenDeposition = xml.GetDouble("nitrogenDeposition", 0.0);
         }
@@ -121,8 +121,8 @@ namespace iLand.Core
             YoungRefractory = young_refractory_kg_ha * 0.001;
             OrganicMatter = SOM_kg_ha * 0.001;
 
-            mKyl = young_labile_kg_ha.Parameter;
-            mKyr = young_refractory_kg_ha.Parameter;
+            mKyl = young_labile_kg_ha.Weight;
+            mKyr = young_refractory_kg_ha.Weight;
 
             if (mKyl <= 0.0 || mKyr <= 0.0)
             {
@@ -220,12 +220,12 @@ namespace iLand.Core
             CNPair yl = YoungLabile;
             YoungLabile.C = ylss + (yl.C - ylss) * lfactor;
             YoungLabile.N = ynlss + (yl.N - ynlss - cl / (sp.el - mH) * (yl.C - ylss)) * Math.Exp(-mKyl * ClimateFactor * (1.0 - mH) * t / (1.0 - sp.el)) + cl / (sp.el - mH) * (yl.C - ylss) * lfactor;
-            YoungLabile.Parameter = mKyl; // update decomposition rate
+            YoungLabile.Weight = mKyl; // update decomposition rate
             // young ref. pool
             CNPair yr = YoungRefractory;
             YoungRefractory.C = yrss + (yr.C - yrss) * rfactor;
             YoungRefractory.N = ynrss + (yr.N - ynrss - cr / (sp.er - mH) * (yr.C - yrss)) * Math.Exp(-mKyr * ClimateFactor * (1.0 - mH) * t / (1.0 - sp.er)) + cr / (sp.er - mH) * (yr.C - yrss) * rfactor;
-            YoungRefractory.Parameter = mKyr; // update decomposition rate
+            YoungRefractory.Weight = mKyr; // update decomposition rate
             // SOM pool (old)
             CNPair o = OrganicMatter;
             OrganicMatter.C = oss + (o.C - oss - al - ar) * Math.Exp(-mKo * ClimateFactor * t) + al * lfactor + ar * rfactor;
@@ -276,7 +276,7 @@ namespace iLand.Core
             List<object> list = new List<object>() 
             {
                 // (1) inputs of the year
-                mInputLab.C, mInputLab.N, mInputLab.Parameter, mInputRef.C, mInputRef.N, mInputRef.Parameter, ClimateFactor,
+                mInputLab.C, mInputLab.N, mInputLab.Weight, mInputRef.C, mInputRef.N, mInputRef.Weight, ClimateFactor,
                 // (2) states
                 mKyl, mKyr, YoungLabile.C, YoungLabile.N, YoungRefractory.C, YoungRefractory.N, OrganicMatter.C, OrganicMatter.N,
                 // (3) nav

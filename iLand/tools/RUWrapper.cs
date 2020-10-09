@@ -1,21 +1,24 @@
 ﻿using iLand.Core;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 
 namespace iLand.Tools
 {
     internal class RUWrapper : ExpressionWrapper
     {
-        private static readonly List<string> ruVarList;
+        private static readonly ReadOnlyCollection<string> VariableNames;
 
         public ResourceUnit ResourceUnit { get; set; }
 
         static RUWrapper()
         {
-            ruVarList = new List<string>(BaseVarList);
-            ruVarList.AddRange(new string[] { "id", "totalEffectiveArea", "nitrogenAvailable", "soilDepth", "stockedArea", "stockableArea",
-                         "count", "volume", "avgDbh", "avgHeight", "basalArea", "leafAreaIndex", "aging", "cohortCount", "saplingCount", "saplingAge",
-                         "canopyConductance", "soilC", "soilN", "snagC", "index", "meanTemp", "annualPrecip", "annualRad" });
+            RUWrapper.VariableNames = new List<string>(ExpressionWrapper.BaseVariableNames) 
+            { 
+                "id", "totalEffectiveArea", "nitrogenAvailable", "soilDepth", "stockedArea", "stockableArea",
+                "count", "volume", "avgDbh", "avgHeight", "basalArea", "leafAreaIndex", "aging", "cohortCount", "saplingCount", "saplingAge",
+                "canopyConductance", "soilC", "soilN", "snagC", "index", "meanTemp", "annualPrecip", "annualRad"
+            }.AsReadOnly();
         }
 
         public RUWrapper()
@@ -28,25 +31,25 @@ namespace iLand.Tools
             ResourceUnit = resourceUnit;
         }
 
-        public override List<string> GetVariablesList()
+        public override ReadOnlyCollection<string> GetVariablesList()
         {
-            return ruVarList;
+            return VariableNames;
         }
 
-        public override double Value(int variableIndex)
+        public override double Value(int variableIndex, GlobalSettings globalSettings)
         {
             Debug.Assert(ResourceUnit != null);
 
-            switch (variableIndex - BaseVarList.Count)
+            switch (variableIndex - BaseVariableNames.Count)
             {
                 case 0: return ResourceUnit.ID; // id from grid
-                case 1: return ResourceUnit.mEffectiveArea_perWLA;
+                case 1: return ResourceUnit.EffectiveAreaPerWla;
                 case 2: return ResourceUnit.Variables.NitrogenAvailable;
                 case 3: return ResourceUnit.WaterCycle.SoilDepth;
                 case 4: return ResourceUnit.StockedArea;
                 case 5: return ResourceUnit.StockableArea;
                 case 6: return ResourceUnit.Statistics.Count;
-                case 7: return ResourceUnit.Statistics.Volume;
+                case 7: return ResourceUnit.Statistics.StemVolume;
                 case 8: return ResourceUnit.Statistics.AverageDbh;
                 case 9: return ResourceUnit.Statistics.AverageHeight;
                 case 10: return ResourceUnit.Statistics.BasalArea;
@@ -97,9 +100,9 @@ namespace iLand.Tools
                         return psum;
                     }
                 case 23: 
-                    return ResourceUnit.Climate.TotalRadiation;
+                    return ResourceUnit.Climate.TotalAnnualRadiation;
                 default:
-                    return base.Value(variableIndex);
+                    return base.Value(variableIndex, globalSettings);
             }
         }
     }

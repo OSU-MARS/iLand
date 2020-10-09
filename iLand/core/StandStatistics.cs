@@ -15,8 +15,6 @@
     {
         private double mSumDbh;
         private double mSumHeight;
-        private double mSumBasalArea;
-        private double mSumVolume;
         private double mSumSaplingAge;
 
         public double AverageDbh { get; private set; } ///< average dbh (cm)
@@ -24,7 +22,7 @@
         public double BasalArea { get; private set; } ///< sum of basal area of all trees (m2/ha)
         public int CohortCount { get; private set; } ///< number of cohorts of saplings / ha
         public double Count { get; private set; }
-        public double Gwl { get; private set; } ///< total increment (m3/ha)
+        public double TotalStemGrowth { get; private set; } ///< total increment (gesamtwuchsleistung, m3/ha)
         public double LeafAreaIndex { get; private set; } ///< [m2/m2]/ha stocked area.
         public double MeanSaplingAge { get; private set; } ///< average age of sapling (currenty not weighted with represented sapling numbers...)
         public double Npp { get; private set; } ///< sum. of NPP (kg Biomass increment, above+belowground, trees >4m)/ha
@@ -33,7 +31,7 @@
         public ResourceUnitSpecies ResourceUnitSpecies { get; set; }
         ///< number of sapling (Reinekes Law)
         public int SaplingCount { get; private set; } ///< number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
-        public double Volume { get; private set; } ///< sum of tree volume (m3/ha)
+        public double StemVolume { get; private set; } ///< sum of tree volume (m3/ha)
         // carbon/nitrogen cycle
         public double BranchC { get; private set; }
         public double BranchN { get; private set; }
@@ -63,7 +61,7 @@
             // TODO: call ClearOnlyTrees()
             Count = 0;
             mSumDbh = mSumHeight = AverageDbh = AverageHeight = 0.0;
-            mSumBasalArea = mSumVolume = Gwl = 0.0;
+            BasalArea = StemVolume = TotalStemGrowth = 0.0;
             LeafAreaIndex = 0.0;
             Npp = NppAbove = 0.0;
             NppSaplings = 0.0;
@@ -81,7 +79,7 @@
             // reset only those values that are directly accumulated from trees
             Count = 0;
             mSumDbh = mSumHeight = AverageDbh = AverageHeight = 0.0;
-            mSumBasalArea = mSumVolume = Gwl = 0.0;
+            BasalArea = StemVolume = TotalStemGrowth = 0.0;
             LeafAreaIndex = 0.0;
             /*mNPP = mNPPabove = 0.0;
             mNPPsaplings = 0.0;
@@ -93,18 +91,18 @@
             /*mCRegeneration=0.0; mNRegeneration=0.0;*/
         }
 
-        public void Add(Tree tree, TreeGrowthData tgd)
+        public void Add(Tree tree, TreeGrowthData treeGrowth)
         {
             Count++;
             mSumDbh += tree.Dbh;
             mSumHeight += tree.Height;
-            mSumBasalArea += tree.BasalArea();
-            mSumVolume += tree.Volume();
+            BasalArea += tree.BasalArea();
+            StemVolume += tree.Volume();
             LeafAreaIndex += tree.LeafArea; // warning: sum of leafarea!
-            if (tgd != null)
+            if (treeGrowth != null)
             {
-                Npp += tgd.NppTotal;
-                NppAbove += tgd.NppAboveground;
+                Npp += treeGrowth.NppTotal;
+                NppAbove += treeGrowth.NppAboveground;
             }
             // carbon and nitrogen pools
             this.BranchC += Constant.BiomassCFraction * tree.GetBranchBiomass();
@@ -140,51 +138,51 @@
             // note: do this only on species-level (avoid double scaling)
             if (ResourceUnitSpecies != null)
             {
-                double area_factor = Constant.RUArea / ResourceUnitSpecies.RU.StockableArea;
-                if (area_factor != 1.0)
+                double areaFactor = Constant.RUArea / this.ResourceUnitSpecies.RU.StockableArea;
+                if (areaFactor != 1.0)
                 {
-                    Count *= area_factor;
-                    mSumBasalArea *= area_factor;
-                    mSumVolume *= area_factor;
-                    mSumDbh *= area_factor;
-                    Npp *= area_factor;
-                    NppAbove *= area_factor;
-                    NppSaplings *= area_factor;
+                    Count *= areaFactor;
+                    BasalArea *= areaFactor;
+                    StemVolume *= areaFactor;
+                    mSumDbh *= areaFactor;
+                    Npp *= areaFactor;
+                    NppAbove *= areaFactor;
+                    NppSaplings *= areaFactor;
                     //mGWL *= area_factor;
-                    CohortCount = (int)(area_factor * CohortCount); // BUGBUG: quantization?
-                    SaplingCount = (int)(area_factor * SaplingCount); // BUGBUG: quantization?
+                    CohortCount = (int)(areaFactor * CohortCount); // TODO: quantization?
+                    SaplingCount = (int)(areaFactor * SaplingCount); // TODO: quantization?
                     //double mCStem, mCFoliage, mCBranch, mCCoarseRoot, mCFineRoot;
                     //double mNStem, mNFoliage, mNBranch, mNCoarseRoot, mNFineRoot;
                     //double mCRegeneration, mNRegeneration;
-                    StemC *= area_factor; 
-                    StemN *= area_factor;
-                    FoliageC *= area_factor; 
-                    FoliageN *= area_factor;
-                    BranchC *= area_factor; 
-                    BranchN *= area_factor;
-                    CoarseRootC *= area_factor; 
-                    CoarseRootN *= area_factor;
-                    FineRootC *= area_factor; 
-                    FineRootN *= area_factor;
-                    RegenerationC *= area_factor; 
-                    RegenerationN *= area_factor;
+                    StemC *= areaFactor; 
+                    StemN *= areaFactor;
+                    FoliageC *= areaFactor; 
+                    FoliageN *= areaFactor;
+                    BranchC *= areaFactor; 
+                    BranchN *= areaFactor;
+                    CoarseRootC *= areaFactor; 
+                    CoarseRootN *= areaFactor;
+                    FineRootC *= areaFactor; 
+                    FineRootN *= areaFactor;
+                    RegenerationC *= areaFactor; 
+                    RegenerationN *= areaFactor;
                 }
-                Gwl = mSumVolume + ResourceUnitSpecies.RemovedVolume; // removedVolume: per ha, SumVolume now too
+                TotalStemGrowth = StemVolume + ResourceUnitSpecies.RemovedStemVolume; // removedVolume: per ha, SumVolume now too
             }
         }
 
         public void Add(StandStatistics stat)
         {
             Count += stat.Count;
-            mSumBasalArea += stat.mSumBasalArea;
+            BasalArea += stat.BasalArea;
             mSumDbh += stat.mSumDbh;
             mSumHeight += stat.mSumHeight;
-            mSumVolume += stat.mSumVolume;
+            StemVolume += stat.StemVolume;
             LeafAreaIndex += stat.LeafAreaIndex;
             Npp += stat.Npp;
             NppAbove += stat.NppAbove;
             NppSaplings += stat.NppSaplings;
-            Gwl += stat.Gwl;
+            TotalStemGrowth += stat.TotalStemGrowth;
             // regeneration
             CohortCount += stat.CohortCount;
             SaplingCount += stat.SaplingCount;
@@ -202,10 +200,10 @@
         {
             // aggregates that are not scaled to hectares
             Count += stat.Count * weight;
-            mSumBasalArea += stat.mSumBasalArea * weight;
+            BasalArea += stat.BasalArea * weight;
             mSumDbh += stat.mSumDbh * weight;
             mSumHeight += stat.mSumHeight * weight;
-            mSumVolume += stat.mSumVolume * weight;
+            StemVolume += stat.StemVolume * weight;
             // averages that are scaled to per hectare need to be scaled
             AverageDbh += stat.AverageDbh * weight;
             AverageHeight += stat.AverageHeight * weight;
@@ -215,7 +213,7 @@
             Npp += stat.Npp * weight;
             NppAbove += stat.NppAbove * weight;
             NppSaplings += stat.NppSaplings * weight;
-            Gwl += stat.Gwl * weight;
+            TotalStemGrowth += stat.TotalStemGrowth * weight;
             // regeneration
             CohortCount += (int)(stat.CohortCount * weight); // BUGBUG: quantization?
             SaplingCount += (int)(stat.SaplingCount * weight); // BUGBUG: quantization?

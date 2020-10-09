@@ -15,35 +15,34 @@ namespace iLand.Tools
             this.mRumpleGrid = new Grid<float>();
         }
 
-        public void Setup()
+        public void Setup(Model model)
         {
             mRumpleGrid.Clear();
-            if (GlobalSettings.Instance.Model == null)
+            if (model == null)
             {
                 return;
             }
 
             // the rumple grid has the same dimensions as the resource unit grid (i.e. 100 meters)
-            mRumpleGrid.Setup(GlobalSettings.Instance.Model.ResourceUnitGrid.PhysicalExtent,
-                              GlobalSettings.Instance.Model.ResourceUnitGrid.CellSize);
+            mRumpleGrid.Setup(model.ResourceUnitGrid.PhysicalExtent, model.ResourceUnitGrid.CellSize);
         }
 
         ///< return the rumple index for the full project area
-        public Grid<float> RumpleGrid()
+        public Grid<float> RumpleGrid(Model model)
         {
-            Value(); /* calculate if necessary */
+            Value(model); /* calculate if necessary */
             return mRumpleGrid;
         }
 
-        public void Calculate()
+        public void Calculate(Model model)
         {
             if (mRumpleGrid.IsEmpty())
             {
-                Setup();
+                Setup(model);
             }
 
             mRumpleGrid.Initialize(0.0F);
-            Grid<HeightGridValue> hg = GlobalSettings.Instance.Model.HeightGrid;
+            Grid<HeightGridValue> hg = model.HeightGrid;
 
             // iterate over the resource units and calculate the rumple index / surface area for each resource unit
             HeightGridValue[] hgv_8 = new HeightGridValue[8]; // array holding pointers to height grid values (neighborhood)
@@ -57,7 +56,7 @@ namespace iLand.Tools
                 GridRunner<HeightGridValue> runner = new GridRunner<HeightGridValue>(hg, mRumpleGrid.GetCellRect(mRumpleGrid.IndexOf(rg)));
                 for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
                 {
-                    if (runner.Current.IsValid())
+                    if (runner.Current.IsInWorld())
                     {
                         runner.Neighbors8(hgv_8);
                         bool valid = true;
@@ -67,7 +66,7 @@ namespace iLand.Tools
                         for (int i = 0; i < 8; ++i)
                         {
                             heights[hp++] = hgv_8[i] != null ? hgv_8[i].Height : 0;
-                            if (hgv_8[i] != null && !hgv_8[i].IsValid())
+                            if (hgv_8[i] != null && !hgv_8[i].IsInWorld())
                             {
                                 valid = false;
                             }
@@ -99,14 +98,14 @@ namespace iLand.Tools
                 float rumple_index = total_surface_area / ((float)total_valid_pixels * hg.CellSize * hg.CellSize);
                 mRumpleIndex = rumple_index;
             }
-            mLastYear = GlobalSettings.Instance.CurrentYear;
+            mLastYear = model.GlobalSettings.CurrentYear;
         }
 
-        public double Value(bool force_recalculate = false)
+        public double Value(Model model, bool force_recalculate = false)
         {
-            if (force_recalculate || mLastYear != GlobalSettings.Instance.CurrentYear)
+            if (force_recalculate || mLastYear != model.GlobalSettings.CurrentYear)
             {
-                Calculate();
+                Calculate(model);
             }
             return mRumpleIndex;
         }

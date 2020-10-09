@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -49,15 +50,12 @@ namespace iLand.Tools
     */
     public class Expression
     {
-        private static readonly List<string> MathFunctions = new List<string>()
+        private static readonly ReadOnlyCollection<string> MathFunctions = new List<string>()
         {
             "sin", "cos", "tan", "exp", "ln", "sqrt", "min", "max", "if", "incsum", "polygon", "mod", "sigmoid", "rnd", "rndg", "in", "round"
-        };
+        }.AsReadOnly();
 
-        private static readonly Dictionary<string, int> SpeciesIndexByName;
         private static readonly int[] MaxArgCount = new int[] { 1, 1, 1, 1, 1, 1, -1, -1, 3, 1, -1, 2, 4, 2, 2, -1, 1 };
-
-        public static bool LinearizationEnabled { get; set; }
 
         private enum Operation
         {
@@ -106,7 +104,7 @@ namespace iLand.Tools
         private double[] mExternalVariableValues;
         private TokenType mState;
         private TokenType mLastState;
-        private int m_pos;
+        private int mParsePosition;
         private string m_token;
         private int mTokenCount;
         private readonly List<string> mVariableNames;
@@ -133,12 +131,6 @@ namespace iLand.Tools
         public bool IsStrict { get; set; }
         public string LastError { get; private set; }
 
-        static Expression()
-        {
-            Expression.SpeciesIndexByName = new Dictionary<string, int>();
-            Expression.LinearizationEnabled = false;
-        }
-
         public Expression()
         {
             this.mTokens = null;
@@ -163,18 +155,18 @@ namespace iLand.Tools
             Wrapper = wrapper;
         }
 
-        public double ExecuteLocked() ///< thread safe version
+        public double ExecuteLocked(GlobalSettings globalSettings) ///< thread safe version
         {
             lock (this.mTokens)
             {
-                return Execute();
+                return Execute(globalSettings);
             }
         }
 
-        public static void AddSpecies(string name, int index)
-        {
-            Expression.SpeciesIndexByName.Add(name, index);
-        }
+        //public static void AddSpecies(string name, int index)
+        //{
+        //    Expression.SpeciesIndexByName.Add(name, index);
+        //}
 
         private TokenType NextToken()
         {
@@ -182,12 +174,12 @@ namespace iLand.Tools
             mLastState = mState;
             // nchsten m_token aus String lesen...
             // whitespaces eliminieren...
-            while ((m_pos < ExpressionString.Length) && " \t\n\r".Contains(ExpressionString[m_pos]))
+            while ((mParsePosition < ExpressionString.Length) && " \t\n\r".Contains(ExpressionString[mParsePosition]))
             {
-                m_pos++;
+                mParsePosition++;
             }
 
-            if (m_pos >= ExpressionString.Length)
+            if (mParsePosition >= ExpressionString.Length)
             {
                 mState = TokenType.Stop;
                 m_token = "";
@@ -195,60 +187,64 @@ namespace iLand.Tools
             }
 
             // whitespaces eliminieren...
-            while (" \t\n\r".Contains(ExpressionString[m_pos]))
+            while (" \t\n\r".Contains(ExpressionString[mParsePosition]))
             {
-                m_pos++;
+                mParsePosition++;
             }
-            if (ExpressionString[m_pos] == ',')
+            if (ExpressionString[mParsePosition] == ',')
             {
-                m_token = new string(ExpressionString[m_pos++], 1);
+                m_token = new string(ExpressionString[mParsePosition++], 1);
                 mState = TokenType.Delimiter;
                 return TokenType.Delimiter;
             }
-            if ("+-*/(){}^".Contains(ExpressionString[m_pos]))
+            if ("+-*/(){}^".Contains(ExpressionString[mParsePosition]))
             {
-                m_token = new string(ExpressionString[m_pos++], 1);
+                m_token = new string(ExpressionString[mParsePosition++], 1);
                 mState = TokenType.Operator;
                 return TokenType.Operator;
             }
-            if ("=<>".Contains(ExpressionString[m_pos]))
+            if ("=<>".Contains(ExpressionString[mParsePosition]))
             {
-                m_token = new string(ExpressionString[m_pos++], 1);
-                if (ExpressionString[m_pos] == '>' || ExpressionString[m_pos] == '=')
+                m_token = new string(ExpressionString[mParsePosition++], 1);
+                if (ExpressionString[mParsePosition] == '>' || ExpressionString[mParsePosition] == '=')
                 {
-                    m_token += ExpressionString[m_pos++];
+                    m_token += ExpressionString[mParsePosition++];
                 }
                 mState = TokenType.Compare;
                 return TokenType.Compare;
             }
-            if (ExpressionString[m_pos] >= '0' && ExpressionString[m_pos] <= '9')
+            if (ExpressionString[mParsePosition] >= '0' && ExpressionString[mParsePosition] <= '9')
             {
                 // Zahl
-                int startPosition = m_pos;
-                while ((m_pos < ExpressionString.Length) && "0123456789.".Contains(ExpressionString[m_pos]))
+                int startPosition = mParsePosition;
+                while ((mParsePosition < ExpressionString.Length) && "0123456789.".Contains(ExpressionString[mParsePosition]))
                 {
-                    m_pos++;  // nchstes Zeichen suchen...
+                    mParsePosition++;  // nchstes Zeichen suchen...
                 }
-                m_token = ExpressionString[startPosition..m_pos];
+                m_token = ExpressionString[startPosition..mParsePosition];
                 mState = TokenType.Number;
                 return TokenType.Number;
             }
 
-            if ((ExpressionString[m_pos] >= 'a' && ExpressionString[m_pos] <= 'z') || (ExpressionString[m_pos] >= 'A' && ExpressionString[m_pos] <= 'Z'))
+            if ((ExpressionString[mParsePosition] >= 'a' && ExpressionString[mParsePosition] <= 'z') || (ExpressionString[mParsePosition] >= 'A' && ExpressionString[mParsePosition] <= 'Z'))
             {
                 // function ... find brace
                 m_token = "";
                 // TODO: simplify to Char.IsLetterOrDigit()
-                while (((ExpressionString[m_pos] >= 'a' && ExpressionString[m_pos] <= 'z') || (ExpressionString[m_pos] >= 'A' && ExpressionString[m_pos] <= 'Z') || 
-                        (ExpressionString[m_pos] >= '0' && ExpressionString[m_pos] <= '9') || (ExpressionString[m_pos] == '_' || ExpressionString[m_pos] == '.')) &&
-                         ExpressionString[m_pos] != '(' && ExpressionString[m_pos] != 0)
+                while (mParsePosition < this.ExpressionString.Length && 
+                       ((this.ExpressionString[mParsePosition] >= 'a' && this.ExpressionString[mParsePosition] <= 'z') || 
+                        (this.ExpressionString[mParsePosition] >= 'A' && this.ExpressionString[mParsePosition] <= 'Z') || 
+                        (this.ExpressionString[mParsePosition] >= '0' && this.ExpressionString[mParsePosition] <= '9') || 
+                        this.ExpressionString[mParsePosition] == '_' || this.ExpressionString[mParsePosition] == '.') &&
+                       this.ExpressionString[mParsePosition] != '(')
                 {
-                    m_token += ExpressionString[m_pos++];
+                    m_token += ExpressionString[mParsePosition++];
                 }
                 // wenn am Ende Klammer, dann Funktion, sonst Variable.
-                if (ExpressionString[m_pos] == '(' || ExpressionString[m_pos] == '{')
+                if (mParsePosition < this.ExpressionString.Length && 
+                    (this.ExpressionString[mParsePosition] == '(' || this.ExpressionString[mParsePosition] == '{'))
                 {
-                    m_pos++; // skip brace
+                    mParsePosition++; // skip brace
                     mState = TokenType.Function;
                     return TokenType.Function;
                 }
@@ -297,7 +293,7 @@ namespace iLand.Tools
         public void SetExpression(string expression)
         {
             this.ExpressionString = expression == null ? String.Empty : String.Join(' ', expression.Trim().Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries));
-            m_pos = 0;  // set starting point...
+            mParsePosition = 0;  // set starting point...
 
             for (int i = 0; i < mVariableValues.Length; i++)
             {
@@ -499,18 +495,17 @@ namespace iLand.Tools
                 }
                 if (mState == TokenType.Variable)
                 {
-                    if (SpeciesIndexByName.ContainsKey(m_token))
-                    {
-                        // constant
-                        double result = SpeciesIndexByName[m_token];
-                        mTokens[mExecuteIndex].Type = TokenType.Number;
-                        mTokens[mExecuteIndex].Value = result;
-                        mTokens[mExecuteIndex++].Index = -1;
-                        CheckBuffer(mExecuteIndex);
-
-                    }
-                    else
-                    {
+                    //if (SpeciesIndexByName.ContainsKey(m_token))
+                    //{
+                    //    // constant
+                    //    double result = SpeciesIndexByName[m_token];
+                    //    mTokens[mExecuteIndex].Type = TokenType.Number;
+                    //    mTokens[mExecuteIndex].Value = result;
+                    //    mTokens[mExecuteIndex++].Index = -1;
+                    //    CheckBuffer(mExecuteIndex);
+                    //}
+                    //else
+                    //{
                         // 'real' variable
                         if (!IsStrict) // in strict mode, the variable must be available by external bindings. in "lax" mode, the variable is added when encountered first.
                         {
@@ -521,7 +516,7 @@ namespace iLand.Tools
                         mTokens[mExecuteIndex++].Index = GetVariableIndex(m_token);
                         CheckBuffer(mExecuteIndex);
                         IsConstant = false;
-                    }
+                    //}
                 }
                 NextToken();
             }
@@ -635,30 +630,30 @@ namespace iLand.Tools
             }
         }
 
-        public double Calculate(double Val1 = 0.0, double Val2 = 0.0, bool forceExecution = false)
+        public double Calculate(GlobalSettings globalSettings, double x = 0.0, double y = 0.0, bool forceExecution = false)
         {
             if (mLinearizedDimensionCount > 0 && !forceExecution)
             {
                 if (mLinearizedDimensionCount == 1)
                 {
-                    return GetLinearizedValue(Val1);
+                    return GetLinearizedValue(globalSettings, x);
                 }
-                return GetLinearizedValue(Val1, Val2); // matrix case
+                return GetLinearizedValue(globalSettings, x, y); // matrix case
             }
             double[] var_space = new double[10];
-            var_space[0] = Val1;
-            var_space[1] = Val2;
+            var_space[0] = x;
+            var_space[1] = y;
             IsStrict = false;
-            return Execute(var_space); // execute with local variables on stack
+            return this.Execute(globalSettings, var_space); // execute with local variables on stack
         }
 
-        public double Calculate(ExpressionWrapper obj, double variable_value1 = 0.0, double variable_value2 = 0.0)
+        public double Calculate(ExpressionWrapper obj, GlobalSettings globalSettings, double variable1 = 0.0, double variable2 = 0.0)
         {
-            double[] var_space = new double[10];
-            var_space[0] = variable_value1;
-            var_space[1] = variable_value2;
+            double[] variableStack = new double[10];
+            variableStack[0] = variable1;
+            variableStack[1] = variable2;
             IsStrict = false;
-            return Execute(var_space, obj); // execute with local variables on stack
+            return Execute(globalSettings, variableStack, obj); // execute with local variables on stack
         }
 
         private int GetFunctionIndex(string functionName)
@@ -671,7 +666,7 @@ namespace iLand.Tools
             return index;
         }
 
-        public double Execute(double[] variableList = null, ExpressionWrapper obj = null)
+        public double Execute(GlobalSettings globalSettings, double[] variableList = null, ExpressionWrapper obj = null)
         {
             if (!m_parsed)
             {
@@ -718,7 +713,7 @@ namespace iLand.Tools
                         }
                         else if (exec.Index < 1000)
                         {
-                            value = GetModelVariable(exec.Index, obj);
+                            value = GetModelVariable(exec.Index, globalSettings, obj);
                         }
                         else
                         {
@@ -934,14 +929,14 @@ namespace iLand.Tools
             return -1;
         }
 
-        public double GetModelVariable(int varIdx, ExpressionWrapper obj = null)
+        public double GetModelVariable(int varIdx, GlobalSettings globalSettings, ExpressionWrapper obj = null)
         {
             // der weg nach draussen....
             ExpressionWrapper model_object = obj ?? Wrapper;
             int idx = varIdx - 100; // intern als 100+x gespeichert...
             if (model_object != null)
             {
-                return model_object.Value(idx);
+                return model_object.Value(idx, globalSettings);
             }
             // hier evtl. verschiedene objekte unterscheiden (Zahlenraum???)
             throw new NotSupportedException("getModelVar: invalid model variable!");
@@ -1093,62 +1088,62 @@ namespace iLand.Tools
             high_value: upper limit
             steps: number of steps the function is split into
           */
-        public void Linearize(double low_value, double high_value, int steps = 1000)
+        public void Linearize(GlobalSettings globalSettings, double lowValue, double highValue, int steps = 1000)
         {
-            if (!LinearizationEnabled)
+            if (globalSettings.LinearizationEnabled == false)
             {
                 return;
             }
 
             mLinearized.Clear();
-            mLinearLow = low_value;
-            mLinearHigh = high_value;
-            mLinearStep = (high_value - low_value) / (double)steps;
+            mLinearLow = lowValue;
+            mLinearHigh = highValue;
+            mLinearStep = (highValue - lowValue) / (double)steps;
             // for the high value, add another step (i.e.: include maximum value) and add one step to allow linear interpolation
             for (int i = 0; i <= steps + 1; i++)
             {
                 double x = mLinearLow + i * mLinearStep;
-                double r = Calculate(x);
+                double r = Calculate(globalSettings, x);
                 mLinearized.Add(r);
             }
             mLinearizedDimensionCount = 1;
         }
 
         /// like 'linearize()' but for 2d-matrices
-        public void Linearize(double low_x, double high_x, double low_y, double high_y, int stepsx = 50, int stepsy = 50)
+        public void Linearize(GlobalSettings globalSettings, double lowX, double highX, double lowY, double highY, int stepsX = 50, int stepsY = 50)
         {
-            if (!LinearizationEnabled)
+            if (globalSettings.LinearizationEnabled == false)
             {
                 return;
             }
             mLinearized.Clear();
-            mLinearLow = low_x;
-            mLinearHigh = high_x;
-            mLinearLowY = low_y;
-            mLinearHighY = high_y;
+            mLinearLow = lowX;
+            mLinearHigh = highX;
+            mLinearLowY = lowY;
+            mLinearHighY = highY;
 
-            mLinearStep = (high_x - low_x) / (double)stepsx;
-            mLinearStepY = (high_y - low_y) / (double)stepsy;
-            for (int i = 0; i <= stepsx + 1; i++)
+            mLinearStep = (highX - lowX) / (double)stepsX;
+            mLinearStepY = (highY - lowY) / (double)stepsY;
+            for (int i = 0; i <= stepsX + 1; i++)
             {
-                for (int j = 0; j <= stepsy + 1; j++)
+                for (int j = 0; j <= stepsY + 1; j++)
                 {
                     double x = mLinearLow + i * mLinearStep;
                     double y = mLinearLowY + j * mLinearStepY;
-                    double r = Calculate(x, y);
+                    double r = Calculate(globalSettings, x, y);
                     mLinearized.Add(r);
                 }
             }
-            mLinearStepCountY = stepsy + 2;
+            mLinearStepCountY = stepsY + 2;
             mLinearizedDimensionCount = 2;
         }
 
         /// calculate the linear approximation of the result value
-        private double GetLinearizedValue(double x)
+        private double GetLinearizedValue(GlobalSettings globalSettings, double x)
         {
             if (x < mLinearLow || x > mLinearHigh)
             {
-                return Calculate(x, 0.0, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
+                return Calculate(globalSettings, x, 0.0, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lower = (int)((x - mLinearLow) / mLinearStep); // the lower point
             if (lower + 1 >= mLinearized.Count())
@@ -1162,11 +1157,11 @@ namespace iLand.Tools
         }
 
         /// calculate the linear approximation of the result value
-        private double GetLinearizedValue(double x, double y)
+        private double GetLinearizedValue(GlobalSettings globalSettings, double x, double y)
         {
             if (x < mLinearLow || x > mLinearHigh || y < mLinearLowY || y > mLinearHighY)
             {
-                return Calculate(x, y, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
+                return Calculate(globalSettings, x, y, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lowerx = (int)((x - mLinearLow) / mLinearStep); // the lower point (x-axis)
             int lowery = (int)((y - mLinearLowY) / mLinearStepY); // the lower point (y-axis)

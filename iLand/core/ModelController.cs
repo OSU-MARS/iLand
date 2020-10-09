@@ -9,7 +9,7 @@ namespace iLand.Core
 {
     internal class ModelController
     {
-        private static readonly List<string> AggList = new List<string>() { "mean" + "sum" + "min" + "max" + "p25" + "p50" + "p75" + "p5" + "p10" + "p90" + "p95" };
+        private static readonly List<string> Aggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95" };
 
         private string mInitFile;
         private readonly List<string> mDynFieldList;
@@ -77,15 +77,10 @@ namespace iLand.Core
             return false;
         }
 
-        public int CurrentYear()
-        {
-            return GlobalSettings.Instance.CurrentYear;
-        }
-
-        public void SetFileName(string initFileName)
+        public void LoadFile(string initFileName)
         {
             mInitFile = initFileName;
-            GlobalSettings.Instance.LoadProjectFile(mInitFile);
+            this.Model.GlobalSettings.LoadProjectFile(mInitFile);
         }
 
         public void Create()
@@ -111,9 +106,9 @@ namespace iLand.Core
             }
 
             // reset clock...
-            GlobalSettings.Instance.CurrentYear = 1;
+            this.Model.GlobalSettings.CurrentYear = 1;
             // initialization of trees, output on startup
-            Model.BeforeRun();
+            this.Model.BeforeRun();
 
             Debug.WriteLine("Model created.");
         }
@@ -123,28 +118,27 @@ namespace iLand.Core
             if (CanDestroy())
             {
                 Model = null;
-                GlobalSettings.Instance.CurrentYear = 0;
                 Debug.WriteLine("ModelController: Model destroyed.");
             }
         }
 
-        public bool RunYear()
+        public bool RunYear(GlobalSettings globalSettings)
         {
             if (!CanRun())
             {
                 return false;
             }
             using DebugTimer t = new DebugTimer("ModelController.RunYear()");
-            Debug.WriteLine(DateTime.Now.ToString("hh:mm:ss:") + " ModelController: run year " + CurrentYear());
+            Debug.WriteLine(DateTime.Now.ToString("hh:mm:ss:") + " ModelController: run year " + this.Model.GlobalSettings.CurrentYear);
 
-            if (GlobalSettings.Instance.Settings.GetBooleanParameter("debug_clear"))
+            if (this.Model.GlobalSettings.Settings.GetBooleanParameter("debug_clear"))
             {
-                GlobalSettings.Instance.ClearDebugLists();  // clear debug data
+                this.Model.GlobalSettings.ClearDebugLists();  // clear debug data
             }
             bool err = false;
             Model.RunYear();
 
-            FetchDynamicOutput();
+            FetchDynamicOutput(globalSettings);
 
             return err;
         }
@@ -177,7 +171,7 @@ namespace iLand.Core
             return String.Join(System.Environment.NewLine, mDynData);
         }
 
-        public void FetchDynamicOutput()
+        public void FetchDynamicOutput(GlobalSettings globalSettings)
         {
             if (!DynamicOutputEnabled || mDynFieldList.Count == 0)
             {
@@ -238,18 +232,18 @@ namespace iLand.Core
                         tw.Tree = tree;
                         if (simple_expression)
                         {
-                            value = tw.Value(var_index);
+                            value = tw.Value(var_index, globalSettings);
                         }
                         else
                         {
-                            value = custom_expr.Execute();
+                            value = custom_expr.Execute(globalSettings);
                         }
                         data.Add(value);
                     }
                     stat.SetData(data);
                 }
                 // fetch data
-                int var_index_inner = AggList.IndexOf(var[1]);
+                int var_index_inner = Aggregations.IndexOf(var[1]);
                 value = var_index_inner switch
                 {
                     0 => stat.Mean,
@@ -264,34 +258,34 @@ namespace iLand.Core
                     9 => stat.Percentile(90),
                     10 => stat.Percentile(95),
                     _ => throw new NotSupportedException(String.Format("Invalid aggregate expression for dynamic output: {0}{2}allowed: {1}",
-                                                                        var[1], String.Join(' ', AggList), System.Environment.NewLine)),
+                                                                        var[1], String.Join(' ', Aggregations), System.Environment.NewLine)),
                 };
                 line.Add(value.ToString());
             }
             line.Insert(0, data.Count.ToString());
-            line.Insert(0, GlobalSettings.Instance.CurrentYear.ToString());
+            line.Insert(0, this.Model.GlobalSettings.CurrentYear.ToString());
             mDynData.Add(String.Join(';', line));
         }
 
         public void SaveDebugOutputs()
         {
             // save to files if switch is true
-            if (!GlobalSettings.Instance.Settings.GetBool("system.settings.debugOutputAutoSave"))
+            if (!this.Model.GlobalSettings.Settings.GetBool("system.settings.debugOutputAutoSave"))
             {
                 return;
             }
-            string p = GlobalSettings.Instance.Path("debug_", "temp");
+            string p = this.Model.GlobalSettings.Path("debug_", "temp");
 
-            GlobalSettings.Instance.DebugDataTable(DebugOutputs.TreePartition, ";", p + "tree_partition.csv");
-            GlobalSettings.Instance.DebugDataTable(DebugOutputs.TreeGrowth, ";", p + "tree_growth.csv");
-            GlobalSettings.Instance.DebugDataTable(DebugOutputs.TreeNpp, ";", p + "tree_npp.csv");
-            GlobalSettings.Instance.DebugDataTable(DebugOutputs.StandGpp, ";", p + "stand_gpp.csv");
-            GlobalSettings.Instance.DebugDataTable(DebugOutputs.WaterCycle, ";", p + "water_cycle.csv");
-            GlobalSettings.Instance.DebugDataTable(DebugOutputs.DailyResponses, ";", p + "daily_responses.csv");
-            GlobalSettings.Instance.DebugDataTable(DebugOutputs.Establishment, ";", p + "establishment.csv");
-            GlobalSettings.Instance.DebugDataTable(DebugOutputs.SaplingGrowth, ";", p + "saplinggrowth.csv");
-            GlobalSettings.Instance.DebugDataTable(DebugOutputs.CarbonCycle, ";", p + "carboncycle.csv");
-            GlobalSettings.Instance.DebugDataTable(DebugOutputs.Performance, ";", p + "performance.csv");
+            this.Model.GlobalSettings.DebugDataTable(DebugOutputs.TreePartition, ";", p + "tree_partition.csv");
+            this.Model.GlobalSettings.DebugDataTable(DebugOutputs.TreeGrowth, ";", p + "tree_growth.csv");
+            this.Model.GlobalSettings.DebugDataTable(DebugOutputs.TreeNpp, ";", p + "tree_npp.csv");
+            this.Model.GlobalSettings.DebugDataTable(DebugOutputs.StandGpp, ";", p + "stand_gpp.csv");
+            this.Model.GlobalSettings.DebugDataTable(DebugOutputs.WaterCycle, ";", p + "water_cycle.csv");
+            this.Model.GlobalSettings.DebugDataTable(DebugOutputs.DailyResponses, ";", p + "daily_responses.csv");
+            this.Model.GlobalSettings.DebugDataTable(DebugOutputs.Establishment, ";", p + "establishment.csv");
+            this.Model.GlobalSettings.DebugDataTable(DebugOutputs.SaplingGrowth, ";", p + "saplinggrowth.csv");
+            this.Model.GlobalSettings.DebugDataTable(DebugOutputs.CarbonCycle, ";", p + "carboncycle.csv");
+            this.Model.GlobalSettings.DebugDataTable(DebugOutputs.Performance, ";", p + "performance.csv");
             Helper.SaveToTextFile(p + "dynamic.csv", DynamicOutput());
             Helper.SaveToTextFile(p + "version.txt", this.GetType().Assembly.FullName);
 

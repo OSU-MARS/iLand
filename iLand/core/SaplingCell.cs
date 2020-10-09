@@ -4,7 +4,7 @@ namespace iLand.Core
 {
     public class SaplingCell
     {
-        public const int SaplingSlots = 5; // TODO: 5 slots per cell -> max of 5 saplings per 2 x 2 m cell -> upper limit of only 8000 TPH regen?
+        public const int SaplingsPerCell = 5; // TODO: 5 slots per cell -> max of 5 saplings per 2 x 2 m cell -> upper limit of only 8000 TPH regen?
 
         public enum SaplingCellState { Invalid = 0, Free = 1, Full = 2 };
 
@@ -14,7 +14,7 @@ namespace iLand.Core
         public SaplingCell()
         {
             this.State = SaplingCellState.Invalid;
-            this.Saplings = new SaplingTree[SaplingCell.SaplingSlots];
+            this.Saplings = new SaplingTree[SaplingCell.SaplingsPerCell];
             for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
                 // BUGBUG: SoA

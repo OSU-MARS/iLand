@@ -10,12 +10,6 @@ namespace iLand.Test
     {
         public TestContext TestContext { get; set; }
 
-        [ClassInitialize]
-        public static void ClassInitialize(TestContext testContext)
-        {
-            LandTest.EnsureModel(testContext);
-        }
-
         private Grid<float> CreateAveragedGrid(int cellSize)
         {
             Grid<float> grid = new Grid<float>();
@@ -58,9 +52,10 @@ namespace iLand.Test
         [TestMethod]
         public void RumpleIndex()
         {
+            Model model = this.LoadProject(this.GetDefaultProjectPath(this.TestContext));
             RumpleIndex rumpleIndex = new RumpleIndex();
-            rumpleIndex.Calculate();
-            double index = rumpleIndex.Value();
+            rumpleIndex.Calculate(model);
+            double index = rumpleIndex.Value(model);
             Assert.IsTrue(Math.Abs(index - 0.0) < 0.001);
 
             // check calculation: numbers for Jenness paper

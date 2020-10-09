@@ -25,41 +25,40 @@ namespace iLand.Output
             Columns.Add(SqlColumn.CreateResourceUnit());
             Columns.Add(SqlColumn.CreateID());
             Columns.Add(SqlColumn.CreateSpecies());
-            Columns.Add(new SqlColumn("area_ha", "stockable forest area on the resource unit (in ha).", OutputDatatype.OutDouble));
+            Columns.Add(new SqlColumn("area_ha", "stockable forest area on the resource unit (in ha).", OutputDatatype.Double));
             //columns().Add(new OutputColumn("x_m", "x-coord", OutInteger)
             //columns().Add(new OutputColumn("y_m", "y-coord", OutInteger) // temp
-            Columns.Add(new SqlColumn("count_ha", "tree count (living, >4m height) per ha", OutputDatatype.OutInteger));
-            Columns.Add(new SqlColumn("dbh_avg_cm", "average dbh (cm)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("height_avg_m", "average tree height (m)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("volume_m3", "volume (geomery, taper factor) in m3", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("total_carbon_kg", "total carbon in living biomass (aboveground compartments and roots) of all living trees (including regeneration layer) (kg/ha)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("gwl_m3", "'gesamtwuchsleistung' (total growth including removed/dead trees) volume (geomery, taper factor) in m3", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("NPP_kg", "sum of NPP (aboveground + belowground) kg Biomass/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("NPPabove_kg", "sum of NPP (abovegroundground) kg Biomass/ha", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("LAI", "Leafareaindex (m2/m2)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("cohort_count_ha", "number of cohorts in the regeneration layer (<4m) /ha", OutputDatatype.OutInteger));
+            Columns.Add(new SqlColumn("count_ha", "tree count (living, >4m height) per ha", OutputDatatype.Integer));
+            Columns.Add(new SqlColumn("dbh_avg_cm", "average dbh (cm)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("height_avg_m", "average tree height (m)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("volume_m3", "volume (geomery, taper factor) in m3", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("total_carbon_kg", "total carbon in living biomass (aboveground compartments and roots) of all living trees (including regeneration layer) (kg/ha)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("gwl_m3", "'gesamtwuchsleistung' (total growth including removed/dead trees) volume (geomery, taper factor) in m3", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("NPP_kg", "sum of NPP (aboveground + belowground) kg Biomass/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("NPPabove_kg", "sum of NPP (abovegroundground) kg Biomass/ha", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("LAI", "Leafareaindex (m2/m2)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("cohort_count_ha", "number of cohorts in the regeneration layer (<4m) /ha", OutputDatatype.Integer));
         }
 
-        public override void Setup()
+        public override void Setup(GlobalSettings globalSettings)
         {
             // use a condition for to control execuation for the current year
-            string condition = Settings().GetString(".condition", "");
+            string condition = globalSettings.Settings.GetString(".condition", "");
             mFilter.SetExpression(condition);
         }
 
-        protected override void LogYear(SqliteCommand insertRow)
+        protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            Model m = GlobalSettings.Instance.Model;
             if (!mFilter.IsEmpty)
             {
-                if (mFilter.Calculate(GlobalSettings.Instance.CurrentYear) == 0.0)
+                if (mFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
                 {
                     return;
                 }
             }
 
-            foreach (ResourceUnit ru in m.ResourceUnits)
+            foreach (ResourceUnit ru in model.ResourceUnits)
             {
                 if (ru.ID == -1)
                 {
@@ -72,7 +71,7 @@ namespace iLand.Output
                     {
                         continue;
                     }
-                    this.Add(CurrentYear());
+                    this.Add(model.GlobalSettings.CurrentYear);
                     this.Add(ru.Index);
                     this.Add(ru.ID);
                     this.Add(rus.Species.ID);
@@ -81,9 +80,9 @@ namespace iLand.Output
                     this.Add(stat.Count);
                     this.Add(stat.AverageDbh);
                     this.Add(stat.AverageHeight);
-                    this.Add(stat.Volume);
+                    this.Add(stat.StemVolume);
                     this.Add(stat.TotalCarbon());
-                    this.Add(stat.Gwl);
+                    this.Add(stat.TotalStemGrowth);
                     this.Add(stat.BasalArea);
                     this.Add(stat.Npp);
                     this.Add(stat.NppAbove);

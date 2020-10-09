@@ -1,6 +1,7 @@
 ﻿using iLand.Core;
 using iLand.Tools;
 using Microsoft.Data.Sqlite;
+using System;
 using System.Collections.Generic;
 
 namespace iLand.Output
@@ -47,20 +48,20 @@ namespace iLand.Output
                           "the setting 'includeHarvest' controls whether to include ('true') or exclude ('false') harvested trees.";
             Columns.Add(SqlColumn.CreateYear());
             Columns.Add(SqlColumn.CreateSpecies());
-            Columns.Add(new SqlColumn("reason", "Resaon for tree death: 'N': Natural mortality, 'H': Harvest (removed from the forest), 'D': Disturbance (not salvage-harvested), 'S': Salvage harvesting (i.e. disturbed trees which are harvested), 'C': killed/cut down by management", OutputDatatype.OutString));
-            Columns.Add(new SqlColumn("count", "number of died trees (living, >4m height) ", OutputDatatype.OutInteger));
-            Columns.Add(new SqlColumn("volume_m3", "sum of volume (geomery, taper factor) in m3", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.OutDouble));
+            Columns.Add(new SqlColumn("reason", "Resaon for tree death: 'N': Natural mortality, 'H': Harvest (removed from the forest), 'D': Disturbance (not salvage-harvested), 'S': Salvage harvesting (i.e. disturbed trees which are harvested), 'C': killed/cut down by management", OutputDatatype.String));
+            Columns.Add(new SqlColumn("count", "number of died trees (living, >4m height) ", OutputDatatype.Integer));
+            Columns.Add(new SqlColumn("volume_m3", "sum of volume (geomery, taper factor) in m3", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.Double));
         }
 
         public void AccumulateTreeRemoval(Tree tree, int reason)
         {
-            TreeRemovalType rem_type = (TreeRemovalType)reason;
-            if (rem_type == TreeRemovalType.TreeDeath && !mIncludeDeadTrees)
+            MortalityCause rem_type = (MortalityCause)reason;
+            if (rem_type == MortalityCause.Stress && !mIncludeDeadTrees)
             {
                 return;
             }
-            if ((rem_type == TreeRemovalType.TreeHarvest || rem_type == TreeRemovalType.TreeSalavaged || rem_type == TreeRemovalType.TreeCutDown) && !mIncludeHarvestTrees)
+            if ((rem_type == MortalityCause.Harvest || rem_type == MortalityCause.Salavaged || rem_type == MortalityCause.CutDown) && !mIncludeHarvestTrees)
             {
                 return;
             }
@@ -76,21 +77,25 @@ namespace iLand.Output
             removalData.n++;
         }
 
-        protected override void LogYear(SqliteCommand insertRow)
+        protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             foreach (KeyValuePair<int, LROdata> i in mLandscapeRemoval)
             {
                 if (i.Value.n > 0)
                 {
-                    TreeRemovalType rem_type = (TreeRemovalType)(i.Key / 10000);
+                    MortalityCause rem_type = (MortalityCause)(i.Key / 10000);
                     int species_index = i.Key % 10000;
-                    this.Add(CurrentYear());
-                    this.Add(GlobalSettings.Instance.Model.SpeciesSet().Species(species_index).ID);
-                    if (rem_type == TreeRemovalType.TreeDeath) this.Add("N");
-                    if (rem_type == TreeRemovalType.TreeHarvest) this.Add("H");
-                    if (rem_type == TreeRemovalType.TreeDisturbance) this.Add("D");
-                    if (rem_type == TreeRemovalType.TreeSalavaged) this.Add("S");
-                    if (rem_type == TreeRemovalType.TreeCutDown) this.Add("C");
+                    this.Add(model.GlobalSettings.CurrentYear);
+                    this.Add(model.SpeciesSet().Species(species_index).ID);
+                    this.Add(rem_type switch
+                    {
+                        MortalityCause.CutDown => "C",
+                        MortalityCause.Stress => "N",
+                        MortalityCause.Disturbance => "D",
+                        MortalityCause.Harvest => "H",
+                        MortalityCause.Salavaged => "S",
+                        _ => throw new NotSupportedException("Unhandled tree removal type " + rem_type + ".")
+                    });;
                     this.Add(i.Value.n);
                     this.Add(i.Value.volume);
                     this.Add(i.Value.basal_area);
@@ -105,10 +110,10 @@ namespace iLand.Output
             }
         }
 
-        public override void Setup()
+        public override void Setup(GlobalSettings globalSettings)
         {
-            mIncludeHarvestTrees = Settings().GetBool(".includeHarvest", true);
-            mIncludeDeadTrees = Settings().GetBool(".includeNatural", false);
+            mIncludeHarvestTrees = globalSettings.Settings.GetBool(".includeHarvest", true);
+            mIncludeDeadTrees = globalSettings.Settings.GetBool(".includeNatural", false);
             Tree.LandscapeRemovalOutput = this;
         }
     }

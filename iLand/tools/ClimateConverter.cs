@@ -78,7 +78,7 @@ namespace iLand.Tools
             }
         }
 
-        public void Run()
+        public void Run(GlobalSettings globalSettings)
         {
             mExpYear.SetExpression(Year);
             mExpMonth.SetExpression(Month);
@@ -150,14 +150,14 @@ namespace iLand.Tools
                     }
 
                     // calculate new values....
-                    int year = (int)mExpYear.Execute();
-                    int month = (int)mExpMonth.Execute();
-                    int day = (int)mExpDay.Execute();
-                    double temp = mExpTemp.Execute();
-                    double min_temp = mExpMinTemp.Execute();
-                    double prec = mExpPrec.Execute();
-                    double rad = mExpRad.Execute();
-                    double vpd = mExpVpd.Execute();
+                    int year = (int)mExpYear.Execute(globalSettings);
+                    int month = (int)mExpMonth.Execute(globalSettings);
+                    int day = (int)mExpDay.Execute(globalSettings);
+                    double temp = mExpTemp.Execute(globalSettings);
+                    double min_temp = mExpMinTemp.Execute(globalSettings);
+                    double prec = mExpPrec.Execute(globalSettings);
+                    double rad = mExpRad.Execute(globalSettings);
+                    double vpd = mExpVpd.Execute(globalSettings);
 
                     // bind values
                     insert.Parameters[0].Value = year;

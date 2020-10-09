@@ -26,6 +26,7 @@ namespace iLand
 
         public class Default
         {
+            public const double CarbonDioxidePpm = 400.0;
             public const int ClimateYearsToLoadPerChunk = 100;
         }
 

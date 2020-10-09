@@ -8,7 +8,7 @@ namespace iLand.Core
         private const double J = Math.PI / 182.625;
         private static readonly double Ecliptic = Global.ToRadians(23.439);
 
-        private double mLatitude; ///< latitude in radians
+        private double mLatitudeInRadians; ///< latitude in radians
         private readonly double[] mDayLengthInHours; ///< daylength per day in hours
 
         public int LastDayLongerThan10_5Hours { get; private set; } // last day of year with a day length > 10.5 hours (see Establishment)
@@ -21,12 +21,12 @@ namespace iLand.Core
         }
 
         public double GetDaylength(int day) { return mDayLengthInHours[day]; }
-        public bool NorthernHemishere() { return LongestDay < 300; }
+        public bool NorthernHemisphere() { return LongestDay < 300; }
 
         public string Dump()
         {
             StringBuilder result = new StringBuilder();
-            result.AppendLine(String.Format("lat: {0}, longest day: {1}", mLatitude, LongestDay));
+            result.AppendLine(String.Format("lat: {0}, longest day: {1}", mLatitudeInRadians, LongestDay));
             result.AppendLine("day;daylength");
             for (int day = 0; day < this.mDayLengthInHours.Length; ++day)
             {
@@ -35,10 +35,10 @@ namespace iLand.Core
             return result.ToString();
         }
 
-        public void Setup(double latitude_rad)
+        public void Setup(double latitudeInRadians)
         {
-            mLatitude = latitude_rad;
-            if (mLatitude > 0)
+            mLatitudeInRadians = latitudeInRadians;
+            if (mLatitudeInRadians > 0)
             {
                 LongestDay = 182 - 10; // 21.juni
             }
@@ -51,7 +51,7 @@ namespace iLand.Core
             double m;
             for (int day = 0; day < this.mDayLengthInHours.Length; day++)
             {
-                m = 1.0 - Math.Tan(latitude_rad) * Math.Tan(Ecliptic * Math.Cos(J * (day + 10))); // day=0: winter solstice => subtract 10 days
+                m = 1.0 - Math.Tan(latitudeInRadians) * Math.Tan(Ecliptic * Math.Cos(J * (day + 10))); // day=0: winter solstice => subtract 10 days
                 m = Global.Limit(m, 0.0, 2.0);
                 mDayLengthInHours[day] = Math.Acos(1 - m) / Math.PI * 24.0; // result in hours [0..24]
             }

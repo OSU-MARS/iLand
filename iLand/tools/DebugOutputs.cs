@@ -5,7 +5,7 @@ namespace iLand.Tools
     // fine grained debug outputs
     // defines available debug output types.
     [Flags]
-    internal enum DebugOutputs : uint
+    public enum DebugOutputs : uint
     {
         TreeNpp = 1, 
         TreePartition = 2, 

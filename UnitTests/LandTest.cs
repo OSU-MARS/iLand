@@ -7,29 +7,20 @@ namespace iLand.Test
 {
     public class LandTest
     {
-        private static readonly object LockObject = new object();
-
-        protected static string ProjectFilePath { get; set; }
-        protected static Model Model { get; private set; }
-
-        protected static void EnsureModel(TestContext testContext)
+        protected string GetDefaultProjectPath(TestContext testContext)
         {
-            if (LandTest.Model == null)
-            {
-                lock (LandTest.LockObject)
-                {
-                    if (LandTest.Model == null)
-                    {
-                        // see also ModelControlller.
-                        LandTest.ProjectFilePath = Path.Combine(testContext.TestDir, "..", "..", "UnitTests", "testProject", "testProject.xml");
-                        LandTest.Model = new Model();
-                        GlobalSettings.Instance.LoadProjectFile(LandTest.ProjectFilePath);
-                        GlobalSettings.Instance.CurrentYear = 1;
-                        LandTest.Model.LoadProject();
-                        LandTest.Model.BeforeRun();
-                    }
-                }
-            }
+            return Path.Combine(testContext.TestDir, "..", "..", "UnitTests", "testProject", "testProject.xml");
+        }
+
+        protected Model LoadProject(string projectFilePath)
+        {
+            // see also ModelController
+            Model model = new Model();
+            model.GlobalSettings.LoadProjectFile(projectFilePath);
+            model.GlobalSettings.CurrentYear = 1;
+            model.LoadProject();
+            model.BeforeRun();
+            return model;
         }
     }
 }

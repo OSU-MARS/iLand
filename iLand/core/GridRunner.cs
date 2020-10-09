@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 
 namespace iLand.Core
 {
@@ -13,10 +14,10 @@ namespace iLand.Core
         private int mCols;
         private int mCurrentCol;
 
-        public GridRunner(Grid<T> target_grid, RectangleF rectangle)
+        public GridRunner(Grid<T> grid, RectangleF physicalExtentOnGridToRun)
         {
             // run over 
-            Setup(target_grid, rectangle);
+            Setup(grid, physicalExtentOnGridToRun);
         }
 
         public GridRunner(Grid<T> target_grid) 
@@ -119,30 +120,35 @@ namespace iLand.Core
             }
         }
 
-        private void Setup(Grid<T> target_grid, Rectangle rectangle)
+        private void Setup(Grid<T> gridToRun, Rectangle cellExtentToRun)
         {
-            Point upper_left = new Point(rectangle.Left, rectangle.Top);
-            // due to the strange behavior of Rectangle::bottom() and right():
-            Point lower_right = new Point(rectangle.Right, rectangle.Bottom);
-            mCurrent = target_grid.IndexOf(upper_left.X, upper_left.Y);
-            mFirst = mCurrent;
-            mCurrent--; // point to first element -1
-            mLast = target_grid.IndexOf(lower_right.X - 1, lower_right.Y - 1);
-            mCols = lower_right.X - upper_left.X; //
-            mLineLength = target_grid.CellsX - mCols;
+            Point upperLeft = new Point(cellExtentToRun.Left, cellExtentToRun.Top);
+            Point lowerRight = new Point(cellExtentToRun.Right, cellExtentToRun.Bottom);
+
+            mGrid = gridToRun;
+
+            mCols = lowerRight.X - upperLeft.X;
+            mFirst = gridToRun.IndexOf(upperLeft.X, upperLeft.Y);
+            mLast = gridToRun.IndexOf(lowerRight.X - 1, lowerRight.Y - 1);
+            if ((mFirst < 0) || (mLast >= gridToRun.Count))
+            {
+                throw new ArgumentOutOfRangeException(nameof(cellExtentToRun), "Rectangle extends beyond grid.");
+            }
+            mLineLength = gridToRun.CellsX - mCols;
+
+            mCurrent = mFirst - 1; // point to first element -1
             mCurrentCol = -1;
-            mGrid = target_grid;
             //    qDebug() << "GridRunner: rectangle:" << rectangle
             //             << "upper_left:" << target_grid.cellCenterPoint(target_grid.indexOf(mCurrent))
             //             << "lower_right:" << target_grid.cellCenterPoint(target_grid.indexOf(mLast));
         }
 
-        public void Setup(Grid<T> target_grid, RectangleF rectangle_metric)
+        public void Setup(Grid<T> grid, RectangleF physicalExtentOnGridToRun)
         {
-            Point topLeft = target_grid.IndexAt(rectangle_metric.Left, rectangle_metric.Top);
-            Point bottomRight = target_grid.IndexAt(rectangle_metric.Right, rectangle_metric.Bottom);
+            Point topLeft = grid.IndexAt(physicalExtentOnGridToRun.Left, physicalExtentOnGridToRun.Top);
+            Point bottomRight = grid.IndexAt(physicalExtentOnGridToRun.Right, physicalExtentOnGridToRun.Bottom);
             Rectangle rect = new Rectangle(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
-            Setup(target_grid, rect);
+            Setup(grid, rect);
         }
     }
 }

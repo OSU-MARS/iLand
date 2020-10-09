@@ -1,7 +1,4 @@
-﻿using iLand.Tools;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System;
 
 namespace iLand.Core
 {
@@ -126,11 +123,11 @@ namespace iLand.Core
          a model mockup in R: script_establishment.r
 
          */
-        public void CalculateAbioticEnvironment()
+        public void CalculateAbioticEnvironment(Model model)
         {
             //DebugTimer t("est_abiotic"); t.setSilent();
             // make sure that required calculations (e.g. watercycle are already performed)
-            mRUS.Calculate(true); // calculate the 3pg module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
+            mRUS.Calculate(model, fromEstablishment: true); // calculate the 3pg module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
 
             EstablishmentParameters p = mRUS.Species.EstablishmentParameters;
             Phenology pheno = mClimate.Phenology(mRUS.Species.PhenologyClass);
@@ -154,7 +151,7 @@ namespace iLand.Core
             {
                 veg_period_end = mClimate.Sun.LastDayLongerThan10_5Hours;
             }
-            for (int index = mClimate.Begin; index != mClimate.End; ++index, ++doy)
+            for (int index = mClimate.CurrentJanuary1; index != mClimate.NextJanuary1; ++index, ++doy)
             {
                 ClimateDay day = mClimate[index];
                 // minimum temperature: if temp too low . set prob. to zero
@@ -239,29 +236,29 @@ namespace iLand.Core
             }
         }
 
-        public void WriteDebugOutputs()
-        {
-            if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.Establishment))
-            {
-                List<object> output = GlobalSettings.Instance.DebugList(mRUS.RU.Index, DebugOutputs.Establishment);
-                // establishment details
-                output.AddRange(new object[] { mRUS.Species.ID,  mRUS.RU.Index, mRUS.RU.ID,
-                                               MeanSeedDensity, TacaMinTemp, TacaChill, TacaFrostFree, TacaGdd,
-                                               TacaFrostDaysAfterBudburst, WaterLimitation, AbioticEnvironment,
-                                               mRUS.BiomassGrowth.EnvironmentalFactor, mRUS.SaplingStats.NewSaplings
-                                               //mSaplingStat.livingSaplings(), mSaplingStat.averageHeight(), mSaplingStat.averageAge(), mSaplingStat.averageDeltaHPot(), mSaplingStat.averageDeltaHRealized();
-                                               //mSaplingStat.newSaplings(), mSaplingStat.diedSaplings(), mSaplingStat.recruitedSaplings(), mSpecies.saplingGrowthParameters().referenceRatio;
-                });
-            }
+        //public void WriteDebugOutputs()
+        //{
+        //    if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.Establishment))
+        //    {
+        //        List<object> output = GlobalSettings.Instance.DebugList(mRUS.RU.Index, DebugOutputs.Establishment);
+        //        // establishment details
+        //        output.AddRange(new object[] { mRUS.Species.ID,  mRUS.RU.Index, mRUS.RU.ID,
+        //                                       MeanSeedDensity, TacaMinTemp, TacaChill, TacaFrostFree, TacaGdd,
+        //                                       TacaFrostDaysAfterBudburst, WaterLimitation, AbioticEnvironment,
+        //                                       mRUS.BiomassGrowth.EnvironmentalFactor, mRUS.SaplingStats.NewSaplings
+        //                                       //mSaplingStat.livingSaplings(), mSaplingStat.averageHeight(), mSaplingStat.averageAge(), mSaplingStat.averageDeltaHPot(), mSaplingStat.averageDeltaHRealized();
+        //                                       //mSaplingStat.newSaplings(), mSaplingStat.diedSaplings(), mSaplingStat.recruitedSaplings(), mSpecies.saplingGrowthParameters().referenceRatio;
+        //        });
+        //    }
 
-            if (GlobalSettings.Instance.LogDebug())
-            {
-                Debug.WriteLine("establishment of RU " + mRUS.RU.Index + " species " + mRUS.Species.ID +
-                                " seeds density :" + MeanSeedDensity + 
-                                " abiotic environment: " + AbioticEnvironment +
-                                " f_env,yr: " + mRUS.BiomassGrowth.EnvironmentalFactor + 
-                                " N(established):"  + NumberEstablished);
-            }
-        }
+        //    if (GlobalSettings.Instance.LogDebug())
+        //    {
+        //        Debug.WriteLine("establishment of RU " + mRUS.RU.Index + " species " + mRUS.Species.ID +
+        //                        " seeds density :" + MeanSeedDensity + 
+        //                        " abiotic environment: " + AbioticEnvironment +
+        //                        " f_env,yr: " + mRUS.BiomassGrowth.EnvironmentalFactor + 
+        //                        " N(established):"  + NumberEstablished);
+        //    }
+        //}
     }
 }

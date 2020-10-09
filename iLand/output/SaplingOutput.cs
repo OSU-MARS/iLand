@@ -22,25 +22,23 @@ namespace iLand.Output
             Columns.Add(SqlColumn.CreateResourceUnit());
             Columns.Add(SqlColumn.CreateID());
             Columns.Add(SqlColumn.CreateSpecies());
-            Columns.Add(new SqlColumn("count_ha", "number of represented individuals per ha (tree height >1.3m).", OutputDatatype.OutInteger));
-            Columns.Add(new SqlColumn("count_small_ha", "number of represented individuals per ha (with height <=1.3m).", OutputDatatype.OutInteger));
-            Columns.Add(new SqlColumn("cohort_count_ha", "number of cohorts per ha.", OutputDatatype.OutInteger));
-            Columns.Add(new SqlColumn("height_avg_m", "arithmetic average height of the cohorts (m) ", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("age_avg", "arithmetic average age of the sapling cohorts (years)", OutputDatatype.OutDouble));
+            Columns.Add(new SqlColumn("count_ha", "number of represented individuals per ha (tree height >1.3m).", OutputDatatype.Integer));
+            Columns.Add(new SqlColumn("count_small_ha", "number of represented individuals per ha (with height <=1.3m).", OutputDatatype.Integer));
+            Columns.Add(new SqlColumn("cohort_count_ha", "number of cohorts per ha.", OutputDatatype.Integer));
+            Columns.Add(new SqlColumn("height_avg_m", "arithmetic average height of the cohorts (m) ", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("age_avg", "arithmetic average age of the sapling cohorts (years)", OutputDatatype.Double));
         }
 
-        public override void Setup()
+        public override void Setup(GlobalSettings globalSettings)
         {
             // use a condition for to control execuation for the current year
-            string condition = Settings().GetString(".condition", "");
+            string condition = globalSettings.Settings.GetString(".condition", "");
             mFilter.SetExpression(condition);
         }
 
-        protected override void LogYear(SqliteCommand insertRow)
+        protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            Model m = GlobalSettings.Instance.Model;
-
-            foreach (ResourceUnit ru in m.ResourceUnits)
+            foreach (ResourceUnit ru in model.ResourceUnits)
             {
                 if (ru.ID == -1)
                 {
@@ -49,7 +47,7 @@ namespace iLand.Output
 
                 if (!mFilter.IsEmpty)
                 {
-                    if (mFilter.Execute() == 0.0)
+                    if (mFilter.Execute(model.GlobalSettings) == 0.0)
                     {
                         continue;
                     }
@@ -64,7 +62,7 @@ namespace iLand.Output
                     {
                         continue;
                     }
-                    this.Add(CurrentYear());
+                    this.Add(model.GlobalSettings.CurrentYear);
                     this.Add(ru.Index);
                     this.Add(ru.ID);
                     this.Add(rus.Species.ID); // keys

@@ -12,20 +12,20 @@ namespace iLand.Tools
         private readonly List<ITreeDeathInterface> mTreeDeath;
         private readonly List<IWaterInterface> mWater;
 
-        public Modules()
+        public Modules(GlobalSettings globalSettings)
         {
             this.mInterfaces = new List<IDisturbanceInterface>();
             this.mSetupRUs = new List<ISetupResourceUnitInterface>();
             this.mTreeDeath = new List<ITreeDeathInterface>();
             this.mWater = new List<IWaterInterface>();
 
-            this.Init();
+            this.Init(globalSettings);
         }
 
         public bool HasSetupResourceUnits() { return mSetupRUs.Count != 0; }
 
         // load the static plugins
-        private void Init()
+        private void Init(GlobalSettings globalSettings)
         {
             foreach (object plugin in PluginLoader.StaticInstances)
             {
@@ -33,7 +33,7 @@ namespace iLand.Tools
                 {
                     Debug.WriteLine(di.Name());
                     // check xml file
-                    if (GlobalSettings.Instance.Settings.GetBool(String.Format("modules.{0}.enabled", di.Name())))
+                    if (globalSettings.Settings.GetBool(String.Format("modules.{0}.enabled", di.Name())))
                     {
                         // plugin is enabled: store in list of active modules
                         mInterfaces.Add(di);

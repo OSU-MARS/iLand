@@ -65,14 +65,13 @@ using System.Xml;
 */
 namespace iLand.Tools
 {
-    internal class GlobalSettings : IDisposable
+    public class GlobalSettings : IDisposable
     {
         private static readonly ReadOnlyCollection<string> DebugOutputNames = new List<string>() { "treeNPP", "treePartition", "treeGrowth", "waterCycle", "dailyResponse", "establishment", "carbonCycle", "performance" }.AsReadOnly();
-        public static GlobalSettings Instance { get; private set; }
 
         private bool isDisposed;
         private readonly MultiValueDictionary<int, List<object>> mDebugLists;
-        private readonly Dictionary<string, string> mFilePath; ///< storage for file paths
+        private readonly Dictionary<string, string> mFilePaths; ///< storage for file paths
         private int mLoglevel;
         private readonly Dictionary<string, SettingMetaData> mSettingMetaData; ///< storage container (QHash) for settings.
 
@@ -81,36 +80,30 @@ namespace iLand.Tools
         public SqliteConnection DatabaseInput { get; private set; }
         public SqliteConnection DatabaseOutput { get; private set; }
         public int DebugOutputs { get; set; }
-        public Model Model { get; set; }
-        public ModelController ModelController { get; set; }
+        public bool LinearizationEnabled { get; set; }
 
         public OutputManager OutputManager { get; private set; }
         // xml project file
         public XmlHelper Settings { get; private set; }
         public SystemStatistics SystemStatistics { get; private set; }
 
-        static GlobalSettings()
-        {
-            GlobalSettings.Instance = new GlobalSettings();
-        }
-
-        private GlobalSettings()
+        public GlobalSettings()
         {
             // lazy init
             // this.databaseClimate
             // this.databaseIn
             // this.databaseOut
-            this.mLoglevel = 0;
             this.isDisposed = false;
             this.mDebugLists = new MultiValueDictionary<int, List<object>>();
-            this.DebugOutputs = 0;
-            this.mFilePath = new Dictionary<string, string>();
-            this.Model = null;
-            this.ModelController = new ModelController();
-            this.OutputManager = new OutputManager();
-            // initialized externall
-            // this.mRunYear
+            this.mFilePaths = new Dictionary<string, string>();
+            this.mLoglevel = 0;
             this.mSettingMetaData = new Dictionary<string, SettingMetaData>();
+            // initialized externally
+            // this.mRunYear
+
+            this.DebugOutputs = 0;
+            this.OutputManager = new OutputManager();
+            this.LinearizationEnabled = false;
             this.SystemStatistics = new SystemStatistics();
             this.Settings = new XmlHelper();
         }
@@ -141,8 +134,7 @@ namespace iLand.Tools
 
         public List<string> DebugDataTable(DebugOutputs type, string separator, string fileName = null) ///< output for all available items (trees, ...) in table form
         {
-            GlobalSettings g = GlobalSettings.Instance;
-            List<List<object>> ddl = g.DebugLists(-1, type); // get all debug data
+            List<List<object>> ddl = this.DebugLists(-1, type); // get all debug data
 
             List<string> result = new List<string>();
             if (ddl.Count < 1)
@@ -155,7 +147,7 @@ namespace iLand.Tools
             {
                 FileStream out_file = new FileStream(fileName, FileMode.Append, FileAccess.Write, FileShare.Read);
                 ts = new StreamWriter(out_file);
-                ts.WriteLine(String.Join(separator, g.DebugListCaptions(type)));
+                ts.WriteLine(String.Join(separator, this.DebugListCaptions(type)));
             }
 
             try
@@ -193,7 +185,7 @@ namespace iLand.Tools
             if (result.Count > 0)
             {
                 // TODO: hoist this
-                result.Insert(0, String.Join(separator, g.DebugListCaptions(type)));
+                result.Insert(0, String.Join(separator, this.DebugListCaptions(type)));
             }
             return result;
         }
@@ -371,14 +363,13 @@ namespace iLand.Tools
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects)
-                    // meta data... really clear ressources...
+                    // meta data... really clear resources...
                     //qDeleteAll(mSettingMetaData.values());
                     //delete mSystemStatistics;
                     //mInstance = NULL;
                     //delete mOutputManager;
                     // clear all databases
-                    ClearDatabaseConnections();
+                    this.CloseDatabaseConnections();
                     //if (mScriptEngine)
                     //    delete mScriptEngine;
                 }
@@ -412,7 +403,7 @@ namespace iLand.Tools
                 }
             }
 
-            if (mFilePath.TryGetValue(type, out string directoryPath) == false)
+            if (mFilePaths.TryGetValue(type, out string directoryPath) == false)
             {
                 directoryPath = System.Environment.CurrentDirectory;
             }
@@ -476,7 +467,7 @@ namespace iLand.Tools
         }
 
         // Database connections
-        public void ClearDatabaseConnections() ///< shutdown and clear connections
+        public void CloseDatabaseConnections() ///< shutdown and clear connections
         {
             if (this.DatabaseClimate != null)
             {
@@ -571,7 +562,7 @@ namespace iLand.Tools
         public void PrintDirectories()
         {
             Debug.WriteLine("current File Paths:");
-            foreach (KeyValuePair<string, string> filePath in mFilePath)
+            foreach (KeyValuePair<string, string> filePath in mFilePaths)
             {
                 Debug.WriteLine(filePath.Key + ": " + filePath.Value);
             }
@@ -579,9 +570,8 @@ namespace iLand.Tools
 
         public void SetupDirectories(XmlNode pathNode, string projectFilePath)
         {
-
-            mFilePath.Clear();
-            mFilePath.Add("exe", this.GetType().Assembly.Location);
+            mFilePaths.Clear();
+            mFilePaths.Add("exe", this.GetType().Assembly.Location);
             XmlHelper xml = new XmlHelper(pathNode);
             string homePath = xml.GetString("home", System.IO.Path.GetDirectoryName(projectFilePath));
             if (String.IsNullOrEmpty(homePath))
@@ -589,16 +579,16 @@ namespace iLand.Tools
                 throw new ArgumentOutOfRangeException(projectFilePath);
             }
 
-            mFilePath.Add("home", homePath);
+            mFilePaths.Add("home", homePath);
             // make other paths relative to "home" if given as relative paths
             // BUGBUG: doesn't detect missing entries in project file
-            mFilePath.Add("lip", this.Path(xml.GetString("lip", "lip"), "home"));
-            mFilePath.Add("database", this.Path(xml.GetString("database", "database"), "home"));
-            mFilePath.Add("temp", this.Path(xml.GetString("temp", ""), "home"));
-            mFilePath.Add("log", this.Path(xml.GetString("log", ""), "home"));
-            mFilePath.Add("script", this.Path(xml.GetString("script", ""), "home"));
-            mFilePath.Add("init", this.Path(xml.GetString("init", ""), "home"));
-            mFilePath.Add("output", this.Path(xml.GetString("output", "output"), "home"));
+            mFilePaths.Add("lip", this.Path(xml.GetString("lip", "lip"), "home"));
+            mFilePaths.Add("database", this.Path(xml.GetString("database", "database"), "home"));
+            mFilePaths.Add("temp", this.Path(xml.GetString("temp", ""), "home"));
+            mFilePaths.Add("log", this.Path(xml.GetString("log", ""), "home"));
+            mFilePaths.Add("script", this.Path(xml.GetString("script", ""), "home"));
+            mFilePaths.Add("init", this.Path(xml.GetString("init", ""), "home"));
+            mFilePaths.Add("output", this.Path(xml.GetString("output", "output"), "home"));
         }
 
         public void SetDebugOutput(DebugOutputs dbg, bool enable = true) ///< enable/disable a specific output type.

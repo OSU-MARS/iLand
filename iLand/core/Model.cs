@@ -19,17 +19,19 @@ namespace iLand.Core
         // access to elements
         public ThreadRunner ThreadRunner { get; private set; }
         public RectangleF WorldExtentUnbuffered { get; private set; } ///< extent of the model (without buffer)
-        public double TotalStockableArea { get; private set; } ///< total stockable area of the landscape (ha)
+        public double TotalStockableHectares { get; private set; } ///< total stockable area of the landscape (ha)
 
-        public List<ResourceUnit> ResourceUnits { get; private set; }
-        public Management Management { get; private set; }
+        public List<Climate> Climates { get; private set; }
+        public DEM Dem { get; private set; }
         public Environment Environment { get; private set; }
+        public GrassCover GrassCover { get; private set; }
+        public GlobalSettings GlobalSettings { get; private set; }
+        public Management Management { get; private set; }
+        public ModelSettings ModelSettings { get; private set; }
+        public Modules Modules { get; private set; }
+        public List<ResourceUnit> ResourceUnits { get; private set; }
         public Saplings Saplings { get; private set; }
         public TimeEvents TimeEvents { get; private set; }
-        public Modules Modules { get; private set; }
-        public DEM Dem { get; private set; }
-        public GrassCover GrassCover { get; private set; }
-        public List<Climate> Climates { get; private set; }
 
         public bool IsSetup { get; private set; } ///< return true if the model world is correctly setup.
 
@@ -39,18 +41,18 @@ namespace iLand.Core
         public MapGrid StandGrid { get; private set; } ///< retrieve the spatial grid that defines the stands (10m resolution)
         public Grid<ResourceUnit> ResourceUnitGrid { get; private set; }
 
-        public ModelSettings Settings { get; private set; }
-
         public Model()
         {
-            GlobalSettings.Instance.CurrentYear = 0; // BUGBUG
-            GlobalSettings.Instance.Model = this; // BUGBUG: many to one set
+            this.mSpeciesSets = new List<SpeciesSet>();
 
             this.Climates = new List<Climate>();
+            this.GlobalSettings = new GlobalSettings()
+            {
+                CurrentYear = 0,
+            };
+            this.ModelSettings = new ModelSettings();
             this.ResourceUnits = new List<ResourceUnit>();
             this.ResourceUnitGrid = new Grid<ResourceUnit>();
-            this.mSpeciesSets = new List<SpeciesSet>();
-            this.Settings = new ModelSettings();
             this.ThreadRunner = new ThreadRunner();
 
             this.IsSetup = false;
@@ -82,24 +84,24 @@ namespace iLand.Core
         {
             // setup outputs
             // setup output database
-            if ((GlobalSettings.Instance.DatabaseOutput != null) && (GlobalSettings.Instance.DatabaseOutput.State != ConnectionState.Closed))
+            if ((this.GlobalSettings.DatabaseOutput != null) && (this.GlobalSettings.DatabaseOutput.State != ConnectionState.Closed))
             {
-                GlobalSettings.Instance.DatabaseOutput.Close();
+                this.GlobalSettings.DatabaseOutput.Close();
             }
             OpenOutputDatabase();
-            GlobalSettings.Instance.OutputManager.Setup();
-            GlobalSettings.Instance.ClearDebugLists();
+            this.GlobalSettings.OutputManager.Setup(this.GlobalSettings);
+            this.GlobalSettings.ClearDebugLists();
 
             // initialize stands
             StandLoader loader = new StandLoader(this);
             {
                 using DebugTimer loadTrees = new DebugTimer("StandLoader.ProcessInit()");
-                loader.ProcessInit();
+                loader.ProcessInit(this);
             }
 
             // load climate
             {
-                if (GlobalSettings.Instance.LogDebug())
+                if (this.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("attempting to load climate...");
                 }
@@ -108,18 +110,18 @@ namespace iLand.Core
                 {
                     if (!c.IsSetup)
                     {
-                        c.Setup();
+                        c.Setup(this);
                     }
                 }
                 // load the first year of the climate database
                 foreach (Climate c in Climates)
                 {
-                    c.NextYear();
+                    c.NextYear(this.GlobalSettings);
                 }
             }
 
             {
-                if (GlobalSettings.Instance.LogDebug())
+                if (this.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("attempting to calculate initial stand statistics (incl. apply and read pattern)...");
                 }
@@ -128,16 +130,16 @@ namespace iLand.Core
                 // debugCheckAllTrees(); // introduced for debugging session (2012-04-06)
                 ApplyPattern();
                 ReadPattern();
-                loader.ProcessAfterInit(); // e.g. initialization of saplings
+                loader.ProcessAfterInit(this); // e.g. initialization of saplings
 
                 // force the compilation of initial stand statistics
-                CreateStandStatistics();
+                CreateStandStatistics(this.GlobalSettings);
             }
 
             // outputs to create with inital state (without any growth) are called here:
-            GlobalSettings.Instance.CurrentYear = 0; // set clock to "0" (for outputs with initial state)
-            GlobalSettings.Instance.OutputManager.LogYear(); // log initial state
-            GlobalSettings.Instance.CurrentYear = 1; // set to first year
+            this.GlobalSettings.CurrentYear = 0; // set clock to "0" (for outputs with initial state)
+            this.GlobalSettings.OutputManager.LogYear(this); // log initial state
+            this.GlobalSettings.CurrentYear = 1; // set to first year
         }
 
         /** Main model runner.
@@ -156,7 +158,7 @@ namespace iLand.Core
         public void RunYear() ///< run a single year
         {
             using DebugTimer t = new DebugTimer("Model.RunYear()");
-            GlobalSettings.Instance.SystemStatistics.Reset();
+            this.GlobalSettings.SystemStatistics.Reset();
             RandomGenerator.CheckGenerator(); // see if we need to generate new numbers...
                                               // initalization at start of year for external modules
             Modules.YearBegin();
@@ -164,14 +166,14 @@ namespace iLand.Core
             // execute scheduled events for the current year
             if (TimeEvents != null)
             {
-                TimeEvents.Run();
+                TimeEvents.Run(this.GlobalSettings);
             }
             // load the next year of the climate database (except for the first year - the first climate year is loaded immediately
-            if (GlobalSettings.Instance.CurrentYear > 1)
+            if (this.GlobalSettings.CurrentYear > 1)
             {
                 foreach (Climate c in Climates)
                 {
-                    c.NextYear();
+                    c.NextYear(this.GlobalSettings);
                 }
             }
 
@@ -183,14 +185,14 @@ namespace iLand.Core
 
             foreach (SpeciesSet set in mSpeciesSets)
             {
-                set.NewYear();
+                set.NewYear(this);
             }
             // management classic
             if (Management != null)
             {
                 using DebugTimer t2 = new DebugTimer("Management.Run()");
                 Management.Run();
-                GlobalSettings.Instance.SystemStatistics.ManagementTime += t.Elapsed();
+                this.GlobalSettings.SystemStatistics.ManagementTime += t.Elapsed();
             }
 
             // if trees are dead/removed because of management, the tree lists
@@ -201,30 +203,28 @@ namespace iLand.Core
             ApplyPattern(); // create Light Influence Patterns
             ReadPattern(); // readout light state of individual trees
             Grow(); // let the trees grow (growth on stand-level, tree-level, mortality)
-            GrassCover.Execute(); // evaluate the grass / herb cover (and its effect on regeneration)
+            GrassCover.Execute(this); // evaluate the grass / herb cover (and its effect on regeneration)
 
             // regeneration
-            if (Settings.RegenerationEnabled)
+            if (ModelSettings.RegenerationEnabled)
             {
                 // seed dispersal
                 using DebugTimer tseed = new DebugTimer("Model.RunYear(seed dispersal, establishment, sapling growth");
                 foreach (SpeciesSet set in mSpeciesSets)
                 {
-                    set.Regeneration(); // parallel execution for each species set
+                    set.Regeneration(this); // parallel execution for each species set
                 }
-                GlobalSettings.Instance.SystemStatistics.SeedDistributionTime += tseed.Elapsed();
+                this.GlobalSettings.SystemStatistics.SeedDistributionTime += tseed.Elapsed();
                 // establishment
-                Saplings.UpdateBrowsingPressure();
-
                 {
                     using DebugTimer t2 = new DebugTimer("Model.SaplingEstablishment()");
                     ExecutePerResourceUnit(SaplingEstablishment, false /* true: force single threaded operation */);
-                    GlobalSettings.Instance.SystemStatistics.EstablishmentTime += t.Elapsed();
+                    this.GlobalSettings.SystemStatistics.EstablishmentTime += t.Elapsed();
                 }
                 {
                     using DebugTimer t3 = new DebugTimer("Model.SaplingGrowth()");
                     ExecutePerResourceUnit(SaplingGrowth, false /* true: force single threaded operation */);
-                    GlobalSettings.Instance.SystemStatistics.SaplingTime += t.Elapsed();
+                    this.GlobalSettings.SystemStatistics.SaplingTime += t.Elapsed();
                 }
 
                 // Establishment.debugInfo(); // debug test
@@ -237,27 +237,27 @@ namespace iLand.Core
 
 
             // calculate soil / snag dynamics
-            if (Settings.CarbonCycleEnabled)
+            if (ModelSettings.CarbonCycleEnabled)
             {
                 using DebugTimer ccycle = new DebugTimer("Model.CarbonCycle90");
                 ExecutePerResourceUnit(CarbonCycle, false /* true: force single threaded operation */);
-                GlobalSettings.Instance.SystemStatistics.CarbonCycleTime += ccycle.Elapsed();
+                this.GlobalSettings.SystemStatistics.CarbonCycleTime += ccycle.Elapsed();
             }
 
             using DebugTimer toutput = new DebugTimer("Model.RunYear(outputs)");
             // calculate statistics
             foreach (ResourceUnit ru in ResourceUnits)
             {
-                ru.YearEnd();
+                ru.YearEnd(this);
             }
             // create outputs
-            GlobalSettings.Instance.OutputManager.LogYear();
+            this.GlobalSettings.OutputManager.LogYear(this);
 
-            GlobalSettings.Instance.SystemStatistics.WriteOutputTime += toutput.Elapsed();
-            GlobalSettings.Instance.SystemStatistics.TotalYearTime += t.Elapsed();
-            GlobalSettings.Instance.SystemStatistics.WriteOutput();
+            this.GlobalSettings.SystemStatistics.WriteOutputTime += toutput.Elapsed();
+            this.GlobalSettings.SystemStatistics.TotalYearTime += t.Elapsed();
+            // this.GlobalSettings.SystemStatistics.AddToDebugList();
 
-            ++GlobalSettings.Instance.CurrentYear;
+            ++this.GlobalSettings.CurrentYear;
         }
 
         // setup/maintenance
@@ -298,7 +298,6 @@ namespace iLand.Core
             {
                 if (disposing)
                 {
-                    GlobalSettings.Instance.Model = null;
                     Clear();
                 }
                 this.isDisposed = true;
@@ -317,8 +316,8 @@ namespace iLand.Core
         public void LoadProject() ///< setup and load a project
         {
             using DebugTimer dt = new DebugTimer("Model.LoadProject()");
-            // GlobalSettings.Instance.PrintDirectories();
-            XmlHelper xml = GlobalSettings.Instance.Settings;
+            // this.GlobalSettings.PrintDirectories();
+            XmlHelper xml = this.GlobalSettings.Settings;
 
             // log level
             string logLevelAsString = xml.GetString("system.settings.logLevel", "debug").ToLowerInvariant();
@@ -330,41 +329,36 @@ namespace iLand.Core
                 "error" => 3,
                 _ => throw new NotSupportedException("Unhandled log level '" + logLevelAsString + "'.")
             };
-            GlobalSettings.Instance.SetLogLevel(logLevel);
+            this.GlobalSettings.SetLogLevel(logLevel);
+
+            this.GlobalSettings.LinearizationEnabled = xml.GetBool("system.settings.expressionLinearizationEnabled", false);
 
             // database connections: reset
-            GlobalSettings.Instance.ClearDatabaseConnections();
+            this.GlobalSettings.CloseDatabaseConnections();
             // input and climate connection
             // see initOutputDatabase() for output database
-            string dbPath = GlobalSettings.Instance.Path(xml.GetString("system.database.in"), "database");
-            GlobalSettings.Instance.SetupDatabaseConnection("in", dbPath, true);
-            dbPath = GlobalSettings.Instance.Path(xml.GetString("system.database.climate"), "database");
-            GlobalSettings.Instance.SetupDatabaseConnection("climate", dbPath, true);
+            string dbPath = this.GlobalSettings.Path(xml.GetString("system.database.in"), "database");
+            this.GlobalSettings.SetupDatabaseConnection("in", dbPath, true);
+            dbPath = this.GlobalSettings.Path(xml.GetString("system.database.climate"), "database");
+            this.GlobalSettings.SetupDatabaseConnection("climate", dbPath, true);
 
-            Settings.LoadModelSettings();
-            Settings.Print();
+            this.ModelSettings.LoadModelSettings(this.GlobalSettings);
+            if (this.GlobalSettings.LogDebug())
+            {
+                this.ModelSettings.Print();
+            }
             // random seed: if stored value is <> 0, use this as the random seed (and produce hence always an equal sequence of random numbers)
             int seed = Int32.Parse(xml.GetString("system.settings.randomSeed", "0"));
             RandomGenerator.Setup(RandomGenerator.RandomGenerators.MersenneTwister, seed); // use the MersenneTwister as default
                                                                                            // linearization of expressions: if true *and* linearize() is explicitely called, then
                                                                                            // function results will be cached over a defined range of values.
-            bool do_linearization = xml.GetBool("system.settings.expressionLinearizationEnabled", false);
-            Expression.LinearizationEnabled = do_linearization;
-            if (do_linearization)
-            {
-                Debug.WriteLine("Linearization of expressions is enabled to reduce computation.");
-            }
 
             // snag dynamics / soil model enabled? (info used during setup of world)
-            Settings.CarbonCycleEnabled = xml.GetBool("model.settings.carbonCycleEnabled", false);
-            // class size of snag classes
-            Snag.SetupThresholds(xml.GetDouble("model.settings.soil.swdDBHClass12"),
-                                 xml.GetDouble("model.settings.soil.swdDBHClass23"));
+            ModelSettings.CarbonCycleEnabled = xml.GetBool("model.settings.carbonCycleEnabled", false);
 
             // setup of modules
-            Modules = new Modules();
-
-            Settings.RegenerationEnabled = xml.GetBool("model.settings.regenerationEnabled", false);
+            Modules = new Modules(this.GlobalSettings);
+            ModelSettings.RegenerationEnabled = xml.GetBool("model.settings.regenerationEnabled", false);
 
             SetupSpace();
             if (ResourceUnits.Count == 0)
@@ -374,20 +368,19 @@ namespace iLand.Core
 
             // (3) additional issues
             // (3.2) setup of regeneration
-            if (Settings.RegenerationEnabled)
+            if (ModelSettings.RegenerationEnabled)
             {
                 foreach (SpeciesSet ss in mSpeciesSets)
                 {
-                    ss.SetupRegeneration();
+                    ss.SetupRegeneration(this);
                 }
             }
-            Saplings.RecruitmentVariation = xml.GetDouble("model.settings.seedDispersal.recruitmentDimensionVariation", 0.1);
 
             if (xml.GetBool("model.management.enabled"))
             {
                 Management = new Management();
-                string mgmtFile = xml.GetString("model.management.file");
-                string path = GlobalSettings.Instance.Path(mgmtFile, "script");
+                // string mgmtFile = xml.GetString("model.management.file");
+                // string path = this.GlobalSettings.Path(mgmtFile, "script");
             }
         }
 
@@ -408,20 +401,20 @@ namespace iLand.Core
 
         // actions
         /// build stand statistics (i.e. stats based on resource units)
-        public void CreateStandStatistics()
+        public void CreateStandStatistics(GlobalSettings globalSettings)
         {
             CalculateStockedArea();
             foreach (ResourceUnit ru in ResourceUnits)
             {
-                ru.AddTreeAgingForAllTrees();
-                ru.CreateStandStatistics();
+                ru.AddTreeAgingForAllTrees(globalSettings);
+                ru.CreateStandStatistics(this);
             }
         }
 
         /// clean the tree data structures (remove harvested trees) - call after management operations.
         public void CleanTreeLists(bool recalculate_stats)
         {
-            foreach (ResourceUnit ru in GlobalSettings.Instance.Model.ResourceUnits)
+            foreach (ResourceUnit ru in this.ResourceUnits)
             {
                 if (ru.HasDeadTrees)
                 {
@@ -439,21 +432,21 @@ namespace iLand.Core
 
         private void SetupSpace() ///< setup the "world"(spatial grids, ...), create ressource units
         {
-            XmlHelper xml = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.world"));
-            float cellSize = (float)xml.GetDouble("cellSize", Constant.LightSize);
-            float width = (float)xml.GetDouble("width", Constant.RUSize); // default to a single resource unit
-            float height = (float)xml.GetDouble("height", Constant.RUSize);
-            float buffer = (float)xml.GetDouble("buffer", 0.6 * Constant.RUSize);
-            this.WorldExtentUnbuffered = new RectangleF(0.0F, 0.0F, width, height);
+            XmlHelper xml = new XmlHelper(this.GlobalSettings.Settings.Node("model.world"));
+            float lightCellSize = (float)xml.GetDouble("cellSize", Constant.LightSize);
+            float worldWidth = (float)xml.GetDouble("width", Constant.RUSize); // default to a single resource unit
+            float worldHeight = (float)xml.GetDouble("height", Constant.RUSize);
+            float worldBuffer = (float)xml.GetDouble("buffer", 0.6 * Constant.RUSize);
+            this.WorldExtentUnbuffered = new RectangleF(0.0F, 0.0F, worldWidth, worldHeight);
 
-            Debug.WriteLine(String.Format("Setup of the world: {0}x{1} m with {2} m cell size and {3} m buffer", width, height, cellSize, buffer));
+            Debug.WriteLine(String.Format("Setup of the world: {0}x{1} m with {2} m light cell size and {3} m buffer", worldWidth, worldHeight, lightCellSize, worldBuffer));
 
-            RectangleF worldExtentBuffered = new RectangleF(new PointF(-buffer, -buffer), new SizeF(width + buffer, height + buffer));
+            RectangleF worldExtentBuffered = new RectangleF(-worldBuffer, -worldBuffer, worldWidth + 2 * worldBuffer, worldHeight + 2 * worldBuffer);
             Debug.WriteLine("Setup grid rectangle: " + worldExtentBuffered);
 
-            this.LightGrid = new Grid<float>(worldExtentBuffered, cellSize);
+            this.LightGrid = new Grid<float>(worldExtentBuffered, lightCellSize);
             this.LightGrid.Initialize(1.0F);
-            this.HeightGrid = new Grid<HeightGridValue>(worldExtentBuffered, cellSize * Constant.LightPerHeightSize);
+            this.HeightGrid = new Grid<HeightGridValue>(worldExtentBuffered, Constant.LightPerHeightSize * lightCellSize);
             for (int index = 0; index < this.HeightGrid.Count; ++index)
             {
                 this.HeightGrid[index] = new HeightGridValue();
@@ -489,7 +482,7 @@ namespace iLand.Core
                     {
                         throw new XmlException("/project/model/world/environmentGrid not found.");
                     }
-                    string gridFilePath = GlobalSettings.Instance.Path(gridFileName);
+                    string gridFilePath = this.GlobalSettings.Path(gridFileName);
                     if (File.Exists(gridFilePath) && String.IsNullOrEmpty(xml.GetString("environmentGrid")) == false)
                     {
                         Environment.SetGridMode(gridFilePath);
@@ -505,8 +498,8 @@ namespace iLand.Core
                 {
                     throw new XmlException("/project/model/world/environmentFile not found.");
                 }
-                string environmentFilePath = GlobalSettings.Instance.Path(environmentFileName);
-                if (!Environment.LoadFromFile(environmentFilePath))
+                string environmentFilePath = this.GlobalSettings.Path(environmentFileName);
+                if (!Environment.LoadFromFile(environmentFilePath, this))
                 {
                     return;
                 }
@@ -517,7 +510,7 @@ namespace iLand.Core
                 // (2) SpeciesSets: currently only one a global species set.
                 SpeciesSet speciesSet = new SpeciesSet();
                 mSpeciesSets.Add(speciesSet);
-                speciesSet.Setup();
+                speciesSet.Setup(this.GlobalSettings);
                 // Climate...
                 Climate c = new Climate();
                 Climates.Add(c);
@@ -533,7 +526,7 @@ namespace iLand.Core
                 {
                     throw new XmlException("/project/model/world/timeEventsFile not found");
                 }
-                TimeEvents.LoadFromFile(GlobalSettings.Instance.Path(timeEventsFileName, "script"));
+                TimeEvents.LoadFromFile(this.GlobalSettings.Path(timeEventsFileName, "script"), this.GlobalSettings);
             }
 
             // simple case: create resource units in a regular grid.
@@ -542,47 +535,47 @@ namespace iLand.Core
                 throw new XmlException("/project/world/resourceUnitsAsGrid MUST be set to true - at least currently :)");
             }
 
-            ResourceUnitGrid.Setup(new RectangleF(0.0F, 0.0F, width, height), 100.0); // Grid, that holds positions of resource units
+            ResourceUnitGrid.Setup(new RectangleF(0.0F, 0.0F, worldWidth, worldHeight), 100.0); // Grid, that holds positions of resource units
             ResourceUnitGrid.ClearDefault();
 
-            bool mask_is_setup = false;
+            bool hasStandGrid = false;
             if (xml.GetBool("standGrid.enabled"))
             {
-                string fileName = GlobalSettings.Instance.Path(xml.GetString("standGrid.fileName"));
-                StandGrid = new MapGrid(fileName, false); // create stand grid index later
+                string fileName = this.GlobalSettings.Path(xml.GetString("standGrid.fileName"));
+                StandGrid = new MapGrid(this, fileName, false); // create stand grid index later
 
                 if (StandGrid.IsValid())
                 {
                     for (int i = 0; i < StandGrid.Grid.Count; i++)
                     {
-                        int grid_value = StandGrid.Grid[i];
-                        HeightGrid[i].SetValid(grid_value > -1);
+                        int standID = StandGrid.Grid[i];
+                        HeightGrid[i].SetInWorld(standID > -1);
                         // BUGBUG: unclear why this is present in C++, appears removable
                         //if (grid_value > -1)
                         //{
                         //    mRUmap[mStandGrid.grid().cellCenterPoint(i)] = (ResourceUnit)1;
                         //}
-                        if (grid_value < -1)
+                        if (standID < -1)
                         {
-                            HeightGrid[i].SetForestOutside(true);
+                            HeightGrid[i].SetIsOutsideWorld(true);
                         }
                     }
                 }
-                mask_is_setup = true;
+                hasStandGrid = true;
             }
             else
             {
-                if (!Settings.TorusMode)
+                if (ModelSettings.TorusMode == false)
                 {
                     // in the case we have no stand grid but only a large rectangle (without the torus option)
                     // we assume a forest outside
                     for (int i = 0; i < HeightGrid.Count; ++i)
                     {
                         PointF p = HeightGrid.GetCellCenterPoint(HeightGrid.IndexOf(i));
-                        if (p.X < 0.0F || p.X > width || p.Y < 0.0F || p.Y > height)
+                        if (p.X < 0.0F || p.X > worldWidth || p.Y < 0.0F || p.Y > worldHeight)
                         {
-                            HeightGrid[i].SetForestOutside(true);
-                            HeightGrid[i].SetValid(false);
+                            HeightGrid[i].SetIsOutsideWorld(true);
+                            HeightGrid[i].SetInWorld(false);
                         }
                     }
                 }
@@ -594,16 +587,16 @@ namespace iLand.Core
                 RectangleF r = ResourceUnitGrid.GetCellRect(ResourceUnitGrid.IndexOf(p));
                 if (StandGrid == null || !StandGrid.IsValid())
                 {
-                    Environment.SetPosition(r.Center()); // if environment is 'disabled' default values from the project file are used.
-                                                         // create resource units for valid positions only
+                    Environment.SetPosition(r.Center(), this); // if environment is 'disabled' default values from the project file are used.
+                    // create resource units for valid positions only
                     ResourceUnit new_ru = new ResourceUnit(ru_index++) // create resource unit
                     {
                         Climate = Environment.CurrentClimate
                     };
                     new_ru.SetSpeciesSet(Environment.CurrentSpeciesSet);
-                    new_ru.Setup();
+                    new_ru.Setup(this);
                     new_ru.ID = Environment.CurrentID; // set id of resource unit in grid mode
-                    new_ru.SetBoundingBox(r);
+                    new_ru.SetBoundingBox(r, this);
                     ResourceUnits.Add(new_ru);
                     ResourceUnitGrid[p] = new_ru; // save in the RUmap grid
                 }
@@ -613,25 +606,24 @@ namespace iLand.Core
                 // retrieve species sets and climates (that were really used)
                 mSpeciesSets.AddRange(Environment.SpeciesSets);
                 Climates.AddRange(Environment.Climates);
-                StringBuilder climate_file_list = new StringBuilder();
-                for (int i = 0, c = 0; i < Climates.Count; ++i)
-                {
-                    climate_file_list.Append(Climates[i].Name + ", ");
-                    if (++c > 5)
-                    {
-                        climate_file_list.Append("...");
-                        break;
-                    }
-
-                }
-                // Debug.WriteLine("Setup of climates: #loaded: " + Climates.Count + " tables: " + climate_file_list);
+                //StringBuilder climateFiles = new StringBuilder();
+                //for (int i = 0, c = 0; i < Climates.Count; ++i)
+                //{
+                //    climateFiles.Append(Climates[i].Name + ", ");
+                //    if (++c > 5)
+                //    {
+                //        climateFiles.Append("...");
+                //        break;
+                //    }
+                //}
+                // Debug.WriteLine("Setup of climates: #loaded: " + Climates.Count + " tables: " + climateFiles);
             }
 
             Debug.WriteLine("Setup of " + this.Environment.Climates.Count + " climate(s) performed.");
 
             if (StandGrid != null && StandGrid.IsValid())
             {
-                StandGrid.CreateIndex();
+                StandGrid.CreateIndex(this);
             }
             // now store the pointers in the grid.
             // Important: This has to be done after the mRU-QList is complete - otherwise pointers would
@@ -644,16 +636,16 @@ namespace iLand.Core
             CalculateStockableArea();
 
             // setup of the project area mask
-            if (!mask_is_setup && xml.GetBool("areaMask.enabled", false) && xml.HasNode("areaMask.imageFile"))
+            if ((hasStandGrid == false) && xml.GetBool("areaMask.enabled", false) && xml.HasNode("areaMask.imageFile"))
             {
                 // to be extended!!! e.g. to load ESRI-style text files....
                 // setup a grid with the same size as the height grid...
-                Grid<float> tempgrid = new Grid<float>((int)HeightGrid.CellSize, HeightGrid.CellsX, HeightGrid.CellsY);
-                string fileName = GlobalSettings.Instance.Path(xml.GetString("areaMask.imageFile"));
-                Grid.LoadGridFromImage(fileName, tempgrid); // fetch from image
-                for (int i = 0; i < tempgrid.Count; i++)
+                Grid<float> worldMask = new Grid<float>((int)HeightGrid.CellSize, HeightGrid.CellsX, HeightGrid.CellsY);
+                string fileName = this.GlobalSettings.Path(xml.GetString("areaMask.imageFile"));
+                Grid.LoadGridFromImage(fileName, worldMask); // fetch from image
+                for (int i = 0; i < worldMask.Count; i++)
                 {
-                    HeightGrid[i].SetValid(tempgrid[i] > 0.99);
+                    HeightGrid[i].SetInWorld(worldMask[i] > 0.99);
                 }
                 Debug.WriteLine("loaded project area mask from" + fileName);
             }
@@ -672,7 +664,7 @@ namespace iLand.Core
             string dem_file = xml.GetString("DEM");
             if (String.IsNullOrEmpty(dem_file) == false)
             {
-                this.Dem = new DEM(GlobalSettings.Instance.Path(dem_file));
+                this.Dem = new DEM(this.GlobalSettings.Path(dem_file), this);
             }
 
             // setup of saplings
@@ -680,10 +672,10 @@ namespace iLand.Core
             {
                 Saplings = null;
             }
-            if (Settings.RegenerationEnabled)
+            if (ModelSettings.RegenerationEnabled)
             {
                 Saplings = new Saplings();
-                Saplings.Setup();
+                Saplings.Setup(this);
             }
 
             // setup of the grass cover
@@ -691,7 +683,7 @@ namespace iLand.Core
             {
                 GrassCover = new GrassCover();
             }
-            GrassCover.Setup();
+            GrassCover.Setup(this);
 
             // setup of external modules
             Modules.Setup();
@@ -703,7 +695,7 @@ namespace iLand.Core
                     if (p != null)
                     {
                         RectangleF r = ResourceUnitGrid.GetCellRect(ResourceUnitGrid.IndexOf(p));
-                        Environment.SetPosition(r.Center()); // if environment is 'disabled' default values from the project file are used.
+                        Environment.SetPosition(r.Center(), this); // if environment is 'disabled' default values from the project file are used.
                         Modules.SetupResourceUnit(p);
                     }
                 }
@@ -711,7 +703,7 @@ namespace iLand.Core
 
             // setup the helper that does the multithreading
             ThreadRunner.Setup(valid_rus);
-            ThreadRunner.IsMultithreaded = GlobalSettings.Instance.Settings.GetBool("system.settings.multithreading");
+            ThreadRunner.IsMultithreaded = this.GlobalSettings.Settings.GetBool("system.settings.multithreading");
             // Debug.WriteLine("Multithreading enabled: " + IsMultithreaded + ", thread count: " + System.Environment.ProcessorCount);
 
             IsSetup = true;
@@ -725,7 +717,7 @@ namespace iLand.Core
             //SqlHelper.ExecuteSql(String.Format("insert into runs (id, timestamp) values ({0}, '{1}')", maxID, timestamp), g.DatabaseInput);
             // replace path information
             // setup final path
-            GlobalSettings globalSettings = GlobalSettings.Instance;
+            GlobalSettings globalSettings = this.GlobalSettings;
             string outputDatabaseFile = globalSettings.Settings.GetString("system.database.out");
             if (String.IsNullOrWhiteSpace(outputDatabaseFile))
             {
@@ -752,14 +744,14 @@ namespace iLand.Core
             }
 
             ThreadRunner.Run(CalculateHeightFieldAndLightIntensityPattern);
-            GlobalSettings.Instance.SystemStatistics.ApplyPatternTime += t.Elapsed();
+            this.GlobalSettings.SystemStatistics.ApplyPatternTime += t.Elapsed();
         }
 
         private void ReadPattern() ///< retrieve LRI for trees
         {
             using DebugTimer t = new DebugTimer("Model.ReadPattern()");
             ThreadRunner.Run(ReadPattern);
-            GlobalSettings.Instance.SystemStatistics.ReadPatternTime += t.Elapsed();
+            this.GlobalSettings.SystemStatistics.ReadPatternTime += t.Elapsed();
         }
 
         /** Main function for the growth of stands and trees.
@@ -788,7 +780,7 @@ namespace iLand.Core
                 ru.AfterGrow();
                 //Debug.WriteLine((b-n) + "trees died (of" + b + ").");
             }
-            GlobalSettings.Instance.SystemStatistics.TreeGrowthTime += t2.Elapsed();
+            this.GlobalSettings.SystemStatistics.TreeGrowthTime += t2.Elapsed();
         }
 
         /** calculate for each resource unit the fraction of area which is stocked.
@@ -817,40 +809,39 @@ namespace iLand.Core
           */
         private void CalculateStockableArea() ///< calculate the stockable area for each RU (i.e.: with stand grid values <> -1)
         {
-            TotalStockableArea = 0.0;
+            TotalStockableHectares = 0.0;
             foreach (ResourceUnit ru in ResourceUnits)
             {
-                // //
                 //        if (ru.id()==-1) {
                 //            ru.setStockableArea(0.);
                 //            continue;
                 //        }
                 GridRunner<HeightGridValue> heightRunner = new GridRunner<HeightGridValue>(HeightGrid, ru.BoundingBox);
-                int valid = 0;
-                int total = 0;
+                int heightCellsWithTrees = 0;
+                int totalCells = 0;
                 for (heightRunner.MoveNext(); heightRunner.IsValid(); heightRunner.MoveNext())
                 {
                     HeightGridValue current = heightRunner.Current;
-                    if (current != null && current.IsValid())
+                    if (current != null && current.IsInWorld())
                     {
-                        valid++;
+                        ++heightCellsWithTrees;
                     }
-                    total++;
+                    ++totalCells;
                 }
-                if (total != 0)
+                if (totalCells != 0)
                 {
-                    ru.StockableArea = Constant.HeightPixelArea * valid; // in m2
+                    ru.StockableArea = Constant.HeightPixelArea * heightCellsWithTrees; // in m2
                     if (ru.Snags != null)
                     {
                         ru.Snags.ScaleInitialState();
                     }
-                    TotalStockableArea += Constant.HeightPixelArea * valid / Constant.RUArea; // in ha
-                    if (valid == 0 && ru.ID > -1)
+                    this.TotalStockableHectares += Constant.HeightPixelArea * heightCellsWithTrees / Constant.RUArea; // in ha
+                    if (heightCellsWithTrees == 0 && ru.ID > -1)
                     {
                         // invalidate this resource unit
                         ru.ID = -1;
                     }
-                    if (valid > 0 && ru.ID == -1)
+                    if (heightCellsWithTrees > 0 && ru.ID == -1)
                     {
                         Debug.WriteLine("Warning: a resource unit has id=-1 but stockable area (id was set to 0)!!! ru: " + ru.BoundingBox + "with index" + ru.Index);
                         ru.ID = 0;
@@ -872,14 +863,14 @@ namespace iLand.Core
             HeightGridValue[] neighbors = new HeightGridValue[8];
             for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
             {
-                if (runner.Current.IsForestOutside())
+                if (runner.Current.IsOutsideWorld())
                 {
                     // if the current pixel is a "radiating" border pixel,
                     // then check the neighbors and set a flag if the pixel is a neighbor of a in-project-area pixel.
                     runner.Neighbors8(neighbors);
                     for (int i = 0; i < 8; ++i)
                     {
-                        if (neighbors[i] != null && neighbors[i].IsValid())
+                        if (neighbors[i] != null && neighbors[i].IsInWorld())
                         {
                             runner.Current.SetIsRadiating();
                         }
@@ -887,7 +878,7 @@ namespace iLand.Core
                 }
             }
 
-            Debug.WriteLine("Total stockable area of the landscape is" + TotalStockableArea + "ha.");
+            Debug.WriteLine("Total stockable area of the landscape is" + TotalStockableHectares + "ha.");
         }
 
         private void InitializeGrid() ///< initialize the LIF grid
@@ -919,7 +910,7 @@ namespace iLand.Core
                     {
                         for (int x = ix_min; x <= ix_max; ++x)
                         {
-                            if (!LightGrid.Contains(x, y) || !HeightGrid[x / Constant.LightPerHeightSize, y / Constant.LightPerHeightSize].IsValid())
+                            if (!LightGrid.Contains(x, y) || !HeightGrid[x / Constant.LightPerHeightSize, y / Constant.LightPerHeightSize].IsInWorld())
                             {
                                 continue;
                             }
@@ -934,7 +925,7 @@ namespace iLand.Core
                     c_rad++;
                 }
             }
-            if (GlobalSettings.Instance.LogDebug())
+            if (this.GlobalSettings.LogDebug())
             {
                 Debug.WriteLine("initialize grid:" + c_rad + "radiating pixels...");
             }
@@ -943,15 +934,13 @@ namespace iLand.Core
         /// multithreaded running function for the resource unit level establishment
         private void SaplingEstablishment(ResourceUnit unit)
         {
-            Saplings s = GlobalSettings.Instance.Model.Saplings;
-            s.Establishment(unit);
+            this.Saplings.Establishment(unit, this);
         }
 
         /// multithreaded running function for the resource unit level establishment
         private void SaplingGrowth(ResourceUnit unit)
         {
-            Saplings s = GlobalSettings.Instance.Model.Saplings;
-            s.SaplingGrowth(unit);
+            this.Saplings.SaplingGrowth(unit, this);
         }
 
         /// multithreaded running function for LIP printing
@@ -959,7 +948,7 @@ namespace iLand.Core
         {
             List<Tree> trees = unit.Trees;
             // light concurrence influence
-            if (GlobalSettings.Instance.Model.Settings.TorusMode)
+            if (this.ModelSettings.TorusMode)
             {
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
@@ -987,18 +976,18 @@ namespace iLand.Core
         private void ReadPattern(ResourceUnit unit)
         {
             List<Tree> trees = unit.Trees;
-            if (!GlobalSettings.Instance.Model.Settings.TorusMode)
+            if (!this.ModelSettings.TorusMode)
             {
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
-                    trees[treeIndex].ReadLightInfluenceField(); // multiplicative approach
+                    trees[treeIndex].ReadLightInfluenceField(this.GlobalSettings); // multiplicative approach
                 }
             }
             else
             {
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
-                    trees[treeIndex].ReadLightIntensityFieldTorus();
+                    trees[treeIndex].ReadLightIntensityFieldTorus(this.GlobalSettings);
                 }
             }
         }
@@ -1012,22 +1001,22 @@ namespace iLand.Core
             List<Tree> trees = unit.Trees;
             for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
             {
-                trees[treeIndex].CalcLightResponse();
+                trees[treeIndex].CalcLightResponse(this.GlobalSettings);
             }
             unit.CalculateInterceptedArea();
 
             for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
             {
-                trees[treeIndex].Grow(); // actual growth of individual trees
+                trees[treeIndex].Grow(this); // actual growth of individual trees
             }
 
-            GlobalSettings.Instance.SystemStatistics.TreeCount += unit.Trees.Count;
+            this.GlobalSettings.SystemStatistics.TreeCount += unit.Trees.Count;
         }
 
         /// multithreaded running function for the resource level production
         private void Production(ResourceUnit unit)
         {
-            unit.Production();
+            unit.Production(this);
         }
 
         /// multithreaded execution of the carbon cycle routine
@@ -1035,7 +1024,7 @@ namespace iLand.Core
         {
             // (1) do calculations on snag dynamics for the resource unit
             // (2) do the soil carbon and nitrogen dynamics calculations (ICBM/2N)
-            unit.CalculateCarbonCycle();
+            unit.CalculateCarbonCycle(this);
         }
 
         public ResourceUnit FirstResourceUnit()

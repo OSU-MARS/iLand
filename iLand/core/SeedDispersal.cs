@@ -18,12 +18,12 @@ namespace iLand.Core
         */
     public class SeedDispersal
     {
-        private static Grid<float> mExternalSeedBaseMap = null; ///< static intermediate data while setting up external seeds
-        private static readonly Dictionary<string, List<double>> mExtSeedData; ///< holds definition of species and percentages for external seed input
-        private static int mExtSeedSizeX = 0; ///< size of the sectors used to specify external seed input
-        private static int mExtSeedSizeY = 0;
-        private static int _debug_ldd = 0;
-
+        private int _debug_ldd = 0;
+        private Grid<float> mExternalSeedBaseMap = null; ///< static intermediate data while setting up external seeds
+        // TODO: can this be made species specific?
+        private readonly Dictionary<string, List<double>> mExtSeedData; ///< holds definition of species and percentages for external seed input
+        private int mExtSeedSizeX = 0; ///< size of the sectors used to specify external seed input
+        private int mExtSeedSizeY = 0;
         private bool mProbMode; ///< if 'true', seed dispersal uses probabilities to distribute (old version)
         private double mTM_as1, mTM_as2, mTM_ks; ///< seed dispersal paramaters (treemig)
         private double mTM_fecundity_cell; ///< maximum seeds per source cell
@@ -53,26 +53,22 @@ namespace iLand.Core
         public Grid<float> SeedMap { get; private set; } ///< (large) seedmap. Is filled by individual trees and then processed
         public Species Species { get; private set; }
 
-        static SeedDispersal()
-        {
-            SeedDispersal.mExternalSeedBaseMap = new Grid<float>();
-            SeedDispersal.mExtSeedData = new Dictionary<string, List<double>>();
-        }
-
         public SeedDispersal(Species species = null)
         {
-            this.mIndexFactor = 10;
-            this.Species = species;
-
+            this.mExternalSeedBaseMap = new Grid<float>();
+            this.mExtSeedData = new Dictionary<string, List<double>>();
             this.mExternalSeedMap = new Grid<float>();
+            this.mIndexFactor = 10;
             this.mKernelSeedYear = new Grid<float>(); ///< species specific "seed kernel" (small) for seed years
             this.mKernelNonSeedYear = new Grid<float>(); ///< species specific "seed kernel" (small) for non-seed-years
             this.mKernelSerotiny = new Grid<float>(); ///< seed kernel for extra seed rain
             this.mLDDDistance = new List<double>(); ///< long distance dispersal distances (e.g. the "rings")
             this.mLDDDensity = new List<double>();  ///< long distance dispersal # of cells that should be affected in each "ring"
-            this.SeedMap = new Grid<float>(); ///< (large) seedmap. Is filled by individual trees and then processed
             this.mSeedMapSerotiny = new Grid<float>(); ///< seed map that keeps track of serotiny events
             this.mSourceMap = new Grid<float>(); ///< (large) seedmap used to denote the sources
+
+            this.SeedMap = new Grid<float>(); ///< (large) seedmap. Is filled by individual trees and then processed
+            this.Species = species;
         }
 
         /// setMatureTree is called by individual (mature) trees. This actually fills the initial state of the seed map.
@@ -91,9 +87,9 @@ namespace iLand.Core
         /** setup of the seedmaps.
           This sets the size of the seed map and creates the seed kernel (species specific)
           */
-        public void Setup()
+        public void Setup(Model model)
         {
-            if (GlobalSettings.Instance.Model == null || GlobalSettings.Instance.Model.HeightGrid == null || this.Species == null)
+            if (model == null || model.HeightGrid == null || this.Species == null)
             {
                 return;
             }
@@ -101,7 +97,7 @@ namespace iLand.Core
 
             // setup of seed map
             SeedMap.Clear();
-            SeedMap.Setup(GlobalSettings.Instance.Model.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
+            SeedMap.Setup(model.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
             SeedMap.Initialize(0.0F);
             if (!mProbMode)
             {
@@ -110,7 +106,7 @@ namespace iLand.Core
             }
             mExternalSeedMap.Clear();
             mIndexFactor = Constant.SeedmapSize / Constant.LightSize; // ratio seed grid / lip-grid:
-            if (GlobalSettings.Instance.LogInfo())
+            if (model.GlobalSettings.LogInfo())
             {
                 Debug.WriteLine("Seed map setup. Species: " + Species.ID + " kernel-size: " + SeedMap.CellsX + " x " + SeedMap.CellsY + " pixels.");
             }
@@ -120,7 +116,7 @@ namespace iLand.Core
                 throw new NotSupportedException("Setup of SeedDispersal: Species not defined.");
             }
 
-            if ((GlobalSettings.Instance.Settings.GetDouble("model.world.buffer", 0) % Constant.SeedmapSize) != 0.0)
+            if ((model.GlobalSettings.Settings.GetDouble("model.world.buffer", 0) % Constant.SeedmapSize) != 0.0)
             {
                 throw new NotSupportedException("SeedDispersal:setup(): The buffer (model.world.buffer) must be a integer multiple of the seed pixel size (currently 20m, e.g. 20,40,60,...)).");
             }
@@ -131,7 +127,7 @@ namespace iLand.Core
             Species.GetTreeMigKernel(ref mTM_as1, ref mTM_as2, ref mTM_ks);
             mTM_fecundity_cell = Species.FecundityM2 * Constant.SeedmapSize * Constant.SeedmapSize * mTM_occupancy; // scale to production for the whole cell
             mNonSeedYearFraction = Species.NonSeedYearFraction;
-            XmlHelper xml = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.settings.seedDispersal"));
+            XmlHelper xml = new XmlHelper(model.GlobalSettings.Settings.Node("model.settings.seedDispersal"));
             mKernelThresholdArea = xml.GetDouble(".longDistanceDispersal.thresholdArea", 0.0001);
             mKernelThresholdLDD = xml.GetDouble(".longDistanceDispersal.thresholdLDD", 0.0001);
             mLDDSeedlings = (float)xml.GetDouble(".longDistanceDispersal.LDDSeedlings", 0.0001);
@@ -153,7 +149,7 @@ namespace iLand.Core
             {
                 // an extra seed map is used for storing information related to post-fire seed rain
                 mSeedMapSerotiny.Clear();
-                mSeedMapSerotiny.Setup(GlobalSettings.Instance.Model.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
+                mSeedMapSerotiny.Setup(model.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
                 mSeedMapSerotiny.Initialize(0.0F);
 
                 // set up the special seed kernel for post fire seed rain
@@ -163,10 +159,10 @@ namespace iLand.Core
             mHasPendingSerotiny = false;
 
             // debug info
-            mDumpSeedMaps = GlobalSettings.Instance.Settings.GetBool("model.settings.seedDispersal.dumpSeedMapsEnabled", false);
+            mDumpSeedMaps = model.GlobalSettings.Settings.GetBool("model.settings.seedDispersal.dumpSeedMapsEnabled", false);
             if (mDumpSeedMaps)
             {
-                string path = GlobalSettings.Instance.Path(GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.dumpSeedMapsPath"));
+                string path = model.GlobalSettings.Path(model.GlobalSettings.Settings.GetString("model.settings.seedDispersal.dumpSeedMapsPath"));
                 Helper.SaveToTextFile(String.Format("{0}/seedkernelYes_{1}.csv", path, Species.ID), Grid.ToString(mKernelSeedYear));
                 Helper.SaveToTextFile(String.Format("{0}/seedkernelNo_{1}.csv", path, Species.ID), Grid.ToString(mKernelNonSeedYear));
                 if (!mKernelSerotiny.IsEmpty())
@@ -180,9 +176,9 @@ namespace iLand.Core
             mExternalSeedBuffer = 0;
             mExternalSeedDirection = 0;
             mExternalSeedBackgroundInput = 0.0;
-            if (GlobalSettings.Instance.Settings.GetBool("model.settings.seedDispersal.externalSeedEnabled", false))
+            if (model.GlobalSettings.Settings.GetBool("model.settings.seedDispersal.externalSeedEnabled", false))
             {
-                if (GlobalSettings.Instance.Settings.GetBool("model.settings.seedDispersal.seedBelt.enabled", false))
+                if (model.GlobalSettings.Settings.GetBool("model.settings.seedDispersal.seedBelt.enabled", false))
                 {
                     // external seed input specified by sectors and around the project area (seedbelt)
                     SetupExternalSeedsForSpecies(Species);
@@ -191,14 +187,14 @@ namespace iLand.Core
                 {
                     // external seeds specified fixedly per cardinal direction
                     // current species in list??
-                    mHasExternalSeedInput = GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.externalSeedSpecies").Contains(Species.ID);
-                    string dir = GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.externalSeedSource").ToLowerInvariant();
+                    mHasExternalSeedInput = model.GlobalSettings.Settings.GetString("model.settings.seedDispersal.externalSeedSpecies").Contains(Species.ID);
+                    string dir = model.GlobalSettings.Settings.GetString("model.settings.seedDispersal.externalSeedSource").ToLowerInvariant();
                     // encode cardinal positions as bits: e.g: "e,w" . 6
                     mExternalSeedDirection += dir.Contains("n") ? 1 : 0;
                     mExternalSeedDirection += dir.Contains("e") ? 2 : 0;
                     mExternalSeedDirection += dir.Contains("s") ? 4 : 0;
                     mExternalSeedDirection += dir.Contains("w") ? 8 : 0;
-                    List<string> buffer_list = Regex.Matches(GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.externalSeedBuffer"), "([^\\.\\w]+)").Select(match => match.Value).ToList();
+                    List<string> buffer_list = Regex.Matches(model.GlobalSettings.Settings.GetString("model.settings.seedDispersal.externalSeedBuffer"), "([^\\.\\w]+)").Select(match => match.Value).ToList();
                     int index = buffer_list.IndexOf(Species.ID);
                     if (index >= 0)
                     {
@@ -207,7 +203,7 @@ namespace iLand.Core
                     }
 
                     // background seed rain (i.e. for the full landscape), use regexp
-                    List<string> background_input_list = Regex.Matches(GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.externalSeedBackgroundInput"), "([^\\.\\w]+)").Select(match => match.Value).ToList();
+                    List<string> background_input_list = Regex.Matches(model.GlobalSettings.Settings.GetString("model.settings.seedDispersal.externalSeedBackgroundInput"), "([^\\.\\w]+)").Select(match => match.Value).ToList();
                     index = background_input_list.IndexOf(Species.ID);
                     if (index >= 0)
                     {
@@ -248,24 +244,24 @@ namespace iLand.Core
             //    img.save("seedmap_e.png");
         }
 
-        public static void SetupExternalSeeds()
+        public void SetupExternalSeeds(Model model)
         {
             mExternalSeedBaseMap = null;
-            if (!GlobalSettings.Instance.Settings.GetBool("model.settings.seedDispersal.seedBelt.enabled", false))
+            if (!model.GlobalSettings.Settings.GetBool("model.settings.seedDispersal.seedBelt.enabled", false))
             {
                 return;
             }
 
             using DebugTimer t = new DebugTimer("SeedDispertal.SetupExternalSeeds()");
-            XmlHelper xml = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.settings.seedDispersal.seedBelt"));
+            XmlHelper xml = new XmlHelper(model.GlobalSettings.Settings.Node("model.settings.seedDispersal.seedBelt"));
             int seedbelt_width = xml.ValueInt(".width", 10);
             // setup of sectors
             // setup of base map
             float seedmap_size = 20.0F;
             mExternalSeedBaseMap = new Grid<float>();
-            mExternalSeedBaseMap.Setup(GlobalSettings.Instance.Model.HeightGrid.PhysicalExtent, seedmap_size);
+            mExternalSeedBaseMap.Setup(model.HeightGrid.PhysicalExtent, seedmap_size);
             mExternalSeedBaseMap.Initialize(0.0F);
-            if (mExternalSeedBaseMap.Count * 4 != GlobalSettings.Instance.Model.HeightGrid.Count)
+            if (mExternalSeedBaseMap.Count * 4 != model.HeightGrid.Count)
             {
                 throw new NotSupportedException("error in setting up external seeds: the width and height of the project area need to be a multiple of 20m when external seeds are enabled.");
             }
@@ -275,15 +271,15 @@ namespace iLand.Core
             {
                 for (int x = 0; x < mExternalSeedBaseMap.CellsX; x++)
                 {
-                    bool val = GlobalSettings.Instance.Model.HeightGrid[x * 2, y * 2].IsForestOutside();
+                    bool val = model.HeightGrid[x * 2, y * 2].IsOutsideWorld();
                     mExternalSeedBaseMap[x, y] = val ? 1.0F : 0.0F;
-                    if (GlobalSettings.Instance.Model.HeightGrid[x * 2, y * 2].IsValid())
+                    if (model.HeightGrid[x * 2, y * 2].IsInWorld())
                     {
                         mExternalSeedBaseMap[x, y] = -1.0F;
                     }
                 }
             }
-            string path = GlobalSettings.Instance.Path(GlobalSettings.Instance.Settings.GetString("model.settings.seedDispersal.dumpSeedMapsPath"));
+            string path = model.GlobalSettings.Path(model.GlobalSettings.Settings.GetString("model.settings.seedDispersal.dumpSeedMapsPath"));
 
             // now scan the pixels of the belt: paint all pixels that are close to the project area
             // we do this 4 times (for all cardinal direcitons)
@@ -430,11 +426,6 @@ namespace iLand.Core
             Debug.WriteLine("setting up of external seed maps finished");
         }
 
-        public static void FinalizeExternalSeeds()
-        {
-            mExternalSeedBaseMap = null;
-        }
-
         public void SeedProductionSerotiny(Point position_index)
         {
             if (mSeedMapSerotiny.IsEmpty())
@@ -499,11 +490,10 @@ namespace iLand.Core
             // set the parent cell to 1
             //kernel[kernel_offset, kernel_offset)=1.0F;
 
-            // some final statistics....
-            if (GlobalSettings.Instance.LogInfo())
-            {
-                Debug.WriteLine("kernel setup. Species: " + Species.ID + " kernel-size: " + kernel.CellsX + " x " + kernel.CellsY + " pixels, sum (after scaling): " + kernel.Sum());
-            }
+            //if (GlobalSettings.Instance.LogInfo())
+            //{
+            //    Debug.WriteLine("kernel setup. Species: " + Species.ID + " kernel-size: " + kernel.CellsX + " x " + kernel.CellsY + " pixels, sum (after scaling): " + kernel.Sum());
+            //}
         }
 
         private double SetupLdd()
@@ -537,10 +527,10 @@ namespace iLand.Core
 
                 mLDDDensity.Add(n_px);
             }
-            if (GlobalSettings.Instance.LogInfo())
-            {
-                Debug.WriteLine("Setup LDD for " + Species.Name + ", using probability: " + mLDDSeedlings + ": Distances: " + mLDDDistance + ", seed pixels: " + mLDDDensity + "covered prob: " + ldd_sum);
-            }
+            //if (GlobalSettings.Instance.LogInfo())
+            //{
+            //    Debug.WriteLine("Setup LDD for " + Species.Name + ", using probability: " + mLDDSeedlings + ": Distances: " + mLDDDistance + ", seed pixels: " + mLDDDensity + "covered prob: " + ldd_sum);
+            //}
 
             return ldd_sum;
         }
@@ -659,7 +649,7 @@ namespace iLand.Core
             }
         }
 
-        public void Clear()
+        public void Clear(GlobalSettings globalSettings)
         {
             Grid<float> seed_map = SeedMap;
             if (!mProbMode)
@@ -680,7 +670,7 @@ namespace iLand.Core
             {
                 // if external seed input is enabled, the buffer area of the seed maps is
                 // "turned on", i.e. set to 1.
-                int buf_size = GlobalSettings.Instance.Settings.ValueInt("model.world.buffer", 0) / (int)(seed_map.CellSize);
+                int buf_size = globalSettings.Settings.ValueInt("model.world.buffer", 0) / (int)(seed_map.CellSize);
                 // if a special buffer is defined, reduce the size of the input
                 if (mExternalSeedBuffer > 0)
                 {
@@ -721,7 +711,7 @@ namespace iLand.Core
             }
         }
 
-        public void Execute()
+        public void Execute(Model model)
         {
             if (mDumpSeedMaps)
             {
@@ -763,7 +753,7 @@ namespace iLand.Core
                 // distribute actual values
                 using DebugTimer t = new DebugTimer("SeedDispersal.DistributeSeeds()");
                 // fill seed map from source map
-                DistributeSeeds();
+                DistributeSeeds(model);
             }
         }
 
@@ -903,7 +893,7 @@ namespace iLand.Core
             } // for()
         }
 
-        public void DistributeSeeds(Grid<float> seed_map = null)
+        public void DistributeSeeds(Model model, Grid<float> seed_map = null)
         {
             Grid<float> sourcemap = seed_map ?? mSourceMap; // switch to extra seed map if provided
             Grid<float> kernel = mKernelSeedYear;
@@ -952,7 +942,7 @@ namespace iLand.Core
                                              // source mode
 
             // *** seed distribution (Kernel + long distance dispersal) ***
-            if (GlobalSettings.Instance.Model.Settings.TorusMode == false)
+            if (model.ModelSettings.TorusMode == false)
             {
                 // ** standard case (no torus) **
                 for (int src = 0; src < sourcemap.Count; ++src)

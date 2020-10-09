@@ -32,13 +32,17 @@ namespace iLand.Core
         public double Epsilon { get; private set; } ///< maximum light use efficency used for the 3PG model
         public bool UseParFractionBelowGroundAllocation { get; private set; } ///< if true, the 'correct' version of the calculation of belowground allocation is used (default=true)
 
-        public void LoadModelSettings()
+        public double BrowsingPressure { get; private set; }
+        public double RecruitmentVariation { get; private set; }
+
+        public void LoadModelSettings(GlobalSettings globalSettings)
         {
-            XmlHelper xml = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.settings"));
+            XmlHelper xml = new XmlHelper(globalSettings.Settings.Node("model.settings"));
             if (xml.IsValid() == false)
             {
                 throw new XmlException("/project/model/settings element not found in project file.");
             }
+            BrowsingPressure = globalSettings.Settings.GetDouble("model.settings.browsing.browsingPressure", 0.0);
             GrowthEnabled = xml.GetBool("growthEnabled", true);
             MortalityEnabled = xml.GetBool("mortalityEnabled", true);
             LightExtinctionCoefficient = xml.GetDouble("lightExtinctionCoefficient", 0.5);
@@ -48,21 +52,18 @@ namespace iLand.Core
             AirDensity = xml.GetDouble("airDensity", 1.2);
             LaiThresholdForClosedStands = xml.GetDouble("laiThresholdForClosedStands", 3.0);
             BoundaryLayerConductance = xml.GetDouble("boundaryLayerConductance", 0.2);
-            XmlHelper world = new XmlHelper(GlobalSettings.Instance.Settings.Node("model.world"));
+            RecruitmentVariation = xml.GetDouble("model.settings.seedDispersal.recruitmentDimensionVariation", 0.1); // +/- 10%
+
+            XmlHelper world = new XmlHelper(globalSettings.Settings.Node("model.world"));
             Latitude = Global.ToRadians(world.GetDouble("latitude", 48.0));
             UseParFractionBelowGroundAllocation = xml.GetBool("usePARFractionBelowGroundAllocation", true);
             //useDynamicAvailableNitrogen = xml.valueBool("model.settings.soil.useDynamicAvailableNitrogen", false); // TODO: there is a bug in using a xml helper that whose top-node is set
-            UseDynamicAvailableNitrogen = GlobalSettings.Instance.Settings.GetBool("model.settings.soil.useDynamicAvailableNitrogen", false);
-            TorusMode = GlobalSettings.Instance.Settings.GetBooleanParameter("torus", false);
+            UseDynamicAvailableNitrogen = globalSettings.Settings.GetBool("model.settings.soil.useDynamicAvailableNitrogen", false);
+            TorusMode = globalSettings.Settings.GetBooleanParameter("torus", false);
         }
 
         public void Print()
         {
-            if (GlobalSettings.Instance.LogDebug() == false)
-            {
-                return;
-            }
-
             List<string> set = new List<string>() { "Settings:",
                                                     String.Format("growthEnabled={0}", GrowthEnabled),
                                                     String.Format("mortalityEnabled={0}", MortalityEnabled),

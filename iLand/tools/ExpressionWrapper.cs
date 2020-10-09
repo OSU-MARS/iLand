@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace iLand.Tools
 {
@@ -19,22 +20,22 @@ namespace iLand.Tools
      */
     public abstract class ExpressionWrapper
     {
-        protected static readonly List<string> BaseVarList;
+        protected static readonly ReadOnlyCollection<string> BaseVariableNames;
 
         static ExpressionWrapper()
         {
-            ExpressionWrapper.BaseVarList = new List<string>() { "year" };
+            ExpressionWrapper.BaseVariableNames = new List<string>() { "year" }.AsReadOnly();
         }
 
-        public abstract List<string> GetVariablesList();
+        public abstract ReadOnlyCollection<string> GetVariablesList();
 
         // must be overloaded!
-        public virtual double Value(int variableIndex)
+        public virtual double Value(int variableIndex, GlobalSettings globalSettings)
         {
             return variableIndex switch
             {
                 // year
-                0 => (double)GlobalSettings.Instance.CurrentYear,
+                0 => (double)globalSettings.CurrentYear,
                 _ => throw new NotSupportedException(string.Format("expression wrapper reached base with invalid index index {0}", variableIndex)),
             };
         }
@@ -44,10 +45,10 @@ namespace iLand.Tools
             return GetVariablesList().IndexOf(variableName);
         }
 
-        public double ValueByName(string variableName)
+        public double ValueByName(string variableName, GlobalSettings globalSettings)
         {
             int idx = GetVariableIndex(variableName);
-            return Value(idx);
+            return Value(idx, globalSettings);
         }
     }
 }

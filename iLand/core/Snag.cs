@@ -8,9 +8,9 @@ namespace iLand.Core
 {
     public class Snag
     {
-        private static double mDBHLower = -1.0;
-        private static double mDBHHigher = 0.0; ///< thresholds used to classify to SWD-Pools
-        private readonly static double[] mCarbonThreshold = new double[] { 0.0, 0.0, 0.0 }; ///< carbon content thresholds that are used to decide if the SWD-pool should be emptied
+        private double mDbhLower = -1.0;
+        private double mDbhHigher = 0.0; ///< thresholds used to classify to SWD-Pools
+        private readonly double[] mCarbonThreshold = new double[] { 0.0, 0.0, 0.0 }; ///< carbon content thresholds that are used to decide if the SWD-pool should be emptied
 
         public ResourceUnit mRU; ///< link to resource unit
                                  /// access SWDPool as function of diameter (cm)
@@ -86,25 +86,25 @@ namespace iLand.Core
 
         private int PoolIndex(float dbh)
         {
-            if (dbh < mDBHLower)
+            if (dbh < mDbhLower)
             {
                 return 0;
             }
-            if (dbh > mDBHHigher)
+            if (dbh > mDbhHigher)
             {
                 return 2;
             }
             return 1;
         }
 
-        public static void SetupThresholds(double lower, double upper)
+        public void SetupThresholds(double lower, double upper)
         {
-            if (mDBHLower == lower)
+            if (mDbhLower == lower)
             {
                 return;
             }
-            mDBHLower = lower;
-            mDBHHigher = upper;
+            mDbhLower = lower;
+            mDbhHigher = upper;
             mCarbonThreshold[0] = lower / 2.0;
             mCarbonThreshold[1] = lower + (upper - lower) / 2.0;
             mCarbonThreshold[2] = upper + (upper - lower) / 2.0;
@@ -117,7 +117,7 @@ namespace iLand.Core
             }
         }
 
-        public void Setup(ResourceUnit ru)
+        public void Setup(ResourceUnit ru, GlobalSettings globalSettings)
         {
             mRU = ru;
             ClimateFactor = 0.0;
@@ -135,13 +135,13 @@ namespace iLand.Core
                 mHalfLife[i] = 0.0;
             }
             mTotalCarbon = 0.0;
-            if (mDBHLower <= 0)
+            if (mDbhLower <= 0.0)
             {
-                throw new NotSupportedException("setupThresholds() not called or called with invalid parameters.");
+                throw new NotSupportedException("SetupThresholds() not called or called with invalid parameters.");
             }
 
             // Inital values from XML file
-            XmlHelper xml = GlobalSettings.Instance.Settings;
+            XmlHelper xml = globalSettings.Settings;
             double kyr = xml.GetDouble("model.site.youngRefractoryDecompRate", -1);
             // put carbon of snags to the middle size class
             if (xml.TrySetCurrentNode("model.initialization.snags") == false)
@@ -150,7 +150,7 @@ namespace iLand.Core
             }
             mSWD[1].C = xml.GetDouble(".swdC");
             mSWD[1].N = mSWD[1].C / xml.GetDouble(".swdCN", 50.0);
-            mSWD[1].Parameter = kyr;
+            mSWD[1].Weight = kyr;
             mKSW[1] = xml.GetDouble(".swdDecompRate");
             mNumberOfSnags[1] = xml.GetDouble(".swdCount");
             mHalfLife[1] = xml.GetDouble(".swdHalfLife");
@@ -233,11 +233,11 @@ namespace iLand.Core
 
         /// calculate the dynamic climate modifier for decomposition 're'
         /// calculation is done on the level of ResourceUnit because the water content per day is needed.
-        public double CalculateClimateFactors()
+        public double CalculateClimateFactors(Model model)
         {
             // the calculation of climate factors requires calculated evapotranspiration. In cases without vegetation (trees or saplings)
             // we have to trigger the water cycle calculation for ourselves [ the waterCycle checks if it has already been run in a year and doesn't run twice in that case ]
-            mRU.WaterCycle.Run();
+            mRU.WaterCycle.Run(model);
             double ft, fw;
             double f_sum = 0.0;
             int iday = 0;
@@ -255,13 +255,13 @@ namespace iLand.Core
                     ratio = 0.0;
                 }
                 fw_month[m] = 1.0 / (1.0 + 30.0 * Math.Exp(-8.5 * ratio));
-                if (GlobalSettings.Instance.LogDebug())
+                if (model.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("month " + m + " PET " + mRU.WaterCycle.ReferenceEvapotranspiration()[m] + " prec " + mRU.Climate.PrecipitationMonth[m]);
                 }
             }
 
-            for (int index = mRU.Climate.Begin; index != mRU.Climate.End; ++index, ++iday)
+            for (int index = mRU.Climate.CurrentJanuary1; index != mRU.Climate.NextJanuary1; ++index, ++iday)
             {
                 ClimateDay day = mRU.Climate[index];
                 ft = Math.Exp(308.56 * (1.0 / 56.02 - 1.0 / ((273.15 + day.MeanDaytimeTemperature) - 227.13)));  // empirical variable Q10 model of Lloyd and Taylor (1994), see also Adair et al. (2008)
@@ -276,12 +276,12 @@ namespace iLand.Core
 
         /// do the yearly calculation
         /// see http://iland.boku.ac.at/snag+dynamics
-        public void CalculateYear()
+        public void CalculateYear(Model model)
         {
             mSWDtoSoil.Clear();
 
             // calculate anyway, because also the soil module needs it (and currently one can have Snag and Soil only as a couple)
-            CalculateClimateFactors();
+            CalculateClimateFactors(model);
             double climate_factor_re = ClimateFactor;
             if (IsEmpty()) // nothing to do
             {
@@ -297,7 +297,7 @@ namespace iLand.Core
             {
                 if (mOtherWood[i].C > 0.0)
                 {
-                    double survive_rate = Math.Exp(-climate_factor_re * mOtherWood[i].Parameter); // parameter: the "kyr" value...
+                    double survive_rate = Math.Exp(-climate_factor_re * mOtherWood[i].Weight); // parameter: the "kyr" value...
                     FluxToAtmosphere.C += mOtherWood[i].C * (1.0 - survive_rate); // flux to atmosphere (decayed carbon)
                     mOtherWood[i].C *= survive_rate;
                 }
@@ -444,8 +444,8 @@ namespace iLand.Core
 
                 // average the decay rate (ksw); this is done based on the carbon content
                 // aggregate all trees that die in the current year (and save weighted decay rates to CurrentKSW)
-                p_old = mToSWD[pi].C / (mToSWD[pi].C + tree.StemMass * CNPair.BiomassCFraction);
-                p_new = tree.StemMass * CNPair.BiomassCFraction / (mToSWD[pi].C + tree.StemMass * CNPair.BiomassCFraction);
+                p_old = mToSWD[pi].C / (mToSWD[pi].C + tree.StemMass * Constant.BiomassCFraction);
+                p_new = tree.StemMass * Constant.BiomassCFraction / (mToSWD[pi].C + tree.StemMass * Constant.BiomassCFraction);
                 mCurrentKSW[pi] = mCurrentKSW[pi] * p_old + species.SnagKsw * p_new;
                 mNumberOfSnags[pi]++;
             }

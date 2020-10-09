@@ -3,30 +3,32 @@
     /** CNPool provides (in addition to CNPair) also a weighted parameter value (e.g. a decay rate) */
     public class CNPool : CNPair
     {
-        public double Parameter { get; set; } ///< get weighting parameter
+        public double Weight { get; set; } ///< get weighting parameter
 
         public CNPool()
         {
-            Parameter = 0.0;
+            this.C = 0.0;
+            this.N = 0.0;
+            this.Weight = 0.0;
         }
 
-        public CNPool(double c, double n, double param_value)
+        public CNPool(double c, double n, double weight)
         {
-            C = c; 
-            N = n; 
-            Parameter = param_value;
+            this.C = c;
+            this.N = n;
+            this.Weight = weight;
         }
 
         public new void Clear()
         {
             base.Clear();
-            Parameter = 0.0;
+            this.Weight = 0.0;
         }
 
         public void Add(CNPair s, double parameter_value)
         {
-            CNPool pool = new CNPool() { C = s.C, N = s.N, Parameter = parameter_value };
-            this.Parameter = this.GetWeightedParameter(pool);
+            CNPool pool = new CNPool() { C = s.C, N = s.N, Weight = parameter_value };
+            this.Weight = this.GetWeightedParameter(pool);
             this.C += s.C;
             this.N += s.N;
         } ///< convenience function
@@ -34,7 +36,7 @@
         // increase pool (and weight the value)
         public static CNPool operator +(CNPool p1, CNPool p2)
         {
-            CNPool pool = new CNPool() { C = p1.C, N = p1.N, Parameter = p1.Parameter };
+            CNPool pool = new CNPool() { C = p1.C, N = p1.N, Weight = p1.Weight };
             pool.GetWeightedParameter(p2);
             pool.C += p2.C;
             pool.N += p2.N;
@@ -48,21 +50,21 @@
             {
                 C = pool.C * factor,
                 N = pool.N * factor,
-                Parameter = pool.Parameter
+                Weight = pool.Weight
             };
         }
 
         /// add biomass and weigh the parameter_value with the current C-content of the pool
         /// add biomass with a specific 'CNRatio' and 'parameter_value'
-        public void AddBiomass(double biomass, double CNratio, double parameter_value)
+        public void AddBiomass(double biomass, double CNratio, double parameterValue)
         {
             if (biomass == 0.0)
             {
                 return;
             }
-            double new_c = biomass * BiomassCFraction;
-            double p_old = C / (new_c + C);
-            Parameter = Parameter * p_old + parameter_value * (1.0 - p_old);
+            double newC = biomass * Constant.BiomassCFraction;
+            double oldCfraction = C / (newC + C);
+            Weight = Weight * oldCfraction + parameterValue * (1.0 - oldCfraction);
             base.AddBiomass(biomass, CNratio);
         }
 
@@ -71,10 +73,10 @@
         {
             if (s.C == 0.0)
             {
-                return Parameter;
+                return Weight;
             }
             double p_old = C / (s.C + C);
-            double result = Parameter * p_old + s.Parameter * (1.0 - p_old);
+            double result = Weight * p_old + s.Weight * (1.0 - p_old);
             return result;
         }
     }

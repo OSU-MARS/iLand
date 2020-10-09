@@ -39,21 +39,20 @@ namespace iLand.Core
         ///< return number of trees currently in list
         public int Count() { return mTrees.Count; }
         /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
-        public double Mean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
+        // public double Mean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
         /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
-        public double Sum(string expression, string filter = null) { return AggregateFunction(expression, filter, "sum"); }
+        // public double Sum(string expression, string filter = null) { return AggregateFunction(expression, filter, "sum"); }
 
         ///< load all trees, return number of trees
-        public int LoadAll()
-        { 
-            return Load(null);
-        }
+        //public int LoadAll()
+        //{ 
+        //    return Load(null);
+        //}
 
-        public int Remain(int number)
+        public int Remain(int number, Model model)
         {
             Debug.WriteLine("remain called (number): " + number);
-            Model m = GlobalSettings.Instance.Model;
-            AllTreeIterator at = new AllTreeIterator(m);
+            AllTreeIterator at = new AllTreeIterator(model);
             List<Tree> trees = new List<Tree>();
             for (Tree t = at.MoveNext(); t != null; t = at.MoveNext())
             {
@@ -64,56 +63,56 @@ namespace iLand.Core
             for (int i = 0; i < to_kill; i++)
             {
                 int index = RandomGenerator.Random(0, trees.Count);
-                trees[index].Remove();
+                trees[index].Remove(model);
                 trees.RemoveAt(index);
             }
             return to_kill;
         }
 
-        public int KillAll()
+        public int KillAll(Model model)
         {
             int c = mTrees.Count;
             for (int i = 0; i < mTrees.Count; i++)
             {
-                mTrees[i].Item1.Remove();
+                mTrees[i].Item1.Remove(model);
             }
             mTrees.Clear();
             return c;
         }
 
-        public int DisturbanceKill()
+        public int DisturbanceKill(Model model)
         {
             int c = mTrees.Count;
             for (int i = 0; i < mTrees.Count; i++)
             {
-                mTrees[i].Item1.RemoveDisturbance(0.1, 0.1, 0.1, 0.1, 1.0);
+                mTrees[i].Item1.RemoveDisturbance(model, 0.1, 0.1, 0.1, 0.1, 1.0);
             }
             mTrees.Clear();
             return c;
         }
 
-        public int Kill(string filter, double fraction)
+        public int Kill(Model model, string filter, double fraction)
         {
-            return RemoveTrees(filter, fraction, false);
+            return RemoveTrees(model, filter, fraction, false);
         }
 
-        public int Manage(string filter, double fraction)
+        public int Manage(Model model, string filter, double fraction)
         {
-            return RemoveTrees(filter, fraction, true);
+            return RemoveTrees(model, filter, fraction, true);
         }
 
-        public void CutAndDrop()
+        public void CutAndDrop(Model model)
         {
             //int c = mTrees.Count;
             for (int i = 0; i < mTrees.Count; i++)
             {
                 mTrees[i].Item1.SetDeathReasonCutdown(); // set flag that tree is cut down
-                mTrees[i].Item1.Die();
+                mTrees[i].Item1.Die(model);
             }
             mTrees.Clear();
         }
 
-        private int RemovePercentiles(int pctfrom, int pctto, int number, bool management)
+        private int RemovePercentiles(Model model, int pctfrom, int pctto, int number, bool management)
         {
             if (mTrees.Count == 0)
             {
@@ -135,7 +134,7 @@ namespace iLand.Core
                     // management
                     for (int i = index_from; i < index_to; i++)
                     {
-                        mTrees[i].Item1.Remove(mRemoveFoliage, mRemoveBranch, mRemoveStem);
+                        mTrees[i].Item1.Remove(model, mRemoveFoliage, mRemoveBranch, mRemoveStem);
                     }
                 }
                 else
@@ -143,7 +142,7 @@ namespace iLand.Core
                     // just kill...
                     for (int i = index_from; i < index_to; i++)
                     {
-                        mTrees[i].Item1.Remove();
+                        mTrees[i].Item1.Remove(model);
                     }
                 }
                 count = index_to - index_from;
@@ -169,11 +168,11 @@ namespace iLand.Core
                     number--;
                     if (management)
                     {
-                        mTrees[rnd_index].Item1.Remove(mRemoveFoliage, mRemoveBranch, mRemoveStem);
+                        mTrees[rnd_index].Item1.Remove(model, mRemoveFoliage, mRemoveBranch, mRemoveStem);
                     }
                     else
                     {
-                        mTrees[rnd_index].Item1.Remove();
+                        mTrees[rnd_index].Item1.Remove(model);
                     }
                 }
             }
@@ -191,7 +190,7 @@ namespace iLand.Core
 
         /** remove trees from a list and reduce the list.
           */
-        private int RemoveTrees(string expression, double fraction, bool management)
+        private int RemoveTrees(Model model, string expression, double fraction, bool management)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression expr = new Expression(expression, tw);
@@ -201,16 +200,16 @@ namespace iLand.Core
             {
                 tw.Tree = mTrees[tp].Item1;
                 // if expression evaluates to true and if random number below threshold...
-                if (expr.Calculate(tw) != 0.0 && RandomGenerator.Random() <= fraction)
+                if (expr.Calculate(tw, model.GlobalSettings) != 0.0 && RandomGenerator.Random() <= fraction)
                 {
                     // remove from system
                     if (management)
                     {
-                        mTrees[tp].Item1.Remove(mRemoveFoliage, mRemoveBranch, mRemoveStem); // management with removal fractions
+                        mTrees[tp].Item1.Remove(model, mRemoveFoliage, mRemoveBranch, mRemoveStem); // management with removal fractions
                     }
                     else
                     {
-                        mTrees[tp].Item1.Remove(); // kill
+                        mTrees[tp].Item1.Remove(model); // kill
                     }
 
                     // remove from tree list
@@ -227,69 +226,69 @@ namespace iLand.Core
         }
 
         // calculate aggregates for all trees in the internal list
-        private double AggregateFunction(string expression, string filter, string type)
-        {
-            TreeWrapper tw = new TreeWrapper();
-            Expression expr = new Expression(expression, tw);
+        //private double AggregateFunction(GlobalSettings globalSettings, string expression, string filter, string type)
+        //{
+        //    TreeWrapper tw = new TreeWrapper();
+        //    Expression expr = new Expression(expression, tw);
 
-            double sum = 0.0;
-            int n = 0;
-            if (String.IsNullOrEmpty(filter))
-            {
-                // without filtering
-                for (int tp = 0; tp < mTrees.Count; ++tp)
-                {
-                    tw.Tree = mTrees[tp].Item1;
-                    sum += expr.Calculate();
-                    ++n;
-                    ++tp;
-                }
-            }
-            else
-            {
-                // with filtering
-                Expression filter_expr = new Expression(filter, tw);
-                filter_expr.EnableIncrementalSum();
-                for (int tp = 0; tp < mTrees.Count; ++tp)
-                {
-                    tw.Tree = mTrees[tp].Item1;
-                    if (filter_expr.Calculate() != 0.0)
-                    {
-                        sum += expr.Calculate();
-                        ++n;
-                    }
-                    ++tp;
-                }
-            }
-            if (type == "sum")
-            {
-                return sum;
-            }
-            if (type == "mean")
-            {
-                return n > 0 ? sum / (double)n : 0.0;
-            }
-            return 0.0;
+        //    double sum = 0.0;
+        //    int n = 0;
+        //    if (String.IsNullOrEmpty(filter))
+        //    {
+        //        // without filtering
+        //        for (int tp = 0; tp < mTrees.Count; ++tp)
+        //        {
+        //            tw.Tree = mTrees[tp].Item1;
+        //            sum += expr.Calculate(globalSettings);
+        //            ++n;
+        //            ++tp;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        // with filtering
+        //        Expression filter_expr = new Expression(filter, tw);
+        //        filter_expr.EnableIncrementalSum();
+        //        for (int tp = 0; tp < mTrees.Count; ++tp)
+        //        {
+        //            tw.Tree = mTrees[tp].Item1;
+        //            if (filter_expr.Calculate(globalSettings) != 0.0)
+        //            {
+        //                sum += expr.Calculate(globalSettings);
+        //                ++n;
+        //            }
+        //            ++tp;
+        //        }
+        //    }
+        //    if (type == "sum")
+        //    {
+        //        return sum;
+        //    }
+        //    if (type == "mean")
+        //    {
+        //        return n > 0 ? sum / (double)n : 0.0;
+        //    }
+        //    return 0.0;
+        //}
+
+        // from the range percentile range pctfrom to pctto (each 1..100)
+        public int KillPercentage(Model model, int pctfrom, int pctto, int number)
+        {
+            return RemovePercentiles(model, pctfrom, pctto, number, false);
         }
 
         // from the range percentile range pctfrom to pctto (each 1..100)
-        public int KillPercentage(int pctfrom, int pctto, int number)
+        public int ManagePercentage(Model model, int pctfrom, int pctto, int number)
         {
-            return RemovePercentiles(pctfrom, pctto, number, false);
+            return RemovePercentiles(model, pctfrom, pctto, number, true);
         }
 
-        // from the range percentile range pctfrom to pctto (each 1..100)
-        public int ManagePercentage(int pctfrom, int pctto, int number)
-        {
-            return RemovePercentiles(pctfrom, pctto, number, true);
-        }
-
-        public int ManageAll()
+        public int ManageAll(Model model)
         {
             int c = mTrees.Count;
             for (int i = 0; i < mTrees.Count; i++)
             {
-                mTrees[i].Item1.Remove(mRemoveFoliage, mRemoveBranch, mRemoveStem);
+                mTrees[i].Item1.Remove(model, mRemoveFoliage, mRemoveBranch, mRemoveStem);
             }
             mTrees.Clear();
             return c;
@@ -299,7 +298,6 @@ namespace iLand.Core
         {
             mTrees.Clear();
             Debug.WriteLine("run() called");
-            int year = GlobalSettings.Instance.CurrentYear;
         }
 
         public int FilterIDList(List<object> idList)
@@ -331,7 +329,7 @@ namespace iLand.Core
             return mTrees.Count;
         }
 
-        public int Filter(string filter)
+        public int Filter(GlobalSettings globalSettings, string filter)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression expr = new Expression(filter, tw);
@@ -340,7 +338,7 @@ namespace iLand.Core
             for (int tp = 0; tp < mTrees.Count; ++tp)
             {
                 tw.Tree = mTrees[tp].Item1;
-                double value = expr.Calculate(tw);
+                double value = expr.Calculate(tw, globalSettings);
                 // keep if expression returns true (1)
                 bool keep = value == 1.0;
                 // if value is >0 (i.e. not "false"), then draw a random number
@@ -363,57 +361,56 @@ namespace iLand.Core
             return mTrees.Count;
         }
 
-        public int LoadResourceUnit(int ruindex)
-        {
-            Model m = GlobalSettings.Instance.Model;
-            ResourceUnit ru = m.GetResourceUnit(ruindex);
-            if (ru == null)
-            {
-                return -1;
-            }
-            mTrees.Clear();
-            for (int i = 0; i < ru.Trees.Count; i++)
-            {
-                if (!ru.Tree(i).IsDead())
-                {
-                    mTrees.Add(new MutableTuple<Tree, double>(ru.Tree(i), 0.0));
-                }
-            }
-            return mTrees.Count;
-        }
+        //public int LoadResourceUnit(int ruindex)
+        //{
+        //    Model m = GlobalSettings.Instance.Model;
+        //    ResourceUnit ru = m.GetResourceUnit(ruindex);
+        //    if (ru == null)
+        //    {
+        //        return -1;
+        //    }
+        //    mTrees.Clear();
+        //    for (int i = 0; i < ru.Trees.Count; i++)
+        //    {
+        //        if (!ru.Tree(i).IsDead())
+        //        {
+        //            mTrees.Add(new MutableTuple<Tree, double>(ru.Tree(i), 0.0));
+        //        }
+        //    }
+        //    return mTrees.Count;
+        //}
 
-        public int Load(string filter)
-        {
-            TreeWrapper tw = new TreeWrapper();
-            Model m = GlobalSettings.Instance.Model;
-            mTrees.Clear();
-            AllTreeIterator at = new AllTreeIterator(m);
-            if (String.IsNullOrEmpty(filter))
-            {
-                for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
-                {
-                    if (!t.IsDead())
-                    {
-                        mTrees.Add(new MutableTuple<Tree, double>(t, 0.0));
-                    }
-                }
-            }
-            else
-            {
-                Expression expr = new Expression(filter, tw);
-                expr.EnableIncrementalSum();
-                Debug.WriteLine("filtering with " + filter);
-                for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
-                {
-                    tw.Tree = t;
-                    if (!t.IsDead() && expr.Execute() == 0.0)
-                    {
-                        mTrees.Add(new MutableTuple<Tree, double>(t, 0.0));
-                    }
-                }
-            }
-            return mTrees.Count;
-        }
+        //private int Load(string filter, Model model)
+        //{
+        //    TreeWrapper tw = new TreeWrapper();
+        //    mTrees.Clear();
+        //    AllTreeIterator at = new AllTreeIterator(model);
+        //    if (String.IsNullOrEmpty(filter))
+        //    {
+        //        for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
+        //        {
+        //            if (!t.IsDead())
+        //            {
+        //                mTrees.Add(new MutableTuple<Tree, double>(t, 0.0));
+        //            }
+        //        }
+        //    }
+        //    else
+        //    {
+        //        Expression expr = new Expression(filter, tw);
+        //        expr.EnableIncrementalSum();
+        //        Debug.WriteLine("filtering with " + filter);
+        //        for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
+        //        {
+        //            tw.Tree = t;
+        //            if (!t.IsDead() && expr.Execute(model.GlobalSettings) == 0.0)
+        //            {
+        //                mTrees.Add(new MutableTuple<Tree, double>(t, 0.0));
+        //            }
+        //        }
+        //    }
+        //    return mTrees.Count;
+        //}
 
         public void LoadFromTreeList(List<Tree> tree_list)
         {
@@ -431,10 +428,10 @@ namespace iLand.Core
             {
                 throw new ArgumentNullException(nameof(wrap));
             }
-            LoadFromMap(wrap.Map, key);
+            LoadFromMap(wrap.StandGrid, key);
         }
 
-        public void KillSaplings(MapGridWrapper wrap, int key)
+        public void KillSaplings(MapGridWrapper wrap, Model model, int key)
         {
             //MapGridWrapper *wrap = qobject_cast<MapGridWrapper*>(map_grid_object.toQObject());
             //if (!wrap) {
@@ -442,17 +439,17 @@ namespace iLand.Core
             //    return;
             //}
             //loadFromMap(wrap.map(), key);
-            RectangleF box = wrap.Map.BoundingBox(key);
-            GridRunner<float> runner = new GridRunner<float>(GlobalSettings.Instance.Model.LightGrid, box);
+            RectangleF box = wrap.StandGrid.BoundingBox(key);
+            GridRunner<float> runner = new GridRunner<float>(model.LightGrid, box);
             for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
             {
-                if (wrap.Map.StandIDFromLifCoord(runner.CurrentIndex()) == key)
+                if (wrap.StandGrid.StandIDFromLifCoord(runner.CurrentIndex()) == key)
                 {
                     ResourceUnit ru = null;
-                    SaplingCell sc = GlobalSettings.Instance.Model.Saplings.Cell(runner.CurrentIndex(), true, ref ru);
+                    SaplingCell sc = model.Saplings.Cell(runner.CurrentIndex(), model, true, ref ru);
                     if (sc != null)
                     {
-                        GlobalSettings.Instance.Model.Saplings.ClearSaplings(sc, ru, true);
+                        model.Saplings.ClearSaplings(sc, ru, true);
                     }
                 }
             }
@@ -469,7 +466,7 @@ namespace iLand.Core
             {
                 throw new ArgumentException("removeSoilCarbon called with invalid parameters!!");
             }
-            List<MutableTuple<ResourceUnit, double>> ru_areas = wrap.Map.ResourceUnitAreas(key).ToList();
+            List<MutableTuple<ResourceUnit, double>> ru_areas = wrap.StandGrid.ResourceUnitAreas(key).ToList();
             double total_area = 0.0;
             for (int i = 0; i < ru_areas.Count; ++i)
             {
@@ -485,7 +482,7 @@ namespace iLand.Core
                 ru.Soil.Disturbance(DWDfrac * area_factor, litterFrac * area_factor, soilFrac * area_factor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
-            Debug.WriteLine("total area " + total_area + " of " + wrap.Map.Area(key));
+            Debug.WriteLine("total area " + total_area + " of " + wrap.StandGrid.Area(key));
         }
 
         /** slash snags (SWD and otherWood-Pools) of polygon \p key on the map \p wrap.
@@ -500,7 +497,7 @@ namespace iLand.Core
             {
                 throw new ArgumentOutOfRangeException(nameof(slash_fraction), "slashSnags called with invalid parameters!");
             }
-            List<MutableTuple<ResourceUnit, double>> ru_areas = wrap.Map.ResourceUnitAreas(key).ToList();
+            List<MutableTuple<ResourceUnit, double>> ru_areas = wrap.StandGrid.ResourceUnitAreas(key).ToList();
             double total_area = 0.0;
             for (int i = 0; i < ru_areas.Count; ++i)
             {
@@ -510,7 +507,7 @@ namespace iLand.Core
                 ru.Snags.Management(slash_fraction * area_factor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
-            Debug.WriteLine("total area " + total_area + " of " + wrap.Map.Area(key));
+            Debug.WriteLine("total area " + total_area + " of " + wrap.StandGrid.Area(key));
         }
 
         /** loadFromMap selects trees located on pixels with value 'key' within the grid 'map_grid'.
@@ -546,7 +543,7 @@ namespace iLand.Core
             return 0;
         }
 
-        public void Sort(string statement)
+        public void Sort(GlobalSettings globalSettings, string statement)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression sorter = new Expression(statement, tw);
@@ -555,7 +552,7 @@ namespace iLand.Core
             {
                 tw.Tree = mTrees[i].Item1;
                 MutableTuple<Tree, double> tree = mTrees[i];
-                tree.Item2 = sorter.Execute();
+                tree.Item2 = sorter.Execute(globalSettings);
             }
             // now sort the list....
             mTrees.Sort(TreePairValue);

@@ -19,7 +19,7 @@ namespace iLand.Tools
       */
     public class MapGrid
     {
-        private static readonly MapGridRULock mapGridLock;
+        // private static readonly MapGridRULock mapGridLock;
 
         private readonly Dictionary<int, MutableTuple<RectangleF, double>> mRectIndex; ///< holds the extent and area for each map-id
         private readonly MultiValueDictionary<int, MutableTuple<ResourceUnit, double>> mRUIndex; ///< holds a list of resource units + areas per map-id
@@ -35,10 +35,10 @@ namespace iLand.Tools
         /// returns true, if 'id' is a valid id in the grid, false otherwise.
         public bool IsValid(int id) { return mRectIndex.ContainsKey(id); }
 
-        static MapGrid()
-        {
-            mapGridLock = new MapGridRULock();
-        }
+        //static MapGrid()
+        //{
+        //    mapGridLock = new MapGridRULock();
+        //}
 
         public MapGrid()
         {
@@ -48,14 +48,14 @@ namespace iLand.Tools
             this.mNeighborList = new MultiValueDictionary<int, int>();
         }
 
-        public MapGrid(GisGrid source_grid)
+        public MapGrid(Model model, GisGrid sourceGrid)
         {
-            LoadFromGrid(source_grid);
+            LoadFromGrid(model, sourceGrid);
         }
 
-        public MapGrid(string fileName, bool create_index = true)
+        public MapGrid(Model model, string fileName, bool createIndex = true)
         {
-            LoadFromFile(fileName, create_index);
+            LoadFromFile(model, fileName, createIndex);
         }
 
         /// return true, if the point 'lif_grid_coords' (x/y integer key within the LIF-Grid)
@@ -71,14 +71,14 @@ namespace iLand.Tools
         }
 
         ///< load from an already present GisGrid
-        public bool LoadFromGrid(GisGrid source_grid, bool create_index = true)
+        public bool LoadFromGrid(Model model, GisGrid source_grid, bool create_index = true)
         {
-            if (GlobalSettings.Instance.Model == null)
+            if (model == null)
             {
                 throw new NotSupportedException("GisGrid::create10mGrid: no valid model to retrieve height grid.");
             }
 
-            Grid<HeightGridValue> h_grid = GlobalSettings.Instance.Model.HeightGrid;
+            Grid<HeightGridValue> h_grid = model.HeightGrid;
             if (h_grid == null || h_grid.IsEmpty())
             {
                 throw new NotSupportedException("MapGrid.loadFromGrid(): no valid height grid to copy grid size.");
@@ -88,7 +88,7 @@ namespace iLand.Tools
             Grid.Clear();
             Grid.Setup(h_grid.PhysicalExtent, h_grid.CellSize);
 
-            RectangleF world = GlobalSettings.Instance.Model.WorldExtentUnbuffered;
+            RectangleF world = model.WorldExtentUnbuffered;
             for (int i = 0; i < Grid.Count; i++)
             {
                 PointF p = Grid.GetCellCenterPoint(Grid.IndexOf(i));
@@ -108,14 +108,14 @@ namespace iLand.Tools
 
             if (create_index)
             {
-                CreateIndex();
+                CreateIndex(model);
             }
             return true;
         }
 
-        public void CreateEmptyGrid()
+        public void CreateEmptyGrid(Model model)
         {
-            Grid<HeightGridValue> h_grid = GlobalSettings.Instance.Model.HeightGrid;
+            Grid<HeightGridValue> h_grid = model.HeightGrid;
             if (h_grid == null || h_grid.IsEmpty())
             {
                 throw new NotSupportedException("GisGrid::createEmptyGrid: 10mGrid: no valid height grid to copy grid size.");
@@ -136,7 +136,7 @@ namespace iLand.Tools
             mRUIndex.Clear();
         }
 
-        public void CreateIndex()
+        public void CreateIndex(Model model)
         {
             // reset spatial index
             mRectIndex.Clear();
@@ -152,7 +152,7 @@ namespace iLand.Tools
                 data.Item1 = RectangleF.Union(data.Item1, Grid.GetCellRect(Grid.IndexOf(p)));
                 data.Item2 += Constant.LightSize * Constant.LightPerHeightSize * Constant.LightSize * Constant.LightPerHeightSize; // 100m2
 
-                ResourceUnit ru = GlobalSettings.Instance.Model.GetResourceUnit(Grid.GetCellCenterPoint(Grid.IndexOf(p)));
+                ResourceUnit ru = model.GetResourceUnit(Grid.GetCellCenterPoint(Grid.IndexOf(p)));
                 if (ru == null)
                 {
                     continue;
@@ -180,14 +180,14 @@ namespace iLand.Tools
         }
 
         ///< load ESRI style text file
-        public bool LoadFromFile(string fileName, bool create_index)
+        public bool LoadFromFile(Model model, string fileName, bool createIndex)
         {
-            GisGrid gis_grid = new GisGrid();
+            GisGrid gisGrid = new GisGrid();
             Name = "invalid";
-            if (gis_grid.LoadFromFile(fileName))
+            if (gisGrid.LoadFromFile(fileName))
             {
                 Name = fileName;
-                return LoadFromGrid(gis_grid, create_index);
+                return LoadFromGrid(model, gisGrid, createIndex);
             }
             return false;
         }
@@ -230,7 +230,7 @@ namespace iLand.Tools
             return tree_list;
         }
 
-        public int LoadTrees(int id, List<MutableTuple<Tree, double>> rList, string filter, int n_estimate)
+        public int LoadTrees(GlobalSettings globalSettings, int id, List<MutableTuple<Tree, double>> rList, string filter, int n_estimate)
         {
             rList.Clear();
             if (n_estimate > 0)
@@ -258,7 +258,7 @@ namespace iLand.Tools
                         tw.Tree = t;
                         if (expression != null)
                         {
-                            double value = expression.Calculate(tw);
+                            double value = expression.Calculate(tw, globalSettings);
                             // keep if expression returns true (1)
                             bool keep = value == 1.0;
                             // if value is >0 (i.e. not "false"), then draw a random number
@@ -278,13 +278,13 @@ namespace iLand.Tools
             return rList.Count;
         }
 
-        public void FreeLocksForStand(int id)
-        {
-            if (id > -1)
-            {
-                mapGridLock.Unlock(id);
-            }
-        }
+        //public void FreeLocksForStand(int id)
+        //{
+        //    if (id > -1)
+        //    {
+        //        mapGridLock.Unlock(id);
+        //    }
+        //}
 
         /// return a list of grid-indices of a given stand-id (a grid-index
         /// is the index of 10m x 10m pixels within the internal storage)

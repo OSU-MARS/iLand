@@ -6,20 +6,22 @@ namespace iLand.Core
 {
     internal class SaplingCellRunner
     {
+        private readonly Model mModel;
         private readonly MapGrid mStandGrid;
-
+        private readonly int mStandID;
         private readonly GridRunner<float> mRunner;
-        private readonly int mStandId;
 
         public ResourceUnit RU { get; private set; }
 
-        public SaplingCellRunner(int stand_id, MapGrid stand_grid)
+        public SaplingCellRunner(int standID, MapGrid standGrid, Model model)
         {
-            RU = null;
-            mStandId = stand_id;
-            mStandGrid = stand_grid ?? GlobalSettings.Instance.Model.StandGrid;
-            RectangleF box = mStandGrid.BoundingBox(stand_id);
-            mRunner = new GridRunner<float>(GlobalSettings.Instance.Model.LightGrid, box);
+            this.mModel = model;
+            this.mStandID = standID;
+            this.mStandGrid = standGrid ?? model.StandGrid;
+            RectangleF box = mStandGrid.BoundingBox(standID);
+            this.mRunner = new GridRunner<float>(model.LightGrid, box);
+
+            this.RU = null;
         }
 
         public PointF CurrentCoordinate()
@@ -40,11 +42,11 @@ namespace iLand.Core
                 {
                     return null; // end of the bounding box
                 }
-                if (mStandGrid.StandIDFromLifCoord(mRunner.CurrentIndex()) != mStandId)
+                if (mStandGrid.StandIDFromLifCoord(mRunner.CurrentIndex()) != mStandID)
                 {
                     continue; // pixel does not belong to the target stand
                 }
-                RU = GlobalSettings.Instance.Model.GetResourceUnit(mRunner.CurrentCoordinate());
+                RU = mModel.GetResourceUnit(mRunner.CurrentCoordinate());
                 SaplingCell sc = null;
                 if (RU != null)
                 {

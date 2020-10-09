@@ -52,13 +52,13 @@ namespace iLand.Core
         }
 
         // some special calculations used for establishment
-        private void CalculateChillDays(int end_of_season = -1)
+        private void CalculateChillDays(GlobalSettings globalSettings, int end_of_season = -1)
         {
             int iday = 0;
             mChillDaysBefore = 0;
             int days_after = 0;
             int last_day = end_of_season > 0 ? end_of_season : LeafOnEnd;
-            for (int index = mClimate.Begin; index != mClimate.End; ++index, ++iday)
+            for (int index = mClimate.CurrentJanuary1; index != mClimate.NextJanuary1; ++index, ++iday)
             {
                 ClimateDay day = mClimate[index];
                 if (day.MeanDaytimeTemperature >= -5.0 && day.MeanDaytimeTemperature < 5.0)
@@ -73,7 +73,7 @@ namespace iLand.Core
                     }
                 }
             }
-            if (GlobalSettings.Instance.CurrentYear == 1)
+            if (globalSettings.CurrentYear == 1)
             {
                 // for the first simulation year, use the value of this autumn for the last years autumn
                 ChillingDaysLastYear = days_after;
@@ -86,23 +86,23 @@ namespace iLand.Core
         }
 
         /// calculate the phenology for the current year
-        public void Calculate()
+        public void Calculate(GlobalSettings globalSettings)
         {
             if (ID == 0)
             {
                 // for needles: just calculate the chilling requirement for the establishment
                 // i.e.: use the "bottom line" of 10.5 hrs daylength for the end of the vegetation season
-                CalculateChillDays(mClimate.Sun.LastDayLongerThan10_5Hours);
+                CalculateChillDays(globalSettings, mClimate.Sun.LastDayLongerThan10_5Hours);
                 return;
             }
             double vpd, temp, daylength;
             double gsi; // combined factor of effect of vpd, temperature and day length
-            bool inside_period = !mClimate.Sun.NorthernHemishere(); // on northern hemisphere 1.1. is in winter
+            bool inside_period = !mClimate.Sun.NorthernHemisphere(); // on northern hemisphere 1.1. is in winter
             int day_start = -1, day_stop = -1;
             int day_wait_for = -1;
 
             int iday = 0;
-            for (int index = mClimate.Begin; index != mClimate.End; ++index, ++iday)
+            for (int index = mClimate.CurrentJanuary1; index != mClimate.NextJanuary1; ++index, ++iday)
             {
                 ClimateDay day = mClimate[index];
                 if (day_wait_for >= 0 && iday < day_wait_for)
@@ -145,10 +145,10 @@ namespace iLand.Core
                 day_start = mClimate.DaysOfYear() - 1; // last day of the year, never reached
                 day_stop = day_start; // never reached
             }
-            if (GlobalSettings.Instance.LogDebug())
-            {
-                Debug.WriteLine("Jolly-phenology. start " + mClimate.DayOfYear(day_start) + " stop " + mClimate.DayOfYear(day_stop));
-            }
+            //if (GlobalSettings.Instance.LogDebug())
+            //{
+            //    Debug.WriteLine("Jolly-phenology. start " + mClimate.DayOfYear(day_start) + " stop " + mClimate.DayOfYear(day_stop));
+            //}
             LeafOnStart = day_start;
             LeafOnEnd = day_stop;
             // convert yeardays to dates
@@ -179,7 +179,7 @@ namespace iLand.Core
                 }
             }
 
-            CalculateChillDays();
+            CalculateChillDays(globalSettings);
         }
 
         private double Ramp(double value, double minValue, double maxValue)

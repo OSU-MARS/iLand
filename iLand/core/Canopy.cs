@@ -79,9 +79,9 @@ namespace iLand.Core
         }
 
         /// sets up the canopy. fetch some global parameter values...
-        public void Setup()
+        public void Setup(Model model)
         {
-            mAirDensity = GlobalSettings.Instance.Model.Settings.AirDensity; // kg / m3
+            mAirDensity = model.ModelSettings.AirDensity; // kg / m3
         }
 
         public void SetStandParameters(double LAIneedle, double LAIbroadleave, double maxCanopyConductance)
@@ -99,7 +99,7 @@ namespace iLand.Core
         }
 
         // Returns the total sum of evaporation+transpiration in mm of the day.
-        public double Evapotranspiration3PG(ClimateDay climate, double daylength_h, double combined_response)
+        public double Evapotranspiration3PG(ClimateDay climate, Model model, double daylength_h, double combined_response)
         {
             double vpd_mbar = climate.Vpd * 10.0; // convert from kPa to mbar
             double temperature = climate.MeanDaytimeTemperature; // average temperature of the day (degree C)
@@ -115,7 +115,7 @@ namespace iLand.Core
             double VPDconv = 0.000622; //convert VPD to saturation deficit = 18/29/1000 = molecular weight of H2O/molecular weight of air
             double latent_heat = 2460000.0; // Latent heat of vaporization. Energy required per unit mass of water vaporized [J kg-1]
 
-            double gBL = GlobalSettings.Instance.Model.Settings.BoundaryLayerConductance; // boundary layer conductance
+            double gBL = model.ModelSettings.BoundaryLayerConductance; // boundary layer conductance
 
             // canopy conductance.
             // The species traits are weighted by LAI on the RU.

@@ -19,39 +19,38 @@ namespace iLand.Tools
             180°
 
       Values for height of -1 indicate "out of scope", "invalid" values
-
      */
     public class DEM : Grid<float>
     {
-        private readonly Grid<float> aspect_grid;
-        private readonly Grid<float> slope_grid;
-        private readonly Grid<float> view_grid;
+        private readonly Grid<float> aspectGrid;
+        private readonly Grid<float> slopeGrid;
+        private readonly Grid<float> viewGrid;
 
-        public DEM(string fileName)
+        public DEM(string fileName, Model model)
         {
-            this.aspect_grid = new Grid<float>();
-            this.slope_grid = new Grid<float>();
-            this.view_grid = new Grid<float>();
+            this.aspectGrid = new Grid<float>();
+            this.slopeGrid = new Grid<float>();
+            this.viewGrid = new Grid<float>();
 
-            LoadFromFile(fileName);
+            this.LoadFromFile(fileName, model);
         }
 
         public Grid<float> EnsureAspectGrid()
         {
-            CreateSlopeGrid();
-            return aspect_grid;
+            CreateGrids();
+            return aspectGrid;
         }
 
         public Grid<float> EnsureSlopeGrid()
         {
-            CreateSlopeGrid();
-            return slope_grid;
+            CreateGrids();
+            return slopeGrid;
         }
 
         public Grid<float> EnsureViewGrid()
         {
-            CreateSlopeGrid();
-            return view_grid;
+            CreateGrids();
+            return viewGrid;
         }
 
         // special functions for DEM
@@ -73,14 +72,14 @@ namespace iLand.Tools
 
         /// loads a DEM from a ESRI style text file.
         /// internally, the DEM has always a resolution of 10m
-        public bool LoadFromFile(string fileName)
+        public bool LoadFromFile(string fileName, Model model)
         {
-            if (GlobalSettings.Instance.Model == null)
+            if (model == null)
             {
-                throw new NotSupportedException("create10mGrid: no valid model to retrieve height grid.");
+                throw new NotSupportedException("No valid model to retrieve height grid.");
             }
 
-            Grid<HeightGridValue> h_grid = GlobalSettings.Instance.Model.HeightGrid;
+            Grid<HeightGridValue> h_grid = model.HeightGrid;
             if (h_grid == null || h_grid.IsEmpty())
             {
                 throw new NotSupportedException("GisGrid::create10mGrid: no valid height grid to copy grid size.");
@@ -94,13 +93,13 @@ namespace iLand.Tools
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
             Clear();
-            aspect_grid.Clear();
-            slope_grid.Clear();
-            view_grid.Clear();
+            aspectGrid.Clear();
+            slopeGrid.Clear();
+            viewGrid.Clear();
 
             Setup(h_grid.PhysicalExtent, h_grid.CellSize);
 
-            RectangleF world = GlobalSettings.Instance.Model.WorldExtentUnbuffered;
+            RectangleF world = model.WorldExtentUnbuffered;
 
             if ((gis_grid.CellSize % CellSize) != 0.0)
             {
@@ -211,14 +210,14 @@ namespace iLand.Tools
             }
         }
 
-        public void CreateSlopeGrid()
+        public void CreateGrids()
         {
-            if (slope_grid.IsEmpty())
+            if (slopeGrid.IsEmpty())
             {
                 // setup custom grids with the same size as this DEM
-                slope_grid.Setup(this);
-                view_grid.Setup(this);
-                aspect_grid.Setup(this);
+                slopeGrid.Setup(this);
+                viewGrid.Setup(this);
+                aspectGrid.Setup(this);
             }
             else
             {
@@ -236,23 +235,23 @@ namespace iLand.Tools
             {
                 PointF pt = GetCellCenterPoint(p);
                 float height = GetOrientation(pt, out float slope, out float aspect);
-                slope_grid[p] = slope;
-                aspect_grid[p] = aspect;
+                slopeGrid[p] = slope;
+                aspectGrid[p] = aspect;
                 // calculate the view value:
                 if (height > 0)
                 {
-                    float h = MathF.Atan(slope_grid[p]);
-                    a_x = MathF.Cos(aspect_grid[p] * MathF.PI / 180.0F) * MathF.Cos(h);
-                    a_y = MathF.Sin(aspect_grid[p] * MathF.PI / 180.0F) * MathF.Cos(h);
+                    float h = MathF.Atan(slopeGrid[p]);
+                    a_x = MathF.Cos(aspectGrid[p] * MathF.PI / 180.0F) * MathF.Cos(h);
+                    a_y = MathF.Sin(aspectGrid[p] * MathF.PI / 180.0F) * MathF.Cos(h);
                     a_z = MathF.Sin(h);
 
                     // use the scalar product to calculate the angle, and then
                     // transform from [-1,1] to [0,1]
-                    view_grid[p] = (a_x * sun_x + a_y * sun_y + a_z * sun_z + 1.0F) / 2.0F;
+                    viewGrid[p] = (a_x * sun_x + a_y * sun_y + a_z * sun_z + 1.0F) / 2.0F;
                 }
                 else
                 {
-                    view_grid[p] = 0.0F;
+                    viewGrid[p] = 0.0F;
                 }
             }
         }

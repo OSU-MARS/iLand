@@ -8,11 +8,10 @@ namespace iLand.Tools
     internal class RandomGenerator
     {
         private const int RandomGeneratorSize = 500000;
-        private const int RandomGeneratorRotations = 0;
 
         private static readonly int[] mBuffer = new int[RandomGeneratorSize + 5];
         private static int mIndex = 0;
-        private static int mRotationCount = RandomGeneratorRotations + 1;
+        private static int mRotationCount = 1;
         private static int mRefillCounter = 0;
         private static RandomGenerators mGeneratorType = RandomGenerators.Fast;
 
@@ -34,7 +33,7 @@ namespace iLand.Tools
         public static void SetGeneratorType(RandomGenerators gen)
         {
             mGeneratorType = gen;
-            mRotationCount = RandomGeneratorRotations + 1;
+            mRotationCount = 1;
             mIndex = 0;
             mRefillCounter = 0;
         }
@@ -48,14 +47,14 @@ namespace iLand.Tools
 
         public static int DebugNRandomNumbers()
         {
-            return mIndex + RandomGeneratorSize * mRotationCount + (RandomGeneratorRotations + 1) * RandomGeneratorSize * mRefillCounter;
+            return mIndex + RandomGeneratorSize * mRotationCount + RandomGeneratorSize * mRefillCounter;
         }
 
         /// call this function to check if we need to create new random numbers.
         /// this function is not reentrant! (e.g. call every year in the model)
         public static void CheckGenerator()
         {
-            if (mRotationCount > RandomGeneratorRotations)
+            if (mRotationCount > 0)
             {
                 RandomGenerator.Refill();
             }
@@ -104,7 +103,7 @@ namespace iLand.Tools
             // BUGBUG: check mRotationCount < RANDOMGENERATORROTATIONS 
             lock (mBuffer) // serialize access
             {
-                if (mRotationCount < RandomGeneratorRotations) // another thread might already succeeded in refilling....
+                if (mRotationCount <= 0) // another thread might already succeeded in refilling....
                 {
                     return;
                 }

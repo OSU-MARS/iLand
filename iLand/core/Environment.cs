@@ -50,24 +50,18 @@ namespace iLand.Core
             this.SpeciesSets = new List<SpeciesSet>();
         }
 
-        public bool LoadFromFile(string fileName)
+        public bool LoadFromFile(string filePath, Model model)
         {
-            string source = Helper.LoadTextFile(GlobalSettings.Instance.Path(fileName));
+            string source = Helper.LoadTextFile(filePath);
             if (String.IsNullOrEmpty(source))
             {
-                throw new NotSupportedException(String.Format("Environment: input file does not exist or is empty ({0})", fileName));
+                throw new NotSupportedException(String.Format("Environment: input file does not exist or is empty ({0})", filePath));
             }
-            return LoadFromString(source);
-        }
 
-        public bool LoadFromString(string source)
-        {
             mInfile = new CsvFile();
-
             mInfile.LoadFromString(source);
             mKeys = mInfile.Captions;
 
-            XmlHelper xml = GlobalSettings.Instance.Settings;
             SpeciesSets.Clear(); // note: the objects are not destroyed - potential memory leak.
             Climates.Clear();
             mRowCoordinates.Clear();
@@ -114,12 +108,12 @@ namespace iLand.Core
                 Debug.WriteLine("creating species sets: " + speciesNames);
                 foreach (string name in speciesNames)
                 {
-                    xml.SetNodeValue(SpeciesKey, name); // set xml value
+                    model.GlobalSettings.Settings.SetNodeValue(SpeciesKey, name); // set xml value
                     // create species sets
                     SpeciesSet set = new SpeciesSet();
                     SpeciesSets.Add(set);
                     mCreatedObjects[name] = (object)set;
-                    set.Setup();
+                    set.Setup(model.GlobalSettings);
                 }
                 Debug.WriteLine(SpeciesSets.Count + " species sets created.");
             }
@@ -128,7 +122,7 @@ namespace iLand.Core
                 // no species sets specified
                 SpeciesSet speciesSet = new SpeciesSet();
                 SpeciesSets.Add(speciesSet);
-                speciesSet.Setup();
+                speciesSet.Setup(model.GlobalSettings);
                 CurrentSpeciesSet = speciesSet;
             }
 
@@ -137,7 +131,7 @@ namespace iLand.Core
             {
                 using DebugTimer t = new DebugTimer("Environment.LoadFromString(climate)");
                 List<string> climateNames = mInfile.Column(index).Distinct().ToList();
-                if (GlobalSettings.Instance.LogDebug())
+                if (model.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("creating climate: " + climateNames);
                     Debug.WriteLine("Environment: climate: # of climates in environment file:" + climateNames.Count);
@@ -147,7 +141,7 @@ namespace iLand.Core
                     // create an entry in the list of created objects, but
                     // really create the climate only if required (see setPosition() )
                     mCreatedObjects[name] = null;
-                    xml.SetNodeValue(ClimateKey, name); // set xml value
+                    model.GlobalSettings.Settings.SetNodeValue(ClimateKey, name); // set xml value
                 }
             }
             else
@@ -155,7 +149,7 @@ namespace iLand.Core
                 // no climate defined - setup default climate
                 Climate c = new Climate();
                 Climates.Add(c);
-                c.Setup();
+                c.Setup(model);
                 CurrentClimate = c;
             }
             if (CurrentClimate == null && Climates.Count > 0)
@@ -172,7 +166,7 @@ namespace iLand.Core
         /** sets the "pointer" to a "position" (metric coordinates).
             All specified values are set (also the climate/species-set pointers).
             */
-        public void SetPosition(PointF position)
+        public void SetPosition(PointF position, Model model)
         {
             // no changes occur, when the "environment" is not loaded
             if (!IsSetup())
@@ -217,10 +211,8 @@ namespace iLand.Core
                 }
             }
 
-            XmlHelper xml = GlobalSettings.Instance.Settings;
             int row = mRowCoordinates[key];
-            string value;
-            if (GlobalSettings.Instance.LogInfo())
+            if (model.GlobalSettings.LogInfo())
             {
                 Debug.WriteLine("settting up point " + position + " with row " + row);
             }
@@ -235,12 +227,12 @@ namespace iLand.Core
                 {
                     continue;
                 }
-                value = mInfile.Value(row, col).ToString();
-                if (GlobalSettings.Instance.LogInfo())
+                string value = mInfile.Value(row, col).ToString();
+                if (model.GlobalSettings.LogInfo())
                 {
                     Debug.WriteLine("set " + mKeys[col] + " to " + value);
                 }
-                xml.SetNodeValue(mKeys[col], value);
+                model.GlobalSettings.Settings.SetNodeValue(mKeys[col], value);
                 // special handling for constructed objects:
                 if (mKeys[col] == SpeciesKey)
                 {
@@ -255,9 +247,8 @@ namespace iLand.Core
                         Climate climate = new Climate();
                         Climates.Add(climate);
                         mCreatedObjects[value] = (object)climate;
-                        climate.Setup();
+                        climate.Setup(model);
                         CurrentClimate = climate;
-
                     }
                 }
             }

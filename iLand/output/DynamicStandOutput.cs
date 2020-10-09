@@ -3,13 +3,14 @@ using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 
 namespace iLand.Output
 {
     internal class DynamicStandOutput : Output
     {
-        private static readonly List<string> aggList = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95", "sd" };
+        private static readonly ReadOnlyCollection<string> Aggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95", "sd" }.AsReadOnly();
 
         private readonly List<SDynamicField> mFieldList;
         private readonly Expression mRUFilter;
@@ -18,7 +19,7 @@ namespace iLand.Output
 
         private struct SDynamicField
         {
-            public int agg_index;
+            public int aggregationIndex;
             public int var_index;
             public string expression;
         };
@@ -54,12 +55,12 @@ namespace iLand.Output
             // other colums are added during setup...
         }
 
-        public override void Setup()
+        public override void Setup(GlobalSettings globalSettings)
         {
-            string filter = Settings().GetString(".rufilter", "");
-            string tree_filter = Settings().GetString(".treefilter", "");
-            string fieldList = Settings().GetString(".columns", "");
-            string condition = Settings().GetString(".condition", "");
+            string filter = globalSettings.Settings.GetString(".rufilter", "");
+            string tree_filter = globalSettings.Settings.GetString(".treefilter", "");
+            string fieldList = globalSettings.Settings.GetString(".columns", "");
+            string condition = globalSettings.Settings.GetString(".condition", "");
             if (String.IsNullOrEmpty(fieldList))
             {
                 return;
@@ -73,14 +74,13 @@ namespace iLand.Output
 
             // setup fields
             // int pos = 0;
-            string field, aggregation;
             TreeWrapper tw = new TreeWrapper();
             Regex rx = new Regex("([^\\.]+).(\\w+)[,\\s]*"); // two parts: before dot and after dot, and , + whitespace at the end
             MatchCollection fields = rx.Matches(fieldList);
-            foreach(Match match in fields)
+            foreach (Match match in fields)
             {
-                field = match.Captures[0].Value; // field / expresssion
-                aggregation = match.Captures[1].Value;
+                string field = match.Groups[1].Value; // field / expresssion
+                string aggregation = match.Groups[2].Value;
                 SDynamicField newField = new SDynamicField();
                 mFieldList.Add(newField);
                 // parse field
@@ -96,21 +96,21 @@ namespace iLand.Output
                     newField.expression = field;
                 }
 
-                newField.agg_index = aggList.IndexOf(aggregation);
-                if (newField.agg_index == -1)
+                newField.aggregationIndex = DynamicStandOutput.Aggregations.IndexOf(aggregation);
+                if (newField.aggregationIndex == -1)
                 {
                     throw new NotSupportedException(String.Format("Invalid aggregate expression for dynamic output: {0}{2}allowed:{1}",
-                                                 aggregation, String.Join(" ", aggList), System.Environment.NewLine));
+                                                                  aggregation, String.Join(" ", Aggregations), System.Environment.NewLine));
                 }
 
                 string stripped_field = String.Format("{0}_{1}", field, aggregation);
                 stripped_field = Regex.Replace(stripped_field, "[\\[\\]\\,\\(\\)<>=!\\s]", "_");
                 stripped_field.Replace("__", "_");
-                Columns.Add(new SqlColumn(stripped_field, field, OutputDatatype.OutDouble));
+                Columns.Add(new SqlColumn(stripped_field, field, OutputDatatype.Double));
             }
         }
 
-        protected override void LogYear(SqliteCommand insertRow)
+        protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             if (mFieldList.Count == 0)
             {
@@ -118,7 +118,7 @@ namespace iLand.Output
             }
             if (!mFilter.IsEmpty)
             {
-                if (mFilter.Calculate(GlobalSettings.Instance.CurrentYear) != 0.0)
+                if (mFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) != 0.0)
                 {
                     return;
                 }
@@ -126,17 +126,16 @@ namespace iLand.Output
 
             using DebugTimer dt = new DebugTimer("DynamicStandOutput.LogYear()");
 
-            bool perSpecies = GlobalSettings.Instance.Settings.GetBool("output.dynamicstand.by_species", true);
-            bool per_ru = GlobalSettings.Instance.Settings.GetBool("output.dynamicstand.by_ru", true);
+            bool perSpecies = model.GlobalSettings.Settings.GetBool("output.dynamicstand.by_species", true);
+            bool per_ru = model.GlobalSettings.Settings.GetBool("output.dynamicstand.by_ru", true);
 
             if (per_ru)
             {
                 // when looping over resource units, do it differently (old way)
-                this.ExtractByResourceUnit(perSpecies, insertRow);
+                this.ExtractByResourceUnit(model, perSpecies, insertRow);
                 return;
             }
 
-            Model m = GlobalSettings.Instance.Model;
             List<double> data = new List<double>(); //statistics data
             TreeWrapper tw = new TreeWrapper();
             Expression custom_expr = new Expression();
@@ -144,11 +143,11 @@ namespace iLand.Output
             StatData stat = new StatData(); // statistcs helper class
             // grouping
             List<Tree> trees = new List<Tree>();
-            for (int index = 0; index < m.SpeciesSet().ActiveSpecies.Count; ++index)
+            for (int index = 0; index < model.SpeciesSet().ActiveSpecies.Count; ++index)
             {
-                Species species = m.SpeciesSet().ActiveSpecies[index];
+                Species species = model.SpeciesSet().ActiveSpecies[index];
                 trees.Clear();
-                AllTreeIterator all_trees = new AllTreeIterator(m);
+                AllTreeIterator all_trees = new AllTreeIterator(model);
                 for (Tree t = all_trees.MoveNextLiving(); t != null; t = all_trees.MoveNextLiving())
                 {
                     if (perSpecies && t.Species != species)
@@ -180,16 +179,16 @@ namespace iLand.Output
                     }
                     if (field.var_index >= 0)
                     {
-                        data.Add(tw.Value(field.var_index));
+                        data.Add(tw.Value(field.var_index, model.GlobalSettings));
                     }
                     else
                     {
-                        data.Add(custom_expr.Execute());
+                        data.Add(custom_expr.Execute(model.GlobalSettings));
                     }
                     // constant values (if not already present)
                     if (IsRowEmpty())
                     {
-                        this.Add(CurrentYear());
+                        this.Add(model.GlobalSettings.CurrentYear);
                         this.Add(-1);
                         this.Add(-1);
                         if (perSpecies)
@@ -204,7 +203,7 @@ namespace iLand.Output
 
                     // calculate statistics
                     stat.SetData(data);
-                    double value = field.agg_index switch
+                    double value = field.aggregationIndex switch
                     {
                         0 => stat.Mean,
                         1 => stat.Sum,
@@ -236,14 +235,13 @@ namespace iLand.Output
             }
         }
 
-        private void ExtractByResourceUnit(bool bySpecies, SqliteCommand insertRow)
+        private void ExtractByResourceUnit(Model model, bool bySpecies, SqliteCommand insertRow)
         {
             if (mFieldList.Count == 0)
             {
                 return;
             }
 
-            Model m = GlobalSettings.Instance.Model;
             List<double> data = new List<double>(); //statistics data
             StatData stat = new StatData(); // statistcs helper class
             TreeWrapper tw = new TreeWrapper();
@@ -251,7 +249,7 @@ namespace iLand.Output
             mRUFilter.Wrapper = ruwrapper;
 
             Expression custom_expr = new Expression();
-            foreach (ResourceUnit ru in m.ResourceUnits)
+            foreach (ResourceUnit ru in model.ResourceUnits)
             {
                 if (ru.ID == -1)
                 {
@@ -262,7 +260,7 @@ namespace iLand.Output
                 if (!mRUFilter.IsEmpty)
                 {
                     ruwrapper.ResourceUnit = ru;
-                    if (mRUFilter.Execute() == 0.0)
+                    if (mRUFilter.Execute(model.GlobalSettings) == 0.0)
                     {
                         continue;
                     }
@@ -302,7 +300,7 @@ namespace iLand.Output
                             if (!mTreeFilter.IsEmpty)
                             {
                                 mTreeFilter.Wrapper = tw;
-                                if (mTreeFilter.Execute() == 0.0)
+                                if (mTreeFilter.Execute(model.GlobalSettings) == 0.0)
                                 {
                                     continue;
                                 }
@@ -311,11 +309,11 @@ namespace iLand.Output
 
                             if (field.var_index >= 0)
                             {
-                                data.Add(tw.Value(field.var_index));
+                                data.Add(tw.Value(field.var_index, model.GlobalSettings));
                             }
                             else
                             {
-                                data.Add(custom_expr.Execute());
+                                data.Add(custom_expr.Execute(model.GlobalSettings));
                             }
                         }
 
@@ -328,7 +326,7 @@ namespace iLand.Output
 
                         if (IsRowEmpty())
                         {
-                            this.Add(CurrentYear());
+                            this.Add(model.GlobalSettings.CurrentYear);
                             this.Add(ru.Index);
                             this.Add(ru.ID);
                             if (bySpecies)
@@ -343,7 +341,7 @@ namespace iLand.Output
 
                         // calculate statistics
                         stat.SetData(data);
-                        double value = field.agg_index switch
+                        double value = field.aggregationIndex switch
                         {
                             0 => stat.Mean,
                             1 => stat.Sum,

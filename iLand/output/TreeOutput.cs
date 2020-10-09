@@ -2,7 +2,6 @@
 using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
-using System.Diagnostics;
 
 namespace iLand.Output
 {
@@ -23,37 +22,37 @@ namespace iLand.Output
             Columns.Add(SqlColumn.CreateResourceUnit());
             Columns.Add(SqlColumn.CreateID());
             Columns.Add(SqlColumn.CreateSpecies());
-            Columns.Add(new SqlColumn("id", "id of the tree", OutputDatatype.OutInteger));
-            Columns.Add(new SqlColumn("x", "position of the tree, x-direction (m)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("y", "position of the tree, y-direction (m)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("dbh", "dbh (cm) of the tree", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("height", "height (m) of the tree", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("basalArea", "basal area of tree in m2", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("volume_m3", "volume of tree (m3)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("leafArea_m2", "current leaf area of the tree (m2)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("foliageMass", "current mass of foliage (kg)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("woodyMass", "kg Biomass in woody department", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("fineRootMass", "kg Biomass in fine-root department", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("coarseRootMass", "kg Biomass in coarse-root department", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("lri", "LightResourceIndex of the tree (raw light index from iLand, without applying resource-unit modifications)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("lightResponse", "light response value (including species specific response to the light level)", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("stressIndex", "scalar (0..1) indicating the stress level (see [Mortality]).", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", OutputDatatype.OutDouble));
+            Columns.Add(new SqlColumn("id", "id of the tree", OutputDatatype.Integer));
+            Columns.Add(new SqlColumn("x", "position of the tree, x-direction (m)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("y", "position of the tree, y-direction (m)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("dbh", "dbh (cm) of the tree", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("height", "height (m) of the tree", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("basalArea", "basal area of tree in m2", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("volume_m3", "volume of tree (m3)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("leafArea_m2", "current leaf area of the tree (m2)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("foliageMass", "current mass of foliage (kg)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("woodyMass", "kg Biomass in woody department", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("fineRootMass", "kg Biomass in fine-root department", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("coarseRootMass", "kg Biomass in coarse-root department", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("lri", "LightResourceIndex of the tree (raw light index from iLand, without applying resource-unit modifications)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("lightResponse", "light response value (including species specific response to the light level)", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("stressIndex", "scalar (0..1) indicating the stress level (see [Mortality]).", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", OutputDatatype.Double));
         }
 
-        public override void Setup()
+        public override void Setup(GlobalSettings globalSettings)
         {
-            if (!this.Settings().IsValid())
+            if (globalSettings.Settings.IsValid() == false)
             {
                 throw new NotSupportedException("No parameter section in project file.");
             }
-            string filter = Settings().GetString(".filter", "");
+            string filter = globalSettings.Settings.GetString(".filter", "");
             mFilter.SetExpression(filter);
         }
 
-        protected override void LogYear(SqliteCommand insertRow)
+        protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            AllTreeIterator at = new AllTreeIterator(GlobalSettings.Instance.Model);
+            AllTreeIterator at = new AllTreeIterator(model);
             using DebugTimer dt = new DebugTimer("TreeOutput.LogYear()");
             TreeWrapper tw = new TreeWrapper();
             mFilter.Wrapper = tw;
@@ -62,12 +61,12 @@ namespace iLand.Output
                 if (!mFilter.IsEmpty)
                 { // skip fields
                     tw.Tree = t;
-                    if (mFilter.Execute() == 0.0)
+                    if (mFilter.Execute(model.GlobalSettings) == 0.0)
                     {
                         continue;
                     }
                 }
-                this.Add(CurrentYear());
+                this.Add(model.GlobalSettings.CurrentYear);
                 this.Add(t.RU.Index);
                 this.Add(t.RU.ID);
                 this.Add(t.Species.ID);

@@ -23,17 +23,15 @@ namespace iLand.Output
             Columns.Add(SqlColumn.CreateResourceUnit());
             Columns.Add(SqlColumn.CreateID());
             Columns.Add(SqlColumn.CreateSpecies());
-            Columns.Add(new SqlColumn("n_represented", "number of trees that are represented by the cohort (Reineke function).", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("dbh", "diameter of the cohort (cm).", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("height", "height of the cohort (m).", OutputDatatype.OutDouble));
-            Columns.Add(new SqlColumn("age", "age of the cohort (years) ", OutputDatatype.OutInteger));
+            Columns.Add(new SqlColumn("n_represented", "number of trees that are represented by the cohort (Reineke function).", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("dbh", "diameter of the cohort (cm).", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("height", "height of the cohort (m).", OutputDatatype.Double));
+            Columns.Add(new SqlColumn("age", "age of the cohort (years) ", OutputDatatype.Integer));
         }
 
-        protected override void LogYear(SqliteCommand insertRow)
+        protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            Model m = GlobalSettings.Instance.Model;
-
-            foreach (ResourceUnit ru in m.ResourceUnits)
+            foreach (ResourceUnit ru in model.ResourceUnits)
             {
                 if (ru.ID == -1)
                 {
@@ -43,7 +41,7 @@ namespace iLand.Output
                 // exclude if a condition is specified and condition is not met
                 if (!mFilter.IsEmpty)
                 {
-                    if (mFilter.Execute() == 0.0)
+                    if (mFilter.Execute(model.GlobalSettings) == 0.0)
                     {
                         continue;
                     }
@@ -55,7 +53,7 @@ namespace iLand.Output
                     int n_on_px = s.GetOccupiedSlotCount();
                     if (n_on_px > 0)
                     {
-                        for (int i = 0; i < SaplingCell.SaplingSlots; ++i)
+                        for (int i = 0; i < SaplingCell.SaplingsPerCell; ++i)
                         {
                             if (s.Saplings[i].IsOccupied())
                             {
@@ -69,7 +67,7 @@ namespace iLand.Output
                                 }
                                 double n_repr = species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(s.Saplings[i].Height) / n_on_px;
 
-                                this.Add(CurrentYear());
+                                this.Add(model.GlobalSettings.CurrentYear);
                                 this.Add(ru.Index);
                                 this.Add(ru.ID);
                                 this.Add(rus.Species.ID);
@@ -85,12 +83,12 @@ namespace iLand.Output
             }
         }
 
-        public override void Setup()
+        public override void Setup(GlobalSettings globalSettings)
         {
             // use a condition for to control execuation for the current year
-            string condition = Settings().GetString(".condition", "");
+            string condition = globalSettings.Settings.GetString(".condition", "");
             mFilter.SetExpression(condition);
-            mMinDbh = Settings().GetDouble(".minDbh");
+            mMinDbh = globalSettings.Settings.GetDouble(".minDbh");
         }
     }
 }

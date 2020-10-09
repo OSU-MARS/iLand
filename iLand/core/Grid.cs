@@ -1,6 +1,5 @@
 ﻿using iLand.Tools;
 using System;
-using System.Diagnostics;
 using System.Drawing;
 using System.Text;
 
@@ -306,20 +305,29 @@ namespace iLand.Core
             return true;
         }
 
-        public bool Setup(RectangleF extent, double cellsize)
+        public bool Setup(RectangleF extent, double cellSize)
         {
+            if (cellSize <= 0.0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(cellSize));
+            }
+            if (extent.IsEmpty)
+            {
+                throw new ArgumentOutOfRangeException(nameof(extent));
+            }
+
             this.PhysicalExtent = extent;
-            int dx = (int)(extent.Width / cellsize);
-            if (this.PhysicalExtent.Left + cellsize * dx < extent.Right)
+            int dx = (int)(extent.Width / cellSize);
+            if (this.PhysicalExtent.Left + cellSize * dx < extent.Right)
             {
                 dx++;
             }
-            int dy = (int)(extent.Height / cellsize);
-            if (this.PhysicalExtent.Top + cellsize * dy < extent.Bottom)
+            int dy = (int)(extent.Height / cellSize);
+            if (this.PhysicalExtent.Top + cellSize * dy < extent.Bottom)
             {
                 dy++;
             }
-            return Setup((float)cellsize, dx, dy);
+            return Setup((float)cellSize, dx, dy);
         }
 
         public void ClearDefault()

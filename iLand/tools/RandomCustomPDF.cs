@@ -24,10 +24,10 @@ namespace iLand.Tools
             this.mRandomIndex = new RandomWeighted();
         }
 
-        public RandomCustomPdf(string densityFunction)
+        public RandomCustomPdf(GlobalSettings globalSettings, string densityFunction)
             : this()
         {
-            Setup(densityFunction);
+            Setup(globalSettings, densityFunction);
         }
 
         /** setup of the properites of the RandomCustomPDF.
@@ -37,7 +37,7 @@ namespace iLand.Tools
             @p isSumFunc if true, the function given in 'funcExpr' is a cumulative probabilty density function (default=false)
             @p stepCount internal degree of 'slots' - the more slots, the more accurate (default=100)
          */
-        public void Setup(string funcExpr, double lowerBound = 0, double upperBound = 1, bool isSumFunc = false, int stepCount = 100)
+        public void Setup(GlobalSettings globalSettings, string funcExpr, double lowerBound = 0, double upperBound = 1, bool isSumFunc = false, int stepCount = 100)
         {
             DensityFunction = funcExpr;
             mSteps = stepCount;
@@ -57,8 +57,8 @@ namespace iLand.Tools
                 x1 = mLowerBound + i * mDeltaX;
                 x2 = x1 + mDeltaX;
                 // p1, p2: werte der pdf bei unterer und oberer grenze des aktuellen schrittes
-                p1 = mExpression.Calculate(x1);
-                p2 = mExpression.Calculate(x2);
+                p1 = mExpression.Calculate(globalSettings, x1);
+                p2 = mExpression.Calculate(globalSettings, x2);
                 // areaval: numerische integration zwischen x1 und x2
                 areaval = (p1 + p2) / 2 * step_width;
                 if (isSumFunc)
@@ -87,13 +87,13 @@ namespace iLand.Tools
             return value;
         }
 
-        public double GetProbOfRange(double lowerBound, double upperBound)
+        public double GetProbOfRange(GlobalSettings globalSettings, double lowerBound, double upperBound)
         {
             if (mSumFunction)
             {
                 double p1, p2;
-                p1 = mExpression.Calculate(lowerBound);
-                p2 = mExpression.Calculate(upperBound);
+                p1 = mExpression.Calculate(globalSettings, lowerBound);
+                p2 = mExpression.Calculate(globalSettings, upperBound);
                 return p2 - p1;
             }
 

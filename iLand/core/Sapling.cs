@@ -17,9 +17,6 @@ namespace iLand.Core
     // BUGBUG: copy/paste code shared with other sapling classes
     internal class Sapling
     {
-        private static readonly double mRecruitmentVariation = 0.1; // +/- 10%
-        private static double mBrowsingPressure = 0.0;
-
         private ResourceUnitSpecies mRUS;
         private readonly List<SaplingTreeOld> mSaplingTrees;
         private double mSumDbhDied; ///< running sum of dbh of died trees (used to calculate detritus)
@@ -65,18 +62,6 @@ namespace iLand.Core
             AverageHeight = 0.0;
             AverageAge = 0.0;
             AverageDeltaHPot = AverageDeltaHRealized = 0.0;
-        }
-
-        public void UpdateBrowsingPressure()
-        {
-            if (GlobalSettings.Instance.Settings.GetBool("model.settings.browsing.enabled"))
-            {
-                mBrowsingPressure = GlobalSettings.Instance.Settings.GetDouble("model.settings.browsing.browsingPressure");
-            }
-            else
-            {
-                mBrowsingPressure = 0.0;
-            }
         }
 
         public double RepresentedStemNumber(float height)
@@ -153,23 +138,23 @@ namespace iLand.Core
 
         /// retrieve the height of the sapling at the location 'position' (given in LIF-coordinates)
         /// this is quite expensive and only done for initialization
-        public double HeightAt(Point position)
-        {
-            if (!HasSapling(position))
-            {
-                return 0.0;
-            }
-            // ok, we'll have to search through all saplings
-            int lif_ptr = GlobalSettings.Instance.Model.LightGrid.IndexOf(position);
-            for (int it = 0; it != mSaplingTrees.Count; ++it)
-            {
-                if (mSaplingTrees[it].LightPixel == lif_ptr)
-                {
-                    return mSaplingTrees[it].Height;
-                }
-            }
-            return 0.0;
-        }
+        //public double HeightAt(Grid<float> lightGrid, Point position)
+        //{
+        //    if (!HasSapling(position))
+        //    {
+        //        return 0.0;
+        //    }
+        //    // ok, we'll have to search through all saplings
+        //    int lif_ptr = lightGrid.IndexOf(position);
+        //    for (int it = 0; it != mSaplingTrees.Count; ++it)
+        //    {
+        //        if (mSaplingTrees[it].LightPixel == lif_ptr)
+        //        {
+        //            return mSaplingTrees[it].Height;
+        //        }
+        //    }
+        //    return 0.0;
+        //}
 
         private void SetBit(Point pos_index, bool value)
         {
@@ -178,55 +163,53 @@ namespace iLand.Core
         }
 
         /// add a sapling at the given position (index on the LIF grid, i.e. 2x2m)
-        public int AddSapling(Point pos_lif, float height = 0.5F, int age = 1)
-        {
-            // adds a sapling...
-            SaplingTreeOld t = new SaplingTreeOld();
-            mSaplingTrees.Add(t);
-            t.Height = height; // default is 5cm height
-            t.Age.Age = (UInt16)age;
-            Grid<float>  lif_map = GlobalSettings.Instance.Model.LightGrid;
-            t.LightPixel = lif_map.IndexOf(pos_lif);
-            SetBit(pos_lif, true);
-            NewSaplings++;
-            return mSaplingTrees.Count - 1; // index of the newly added tree.
-        }
+        //public int AddSapling(Grid<float> lightGrid, Point pos_lif, float height = 0.5F, int age = 1)
+        //{
+        //    // adds a sapling...
+        //    SaplingTreeOld t = new SaplingTreeOld();
+        //    mSaplingTrees.Add(t);
+        //    t.Height = height; // default is 5cm height
+        //    t.Age.Age = (UInt16)age;
+        //    t.LightPixel = lightGrid.IndexOf(pos_lif);
+        //    SetBit(pos_lif, true);
+        //    NewSaplings++;
+        //    return mSaplingTrees.Count - 1; // index of the newly added tree.
+        //}
 
         /// clear saplings on a given position (after recruitment)
-        public void ClearSaplings(Point position)
-        {
-            float target = GlobalSettings.Instance.Model.LightGrid[position];
-            for (int it = 0; it < mSaplingTrees.Count; ++it)
-            {
-                if (mSaplingTrees[it].LightPixel == target)
-                {
-                    // trick: use a iterator to avoid a deep copy of the vector; then do an ugly const_cast to actually write the data
-                    //SaplingTree &t = *it;
-                    //const_cast<SaplingTree&>(t).pixel=0;
-                    ClearSapling(it, false); // kill sapling and move carbon to soil
-                }
-            }
-            SetBit(position, false); // clear bit: now there is no sapling on this position
-                                     //int index = (position.x() - mRUS.ru().cornerPointOffset().x()) * cPxPerRU +(position.y() - mRUS.ru().cornerPointOffset().y());
-                                     //mSapBitset.set(index,false); // clear bit: now there is no sapling on this position
-        }
+        //public void ClearSaplings(Grid<float> lightGrid, Point position)
+        //{
+        //    float target = lightGrid[position];
+        //    for (int it = 0; it < mSaplingTrees.Count; ++it)
+        //    {
+        //        if (mSaplingTrees[it].LightPixel == target)
+        //        {
+        //            // trick: use a iterator to avoid a deep copy of the vector; then do an ugly const_cast to actually write the data
+        //            //SaplingTree &t = *it;
+        //            //const_cast<SaplingTree&>(t).pixel=0;
+        //            ClearSapling(it, false); // kill sapling and move carbon to soil
+        //        }
+        //    }
+        //    SetBit(position, false); // clear bit: now there is no sapling on this position
+        //                             //int index = (position.x() - mRUS.ru().cornerPointOffset().x()) * cPxPerRU +(position.y() - mRUS.ru().cornerPointOffset().y());
+        //                             //mSapBitset.set(index,false); // clear bit: now there is no sapling on this position
+        //}
 
         /// clear saplings within a given rectangle
-        public void ClearSaplings(RectangleF rectangle, bool remove_biomass)
-        {
-            Grid<float> grid = GlobalSettings.Instance.Model.LightGrid;
-            for (int it = 0; it < mSaplingTrees.Count; ++it)
-            {
-                if (rectangle.Contains(grid.GetCellCenterPoint(mSaplingTrees[it].Coordinate())))
-                {
-                    ClearSapling(it, remove_biomass);
-                }
-            }
-        }
+        //public void ClearSaplings(Grid<float> lightGrid, RectangleF rectangle, bool remove_biomass)
+        //{
+        //    for (int it = 0; it < mSaplingTrees.Count; ++it)
+        //    {
+        //        if (rectangle.Contains(lightGrid.GetCellCenterPoint(mSaplingTrees[it].Coordinate())))
+        //        {
+        //            ClearSapling(it, remove_biomass);
+        //        }
+        //    }
+        //}
 
-        public void ClearSapling(SaplingTreeOld tree, bool remove)
+        public void ClearSapling(SaplingTreeOld tree, Grid<float> lightGrid, bool remove)
         {
-            Point p = tree.Coordinate();
+            Point p = tree.Coordinate(lightGrid);
             tree.LightPixel = 0;
             SetBit(p, false); // no tree left
             if (!remove)
@@ -238,27 +221,27 @@ namespace iLand.Core
             }
         }
 
-        public void ClearSapling(int index, bool remove)
+        public void ClearSapling(int index, Grid<float> lightGrid, bool remove)
         {
             Debug.Assert(index < mSaplingTrees.Count);
-            ClearSapling(mSaplingTrees[index], remove);
+            ClearSapling(mSaplingTrees[index], lightGrid, remove);
         }
 
         /// growth function for an indivudal sapling.
         /// returns true, if sapling survives, false if sapling dies or is recruited to iLand.
         /// see also http://iland.boku.ac.at/recruitment
-        private bool GrowSapling(SaplingTreeOld tree, double f_env_yr, Species species)
+        private bool GrowSapling(SaplingTreeOld tree, Model model, double f_env_yr, Species species)
         {
-            Point p = GlobalSettings.Instance.Model.LightGrid.IndexOf(tree.LightPixel);
+            Point p = model.LightGrid.IndexOf(tree.LightPixel);
             //GlobalSettings.instance().model().heightGrid()[Grid::index5(tree.pixel-GlobalSettings.instance().model().grid().begin())];
 
             // (1) calculate height growth potential for the tree (uses linerization of expressions...)
-            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(tree.Height); // TODO check if this can be source of crashes (race condition)
+            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model.GlobalSettings, tree.Height); // TODO check if this can be source of crashes (race condition)
             double delta_h_pot = h_pot - tree.Height;
 
             // (2) reduce height growth potential with species growth response f_env_yr and with light state (i.e. LIF-value) of home-pixel.
             double lif_value = tree.LightPixel;
-            double h_height_grid = GlobalSettings.Instance.Model.HeightGrid[p.X / Constant.LightPerHeightSize, p.Y / Constant.LightPerHeightSize].Height;
+            double h_height_grid = model.HeightGrid[p.X / Constant.LightPerHeightSize, p.Y / Constant.LightPerHeightSize].Height;
             if (h_height_grid == 0.0)
             {
                 throw new NotSupportedException(String.Format("growSapling: height grid at {0},{1} has value 0", p.X, p.Y));
@@ -266,9 +249,9 @@ namespace iLand.Core
 
             double rel_height = tree.Height / h_height_grid;
 
-            double lif_corrected = mRUS.Species.SpeciesSet.LriCorrection(lif_value, rel_height); // correction based on height
+            double lif_corrected = mRUS.Species.SpeciesSet.GetLriCorrection(model.GlobalSettings, lif_value, rel_height); // correction based on height
 
-            double lr = mRUS.Species.GetLightResponse(lif_corrected); // species specific light response (LUI, light utilization index)
+            double lr = mRUS.Species.GetLightResponse(model.GlobalSettings, lif_corrected); // species specific light response (LUI, light utilization index)
 
             double delta_h_factor = f_env_yr * lr; // relative growth
 
@@ -278,12 +261,12 @@ namespace iLand.Core
             }
 
             // check browsing
-            if (mBrowsingPressure > 0.0 && tree.Height <= 2.0F)
+            if (model.ModelSettings.BrowsingPressure > 0.0 && tree.Height <= 2.0F)
             {
                 double pb = mRUS.Species.SaplingGrowthParameters.BrowsingProbability;
                 // calculate modifed annual browsing probability via odds-ratios
                 // odds = p/(1-p) -> odds_mod = odds * browsingPressure -> p_mod = odds_mod /( 1 + odds_mod) === p*pressure/(1-p+p*pressure)
-                double p_browse = pb * mBrowsingPressure / (1.0 - pb + pb * mBrowsingPressure);
+                double p_browse = pb * model.ModelSettings.BrowsingPressure / (1.0 - pb + pb * model.ModelSettings.BrowsingPressure);
                 if (RandomGenerator.Random() < p_browse)
                 {
                     delta_h_factor = 0.0;
@@ -297,7 +280,7 @@ namespace iLand.Core
                 if (tree.Age.StressYears > species.SaplingGrowthParameters.MaxStressYears)
                 {
                     // sapling dies...
-                    ClearSapling(tree, false); // false: put carbon to the soil
+                    ClearSapling(tree, model.LightGrid, false); // false: put carbon to the soil
                     return false;
                 }
             }
@@ -332,21 +315,20 @@ namespace iLand.Core
                 // add a new tree
                 for (int i = 0; i < to_establish; i++)
                 {
-                    Tree bigtree = ru.NewTree();
+                    Tree bigtree = ru.AddNewTree();
                     bigtree.LightCellIndex = p;
                     // add variation: add +/-10% to dbh and *independently* to height.
-                    bigtree.Dbh = dbh * (float)RandomGenerator.Random(1.0 - mRecruitmentVariation, 1.0 + mRecruitmentVariation);
-                    bigtree.SetHeight(tree.Height * (float)RandomGenerator.Random(1.0 - mRecruitmentVariation, 1.0 + mRecruitmentVariation));
+                    bigtree.Dbh = dbh * (float)RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation);
+                    bigtree.SetHeight(tree.Height * (float)RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation));
                     bigtree.Species = species;
                     bigtree.SetAge(tree.Age.Age, tree.Height);
                     bigtree.RU = ru;
-                    bigtree.Setup();
+                    bigtree.Setup(model);
                     mRUS.Statistics.Add(bigtree, null); // count the newly created trees already in the stats
                 }
                 // clear all regeneration from this pixel (including this tree)
-                ClearSapling(tree, true); // remove this tree (but do not move biomass to soil)
-                                          //        ru->clearSaplings(p); // remove all other saplings on the same pixel
-
+                ClearSapling(tree, model.LightGrid, true); // remove this tree (but do not move biomass to soil)
+                //        ru->clearSaplings(p); // remove all other saplings on the same pixel
                 return false;
             }
             // book keeping (only for survivors)
@@ -361,7 +343,7 @@ namespace iLand.Core
         /** main growth function for saplings.
             Statistics are cleared at the beginning of the year.
             */
-        public void CalculateGrowth()
+        public void CalculateGrowth(Model model)
         {
             Debug.Assert(mRUS != null);
             if (mSaplingTrees.Count == 0)
@@ -372,7 +354,7 @@ namespace iLand.Core
             Species species = mRUS.Species;
 
             // calculate necessary growth modifier (this is done only once per year)
-            mRUS.Calculate(true); // calculate the 3pg module (this is done only if that did not happen up to now); true: call comes from regeneration
+            mRUS.Calculate(model, true); // calculate the 3pg module (this is done only if that did not happen up to now); true: call comes from regeneration
             double f_env_yr = mRUS.BiomassGrowth.EnvironmentalFactor;
 
             LivingSaplings = 0;
@@ -387,7 +369,7 @@ namespace iLand.Core
                 if (tree.IsValid())
                 {
                     // growing (increases mLiving if tree did not die, mDied otherwise)
-                    if (GrowSapling(tree, f_env_yr, species))
+                    if (GrowSapling(tree, model, f_env_yr, species))
                     {
                         // set the sapling height to the maximum value on the current pixel
                         //                ru.setMaxSaplingHeightAt(tree.coords(),tree.height);
@@ -477,8 +459,8 @@ namespace iLand.Core
             }
 
             //    mRUS.statistics().add(this);
-            GlobalSettings.Instance.SystemStatistics.SaplingCount += LivingSaplings;
-            GlobalSettings.Instance.SystemStatistics.NewSaplings += NewSaplings;
+            model.GlobalSettings.SystemStatistics.SaplingCount += LivingSaplings;
+            model.GlobalSettings.SystemStatistics.NewSaplings += NewSaplings;
             NewSaplings = 0; // reset
 
             //Debug.WriteLine(ru.index() << species.id()<< ": (living/avg.height):" <<  mLiving << mAvgHeight;
@@ -486,19 +468,19 @@ namespace iLand.Core
 
         /// fill a grid with the maximum height of saplings per pixel (2x2m).
         /// this function is used for visualization only
-        public void FillMaxHeightGrid(Grid<float> grid)
-        {
-            for (int it = 0; it != mSaplingTrees.Count; ++it)
-            {
-                if (mSaplingTrees[it].IsValid())
-                {
-                    Point p = mSaplingTrees[it].Coordinate();
-                    if (grid[p] < mSaplingTrees[it].Height)
-                    {
-                        grid[p] = mSaplingTrees[it].Height;
-                    }
-                }
-            }
-        }
+        //public void FillMaxHeightGrid(Grid<float> grid)
+        //{
+        //    for (int it = 0; it != mSaplingTrees.Count; ++it)
+        //    {
+        //        if (mSaplingTrees[it].IsValid())
+        //        {
+        //            Point p = mSaplingTrees[it].Coordinate(grid);
+        //            if (grid[p] < mSaplingTrees[it].Height)
+        //            {
+        //                grid[p] = mSaplingTrees[it].Height;
+        //            }
+        //        }
+        //    }
+        //}
     }
 }

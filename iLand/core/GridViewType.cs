@@ -2,17 +2,17 @@
 {
     internal enum GridViewType
     {
-        GridViewRainbow = 0,
-        GridViewRainbowReverse = 1,
-        GridViewGray = 2,
-        GridViewGrayReverse = 3,
-        GridViewHeat = 4,
-        GridViewGreens = 5, 
-        GridViewReds = 6, 
-        GridViewBlues = 7,
-        GridViewBrewerDiv = 10, 
-        GridViewBrewerQual = 11, 
-        GridViewTerrain = 12, 
-        GridViewCustom = 14
+        Rainbow = 0,
+        RainbowReverse = 1,
+        Grey = 2,
+        GreyReverse = 3,
+        Heat = 4,
+        Greens = 5, 
+        Reds = 6, 
+        Blues = 7,
+        rewerDiv = 10, 
+        BrewerQual = 11, 
+        Terrain = 12, 
+        Custom = 14
     };
 }

@@ -28,9 +28,9 @@ namespace iLand.Core
             Height = 0.05F;
         }
 
-        public Point Coordinate()
+        public Point Coordinate(Grid<float> lightGrid)
         {
-            return GlobalSettings.Instance.Model.LightGrid.IndexOf(LightPixel);
+            return lightGrid.IndexOf(LightPixel);
         }
 
         public bool IsValid()

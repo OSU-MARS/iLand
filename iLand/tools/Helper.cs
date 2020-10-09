@@ -11,10 +11,10 @@ namespace iLand.Tools
       */
     internal class Helper
     {
-        public static string CurrentRevision()
-        {
-            return typeof(Helper).Assembly.GetName().Version.ToString(); //.section(" ",1,1);
-        }
+        //public static string CurrentRevision()
+        //{
+        //    return typeof(Helper).Assembly.GetName().Version.ToString(); //.section(" ",1,1);
+        //}
 
         public static string LoadTextFile(string fileName)
         {
@@ -26,25 +26,25 @@ namespace iLand.Tools
             File.WriteAllText(fileName, text);
         }
 
-        public static byte[] LoadFile(string fileName)
-        {
-            return File.ReadAllBytes(fileName);
-        }
+        //public static byte[] LoadFile(string fileName)
+        //{
+        //    return File.ReadAllBytes(fileName);
+        //}
 
-        public static void SaveToFile(string fileName, byte[] data)
-        {
-            File.WriteAllBytes(fileName, data);
-        }
+        //public static void SaveToFile(string fileName, byte[] data)
+        //{
+        //    File.WriteAllBytes(fileName, data);
+        //}
 
-        public static void Message(string message)
-        {
-            throw new NotImplementedException();
-        }
+        //public static void Message(string message)
+        //{
+        //    throw new NotImplementedException();
+        //}
 
-        public static string StripHtml(string source)
-        {
-            string str = String.Join(' ', source.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries));
-            return Regex.Replace(str, "<[^>]+>", "");
-        }
+        //public static string StripHtml(string source)
+        //{
+        //    string str = String.Join(' ', source.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries));
+        //    return Regex.Replace(str, "<[^>]+>", "");
+        //}
     }
 }
