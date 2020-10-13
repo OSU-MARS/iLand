@@ -4,13 +4,13 @@ namespace iLand.Core
 {
     public class Production3PG
     {
+        ///<  GPP production (yearly) (kg Biomass) per m2 (effective area)
+        public double AnnualGpp { get; private set; }
         ///< f_env,yr: aggregate environmental factor [0..1}
         ///< f_env,yr: factor that aggregates the environment for the species over the year (weighted with the radiation pattern)
         public double EnvironmentalFactor { get; private set; }
         ///< monthly Gross Primary Production [kg Biomass / m2]
-        public double[] Gpp { get; private set; }
-        ///<  GPP production (yearly) (kg Biomass) per m2 (effective area)
-        public double GppPerArea { get; private set; }
+        public double[] MonthlyGpp { get; private set; }
         /// fraction of biomass that should be distributed to roots
         public double RootFraction { get; private set; }
         ///< species specific responses
@@ -20,9 +20,9 @@ namespace iLand.Core
 
         public Production3PG()
         {
+            this.AnnualGpp = 0.0;
             this.EnvironmentalFactor = 0.0;
-            this.Gpp = new double[12];
-            this.GppPerArea = 0.0;
+            this.MonthlyGpp = new double[12];
             this.SpeciesResponse = null;
             this.RootFraction = 0.0;
             this.UtilizablePar = new double[12];
@@ -76,12 +76,12 @@ namespace iLand.Core
         {
             for (int i = 0; i < 12; i++)
             {
-                Gpp[i] = 0.0; 
+                MonthlyGpp[i] = 0.0; 
                 UtilizablePar[i] = 0.0;
             }
 
             EnvironmentalFactor = 0.0;
-            GppPerArea = 0.0;
+            AnnualGpp = 0.0;
             RootFraction = 0.0;
             // BUGBUG: speciesResponse?
         }
@@ -94,7 +94,7 @@ namespace iLand.Core
         {
             Debug.Assert(SpeciesResponse != null);
             // Radiation: sum over all days of each month with foliage
-            double year_raw_gpp = 0.0;
+            double annualRUgpp = 0.0;
             Clear();
             double utilizable_rad, epsilon;
             // conversion from gC to kg Biomass: C/Biomass=0.5
@@ -104,15 +104,15 @@ namespace iLand.Core
                 utilizable_rad = CalculateUtilizablePar(month); // utilizable radiation of the month ... (MJ/m2)
                 epsilon = CalculateEpsilon(month, model); // ... photosynthetic efficiency ... (gC/MJ)
                 UtilizablePar[month] = utilizable_rad;
-                Gpp[month] = utilizable_rad * epsilon * gC_to_kg_biomass; // ... results in GPP of the month kg Biomass/m2 (converted from gC/m2)
-                year_raw_gpp += Gpp[month]; // kg Biomass/m2
+                MonthlyGpp[month] = utilizable_rad * epsilon * gC_to_kg_biomass; // ... results in GPP of the month kg Biomass/m2 (converted from gC/m2)
+                annualRUgpp += MonthlyGpp[month]; // kg Biomass/m2
             }
 
             // calculate f_env,yr: see http://iland.boku.ac.at/sapling+growth+and+competition
             double f_sum = 0.0;
             for (int i = 0; i < 12; i++)
             {
-                f_sum += Gpp[i] / gC_to_kg_biomass; // == uAPar * epsilon_eff
+                f_sum += MonthlyGpp[i] / gC_to_kg_biomass; // == uAPar * epsilon_eff
             }
 
             //  the factor f_ref: parameter that scales response values to the range 0..1 (1 for best growth conditions) (species parameter)
@@ -136,13 +136,13 @@ namespace iLand.Core
             double dbg = model.GlobalSettings.Settings.ParamValue("gpp_per_year", 0);
             if (dbg > 0.0)
             {
-                year_raw_gpp = dbg;
+                annualRUgpp = dbg;
                 RootFraction = 0.4;
             }
 
             // year GPP/rad: kg Biomass/m2
-            GppPerArea = year_raw_gpp;
-            return GppPerArea; // yearly GPP in kg Biomass/m2
+            AnnualGpp = annualRUgpp;
+            return AnnualGpp; // yearly GPP in kg Biomass/m2
         }
     }
 }

@@ -61,7 +61,7 @@ namespace iLand.Core
             this.StatisticsDead.ResourceUnitSpecies = this;
             this.StatisticsMgmt.ResourceUnitSpecies = this;
 
-            Debug.WriteLineIf(Species.Index > 1000 || Species.Index < 0, "suspicious species?? in RUS::setup()");
+            Debug.WriteLineIf(Species.Index > 1000 || Species.Index < 0, "suspicious species in ResourecUnitSpecies.Setup()");
         }
 
         public void Calculate(Model model, bool fromEstablishment = false)

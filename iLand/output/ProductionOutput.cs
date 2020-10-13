@@ -46,7 +46,7 @@ namespace iLand.Output
                 this.Add(resp.NitrogenResponse);
                 this.Add(resp.GlobalRadiation[i]);
                 this.Add(prod.UtilizablePar[i]);
-                this.Add(prod.Gpp[i]);
+                this.Add(prod.MonthlyGpp[i]);
                 this.WriteRow(insertRow);
             }
         }

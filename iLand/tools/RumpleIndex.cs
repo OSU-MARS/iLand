@@ -42,10 +42,10 @@ namespace iLand.Tools
             }
 
             mRumpleGrid.Initialize(0.0F);
-            Grid<HeightGridValue> hg = model.HeightGrid;
+            Grid<HeightCell> hg = model.HeightGrid;
 
             // iterate over the resource units and calculate the rumple index / surface area for each resource unit
-            HeightGridValue[] hgv_8 = new HeightGridValue[8]; // array holding pointers to height grid values (neighborhood)
+            HeightCell[] hgv_8 = new HeightCell[8]; // array holding pointers to height grid values (neighborhood)
             float[] heights = new float[9];  // array holding heights (8er neighborhood + center pixel)
             int total_valid_pixels = 0;
             float total_surface_area = 0.0F;
@@ -53,7 +53,7 @@ namespace iLand.Tools
             {
                 int valid_pixels = 0;
                 float surface_area_sum = 0.0F;
-                GridRunner<HeightGridValue> runner = new GridRunner<HeightGridValue>(hg, mRumpleGrid.GetCellRect(mRumpleGrid.IndexOf(rg)));
+                GridRunner<HeightCell> runner = new GridRunner<HeightCell>(hg, mRumpleGrid.GetCellRect(mRumpleGrid.IndexOf(rg)));
                 for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
                 {
                     if (runner.Current.IsInWorld())

@@ -316,7 +316,7 @@ namespace iLand.Core
                     for (Tree t = treeIterator.MoveNext(); t != null; t = treeIterator.MoveNext())
                     {
                         total_offset += t.Stamp.CenterCellPosition;
-                        if (model.LightGrid.Contains(t.LightCellIndex) == false)
+                        if (model.LightGrid.Contains(t.LightCellPosition) == false)
                         {
                             Debug.WriteLine("evaluateDebugTrees: debugstamp: invalid position found!");
                         }
@@ -389,7 +389,7 @@ namespace iLand.Core
             }
             Debug.Assert(ru != null);
 
-            PointF offset = ru.BoundingBox.TopLeft();
+            PointF ruOffset = ru.BoundingBox.TopLeft();
             SpeciesSet speciesSet = ru.SpeciesSet; // of default RU
 
             string trimmedList = treeList;
@@ -404,61 +404,57 @@ namespace iLand.Core
             CsvFile infile = new CsvFile();
             infile.LoadFromString(trimmedList);
 
-            int iID = infile.GetColumnIndex("id");
-            int iX = infile.GetColumnIndex("x");
-            int iY = infile.GetColumnIndex("y");
-            int iBhd = infile.GetColumnIndex("bhdfrom");
-            if (iBhd < 0)
+            int idColumn = infile.GetColumnIndex("id");
+            int xColumn = infile.GetColumnIndex("x");
+            int yColumn = infile.GetColumnIndex("y");
+            int dbhColumn = infile.GetColumnIndex("bhdfrom");
+            if (dbhColumn < 0)
             {
-                iBhd = infile.GetColumnIndex("dbh");
+                dbhColumn = infile.GetColumnIndex("dbh");
             }
-            double height_conversion = 100.0;
-            int iHeight = infile.GetColumnIndex("treeheight");
-            if (iHeight < 0)
+            double heightConversionFactor = 100.0; // cm to m
+            int heightColumn = infile.GetColumnIndex("treeheight");
+            if (heightColumn < 0)
             {
-                iHeight = infile.GetColumnIndex("height");
-                height_conversion = 1.0; // in meter
+                heightColumn = infile.GetColumnIndex("height");
+                heightConversionFactor = 1.0; // input is in meters
             }
-            int iSpecies = infile.GetColumnIndex("species");
-            int iAge = infile.GetColumnIndex("age");
-            if (iX == -1 || iY == -1 || iBhd == -1 || iSpecies == -1 || iHeight == -1)
+            int speciesColumn = infile.GetColumnIndex("species");
+            int ageColumn = infile.GetColumnIndex("age");
+            if (xColumn == -1 || yColumn == -1 || dbhColumn == -1 || speciesColumn == -1 || heightColumn == -1)
             {
-                throw new NotSupportedException(String.Format("Initfile {0} is not valid!\nRequired columns are: x,y, bhdfrom or dbh, species, treeheight or height.", fileName));
+                throw new NotSupportedException(String.Format("Initfile {0} is not valid! Required columns are: x, y, bhdfrom or dbh, species, and treeheight or height.", fileName));
             }
 
-            double dbh;
-            bool ok;
-            int cnt = 0;
-            string speciesID;
-            for (int i = 1; i < infile.RowCount; i++)
+            int treCount = 0;
+            for (int rowIndex = 2; rowIndex < infile.RowCount; rowIndex++) // BUGBUG: replicates iLand 1.0 defect dropping first tree
             {
-                dbh = Double.Parse(infile.Value(i, iBhd));
+                double dbh = Double.Parse(infile.Value(rowIndex, dbhColumn));
                 //if (dbh<5.)
                 //    continue;
-                PointF f = new PointF();
-                if (iX >= 0 && iY >= 0)
+                PointF physicalPosition = new PointF();
+                if (xColumn >= 0 && yColumn >= 0)
                 {
-                    f.X = Single.Parse(infile.Value(i, iX)) + offset.X;
-                    f.Y = Single.Parse(infile.Value(i, iY)) + offset.Y;
+                    physicalPosition.X = Single.Parse(infile.Value(rowIndex, xColumn)) + ruOffset.X;
+                    physicalPosition.Y = Single.Parse(infile.Value(rowIndex, yColumn)) + ruOffset.Y;
                 }
                 // position valid?
-                if (!mModel.HeightGrid[f].IsInWorld())
+                if (!mModel.HeightGrid[physicalPosition].IsInWorld())
                 {
                     continue;
                 }
                 Tree tree = ru.AddNewTree();
-                tree.SetLightCellIndex(f);
-                if (iID >= 0)
+                tree.SetLightCellIndex(physicalPosition);
+                if (idColumn >= 0)
                 {
-                    tree.ID = Int32.Parse(infile.Value(i, iID));
+                    tree.ID = Int32.Parse(infile.Value(rowIndex, idColumn));
                 }
 
                 tree.Dbh = (float)dbh;
-                tree.SetHeight(Single.Parse(infile.Value(i, iHeight)) / (float)height_conversion); // convert from Picus-cm to m if necessary
+                tree.SetHeight(Single.Parse(infile.Value(rowIndex, heightColumn)) / (float)heightConversionFactor); // convert from Picus-cm to m if necessary
 
-                speciesID = infile.Value(i, iSpecies);
-                ok = Int32.TryParse(speciesID, out int picusID);
-                if (ok)
+                string speciesID = infile.Value(rowIndex, speciesColumn);
+                if (Int32.TryParse(speciesID, out int picusID))
                 {
                     int idx = PicusSpeciesIDs.IndexOf(picusID);
                     if (idx == -1)
@@ -474,22 +470,23 @@ namespace iLand.Core
                 }
                 tree.Species = species;
 
-                ok = true;
-                if (iAge >= 0)
+                bool ageParsed = true;
+                if (ageColumn >= 0)
                 {
-                    ok = Int32.TryParse(infile.Value(i, iAge), out int age);
+                    // BUGBUG should probably throw if age parsing fails
+                    ageParsed = Int32.TryParse(infile.Value(rowIndex, ageColumn), out int age);
                     tree.SetAge(age, tree.Height); // this is a *real* age
                 }
-                if (iAge < 0 || !ok || tree.Age == 0)
+                if (ageColumn < 0 || !ageParsed || tree.Age == 0)
                 {
                     tree.SetAge(0, tree.Height); // no real tree age available
                 }
 
                 tree.RU = ru;
                 tree.Setup(model);
-                cnt++;
+                treCount++;
             }
-            return cnt;
+            return treCount;
             //Debug.WriteLine("loaded init-file contained" + lines.count() + "lines.";
             //Debug.WriteLine("lines: " + lines;
         }
@@ -813,7 +810,7 @@ namespace iLand.Core
                     tree_pos = new Point(offsetIdx.X + 5 * (i / 10) + pos / 5,
                                          offsetIdx.Y + 5 * (i % 10) + pos % 5);
                     //Debug.WriteLine(tree_no++ + "to" + index);
-                    ru.Trees[tree_idx].LightCellIndex = tree_pos;
+                    ru.Trees[tree_idx].LightCellPosition = tree_pos;
                 }
             }
         }
@@ -1025,7 +1022,7 @@ namespace iLand.Core
                     Point tree_pos = new Point(p.CellPosition.X * Constant.LightPerHeightSize + pos / Constant.LightPerHeightSize, // convert to LIF index
                                                p.CellPosition.Y * Constant.LightPerHeightSize + pos % Constant.LightPerHeightSize);
 
-                    p.ResourceUnit.Trees[tree_idx].LightCellIndex = tree_pos;
+                    p.ResourceUnit.Trees[tree_idx].LightCellPosition = tree_pos;
                     // test if tree position is valid..
                     if (model.LightGrid.Contains(tree_pos) == false)
                     {

@@ -75,7 +75,6 @@ namespace iLand.Core
 
             // (5) reduce preciptitaion by the amount that is intercepted by the canopy
             return preciptitation_mm - Interception;
-
         }
 
         /// sets up the canopy. fetch some global parameter values...

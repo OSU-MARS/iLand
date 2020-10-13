@@ -316,7 +316,7 @@ namespace iLand.Core
                 for (int i = 0; i < to_establish; i++)
                 {
                     Tree bigtree = ru.AddNewTree();
-                    bigtree.LightCellIndex = p;
+                    bigtree.LightCellPosition = p;
                     // add variation: add +/-10% to dbh and *independently* to height.
                     bigtree.Dbh = dbh * (float)RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation);
                     bigtree.SetHeight(tree.Height * (float)RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation));

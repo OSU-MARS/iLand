@@ -1,6 +1,5 @@
 ﻿using iLand.Core;
 using iLand.Tools;
-using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -18,115 +17,27 @@ namespace iLand.Test
         {
             string projectDirectory = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "OSU", "iLand", "Malcolm Knapp");
             // spacing trials
-            using Model plot14 = this.LoadProject(Path.Combine(projectDirectory, "plot 14.xml"));
+            //using Model plot14 = this.LoadProject(Path.Combine(projectDirectory, "plot 14.xml"));
             using Model plot16 = this.LoadProject(Path.Combine(projectDirectory, "plot 16.xml"));
 
             // check soil properties at initial load
-            foreach (ResourceUnit ru in plot16.ResourceUnits)
-            {
-                // resource unit variables read from climate file which are aren't currently test accessible
-                //   ru.Snags: swdC, swdCount, swdCN, swdHalfLife, swdDecomRate, otherC, other CN
-                // resource unit variables read from project file which are aren't currently test accessible
-                //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilDepth,
-                //            mKo (decomposition rate), mH (humification rate0
-                //   ru.WaterCycle.Canopy: interceptionStorageNeedle, interceptionStorageBroadleaf, snowMeltTemperature,
-                //                         waterUseSoilSaturation, pctSand, pctSilt, pctClay
-                //   ru.SpeciesSet: nitrogenResponseClasses 1a, 1b, 2a, 2b, 3a, 3b
-                //                  CO2 baseConcentration, compensationPoint, beta0, p0
-                //                  lightResponse shadeIntolerant, shadeTolerant, LRImodifier
-                //ru.Snags.ClimateFactor;
-                //ru.Snags.FluxToAtmosphere;
-                //ru.Snags.FluxToDisturbance;
-                //ru.Snags.FluxToExtern;
-                //ru.Snags.RefractoryFlux;
-                //ru.Snags.RemoveCarbon;
-                //ru.Soil.ClimateFactor;
-                //ru.Soil.FluxToAtmosphere;
-                //ru.Soil.FluxToDisturbance;
-                // settings from project file are ignored and values from climate file are used 
-                //Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.C - 128.666) < 0.001);
-                //Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.N - 0.08368) < 0.00001);
-                //Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.C - 12.375) < 0.001);
-                //Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.N - 0.6521) < 0.0001);
-                //Assert.IsTrue(ru.Soil.YoungLabile.Weight == 0.227); // TODO: why is decomposition rate read as weight?
-                //Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.C - 33.832) < 0.001);
-                //Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.N - 0.1212) < 0.0001);
-                //Assert.IsTrue(ru.Soil.YoungRefractory.Weight == 0.071); // decomposition rate
-                // Assert.IsTrue(Math.Abs(ru.Soil.AvailableNitrogen - 56.18682579) < 0.001); // BUGBUG: ignored in climate file
-                Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.C - 161.086884) < 0.001);
-                Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.N - 17.73954044) < 0.00001);
-                Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.C - 4.841498397) < 0.001);
-                Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.N - 0.2554353319) < 0.0001);
-                Assert.IsTrue(ru.Soil.YoungLabile.Weight == 0.322);
-                Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.C - 45.97414423) < 0.001);
-                Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.N - 0.261731921) < 0.0001);
-                Assert.IsTrue(ru.Soil.YoungRefractory.Weight == 0.1790625);
-                //ru.Variables.CarbonToAtm;
-                //ru.Variables.CarbonUptake;
-                //ru.Variables.CumCarbonToAtm;
-                //ru.Variables.CumCarbonUptake;
-                //ru.Variables.CumNep;
-                //ru.Variables.Nep;
-                Assert.IsTrue(Math.Abs(ru.Variables.NitrogenAvailable - 56.18682579) < 0.0001); // BUGBUG: read from climate file but never used, project file setting is silently ignored
-            }
+            this.VerifyMalcolmKnappResourceUnit(plot16);
 
             for (int year = 0; year < 28; ++year)
             {
-                plot14.RunYear();
+                //plot14.RunYear();
                 plot16.RunYear();
             }
 
-            Assert.IsTrue(plot16.ModelSettings.RegenerationEnabled == false);
-            Assert.IsTrue(plot16.ModelSettings.MortalityEnabled == true);
-            Assert.IsTrue(plot16.ModelSettings.GrowthEnabled == true);
-            Assert.IsTrue(plot16.ModelSettings.CarbonCycleEnabled == true);
-            Assert.IsTrue(plot16.ModelSettings.Epsilon == 2.7);
-            Assert.IsTrue(plot16.ModelSettings.LightExtinctionCoefficient == 0.6);
-            Assert.IsTrue(plot16.ModelSettings.LightExtinctionCoefficientOpacity == 0.6);
-            Assert.IsTrue(plot16.ModelSettings.TemperatureTau == 6.0);
-            Assert.IsTrue(plot16.ModelSettings.AirDensity == 1.204);
-            Assert.IsTrue(plot16.ModelSettings.LaiThresholdForClosedStands == 3.0);
-            Assert.IsTrue(plot16.ModelSettings.BoundaryLayerConductance == 0.2);
-            Assert.IsTrue(plot16.ModelSettings.UseDynamicAvailableNitrogen == false);
-            Assert.IsTrue(plot16.ModelSettings.UseParFractionBelowGroundAllocation == true);
-            Assert.IsTrue(plot16.ModelSettings.TorusMode == true);
-            Assert.IsTrue(Math.Abs(plot16.ModelSettings.Latitude - Global.ToRadians(49.259)) < 0.0001);
-
-            foreach (Climate climate in plot16.Climates)
-            {
-                Phenology conifer = climate.Phenology(0);
-                // private phenology variables read from the project file
-                //   vpdMin, vpdMax, dayLengthMin, dayLengthMax, tempMintempMax
-                //conifer.ChillingDaysLastYear;
-                //conifer.ID;
-                //conifer.LeafOnEnd;
-                //conifer.LeafOnFraction;
-                //conifer.LeafOnStart;
-                Phenology broadleaf = climate.Phenology(1);
-                Phenology deciduousConifer = climate.Phenology(2);
-
-                // private climate variables
-                //   tableName, batchYears, temperatureShift, precipitationShift, randomSamplingEnabled, randomSamplingList, filter
-                Assert.IsTrue(climate.CarbonDioxidePpm == 360.0);
-                Assert.IsTrue((climate.MeanAnnualTemperature > 0.0) && (climate.MeanAnnualTemperature < 30.0));
-                Assert.IsTrue(String.Equals(climate.Name, "HaneyUBC", StringComparison.OrdinalIgnoreCase));
-                Assert.IsTrue(conifer.ID == 0);
-                Assert.IsTrue(broadleaf.ID == 1);
-                Assert.IsTrue(deciduousConifer.ID == 2);
-                // climate.PrecipitationMonth;
-                Assert.IsTrue((climate.Sun.LastDayLongerThan10_5Hours > 0) && (climate.Sun.LastDayLongerThan10_5Hours < 365));
-                Assert.IsTrue((climate.Sun.LastDayLongerThan14_5Hours > 0) && (climate.Sun.LastDayLongerThan14_5Hours < 365));
-                Assert.IsTrue(climate.Sun.LongestDay == 172);
-                Assert.IsTrue(climate.Sun.NorthernHemisphere());
-                // climate.TemperatureMonth;
-                Assert.IsTrue((climate.TotalAnnualRadiation > 4000.0) && (climate.TotalAnnualRadiation < 5000.0));
-            }
+            this.VerifyMalcolmKnappClimate(plot16);
+            this.VerifyMalcolmKnappModel(plot16);
+            this.VerifyMalcolmKnappDouglasFir(plot16);
 
             // Nelder plot
             using Model nelder1 = this.LoadProject(Path.Combine(projectDirectory, "Nelder 1.xml"));
             for (int year = 0; year < 26; ++year) // age 25 to 51
             {
-                nelder1.RunYear();
+                // nelder1.RunYear();
             }
         }
 
@@ -180,6 +91,209 @@ namespace iLand.Test
             Assert.IsTrue(Math.Abs(shortPotential - 0.431) < 0.01);
             Assert.IsTrue(Math.Abs(mediumPotential - 1.367) < 0.01);
             Assert.IsTrue(Math.Abs(tallPotential - 5.202) < 0.01);
+        }
+
+        private void VerifyMalcolmKnappClimate(Model model)
+        {
+            Assert.IsTrue(model.Climates.Count == 1);
+            foreach (Climate climate in model.Climates)
+            {
+                Phenology conifer = climate.Phenology(0);
+                // private phenology variables read from the project file
+                //   vpdMin, vpdMax, dayLengthMin, dayLengthMax, tempMintempMax
+                //conifer.ChillingDaysLastYear;
+                //conifer.ID;
+                //conifer.LeafOnEnd;
+                //conifer.LeafOnFraction;
+                //conifer.LeafOnStart;
+                Phenology broadleaf = climate.Phenology(1);
+                Phenology deciduousConifer = climate.Phenology(2);
+
+                // private climate variables
+                //   tableName, batchYears, temperatureShift, precipitationShift, randomSamplingEnabled, randomSamplingList, filter
+                Assert.IsTrue(climate.CarbonDioxidePpm == 360.0);
+                Assert.IsTrue((climate.MeanAnnualTemperature > 0.0) && (climate.MeanAnnualTemperature < 30.0));
+                Assert.IsTrue(String.Equals(climate.Name, "HaneyUBC", StringComparison.OrdinalIgnoreCase));
+                Assert.IsTrue(conifer.ID == 0);
+                Assert.IsTrue(broadleaf.ID == 1);
+                Assert.IsTrue(deciduousConifer.ID == 2);
+                // climate.PrecipitationMonth;
+                Assert.IsTrue((climate.Sun.LastDayLongerThan10_5Hours > 0) && (climate.Sun.LastDayLongerThan10_5Hours < 365));
+                Assert.IsTrue((climate.Sun.LastDayLongerThan14_5Hours > 0) && (climate.Sun.LastDayLongerThan14_5Hours < 365));
+                Assert.IsTrue(climate.Sun.LongestDay == 172);
+                Assert.IsTrue(climate.Sun.NorthernHemisphere());
+                // climate.TemperatureMonth;
+                Assert.IsTrue((climate.TotalAnnualRadiation > 4000.0) && (climate.TotalAnnualRadiation < 5000.0));
+            }
+        }
+
+        private void VerifyMalcolmKnappDouglasFir(Model model)
+        {
+            Assert.IsTrue(model.SpeciesSet().SpeciesCount() == 1);
+
+            Species douglasFir = model.SpeciesSet().Species(0);
+            Assert.IsTrue(douglasFir.Active);
+            // maximumAge  500
+            // maximumHeight   90
+            // aging   1 / (1 + (x / 0.7) ^ 2)
+            // douglasFir.Aging();
+            // barkThickness   0.065
+            // bmWoody_a   0.10568
+            // bmWoody_b   2.4247
+            // bmFoliage_a 0.058067
+            // bmFoliage_b 1.7009
+            // bmRoot_a    0.03575375
+            // bmRoot_b    2.1641
+            // bmBranch_a  0.024871
+            // bmBranch_b  2.1382
+            Assert.IsTrue(Math.Abs(douglasFir.CNRatioFineRoot - 42.11) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.CNRatioFoliage - 72.0) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.CNRatioWood - 880.33) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.DeathProbabilityIntrinsic - 0.00080063445425371249) < 0.000001); // transformed from 0.67
+            // probStress  6.9
+            // displayColor D6F288
+            Assert.IsTrue(douglasFir.EstablishmentParameters.ChillRequirement == 56);
+            Assert.IsTrue(Math.Abs(douglasFir.EstablishmentParameters.FrostTolerance - 0.5) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.EstablishmentParameters.GddBaseTemperature - 3.4) < 0.001);
+            Assert.IsTrue(douglasFir.EstablishmentParameters.GddBudBurst == 255);
+            Assert.IsTrue(douglasFir.EstablishmentParameters.GddMax == 3261);
+            Assert.IsTrue(douglasFir.EstablishmentParameters.GddMin == 177);
+            Assert.IsTrue(douglasFir.EstablishmentParameters.MinFrostFree == 65);
+            Assert.IsTrue(Math.Abs(douglasFir.EstablishmentParameters.MinTemp + 37.0) < 0.001);
+            Assert.IsTrue(Double.IsNaN(douglasFir.EstablishmentParameters.PsiMin));
+            Assert.IsTrue(Math.Abs(douglasFir.FecundityM2 - 114.0) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.FecunditySerotiny - 0.0) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.FinerootFoliageRatio - 0.75) < 0.001);
+            // HDlow   145.0998 * 1 * 0.8 * (1 - 0.28932) * d ^ -0.28932
+            // HDhigh  100 / d + 25 + 100 * exp(-0.3 * (0.08 * d) ^ 1.5) + 120 * exp(-0.01 * d)
+            Assert.IsTrue(String.Equals(douglasFir.ID, "psme", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(douglasFir.Index == 0);
+            Assert.IsTrue(douglasFir.IsConiferous == true);
+            Assert.IsTrue(douglasFir.IsEvergreen == true);
+            Assert.IsTrue(douglasFir.IsSeedYear == false);
+            Assert.IsTrue(douglasFir.IsTreeSerotinous(model.GlobalSettings, 40) == false);
+            // lightResponseClass  2.78
+            Assert.IsTrue(Math.Abs(douglasFir.MaxCanopyConductance - 0.017) < 0.001);
+            Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menzisii", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(Math.Abs(douglasFir.NonSeedYearFraction - 0.25) < 0.001);
+            Assert.IsTrue(douglasFir.PhenologyClass == 0);
+            Assert.IsTrue(Math.Abs(douglasFir.PsiMin + 1.234) < 0.001);
+            // respNitrogenClass   2
+            // respTempMax 20
+            // respTempMin 0
+            // respVpdExponent - 0.6
+            // maturityYears   14
+            // seedYearInterval    5
+            // nonSeedYearFraction 0.25
+            // seedKernel_as1  30
+            // seedKernel_as2  200
+            // seedKernel_ks0  0.2
+            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.BrowsingProbability - 0.3509615) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.HdSapling - 89.0F) < 0.001);
+            Assert.IsTrue(String.Equals(douglasFir.SaplingGrowthParameters.HeightGrowthPotential.ExpressionString, "41.4*(1-(1-(h/41.4)^(1/3))*exp(-0.0408))^3", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(douglasFir.SaplingGrowthParameters.MaxStressYears == 3);
+            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.ReferenceRatio - 0.506) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.ReinekesR - 159.0) < 0.001);
+            Assert.IsTrue(douglasFir.SaplingGrowthParameters.RepresentedClasses.Count == 41);
+            Assert.IsTrue(Double.IsNaN(douglasFir.SaplingGrowthParameters.SproutGrowth));
+            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.StressThreshold - 0.1) < 0.001);
+            Assert.IsTrue(douglasFir.SeedDispersal == null);
+            // Assert.IsTrue(String.Equals(douglasFir.SeedDispersal.DumpNextYearFileName, null, StringComparison.OrdinalIgnoreCase));
+            // Assert.IsTrue(douglasFir.SeedDispersal.SeedMap == null);
+            // Assert.IsTrue(Object.ReferenceEquals(douglasFir.SeedDispersal.Species, douglasFir));
+            Assert.IsTrue(douglasFir.SnagHalflife == 40);
+            Assert.IsTrue(Math.Abs(douglasFir.SnagKsw - 0.08) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.SnagKyl - 0.322) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.SnagKyr - 0.1791) < 0.001);
+            Assert.IsTrue(Object.ReferenceEquals(douglasFir.SpeciesSet, model.SpeciesSet()));
+            Assert.IsTrue(Math.Abs(douglasFir.SpecificLeafArea - 5.84) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.TurnoverLeaf - 0.18) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.TurnoverRoot - 0.617284) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.VolumeFactor - 0.423492) < 0.001); // 0.539208 * pi/4
+            Assert.IsTrue(Math.Abs(douglasFir.WoodDensity - 450.0) < 0.001);
+        }
+
+        private void VerifyMalcolmKnappModel(Model model)
+        {
+            Assert.IsTrue(model.ModelSettings.RegenerationEnabled == false);
+            Assert.IsTrue(model.ModelSettings.MortalityEnabled == true);
+            Assert.IsTrue(model.ModelSettings.GrowthEnabled == true);
+            Assert.IsTrue(model.ModelSettings.CarbonCycleEnabled == true);
+            Assert.IsTrue(model.ModelSettings.Epsilon == 2.7);
+            Assert.IsTrue(model.ModelSettings.LightExtinctionCoefficient == 0.6);
+            Assert.IsTrue(model.ModelSettings.LightExtinctionCoefficientOpacity == 0.6);
+            Assert.IsTrue(model.ModelSettings.TemperatureTau == 6.0);
+            Assert.IsTrue(model.ModelSettings.AirDensity == 1.204);
+            Assert.IsTrue(model.ModelSettings.LaiThresholdForClosedStands == 3.0);
+            Assert.IsTrue(model.ModelSettings.BoundaryLayerConductance == 0.2);
+            Assert.IsTrue(model.ModelSettings.UseDynamicAvailableNitrogen == false);
+            Assert.IsTrue(model.ModelSettings.UseParFractionBelowGroundAllocation == true);
+            Assert.IsTrue(model.ModelSettings.TorusMode == true);
+            Assert.IsTrue(Math.Abs(model.ModelSettings.Latitude - Global.ToRadians(49.259)) < 0.0001);
+        }
+
+        private void VerifyMalcolmKnappResourceUnit(Model model)
+        {
+            foreach (ResourceUnit ru in model.ResourceUnits)
+            {
+                // resource unit variables read from climate file which are aren't currently test accessible
+                //   ru.Snags: swdC, swdCount, swdCN, swdHalfLife, swdDecomRate, otherC, other CN
+                // resource unit variables read from project file which are aren't currently test accessible
+                //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilDepth,
+                //            mKo (decomposition rate), mH (humification rate0
+                //   ru.WaterCycle.Canopy: interceptionStorageNeedle, interceptionStorageBroadleaf, snowMeltTemperature,
+                //                         waterUseSoilSaturation, pctSand, pctSilt, pctClay
+                //   ru.SpeciesSet: nitrogenResponseClasses 1a, 1b, 2a, 2b, 3a, 3b
+                //                  CO2 baseConcentration, compensationPoint, beta0, p0
+                //                  lightResponse shadeIntolerant, shadeTolerant, LRImodifier
+                //ru.Snags.ClimateFactor;
+                //ru.Snags.FluxToAtmosphere;
+                //ru.Snags.FluxToDisturbance;
+                //ru.Snags.FluxToExtern;
+                //ru.Snags.RefractoryFlux;
+                //ru.Snags.RemoveCarbon;
+                //ru.Soil.ClimateFactor;
+                //ru.Soil.FluxToAtmosphere;
+                //ru.Soil.FluxToDisturbance;
+                // settings from project file are ignored and values from climate file are used 
+                //Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.C - 128.666) < 0.001);
+                //Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.N - 0.08368) < 0.00001);
+                //Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.C - 12.375) < 0.001);
+                //Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.N - 0.6521) < 0.0001);
+                //Assert.IsTrue(ru.Soil.YoungLabile.Weight == 0.227); // TODO: why is decomposition rate read as weight?
+                //Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.C - 33.832) < 0.001);
+                //Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.N - 0.1212) < 0.0001);
+                //Assert.IsTrue(ru.Soil.YoungRefractory.Weight == 0.071); // decomposition rate
+                // Assert.IsTrue(Math.Abs(ru.Soil.AvailableNitrogen - 56.18682579) < 0.001); // BUGBUG: ignored in climate file
+                Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.C - 161.086884) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.N - 17.73954044) < 0.00001);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.C - 4.841498397) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.N - 0.2554353319) < 0.0001);
+                Assert.IsTrue(ru.Soil.YoungLabile.Weight == 0.322);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.C - 45.97414423) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.N - 0.261731921) < 0.0001);
+                Assert.IsTrue(ru.Soil.YoungRefractory.Weight == 0.1790625);
+                //ru.Variables.CarbonToAtm;
+                //ru.Variables.CarbonUptake;
+                //ru.Variables.CumCarbonToAtm;
+                //ru.Variables.CumCarbonUptake;
+                //ru.Variables.CumNep;
+                //ru.Variables.Nep;
+                Assert.IsTrue(Math.Abs(ru.Variables.NitrogenAvailable - 56.18682579) < 0.0001); // BUGBUG: read from climate file but never used, project file setting is silently ignored
+                Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0); // initially zero
+                Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity));
+                Assert.IsTrue(Math.Abs(ru.WaterCycle.FieldCapacity - 20.006) < 0.001);
+                Assert.IsTrue(ru.WaterCycle.Psi.Length == Constant.DaysInLeapYear);
+                foreach (double psi in ru.WaterCycle.Psi)
+                {
+                    Assert.IsTrue((psi <= 0.0) && (psi > -6000.0));
+                }
+                Assert.IsTrue((ru.WaterCycle.SnowDayRad >= 0.0) && (ru.WaterCycle.SnowDayRad < 5000.0)); // TODO: linkt to snow days?
+                Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear));
+                Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepth - 112.8) < 0.001);
+                Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0); // zero at initialization
+                Assert.IsTrue(ru.WaterCycle.TotalWaterLoss == 0.0); // zero at initialization
+            }
         }
 
         [TestMethod]
@@ -246,7 +360,7 @@ namespace iLand.Test
                     Assert.IsTrue(ru.ID >= 0);
                     Assert.IsTrue(ru.Index >= 0);
                     Assert.IsTrue((ru.LriModifier > 0.0) && (ru.LriModifier <= 1.0));
-                    Assert.IsTrue((ru.ProductiveArea > 0.0) && (ru.ProductiveArea <= Constant.RUArea));
+                    Assert.IsTrue((ru.PhotosyntheticallyActiveArea > 0.0) && (ru.PhotosyntheticallyActiveArea <= Constant.RUArea));
                     Assert.IsTrue(ru.StockableArea == Constant.RUArea);
                     Assert.IsTrue((ru.StockedArea > 0.0) && (ru.StockedArea <= Constant.RUArea));
                     Assert.IsTrue((ru.TotalLeafArea > 0.0) && (ru.TotalLeafArea < 20.0 * Constant.RUArea));

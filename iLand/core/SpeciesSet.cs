@@ -332,10 +332,10 @@ namespace iLand.Core
             @sa http://iland.boku.ac.at/allocation#reserve_and_allocation_to_stem_growth */
         public double LightResponse(GlobalSettings globalSettings, double lightResourceIndex, double lightResponseClass)
         {
-            double low = mLightResponseIntolerant.Calculate(globalSettings, lightResourceIndex);
-            double high = mLightResponseTolerant.Calculate(globalSettings, lightResourceIndex);
-            double result = low + 0.25 * (lightResponseClass - 1.0) * (high - low);
-            return Global.Limit(result, 0.0, 1.0);
+            double intolerant = mLightResponseIntolerant.Calculate(globalSettings, lightResourceIndex);
+            double tolerant = mLightResponseTolerant.Calculate(globalSettings, lightResourceIndex);
+            double response = intolerant + 0.25 * (lightResponseClass - 1.0) * (tolerant - intolerant);
+            return Global.Limit(response, 0.0, 1.0);
         }
     }
 }

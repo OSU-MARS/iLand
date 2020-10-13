@@ -17,11 +17,11 @@ namespace iLand.Core
         */
     public class ResourceUnit
     {
-        private double mAggregatedWLA; ///< sum of lightResponse * LeafArea for all trees
+        private double mTotalWeightedLeafArea; ///< sum of lightResponse * LeafArea for all trees
         private double mAggregatedLR; ///< sum of lightresponse*LA of the current unit
         private int mNextTreeID;
-        private int mPixelCount; ///< count of (Heightgrid) pixels thare are inside the RU
-        private int mStockedPixelCount;  ///< count of pixels that are stocked with trees
+        private int mHeightCells; ///< count of (Heightgrid) pixels thare are inside the RU
+        private int mHeightCellsWithTrees;  ///< count of pixels that are stocked with trees
 
         public double AverageAging { get; private set; } ///< leaf area weighted average aging
         public RectangleF BoundingBox { get; private set; }
@@ -32,7 +32,7 @@ namespace iLand.Core
         public int ID { get; set; }
         public int Index { get; private set; }
         public double LriModifier { get; private set; }
-        public double ProductiveArea { get; private set; } ///< TotalArea - Unstocked Area - loss due to BeerLambert (m2)
+        public double PhotosyntheticallyActiveArea { get; private set; } ///< TotalArea - Unstocked Area - loss due to BeerLambert (m2)
         public Snag Snags { get; private set; } ///< access the snag object
         public Soil Soil { get; private set; } ///< access the soil model
         public List<ResourceUnitSpecies> Species { get; private set; }
@@ -46,14 +46,7 @@ namespace iLand.Core
         public ResourceUnitVariables Variables { get; private set; } ///< access to variables that are specific to resourceUnit (e.g. nitrogenAvailable)
         public WaterCycle WaterCycle { get; private set; } ///< water model of the unit
 
-        // stocked area calculation
-        public void AddHeightCell(bool pixelIsStocked) { mPixelCount++; if (pixelIsStocked) mStockedPixelCount++; }
-        public void AddLightResponse(float leafArea, float lightResponse) { mAggregatedLR += leafArea * lightResponse; }
-        public void AddTreeAging(double leafArea, double agingFactor) { AverageAging += leafArea * agingFactor; } ///< aggregate the tree aging values (weighted by leaf area)
-        /// AddWeightedLeafArea() is called by each tree to aggregate the total weighted leaf area on a unit
-        public void AddWeightedLeafArea(float leafArea, float LRI) { mAggregatedWLA += leafArea * LRI; TotalLeafArea += leafArea; }
-
-        public double HeightArea() { return mPixelCount * Constant.HeightPixelArea; } ///< get the resource unit area in m2
+        public double HeightArea() { return mHeightCells * Constant.HeightPixelArea; } ///< get the resource unit area in m2
         public double InterceptedArea(double leafArea, double lightResponse) { return EffectiveAreaPerWla * leafArea * lightResponse; }
         public double LeafAreaIndex() { return StockableArea != 0.0 ? TotalLeafArea / StockableArea : 0.0; } ///< Total Leaf Area Index
 
@@ -65,25 +58,25 @@ namespace iLand.Core
         public ResourceUnit(int index)
         {
             this.mAggregatedLR = 0.0;
-            this.mAggregatedWLA = 0.0;
+            this.mTotalWeightedLeafArea = 0.0;
             this.mNextTreeID = 0;
-            this.mPixelCount = 0;
-            this.mStockedPixelCount = 0;
+            this.mHeightCells = 0;
+            this.mHeightCellsWithTrees = 0;
 
             this.Climate = null;
             this.EffectiveAreaPerWla = 0.0;
             this.ID = 0;
             this.Index = index;
             this.LriModifier = 0.0;
-            this.ProductiveArea = 0.0;
+            this.PhotosyntheticallyActiveArea = 0.0;
             this.Species = new List<ResourceUnitSpecies>();
             this.SaplingCells = null;
             this.Snags = null;
             this.Soil = null;
             this.SpeciesSet = null;
             this.Statistics = new StandStatistics();
-            this.StockableArea = 0;
-            this.StockedArea = 0;
+            this.StockableArea = 0.0;
+            this.StockedArea = 0.0;
             this.TotalLeafArea = 0.0;
             this.Trees = new List<Tree>();
             this.Variables = new ResourceUnitVariables();
@@ -141,6 +134,26 @@ namespace iLand.Core
 
             this.AverageAging = 0.0;
             this.HasDeadTrees = false;
+        }
+
+        // stocked area calculation
+        public void AddHeightCell(bool cellHasTrees) 
+        {
+            ++this.mHeightCells;
+            if (cellHasTrees)
+            {
+                ++this.mHeightCellsWithTrees;
+            }
+        }
+
+        public void AddLightResponse(float leafArea, float lightResponse) { mAggregatedLR += leafArea * lightResponse; }
+        public void AddTreeAging(double leafArea, double agingFactor) { AverageAging += leafArea * agingFactor; } ///< aggregate the tree aging values (weighted by leaf area)
+
+        /// AddWeightedLeafArea() is called by each tree to aggregate the total weighted leaf area on a unit
+        public void AddWeightedLeafArea(float leafArea, float lri) 
+        { 
+            mTotalWeightedLeafArea += leafArea * lri; 
+            TotalLeafArea += leafArea; 
         }
 
         public void SetBoundingBox(RectangleF bb, Model model)
@@ -256,11 +269,11 @@ namespace iLand.Core
 
         public void NewYear()
         {
-            mAggregatedWLA = 0.0;
+            mTotalWeightedLeafArea = 0.0;
             TotalLeafArea = 0.0;
             mAggregatedLR = 0.0;
-            ProductiveArea = 0.0;
-            mPixelCount = mStockedPixelCount = 0;
+            PhotosyntheticallyActiveArea = 0.0;
+            mHeightCells = mHeightCellsWithTrees = 0;
             SnagNewYear();
             if (Soil != null)
             {
@@ -283,27 +296,27 @@ namespace iLand.Core
             see also: http://iland.boku.ac.at/individual+tree+light+availability */
         public void Production(Model model)
         {
-            if (mAggregatedWLA == 0.0 || mPixelCount == 0)
+            if (mTotalWeightedLeafArea == 0.0 || mHeightCells == 0)
             {
                 // clear statistics of resourceunitspecies
                 for (int i = 0; i < Species.Count; ++i)
                 {
                     Species[i].Statistics.Clear();
                 }
-                ProductiveArea = 0.0;
+                PhotosyntheticallyActiveArea = 0.0;
                 StockedArea = 0.0;
                 return;
             }
 
             // the pixel counters are filled during the height-grid-calculations
-            StockedArea = Constant.HeightPerRUsize * Constant.HeightPerRUsize * mStockedPixelCount; // m2 (1 height grid pixel = 10x10m)
+            StockedArea = Constant.HeightSize * Constant.HeightSize * mHeightCellsWithTrees; // m2 (1 height grid pixel = 10x10m)
             if (LeafAreaIndex() < 3.0)
             {
                 // estimate stocked area based on crown projections
                 double totalCrownArea = 0.0;
-                for (int i = 0; i < Trees.Count; ++i)
+                for (int treeIndex = 0; treeIndex < Trees.Count; ++treeIndex)
                 {
-                    totalCrownArea += Trees[i].IsDead() ? 0.0 : Trees[i].Stamp.Reader.CrownArea;
+                    totalCrownArea += Trees[treeIndex].IsDead() ? 0.0 : Trees[treeIndex].Stamp.Reader.CrownArea;
                 }
                 //if (GlobalSettings.Instance.LogDebug())
                 //{
@@ -317,6 +330,8 @@ namespace iLand.Core
                 {
                     // for LAI between 1 and 3:
                     // interpolate between sum of crown area of trees (at LAI=1) and the pixel-based value (at LAI=3 and above)
+                    // only results in a change if crown area is less than stocked area
+                    // BUGBUG: assumes trees are homogeneously distributed across resource unit and that crowns don't overlap
                     double px_frac = (LeafAreaIndex() - 1.0) / 2.0; // 0 at LAI=1, 1 at LAI=3
                     this.StockedArea = this.StockedArea * px_frac + Math.Min(totalCrownArea, StockedArea) * (1.0 - px_frac);
                 }
@@ -327,14 +342,14 @@ namespace iLand.Core
             }
 
             // calculate the leaf area index (LAI)
-            double LAI = this.TotalLeafArea / this.StockedArea;
+            double leafAreaIndex = this.TotalLeafArea / this.StockedArea;
             // calculate the intercepted radiation fraction using the law of Beer Lambert
             double k = model.ModelSettings.LightExtinctionCoefficient;
-            double interception_fraction = 1.0 - Math.Exp(-k * LAI);
-            ProductiveArea = StockedArea * interception_fraction; // m2
+            double lightInterceptionfraction = 1.0 - Math.Exp(-k * leafAreaIndex);
+            PhotosyntheticallyActiveArea = StockedArea * lightInterceptionfraction; // m2
 
             // calculate the total weighted leaf area on this RU:
-            LriModifier = interception_fraction * StockedArea / mAggregatedWLA; // p_WLA
+            LriModifier = PhotosyntheticallyActiveArea / mTotalWeightedLeafArea; // p_WLA
             if (LriModifier == 0.0)
             {
                 Debug.WriteLine("lri modification==0!");
@@ -401,7 +416,7 @@ namespace iLand.Core
                 return;
             }
             Debug.Assert(mAggregatedLR > 0.0);
-            EffectiveAreaPerWla = ProductiveArea / mAggregatedLR;
+            EffectiveAreaPerWla = PhotosyntheticallyActiveArea / mAggregatedLR;
             //if (GlobalSettings.Instance.LogDebug())
             //{
             //    Debug.WriteLine("RU: aggregated lightresponse: " + mAggregatedLR + " eff.area./wla: " + mEffectiveArea_perWLA);

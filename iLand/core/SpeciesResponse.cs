@@ -47,9 +47,9 @@ namespace iLand.Core
 
         public void Clear()
         {
-            for (int i = 0; i < 12; i++)
+            for (int month = 0; month < 12; ++month)
             {
-                Co2Response[i] = SoilWaterResponse[i] = TempResponse[i] = GlobalRadiation[i] = UtilizableRadiation[i] = VpdResponse[i] = 0.0;
+                Co2Response[month] = SoilWaterResponse[month] = TempResponse[month] = GlobalRadiation[month] = UtilizableRadiation[month] = VpdResponse[month] = 0.0;
             }
             NitrogenResponse = 0.0;
             YearlyRadiation = 0.0;
@@ -100,7 +100,7 @@ namespace iLand.Core
                 ClimateDay day = ResourceUnit.Climate[dayIndex];
                 int monthIndex = day.Month - 1;
                 // environmental responses
-                double waterResponse = Species.SoilWaterResponse(water.Psi(dayOfYear));
+                double waterResponse = Species.SoilWaterResponse(water.Psi[dayOfYear]);
                 double vpdResponse = Species.VpdResponse(day.Vpd);
                 double tempResponse = Species.TemperatureResponse(day.TempDelayed);
                 SoilWaterResponse[monthIndex] += waterResponse;

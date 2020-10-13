@@ -163,11 +163,11 @@ namespace iLand.Core
             if (mDumpSeedMaps)
             {
                 string path = model.GlobalSettings.Path(model.GlobalSettings.Settings.GetString("model.settings.seedDispersal.dumpSeedMapsPath"));
-                Helper.SaveToTextFile(String.Format("{0}/seedkernelYes_{1}.csv", path, Species.ID), Grid.ToString(mKernelSeedYear));
-                Helper.SaveToTextFile(String.Format("{0}/seedkernelNo_{1}.csv", path, Species.ID), Grid.ToString(mKernelNonSeedYear));
+                Helper.SaveToTextFile(String.Format("{0}/seedkernelYes_{1}.csv", path, Species.ID), mKernelSeedYear.ToString());
+                Helper.SaveToTextFile(String.Format("{0}/seedkernelNo_{1}.csv", path, Species.ID), mKernelNonSeedYear.ToString());
                 if (!mKernelSerotiny.IsEmpty())
                 {
-                    Helper.SaveToTextFile(String.Format("{0}/seedkernelSerotiny_{1}.csv", path, Species.ID), Grid.ToString(mKernelSerotiny));
+                    Helper.SaveToTextFile(String.Format("{0}/seedkernelSerotiny_{1}.csv", path, Species.ID), mKernelSerotiny.ToString());
                 }
             }
 

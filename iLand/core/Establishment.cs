@@ -79,30 +79,29 @@ namespace iLand.Core
 
             double psi_min = mRUS.Species.EstablishmentParameters.PsiMin;
             WaterCycle water = mRUS.RU.WaterCycle;
-            int days = mRUS.RU.Climate.DaysOfYear();
 
             // two week (14 days) running average of actual psi-values on the resource unit
-            const int nwindow = 14;
-            double[] psi_buffer = new double[nwindow];
+            const int valuesToAverage = 14;
+            double[] valuesInAverage = new double[valuesToAverage];
             double current_sum = 0.0;
-
-            int i_buffer = 0;
+            
             double min_average = 9999999.0;
-            for (int day = 0; day < days; ++day)
+            int daysInYear = mRUS.RU.Climate.DaysOfYear();
+            for (int dayOfYear = 0, averageIndex = 0; dayOfYear < daysInYear; ++dayOfYear)
             {
                 // running average: remove oldest item, add new item in a ringbuffer
-                current_sum -= psi_buffer[i_buffer];
-                psi_buffer[i_buffer] = water.Psi(day);
-                current_sum += psi_buffer[i_buffer];
+                current_sum -= valuesInAverage[averageIndex];
+                valuesInAverage[averageIndex] = water.Psi[dayOfYear];
+                current_sum += valuesInAverage[averageIndex];
 
-                if (day >= veg_period_start && day <= veg_period_end)
+                if (dayOfYear >= veg_period_start && dayOfYear <= veg_period_end)
                 {
-                    double current_avg = day > 0 ? current_sum / Math.Min(day, nwindow) : current_sum;
+                    double current_avg = dayOfYear > 0 ? current_sum / Math.Min(dayOfYear, valuesToAverage) : current_sum;
                     min_average = Math.Min(min_average, current_avg);
                 }
 
                 // move to next value in the buffer
-                i_buffer = ++i_buffer % nwindow;
+                averageIndex = ++averageIndex % valuesToAverage;
             }
 
             if (min_average > 1000.0)
@@ -121,7 +120,6 @@ namespace iLand.Core
          The model is closely based on the TACA approach of Nitschke and Innes (2008), Ecol. Model 210, 263-277
          more details: http://iland.boku.ac.at/establishment#abiotic_environment
          a model mockup in R: script_establishment.r
-
          */
         public void CalculateAbioticEnvironment(Model model)
         {

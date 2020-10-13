@@ -56,36 +56,36 @@ namespace iLand.Output
             using DebugTimer dt = new DebugTimer("TreeOutput.LogYear()");
             TreeWrapper tw = new TreeWrapper();
             mFilter.Wrapper = tw;
-            for (Tree t = at.MoveNext(); t != null; t = at.MoveNext())
+            for (Tree tree = at.MoveNext(); tree != null; tree = at.MoveNext())
             {
                 if (!mFilter.IsEmpty)
                 { // skip fields
-                    tw.Tree = t;
+                    tw.Tree = tree;
                     if (mFilter.Execute(model.GlobalSettings) == 0.0)
                     {
                         continue;
                     }
                 }
                 this.Add(model.GlobalSettings.CurrentYear);
-                this.Add(t.RU.Index);
-                this.Add(t.RU.ID);
-                this.Add(t.Species.ID);
-                this.Add(t.ID);
-                this.Add(t.GetCellCenterPoint().X);
-                this.Add(t.GetCellCenterPoint().Y);
-                this.Add(t.Dbh);
-                this.Add(t.Height);
-                this.Add(t.BasalArea());
-                this.Add(t.Volume());
-                this.Add(t.LeafArea);
-                this.Add(t.FoliageMass);
-                this.Add(t.StemMass);
-                this.Add(t.FineRootMass);
-                this.Add(t.CoarseRootMass);
-                this.Add(t.LightResourceIndex);
-                this.Add(t.mLightResponse);
-                this.Add(t.StressIndex);
-                this.Add(t.mNPPReserve);
+                this.Add(tree.RU.Index);
+                this.Add(tree.RU.ID);
+                this.Add(tree.Species.ID);
+                this.Add(tree.ID);
+                this.Add(tree.GetCellCenterPoint().X);
+                this.Add(tree.GetCellCenterPoint().Y);
+                this.Add(tree.Dbh);
+                this.Add(tree.Height);
+                this.Add(tree.BasalArea());
+                this.Add(tree.Volume());
+                this.Add(tree.LeafArea);
+                this.Add(tree.FoliageMass);
+                this.Add(tree.StemMass);
+                this.Add(tree.FineRootMass);
+                this.Add(tree.CoarseRootMass);
+                this.Add(tree.LightResourceIndex);
+                this.Add(tree.LightResponse);
+                this.Add(tree.StressIndex);
+                this.Add(tree.NppReserve);
                 this.WriteRow(insertRow);
             }
         }

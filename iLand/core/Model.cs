@@ -37,7 +37,7 @@ namespace iLand.Core
 
         // global grids
         public Grid<float> LightGrid { get; private set; } ///< this is the global 'LIF'-grid (light patterns) (currently 2x2m)
-        public Grid<HeightGridValue> HeightGrid { get; private set; } ///< stores maximum heights of trees and some flags (currently 10x10m)
+        public Grid<HeightCell> HeightGrid { get; private set; } ///< stores maximum heights of trees and some flags (currently 10x10m)
         public MapGrid StandGrid { get; private set; } ///< retrieve the spatial grid that defines the stands (10m resolution)
         public Grid<ResourceUnit> ResourceUnitGrid { get; private set; }
 
@@ -385,7 +385,7 @@ namespace iLand.Core
         }
 
         /// get the value of the (10m) Height grid at the position index ix and iy (of the LIF grid)
-        public HeightGridValue HeightGridValue(int ix, int iy)
+        public HeightCell HeightGridValue(int ix, int iy)
         {
             return HeightGrid[ix / Constant.LightPerHeightSize, iy / Constant.LightPerHeightSize];
         }
@@ -446,10 +446,10 @@ namespace iLand.Core
 
             this.LightGrid = new Grid<float>(worldExtentBuffered, lightCellSize);
             this.LightGrid.Initialize(1.0F);
-            this.HeightGrid = new Grid<HeightGridValue>(worldExtentBuffered, Constant.LightPerHeightSize * lightCellSize);
+            this.HeightGrid = new Grid<HeightCell>(worldExtentBuffered, Constant.LightPerHeightSize * lightCellSize);
             for (int index = 0; index < this.HeightGrid.Count; ++index)
             {
-                this.HeightGrid[index] = new HeightGridValue();
+                this.HeightGrid[index] = new HeightCell();
             }
             Tree.SetGrids(LightGrid, HeightGrid);
 
@@ -739,8 +739,8 @@ namespace iLand.Core
             // initialize height grid with a value of 4m. This is the height of the regeneration layer
             for (int h = 0; h < HeightGrid.Count; ++h)
             {
-                HeightGrid[h].ResetCount(); // set count = 0, but do not touch the flags
-                HeightGrid[h].Height = 4.0F;
+                HeightGrid[h].ResetTreeCount(); // set count = 0, but do not touch the flags
+                HeightGrid[h].Height = Constant.RegenerationLayerHeight;
             }
 
             ThreadRunner.Run(CalculateHeightFieldAndLightIntensityPattern);
@@ -788,16 +788,16 @@ namespace iLand.Core
           */
         private void CalculateStockedArea() ///< calculate area stocked with trees for each RU
         {
-            // iterate over the whole heightgrid and count pixels for each ressource unit
-            for (int i = 0; i < HeightGrid.Count; ++i)
+            // iterate over the whole heightgrid and count pixels for each resource unit
+            for (int heightIndex = 0; heightIndex < HeightGrid.Count; ++heightIndex)
             {
-                PointF cp = HeightGrid.GetCellCenterPoint(i);
-                if (ResourceUnitGrid.Contains(cp))
+                PointF centerPoint = HeightGrid.GetCellCenterPoint(heightIndex);
+                if (ResourceUnitGrid.Contains(centerPoint))
                 {
-                    ResourceUnit ru = ResourceUnitGrid[cp];
+                    ResourceUnit ru = ResourceUnitGrid[centerPoint];
                     if (ru != null)
                     {
-                        ru.AddHeightCell(HeightGrid[i].Count() > 0);
+                        ru.AddHeightCell(HeightGrid[heightIndex].TreeCount > 0);
                     }
                 }
             }
@@ -816,32 +816,32 @@ namespace iLand.Core
                 //            ru.setStockableArea(0.);
                 //            continue;
                 //        }
-                GridRunner<HeightGridValue> heightRunner = new GridRunner<HeightGridValue>(HeightGrid, ru.BoundingBox);
-                int heightCellsWithTrees = 0;
-                int totalCells = 0;
+                GridRunner<HeightCell> heightRunner = new GridRunner<HeightCell>(HeightGrid, ru.BoundingBox);
+                int heightCellsInWorld = 0;
+                int heightCellsInRU = 0;
                 for (heightRunner.MoveNext(); heightRunner.IsValid(); heightRunner.MoveNext())
                 {
-                    HeightGridValue current = heightRunner.Current;
+                    HeightCell current = heightRunner.Current;
                     if (current != null && current.IsInWorld())
                     {
-                        ++heightCellsWithTrees;
+                        ++heightCellsInWorld;
                     }
-                    ++totalCells;
+                    ++heightCellsInRU;
                 }
-                if (totalCells != 0)
+                if (heightCellsInRU != 0)
                 {
-                    ru.StockableArea = Constant.HeightPixelArea * heightCellsWithTrees; // in m2
+                    ru.StockableArea = Constant.HeightPixelArea * heightCellsInWorld; // in m2
                     if (ru.Snags != null)
                     {
                         ru.Snags.ScaleInitialState();
                     }
-                    this.TotalStockableHectares += Constant.HeightPixelArea * heightCellsWithTrees / Constant.RUArea; // in ha
-                    if (heightCellsWithTrees == 0 && ru.ID > -1)
+                    this.TotalStockableHectares += Constant.HeightPixelArea * heightCellsInWorld / Constant.RUArea; // in ha
+                    if (heightCellsInWorld == 0 && ru.ID > -1)
                     {
                         // invalidate this resource unit
                         ru.ID = -1;
                     }
-                    if (heightCellsWithTrees > 0 && ru.ID == -1)
+                    if (heightCellsInWorld > 0 && ru.ID == -1)
                     {
                         Debug.WriteLine("Warning: a resource unit has id=-1 but stockable area (id was set to 0)!!! ru: " + ru.BoundingBox + "with index" + ru.Index);
                         ru.ID = 0;
@@ -859,8 +859,8 @@ namespace iLand.Core
             }
 
             // mark those pixels that are at the edge of a "forest-out-of-area"
-            GridRunner<HeightGridValue> runner = new GridRunner<HeightGridValue>(HeightGrid, HeightGrid.PhysicalExtent);
-            HeightGridValue[] neighbors = new HeightGridValue[8];
+            GridRunner<HeightCell> runner = new GridRunner<HeightCell>(HeightGrid, HeightGrid.PhysicalExtent);
+            HeightCell[] neighbors = new HeightCell[8];
             for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
             {
                 if (runner.Current.IsOutsideWorld())
@@ -868,9 +868,9 @@ namespace iLand.Core
                     // if the current pixel is a "radiating" border pixel,
                     // then check the neighbors and set a flag if the pixel is a neighbor of a in-project-area pixel.
                     runner.Neighbors8(neighbors);
-                    for (int i = 0; i < 8; ++i)
+                    for (int neighborIndex = 0; neighborIndex < neighbors.Length; ++neighborIndex)
                     {
-                        if (neighbors[i] != null && neighbors[i].IsInWorld())
+                        if (neighbors[neighborIndex] != null && neighbors[neighborIndex].IsInWorld())
                         {
                             runner.Current.SetIsRadiating();
                         }
@@ -896,7 +896,7 @@ namespace iLand.Core
             int c_rad = 0;
             for (int index = 0; index < HeightGrid.Count; ++index)
             {
-                HeightGridValue hgv = HeightGrid[index];
+                HeightCell hgv = HeightGrid[index];
                 if (hgv.IsRadiating())
                 {
                     p = HeightGrid.IndexOf(hgv);

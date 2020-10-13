@@ -15,7 +15,7 @@ namespace iLand.Core
             //mGrid.setup(GlobalSettings.instance().model().grid().metricRect(), GlobalSettings.instance().model().grid().cellsize());
             Grid<float> lif_grid = model.LightGrid;
             // mask out out-of-project areas
-            Grid<HeightGridValue> hg = model.HeightGrid;
+            Grid<HeightCell> hg = model.HeightGrid;
             for (int i = 0; i < lif_grid.Count; ++i)
             {
                 ResourceUnit ru = null;
@@ -188,7 +188,7 @@ namespace iLand.Core
 
         public void SaplingGrowth(ResourceUnit ru, Model model)
         {
-            Grid<HeightGridValue> height_grid = model.HeightGrid;
+            Grid<HeightCell> height_grid = model.HeightGrid;
             Grid<float> lif_grid = model.LightGrid;
 
             Point imap = ru.CornerPointOffset;
@@ -209,7 +209,7 @@ namespace iLand.Core
                             if (s.Saplings[i].IsOccupied())
                             {
                                 // growth of this sapling tree
-                                HeightGridValue hgv = height_grid[height_grid.Index5(isc)];
+                                HeightCell hgv = height_grid[height_grid.Index5(isc)];
                                 float lif_value = lif_grid[isc];
 
                                 need_check |= GrowSapling(ru, model, s, s.Saplings[i], isc, hgv.Height, lif_value, n_on_px);
@@ -328,7 +328,7 @@ namespace iLand.Core
                 return 0;
             }
             ResourceUnit ru = null;
-            SaplingCell sc = Cell(t.LightCellIndex, model, true, ref ru);
+            SaplingCell sc = Cell(t.LightCellPosition, model, true, ref ru);
             if (sc == null)
             {
                 return 0;
@@ -353,7 +353,7 @@ namespace iLand.Core
                 ru = null;
                 while (n_cells > 0)
                 {
-                    sc = Cell(t.LightCellIndex.Add(new Point(offsets_x[s], offsets_y[s])), model, true, ref ru);
+                    sc = Cell(t.LightCellPosition.Add(new Point(offsets_x[s], offsets_y[s])), model, true, ref ru);
                     if (sc != null)
                     {
                         ClearSaplings(sc, ru, false);
@@ -463,7 +463,7 @@ namespace iLand.Core
                 for (int i = 0; i < to_establish; i++)
                 {
                     Tree bigtree = ru.AddNewTree();
-                    bigtree.LightCellIndex = model.LightGrid.IndexOf(isc);
+                    bigtree.LightCellPosition = model.LightGrid.IndexOf(isc);
                     // add variation: add +/-N% to dbh and *independently* to height.
                     bigtree.Dbh = (float)(dbh * RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation));
                     bigtree.SetHeight((float)(tree.Height * RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation)));

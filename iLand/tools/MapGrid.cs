@@ -78,7 +78,7 @@ namespace iLand.Tools
                 throw new NotSupportedException("GisGrid::create10mGrid: no valid model to retrieve height grid.");
             }
 
-            Grid<HeightGridValue> h_grid = model.HeightGrid;
+            Grid<HeightCell> h_grid = model.HeightGrid;
             if (h_grid == null || h_grid.IsEmpty())
             {
                 throw new NotSupportedException("MapGrid.loadFromGrid(): no valid height grid to copy grid size.");
@@ -115,7 +115,7 @@ namespace iLand.Tools
 
         public void CreateEmptyGrid(Model model)
         {
-            Grid<HeightGridValue> h_grid = model.HeightGrid;
+            Grid<HeightCell> h_grid = model.HeightGrid;
             if (h_grid == null || h_grid.IsEmpty())
             {
                 throw new NotSupportedException("GisGrid::createEmptyGrid: 10mGrid: no valid height grid to copy grid size.");
@@ -220,7 +220,7 @@ namespace iLand.Tools
             {
                 foreach (Tree tree in ru.Trees)
                 {
-                    if (StandIDFromLifCoord(tree.LightCellIndex) == id && !tree.IsDead())
+                    if (StandIDFromLifCoord(tree.LightCellPosition) == id && !tree.IsDead())
                     {
                         tree_list.Add(tree);
                     }
@@ -252,7 +252,7 @@ namespace iLand.Tools
             {
                 foreach (Tree tree in ru.Trees)
                 {
-                    if (StandIDFromLifCoord(tree.LightCellIndex) == id && !tree.IsDead())
+                    if (StandIDFromLifCoord(tree.LightCellPosition) == id && !tree.IsDead())
                     {
                         Tree t = tree;
                         tw.Tree = t;

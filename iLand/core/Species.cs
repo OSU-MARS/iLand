@@ -395,7 +395,7 @@ namespace iLand.Core
             // no seed production if maturity age is not reached (species parameter) or if tree height is below 4m.
             if (tree.Age > mMaturityYears && tree.Height > 4.0F)
             {
-                SeedDispersal.SetMatureTree(tree.LightCellIndex, tree.LeafArea);
+                SeedDispersal.SetMatureTree(tree.LightCellPosition, tree.LeafArea);
             }
         }
 

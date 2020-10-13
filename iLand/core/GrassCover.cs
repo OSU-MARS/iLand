@@ -73,7 +73,7 @@ namespace iLand.Core
             Grid.Setup(model.LightGrid.PhysicalExtent, model.LightGrid.CellSize);
             Grid.ClearDefault();
             // mask out out-of-project areas
-            Grid<HeightGridValue> heightGrid = model.HeightGrid;
+            Grid<HeightCell> heightGrid = model.HeightGrid;
             for (int i = 0; i < Grid.Count; ++i)
             {
                 if (!heightGrid[Grid.Index5(i)].IsInWorld())

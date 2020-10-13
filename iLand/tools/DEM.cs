@@ -79,7 +79,7 @@ namespace iLand.Tools
                 throw new NotSupportedException("No valid model to retrieve height grid.");
             }
 
-            Grid<HeightGridValue> h_grid = model.HeightGrid;
+            Grid<HeightCell> h_grid = model.HeightGrid;
             if (h_grid == null || h_grid.IsEmpty())
             {
                 throw new NotSupportedException("GisGrid::create10mGrid: no valid height grid to copy grid size.");

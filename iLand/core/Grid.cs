@@ -28,32 +28,18 @@ namespace iLand.Core
             Vector3D model = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
             Vector3D world = new Vector3D();
             GisGrid.ModelToWorld(model, world);
-            string result = String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
-                    grid.CellsX, grid.CellsY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine);
-            string line = Grid.ToString(grid, ' '); // for normal grids (e.g. float)
-            return result + line;
-        }
-
-        /// dumps a Grid<float> to a String.
-        /// rows will be y-lines, columns x-values. (see grid.cpp)
-        public static string ToString<T>(Grid<T> grid, char sep = ';', int newline_after = -1)
-        {
-            StringBuilder res = new StringBuilder();
-            int newl_counter = newline_after;
+            StringBuilder result = new StringBuilder();
+            result.Append(String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
+                                        grid.CellsX, grid.CellsY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine));
             for (int y = grid.CellsY - 1; y >= 0; --y)
             {
                 for (int x = 0; x < grid.CellsX; x++)
                 {
-                    res.Append(grid[x, y].ToString() + sep);
-                    if (--newl_counter == 0)
-                    {
-                        res.Append(System.Environment.NewLine);
-                        newl_counter = newline_after;
-                    }
+                    result.Append(grid[x, y].ToString() + ' ');
                 }
-                res.Append(System.Environment.NewLine);
+                result.Append(System.Environment.NewLine);
             }
-            return res.ToString();
+            return result.ToString();
         }
 
         /// template version for non-float grids (see also version for Grid<float>)
@@ -346,6 +332,23 @@ namespace iLand.Core
             PointF fp2 = GetCellCenterPoint(p2);
             double distance = MathF.Sqrt((fp1.X - fp2.X) * (fp1.X - fp2.X) + (fp1.Y - fp2.Y) * (fp1.Y - fp2.Y));
             return distance;
+        }
+
+        /// dumps a Grid<T> to a long data CSV.
+        /// rows will be y-lines, columns x-values. (see grid.cpp)
+        public string ToCsv()
+        {
+            StringBuilder res = new StringBuilder();
+            res.AppendLine("x_m,y_m,value"); // wrong if value overrides ToString() and returns multiple values
+            for (int xIndex = 0; xIndex < this.CellsX; ++xIndex)
+            {
+                for (int yIndex = 0; yIndex < this.CellsY; ++yIndex)
+                {
+                    PointF cellCenter = this.GetCellCenterPoint(new Point(xIndex, yIndex));
+                    res.AppendLine(cellCenter.X + "," + cellCenter.Y + "," + this[xIndex, yIndex].ToString());
+                }
+            }
+            return res.ToString();
         }
     }
 }

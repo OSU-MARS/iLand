@@ -162,7 +162,7 @@ namespace iLand.Tools
             {
                 // apply the reader-stamp
                 Stamp reader = t.Stamp.Reader;
-                Point pos_reader = t.LightCellIndex; // tree position
+                Point pos_reader = t.LightCellPosition; // tree position
                 pos_reader.X -= reader.CenterCellPosition;
                 pos_reader.Y -= reader.CenterCellPosition;
                 int reader_size = reader.Size();

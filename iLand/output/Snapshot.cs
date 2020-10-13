@@ -265,12 +265,12 @@ namespace iLand.Output
                     insertTree.Parameters[6].Value = t.Height;
                     insertTree.Parameters[7].Value = t.Dbh;
                     insertTree.Parameters[8].Value = t.LeafArea;
-                    insertTree.Parameters[10].Value = t.mOpacity;
+                    insertTree.Parameters[10].Value = t.Opacity;
                     insertTree.Parameters[11].Value = t.FoliageMass;
                     insertTree.Parameters[12].Value = t.StemMass;
                     insertTree.Parameters[13].Value = t.FineRootMass;
                     insertTree.Parameters[14].Value = t.CoarseRootMass;
-                    insertTree.Parameters[15].Value = t.mNPPReserve;
+                    insertTree.Parameters[15].Value = t.NppReserve;
                     insertTree.Parameters[16].Value = t.StressIndex;
                     insertTree.ExecuteNonQuery();
                 }
@@ -359,24 +359,24 @@ namespace iLand.Output
                 {
                     continue;
                 }
-                Tree t = ru.AddNewTree();
-                t.RU = ru;
-                t.ID = treeReader.GetInt32(1);
-                t.SetLightCellIndex(coord);
-                Species s = model.SpeciesSet().Species(treeReader.GetInt32(4));
-                t.Species = s ?? throw new NotSupportedException("loadTrees: Invalid species");
-                t.Age = treeReader.GetInt32(5);
-                t.Height = treeReader.GetFloat(6);
-                t.Dbh = treeReader.GetFloat(7);
-                t.LeafArea = treeReader.GetFloat(8);
-                t.mOpacity = treeReader.GetFloat(9);
-                t.FoliageMass = treeReader.GetFloat(10);
-                t.StemMass = treeReader.GetFloat(11);
-                t.FineRootMass = treeReader.GetFloat(12);
-                t.CoarseRootMass = treeReader.GetFloat(13);
-                t.mNPPReserve = treeReader.GetFloat(14);
-                t.StressIndex = treeReader.GetFloat(15);
-                t.Stamp = s.GetStamp(t.Dbh, t.Height);
+                Tree tree = ru.AddNewTree();
+                tree.RU = ru;
+                tree.ID = treeReader.GetInt32(1);
+                tree.SetLightCellIndex(coord);
+                Species species = model.SpeciesSet().Species(treeReader.GetInt32(4));
+                tree.Species = species ?? throw new NotSupportedException("loadTrees: Invalid species");
+                tree.Age = treeReader.GetInt32(5);
+                tree.Height = treeReader.GetFloat(6);
+                tree.Dbh = treeReader.GetFloat(7);
+                tree.LeafArea = treeReader.GetFloat(8);
+                tree.Opacity = treeReader.GetFloat(9);
+                tree.FoliageMass = treeReader.GetFloat(10);
+                tree.StemMass = treeReader.GetFloat(11);
+                tree.FineRootMass = treeReader.GetFloat(12);
+                tree.CoarseRootMass = treeReader.GetFloat(13);
+                tree.NppReserve = treeReader.GetFloat(14);
+                tree.StressIndex = treeReader.GetFloat(15);
+                tree.Stamp = species.GetStamp(tree.Dbh, tree.Height);
             }
 
             // now the saplings
@@ -455,19 +455,19 @@ namespace iLand.Output
             {
                 treeInsert.Parameters[0].Value = t.ID;
                 treeInsert.Parameters[1].Value = t.RU.Index;
-                treeInsert.Parameters[2].Value = t.PositionIndex.X;
-                treeInsert.Parameters[3].Value = t.PositionIndex.Y;
+                treeInsert.Parameters[2].Value = t.LightCellPosition.X;
+                treeInsert.Parameters[3].Value = t.LightCellPosition.Y;
                 treeInsert.Parameters[4].Value = t.Species.ID;
                 treeInsert.Parameters[5].Value = t.Age;
                 treeInsert.Parameters[6].Value = t.Height;
                 treeInsert.Parameters[7].Value = t.Dbh;
                 treeInsert.Parameters[8].Value = t.LeafArea;
-                treeInsert.Parameters[9].Value = t.mOpacity;
+                treeInsert.Parameters[9].Value = t.Opacity;
                 treeInsert.Parameters[10].Value = t.FoliageMass;
                 treeInsert.Parameters[11].Value = t.StemMass;
                 treeInsert.Parameters[12].Value = t.FineRootMass;
                 treeInsert.Parameters[13].Value = t.CoarseRootMass;
-                treeInsert.Parameters[14].Value = t.mNPPReserve;
+                treeInsert.Parameters[14].Value = t.NppReserve;
                 treeInsert.Parameters[15].Value = t.StressIndex;
                 treeInsert.ExecuteNonQuery();
 
@@ -518,25 +518,25 @@ namespace iLand.Output
                 // add a new tree to the tree list
                 //ru.trees().Add(Tree());
                 //Tree &t = ru.trees().back();
-                Tree t = ru.AddNewTree();
-                t.RU = ru;
-                t.ID = treeReader.GetInt32(0);
-                t.PositionIndex = new Point(offsetx + treeReader.GetInt32(2) % Constant.LightPerRUsize,
+                Tree tree = ru.AddNewTree();
+                tree.RU = ru;
+                tree.ID = treeReader.GetInt32(0);
+                tree.LightCellPosition = new Point(offsetx + treeReader.GetInt32(2) % Constant.LightPerRUsize,
                                             offsety + treeReader.GetInt32(3) % Constant.LightPerRUsize);
-                Species s = model.SpeciesSet().GetSpecies(treeReader.GetString(4));
-                t.Species = s ?? throw new NotSupportedException("loadTrees: Invalid species");
-                t.Age = treeReader.GetInt32(5);
-                t.Height = treeReader.GetFloat(6);
-                t.Dbh = treeReader.GetFloat(7);
-                t.LeafArea = treeReader.GetFloat(8);
-                t.mOpacity = treeReader.GetFloat(9);
-                t.FoliageMass = treeReader.GetFloat(10);
-                t.StemMass = treeReader.GetFloat(11);
-                t.FineRootMass = treeReader.GetFloat(12);
-                t.CoarseRootMass = treeReader.GetFloat(13);
-                t.mNPPReserve = treeReader.GetFloat(14);
-                t.StressIndex = treeReader.GetFloat(15);
-                t.Stamp = s.GetStamp(t.Dbh, t.Height);
+                Species species = model.SpeciesSet().GetSpecies(treeReader.GetString(4));
+                tree.Species = species ?? throw new NotSupportedException("loadTrees: Invalid species");
+                tree.Age = treeReader.GetInt32(5);
+                tree.Height = treeReader.GetFloat(6);
+                tree.Dbh = treeReader.GetFloat(7);
+                tree.LeafArea = treeReader.GetFloat(8);
+                tree.Opacity = treeReader.GetFloat(9);
+                tree.FoliageMass = treeReader.GetFloat(10);
+                tree.StemMass = treeReader.GetFloat(11);
+                tree.FineRootMass = treeReader.GetFloat(12);
+                tree.CoarseRootMass = treeReader.GetFloat(13);
+                tree.NppReserve = treeReader.GetFloat(14);
+                tree.StressIndex = treeReader.GetFloat(15);
+                tree.Stamp = species.GetStamp(tree.Dbh, tree.Height);
 
                 if (n < 10000000 && ++n % 10000 == 0)
                 {
@@ -596,7 +596,7 @@ namespace iLand.Output
                     soilInsert.Parameters[14].Value = s.YoungRefractory.Weight;
                     soilInsert.Parameters[15].Value = s.OrganicMatter.C;
                     soilInsert.Parameters[16].Value = s.OrganicMatter.N;
-                    soilInsert.Parameters[17].Value = ru.WaterCycle.CurrentContent;
+                    soilInsert.Parameters[17].Value = ru.WaterCycle.CurrentSoilWaterContent;
                     soilInsert.Parameters[18].Value = ru.WaterCycle.CurrentSnowWaterEquivalent();
                     soilInsert.ExecuteNonQuery();
 

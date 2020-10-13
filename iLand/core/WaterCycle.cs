@@ -24,36 +24,34 @@ namespace iLand.Core
         private ResourceUnit mRU; ///< resource unit to which this watercycle is connected
         private readonly Canopy mCanopy; ///< object representing the forest canopy (interception, evaporation)
         private readonly SnowPack mSnowPack; ///< object representing the snow cover (aggregation, melting)
-        private double mSoilDepth; ///< depth of the soil (without rocks) in mm
         private double mPermanentWiltingPoint; ///< bucket "height" of PWP (is fixed to -4MPa) (mm)
-        private readonly double[] mPsi; ///< soil water potential for each day in kPa
         private double mLAINeedle;
         private double mLAIBroadleaved;
         
+        public double CanopyConductance { get; private set; } ///< current canopy conductance (LAI weighted CC of available tree species) (m/s)
+        public double CurrentSoilWaterContent { get; private set; } ///< current water content in mm water column of the soil
+        public double FieldCapacity { get; private set; } ///<  bucket height of field-capacity (eq. -15kPa) (mm)
+        public double[] Psi { get; private set; } ///< soil water potential for each day in kPa
+
+        public double SoilDepth { get; private set; } ///< soil depth (without rocks) in mm
+        public double SnowDays { get; set; } ///< # of days with snowcover >0
+        public double SnowDayRad { get; set; } ///< sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
         public double TotalEvapotranspiration { get; set; } ///< annual sum of evapotranspiration (mm)
         public double TotalWaterLoss { get; set; } ///< annual sum of water loss due to lateral outflow/groundwater flow (mm)
-        public double SnowDayRad { get; set; } ///< sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
-        public double SnowDays { get; set; } ///< # of days with snowcover >0
-
-        public double CanopyConductance { get; private set; } ///< current canopy conductance (LAI weighted CC of available tree species) (m/s)
-        public double CurrentContent { get; private set; } ///< current water content in mm water column of the soil
-        public double FieldCapacity { get; private set; } ///<  bucket height of field-capacity (eq. -15kPa) (mm)
-        public double SoilDepth { get; private set; } ///< soil depth in mm
 
         public WaterCycle()
         {
             this.mCanopy = new Canopy();
             this.mLastYear = -1;
-            this.mPsi = new double[Constant.DaysInLeapYear];
+            this.Psi = new double[Constant.DaysInLeapYear];
             this.mSnowPack = new SnowPack();
-            this.mSoilDepth = 0;
+            this.SoilDepth = 0;
         }
 
         public double CurrentSnowWaterEquivalent() { return mSnowPack.WaterEquivalent; } ///< current water stored as snow (mm water)
-        public double Psi(int day) { return mPsi[day]; } ///< soil water potential for the day 'doy' (0-index) in kPa
         /// monthly values for PET (mm sum)
         public double[] ReferenceEvapotranspiration() { return mCanopy.ReferenceEvapotranspiration; }
-        public void SetContent(double content, double snow_mm) { CurrentContent = content; mSnowPack.WaterEquivalent = snow_mm; }
+        public void SetContent(double content, double snow_mm) { CurrentSoilWaterContent = content; mSnowPack.WaterEquivalent = snow_mm; }
 
         public void Setup(ResourceUnit ru, Model model)
         {
@@ -61,7 +59,7 @@ namespace iLand.Core
             // get values...
             FieldCapacity = 0.0; // on top
             XmlHelper xml = model.GlobalSettings.Settings;
-            mSoilDepth = xml.GetDouble("model.site.soilDepth", 0.0) * 10; // convert from cm to mm
+            SoilDepth = xml.GetDouble("model.site.soilDepth", 0.0) * 10; // convert from cm to mm
             double pct_sand = xml.GetDouble("model.site.pctSand");
             double pct_silt = xml.GetDouble("model.site.pctSilt");
             double pct_clay = xml.GetDouble("model.site.pctClay");
@@ -80,6 +78,7 @@ namespace iLand.Core
             mPermanentWiltingPoint = HeightFromPsi(-4000); // maximum psi is set to a constant of -4MPa
             if (xml.GetBool("model.settings.waterUseSoilSaturation", false) == false)
             {
+                // BUGBUG: may result in field capacity height below permanent wilt point
                 FieldCapacity = HeightFromPsi(-15);
             }
             else
@@ -93,7 +92,9 @@ namespace iLand.Core
                 }
             }
 
-            CurrentContent = FieldCapacity; // start with full water content (in the middle of winter)
+            // start with full soil water content (in the middle of winter)
+            // BUGBUG: depends on model location and input climate data
+            CurrentSoilWaterContent = FieldCapacity;
             if (model.GlobalSettings.LogDebug())
             {
                 Debug.WriteLine("setup of water: Psi_sat (kPa) " + mPsi_sat + " Theta_sat " + mTheta_sat + " coeff. b " + mPsi_koeff_b);
@@ -120,7 +121,7 @@ namespace iLand.Core
             {
                 return -100000000.0;
             }
-            double psi_x = mPsi_sat * Math.Pow((mm / mSoilDepth / mTheta_sat), mPsi_koeff_b);
+            double psi_x = mPsi_sat * Math.Pow((mm / SoilDepth / mTheta_sat), mPsi_koeff_b);
             return psi_x; // pis
         }
 
@@ -130,7 +131,7 @@ namespace iLand.Core
         public double HeightFromPsi(double psi_kpa)
         {
             // rho_x = rho_ref * (psi_x / psi_ref)^(1/b)
-            double h = mSoilDepth * mTheta_sat * Math.Pow(psi_kpa / mPsi_sat, 1.0 / mPsi_koeff_b);
+            double h = SoilDepth * mTheta_sat * Math.Pow(psi_kpa / mPsi_sat, 1.0 / mPsi_koeff_b);
             return h;
         }
 
@@ -256,33 +257,29 @@ namespace iLand.Core
                 return;
             }
             using DebugTimer tw = new DebugTimer("WaterCycle.Run()");
-            WaterCycleData add_data = new WaterCycleData();
+            WaterCycleData hydrologicState = new WaterCycleData();
 
             // preparations (once a year)
             GetStandValues(model); // fetch canopy characteristics from iLand (including weighted average for mCanopyConductance)
             mCanopy.SetStandParameters(mLAINeedle, mLAIBroadleaved, CanopyConductance);
 
             // main loop over all days of the year
-            double prec_mm, prec_after_interception, prec_to_soil, et, excess;
             Climate climate = mRU.Climate;
-            
-            int doy = 0;
-            TotalWaterLoss = 0.0;
-            TotalEvapotranspiration = 0.0;
+            int dayOfYear = 0;
             SnowDayRad = 0.0;
             SnowDays = 0;
-            for (int index = climate.CurrentJanuary1; index < climate.NextJanuary1; ++index, ++doy)
+            TotalEvapotranspiration = 0.0;
+            TotalWaterLoss = 0.0;
+            for (int dayIndex = climate.CurrentJanuary1; dayIndex < climate.NextJanuary1; ++dayIndex, ++dayOfYear)
             {
-                ClimateDay day = climate[index];
-                // (1) precipitation of the day
-                prec_mm = day.Preciptitation;
+                ClimateDay day = climate[dayIndex];
                 // (2) interception by the crown
-                prec_after_interception = mCanopy.Flow(prec_mm);
+                double throughfallInMM = mCanopy.Flow(day.Preciptitation);
                 // (3) storage in the snow pack
-                prec_to_soil = mSnowPack.Flow(prec_after_interception, day.MeanDaytimeTemperature);
+                double infiltrationInMM = mSnowPack.Flow(throughfallInMM, day.MeanDaytimeTemperature);
                 // save extra data (used by e.g. fire module)
-                add_data.WaterReachingGround[doy] = prec_to_soil;
-                add_data.SnowCover[doy] = mSnowPack.WaterEquivalent;
+                hydrologicState.WaterReachingGround[dayOfYear] = infiltrationInMM;
+                hydrologicState.SnowCover[dayOfYear] = mSnowPack.WaterEquivalent;
                 if (mSnowPack.WaterEquivalent > 0.0)
                 {
                     SnowDayRad += day.Radiation;
@@ -290,40 +287,40 @@ namespace iLand.Core
                 }
 
                 // (4) add rest to soil
-                CurrentContent += prec_to_soil;
+                CurrentSoilWaterContent += infiltrationInMM;
 
-                excess = 0.0;
-                if (CurrentContent > FieldCapacity)
+                double runoffInMM = 0.0;
+                if (CurrentSoilWaterContent > FieldCapacity)
                 {
                     // excess water runoff
-                    excess = CurrentContent - FieldCapacity;
-                    TotalWaterLoss += excess;
-                    CurrentContent = FieldCapacity;
+                    runoffInMM = CurrentSoilWaterContent - FieldCapacity;
+                    TotalWaterLoss += runoffInMM;
+                    CurrentSoilWaterContent = FieldCapacity;
                 }
 
-                double current_psi = PsiFromHeight(CurrentContent);
-                mPsi[doy] = current_psi;
+                double currentPsi = PsiFromHeight(CurrentSoilWaterContent);
+                Psi[dayOfYear] = currentPsi;
 
                 // (5) transpiration of the vegetation (and of water intercepted in canopy)
                 // calculate the LAI-weighted response values for soil water and vpd:
                 double interception_before_transpiration = mCanopy.Interception;
-                double combined_response = CalculateSoilAtmosphereResponse(current_psi, day.Vpd);
-                et = mCanopy.Evapotranspiration3PG(day, model, climate.DayLengthInHours(doy), combined_response);
+                double combined_response = CalculateSoilAtmosphereResponse(currentPsi, day.Vpd);
+                double et = mCanopy.Evapotranspiration3PG(day, model, climate.DayLengthInHours(dayOfYear), combined_response);
                 // if there is some flow from intercepted water to the ground -> add to "water_to_the_ground"
                 if (mCanopy.Interception < interception_before_transpiration)
                 {
-                    add_data.WaterReachingGround[doy] += interception_before_transpiration - mCanopy.Interception;
+                    hydrologicState.WaterReachingGround[dayOfYear] += interception_before_transpiration - mCanopy.Interception;
                 }
 
-                CurrentContent -= et; // reduce content (transpiration)
+                CurrentSoilWaterContent -= et; // reduce content (transpiration)
                                 // add intercepted water (that is *not* evaporated) again to the soil (or add to snow if temp too low -> call to snowpack)
-                CurrentContent += mSnowPack.Add(mCanopy.Interception, day.MeanDaytimeTemperature);
+                CurrentSoilWaterContent += mSnowPack.Add(mCanopy.Interception, day.MeanDaytimeTemperature);
 
                 // do not remove water below the PWP (fixed value)
-                if (CurrentContent < mPermanentWiltingPoint)
+                if (CurrentSoilWaterContent < mPermanentWiltingPoint)
                 {
-                    et -= mPermanentWiltingPoint - CurrentContent; // reduce et (for bookkeeping)
-                    CurrentContent = mPermanentWiltingPoint;
+                    et -= mPermanentWiltingPoint - CurrentSoilWaterContent; // reduce et (for bookkeeping)
+                    CurrentSoilWaterContent = mPermanentWiltingPoint;
                 }
 
                 TotalEvapotranspiration += et;
@@ -336,11 +333,11 @@ namespace iLand.Core
                     output.AddRange(new object[] { day.ID(), mRU.Index, mRU.ID, day.MeanDaytimeTemperature, day.Vpd, day.Preciptitation, day.Radiation });
                     output.Add(combined_response); // combined response of all species on RU (min(water, vpd))
                                                    // fluxes
-                    output.AddRange(new object[] { prec_after_interception, prec_to_soil, et, mCanopy.EvaporationCanopy, CurrentContent, mPsi[doy], excess });
+                    output.AddRange(new object[] { throughfallInMM, infiltrationInMM, et, mCanopy.EvaporationCanopy, CurrentSoilWaterContent, Psi[dayOfYear], runoffInMM });
                     // other states
                     output.Add(mSnowPack.WaterEquivalent);
                     //special sanity check:
-                    if (prec_to_soil > 0.0 && mCanopy.Interception > 0.0)
+                    if (infiltrationInMM > 0.0 && mCanopy.Interception > 0.0)
                     {
                         if (mSnowPack.WaterEquivalent == 0.0 && day.Preciptitation == 0)
                         {
@@ -350,8 +347,9 @@ namespace iLand.Core
                 }
                 //); // DBGMODE()
             }
+
             // call external modules
-            model.Modules.CalculateWater(mRU, add_data);
+            model.Modules.CalculateWater(mRU, hydrologicState);
             mLastYear = model.GlobalSettings.CurrentYear;
         }
     }

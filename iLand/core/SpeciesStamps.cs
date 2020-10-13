@@ -470,7 +470,7 @@ namespace iLand.Core
                     res.AppendFormat("P: x/y: {0}/{1}{2}", mStampsByClass.IndexOf(s).X, mStampsByClass.IndexOf(s).Y, System.Environment.NewLine);
                 }
             }
-            res.AppendLine(System.Environment.NewLine + Grid.ToString(mStampsByClass));
+            res.AppendLine(mStampsByClass.ToString());
             return res.ToString();
         }
     }

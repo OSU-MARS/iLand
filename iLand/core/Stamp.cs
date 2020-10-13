@@ -66,7 +66,7 @@ namespace iLand.Core
         public int Count() { return DataSize * DataSize; } ///< count of pixels (rectangle)
 
         /// get index (e.g. for data()[index]) for indices x and y
-        public int IndexOf(int x, int y) { Debug.Assert(y * DataSize + x < DataSize * DataSize); return y * DataSize + x; }
+        public int IndexOf(int x, int y) { Debug.Assert((y * DataSize + x) < Data.Length); return y * DataSize + x; }
 
         public void SetReader(Stamp reader)
         {
