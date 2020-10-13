@@ -202,12 +202,13 @@ namespace iLand.Core
             return Species[species.Index];
         }
 
-        public Tree AddNewTree()
+        public Tree AddNewTree(Model model)
         {
             Tree tree = new Tree()
             {
                 ID = this.mNextTreeID++
             };
+            tree.SetGrids(model.LightGrid, model.HeightGrid);
             this.Trees.Add(tree);
             return tree;
         }
@@ -269,11 +270,14 @@ namespace iLand.Core
 
         public void NewYear()
         {
-            mTotalWeightedLeafArea = 0.0;
-            TotalLeafArea = 0.0;
-            mAggregatedLR = 0.0;
-            PhotosyntheticallyActiveArea = 0.0;
-            mHeightCells = mHeightCellsWithTrees = 0;
+            this.mAggregatedLR = 0.0;
+            this.mHeightCells = 0;
+            this.mHeightCellsWithTrees = 0;
+            this.mTotalWeightedLeafArea = 0.0;
+
+            this.PhotosyntheticallyActiveArea = 0.0;
+            this.TotalLeafArea = 0.0;
+
             SnagNewYear();
             if (Soil != null)
             {
@@ -350,6 +354,7 @@ namespace iLand.Core
 
             // calculate the total weighted leaf area on this RU:
             LriModifier = PhotosyntheticallyActiveArea / mTotalWeightedLeafArea; // p_WLA
+            Debug.Assert(LriModifier >= 0.0 && LriModifier < 2.0); // sanity upper bound
             if (LriModifier == 0.0)
             {
                 Debug.WriteLine("lri modification==0!");
@@ -410,7 +415,7 @@ namespace iLand.Core
 
         public void CalculateInterceptedArea()
         {
-            if (mAggregatedLR == 0)
+            if (mAggregatedLR == 0.0)
             {
                 EffectiveAreaPerWla = 0.0;
                 return;
@@ -481,12 +486,12 @@ namespace iLand.Core
             }
         }
 
-        public void AddTreeAgingForAllTrees(GlobalSettings globalSettings)
+        public void AddTreeAgingForAllTrees(Model model)
         {
             AverageAging = 0.0;
             foreach (Tree t in Trees)
             {
-                AddTreeAging(t.LeafArea, t.Species.Aging(globalSettings, t.Height, t.Age));
+                AddTreeAging(t.LeafArea, t.Species.Aging(model, t.Height, t.Age));
             }
         }
 

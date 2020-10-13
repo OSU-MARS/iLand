@@ -1,5 +1,4 @@
 ﻿using iLand.Core;
-using iLand.Tools;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
 
@@ -7,7 +6,7 @@ namespace iLand.Test
 {
     public class LandTest
     {
-        protected string GetDefaultProjectPath(TestContext testContext)
+        protected string GetKalkalpenProjectPath(TestContext testContext)
         {
             return Path.Combine(testContext.TestDir, "..", "..", "UnitTests", "testProject", "testProject.xml");
         }

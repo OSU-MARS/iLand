@@ -5,7 +5,7 @@ using System;
 
 namespace iLand.Output
 {
-    internal class TreeOutput : Output
+    public class TreeOutput : Output
     {
         private readonly Expression mFilter;
 
@@ -53,7 +53,7 @@ namespace iLand.Output
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             AllTreeIterator at = new AllTreeIterator(model);
-            using DebugTimer dt = new DebugTimer("TreeOutput.LogYear()");
+            using DebugTimer dt = model.DebugTimers.Create("TreeOutput.LogYear()");
             TreeWrapper tw = new TreeWrapper();
             mFilter.Wrapper = tw;
             for (Tree tree = at.MoveNext(); tree != null; tree = at.MoveNext())
@@ -61,7 +61,7 @@ namespace iLand.Output
                 if (!mFilter.IsEmpty)
                 { // skip fields
                     tw.Tree = tree;
-                    if (mFilter.Execute(model.GlobalSettings) == 0.0)
+                    if (mFilter.Execute(model) == 0.0)
                     {
                         continue;
                     }

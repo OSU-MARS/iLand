@@ -100,14 +100,14 @@ namespace iLand.Output
                 if (ru != null)
                 {
                     ru_wrap.ResourceUnit = ru;
-                    index_grid[index] = ru_value.Execute(globalSettings);
+                    index_grid[index] = ru_value.Execute(model);
                 }
                 else
                 {
                     index_grid[index] = -1.0;
                 }
             }
-            string grid_text = Grid.ToEsriRaster(index_grid);
+            string grid_text = Grid.ToEsriRaster(model, index_grid);
             Helper.SaveToTextFile(gridFile, grid_text);
             Debug.WriteLine("saved grid to " + gridFile);
 
@@ -116,7 +116,7 @@ namespace iLand.Output
 
         public bool Load(string fileName, Model model)
         {
-            using DebugTimer t = new DebugTimer("Snapshot.Load()");
+            using DebugTimer t = model.DebugTimers.Create("Snapshot.Load()");
             OpenDatabase(fileName, model.GlobalSettings, true);
 
             FileInfo fi = new FileInfo(fileName);
@@ -142,10 +142,10 @@ namespace iLand.Output
                 // setup link between resource unit index and index grid:
                 // store for each resource unit *in the snapshot database* the corresponding
                 // resource unit index of the *current* simulation.
-                PointF to = GisGrid.WorldToModel(grid.Origin);
+                PointF to = model.Environment.GisGrid.WorldToModel(grid.Origin);
                 if ((to.X % Constant.RUSize) != 0.0 || (to.Y % Constant.RUSize) != 0.0)
                 {
-                    PointF world_offset = GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
+                    PointF world_offset = model.Environment.GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
                     throw new NotSupportedException(String.Format("Loading of the snapshot '{0}' failed: The offset from the current location of the project ({3}/{4}) " +
                                              "is not a multiple of the resource unit size (100m) relative to grid of the snapshot (origin-x: {1}, origin-y: {2}).", fileName,
                                      grid.Origin.X, grid.Origin.Y, world_offset.X, world_offset.Y));
@@ -251,7 +251,7 @@ namespace iLand.Output
                 insertTree.Parameters.Add(":npp", SqliteType.Real);
                 insertTree.Parameters.Add(":si", SqliteType.Real);
 
-                PointF offset = GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
+                PointF offset = model.Environment.GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
                 List<Tree> tree_list = standGrid.Trees(standID);
                 for (int index = 0; index < tree_list.Count; ++index)
                 {
@@ -296,7 +296,7 @@ namespace iLand.Output
                 insertSapling.Parameters.Add("stress_years", SqliteType.Integer);
                 insertSapling.Parameters.Add("flags", SqliteType.Integer);
 
-                PointF offset = GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
+                PointF offset = model.Environment.GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
                 SaplingCellRunner scr = new SaplingCellRunner(standID, standGrid, model);
                 for (SaplingCell sc = scr.MoveNext(); sc != null; sc = scr.MoveNext())
                 {
@@ -349,7 +349,7 @@ namespace iLand.Output
             {
                 ++n;
 
-                PointF coord = GisGrid.WorldToModel(new PointF(treeReader.GetInt32(2), treeReader.GetInt32(3)));
+                PointF coord = model.Environment.GisGrid.WorldToModel(new PointF(treeReader.GetInt32(2), treeReader.GetInt32(3)));
                 if (!extent.Contains(coord))
                 {
                     continue;
@@ -359,7 +359,7 @@ namespace iLand.Output
                 {
                     continue;
                 }
-                Tree tree = ru.AddNewTree();
+                Tree tree = ru.AddNewTree(model);
                 tree.RU = ru;
                 tree.ID = treeReader.GetInt32(1);
                 tree.SetLightCellIndex(coord);
@@ -398,7 +398,7 @@ namespace iLand.Output
                 using SqliteDataReader saplingReader = saplingQuery.ExecuteReader();
                 while (saplingReader.Read())
                 {
-                    PointF coord = GisGrid.WorldToModel(new PointF(saplingReader.GetInt32(0), saplingReader.GetInt32(1)));
+                    PointF coord = model.Environment.GisGrid.WorldToModel(new PointF(saplingReader.GetInt32(0), saplingReader.GetInt32(1)));
                     if (!extent.Contains(coord))
                     {
                         continue;
@@ -518,7 +518,7 @@ namespace iLand.Output
                 // add a new tree to the tree list
                 //ru.trees().Add(Tree());
                 //Tree &t = ru.trees().back();
-                Tree tree = ru.AddNewTree();
+                Tree tree = ru.AddNewTree(model);
                 tree.RU = ru;
                 tree.ID = treeReader.GetInt32(0);
                 tree.LightCellPosition = new Point(offsetx + treeReader.GetInt32(2) % Constant.LightPerRUsize,

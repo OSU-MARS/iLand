@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 
 namespace iLand.Output
 {
-    internal class SaplingDetailsOutput : Output
+    public class SaplingDetailsOutput : Output
     {
         private readonly Expression mFilter;
         private double mMinDbh;
@@ -41,7 +41,7 @@ namespace iLand.Output
                 // exclude if a condition is specified and condition is not met
                 if (!mFilter.IsEmpty)
                 {
-                    if (mFilter.Execute(model.GlobalSettings) == 0.0)
+                    if (mFilter.Execute(model) == 0.0)
                     {
                         continue;
                     }

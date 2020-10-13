@@ -1,4 +1,5 @@
-﻿using System;
+﻿using iLand.Core;
+using System;
 
 namespace iLand.Tools
 {
@@ -45,7 +46,7 @@ namespace iLand.Tools
             mUpdated = false;
         }
 
-        public int Random()
+        public int Random(Model model)
         {
             if (mGrid == null)
             {
@@ -55,7 +56,7 @@ namespace iLand.Tools
             {
                 UpdateValues();
             }
-            int rnd = RandomGenerator.Random(0, mMaxVal);
+            int rnd = model.RandomGenerator.Random(0, mMaxVal);
             int index = 0;
             while (rnd >= mGrid[index] && index < mSize)
             {

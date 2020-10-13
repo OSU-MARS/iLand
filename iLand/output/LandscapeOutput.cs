@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace iLand.Output
 {
     /** LandscapeOut is aggregated output for the total landscape per species. All values are per hectare values. */
-    internal class LandscapeOutput : Output
+    public class LandscapeOutput : Output
     {
         private readonly Expression mFilter;
         private readonly Dictionary<string, StandStatistics> mStandStatisticsBySpecies;
@@ -49,7 +49,7 @@ namespace iLand.Output
         {
             if (!mFilter.IsEmpty)
             {
-                if (mFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
+                if (mFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
                 {
                     return;
                 }

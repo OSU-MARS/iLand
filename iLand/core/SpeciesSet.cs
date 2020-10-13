@@ -60,9 +60,9 @@ namespace iLand.Core
             ActiveSpecies.Clear();
         }
 
-        public double GetLriCorrection(GlobalSettings globalSettings, double lightResourceIndex, double relativeHeight) 
+        public double GetLriCorrection(Model model, double lightResourceIndex, double relativeHeight) 
         { 
-            return mLriCorrection.Calculate(globalSettings, lightResourceIndex, relativeHeight); 
+            return mLriCorrection.Calculate(model, lightResourceIndex, relativeHeight); 
         }
 
         public Species Species(int index)
@@ -80,21 +80,21 @@ namespace iLand.Core
         /** loads active species from a database table and creates/setups the species.
             The function uses the global database-connection.
           */
-        public int Setup(GlobalSettings globalSettings)
+        public int Setup(Model model)
         {
-            XmlHelper xml = globalSettings.Settings;
+            XmlHelper xml = model.GlobalSettings.Settings;
             string tableName = xml.GetString("model.species.source", "species");
             Name = tableName;
             string readerStampFile = xml.GetString("model.species.reader", "readerstamp.bin");
-            readerStampFile = globalSettings.Path(readerStampFile, "lip");
+            readerStampFile = model.GlobalSettings.Path(readerStampFile, "lip");
             this.ReaderStamps.Load(readerStampFile);
-            if (globalSettings.Settings.GetBooleanParameter("debugDumpStamps", false))
+            if (model.GlobalSettings.Settings.GetBooleanParameter("debugDumpStamps", false))
             {
                 Debug.WriteLine(ReaderStamps.Dump());
             }
 
             this.Clear();
-            using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", tableName), globalSettings.DatabaseInput);
+            using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", tableName), model.GlobalSettings.DatabaseInput);
             // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");
             using SpeciesReader speciesReader = new SpeciesReader(speciesSelect.ExecuteReader());
             while (speciesReader.Read())
@@ -104,7 +104,7 @@ namespace iLand.Core
                 {
                     continue;
                 }
-                Species species = Core.Species.Load(speciesReader, this, globalSettings);
+                Species species = Core.Species.Load(speciesReader, this, model);
                 mSpeciesByID.Add(species.ID, species);
                 if (species.Active)
                 {
@@ -154,8 +154,8 @@ namespace iLand.Core
             XmlHelper light = new XmlHelper(xml.Node("model.species.lightResponse"));
             mLightResponseTolerant.SetAndParse(light.GetString("shadeTolerant"));
             mLightResponseIntolerant.SetAndParse(light.GetString("shadeIntolerant"));
-            mLightResponseTolerant.Linearize(globalSettings, 0.0, 1.0);
-            mLightResponseIntolerant.Linearize(globalSettings, 0.0, 1.0);
+            mLightResponseTolerant.Linearize(model, 0.0, 1.0);
+            mLightResponseIntolerant.Linearize(model, 0.0, 1.0);
             if (String.IsNullOrEmpty(mLightResponseTolerant.ExpressionString) || String.IsNullOrEmpty(mLightResponseIntolerant.ExpressionString))
             {
                 throw new NotSupportedException("At least one parameter of /project/model/species/lightResponse is missing.");
@@ -163,9 +163,9 @@ namespace iLand.Core
             // lri-correction
             mLriCorrection.SetAndParse(light.GetString("LRImodifier", "1"));
             // x: LRI, y: relative height
-            mLriCorrection.Linearize(globalSettings, 0.0, 1.0, 0.0, 1.0);
+            mLriCorrection.Linearize(model, 0.0, 1.0, 0.0, 1.0);
 
-            CreateRandomSpeciesOrder();
+            CreateRandomSpeciesOrder(model);
             return mSpeciesByID.Count;
         }
 
@@ -191,7 +191,7 @@ namespace iLand.Core
             {
                 return;
             }
-            using DebugTimer t = new DebugTimer("SpeciesSet.Regeneration()");
+            using DebugTimer t = model.DebugTimers.Create("SpeciesSet.Regeneration()");
 
             ThreadRunner runner = new ThreadRunner(ActiveSpecies); // initialize a thread runner object with all active species
             runner.Run(SeedDistribution, model);
@@ -211,9 +211,9 @@ namespace iLand.Core
             {
                 return;
             }
-            foreach (Species s in ActiveSpecies) 
+            foreach (Species species in ActiveSpecies) 
             {
-                s.NewYear(model.GlobalSettings);
+                species.NewYear(model);
             }
         }
 
@@ -227,13 +227,13 @@ namespace iLand.Core
             throw new NotSupportedException("SpeciesSet: variable not set: " + columnName);
         }
 
-        public void GetRandomSpeciesSampleIndices(out int beginIndex, out int endIndex)
+        public void GetRandomSpeciesSampleIndices(Model model, out int beginIndex, out int endIndex)
         {
-            beginIndex = this.ActiveSpecies.Count * RandomGenerator.Random(0, RandomSets - 1);
+            beginIndex = this.ActiveSpecies.Count * model.RandomGenerator.Random(0, RandomSets - 1);
             endIndex = beginIndex + this.ActiveSpecies.Count;
         }
 
-        private void CreateRandomSpeciesOrder()
+        private void CreateRandomSpeciesOrder(Model model)
         {
             RandomSpeciesOrder.Clear();
             RandomSpeciesOrder.Capacity = ActiveSpecies.Count * RandomSets;
@@ -248,7 +248,7 @@ namespace iLand.Core
                 // sample and reduce list
                 while (samples.Count > 0)
                 {
-                    int index = RandomGenerator.Random(0, samples.Count);
+                    int index = model.RandomGenerator.Random(0, samples.Count);
                     RandomSpeciesOrder.Add(samples[index]);
                     samples.RemoveAt(index);
                 }
@@ -330,10 +330,10 @@ namespace iLand.Core
             LightResponse is classified from 1 (very shade inolerant) and 5 (very shade tolerant) and interpolated for values between 1 and 5.
             Returns a value between 0..1
             @sa http://iland.boku.ac.at/allocation#reserve_and_allocation_to_stem_growth */
-        public double LightResponse(GlobalSettings globalSettings, double lightResourceIndex, double lightResponseClass)
+        public double LightResponse(Model model, double lightResourceIndex, double lightResponseClass)
         {
-            double intolerant = mLightResponseIntolerant.Calculate(globalSettings, lightResourceIndex);
-            double tolerant = mLightResponseTolerant.Calculate(globalSettings, lightResourceIndex);
+            double intolerant = mLightResponseIntolerant.Calculate(model, lightResourceIndex);
+            double tolerant = mLightResponseTolerant.Calculate(model, lightResourceIndex);
             double response = intolerant + 0.25 * (lightResponseClass - 1.0) * (tolerant - intolerant);
             return Global.Limit(response, 0.0, 1.0);
         }

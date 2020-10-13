@@ -1,4 +1,5 @@
-﻿using System;
+﻿using iLand.Core;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -155,13 +156,13 @@ namespace iLand.Tools
             Wrapper = wrapper;
         }
 
-        public double ExecuteLocked(GlobalSettings globalSettings) ///< thread safe version
-        {
-            lock (this.mTokens)
-            {
-                return Execute(globalSettings);
-            }
-        }
+        //public double ExecuteLocked(Model model) ///< thread safe version
+        //{
+        //    lock (this.mTokens)
+        //    {
+        //        return Execute(model);
+        //    }
+        //}
 
         //public static void AddSpecies(string name, int index)
         //{
@@ -630,30 +631,30 @@ namespace iLand.Tools
             }
         }
 
-        public double Calculate(GlobalSettings globalSettings, double x = 0.0, double y = 0.0, bool forceExecution = false)
+        public double Calculate(Model model, double x = 0.0, double y = 0.0, bool forceExecution = false)
         {
             if (mLinearizedDimensionCount > 0 && !forceExecution)
             {
                 if (mLinearizedDimensionCount == 1)
                 {
-                    return GetLinearizedValue(globalSettings, x);
+                    return GetLinearizedValue(model, x);
                 }
-                return GetLinearizedValue(globalSettings, x, y); // matrix case
+                return GetLinearizedValue(model, x, y); // matrix case
             }
             double[] var_space = new double[10];
             var_space[0] = x;
             var_space[1] = y;
             IsStrict = false;
-            return this.Execute(globalSettings, var_space); // execute with local variables on stack
+            return this.Execute(model, var_space); // execute with local variables on stack
         }
 
-        public double Calculate(ExpressionWrapper obj, GlobalSettings globalSettings, double variable1 = 0.0, double variable2 = 0.0)
+        public double Calculate(ExpressionWrapper obj, Model model, double variable1 = 0.0, double variable2 = 0.0)
         {
             double[] variableStack = new double[10];
             variableStack[0] = variable1;
             variableStack[1] = variable2;
             IsStrict = false;
-            return Execute(globalSettings, variableStack, obj); // execute with local variables on stack
+            return Execute(model, variableStack, obj); // execute with local variables on stack
         }
 
         private int GetFunctionIndex(string functionName)
@@ -666,7 +667,7 @@ namespace iLand.Tools
             return index;
         }
 
-        public double Execute(GlobalSettings globalSettings, double[] variableList = null, ExpressionWrapper obj = null)
+        public double Execute(Model model, double[] variableList = null, ExpressionWrapper obj = null)
         {
             if (!m_parsed)
             {
@@ -713,7 +714,7 @@ namespace iLand.Tools
                         }
                         else if (exec.Index < 1000)
                         {
-                            value = GetModelVariable(exec.Index, globalSettings, obj);
+                            value = GetModelVariable(exec.Index, model.GlobalSettings, obj);
                         }
                         else
                         {
@@ -794,7 +795,7 @@ namespace iLand.Tools
                             case 14: // rnd(from, to) bzw. rndg(mean, stddev)
                                 stackDepth--;
                                 // index-13: 1 bei rnd, 0 bei rndg
-                                stack[stackDepth] = UserDefinedRandom(exec.Index - 13, stack[stackDepth], stack[stackDepth + 1]);
+                                stack[stackDepth] = UserDefinedRandom(model, exec.Index - 13, stack[stackDepth], stack[stackDepth + 1]);
                                 break;
                             case 15: // in-list in() operator
                                 stack[stackDepth - (int)(exec.Value - 1)] = UserDefinedFunctionInList(stack[stackDepth - (int)(exec.Value - 1)], stack, stackDepth, (int)exec.Value);
@@ -1069,16 +1070,16 @@ namespace iLand.Tools
             m_execListSize = NewSize;
         }
 
-        private double UserDefinedRandom(int type, double p1, double p2)
+        private double UserDefinedRandom(Model model, int type, double p1, double p2)
         {
             // random / gleichverteilt - normalverteilt
             if (type == 0)
             {
-                return RandomGenerator.Random(p1, p2);
+                return model.RandomGenerator.Random(p1, p2);
             }
             else    // gaussverteilt
             {
-                return RandomGenerator.RandNorm(p1, p2);
+                return model.RandomGenerator.RandNorm(p1, p2);
             }
         }
 
@@ -1088,9 +1089,9 @@ namespace iLand.Tools
             high_value: upper limit
             steps: number of steps the function is split into
           */
-        public void Linearize(GlobalSettings globalSettings, double lowValue, double highValue, int steps = 1000)
+        public void Linearize(Model model, double lowValue, double highValue, int steps = 1000)
         {
-            if (globalSettings.LinearizationEnabled == false)
+            if (model.GlobalSettings.LinearizationEnabled == false)
             {
                 return;
             }
@@ -1103,16 +1104,16 @@ namespace iLand.Tools
             for (int i = 0; i <= steps + 1; i++)
             {
                 double x = mLinearLow + i * mLinearStep;
-                double r = Calculate(globalSettings, x);
+                double r = Calculate(model, x);
                 mLinearized.Add(r);
             }
             mLinearizedDimensionCount = 1;
         }
 
         /// like 'linearize()' but for 2d-matrices
-        public void Linearize(GlobalSettings globalSettings, double lowX, double highX, double lowY, double highY, int stepsX = 50, int stepsY = 50)
+        public void Linearize(Model model, double lowX, double highX, double lowY, double highY, int stepsX = 50, int stepsY = 50)
         {
-            if (globalSettings.LinearizationEnabled == false)
+            if (model.GlobalSettings.LinearizationEnabled == false)
             {
                 return;
             }
@@ -1130,7 +1131,7 @@ namespace iLand.Tools
                 {
                     double x = mLinearLow + i * mLinearStep;
                     double y = mLinearLowY + j * mLinearStepY;
-                    double r = Calculate(globalSettings, x, y);
+                    double r = Calculate(model, x, y);
                     mLinearized.Add(r);
                 }
             }
@@ -1139,11 +1140,11 @@ namespace iLand.Tools
         }
 
         /// calculate the linear approximation of the result value
-        private double GetLinearizedValue(GlobalSettings globalSettings, double x)
+        private double GetLinearizedValue(Model model, double x)
         {
             if (x < mLinearLow || x > mLinearHigh)
             {
-                return Calculate(globalSettings, x, 0.0, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
+                return Calculate(model, x, 0.0, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lower = (int)((x - mLinearLow) / mLinearStep); // the lower point
             if (lower + 1 >= mLinearized.Count())
@@ -1157,11 +1158,11 @@ namespace iLand.Tools
         }
 
         /// calculate the linear approximation of the result value
-        private double GetLinearizedValue(GlobalSettings globalSettings, double x, double y)
+        private double GetLinearizedValue(Model model, double x, double y)
         {
             if (x < mLinearLow || x > mLinearHigh || y < mLinearLowY || y > mLinearHighY)
             {
-                return Calculate(globalSettings, x, y, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
+                return Calculate(model, x, y, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lowerx = (int)((x - mLinearLow) / mLinearStep); // the lower point (x-axis)
             int lowery = (int)((y - mLinearLowY) / mLinearStepY); // the lower point (y-axis)

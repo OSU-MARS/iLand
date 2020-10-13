@@ -12,22 +12,22 @@ namespace iLand.Core
             throw new NotImplementedException();
         }
 
-        public static string ToEsriRaster<T>(Grid<T> grid, Func<T, string> valueFunction)
-        {
-            Vector3D model = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
-            Vector3D world = new Vector3D();
-            GisGrid.ModelToWorld(model, world);
-            string result = String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
-                                           grid.CellsX, grid.CellsY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine);
-            string line = Grid.ToString(grid, valueFunction, ' '); // for special grids
-            return result + line;
-        }
+        //public static string ToEsriRaster<T>(Grid<T> grid, Func<T, string> valueFunction)
+        //{
+        //    Vector3D model = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
+        //    Vector3D world = new Vector3D();
+        //    GisGrid.ModelToWorld(model, world);
+        //    string result = String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
+        //                                   grid.CellsX, grid.CellsY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine);
+        //    string line = Grid.ToString(grid, valueFunction, ' '); // for special grids
+        //    return result + line;
+        //}
 
-        public static string ToEsriRaster<T>(Grid<T> grid)
+        public static string ToEsriRaster<T>(Model model, Grid<T> grid)
         {
-            Vector3D model = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
+            Vector3D local = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
             Vector3D world = new Vector3D();
-            GisGrid.ModelToWorld(model, world);
+            model.Environment.GisGrid.ModelToWorld(local, world);
             StringBuilder result = new StringBuilder();
             result.Append(String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
                                         grid.CellsX, grid.CellsY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine));
@@ -187,8 +187,7 @@ namespace iLand.Core
         /// get the metric cell center point of the cell given by index 'index'
         public PointF GetCellCenterPoint(int index)
         {
-            Point pos = IndexOf(index);
-            return new PointF((pos.X + 0.5F) * CellSize + PhysicalExtent.Left, (pos.Y + 0.5F) * CellSize + PhysicalExtent.Top);
+            return this.GetCellCenterPoint(this.IndexOf(index));
         }
 
         /// get the metric rectangle of the cell with index @pos

@@ -114,7 +114,6 @@ namespace iLand.Output
         {
             mIncludeHarvestTrees = globalSettings.Settings.GetBool(".includeHarvest", true);
             mIncludeDeadTrees = globalSettings.Settings.GetBool(".includeNatural", false);
-            Tree.LandscapeRemovalOutput = this;
         }
     }
 }

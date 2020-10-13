@@ -5,7 +5,7 @@ using Microsoft.Data.Sqlite;
 namespace iLand.Output
 {
     /** StandOut is basic stand level info per species and ressource unit */
-    internal class StandOutput : Output
+    public class StandOutput : Output
     {
         private readonly Expression mFilter;
 
@@ -52,7 +52,7 @@ namespace iLand.Output
         {
             if (!mFilter.IsEmpty)
             {
-                if (mFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
+                if (mFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
                 {
                     return;
                 }

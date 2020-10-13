@@ -8,6 +8,7 @@ namespace iLand
         public const double BiomassCFraction = 0.5; // fraction of (dry) biomass which is carbon
         public const int DaysInLeapYear = 366;
 
+        public const int HeightSizePerRU = 10; // height cells per resource unit side length, used for torus positioning
         public const double HeightPixelArea = 100.0; // 100m2 area of a height pixel
         public const int HeightSize = 10; // size of a height grid pixel, m
         public const int LightSize = 2; // size of light grid, m

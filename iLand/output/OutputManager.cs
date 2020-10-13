@@ -12,30 +12,60 @@ namespace iLand.Output
       */
     public class OutputManager
     {
-        private readonly List<Output> mOutputs; ///< list of outputs in system
+        private readonly List<Output> outputs; ///< list of outputs in system
+
+        public CarbonFlowOutput CarbonFlowOutput { get; private set; }
+        public CarbonOutput CarbonOutput { get; private set; }
+        public DynamicStandOutput DynamicStandOutput { get; private set; }
+        public LandscapeOutput LandscapeOutput { get; private set; }
+        public LandscapeRemovedOutput LandscapeRemovedOutput { get; private set; }
+        public ManagementOutput ManagementOutput { get; private set; }
+        public ProductionOutput ProductionOutput { get; private set; }
+        public SaplingOutput SaplingOutput { get; private set; }
+        public SaplingDetailsOutput SaplingDetailsOutput { get; private set; }
+        public StandDeadOutput StandDeadOutput { get; private set; }
+        public StandOutput StandOutput { get; private set; }
+        public TreeOutput TreeOutput { get; private set; }
+        public TreeRemovedOutput TreeRemovedOutput { get; private set; }
+        public WaterOutput WaterOutput { get; private set; }
 
         // on creation of the output manager
         // an instance of every iLand output
         // must be added to the list of outputs.
         public OutputManager()
         {
+            this.CarbonFlowOutput = new CarbonFlowOutput();
+            this.CarbonOutput = new CarbonOutput();
+            this.DynamicStandOutput = new DynamicStandOutput();
+            this.LandscapeOutput = new LandscapeOutput();
+            this.LandscapeRemovedOutput = new LandscapeRemovedOutput();
+            this.ProductionOutput = new ProductionOutput();
+            this.ManagementOutput = new ManagementOutput();
+            this.StandDeadOutput = new StandDeadOutput();
+            this.SaplingDetailsOutput = new SaplingDetailsOutput();
+            this.SaplingOutput = new SaplingOutput();
+            this.StandOutput = new StandOutput();
+            this.TreeOutput = new TreeOutput();
+            this.TreeRemovedOutput = new TreeRemovedOutput();
+            this.WaterOutput = new WaterOutput();
+
             // add all the outputs
-            mOutputs = new List<Output>() 
+            this.outputs = new List<Output>() 
             {
-                new TreeOutput(),
-                new TreeRemovedOutput(),
-                new StandOutput(),
-                new LandscapeOutput(),
-                new LandscapeRemovedOutput(),
-                new DynamicStandOutput(),
-                new ProductionOutput(),
-                new StandDeadOutput(),
-                new ManagementOutput(),
-                new SaplingOutput(),
-                new SaplingDetailsOutput(),
-                new CarbonOutput(),
-                new CarbonFlowOutput(),
-                new WaterOutput()
+                this.TreeOutput,
+                this.TreeRemovedOutput,
+                this.StandOutput,
+                this.LandscapeOutput,
+                this.LandscapeRemovedOutput,
+                this.DynamicStandOutput,
+                this.ProductionOutput,
+                this.StandDeadOutput,
+                this.ManagementOutput,
+                this.SaplingOutput,
+                this.SaplingDetailsOutput,
+                this.CarbonOutput,
+                this.CarbonFlowOutput,
+                this.WaterOutput
             };
         }
 
@@ -43,37 +73,36 @@ namespace iLand.Output
         {
             //close();
             XmlHelper xml = globalSettings.Settings;
-            string nodepath;
-            foreach (Output o in mOutputs)
+            foreach (Output output in outputs)
             {
-                nodepath = String.Format("output.{0}", o.TableName);
+                string nodepath = String.Format("output.{0}", output.TableName);
                 xml.TrySetCurrentNode(nodepath);
-                o.Setup(globalSettings);
-                o.IsEnabled = xml.GetBool(".enabled", false);
-                if (o.IsEnabled)
+                output.Setup(globalSettings);
+                output.IsEnabled = xml.GetBool(".enabled", false);
+                if (output.IsEnabled)
                 {
-                    o.Open(globalSettings);
+                    output.Open(globalSettings);
                 }
             }
         }
 
-        public Output Find(string tableName)
-        {
-            foreach (Output p in mOutputs)
-            {
-                if (p.TableName == tableName)
-                {
-                    return p;
-                }
-            }
-            return null;
-        }
+        //public Output Find(string tableName)
+        //{
+        //    foreach (Output output in mOutputs)
+        //    {
+        //        if (output.TableName == tableName)
+        //        {
+        //            return output;
+        //        }
+        //    }
+        //    return null;
+        //}
 
         public void LogYear(Model model)
         {
-            using DebugTimer timer = new DebugTimer("OutputManager.LogYear()");
+            using DebugTimer timer = model.DebugTimers.Create("OutputManager.LogYear()");
 
-            foreach (Output output in this.mOutputs)
+            foreach (Output output in this.outputs)
             {
                 if (output.IsEnabled && output.IsOpen)
                 {
@@ -90,9 +119,9 @@ namespace iLand.Output
         public string WikiFormat()
         {
             StringBuilder result = new StringBuilder();
-            foreach (Output o in mOutputs)
+            foreach (Output output in outputs)
             {
-                result.Append(o.WriteHeaderToWiki() + System.Environment.NewLine);
+                result.AppendLine(output.WriteHeaderToWiki());
             }
             return result.ToString();
         }

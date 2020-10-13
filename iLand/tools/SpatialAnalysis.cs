@@ -41,7 +41,7 @@ namespace iLand.Tools
         /// extract patches (clumps) from the grid 'src'.
         /// Patches are defined as adjacent pixels (8-neighborhood)
         /// Return: vector with number of pixels per patch (first element: patch 1, second element: patch 2, ...)
-        public List<int> ExtractPatches(GlobalSettings globalSettings, Grid<double> src, int min_size, string fileName)
+        public List<int> ExtractPatches(Model model, Grid<double> src, int min_size, string fileName)
         {
             mClumpGrid.Setup(src.PhysicalExtent, src.CellSize);
             mClumpGrid.ClearDefault();
@@ -126,8 +126,8 @@ namespace iLand.Tools
             Debug.WriteLine("extractPatches: found " + patch_index + " patches, total valid pixels: " + total_size + " skipped" + patches_skipped);
             if (String.IsNullOrEmpty(fileName) == false)
             {
-                Debug.WriteLine("extractPatches: save to file: " + globalSettings.Path(fileName));
-                Helper.SaveToTextFile(globalSettings.Path(fileName), Grid.ToEsriRaster(mClumpGrid));
+                Debug.WriteLine("extractPatches: save to file: " + model.GlobalSettings.Path(fileName));
+                Helper.SaveToTextFile(model.GlobalSettings.Path(fileName), Grid.ToEsriRaster(model, mClumpGrid));
             }
             return counts;
 
@@ -139,13 +139,13 @@ namespace iLand.Tools
             {
                 mRumple = new RumpleIndex();
             }
-            Helper.SaveToTextFile(model.GlobalSettings.Path(fileName), Grid.ToEsriRaster(mRumple.RumpleGrid(model)));
+            Helper.SaveToTextFile(model.GlobalSettings.Path(fileName), Grid.ToEsriRaster(model, mRumple.RumpleGrid(model)));
         }
 
         public void SaveCrownCoverGrid(Model model, string fileName)
         {
             CalculateCrownCover(model);
-            Helper.SaveToTextFile(model.GlobalSettings.Path(fileName), Grid.ToEsriRaster(mCrownCoverGrid));
+            Helper.SaveToTextFile(model.GlobalSettings.Path(fileName), Grid.ToEsriRaster(model, mCrownCoverGrid));
         }
 
         private void CalculateCrownCover(Model model)

@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace iLand.Output
 {
-    internal class DynamicStandOutput : Output
+    public class DynamicStandOutput : Output
     {
         private static readonly ReadOnlyCollection<string> Aggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95", "sd" }.AsReadOnly();
 
@@ -118,13 +118,13 @@ namespace iLand.Output
             }
             if (!mFilter.IsEmpty)
             {
-                if (mFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) != 0.0)
+                if (mFilter.Calculate(model, model.GlobalSettings.CurrentYear) != 0.0)
                 {
                     return;
                 }
             }
 
-            using DebugTimer dt = new DebugTimer("DynamicStandOutput.LogYear()");
+            using DebugTimer dt = model.DebugTimers.Create("DynamicStandOutput.LogYear()");
 
             bool perSpecies = model.GlobalSettings.Settings.GetBool("output.dynamicstand.by_species", true);
             bool per_ru = model.GlobalSettings.Settings.GetBool("output.dynamicstand.by_ru", true);
@@ -183,7 +183,7 @@ namespace iLand.Output
                     }
                     else
                     {
-                        data.Add(custom_expr.Execute(model.GlobalSettings));
+                        data.Add(custom_expr.Execute(model));
                     }
                     // constant values (if not already present)
                     if (IsRowEmpty())
@@ -260,7 +260,7 @@ namespace iLand.Output
                 if (!mRUFilter.IsEmpty)
                 {
                     ruwrapper.ResourceUnit = ru;
-                    if (mRUFilter.Execute(model.GlobalSettings) == 0.0)
+                    if (mRUFilter.Execute(model) == 0.0)
                     {
                         continue;
                     }
@@ -300,7 +300,7 @@ namespace iLand.Output
                             if (!mTreeFilter.IsEmpty)
                             {
                                 mTreeFilter.Wrapper = tw;
-                                if (mTreeFilter.Execute(model.GlobalSettings) == 0.0)
+                                if (mTreeFilter.Execute(model) == 0.0)
                                 {
                                     continue;
                                 }
@@ -313,7 +313,7 @@ namespace iLand.Output
                             }
                             else
                             {
-                                data.Add(custom_expr.Execute(model.GlobalSettings));
+                                data.Add(custom_expr.Execute(model));
                             }
                         }
 

@@ -5,7 +5,6 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Text;
 using System.Xml;
 
 namespace iLand.Core
@@ -22,6 +21,7 @@ namespace iLand.Core
         public double TotalStockableHectares { get; private set; } ///< total stockable area of the landscape (ha)
 
         public List<Climate> Climates { get; private set; }
+        public DebugTimerCollection DebugTimers { get; private set; }
         public DEM Dem { get; private set; }
         public Environment Environment { get; private set; }
         public GrassCover GrassCover { get; private set; }
@@ -29,6 +29,7 @@ namespace iLand.Core
         public Management Management { get; private set; }
         public ModelSettings ModelSettings { get; private set; }
         public Modules Modules { get; private set; }
+        public RandomGenerator RandomGenerator { get; private set; }
         public List<ResourceUnit> ResourceUnits { get; private set; }
         public Saplings Saplings { get; private set; }
         public TimeEvents TimeEvents { get; private set; }
@@ -46,11 +47,13 @@ namespace iLand.Core
             this.mSpeciesSets = new List<SpeciesSet>();
 
             this.Climates = new List<Climate>();
+            this.DebugTimers = new DebugTimerCollection();
             this.GlobalSettings = new GlobalSettings()
             {
                 CurrentYear = 0,
             };
             this.ModelSettings = new ModelSettings();
+            this.RandomGenerator = new RandomGenerator();
             this.ResourceUnits = new List<ResourceUnit>();
             this.ResourceUnitGrid = new Grid<ResourceUnit>();
             this.ThreadRunner = new ThreadRunner();
@@ -95,7 +98,7 @@ namespace iLand.Core
             // initialize stands
             StandLoader loader = new StandLoader(this);
             {
-                using DebugTimer loadTrees = new DebugTimer("StandLoader.ProcessInit()");
+                using DebugTimer loadTrees = this.DebugTimers.Create("StandLoader.ProcessInit()");
                 loader.ProcessInit(this);
             }
 
@@ -105,7 +108,7 @@ namespace iLand.Core
                 {
                     Debug.WriteLine("attempting to load climate...");
                 }
-                using DebugTimer loadClimamtes = new DebugTimer("Model.BeforeRun(Climate.Setup + NextYear)");
+                using DebugTimer loadClimamtes = this.DebugTimers.Create("Model.BeforeRun(Climate.Setup + NextYear)");
                 foreach (Climate c in Climates)
                 {
                     if (!c.IsSetup)
@@ -116,7 +119,7 @@ namespace iLand.Core
                 // load the first year of the climate database
                 foreach (Climate c in Climates)
                 {
-                    c.NextYear(this.GlobalSettings);
+                    c.NextYear(this);
                 }
             }
 
@@ -125,15 +128,14 @@ namespace iLand.Core
                 {
                     Debug.WriteLine("attempting to calculate initial stand statistics (incl. apply and read pattern)...");
                 }
-                using DebugTimer loadinit = new DebugTimer("Model.BeforeRun(light + height grids and statistics)");
-                Tree.SetGrids(LightGrid, HeightGrid);
+                using DebugTimer loadinit = this.DebugTimers.Create("Model.BeforeRun(light + height grids and statistics)");
                 // debugCheckAllTrees(); // introduced for debugging session (2012-04-06)
                 ApplyPattern();
                 ReadPattern();
                 loader.ProcessAfterInit(this); // e.g. initialization of saplings
 
                 // force the compilation of initial stand statistics
-                CreateStandStatistics(this.GlobalSettings);
+                CreateStandStatistics(this);
             }
 
             // outputs to create with inital state (without any growth) are called here:
@@ -157,10 +159,9 @@ namespace iLand.Core
           */
         public void RunYear() ///< run a single year
         {
-            using DebugTimer t = new DebugTimer("Model.RunYear()");
+            using DebugTimer t = this.DebugTimers.Create("Model.RunYear()");
             this.GlobalSettings.SystemStatistics.Reset();
-            RandomGenerator.CheckGenerator(); // see if we need to generate new numbers...
-                                              // initalization at start of year for external modules
+            // initalization at start of year for external modules
             Modules.YearBegin();
 
             // execute scheduled events for the current year
@@ -173,7 +174,7 @@ namespace iLand.Core
             {
                 foreach (Climate c in Climates)
                 {
-                    c.NextYear(this.GlobalSettings);
+                    c.NextYear(this);
                 }
             }
 
@@ -190,7 +191,7 @@ namespace iLand.Core
             // management classic
             if (Management != null)
             {
-                using DebugTimer t2 = new DebugTimer("Management.Run()");
+                using DebugTimer t2 = this.DebugTimers.Create("Management.Run()");
                 Management.Run();
                 this.GlobalSettings.SystemStatistics.ManagementTime += t.Elapsed();
             }
@@ -209,7 +210,7 @@ namespace iLand.Core
             if (ModelSettings.RegenerationEnabled)
             {
                 // seed dispersal
-                using DebugTimer tseed = new DebugTimer("Model.RunYear(seed dispersal, establishment, sapling growth");
+                using DebugTimer tseed = this.DebugTimers.Create("Model.RunYear(seed dispersal, establishment, sapling growth");
                 foreach (SpeciesSet set in mSpeciesSets)
                 {
                     set.Regeneration(this); // parallel execution for each species set
@@ -217,12 +218,12 @@ namespace iLand.Core
                 this.GlobalSettings.SystemStatistics.SeedDistributionTime += tseed.Elapsed();
                 // establishment
                 {
-                    using DebugTimer t2 = new DebugTimer("Model.SaplingEstablishment()");
+                    using DebugTimer t2 = this.DebugTimers.Create("Model.SaplingEstablishment()");
                     ExecutePerResourceUnit(SaplingEstablishment, false /* true: force single threaded operation */);
                     this.GlobalSettings.SystemStatistics.EstablishmentTime += t.Elapsed();
                 }
                 {
-                    using DebugTimer t3 = new DebugTimer("Model.SaplingGrowth()");
+                    using DebugTimer t3 = this.DebugTimers.Create("Model.SaplingGrowth()");
                     ExecutePerResourceUnit(SaplingGrowth, false /* true: force single threaded operation */);
                     this.GlobalSettings.SystemStatistics.SaplingTime += t.Elapsed();
                 }
@@ -231,7 +232,7 @@ namespace iLand.Core
             }
 
             // external modules/disturbances
-            Modules.Run();
+            Modules.Run(this);
             // cleanup of tree lists if external modules removed trees.
             CleanTreeLists(false); // do not recalculate statistics - this is done in ru.yearEnd()
 
@@ -239,12 +240,12 @@ namespace iLand.Core
             // calculate soil / snag dynamics
             if (ModelSettings.CarbonCycleEnabled)
             {
-                using DebugTimer ccycle = new DebugTimer("Model.CarbonCycle90");
+                using DebugTimer ccycle = this.DebugTimers.Create("Model.CarbonCycle90");
                 ExecutePerResourceUnit(CarbonCycle, false /* true: force single threaded operation */);
                 this.GlobalSettings.SystemStatistics.CarbonCycleTime += ccycle.Elapsed();
             }
 
-            using DebugTimer toutput = new DebugTimer("Model.RunYear(outputs)");
+            using DebugTimer toutput = this.DebugTimers.Create("Model.RunYear(outputs)");
             // calculate statistics
             foreach (ResourceUnit ru in ResourceUnits)
             {
@@ -265,24 +266,27 @@ namespace iLand.Core
           */
         public void Clear() ///< free resources
         {
+            // Debug.WriteLine("Model clear: attempting to clear " + ResourceUnits.Count + "RU, " + mSpeciesSets.Count + " SpeciesSets.");
+            this.DebugTimers.WriteTimers();
+
+            this.mSpeciesSets.Clear();
+
+            this.Climates.Clear();
+            this.DebugTimers.Clear();
+            this.ResourceUnits.Clear();
+
+            this.Dem = null;
+            this.Environment = null;
+            this.GrassCover = null;
+            this.LightGrid = null;
+            this.HeightGrid = null;
+            this.Management = null;
+            this.Modules = null;
+            this.StandGrid = null;
+            this.TimeEvents = null;
+
             IsSetup = false;
-            Debug.WriteLine("Model clear: attempting to clear " + ResourceUnits.Count + "RU, " + mSpeciesSets.Count + " SpeciesSets.");
-
-            ResourceUnits.Clear();
-            mSpeciesSets.Clear();
-            Climates.Clear();
-
-            LightGrid = null;
-            HeightGrid = null;
-            Management = null;
-            Environment = null;
-            TimeEvents = null;
-            StandGrid = null;
-            Modules = null;
-            Dem = null;
-            GrassCover = null;
-
-            Debug.WriteLine("Model resources freed.");
+            // Debug.WriteLine("Model resources freed.");
         }
 
         public void Dispose()
@@ -315,7 +319,7 @@ namespace iLand.Core
           */
         public void LoadProject() ///< setup and load a project
         {
-            using DebugTimer dt = new DebugTimer("Model.LoadProject()");
+            using DebugTimer dt = this.DebugTimers.Create("Model.LoadProject()");
             // this.GlobalSettings.PrintDirectories();
             XmlHelper xml = this.GlobalSettings.Settings;
 
@@ -331,6 +335,8 @@ namespace iLand.Core
             };
             this.GlobalSettings.SetLogLevel(logLevel);
 
+            // linearization of expressions: if true *and* linearize() is explicitely called, then
+            // function results will be cached over a defined range of values.
             this.GlobalSettings.LinearizationEnabled = xml.GetBool("system.settings.expressionLinearizationEnabled", false);
 
             // database connections: reset
@@ -350,8 +356,6 @@ namespace iLand.Core
             // random seed: if stored value is <> 0, use this as the random seed (and produce hence always an equal sequence of random numbers)
             int seed = Int32.Parse(xml.GetString("system.settings.randomSeed", "0"));
             RandomGenerator.Setup(RandomGenerator.RandomGenerators.MersenneTwister, seed); // use the MersenneTwister as default
-                                                                                           // linearization of expressions: if true *and* linearize() is explicitely called, then
-                                                                                           // function results will be cached over a defined range of values.
 
             // snag dynamics / soil model enabled? (info used during setup of world)
             ModelSettings.CarbonCycleEnabled = xml.GetBool("model.settings.carbonCycleEnabled", false);
@@ -401,12 +405,12 @@ namespace iLand.Core
 
         // actions
         /// build stand statistics (i.e. stats based on resource units)
-        public void CreateStandStatistics(GlobalSettings globalSettings)
+        public void CreateStandStatistics(Model model)
         {
             CalculateStockedArea();
             foreach (ResourceUnit ru in ResourceUnits)
             {
-                ru.AddTreeAgingForAllTrees(globalSettings);
+                ru.AddTreeAgingForAllTrees(model);
                 ru.CreateStandStatistics(this);
             }
         }
@@ -451,7 +455,9 @@ namespace iLand.Core
             {
                 this.HeightGrid[index] = new HeightCell();
             }
-            Tree.SetGrids(LightGrid, HeightGrid);
+
+            // load environment (multiple climates, speciesSets, ...
+            this.Environment = new Environment();
 
             // setup the spatial location of the project area
             if (xml.HasNode("location"))
@@ -461,16 +467,13 @@ namespace iLand.Core
                 double loc_y = xml.GetDouble("location.y");
                 double loc_z = xml.GetDouble("location.z");
                 double loc_rot = xml.GetDouble("location.rotation");
-                GisGrid.SetupGISTransformation(loc_x, loc_y, loc_z, loc_rot);
+                this.Environment.GisGrid.SetupGISTransformation(loc_x, loc_y, loc_z, loc_rot);
                 Debug.WriteLine("Setup of spatial location: " + loc_x + "," + loc_y + "," + loc_z + " rotation " + loc_rot);
             }
             else
             {
-                GisGrid.SetupGISTransformation(0.0, 0.0, 0.0, 0.0);
+                this.Environment.GisGrid.SetupGISTransformation(0.0, 0.0, 0.0, 0.0);
             }
-
-            // load environment (multiple climates, speciesSets, ...
-            Environment = new Environment();
 
             if (xml.GetBool("environmentEnabled", false))
             {
@@ -510,7 +513,7 @@ namespace iLand.Core
                 // (2) SpeciesSets: currently only one a global species set.
                 SpeciesSet speciesSet = new SpeciesSet();
                 mSpeciesSets.Add(speciesSet);
-                speciesSet.Setup(this.GlobalSettings);
+                speciesSet.Setup(this);
                 // Climate...
                 Climate c = new Climate();
                 Climates.Add(c);
@@ -732,7 +735,7 @@ namespace iLand.Core
 
         private void ApplyPattern() ///< apply LIP-patterns of all trees
         {
-            using DebugTimer t = new DebugTimer("Model.ApplyPattern()");
+            using DebugTimer t = this.DebugTimers.Create("Model.ApplyPattern()");
             // intialize grids...
             InitializeGrid();
 
@@ -749,7 +752,7 @@ namespace iLand.Core
 
         private void ReadPattern() ///< retrieve LRI for trees
         {
-            using DebugTimer t = new DebugTimer("Model.ReadPattern()");
+            using DebugTimer t = this.DebugTimers.Create("Model.ReadPattern()");
             ThreadRunner.Run(ReadPattern);
             this.GlobalSettings.SystemStatistics.ReadPatternTime += t.Elapsed();
         }
@@ -764,14 +767,14 @@ namespace iLand.Core
         private void Grow() ///< grow - both on RU-level and tree-level
         {
             {
-                using DebugTimer t = new DebugTimer("Model.Production()");
+                using DebugTimer t = this.DebugTimers.Create("Model.Production()");
                 CalculateStockedArea();
 
                 // Production of biomass (stand level, 3PG)
                 ThreadRunner.Run(Production);
             }
 
-            using DebugTimer t2 = new DebugTimer("Model.Grow()");
+            using DebugTimer t2 = this.DebugTimers.Create("Model.Grow()");
             ThreadRunner.Run(Grow); // actual growth of individual trees
 
             foreach (ResourceUnit ru in ResourceUnits)
@@ -980,14 +983,14 @@ namespace iLand.Core
             {
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
-                    trees[treeIndex].ReadLightInfluenceField(this.GlobalSettings); // multiplicative approach
+                    trees[treeIndex].ReadLightInfluenceField(this); // multiplicative approach
                 }
             }
             else
             {
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
-                    trees[treeIndex].ReadLightIntensityFieldTorus(this.GlobalSettings);
+                    trees[treeIndex].ReadLightIntensityFieldTorus(this);
                 }
             }
         }
@@ -1001,7 +1004,7 @@ namespace iLand.Core
             List<Tree> trees = unit.Trees;
             for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
             {
-                trees[treeIndex].CalcLightResponse(this.GlobalSettings);
+                trees[treeIndex].CalcLightResponse(this);
             }
             unit.CalculateInterceptedArea();
 

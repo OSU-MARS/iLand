@@ -91,7 +91,7 @@ namespace iLand.Core
                 {
                     throw new NotSupportedException("setup(): missing equation for 'grassDuration'.");
                 }
-                mPDF.Setup(model.GlobalSettings, formula, 0.0, 100.0);
+                mPDF.Setup(model, formula, 0.0, 100.0);
                 //mGrassEffect.setExpression(formula);
 
                 mGrassLIFThreshold = (float)xml.GetDouble("model.settings.grass.LIFThreshold", 0.2);
@@ -111,7 +111,7 @@ namespace iLand.Core
                     throw new NotSupportedException("setup of 'grass': required expression 'grassPotential' is missing.");
                 }
                 mGrassPotential.SetExpression(formula);
-                mGrassPotential.Linearize(model.GlobalSettings, 0.0, 1.0, Math.Min(Steps, 1000));
+                mGrassPotential.Linearize(model, 0.0, 1.0, Math.Min(Steps, 1000));
 
                 formula = xml.GetString("model.settings.grass.grassEffect");
                 if (String.IsNullOrEmpty(formula))
@@ -129,18 +129,18 @@ namespace iLand.Core
                 // set up the effect on regeneration in NSTEPS steps
                 for (int stepIndex = 0; stepIndex < Steps; ++stepIndex)
                 {
-                    double effect = mGrassEffect.Calculate(model.GlobalSettings, stepIndex / (double)(Steps - 1));
+                    double effect = mGrassEffect.Calculate(model, stepIndex / (double)(Steps - 1));
                     mEffect[stepIndex] = Global.Limit(effect, 0.0, 1.0);
                 }
 
-                mMaxState = (Int16)(Global.Limit(mGrassPotential.Calculate(model.GlobalSettings, 1.0F), 0.0, 1.0) * (Steps - 1)); // the max value of the potential function
+                mMaxState = (Int16)(Global.Limit(mGrassPotential.Calculate(model, 1.0F), 0.0, 1.0) * (Steps - 1)); // the max value of the potential function
             }
 
             this.IsEnabled = true;
             // Debug.WriteLine("setup of grass cover complete.");
         }
 
-        public void SetInitialValues(List<KeyValuePair<int, float>> LIFpixels, int percent)
+        public void SetInitialValues(Model model, List<KeyValuePair<int, float>> LIFpixels, int percent)
         {
             if (!IsEnabled)
             {
@@ -162,9 +162,9 @@ namespace iLand.Core
             {
                 for (int it = 0; it < LIFpixels.Count; ++it)
                 {
-                    if (percent > RandomGenerator.Random(0, 100))
+                    if (percent > model.RandomGenerator.Random(0, 100))
                     {
-                        Grid[LIFpixels[it].Key] = (Int16)mPDF.Get();
+                        Grid[LIFpixels[it].Key] = (Int16)mPDF.Get(model);
                     }
                     else
                     {
@@ -180,7 +180,7 @@ namespace iLand.Core
             {
                 return;
             }
-            using DebugTimer t = new DebugTimer("GrassCover.Execute()");
+            using DebugTimer t = model.DebugTimers.Create("GrassCover.Execute()");
 
             // Main function of the grass submodule
             Grid<float> lifGrid = model.LightGrid;
@@ -198,7 +198,7 @@ namespace iLand.Core
                         continue;
                     }
 
-                    int potential = (int)(Global.Limit(mGrassPotential.Calculate(model.GlobalSettings, lifGrid[lif]), 0.0, 1.0) * (Steps - 1));
+                    int potential = (int)(Global.Limit(mGrassPotential.Calculate(model, lifGrid[lif]), 0.0, 1.0) * (Steps - 1));
                     Grid[gr] = (Int16)(Math.Min(Grid[gr] + mGrowthRate, potential));
 
                 }
@@ -221,7 +221,7 @@ namespace iLand.Core
                     if (Grid[gr] == 0 && lifGrid[lif] > mGrassLIFThreshold)
                     {
                         // enable grass cover
-                        Grid[gr] = (Int16)(Math.Max(mPDF.Get(), 0.0) + 1); // switch on...
+                        Grid[gr] = (Int16)(Math.Max(mPDF.Get(model), 0.0) + 1); // switch on...
                     }
                     if (Grid[gr] == 1 && lifGrid[lif] < mGrassLIFThreshold)
                     {

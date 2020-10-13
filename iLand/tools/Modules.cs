@@ -120,9 +120,9 @@ namespace iLand.Tools
             }
         }
 
-        public void Run()
+        public void Run(Model model)
         {
-            using DebugTimer t = new DebugTimer("Modules.Run()");
+            using DebugTimer t = model.DebugTimers.Create("Modules.Run()");
 
             // *** run in fixed order ***
             foreach (IDisturbanceInterface di in mInterfaces)

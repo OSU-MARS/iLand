@@ -1,10 +1,9 @@
 ﻿using iLand.Core;
-using iLand.Tools;
 using Microsoft.Data.Sqlite;
 
 namespace iLand.Output
 {
-    internal class StandDeadOutput : Output
+    public class StandDeadOutput : Output
     {
         public StandDeadOutput()
         {

@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace iLand.Output
 {
-    internal class CarbonFlowOutput : Output
+    public class CarbonFlowOutput : Output
     {
         private readonly Expression mFilter; // condition for landscape-level output
         private readonly Expression mResourceUnitFilter; // condition for resource-unit-level output
@@ -60,13 +60,13 @@ namespace iLand.Output
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             // global condition
-            if (!mFilter.IsEmpty && mFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
+            if (!mFilter.IsEmpty && mFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
             {
                 return;
             }
             bool ru_level = true;
             // switch off details if this is indicated in the conditionRU option
-            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(model.GlobalSettings, model.GlobalSettings.CurrentYear) == 0.0)
+            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
             {
                 ru_level = false;
             }

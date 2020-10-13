@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using iLand.Core;
+using Microsoft.Data.Sqlite;
 using System;
 using System.Diagnostics;
 using System.Globalization;
@@ -78,7 +79,7 @@ namespace iLand.Tools
             }
         }
 
-        public void Run(GlobalSettings globalSettings)
+        public void Run(Model model)
         {
             mExpYear.SetExpression(Year);
             mExpMonth.SetExpression(Month);
@@ -150,14 +151,14 @@ namespace iLand.Tools
                     }
 
                     // calculate new values....
-                    int year = (int)mExpYear.Execute(globalSettings);
-                    int month = (int)mExpMonth.Execute(globalSettings);
-                    int day = (int)mExpDay.Execute(globalSettings);
-                    double temp = mExpTemp.Execute(globalSettings);
-                    double min_temp = mExpMinTemp.Execute(globalSettings);
-                    double prec = mExpPrec.Execute(globalSettings);
-                    double rad = mExpRad.Execute(globalSettings);
-                    double vpd = mExpVpd.Execute(globalSettings);
+                    int year = (int)mExpYear.Execute(model);
+                    int month = (int)mExpMonth.Execute(model);
+                    int day = (int)mExpDay.Execute(model);
+                    double temp = mExpTemp.Execute(model);
+                    double min_temp = mExpMinTemp.Execute(model);
+                    double prec = mExpPrec.Execute(model);
+                    double rad = mExpRad.Execute(model);
+                    double vpd = mExpVpd.Execute(model);
 
                     // bind values
                     insert.Parameters[0].Value = year;

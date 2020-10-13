@@ -3,7 +3,7 @@ using Microsoft.Data.Sqlite;
 
 namespace iLand.Output
 {
-    internal class ManagementOutput : Output
+    public class ManagementOutput : Output
     {
         public ManagementOutput()
         {

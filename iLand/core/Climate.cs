@@ -245,7 +245,7 @@ namespace iLand.Core
         }
 
         // activity
-        public void NextYear(GlobalSettings globalSettings)
+        public void NextYear(Model model)
         {
             if (mDoRandomSampling == false)
             {
@@ -268,15 +268,15 @@ namespace iLand.Core
                 {
                     // random without list
                     // make sure that the sequence of years is the same for the full landscape
-                    if (mSampledYears.Count < globalSettings.CurrentYear)
+                    if (mSampledYears.Count < model.GlobalSettings.CurrentYear)
                     {
-                        while (mSampledYears.Count - 1 < globalSettings.CurrentYear)
+                        while (mSampledYears.Count - 1 < model.GlobalSettings.CurrentYear)
                         {
-                            mSampledYears.Add(RandomGenerator.Random(0, mYearsToLoad));
+                            mSampledYears.Add(model.RandomGenerator.Random(0, mYearsToLoad));
                         }
                     }
 
-                    mCurrentYear = mSampledYears[globalSettings.CurrentYear];
+                    mCurrentYear = mSampledYears[model.GlobalSettings.CurrentYear];
                 }
                 else
                 {
@@ -292,14 +292,14 @@ namespace iLand.Core
                         throw new NotSupportedException(String.Format("Climate: load year with random sampling: the actual year {0} is invalid. Only {1} years are loaded from the climate database.", mCurrentYear, mYearsToLoad));
                     }
                 }
-                if (globalSettings.LogDebug())
+                if (model.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("Climate: current year (randomized): " + mCurrentYear);
                 }
             }
 
-            this.CarbonDioxidePpm = globalSettings.Settings.GetDouble("model.climate.co2concentration", Constant.Default.CarbonDioxidePpm);
-            if (globalSettings.LogDebug())
+            this.CarbonDioxidePpm = model.GlobalSettings.Settings.GetDouble("model.climate.co2concentration", Constant.Default.CarbonDioxidePpm);
+            if (model.GlobalSettings.LogDebug())
             {
                 Debug.WriteLine("CO2 concentration " + this.CarbonDioxidePpm + " ppm.");
             }
@@ -333,7 +333,7 @@ namespace iLand.Core
             // calculate phenology
             for (int i = 0; i < mPhenology.Count; ++i)
             {
-                mPhenology[i].Calculate(globalSettings);
+                mPhenology[i].Calculate(model.GlobalSettings);
             }
         }
 

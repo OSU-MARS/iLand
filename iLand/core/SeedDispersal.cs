@@ -19,7 +19,7 @@ namespace iLand.Core
     public class SeedDispersal
     {
         private int _debug_ldd = 0;
-        private Grid<float> mExternalSeedBaseMap = null; ///< static intermediate data while setting up external seeds
+        private Grid<float> mExternalSeedBaseMap = null; ///< intermediate data while setting up external seeds
         // TODO: can this be made species specific?
         private readonly Dictionary<string, List<double>> mExtSeedData; ///< holds definition of species and percentages for external seed input
         private int mExtSeedSizeX = 0; ///< size of the sectors used to specify external seed input
@@ -181,7 +181,7 @@ namespace iLand.Core
                 if (model.GlobalSettings.Settings.GetBool("model.settings.seedDispersal.seedBelt.enabled", false))
                 {
                     // external seed input specified by sectors and around the project area (seedbelt)
-                    SetupExternalSeedsForSpecies(Species);
+                    SetupExternalSeedsForSpecies(model, Species);
                 }
                 else
                 {
@@ -252,7 +252,7 @@ namespace iLand.Core
                 return;
             }
 
-            using DebugTimer t = new DebugTimer("SeedDispertal.SetupExternalSeeds()");
+            using DebugTimer t = model.DebugTimers.Create("SeedDispertal.SetupExternalSeeds()");
             XmlHelper xml = new XmlHelper(model.GlobalSettings.Settings.Node("model.settings.seedDispersal.seedBelt"));
             int seedbelt_width = xml.ValueInt(".width", 10);
             // setup of sectors
@@ -591,7 +591,7 @@ namespace iLand.Core
             return dist;
         }
 
-        public void SetupExternalSeedsForSpecies(Species species)
+        public void SetupExternalSeedsForSpecies(Model model, Species species)
         {
             if (!mExtSeedData.ContainsKey(species.ID))
             {
@@ -620,7 +620,7 @@ namespace iLand.Core
                             // check
                             if (mExternalSeedBaseMap[x, y] == 2.0F)
                             {
-                                if (RandomGenerator.Random() < p)
+                                if (model.RandomGenerator.Random() < p)
                                 {
                                     mExternalSeedMap[x, y] = 1.0F; // flag
                                 }
@@ -719,13 +719,13 @@ namespace iLand.Core
             }
             if (mProbMode)
             {
-                using DebugTimer t = new DebugTimer("SeedDispersal.Execute()");
+                using DebugTimer t = model.DebugTimers.Create("SeedDispersal.Execute()");
 
                 // (1) detect edges
                 if (EdgeDetection())
                 {
                     // (2) distribute seed probabilites from edges
-                    Distribute();
+                    Distribute(model);
                 }
 
                 // special case serotiny
@@ -734,7 +734,7 @@ namespace iLand.Core
                     Debug.WriteLine("calculating extra seed rain (serotiny)....");
                     if (EdgeDetection(mSeedMapSerotiny))
                     {
-                        Distribute(mSeedMapSerotiny);
+                        Distribute(model, mSeedMapSerotiny);
                     }
                     // copy back data
                     for (int p = 0; p < SeedMap.Count; ++p)
@@ -751,7 +751,7 @@ namespace iLand.Core
             else
             {
                 // distribute actual values
-                using DebugTimer t = new DebugTimer("SeedDispersal.DistributeSeeds()");
+                using DebugTimer t = model.DebugTimers.Create("SeedDispersal.DistributeSeeds()");
                 // fill seed map from source map
                 DistributeSeeds(model);
             }
@@ -827,7 +827,7 @@ namespace iLand.Core
         /** do the seed probability distribution.
             This is phase 2. Apply the seed kernel for each "edge" point identified in phase 1.
             */
-        public void Distribute(Grid<float> seed_map = null)
+        public void Distribute(Model model, Grid<float> seed_map = null)
         {
             int x, y;
             Grid<float> seedmap = seed_map ?? SeedMap; // switch to extra seed map if provided
@@ -872,8 +872,8 @@ namespace iLand.Core
                             for (int i = 0; i < n; ++i)
                             {
                                 // distance and direction:
-                                double radius = RandomGenerator.Random(mLDDDistance[r], mLDDDistance[r + 1]) / seedmap.CellSize; // choose a random distance (in pixels)
-                                double phi = RandomGenerator.Random() * 2.0 * Math.PI; // choose a random direction
+                                double radius = model.RandomGenerator.Random(mLDDDistance[r], mLDDDistance[r + 1]) / seedmap.CellSize; // choose a random distance (in pixels)
+                                double phi = model.RandomGenerator.Random() * 2.0 * Math.PI; // choose a random direction
                                 Point ldd = new Point((int)(pt.X + radius * Math.Cos(phi)), (int)(pt.Y + radius * Math.Sin(phi)));
                                 if (seedmap.Contains(ldd))
                                 {
@@ -972,7 +972,7 @@ namespace iLand.Core
                                 int n;
                                 if (mLDDDensity[r] < 1)
                                 {
-                                    n = RandomGenerator.Random() < mLDDDensity[r] ? 1 : 0;
+                                    n = model.RandomGenerator.Random() < mLDDDensity[r] ? 1 : 0;
                                 }
                                 else
                                 {
@@ -981,8 +981,8 @@ namespace iLand.Core
                                 for (int i = 0; i < n; ++i)
                                 {
                                     // distance and direction:
-                                    double radius = RandomGenerator.Random(mLDDDistance[r], mLDDDistance[r + 1]) / SeedMap.CellSize; // choose a random distance (in pixels)
-                                    double phi = RandomGenerator.Random() * 2.0 * Math.PI; // choose a random direction
+                                    double radius = model.RandomGenerator.Random(mLDDDistance[r], mLDDDistance[r + 1]) / SeedMap.CellSize; // choose a random distance (in pixels)
+                                    double phi = model.RandomGenerator.Random() * 2.0 * Math.PI; // choose a random direction
                                     Point ldd = new Point(pt.X + (int)(radius * Math.Cos(phi)), pt.Y + (int)(radius * Math.Sin(phi)));
                                     if (SeedMap.Contains(ldd))
                                     {
@@ -1035,7 +1035,7 @@ namespace iLand.Core
                                 int n;
                                 if (mLDDDensity[r] < 1)
                                 {
-                                    n = RandomGenerator.Random() < mLDDDensity[r] ? 1 : 0;
+                                    n = model.RandomGenerator.Random() < mLDDDensity[r] ? 1 : 0;
                                 }
                                 else
                                 {
@@ -1044,8 +1044,8 @@ namespace iLand.Core
                                 for (int i = 0; i < n; ++i)
                                 {
                                     // distance and direction:
-                                    double radius = RandomGenerator.Random(mLDDDistance[r], mLDDDistance[r + 1]) / SeedMap.CellSize; // choose a random distance (in pixels)
-                                    double phi = RandomGenerator.Random() * 2.0 * Math.PI; // choose a random direction
+                                    double radius = model.RandomGenerator.Random(mLDDDistance[r], mLDDDistance[r + 1]) / SeedMap.CellSize; // choose a random distance (in pixels)
+                                    double phi = model.RandomGenerator.Random() * 2.0 * Math.PI; // choose a random direction
                                     Point ldd = new Point((int)(radius * Math.Cos(phi)), (int)(radius * Math.Sin(phi))); // destination (offset)
                                     torus_pos = offset_ru.Add(new Point(Global.Modulo((offset_in_ru.X + ldd.X), seedpx_per_ru), Global.Modulo((offset_in_ru.Y + ldd.Y), seedpx_per_ru)));
 

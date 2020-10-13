@@ -16,10 +16,10 @@ namespace iLand.Tools
     public class GisGrid
     {
         // global transformation record:
-        private static readonly SCoordTrans GISCoordTrans;
+        private readonly SCoordTrans gisCoordTrans;
 
         private PointF origin;
-        private double[] mData;
+        private double[] data;
 
         // access
         public int DataSize { get; private set; }   ///< number of data items (rows*cols)
@@ -41,41 +41,38 @@ namespace iLand.Tools
 
         // setup of global GIS transformation
         // not a good place to put that code here.... please relocate!
-        public static void SetupGISTransformation(double offsetx, double offsety, double offsetz, double angle_degree)
+        public void SetupGISTransformation(double offsetx, double offsety, double offsetz, double angle_degree)
         {
-            GISCoordTrans.SetupTransformation(offsetx, offsety, offsetz, angle_degree);
+            gisCoordTrans.SetupTransformation(offsetx, offsety, offsetz, angle_degree);
         }
 
-        public static void WorldToModel(Vector3D From, Vector3D To)
+        public void WorldToModel(Vector3D From, Vector3D To)
         {
-            double x = From.X - GISCoordTrans.OffsetX;
-            double y = From.Y - GISCoordTrans.OffsetY;
-            To.X = x * GISCoordTrans.CosRotate - y * GISCoordTrans.SinRotate;
-            To.Y = x * GISCoordTrans.SinRotate + y * GISCoordTrans.CosRotate;
-            To.Z = From.Z - GISCoordTrans.OffsetZ;
+            double x = From.X - gisCoordTrans.OffsetX;
+            double y = From.Y - gisCoordTrans.OffsetY;
+            To.X = x * gisCoordTrans.CosRotate - y * gisCoordTrans.SinRotate;
+            To.Y = x * gisCoordTrans.SinRotate + y * gisCoordTrans.CosRotate;
+            To.Z = From.Z - gisCoordTrans.OffsetZ;
             //To.setY(-To.y()); // spiegeln
         }
 
-        public static void ModelToWorld(Vector3D From, Vector3D To)
+        public void ModelToWorld(Vector3D From, Vector3D To)
         {
             double x = From.X;
             double y = From.Y; // spiegeln
-            To.X = x * GISCoordTrans.CosRotateReverse - y * GISCoordTrans.SinRotateReverse + GISCoordTrans.OffsetX;
-            To.Y = x * GISCoordTrans.SinRotateReverse + y * GISCoordTrans.CosRotateReverse + GISCoordTrans.OffsetY;
-            To.Z = From.Z + GISCoordTrans.OffsetZ;
-        }
-
-        static GisGrid()
-        {
-            GisGrid.GISCoordTrans = new SCoordTrans();
+            To.X = x * gisCoordTrans.CosRotateReverse - y * gisCoordTrans.SinRotateReverse + gisCoordTrans.OffsetX;
+            To.Y = x * gisCoordTrans.SinRotateReverse + y * gisCoordTrans.CosRotateReverse + gisCoordTrans.OffsetY;
+            To.Z = From.Z + gisCoordTrans.OffsetZ;
         }
 
         public GisGrid()
         {
-            mData = null;
-            Rows = 0;
-            Cols = 0;
-            CellSize = 1; // default value (for line mode)
+            this.data = null;
+            this.gisCoordTrans = new SCoordTrans();
+
+            this.CellSize = 1; // default value (for line mode)
+            this.Cols = 0;
+            this.Rows = 0;
         }
 
         public bool LoadFromFile(string fileName)
@@ -139,7 +136,7 @@ namespace iLand.Tools
 
             // create data
             DataSize = Rows * Cols;
-            mData = new double[DataSize];
+            data = new double[DataSize];
 
             // loop thru datalines
             for (;  row < lines.Length; ++row)
@@ -153,7 +150,7 @@ namespace iLand.Tools
                         MinValue = Math.Min(MinValue, value);
                         MaxValue = Math.Max(MaxValue, value);
                     }
-                    mData[row * Cols + col] = value;
+                    data[row * Cols + col] = value;
                 }
             }
             return true;
@@ -161,27 +158,27 @@ namespace iLand.Tools
 
         public List<double> DistinctValues()
         {
-            if (mData == null)
+            if (data == null)
             {
                 return new List<double>();
             }
             Dictionary<double, double> temp_map = new Dictionary<double, double>();
             for (int i = 0; i < DataSize; i++)
             {
-                temp_map.Add(mData[i], 1.0);
+                temp_map.Add(data[i], 1.0);
             }
             temp_map.Remove(NoDataValue);
             return temp_map.Keys.ToList();
         }
 
-        public static PointF ModelToWorld(PointF model_coordinates)
+        public PointF ModelToWorld(PointF model_coordinates)
         {
             Vector3D to = new Vector3D();
             ModelToWorld(new Vector3D(model_coordinates.X, model_coordinates.Y, 0.0), to);
             return new PointF((float)to.X, (float)to.Y);
         }
 
-        public static PointF WorldToModel(PointF world_coordinates)
+        public PointF WorldToModel(PointF world_coordinates)
         {
             Vector3D to = new Vector3D();
             WorldToModel(new Vector3D(world_coordinates.X, world_coordinates.Y, 0.0), to);
@@ -219,7 +216,7 @@ namespace iLand.Tools
         {
             if (indexx >= 0 && indexx < Cols && indexy >= 0 && indexy < Rows)
             {
-                return mData[indexy * Cols + indexx];
+                return data[indexy * Cols + indexx];
             }
             return -1.0;  // out of scope
         }
@@ -229,7 +226,7 @@ namespace iLand.Tools
         {
             if (Index >= 0 && Index < DataSize)
             {
-                return mData[Index];
+                return data[Index];
             }
             return -1.0;  // out of scope
         }
@@ -254,7 +251,7 @@ namespace iLand.Tools
             int iy = (int)(world.Y / CellSize);
             if (ix >= 0 && ix < Cols && iy >= 0 && iy < Rows)
             {
-                double value = mData[iy * Cols + ix];
+                double value = data[iy * Cols + ix];
                 if (value != NoDataValue)
                 {
                     return value;
@@ -394,7 +391,7 @@ namespace iLand.Tools
                     Vector3D akoord = GetCoordinate(iy * Cols + ix);
                     if (!box.Contains((float)akoord.X, (float)akoord.Y))
                     {
-                        mData[iy * Cols + ix] = -1.0;
+                        data[iy * Cols + ix] = -1.0;
                     }
                 }
             }

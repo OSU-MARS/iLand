@@ -77,9 +77,9 @@ namespace iLand.Core
         }
 
         /// Main function that calculates monthly / annual species responses
-        public void Calculate(Climate climate)
+        public void Calculate(Model model, Climate climate)
         {
-            using DebugTimer tpg = new DebugTimer("SpeciesResponse.Calculate()");
+            using DebugTimer tpg = model.DebugTimers.Create("SpeciesResponse.Calculate()");
             Clear(); // reset values
 
             // calculate yearly responses

@@ -85,7 +85,7 @@ namespace iLand.Tools
                     // set the variable values and evaluate the expression
                     expr.SetVariable("x", ptf.X);
                     expr.SetVariable("y", ptf.Y);
-                    if (expr.Execute(model.GlobalSettings) != 0)
+                    if (expr.Execute(model) != 0)
                     {
                         p = standID;
                     }
@@ -113,7 +113,7 @@ namespace iLand.Tools
                         {
                             expr.SetVariable("x", ptf.X + dx * delta_x);
                             expr.SetVariable("y", ptf.Y + dy * delta_y);
-                            if (expr.Execute(model.GlobalSettings) != 0)
+                            if (expr.Execute(model) != 0)
                             {
                                 p = standID;
                             }

@@ -1,6 +1,7 @@
 ﻿using iLand.Tools;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -9,8 +10,9 @@ namespace iLand.Core
 {
     internal class ModelController
     {
-        private static readonly List<string> Aggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95" };
+        private static readonly ReadOnlyCollection<string> Aggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95" }.AsReadOnly();
 
+        private readonly DebugTimerCollection mDebugTimers;
         private string mInitFile;
         private readonly List<string> mDynFieldList;
         private readonly List<string> mDynData;
@@ -23,11 +25,13 @@ namespace iLand.Core
 
         public ModelController()
         {
-            mDynFieldList = new List<string>();
-            mDynData = new List<string>();
-            Model = null;
-            YearsToRun = 0;
-            DynamicOutputEnabled = false;
+            this.mDebugTimers = new DebugTimerCollection();
+            this.mDynFieldList = new List<string>();
+            this.mDynData = new List<string>();
+
+            this.Model = null;
+            this.YearsToRun = 0;
+            this.DynamicOutputEnabled = false;
         }
 
         public void ConnectSignals()
@@ -96,7 +100,7 @@ namespace iLand.Core
             Debug.WriteLine("iLand " + this.GetType().Assembly.GetName().Version);
             Debug.WriteLine("**************************************************");
 
-            DebugTimer.ClearAllTimers();
+            this.mDebugTimers.Clear();
             Model = new Model();
             Model.LoadProject();
             if (!Model.IsSetup)
@@ -122,13 +126,13 @@ namespace iLand.Core
             }
         }
 
-        public bool RunYear(GlobalSettings globalSettings)
+        public bool RunYear()
         {
             if (!CanRun())
             {
                 return false;
             }
-            using DebugTimer t = new DebugTimer("ModelController.RunYear()");
+            using DebugTimer t = this.Model.DebugTimers.Create("ModelController.RunYear()");
             Debug.WriteLine(DateTime.Now.ToString("hh:mm:ss:") + " ModelController: run year " + this.Model.GlobalSettings.CurrentYear);
 
             if (this.Model.GlobalSettings.Settings.GetBooleanParameter("debug_clear"))
@@ -138,7 +142,7 @@ namespace iLand.Core
             bool err = false;
             Model.RunYear();
 
-            FetchDynamicOutput(globalSettings);
+            FetchDynamicOutput(this.Model);
 
             return err;
         }
@@ -171,13 +175,13 @@ namespace iLand.Core
             return String.Join(System.Environment.NewLine, mDynData);
         }
 
-        public void FetchDynamicOutput(GlobalSettings globalSettings)
+        public void FetchDynamicOutput(Model model)
         {
             if (!DynamicOutputEnabled || mDynFieldList.Count == 0)
             {
                 return;
             }
-            using DebugTimer t = new DebugTimer("ModelController.FetchDynamicOutput()");
+            using DebugTimer t = model.DebugTimers.Create("ModelController.FetchDynamicOutput()");
             List<string> var = new List<string>();
             string lastVar = "";
             List<double> data = new List<double>();
@@ -232,11 +236,11 @@ namespace iLand.Core
                         tw.Tree = tree;
                         if (simple_expression)
                         {
-                            value = tw.Value(var_index, globalSettings);
+                            value = tw.Value(var_index, this.Model.GlobalSettings);
                         }
                         else
                         {
-                            value = custom_expr.Execute(globalSettings);
+                            value = custom_expr.Execute(this.Model);
                         }
                         data.Add(value);
                     }

@@ -62,7 +62,7 @@ namespace iLand.Core
             Debug.WriteLine(trees.Count + " standing, targetsize " + number + ", hence " + to_kill + " trees to remove");
             for (int i = 0; i < to_kill; i++)
             {
-                int index = RandomGenerator.Random(0, trees.Count);
+                int index = model.RandomGenerator.Random(0, trees.Count);
                 trees[index].Remove(model);
                 trees.RemoveAt(index);
             }
@@ -153,7 +153,7 @@ namespace iLand.Core
                 int cancel = 1000;
                 while (number >= 0)
                 {
-                    int rnd_index = RandomGenerator.Random(index_from, index_to);
+                    int rnd_index = model.RandomGenerator.Random(index_from, index_to);
                     if (mTrees[rnd_index].Item1.IsDead())
                     {
                         if (--cancel < 0)
@@ -200,7 +200,7 @@ namespace iLand.Core
             {
                 tw.Tree = mTrees[tp].Item1;
                 // if expression evaluates to true and if random number below threshold...
-                if (expr.Calculate(tw, model.GlobalSettings) != 0.0 && RandomGenerator.Random() <= fraction)
+                if (expr.Calculate(tw, model) != 0.0 && model.RandomGenerator.Random() <= fraction)
                 {
                     // remove from system
                     if (management)
@@ -329,7 +329,7 @@ namespace iLand.Core
             return mTrees.Count;
         }
 
-        public int Filter(GlobalSettings globalSettings, string filter)
+        public int Filter(Model model, string filter)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression expr = new Expression(filter, tw);
@@ -338,13 +338,13 @@ namespace iLand.Core
             for (int tp = 0; tp < mTrees.Count; ++tp)
             {
                 tw.Tree = mTrees[tp].Item1;
-                double value = expr.Calculate(tw, globalSettings);
+                double value = expr.Calculate(tw, model);
                 // keep if expression returns true (1)
                 bool keep = value == 1.0;
                 // if value is >0 (i.e. not "false"), then draw a random number
                 if (!keep && value > 0.0)
                 {
-                    keep = RandomGenerator.Random() < value;
+                    keep = model.RandomGenerator.Random() < value;
                 }
                 if (!keep)
                 {
@@ -543,7 +543,7 @@ namespace iLand.Core
             return 0;
         }
 
-        public void Sort(GlobalSettings globalSettings, string statement)
+        public void Sort(Model model, string statement)
         {
             TreeWrapper tw = new TreeWrapper();
             Expression sorter = new Expression(statement, tw);
@@ -552,7 +552,7 @@ namespace iLand.Core
             {
                 tw.Tree = mTrees[i].Item1;
                 MutableTuple<Tree, double> tree = mTrees[i];
-                tree.Item2 = sorter.Execute(globalSettings);
+                tree.Item2 = sorter.Execute(model);
             }
             // now sort the list....
             mTrees.Sort(TreePairValue);
@@ -576,13 +576,13 @@ namespace iLand.Core
         }
 
         /// random shuffle of all trees in the list
-        public void Randomize()
+        public void Randomize(Model model)
         {
             // fill the "value" part of the tree storage with a random value for each tree
             for (int i = 0; i < mTrees.Count; ++i)
             {
                 MutableTuple<Tree, double> tree = mTrees[i];
-                tree.Item2 = RandomGenerator.Random();
+                tree.Item2 = model.RandomGenerator.Random();
             }
             // now sort the list....
             mTrees.Sort(TreePairValue);

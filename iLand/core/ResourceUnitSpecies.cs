@@ -85,8 +85,8 @@ namespace iLand.Core
                 {
                     RU.WaterCycle.Run(model); // run the water sub model (only if this has not be done already)
                 }
-                using DebugTimer rst = new DebugTimer("ResourceUnitSpecies.Calculate(Response + BiomassGrowth)");
-                Response.Calculate(this.RU.Climate);// calculate environmental responses per species (vpd, temperature, ...)
+                using DebugTimer rst = model.DebugTimers.Create("ResourceUnitSpecies.Calculate(Response + BiomassGrowth)");
+                Response.Calculate(model, this.RU.Climate);// calculate environmental responses per species (vpd, temperature, ...)
                 BiomassGrowth.Calculate(model);// production of NPP
                 mLastYear = model.GlobalSettings.CurrentYear; // mark this year as processed
             }

@@ -1,4 +1,6 @@
-﻿namespace iLand.Tools
+﻿using iLand.Core;
+
+namespace iLand.Tools
 {
     /** @class RandomIndex Access each index of a given size in a random order.
         Example-Usage:
@@ -33,7 +35,7 @@
             mRemaining = mCount;
         }
 
-        public bool Next()
+        public bool Next(Model model)
         {
             if (mRemaining == 0)
             {
@@ -41,7 +43,7 @@
                 return false;
             }
             mRemaining--;
-            int random_index = RandomGenerator.Random(0, mRemaining + 1); //RandomRange(0,mRemaining+1);
+            int random_index = model.RandomGenerator.Random(0, mRemaining + 1); //RandomRange(0,mRemaining+1);
             int found = 0;
             for (int i = 0; i < mCount; i++)
             {

@@ -18,6 +18,7 @@ namespace iLand.Core
     {
         ///< grid holding precalculated distances to the stamp center
         // thread safe due to lock in FinalizeSetup()
+        // BUGBUG: not safe across multiple light cell sizes
         public static Grid<float> DistanceGrid { get; private set; }
 
         private struct StampItem

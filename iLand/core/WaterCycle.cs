@@ -256,7 +256,7 @@ namespace iLand.Core
             {
                 return;
             }
-            using DebugTimer tw = new DebugTimer("WaterCycle.Run()");
+            using DebugTimer tw = model.DebugTimers.Create("WaterCycle.Run()");
             WaterCycleData hydrologicState = new WaterCycleData();
 
             // preparations (once a year)

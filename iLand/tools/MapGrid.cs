@@ -230,7 +230,7 @@ namespace iLand.Tools
             return tree_list;
         }
 
-        public int LoadTrees(GlobalSettings globalSettings, int id, List<MutableTuple<Tree, double>> rList, string filter, int n_estimate)
+        public int LoadTrees(Model model, int id, List<MutableTuple<Tree, double>> rList, string filter, int n_estimate)
         {
             rList.Clear();
             if (n_estimate > 0)
@@ -258,13 +258,13 @@ namespace iLand.Tools
                         tw.Tree = t;
                         if (expression != null)
                         {
-                            double value = expression.Calculate(tw, globalSettings);
+                            double value = expression.Calculate(tw, model);
                             // keep if expression returns true (1)
                             bool keep = value == 1.0;
                             // if value is >0 (i.e. not "false"), then draw a random number
                             if (!keep && value > 0.0)
                             {
-                                keep = RandomGenerator.Random() < value;
+                                keep = model.RandomGenerator.Random() < value;
                             }
                             if (!keep)
                             {

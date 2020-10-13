@@ -5,7 +5,7 @@ using Microsoft.Data.Sqlite;
 namespace iLand.Output
 {
     /** ProductionOut describes finegrained production details on the level of resourceunits per month. */
-    internal class ProductionOutput : Output
+    public class ProductionOutput : Output
     {
         public ProductionOutput()
         {
@@ -53,7 +53,7 @@ namespace iLand.Output
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            using DebugTimer t = new DebugTimer("ProductionOutput.LogYear()");
+            using DebugTimer t = model.DebugTimers.Create("ProductionOutput.LogYear()");
             foreach (ResourceUnit ru in model.ResourceUnits)
             {
                 if (ru.ID == -1)

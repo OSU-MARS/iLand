@@ -110,10 +110,10 @@ namespace iLand.Core
 
                 string expr = xml.GetString("heightGrid.fitFormula", "polygon(x, 0,0, 0.8,1, 1.1, 1, 1.25,0)");
                 mHeightGridResponse = new Expression(expr);
-                mHeightGridResponse.Linearize(model.GlobalSettings, 0.0, 2.0);
+                mHeightGridResponse.Linearize(model, 0.0, 2.0);
             }
 
-            Tree.ResetStatistics();
+            //Tree.ResetStatistics();
 
             // one global init-file for the whole area:
             if (initializationMode == "single")
@@ -215,7 +215,7 @@ namespace iLand.Core
                 }
                 if (mRandom == null || (mRandom.DensityFunction != density_func))
                 {
-                    mRandom = new RandomCustomPdf(model.GlobalSettings, density_func);
+                    mRandom = new RandomCustomPdf(model, density_func);
                     if (model.GlobalSettings.LogInfo())
                     {
                         Debug.WriteLine("new probabilty density function: " + density_func);
@@ -330,7 +330,7 @@ namespace iLand.Core
                 for (Tree t = at.MoveNext(); t != null; t = at.MoveNext())
                 {
                     tw.Tree = t;
-                    double result = dexp.Execute(model.GlobalSettings);
+                    double result = dexp.Execute(model);
                     if (result != 0.0)
                     {
                         t.EnableDebugging();
@@ -427,7 +427,7 @@ namespace iLand.Core
             }
 
             int treCount = 0;
-            for (int rowIndex = 2; rowIndex < infile.RowCount; rowIndex++) // BUGBUG: replicates iLand 1.0 defect dropping first tree
+            for (int rowIndex = 1; rowIndex < infile.RowCount; rowIndex++)
             {
                 double dbh = Double.Parse(infile.Value(rowIndex, dbhColumn));
                 //if (dbh<5.)
@@ -443,7 +443,7 @@ namespace iLand.Core
                 {
                     continue;
                 }
-                Tree tree = ru.AddNewTree();
+                Tree tree = ru.AddNewTree(model);
                 tree.SetLightCellIndex(physicalPosition);
                 if (idColumn >= 0)
                 {
@@ -515,7 +515,7 @@ namespace iLand.Core
             }
             if (mRandom == null || (mRandom.DensityFunction != densityFunction))
             {
-                mRandom = new RandomCustomPdf(model.GlobalSettings, densityFunction);
+                mRandom = new RandomCustomPdf(model, densityFunction);
                 if (model.GlobalSettings.LogInfo())
                 {
                     Debug.WriteLine("new probabilty density function: " + densityFunction);
@@ -714,8 +714,8 @@ namespace iLand.Core
                 for (int i = 0; i < initItem.Count; i++)
                 {
                     // create trees
-                    Tree tree = ru.AddNewTree();
-                    tree.Dbh = (float)RandomGenerator.Random(initItem.DbhFrom, initItem.DbhTo);
+                    Tree tree = ru.AddNewTree(model);
+                    tree.Dbh = (float)model.RandomGenerator.Random(initItem.DbhFrom, initItem.DbhTo);
                     tree.SetHeight(tree.Dbh / 100.0F * (float)initItem.HD); // dbh from cm->m, *hd-ratio -> meter height
                     tree.Species = initItem.Species;
                     if (initItem.Age <= 0)
@@ -731,12 +731,12 @@ namespace iLand.Core
                     total_count++;
 
                     // calculate random value. "density" is from 1..-1.
-                    rand_val = mRandom.Get();
+                    rand_val = mRandom.Get(model);
                     if (initItem.Density < 0)
                     {
                         rand_val = 1.0 - rand_val;
                     }
-                    rand_val = rand_val * rand_fraction + RandomGenerator.Random() * (1.0 - rand_fraction);
+                    rand_val = rand_val * rand_fraction + model.RandomGenerator.Random() * (1.0 - rand_fraction);
 
                     // key: rank of target pixel
                     // first: index of target pixel
@@ -793,7 +793,7 @@ namespace iLand.Core
                             //index = (index + 1)%25; // increase and roll over
 
                             // search a random position
-                            r = RandomGenerator.Random();
+                            r = model.RandomGenerator.Random();
                             index = Global.Limit((int)(25 * r * r), 0, 24); // use rnd()^2 to search for locations -> higher number of low indices (i.e. 50% of lookups in first 25% of locations)
                         }
                         while (Global.IsBitSet(bits, index) == true && stop-- != 0);
@@ -875,7 +875,7 @@ namespace iLand.Core
                         // randomize the pixels
                         for (int it = 0; it < pixel_list.Count; ++it)
                         {
-                            pixel_list[it].BasalArea = RandomGenerator.Random();
+                            pixel_list[it].BasalArea = model.RandomGenerator.Random();
                         }
                         pixel_list.Sort(SortInitPixelLessThan);
 
@@ -908,17 +908,17 @@ namespace iLand.Core
                         // calculate random value. "density" is from 1..-1.
                         if (item.Density <= 1.0)
                         {
-                            rand_val = mRandom.Get();
+                            rand_val = mRandom.Get(model);
                             if (item.Density < 0)
                             {
                                 rand_val = 1.0 - rand_val;
                             }
-                            rand_val = rand_val * rand_fraction + RandomGenerator.Random() * (1.0 - rand_fraction);
+                            rand_val = rand_val * rand_fraction + model.RandomGenerator.Random() * (1.0 - rand_fraction);
                         }
                         else
                         {
                             // limited area: limit potential area using the "density" input parameter
-                            rand_val = RandomGenerator.Random() * Math.Min(item.Density / 100.0, 1.0);
+                            rand_val = model.RandomGenerator.Random() * Math.Min(item.Density / 100.0, 1.0);
                         }
                         ++total_tries;
 
@@ -928,8 +928,8 @@ namespace iLand.Core
                         if (InitHeightGrid != null)
                         {
                             // calculate how good the selected pixel fits w.r.t. the predefined height
-                            double p_value = pixel_list[key].MaxHeight > 0.0 ? mHeightGridResponse.Calculate(model.GlobalSettings, init_max_height / pixel_list[key].MaxHeight) : 0.0;
-                            if (RandomGenerator.Random() < p_value)
+                            double p_value = pixel_list[key].MaxHeight > 0.0 ? mHeightGridResponse.Calculate(model, init_max_height / pixel_list[key].MaxHeight) : 0.0;
+                            if (model.RandomGenerator.Random() < p_value)
                             {
                                 found = true;
                             }
@@ -943,12 +943,15 @@ namespace iLand.Core
                             found = false;
                         }
                     }
-                    if (tries < 0) ++total_misses;
+                    if (tries < 0)
+                    {
+                        ++total_misses;
+                    }
 
                     // create a tree
                     ResourceUnit ru = pixel_list[key].ResourceUnit;
-                    Tree tree = ru.AddNewTree();
-                    tree.Dbh = (float)RandomGenerator.Random(item.DbhFrom, item.DbhTo);
+                    Tree tree = ru.AddNewTree(model);
+                    tree.Dbh = (float)model.RandomGenerator.Random(item.DbhFrom, item.DbhTo);
                     tree.SetHeight((float)(tree.Dbh / 100.0 * item.HD)); // dbh from cm->m, *hd-ratio -> meter height
                     tree.Species = item.Species;
                     if (item.Age <= 0)
@@ -1006,7 +1009,7 @@ namespace iLand.Core
                         do
                         {
                             // search a random position
-                            r = RandomGenerator.Random();
+                            r = model.RandomGenerator.Random();
                             index = Global.Limit((int)(25 * r * r), 0, 24); // use rnd()^2 to search for locations -> higher number of low indices (i.e. 50% of lookups in first 25% of locations)
                         }
                         while (Global.IsBitSet(bits, index) == true && stop-- != 0);
@@ -1090,11 +1093,11 @@ namespace iLand.Core
                 while (hits < pxcount)
                 {
                     // sapling location
-                    int rnd_index = RandomGenerator.Random(0, indices.Count);
+                    int rnd_index = model.RandomGenerator.Random(0, indices.Count);
                     Point offset = stand_grid.Grid.IndexOf(indices[rnd_index]);
                     offset.X *= Constant.LightPerHeightSize; // index of 10m patch -> to lif pixel coordinates
                     offset.Y *= Constant.LightPerHeightSize;
-                    int in_p = RandomGenerator.Random(0, Constant.LightPerHeightSize * Constant.LightPerHeightSize); // index of lif-pixel
+                    int in_p = model.RandomGenerator.Random(0, Constant.LightPerHeightSize * Constant.LightPerHeightSize); // index of lif-pixel
                     offset.X += in_p / Constant.LightPerHeightSize;
                     offset.Y += in_p % Constant.LightPerHeightSize;
 
@@ -1249,10 +1252,10 @@ namespace iLand.Core
                 double hits = 0.0;
                 while (hits < pxcount)
                 {
-                    int rnd_index = RandomGenerator.Random(0, min_lif_index);
+                    int rnd_index = model.RandomGenerator.Random(0, min_lif_index);
                     if (iheightfrom != -1)
                     {
-                        height = Global.Limit(RandomGenerator.Random(height_from, height_to), 0.05, 4.0);
+                        height = Global.Limit(model.RandomGenerator.Random(height_from, height_to), 0.05, 4.0);
                         if (age <= 1.0)
                         {
                             age = Math.Max(Math.Round(height / 4.0 * age4m), 1.0); // assume a linear relationship between height and age
@@ -1290,7 +1293,7 @@ namespace iLand.Core
                 {
                     throw new NotSupportedException(String.Format("The grass cover percentage (column 'grass_cover') for stand '{0}' is '{1}', which is invalid (expected: 0-100)", standID, grass_cover_value));
                 }
-                model.GrassCover.SetInitialValues(lif_ptrs, grass_cover_value);
+                model.GrassCover.SetInitialValues(model, lif_ptrs, grass_cover_value);
             }
 
             return total;

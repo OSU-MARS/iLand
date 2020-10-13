@@ -236,7 +236,7 @@ namespace iLand.Core
             //GlobalSettings.instance().model().heightGrid()[Grid::index5(tree.pixel-GlobalSettings.instance().model().grid().begin())];
 
             // (1) calculate height growth potential for the tree (uses linerization of expressions...)
-            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model.GlobalSettings, tree.Height); // TODO check if this can be source of crashes (race condition)
+            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model, tree.Height); // TODO check if this can be source of crashes (race condition)
             double delta_h_pot = h_pot - tree.Height;
 
             // (2) reduce height growth potential with species growth response f_env_yr and with light state (i.e. LIF-value) of home-pixel.
@@ -249,9 +249,9 @@ namespace iLand.Core
 
             double rel_height = tree.Height / h_height_grid;
 
-            double lif_corrected = mRUS.Species.SpeciesSet.GetLriCorrection(model.GlobalSettings, lif_value, rel_height); // correction based on height
+            double lif_corrected = mRUS.Species.SpeciesSet.GetLriCorrection(model, lif_value, rel_height); // correction based on height
 
-            double lr = mRUS.Species.GetLightResponse(model.GlobalSettings, lif_corrected); // species specific light response (LUI, light utilization index)
+            double lr = mRUS.Species.GetLightResponse(model, lif_corrected); // species specific light response (LUI, light utilization index)
 
             double delta_h_factor = f_env_yr * lr; // relative growth
 
@@ -267,7 +267,7 @@ namespace iLand.Core
                 // calculate modifed annual browsing probability via odds-ratios
                 // odds = p/(1-p) -> odds_mod = odds * browsingPressure -> p_mod = odds_mod /( 1 + odds_mod) === p*pressure/(1-p+p*pressure)
                 double p_browse = pb * model.ModelSettings.BrowsingPressure / (1.0 - pb + pb * model.ModelSettings.BrowsingPressure);
-                if (RandomGenerator.Random() < p_browse)
+                if (model.RandomGenerator.Random() < p_browse)
                 {
                     delta_h_factor = 0.0;
                 }
@@ -307,7 +307,7 @@ namespace iLand.Core
 
                 // if n_trees is not an integer, choose randomly if we should add a tree.
                 // e.g.: n_trees = 2.3 -> add 2 trees with 70% probability, and add 3 trees with p=30%.
-                if (RandomGenerator.Random() < (n_trees - to_establish) || to_establish == 0)
+                if (model.RandomGenerator.Random() < (n_trees - to_establish) || to_establish == 0)
                 {
                     to_establish++;
                 }
@@ -315,11 +315,11 @@ namespace iLand.Core
                 // add a new tree
                 for (int i = 0; i < to_establish; i++)
                 {
-                    Tree bigtree = ru.AddNewTree();
+                    Tree bigtree = ru.AddNewTree(model);
                     bigtree.LightCellPosition = p;
                     // add variation: add +/-10% to dbh and *independently* to height.
-                    bigtree.Dbh = dbh * (float)RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation);
-                    bigtree.SetHeight(tree.Height * (float)RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation));
+                    bigtree.Dbh = dbh * (float)model.RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation);
+                    bigtree.SetHeight(tree.Height * (float)model.RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation));
                     bigtree.Species = species;
                     bigtree.SetAge(tree.Age.Age, tree.Height);
                     bigtree.RU = ru;

@@ -39,7 +39,7 @@ namespace iLand.Output
             Columns.Add(new SqlColumn("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", OutputDatatype.Double));
         }
 
-        public void LogTreeRemoval(GlobalSettings globalSettings, Tree tree, int reason)
+        public void LogTreeRemoval(Model model, Tree tree, int reason)
         {
             if (!mFilter.IsEmpty)
             { 
@@ -47,7 +47,7 @@ namespace iLand.Output
                 TreeWrapper tw = new TreeWrapper();
                 mFilter.Wrapper = tw;
                 tw.Tree = tree;
-                if (mFilter.Execute(globalSettings) == 0.0)
+                if (mFilter.Execute(model) == 0.0)
                 {
                     return;
                 }
@@ -88,7 +88,6 @@ namespace iLand.Output
         {
             string filter = globalSettings.Settings.GetString(".filter", "");
             mFilter.SetExpression(filter);
-            Tree.TreeRemovalOutput = this;
         }
     }
 }

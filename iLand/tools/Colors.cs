@@ -1,21 +1,22 @@
 ﻿using iLand.Core;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Drawing;
 
 namespace iLand.Tools
 {
     internal class Colors
     {
-        private static readonly List<Color> mBrewerDiv = new List<Color>() { ColorTranslator.FromHtml("#543005"), ColorTranslator.FromHtml("#8c510a"), ColorTranslator.FromHtml("#bf812d"), ColorTranslator.FromHtml("#dfc27d"),
-                                                                             ColorTranslator.FromHtml("#f6e8c3"), ColorTranslator.FromHtml("#f5f5f5"), ColorTranslator.FromHtml("#fdbf6f"), ColorTranslator.FromHtml("##c7eae5"),
-                                                                             ColorTranslator.FromHtml("#80cdc1"), ColorTranslator.FromHtml("#35978f"), ColorTranslator.FromHtml("#01665e"), ColorTranslator.FromHtml("#003c30") };
-        private static readonly List<Color> mBrewerQual = new List<Color>() { ColorTranslator.FromHtml("#a6cee3"), ColorTranslator.FromHtml("#1f78b4"), ColorTranslator.FromHtml("#b2df8a"), ColorTranslator.FromHtml("#33a02c"),
-                                                                              ColorTranslator.FromHtml("#fb9a99"), ColorTranslator.FromHtml("#e31a1c"), ColorTranslator.FromHtml("#fdbf6f"), ColorTranslator.FromHtml("#ff7f00"),
-                                                                              ColorTranslator.FromHtml("#cab2d6"), ColorTranslator.FromHtml("#6a3d9a"), ColorTranslator.FromHtml("#ffff99"), ColorTranslator.FromHtml("#b15928") };
-        private static readonly List<Color> mTerrainCol = new List<Color>() { ColorTranslator.FromHtml("#00A600"), ColorTranslator.FromHtml("#24B300"), ColorTranslator.FromHtml("#4CBF00"), ColorTranslator.FromHtml("#7ACC00"),
-                                                                              ColorTranslator.FromHtml("#ADD900"), ColorTranslator.FromHtml("#E6E600"), ColorTranslator.FromHtml("#E8C727"), ColorTranslator.FromHtml("#EAB64E"),
-                                                                              ColorTranslator.FromHtml("#ECB176"), ColorTranslator.FromHtml("#EEB99F"), ColorTranslator.FromHtml("#F0CFC8"), ColorTranslator.FromHtml("#F2F2F2") };
+        private static readonly ReadOnlyCollection<Color> mBrewerDiv = new List<Color>() { ColorTranslator.FromHtml("#543005"), ColorTranslator.FromHtml("#8c510a"), ColorTranslator.FromHtml("#bf812d"), ColorTranslator.FromHtml("#dfc27d"),
+                                                                                           ColorTranslator.FromHtml("#f6e8c3"), ColorTranslator.FromHtml("#f5f5f5"), ColorTranslator.FromHtml("#fdbf6f"), ColorTranslator.FromHtml("##c7eae5"),
+                                                                                           ColorTranslator.FromHtml("#80cdc1"), ColorTranslator.FromHtml("#35978f"), ColorTranslator.FromHtml("#01665e"), ColorTranslator.FromHtml("#003c30") }.AsReadOnly();
+        private static readonly ReadOnlyCollection<Color> mBrewerQual = new List<Color>() { ColorTranslator.FromHtml("#a6cee3"), ColorTranslator.FromHtml("#1f78b4"), ColorTranslator.FromHtml("#b2df8a"), ColorTranslator.FromHtml("#33a02c"),
+                                                                                            ColorTranslator.FromHtml("#fb9a99"), ColorTranslator.FromHtml("#e31a1c"), ColorTranslator.FromHtml("#fdbf6f"), ColorTranslator.FromHtml("#ff7f00"),
+                                                                                            ColorTranslator.FromHtml("#cab2d6"), ColorTranslator.FromHtml("#6a3d9a"), ColorTranslator.FromHtml("#ffff99"), ColorTranslator.FromHtml("#b15928") }.AsReadOnly();
+        private static readonly ReadOnlyCollection<Color> mTerrainCol = new List<Color>() { ColorTranslator.FromHtml("#00A600"), ColorTranslator.FromHtml("#24B300"), ColorTranslator.FromHtml("#4CBF00"), ColorTranslator.FromHtml("#7ACC00"),
+                                                                                            ColorTranslator.FromHtml("#ADD900"), ColorTranslator.FromHtml("#E6E600"), ColorTranslator.FromHtml("#E8C727"), ColorTranslator.FromHtml("#EAB64E"),
+                                                                                            ColorTranslator.FromHtml("#ECB176"), ColorTranslator.FromHtml("#EEB99F"), ColorTranslator.FromHtml("#F0CFC8"), ColorTranslator.FromHtml("#F2F2F2") }.AsReadOnly();
         
         private GridViewType mCurrentType;
         private bool mNeedsPaletteUpdate;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 
@@ -28,52 +27,28 @@ namespace iLand.Tools
          @endcode
          For Windows, the "TickTack"-backend is used.
     */
-    internal class DebugTimer : IDisposable
+    public class DebugTimer : IDisposable
     {
-        private static readonly Dictionary<string, TimeSpan> TimersByName;
-
         private bool isDisposed;
-        private readonly Stopwatch stopwatch;
         private readonly string name;
+        private readonly DebugTimerCollection parent;
+        private readonly Stopwatch stopwatch;
 
         // if true, hide messages for short operations (except an explicit call to showElapsed())
         public bool HideShort { get; set; }
         public bool IsSilent { get; set; }
 
-        static DebugTimer()
-        {
-            DebugTimer.TimersByName = new Dictionary<string, TimeSpan>();
-        }
-
-        public DebugTimer(string name, bool isSilent = true)
+        public DebugTimer(string name, DebugTimerCollection parent, bool isSilent = true)
         {
             this.isDisposed = false;
             this.name = name;
+            this.parent = parent;
             this.stopwatch = new Stopwatch();
 
             this.IsSilent = isSilent;
             this.HideShort = true;
 
-            if (DebugTimer.TimersByName.ContainsKey(name) == false)
-            {
-                lock (DebugTimer.TimersByName)
-                {
-                    if (DebugTimer.TimersByName.ContainsKey(name) == false)
-                    {
-                        DebugTimer.TimersByName.Add(name, TimeSpan.Zero);
-                    }
-                }
-            }
-
             this.stopwatch.Start();
-        }
-
-        public static void ClearAllTimers()
-        {
-            foreach (string key in DebugTimer.TimersByName.Keys)
-            {
-                DebugTimer.TimersByName[key] = TimeSpan.Zero;
-            }
         }
 
         public void Dispose()
@@ -88,7 +63,7 @@ namespace iLand.Tools
                 if (disposing)
                 {
                     TimeSpan elapsed = this.Elapsed();
-                    DebugTimer.TimersByName[name] += elapsed;
+                    this.parent.AddTime(this.name, elapsed);
                     // show message if timer is not set to silent, and if time > 100ms (if timer is set to hideShort (which is the default))
                     if (this.IsSilent == false && (this.HideShort == false || elapsed.TotalSeconds > 1.0))
                     {
@@ -98,20 +73,6 @@ namespace iLand.Tools
 
                 this.isDisposed = true;
             }
-        }
-
-        public static void WriteTimers()
-        {
-            TimeSpan total = TimeSpan.Zero;
-            foreach (KeyValuePair<string, TimeSpan> timer in DebugTimer.TimersByName)
-            {
-                if (timer.Value > TimeSpan.Zero)
-                {
-                    Debug.WriteLine("Profile: " + timer.Key + " " + DebugTimer.TimeStr(timer.Value));
-                }
-                total += timer.Value;
-            }
-            Debug.WriteLine("Profile: total time elapsed under debug timers " + DebugTimer.TimeStr(total) + ".");
         }
 
         // pretty formatting of timing information

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using iLand.Core;
+using System;
 
 namespace iLand.Tools
 {
@@ -24,10 +25,10 @@ namespace iLand.Tools
             this.mRandomIndex = new RandomWeighted();
         }
 
-        public RandomCustomPdf(GlobalSettings globalSettings, string densityFunction)
+        public RandomCustomPdf(Model model, string densityFunction)
             : this()
         {
-            Setup(globalSettings, densityFunction);
+            Setup(model, densityFunction);
         }
 
         /** setup of the properites of the RandomCustomPDF.
@@ -37,7 +38,7 @@ namespace iLand.Tools
             @p isSumFunc if true, the function given in 'funcExpr' is a cumulative probabilty density function (default=false)
             @p stepCount internal degree of 'slots' - the more slots, the more accurate (default=100)
          */
-        public void Setup(GlobalSettings globalSettings, string funcExpr, double lowerBound = 0, double upperBound = 1, bool isSumFunc = false, int stepCount = 100)
+        public void Setup(Model model, string funcExpr, double lowerBound = 0, double upperBound = 1, bool isSumFunc = false, int stepCount = 100)
         {
             DensityFunction = funcExpr;
             mSteps = stepCount;
@@ -57,8 +58,8 @@ namespace iLand.Tools
                 x1 = mLowerBound + i * mDeltaX;
                 x2 = x1 + mDeltaX;
                 // p1, p2: werte der pdf bei unterer und oberer grenze des aktuellen schrittes
-                p1 = mExpression.Calculate(globalSettings, x1);
-                p2 = mExpression.Calculate(globalSettings, x2);
+                p1 = mExpression.Calculate(model, x1);
+                p2 = mExpression.Calculate(model, x2);
                 // areaval: numerische integration zwischen x1 und x2
                 areaval = (p1 + p2) / 2 * step_width;
                 if (isSumFunc)
@@ -70,7 +71,7 @@ namespace iLand.Tools
             }
         }
 
-        public double Get()
+        public double Get(Model model)
         {
             // zufallszahl ziehen.
             if (mExpression == null)
@@ -79,21 +80,21 @@ namespace iLand.Tools
             }
 
             // (1) select slot randomly:
-            int slot = mRandomIndex.Random();
+            int slot = mRandomIndex.Random(model);
             // the current slot is:
             double basevalue = mLowerBound + slot * mDeltaX;
             // (2): draw a uniform random number within the slot
-            double value = RandomGenerator.Random(basevalue, basevalue + mDeltaX);
+            double value = model.RandomGenerator.Random(basevalue, basevalue + mDeltaX);
             return value;
         }
 
-        public double GetProbOfRange(GlobalSettings globalSettings, double lowerBound, double upperBound)
+        public double GetProbOfRange(Model model, double lowerBound, double upperBound)
         {
             if (mSumFunction)
             {
                 double p1, p2;
-                p1 = mExpression.Calculate(globalSettings, lowerBound);
-                p2 = mExpression.Calculate(globalSettings, upperBound);
+                p1 = mExpression.Calculate(model, lowerBound);
+                p2 = mExpression.Calculate(model, upperBound);
                 return p2 - p1;
             }
 
