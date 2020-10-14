@@ -248,7 +248,7 @@ namespace iLand.Core
             {
                 if (mRU.WaterCycle.ReferenceEvapotranspiration()[m] > 0.0)
                 {
-                    ratio = mRU.Climate.PrecipitationMonth[m] / mRU.WaterCycle.ReferenceEvapotranspiration()[m];
+                    ratio = mRU.Climate.PrecipitationByMonth[m] / mRU.WaterCycle.ReferenceEvapotranspiration()[m];
                 }
                 else
                 {
@@ -257,7 +257,7 @@ namespace iLand.Core
                 fw_month[m] = 1.0 / (1.0 + 30.0 * Math.Exp(-8.5 * ratio));
                 if (model.GlobalSettings.LogDebug())
                 {
-                    Debug.WriteLine("month " + m + " PET " + mRU.WaterCycle.ReferenceEvapotranspiration()[m] + " prec " + mRU.Climate.PrecipitationMonth[m]);
+                    Debug.WriteLine("month " + m + " PET " + mRU.WaterCycle.ReferenceEvapotranspiration()[m] + " prec " + mRU.Climate.PrecipitationByMonth[m]);
                 }
             }
 

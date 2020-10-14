@@ -106,7 +106,7 @@ namespace iLand.Core
             }
             mExternalSeedMap.Clear();
             mIndexFactor = Constant.SeedmapSize / Constant.LightSize; // ratio seed grid / lip-grid:
-            if (model.GlobalSettings.LogInfo())
+            if (model.GlobalSettings.LogDebug())
             {
                 Debug.WriteLine("Seed map setup. Species: " + Species.ID + " kernel-size: " + SeedMap.CellsX + " x " + SeedMap.CellsY + " pixels.");
             }

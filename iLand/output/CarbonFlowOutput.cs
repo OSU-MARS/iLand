@@ -59,20 +59,24 @@ namespace iLand.Output
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
+            if (model.ResourceUnits.Count == 0)
+            {
+                // TODO: when would there be zero RUs?
+                return;
+            }
             // global condition
-            if (!mFilter.IsEmpty && mFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
+            if ((mFilter.IsEmpty == false) && (mFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0))
             {
                 return;
             }
-            bool ru_level = true;
+            bool logIndividualResourceUnits = true;
             // switch off details if this is indicated in the conditionRU option
             if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
             {
-                ru_level = false;
+                logIndividualResourceUnits = false;
             }
 
-            int ru_count = 0;
-            double[] accumulatedValues = new double[10]; // 11? data values per RU
+            double[] accumulatedValues = new double[10]; // 10 data values
             foreach (ResourceUnit ru in model.ResourceUnits) 
             {
                 if (ru.ID == -1)
@@ -86,11 +90,12 @@ namespace iLand.Output
                 }
 
 
-                double npp = 0.0;
                 double areaFactor = ru.StockableArea / Constant.RUArea; //conversion factor
-                npp += ru.Statistics.Npp * Constant.BiomassCFraction; // kg C/ha
+                double npp = ru.Statistics.Npp * Constant.BiomassCFraction; // kg C/ha
                 npp += ru.Statistics.NppSaplings * Constant.BiomassCFraction; // kgC/ha
-                                                                          // Snag pools are not scaled per ha (but refer to the stockable RU), soil pools and biomass statistics (NPP, ...) are scaled.
+                
+                // Snag pools are not scaled per ha (but refer to the stockable RU), soil pools and biomass statistics (NPP, ...) 
+                // are scaled.
                 double to_atm = ru.Snags.FluxToAtmosphere.C / areaFactor; // from snags, kg/ha
                 to_atm += ru.Snags.FluxToAtmosphere.C * Constant.RUArea / 10.0; // soil: t/ha -> t/m2 -> kg/ha
 
@@ -101,28 +106,25 @@ namespace iLand.Output
 
                 double nep = npp - to_atm - to_harvest - to_dist; // kgC/ha
 
-                if (ru_level)
+                if (logIndividualResourceUnits)
                 {
-                    // keys
-                    this.Add(model.GlobalSettings.CurrentYear);
-                    this.Add(ru.Index);
-                    this.Add(ru.ID);
-                    this.Add(areaFactor);
-                    this.Add(npp / Constant.AutotrophicRespiration); // GPP_act
-                    this.Add(npp); // NPP
-                    this.Add(-to_atm); // rh
-                    this.Add(-to_dist); // disturbance
-                    this.Add(-to_harvest); // management loss
-                    this.Add(nep); // nep
-                    this.Add(ru.Variables.CumCarbonUptake);
-                    this.Add(ru.Variables.CumCarbonToAtm);
-                    this.Add(ru.Variables.CumNep);
-
-                    this.WriteRow(insertRow);
+                    insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                    insertRow.Parameters[1].Value = ru.Index;
+                    insertRow.Parameters[2].Value = ru.ID;
+                    insertRow.Parameters[3].Value = areaFactor;
+                    insertRow.Parameters[4].Value = npp / Constant.AutotrophicRespiration; // GPP_act
+                    insertRow.Parameters[5].Value = npp; // NPP
+                    insertRow.Parameters[6].Value = -to_atm; // rh
+                    insertRow.Parameters[7].Value = -to_dist; // disturbance
+                    insertRow.Parameters[8].Value = -to_harvest; // management loss
+                    insertRow.Parameters[9].Value = nep; // nep
+                    insertRow.Parameters[10].Value = ru.Variables.CumCarbonUptake;
+                    insertRow.Parameters[11].Value = ru.Variables.CumCarbonToAtm;
+                    insertRow.Parameters[12].Value = ru.Variables.CumNep;
+                    insertRow.ExecuteNonQuery();
                 }
-                // landscape level
-                ++ru_count;
 
+                // landscape level
                 accumulatedValues[0] += areaFactor; // total area in ha
                 accumulatedValues[1] += npp / Constant.AutotrophicRespiration * areaFactor; // GPP_act
                 accumulatedValues[2] += npp * areaFactor; // NPP
@@ -136,21 +138,20 @@ namespace iLand.Output
             }
 
             // write landscape sums
-            // BUGBUG: C++ appars to only behave correctly for single RU case
-            double total_stockable_area = accumulatedValues[0]; // total ha of stockable area
-            if (ru_count == 0.0 || total_stockable_area == 0.0)
+            double totalStockableArea = accumulatedValues[0]; // total ha of stockable area
+            if (totalStockableArea == 0.0)
             {
                 return;
             }
-            this.Add(model.GlobalSettings.CurrentYear);
-            this.Add(-1);
-            this.Add(-1); // codes -1/-1 for landscape level
-            this.Add(accumulatedValues[0]); // stockable area [m2]
+            insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+            insertRow.Parameters[1].Value = -1;
+            insertRow.Parameters[2].Value = -1; // codes -1/-1 for landscape level
+            insertRow.Parameters[3].Value = accumulatedValues[0]; // stockable area [m2]
             for (int valueIndex = 1; valueIndex < accumulatedValues.Length; ++valueIndex)
             {
-                this.Add(accumulatedValues[valueIndex] / total_stockable_area);
+                insertRow.Parameters[3 + valueIndex].Value = accumulatedValues[valueIndex] / totalStockableArea;
             }
-            this.WriteRow(insertRow);
+            insertRow.ExecuteNonQuery();
         }
     }
 }

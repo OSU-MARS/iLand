@@ -86,7 +86,7 @@ namespace iLand.Core
                 // =-EXP((1.54-0.0095* pctSand +0.0063* pctSilt)*LN(10))*0.000098
                 double psi_sat = -Math.Exp((1.54 - 0.0095 * pct_sand + 0.0063 * pct_silt) * Math.Log(10.0)) * 0.000098;
                 FieldCapacity = HeightFromPsi(psi_sat);
-                if (model.GlobalSettings.LogDebug())
+                if (model.GlobalSettings.LogInfo())
                 {
                     Debug.WriteLine("psi: saturation " + psi_sat + " field capacity: " + FieldCapacity);
                 }
@@ -176,9 +176,9 @@ namespace iLand.Core
                 // http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance
                 CanopyConductance *= total_lai / model.ModelSettings.LaiThresholdForClosedStands;
             }
-            if (model.GlobalSettings.LogInfo())
+            if (model.GlobalSettings.LogDebug())
             {
-                Debug.WriteLine("WaterCycle:getStandValues: LAI needle " + mLAINeedle + " LAI Broadl: " + mLAIBroadleaved + " weighted avg. Conductance (m/2): " + CanopyConductance);
+                Debug.WriteLine("WaterCycle.GetStandValues(): LAI needle " + mLAINeedle + " LAI Broadl: " + mLAIBroadleaved + " weighted avg. Conductance (m/2): " + CanopyConductance);
             }
         }
 

@@ -40,18 +40,18 @@ namespace iLand.Output
                     {
                         continue;
                     }
-                    this.Add(model.GlobalSettings.CurrentYear);
-                    this.Add(ru.Index);
-                    this.Add(ru.ID);
-                    this.Add(rus.Species.ID); // keys
-                    this.Add(stat.Count);
-                    this.Add(stat.AverageDbh);
-                    this.Add(stat.AverageHeight);
-                    this.Add(stat.StemVolume);
-                    this.Add(stat.BasalArea);
-                    this.Add(stat.Npp);
-                    this.Add(stat.NppAbove);
-                    this.WriteRow(insertRow);
+                    insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                    insertRow.Parameters[1].Value = ru.Index;
+                    insertRow.Parameters[2].Value = ru.ID;
+                    insertRow.Parameters[3].Value = rus.Species.ID; // keys
+                    insertRow.Parameters[4].Value = stat.Count;
+                    insertRow.Parameters[5].Value = stat.AverageDbh;
+                    insertRow.Parameters[6].Value = stat.AverageHeight;
+                    insertRow.Parameters[7].Value = stat.StemVolume;
+                    insertRow.Parameters[8].Value = stat.BasalArea;
+                    insertRow.Parameters[9].Value = stat.Npp;
+                    insertRow.Parameters[10].Value = stat.NppAbove;
+                    insertRow.ExecuteNonQuery();
                 }
             }
         }

@@ -58,7 +58,7 @@ namespace iLand.Output
             mFilter.Wrapper = tw;
             for (Tree tree = at.MoveNext(); tree != null; tree = at.MoveNext())
             {
-                if (!mFilter.IsEmpty)
+                if (mFilter.IsEmpty == false)
                 { // skip fields
                     tw.Tree = tree;
                     if (mFilter.Execute(model) == 0.0)
@@ -66,27 +66,27 @@ namespace iLand.Output
                         continue;
                     }
                 }
-                this.Add(model.GlobalSettings.CurrentYear);
-                this.Add(tree.RU.Index);
-                this.Add(tree.RU.ID);
-                this.Add(tree.Species.ID);
-                this.Add(tree.ID);
-                this.Add(tree.GetCellCenterPoint().X);
-                this.Add(tree.GetCellCenterPoint().Y);
-                this.Add(tree.Dbh);
-                this.Add(tree.Height);
-                this.Add(tree.BasalArea());
-                this.Add(tree.Volume());
-                this.Add(tree.LeafArea);
-                this.Add(tree.FoliageMass);
-                this.Add(tree.StemMass);
-                this.Add(tree.FineRootMass);
-                this.Add(tree.CoarseRootMass);
-                this.Add(tree.LightResourceIndex);
-                this.Add(tree.LightResponse);
-                this.Add(tree.StressIndex);
-                this.Add(tree.NppReserve);
-                this.WriteRow(insertRow);
+                insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                insertRow.Parameters[1].Value = tree.RU.Index;
+                insertRow.Parameters[2].Value = tree.RU.ID;
+                insertRow.Parameters[3].Value = tree.Species.ID;
+                insertRow.Parameters[4].Value = tree.ID;
+                insertRow.Parameters[5].Value = tree.GetCellCenterPoint().X;
+                insertRow.Parameters[6].Value = tree.GetCellCenterPoint().Y;
+                insertRow.Parameters[7].Value = tree.Dbh;
+                insertRow.Parameters[8].Value = tree.Height;
+                insertRow.Parameters[9].Value = tree.BasalArea();
+                insertRow.Parameters[10].Value = tree.Volume();
+                insertRow.Parameters[11].Value = tree.LeafArea;
+                insertRow.Parameters[12].Value = tree.FoliageMass;
+                insertRow.Parameters[13].Value = tree.StemMass;
+                insertRow.Parameters[14].Value = tree.FineRootMass;
+                insertRow.Parameters[15].Value = tree.CoarseRootMass;
+                insertRow.Parameters[16].Value = tree.LightResourceIndex;
+                insertRow.Parameters[17].Value = tree.LightResponse;
+                insertRow.Parameters[18].Value = tree.StressIndex;
+                insertRow.Parameters[19].Value = tree.NppReserve;
+                insertRow.ExecuteNonQuery();
             }
         }
     }

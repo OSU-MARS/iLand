@@ -5,6 +5,9 @@ This repo contains a port of core iLand components from C++ to C#. iLand's user 
 * These directories were not ported: apidoc, fonstudio, iland, ilandc, inits, plugins/{barkbeetle, fire, wind}
 * The abe and abe/output directories were ported but are currently retained only in the feature/scripting branch.
 
+Currently, e_sqlite3.dll needs to be copied from %OutDir%\netcoreapp3.1\runtimes\win-x64\native to %OutDir% as a post build step
+due to [Entity Framework 19396](https://github.com/dotnet/efcore/issues/19396).
+
 ### Dependencies
 This port of iLand is a .NET Core 3.1 assembly. Use of .NET Core 3.1 also motivates the use of Microsoft.Data.Sqlite rather than System.Data.Sqlite
 due to a smaller set of dependencies.

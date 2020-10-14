@@ -8,13 +8,13 @@ namespace iLand.Output
     /** LandscapeOut is aggregated output for the total landscape per species. All values are per hectare values. */
     public class LandscapeOutput : Output
     {
-        private readonly Expression mFilter;
-        private readonly Dictionary<string, StandStatistics> mStandStatisticsBySpecies;
+        private readonly Expression filter;
+        private readonly Dictionary<string, StandStatistics> standStatisticsBySpecies;
 
         public LandscapeOutput()
         {
-            this.mFilter = new Expression();
-            this.mStandStatisticsBySpecies = new Dictionary<string, StandStatistics>();
+            this.filter = new Expression();
+            this.standStatisticsBySpecies = new Dictionary<string, StandStatistics>();
 
             Name = "Landscape aggregates per species";
             TableName = "landscape";
@@ -42,21 +42,21 @@ namespace iLand.Output
         {
             // use a condition for to control execuation for the current year
             string condition = globalSettings.Settings.GetString(".condition", "");
-            mFilter.SetExpression(condition);
+            filter.SetExpression(condition);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            if (!mFilter.IsEmpty)
+            if (!filter.IsEmpty)
             {
-                if (mFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
+                if (filter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
                 {
                     return;
                 }
             }
 
             // clear landscape stats
-            foreach (KeyValuePair<string, StandStatistics> speciesStatistics in mStandStatisticsBySpecies)
+            foreach (KeyValuePair<string, StandStatistics> speciesStatistics in standStatisticsBySpecies)
             {
                 speciesStatistics.Value.Clear();
             }
@@ -86,33 +86,33 @@ namespace iLand.Output
                     {
                         continue;
                     }
-                    if (mStandStatisticsBySpecies.TryGetValue(rus.Species.ID, out StandStatistics statistics) == false)
+                    if (standStatisticsBySpecies.TryGetValue(rus.Species.ID, out StandStatistics statistics) == false)
                     {
                         statistics = new StandStatistics();
-                        mStandStatisticsBySpecies.Add(rus.Species.ID, statistics);
+                        standStatisticsBySpecies.Add(rus.Species.ID, statistics);
                     }
                     statistics.AddAreaWeighted(stat, ru.StockableArea / totalStockableArea);
                 }
             }
 
             // now add to output stream
-            foreach (KeyValuePair<string, StandStatistics> i in mStandStatisticsBySpecies)
+            foreach (KeyValuePair<string, StandStatistics> species in this.standStatisticsBySpecies)
             {
-                StandStatistics stat = i.Value;
-                this.Add(model.GlobalSettings.CurrentYear);
-                this.Add(i.Key); // keys: year, species
-                this.Add(stat.Count);
-                this.Add(stat.AverageDbh);
-                this.Add(stat.AverageHeight);
-                this.Add(stat.StemVolume);
-                this.Add(stat.TotalCarbon());
-                this.Add(stat.TotalStemGrowth);
-                this.Add(stat.BasalArea);
-                this.Add(stat.Npp);
-                this.Add(stat.NppAbove);
-                this.Add(stat.LeafAreaIndex);
-                this.Add(stat.CohortCount);
-                this.WriteRow(insertRow);
+                StandStatistics stat = species.Value;
+                insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                insertRow.Parameters[1].Value = species.Key; // keys: year, species
+                insertRow.Parameters[2].Value = stat.Count;
+                insertRow.Parameters[3].Value = stat.AverageDbh;
+                insertRow.Parameters[4].Value = stat.AverageHeight;
+                insertRow.Parameters[5].Value = stat.StemVolume;
+                insertRow.Parameters[6].Value = stat.TotalCarbon();
+                insertRow.Parameters[7].Value = stat.TotalStemGrowth;
+                insertRow.Parameters[8].Value = stat.BasalArea;
+                insertRow.Parameters[9].Value = stat.Npp;
+                insertRow.Parameters[10].Value = stat.NppAbove;
+                insertRow.Parameters[11].Value = stat.LeafAreaIndex;
+                insertRow.Parameters[12].Value = stat.CohortCount;
+                insertRow.ExecuteNonQuery();
             }
         }
     }

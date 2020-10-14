@@ -1,5 +1,6 @@
 ﻿using iLand.Core;
 using iLand.Tools;
+using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -101,19 +102,15 @@ namespace iLand.Output
         public void LogYear(Model model)
         {
             using DebugTimer timer = model.DebugTimers.Create("OutputManager.LogYear()");
-
+            using SqliteTransaction transaction = model.GlobalSettings.DatabaseOutput.BeginTransaction();
             foreach (Output output in this.outputs)
             {
                 if (output.IsEnabled && output.IsOpen)
                 {
-                    if (output.IsRowEmpty() == false)
-                    {
-                        Trace.TraceWarning("Output " + output.Name + " invalid (not at new row)!!!");
-                        continue;
-                    }
-                    output.LogYear(model);
+                    output.LogYear(model, transaction);
                 }
             }
+            transaction.Commit();
         }
 
         public string WikiFormat()

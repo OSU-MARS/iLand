@@ -36,27 +36,27 @@ namespace iLand.Output
                 using SqliteTransaction transaction = db.BeginTransaction();
                 // create tables
                 // trees
-                SqliteCommand dropTrees = new SqliteCommand("drop table trees", db, transaction);
+                using SqliteCommand dropTrees = new SqliteCommand("drop table trees", db, transaction);
                 dropTrees.ExecuteNonQuery();
-                SqliteCommand createTrees = new SqliteCommand("create table trees (ID integer, RUindex integer, posX integer, posY integer, species text,  age integer, height real, dbh real, leafArea real, opacity real, foliageMass real, woodyMass real, fineRootMass real, coarseRootMass real, NPPReserve real, stressIndex real)", db, transaction);
+                using SqliteCommand createTrees = new SqliteCommand("create table trees (ID integer, RUindex integer, posX integer, posY integer, species text,  age integer, height real, dbh real, leafArea real, opacity real, foliageMass real, woodyMass real, fineRootMass real, coarseRootMass real, NPPReserve real, stressIndex real)", db, transaction);
                 createTrees.ExecuteNonQuery();
                 // soil
-                SqliteCommand dropSoil = new SqliteCommand("drop table soil", db, transaction);
+                using SqliteCommand dropSoil = new SqliteCommand("drop table soil", db, transaction);
                 dropSoil.ExecuteNonQuery();
-                SqliteCommand createSoil = new SqliteCommand("create table soil (RUindex integer, kyl real, kyr real, inLabC real, inLabN real, inLabP real, inRefC real, inRefN real, inRefP real, YLC real, YLN real, YLP real, YRC real, YRN real, YRP real, SOMC real, SOMN real, WaterContent, SnowPack real)", db, transaction);
+                using SqliteCommand createSoil = new SqliteCommand("create table soil (RUindex integer, kyl real, kyr real, inLabC real, inLabN real, inLabP real, inRefC real, inRefN real, inRefP real, YLC real, YLN real, YLP real, YRC real, YRN real, YRP real, SOMC real, SOMN real, WaterContent, SnowPack real)", db, transaction);
                 createSoil.ExecuteNonQuery();
                 // snag
-                SqliteCommand dropSnag = new SqliteCommand("drop table snag", db, transaction);
+                using SqliteCommand dropSnag = new SqliteCommand("drop table snag", db, transaction);
                 dropSoil.ExecuteNonQuery();
-                SqliteCommand createSnag = new SqliteCommand("create table snag(RUIndex integer, climateFactor real, SWD1C real, SWD1N real, SWD2C real, SWD2N real, SWD3C real, SWD3N real, " +
-                       "totalSWDC real, totalSWDN real, NSnags1 real, NSnags2 real, NSnags3 real, dbh1 real, dbh2 real, dbh3 real, height1 real, height2 real, height3 real, " +
-                       "volume1 real, volume2 real, volume3 real, tsd1 real, tsd2 real, tsd3 real, ksw1 real, ksw2 real, ksw3 real, halflife1 real, halflife2 real, halflife3 real, " +
-                       "branch1C real, branch1N real, branch2C real, branch2N real, branch3C real, branch3N real, branch4C real, branch4N real, branch5C real, branch5N real, branchIndex integer)", db, transaction);
+                using SqliteCommand createSnag = new SqliteCommand("create table snag(RUIndex integer, climateFactor real, SWD1C real, SWD1N real, SWD2C real, SWD2N real, SWD3C real, SWD3N real, " +
+                                                                   "totalSWDC real, totalSWDN real, NSnags1 real, NSnags2 real, NSnags3 real, dbh1 real, dbh2 real, dbh3 real, height1 real, height2 real, height3 real, " +
+                                                                   "volume1 real, volume2 real, volume3 real, tsd1 real, tsd2 real, tsd3 real, ksw1 real, ksw2 real, ksw3 real, halflife1 real, halflife2 real, halflife3 real, " +
+                                                                   "branch1C real, branch1N real, branch2C real, branch2N real, branch3C real, branch3N real, branch4C real, branch4N real, branch5C real, branch5N real, branchIndex integer)", db, transaction);
                 createSnag.ExecuteNonQuery();
                 // saplings/regeneration
-                SqliteCommand dropSaplings = new SqliteCommand("drop table saplings", db, transaction);
+                using SqliteCommand dropSaplings = new SqliteCommand("drop table saplings", db, transaction);
                 dropSoil.ExecuteNonQuery();
-                SqliteCommand createSaplings = new SqliteCommand("create table saplings (RUindex integer, species text, posx integer, posy integer, age integer, height float, stress_years integer)", db, transaction);
+                using SqliteCommand createSaplings = new SqliteCommand("create table saplings (RUindex integer, species text, posx integer, posy integer, age integer, height float, stress_years integer)", db, transaction);
                 createSnag.ExecuteNonQuery();
                 transaction.Commit();
                 Debug.WriteLine("Snapshot - tables created. Database " + fileName);
@@ -194,7 +194,7 @@ namespace iLand.Output
         public bool SaveStandSnapshot(int standID, MapGrid standGrid, string fileName, Model model)
         {
             // Check database
-            SqliteConnection db = model.GlobalSettings.DatabaseSnapshotstand();
+            SqliteConnection db = model.GlobalSettings.DatabaseSnapshotStand();
             if (db.State != ConnectionState.Open)
             {
                 OpenStandDatabase(model.GlobalSettings.Path(fileName), model.GlobalSettings, false);
@@ -326,7 +326,7 @@ namespace iLand.Output
 
         public bool LoadStandSnapshot(int standID, MapGrid standGrid, string fileName, Model model)
         {
-            SqliteConnection db = model.GlobalSettings.DatabaseSnapshotstand();
+            SqliteConnection db = model.GlobalSettings.DatabaseSnapshotStand();
             if (db.State != ConnectionState.Open)
             {
                 OpenStandDatabase(model.GlobalSettings.Path(fileName), model.GlobalSettings, false);

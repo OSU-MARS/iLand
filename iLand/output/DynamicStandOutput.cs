@@ -148,13 +148,13 @@ namespace iLand.Output
                 Species species = model.SpeciesSet().ActiveSpecies[index];
                 trees.Clear();
                 AllTreeIterator all_trees = new AllTreeIterator(model);
-                for (Tree t = all_trees.MoveNextLiving(); t != null; t = all_trees.MoveNextLiving())
+                for (Tree tree = all_trees.MoveNextLiving(); tree != null; tree = all_trees.MoveNextLiving())
                 {
-                    if (perSpecies && t.Species != species)
+                    if (perSpecies && tree.Species != species)
                     {
                         continue;
                     }
-                    trees.Add(t);
+                    trees.Add(tree);
                 }
                 if (trees.Count == 0)
                 {
@@ -162,6 +162,7 @@ namespace iLand.Output
                 }
 
                 // dynamic calculations
+                int columnIndex = 0;
                 foreach (SDynamicField field in mFieldList)
                 {
                     if (String.IsNullOrEmpty(field.expression) == false)
@@ -186,19 +187,20 @@ namespace iLand.Output
                         data.Add(custom_expr.Execute(model));
                     }
                     // constant values (if not already present)
-                    if (IsRowEmpty())
+                    if (columnIndex == 0)
                     {
-                        this.Add(model.GlobalSettings.CurrentYear);
-                        this.Add(-1);
-                        this.Add(-1);
+                        insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                        insertRow.Parameters[1].Value = -1;
+                        insertRow.Parameters[2].Value = -1;
                         if (perSpecies)
                         {
-                            this.Add(species.ID);
+                            insertRow.Parameters[3].Value = species.ID;
                         }
                         else
                         {
-                            this.Add("");
+                            insertRow.Parameters[3].Value = "";
                         }
+                        columnIndex = 3;
                     }
 
                     // calculate statistics
@@ -220,12 +222,13 @@ namespace iLand.Output
                         _ => 0.0,
                     };
                     // add current value to output
-                    this.Add(value);
+                    insertRow.Parameters[++columnIndex].Value = value;
                 }
 
-                if (!IsRowEmpty())
+                if (columnIndex > 0)
                 {
-                    this.WriteRow(insertRow);
+                    insertRow.ExecuteNonQuery();
+                    columnIndex = 0;
                 }
 
                 if (!perSpecies)
@@ -265,6 +268,8 @@ namespace iLand.Output
                         continue;
                     }
                 }
+
+                int columnIndex = 0;
                 foreach (ResourceUnitSpecies rus in ru.Species)
                 {
                     if (bySpecies && rus.Statistics.Count == 0)
@@ -275,7 +280,6 @@ namespace iLand.Output
                     // dynamic calculations
                     foreach (SDynamicField field in mFieldList)
                     {
-
                         if (String.IsNullOrEmpty(field.expression) == false)
                         {
                             // setup dynamic dynamic expression if present
@@ -323,20 +327,20 @@ namespace iLand.Output
                             continue;
                         }
 
-
-                        if (IsRowEmpty())
+                        if (columnIndex == 0)
                         {
-                            this.Add(model.GlobalSettings.CurrentYear);
-                            this.Add(ru.Index);
-                            this.Add(ru.ID);
+                            insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                            insertRow.Parameters[1].Value = ru.Index;
+                            insertRow.Parameters[2].Value = ru.ID;
                             if (bySpecies)
                             {
-                                this.Add(rus.Species.ID);
+                                insertRow.Parameters[3].Value = rus.Species.ID;
                             }
                             else
                             {
-                                this.Add("");
+                                insertRow.Parameters[3].Value = "";
                             }
+                            columnIndex = 3;
                         }
 
                         // calculate statistics
@@ -358,12 +362,12 @@ namespace iLand.Output
                             _ => 0.0,
                         };
                         // add current value to output
-                        this.Add(value);
+                        insertRow.Parameters[++columnIndex].Value = value;
 
                     } // foreach (field)
-                    if (!IsRowEmpty())
+                    if (columnIndex > 0)
                     {
-                        this.WriteRow(insertRow);
+                        insertRow.ExecuteNonQuery();
                     }
                     if (!bySpecies)
                     {

@@ -120,11 +120,11 @@ namespace iLand.Test
                 }
                 meanGridHeight /= kalkalpen.HeightGrid.Count;
 
-                Assert.IsTrue(averageDiameterGrowth > 0.2F);
-                Assert.IsTrue(averageHeightGrowth > 0.2F);
+                Assert.IsTrue(averageDiameterGrowth > MathF.Max(0.2F - 0.01F * year, 0.0F));
+                Assert.IsTrue(averageHeightGrowth > MathF.Max(0.2F - 0.01F * year, 0.0F));
                 Assert.IsTrue(minGridHeight >= 0.0F);
                 Assert.IsTrue((meanGridHeight > minGridHeight) && (meanGridHeight < maxGridHeight));
-                Assert.IsTrue(maxGridHeight < 50.0F);
+                Assert.IsTrue(maxGridHeight < 45.0F + 0.1F * year);
                 Assert.IsTrue(minLight >= 0.0F && minLight < 1.0F);
                 Assert.IsTrue((meanLight > minLight) && (meanLight < maxLight));
                 Assert.IsTrue(maxLight == 1.0F);
@@ -171,7 +171,8 @@ namespace iLand.Test
             // check soil properties at initial load
             this.VerifyMalcolmKnappResourceUnit(plot16);
 
-            for (int year = 0; year < 28; ++year)
+            // 2019 - 1985 + 1 = 35 years of data available
+            for (int year = 0; year < 35; ++year)
             {
                 plot16.RunYear();
             }

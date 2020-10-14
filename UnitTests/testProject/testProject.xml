@@ -154,7 +154,7 @@
     <climate>
       <co2concentration>380</co2concentration>
       <tableName>climate1</tableName>
-      <batchYears>61</batchYears>
+      <batchYears>100</batchYears>
       <temperatureShift>0</temperatureShift>
       <precipitationShift>1</precipitationShift>
       <randomSamplingEnabled>false</randomSamplingEnabled>
@@ -178,10 +178,13 @@
       <enabled>true</enabled>
     </dynamic>
     <tree>
+      <!-- SQL insert rate is ~47,000 rows/core-second (i7-3770, Microsoft.Data.Sqlite 3.1.9) which is dominated by individual tree logging 
+           When simulation speed is a concern, consider disabling tree logging or filtering trees. -->
       <enabled>true</enabled>
     </tree>
     <treeremoved>
-      <enabled>false</enabled> <!-- not currently supported due to chatty rather than buffered logging model -->
+      <!-- not currently supported due to chatty rather than buffered logging model -->
+      <enabled>false</enabled>
     </treeremoved>
     <stand>
       <enabled>true</enabled>

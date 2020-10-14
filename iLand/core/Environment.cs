@@ -133,8 +133,7 @@ namespace iLand.Core
                 List<string> climateNames = mInfile.Column(index).Distinct().ToList();
                 if (model.GlobalSettings.LogDebug())
                 {
-                    Debug.WriteLine("creating climate: " + climateNames);
-                    Debug.WriteLine("Environment: climate: # of climates in environment file:" + climateNames.Count);
+                    Debug.WriteLine("Environment: " + climateNames.Count + " climates in environment file.");
                 }
                 foreach (string name in climateNames)
                 {
@@ -212,7 +211,7 @@ namespace iLand.Core
             }
 
             int row = mRowCoordinates[key];
-            if (model.GlobalSettings.LogInfo())
+            if (model.GlobalSettings.LogDebug())
             {
                 Debug.WriteLine("settting up point " + position + " with row " + row);
             }
@@ -228,7 +227,7 @@ namespace iLand.Core
                     continue;
                 }
                 string value = mInfile.Value(row, col).ToString();
-                if (model.GlobalSettings.LogInfo())
+                if (model.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("set " + mKeys[col] + " to " + value);
                 }

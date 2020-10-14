@@ -3,7 +3,6 @@ using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
 
 namespace iLand.Output
@@ -63,12 +62,10 @@ namespace iLand.Output
         */
     public abstract class Output
     {
-        private string mInsertRowSql;
-        private readonly List<object> mRow; ///< current row
+        private string insertRowSqlText;
 
         public bool IsOpen { get; private set; } ///< returns true if output is open, i.e. has a open database connection
         public bool IsEnabled { get; set; } ///< returns true if output is enabled, i.e. is "turned on"
-        public bool IsRowEmpty() { return this.mRow.Count == 0; } ///< returns true if the buffer of the current row is empty
 
         public List<SqlColumn> Columns { get; protected set; }
 
@@ -78,73 +75,11 @@ namespace iLand.Output
 
         public Output()
         {
-            this.mInsertRowSql = null;
-            this.mRow = new List<object>();
+            this.insertRowSqlText = null;
 
             this.Columns = new List<SqlColumn>();
             this.IsEnabled = false;
             this.IsOpen = false;
-
-            this.NewRow();
-        }
-
-        public void Add(object value)
-        {
-            Debug.Assert(this.mRow.Count < this.Columns.Count);
-            this.mRow.Add(value);
-        }
-
-        protected void Add(double value1, double value2) 
-        { 
-            Add(value1); Add(value2); 
-        }
-
-        protected void Add(double value1, double value2, double value3) 
-        { 
-            Add(value1, value2); Add(value3); 
-        }
-
-        protected void Add(double value1, double value2, double value3, double value4) 
-        { 
-            Add(value1, value2); Add(value3, value4); 
-        }
-
-        protected void Add(double value1, double value2, double value3, double value4, double value5)
-        { 
-            Add(value1, value2); Add(value3, value4, value5); 
-        }
-
-        public void LogYear(Model model)
-        {
-            using SqliteTransaction insertTransaction = model.GlobalSettings.DatabaseOutput.BeginTransaction();
-            using SqliteCommand insertRow = new SqliteCommand(this.mInsertRowSql, model.GlobalSettings.DatabaseOutput, insertTransaction);
-            for (int columnIndex = 0; columnIndex < this.Columns.Count; columnIndex++)
-            {
-                insertRow.Parameters.Add("@" + this.Columns[columnIndex].Name, this.Columns[columnIndex].Datatype);
-            }
-
-            this.LogYear(model, insertRow);
-
-            insertTransaction.Commit();
-        }
-
-        protected abstract void LogYear(Model model, SqliteCommand insertRow);
-
-        private void NewRow()
-        {
-            this.mRow.Clear();
-        }
-
-        public void Open(GlobalSettings globalSettings)
-        {
-            if (this.IsOpen)
-            {
-                return;
-            }
-
-            this.EnsureEmptySqlTable(globalSettings);
-            this.mRow.Capacity = this.Columns.Count;
-            this.NewRow();
         }
 
         /** create the database table and opens up the output.
@@ -159,16 +94,16 @@ namespace iLand.Output
             {
                 switch (column.Datatype)
                 {
-                    case SqliteType.Integer: 
-                        createTableCommand.Append(column.Name + " integer,"); 
+                    case SqliteType.Integer:
+                        createTableCommand.Append(column.Name + " integer,");
                         break;
-                    case SqliteType.Real: 
+                    case SqliteType.Real:
                         createTableCommand.Append(column.Name + " real,");
                         break;
-                    case SqliteType.Text: 
-                        createTableCommand.Append(column.Name + " text,"); 
+                    case SqliteType.Text:
+                        createTableCommand.Append(column.Name + " text,");
                         break;
-                    default: 
+                    default:
                         throw new NotSupportedException(); // blob
                 }
                 columnNames.Add(column.Name);
@@ -181,9 +116,32 @@ namespace iLand.Output
             SqliteCommand createTable = new SqliteCommand(createTableCommand.ToString(), db);
             createTable.ExecuteNonQuery(); // (re-)create table
 
-            this.mInsertRowSql = "insert into " + this.TableName + " (" + String.Join(", ", columnNames) + ") values (@" + String.Join(", @", columnNames) + ")";
+            this.insertRowSqlText = "insert into " + this.TableName + " (" + String.Join(", ", columnNames) + ") values (@" + String.Join(", @", columnNames) + ")";
 
             this.IsOpen = true;
+        }
+
+        public void LogYear(Model model, SqliteTransaction transaction)
+        {
+            SqliteCommand insertRow = new SqliteCommand(this.insertRowSqlText, model.GlobalSettings.DatabaseOutput, transaction);
+            for (int columnIndex = 0; columnIndex < this.Columns.Count; columnIndex++)
+            {
+                insertRow.Parameters.Add("@" + this.Columns[columnIndex].Name, this.Columns[columnIndex].Datatype);
+            }
+
+            this.LogYear(model, insertRow);
+        }
+
+        protected abstract void LogYear(Model model, SqliteCommand insertRow);
+
+        public void Open(GlobalSettings globalSettings)
+        {
+            if (this.IsOpen)
+            {
+                return;
+            }
+
+            this.EnsureEmptySqlTable(globalSettings);
         }
 
         public virtual void Setup(GlobalSettings globalSettings)
@@ -203,16 +161,6 @@ namespace iLand.Output
             }
             result.AppendLine("||");
             return result.ToString();
-        }
-
-        protected void WriteRow(SqliteCommand insertRow)
-        {
-            for (int columnIndex = 0; columnIndex < this.Columns.Count; columnIndex++)
-            {
-                insertRow.Parameters[columnIndex].Value = this.mRow[columnIndex];
-            }
-            insertRow.ExecuteNonQuery();
-            this.NewRow();
         }
     }
 }

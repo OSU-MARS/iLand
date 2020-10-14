@@ -43,16 +43,16 @@ namespace iLand.Output
             {
                 return;
             }
-            bool ru_level = true;
+            bool logResourceUnits = true;
             // switch off details if this is indicated in the conditionRU option
             if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
             {
-                ru_level = false;
+                logResourceUnits = false;
             }
 
-            double ru_count = 0.0;
-            int snow_days = 0;
-            double et = 0.0, excess = 0.0, rad = 0.0, snow_rad = 0.0, p = 0.0;
+            int resourceUnitCount = 0;
+            int snowDays = 0;
+            double evapotranspiration = 0.0, runoff = 0.0, rad = 0.0, snowRad = 0.0, precip = 0.0;
             double stockable = 0.0, stocked = 0.0;
             foreach (ResourceUnit ru in model.ResourceUnits)
             {
@@ -61,46 +61,48 @@ namespace iLand.Output
                     continue; // do not include if out of project area
                 }
                 WaterCycle wc = ru.WaterCycle;
-                if (ru_level)
+                if (logResourceUnits)
                 {
-                    this.Add(model.GlobalSettings.CurrentYear);
-                    this.Add(ru.Index);
-                    this.Add(ru.ID);
-                    this.Add(ru.StockedArea / Constant.RUArea);
-                    this.Add(ru.StockableArea / Constant.RUArea);
-                    this.Add(ru.Climate.AnnualPrecipitation());
-                    this.Add(wc.TotalEvapotranspiration);
-                    this.Add(wc.TotalWaterLoss);
-                    this.Add(wc.SnowDays);
-                    this.Add(ru.Climate.TotalAnnualRadiation);
-                    this.Add(wc.SnowDayRad);
-                    this.WriteRow(insertRow);
+                    insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                    insertRow.Parameters[1].Value = ru.Index;
+                    insertRow.Parameters[2].Value = ru.ID;
+                    insertRow.Parameters[3].Value = ru.StockedArea / Constant.RUArea;
+                    insertRow.Parameters[4].Value = ru.StockableArea / Constant.RUArea;
+                    insertRow.Parameters[5].Value = ru.Climate.AnnualPrecipitation();
+                    insertRow.Parameters[6].Value = wc.TotalEvapotranspiration;
+                    insertRow.Parameters[7].Value = wc.TotalWaterLoss;
+                    insertRow.Parameters[8].Value = wc.SnowDays;
+                    insertRow.Parameters[9].Value = ru.Climate.TotalAnnualRadiation;
+                    insertRow.Parameters[10].Value = wc.SnowDayRad;
+                    insertRow.ExecuteNonQuery();
                 }
-                ++ru_count;
+                ++resourceUnitCount;
                 stockable += ru.StockableArea; 
                 stocked += ru.StockedArea;
-                p += ru.Climate.AnnualPrecipitation();
-                et += wc.TotalEvapotranspiration; excess += wc.TotalWaterLoss; 
-                snow_days += (int)wc.SnowDays;
+                precip += ru.Climate.AnnualPrecipitation();
+                evapotranspiration += wc.TotalEvapotranspiration; runoff += wc.TotalWaterLoss; 
+                snowDays += (int)wc.SnowDays;
                 rad += ru.Climate.TotalAnnualRadiation;
-                snow_rad += wc.SnowDayRad;
+                snowRad += wc.SnowDayRad;
             }
 
             // write landscape sums
-            if (ru_count == 0.0)
+            if (resourceUnitCount == 0)
             {
                 return;
             }
-            this.Add(model.GlobalSettings.CurrentYear, -1, -1); // codes -1/-1 for landscape level
-            this.Add(stocked / ru_count / Constant.RUArea);
-            this.Add(stockable / ru_count / Constant.RUArea);
-            this.Add(p / ru_count); // mean precip
-            this.Add(et / ru_count);
-            this.Add(excess / ru_count);
-            this.Add(snow_days / ru_count);
-            this.Add(rad / ru_count);
-            this.Add(snow_rad / ru_count);
-            this.WriteRow(insertRow);
+            insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear; // codes -1/-1 for landscape level
+            insertRow.Parameters[1].Value = -1;
+            insertRow.Parameters[2].Value = -1;
+            insertRow.Parameters[3].Value = stocked / resourceUnitCount / Constant.RUArea;
+            insertRow.Parameters[4].Value = stockable / resourceUnitCount / Constant.RUArea;
+            insertRow.Parameters[5].Value = precip / resourceUnitCount; // mean precip
+            insertRow.Parameters[6].Value = evapotranspiration / resourceUnitCount;
+            insertRow.Parameters[7].Value = runoff / resourceUnitCount;
+            insertRow.Parameters[8].Value = snowDays / resourceUnitCount;
+            insertRow.Parameters[9].Value = rad / resourceUnitCount;
+            insertRow.Parameters[10].Value = snowRad / resourceUnitCount;
+            insertRow.ExecuteNonQuery();
         }
 
         public override void Setup(GlobalSettings globalSettings)

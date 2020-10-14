@@ -62,19 +62,19 @@ namespace iLand.Output
                     {
                         continue;
                     }
-                    this.Add(model.GlobalSettings.CurrentYear);
-                    this.Add(ru.Index);
-                    this.Add(ru.ID);
-                    this.Add(rus.Species.ID); // keys
+                    insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                    insertRow.Parameters[1].Value = ru.Index;
+                    insertRow.Parameters[2].Value = ru.ID;
+                    insertRow.Parameters[3].Value = rus.Species.ID; // keys
 
                     // calculate statistics based on the number of represented trees per cohort
-                    // double n = sap.livingStemNumber(rus.species(), out double avg_dbh, out double avg_height, out double avg_age);
-                    this.Add(sap.LivingSaplings);
-                    this.Add(sap.LivingSaplingsSmall);
-                    this.Add(sap.LivingCohorts);
-                    this.Add(sap.AverageHeight);
-                    this.Add(sap.AverageAge);
-                    this.WriteRow(insertRow);
+                    // double n = sap.livingStemNumber(rus.species(), out double avg_dbh, out double avg_height, out double avg_age;
+                    insertRow.Parameters[4].Value = sap.LivingSaplings;
+                    insertRow.Parameters[5].Value = sap.LivingSaplingsSmall;
+                    insertRow.Parameters[6].Value = sap.LivingCohorts;
+                    insertRow.Parameters[7].Value = sap.AverageHeight;
+                    insertRow.Parameters[8].Value = sap.AverageAge;
+                    insertRow.ExecuteNonQuery();
                 }
             }
         }

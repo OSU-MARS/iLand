@@ -33,21 +33,21 @@ namespace iLand.Output
             SpeciesResponse resp = prod.SpeciesResponse;
             for (int i = 0; i < 12; i++)
             {
-                this.Add(model.GlobalSettings.CurrentYear);
-                this.Add(rus.RU.Index);
-                this.Add(rus.RU.ID);
-                this.Add(rus.Species.ID);
-                this.Add(i + 1); // month
+                insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                insertRow.Parameters[1].Value = rus.RU.Index;
+                insertRow.Parameters[2].Value = rus.RU.ID;
+                insertRow.Parameters[3].Value = rus.Species.ID;
+                insertRow.Parameters[4].Value = i + 1; // month
                 // responses
-                this.Add(resp.TempResponse[i]);
-                this.Add(resp.SoilWaterResponse[i]);
-                this.Add(resp.VpdResponse[i]);
-                this.Add(resp.Co2Response[i]);
-                this.Add(resp.NitrogenResponse);
-                this.Add(resp.GlobalRadiation[i]);
-                this.Add(prod.UtilizablePar[i]);
-                this.Add(prod.MonthlyGpp[i]);
-                this.WriteRow(insertRow);
+                insertRow.Parameters[5].Value = resp.TempResponse[i];
+                insertRow.Parameters[6].Value = resp.SoilWaterResponse[i];
+                insertRow.Parameters[7].Value = resp.VpdResponse[i];
+                insertRow.Parameters[8].Value = resp.Co2Response[i];
+                insertRow.Parameters[9].Value = resp.NitrogenResponse;
+                insertRow.Parameters[10].Value = resp.GlobalRadiation[i];
+                insertRow.Parameters[11].Value = prod.UtilizablePar[i];
+                insertRow.Parameters[12].Value = prod.MonthlyGpp[i];
+                insertRow.ExecuteNonQuery();
             }
         }
 

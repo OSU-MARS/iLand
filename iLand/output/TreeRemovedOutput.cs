@@ -1,16 +1,21 @@
 ﻿using iLand.Core;
 using iLand.Tools;
 using Microsoft.Data.Sqlite;
+using System.Collections.Generic;
 
 namespace iLand.Output
 {
     public class TreeRemovedOutput : Output
     {
-        private readonly Expression mFilter;
+        private readonly Expression filter;
+        private readonly List<MortalityCause> removalReasons;
+        private readonly List<Tree> removedTrees;
 
         public TreeRemovedOutput()
         {
-            this.mFilter = new Expression();
+            this.filter = new Expression();
+            this.removalReasons = new List<MortalityCause>();
+            this.removedTrees = new List<Tree>();
 
             Name = "Tree Removed Output";
             TableName = "treeremoved";
@@ -39,55 +44,61 @@ namespace iLand.Output
             Columns.Add(new SqlColumn("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", OutputDatatype.Double));
         }
 
-        public void LogTreeRemoval(Model model, Tree tree, int reason)
+        public void AddTree(Model model, Tree tree, MortalityCause reason)
         {
-            if (!mFilter.IsEmpty)
+            if (filter.IsEmpty == false)
             { 
                 // skip trees if filter is present
                 TreeWrapper tw = new TreeWrapper();
-                mFilter.Wrapper = tw;
+                filter.Wrapper = tw;
                 tw.Tree = tree;
-                if (mFilter.Execute(model) == 0.0)
+                if (filter.Execute(model) == 0.0)
                 {
                     return;
                 }
             }
 
-            // TODO: re-enable tree removal logging
-            //this.Add(globalSettings.CurrentYear);
-            //this.Add(tree.RU.Index);
-            //this.Add(tree.RU.ID);
-            //this.Add(tree.Species.ID);
-            //this.Add(tree.ID);
-            //this.Add(reason);
-            //this.Add(tree.GetCellCenterPoint().X);
-            //this.Add(tree.GetCellCenterPoint().Y);
-            //this.Add(tree.Dbh);
-            //this.Add(tree.Height);
-            //this.Add(tree.BasalArea());
-            //this.Add(tree.Volume());
-            //this.Add(tree.LeafArea);
-            //this.Add(tree.FoliageMass);
-            //this.Add(tree.StemMass);
-            //this.Add(tree.FineRootMass);
-            //this.Add(tree.CoarseRootMass);
-            //this.Add(tree.LightResourceIndex);
-            //this.Add(tree.mLightResponse);
-            //this.Add(tree.StressIndex);
-            //this.Add(tree.mNPPReserve);
-            //this.WriteRow(insertRow: null);
+            this.removedTrees.Add(tree);
+            this.removalReasons.Add(reason);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            // do nothing here
-            return;
+            for (int treeIndex = 0; treeIndex < this.removedTrees.Count; ++treeIndex)
+            {
+                Tree tree = this.removedTrees[treeIndex];
+                insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                insertRow.Parameters[1].Value = tree.RU.Index;
+                insertRow.Parameters[2].Value = tree.RU.ID;
+                insertRow.Parameters[3].Value = tree.Species.ID;
+                insertRow.Parameters[4].Value = tree.ID;
+                insertRow.Parameters[5].Value = (int)this.removalReasons[treeIndex];
+                insertRow.Parameters[6].Value = tree.GetCellCenterPoint().X;
+                insertRow.Parameters[7].Value = tree.GetCellCenterPoint().Y;
+                insertRow.Parameters[8].Value = tree.Dbh;
+                insertRow.Parameters[9].Value = tree.Height;
+                insertRow.Parameters[10].Value = tree.BasalArea();
+                insertRow.Parameters[11].Value = tree.Volume();
+                insertRow.Parameters[12].Value = tree.LeafArea;
+                insertRow.Parameters[13].Value = tree.FoliageMass;
+                insertRow.Parameters[14].Value = tree.StemMass;
+                insertRow.Parameters[15].Value = tree.FineRootMass;
+                insertRow.Parameters[16].Value = tree.CoarseRootMass;
+                insertRow.Parameters[17].Value = tree.LightResourceIndex;
+                insertRow.Parameters[18].Value = tree.LightResponse;
+                insertRow.Parameters[19].Value = tree.StressIndex;
+                insertRow.Parameters[20].Value = tree.NppReserve;
+                insertRow.ExecuteNonQuery();
+            }
+
+            this.removedTrees.Clear();
+            this.removalReasons.Clear();
         }
 
         public override void Setup(GlobalSettings globalSettings)
         {
             string filter = globalSettings.Settings.GetString(".filter", "");
-            mFilter.SetExpression(filter);
+            this.filter.SetExpression(filter);
         }
     }
 }

@@ -31,11 +31,11 @@ namespace iLand.Output
             }
         }
 
-        private readonly Dictionary<int, LROdata> mLandscapeRemoval;
+        private readonly Dictionary<int, LROdata> removals;
 
         public LandscapeRemovedOutput()
         {
-            this.mLandscapeRemoval = new Dictionary<int, LROdata>();
+            this.removals = new Dictionary<int, LROdata>();
 
             mIncludeDeadTrees = false;
             mIncludeHarvestTrees = true;
@@ -54,23 +54,22 @@ namespace iLand.Output
             Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.Double));
         }
 
-        public void AccumulateTreeRemoval(Tree tree, int reason)
+        public void AdTree(Tree tree, MortalityCause removalType)
         {
-            MortalityCause rem_type = (MortalityCause)reason;
-            if (rem_type == MortalityCause.Stress && !mIncludeDeadTrees)
+            if (removalType == MortalityCause.Stress && !mIncludeDeadTrees)
             {
                 return;
             }
-            if ((rem_type == MortalityCause.Harvest || rem_type == MortalityCause.Salavaged || rem_type == MortalityCause.CutDown) && !mIncludeHarvestTrees)
+            if ((removalType == MortalityCause.Harvest || removalType == MortalityCause.Salavaged || removalType == MortalityCause.CutDown) && !mIncludeHarvestTrees)
             {
                 return;
             }
 
-            int key = reason * 10000 + tree.Species.Index;
-            if (mLandscapeRemoval.TryGetValue(key, out LROdata removalData) == false)
+            int key = 10000 * (int)removalType + tree.Species.Index;
+            if (removals.TryGetValue(key, out LROdata removalData) == false)
             {
                 removalData = new LROdata();
-                mLandscapeRemoval.Add(key, removalData);
+                removals.Add(key, removalData);
             }
             removalData.basal_area += tree.BasalArea();
             removalData.volume += tree.Volume();
@@ -79,15 +78,15 @@ namespace iLand.Output
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            foreach (KeyValuePair<int, LROdata> i in mLandscapeRemoval)
+            foreach (KeyValuePair<int, LROdata> removal in removals)
             {
-                if (i.Value.n > 0)
+                if (removal.Value.n > 0)
                 {
-                    MortalityCause rem_type = (MortalityCause)(i.Key / 10000);
-                    int species_index = i.Key % 10000;
-                    this.Add(model.GlobalSettings.CurrentYear);
-                    this.Add(model.SpeciesSet().Species(species_index).ID);
-                    this.Add(rem_type switch
+                    MortalityCause rem_type = (MortalityCause)(removal.Key / 10000);
+                    int species_index = removal.Key % 10000;
+                    insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                    insertRow.Parameters[1].Value = model.SpeciesSet().Species(species_index).ID;
+                    insertRow.Parameters[2].Value = rem_type switch
                     {
                         MortalityCause.CutDown => "C",
                         MortalityCause.Stress => "N",
@@ -95,18 +94,18 @@ namespace iLand.Output
                         MortalityCause.Harvest => "H",
                         MortalityCause.Salavaged => "S",
                         _ => throw new NotSupportedException("Unhandled tree removal type " + rem_type + ".")
-                    });;
-                    this.Add(i.Value.n);
-                    this.Add(i.Value.volume);
-                    this.Add(i.Value.basal_area);
-                    this.WriteRow(insertRow);
+                    };;
+                    insertRow.Parameters[3].Value = removal.Value.n;
+                    insertRow.Parameters[4].Value = removal.Value.volume;
+                    insertRow.Parameters[5].Value = removal.Value.basal_area;
+                    insertRow.ExecuteNonQuery();
                 }
             }
 
             // clear data (no need to clear the hash table, right?)
-            foreach (LROdata i in mLandscapeRemoval.Values)
+            foreach (LROdata removal in this.removals.Values)
             {
-                i.Clear();
+                removal.Clear();
             }
         }
 

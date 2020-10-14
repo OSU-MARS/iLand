@@ -143,7 +143,7 @@ namespace iLand.Core
                         continue;
                     }
                     LoadInitFile(fileName, type, 0, model, ru);
-                    if (model.GlobalSettings.LogInfo())
+                    if (model.GlobalSettings.LogDebug())
                     {
                         Debug.WriteLine("loaded " + fileName + " on " + ru.BoundingBox + ", " + ru.Trees.Count + "trees.");
                     }
@@ -179,7 +179,7 @@ namespace iLand.Core
                     if (key > 0)
                     {
                         file_name = map_file.Value(i, ivalue);
-                        if (model.GlobalSettings.LogInfo())
+                        if (model.GlobalSettings.LogDebug())
                         {
                             Debug.WriteLine("loading " + file_name + " for grid id " + key);
                         }
@@ -209,14 +209,14 @@ namespace iLand.Core
 
                 // setup the random distribution
                 string density_func = xml.GetString("model.initialization.randomFunction", "1-x^2");
-                if (model.GlobalSettings.LogInfo())
+                if (model.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("density function: " + density_func);
                 }
                 if (mRandom == null || (mRandom.DensityFunction != density_func))
                 {
                     mRandom = new RandomCustomPdf(model, density_func);
-                    if (model.GlobalSettings.LogInfo())
+                    if (model.GlobalSettings.LogDebug())
                     {
                         Debug.WriteLine("new probabilty density function: " + density_func);
                     }
@@ -509,14 +509,14 @@ namespace iLand.Core
 
             // setup the random distribution
             string densityFunction = model.GlobalSettings.Settings.GetString("model.initialization.randomFunction", "1-x^2");
-            if (model.GlobalSettings.LogInfo())
+            if (model.GlobalSettings.LogDebug())
             {
-                Trace.WriteLine("density function: " + densityFunction);
+                Debug.WriteLine("density function: " + densityFunction);
             }
             if (mRandom == null || (mRandom.DensityFunction != densityFunction))
             {
                 mRandom = new RandomCustomPdf(model, densityFunction);
-                if (model.GlobalSettings.LogInfo())
+                if (model.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("new probabilty density function: " + densityFunction);
                 }
@@ -983,7 +983,7 @@ namespace iLand.Core
             }
             if (total_misses > 0 || total_tries > total_count)
             {
-                if (model.GlobalSettings.LogInfo())
+                if (model.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("init for stand " + standID + " treecount: " + total_count + ", tries: " + total_tries + ", misses: " + total_misses + ", %miss: " + Math.Round(total_misses * 100 / (double)total_count));
                 }
@@ -1033,7 +1033,7 @@ namespace iLand.Core
                     }
                 }
             }
-            if (model.GlobalSettings.LogInfo())
+            if (model.GlobalSettings.LogDebug())
             {
                 Debug.WriteLine("init for stand " + standID + " with area" + grid.Area(standID) + " m2, count of 10m pixels: " + indices.Count + "initialized trees: " + total_count);
             }

@@ -109,7 +109,7 @@ namespace iLand.Tools
         }
 
         public SqliteConnection DatabaseSnapshot() { throw new NotImplementedException(); }
-        public SqliteConnection DatabaseSnapshotstand() { throw new NotImplementedException(); }
+        public SqliteConnection DatabaseSnapshotStand() { throw new NotImplementedException(); }
 
         public bool IsDebugEnabled(DebugOutputs dbg) 
         { 
@@ -507,19 +507,28 @@ namespace iLand.Tools
             SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
             {
                 DataSource = databaseFilePath,
-                Mode = fileMustExist ? SqliteOpenMode.ReadWrite : SqliteOpenMode.ReadWriteCreate,
+                Mode = fileMustExist ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
             };
             SqliteConnection db = new SqliteConnection(connectionString.ConnectionString);
             // Debug.WriteLine("setup database connection " + dbname + " to " + databaseFilePath);
             db.Open();
             if (!fileMustExist)
             {
-                // for output databases:
-                // some special commands (pragmas: see also: http://www.sqlite.org/pragma.html)
+                // performance settings for output databases (http://www.sqlite.org/pragma.html)
+                // Databases are typically expensive to create and maintain so SQLite defaults to conservative disk interactions. iLand
+                // output data is cheap to generate and easy to recreate in the unlikely event something goes wrong flushing to disk, so
+                // caution can be exchanged for speed. For example, journal_mode = memory, synchronous = off, and temp_store = memory 
+                // make the model unit tests run 4-5x times faster than default settings.
+                // pragma synchronous cannot be changed within a transaction
+                using SqliteCommand synchronization = new SqliteCommand("pragma synchronous(off)", db);
+                synchronization.ExecuteNonQuery();
+
                 using SqliteTransaction transaction = db.BeginTransaction();
-                SqliteCommand tempStore = new SqliteCommand("pragma temp_store(2)", db, transaction); // temp storage in memory
-                // for now, use default Sqlite synchronization
-                // db.exec("pragma synchronous(1)"); // medium synchronization between memory and disk (faster than "full", more than "none")
+                // little to no difference between journal_mode = memory and journal_mode = off
+                using SqliteCommand journalMode = new SqliteCommand("pragma journal_mode(memory)", db, transaction);
+                journalMode.ExecuteNonQuery();
+                using SqliteCommand tempStore = new SqliteCommand("pragma temp_store(memory)", db, transaction);
+                tempStore.ExecuteNonQuery();
                 transaction.Commit();
             }
 

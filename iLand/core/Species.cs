@@ -252,7 +252,7 @@ namespace iLand.Core
             species.DeathProbabilityIntrinsic = 1.0 - Math.Pow(p_lucky, 1.0 / species.mMaximumAge);
             species.mDeathProb_stress = p_lucky_stress;
 
-            if (model.GlobalSettings.LogInfo())
+            if (model.GlobalSettings.LogDebug())
             {
                 Debug.WriteLine("species " + species.Name + " probStress " + p_lucky_stress + " resulting probability: " + species.mDeathProb_stress);
             }
@@ -427,7 +427,7 @@ namespace iLand.Core
             {
                 // decide whether current year is a seed year
                 IsSeedYear = (model.RandomGenerator.Random() < mSeedYearProbability);
-                if (IsSeedYear && model.GlobalSettings.LogDebug())
+                if (IsSeedYear && model.GlobalSettings.LogInfo())
                 {
                     Debug.WriteLine("species " + ID + " has a seed year.");
                 }

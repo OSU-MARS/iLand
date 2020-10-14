@@ -1136,13 +1136,13 @@ namespace iLand.Core
             TreeRemovedOutput treeRemovedOutput = model.GlobalSettings.OutputManager.TreeRemovedOutput;
             if (treeRemovedOutput != null && treeRemovedOutput.IsEnabled)
             {
-                treeRemovedOutput.LogTreeRemoval(model, this, (int)reason);
+                treeRemovedOutput.AddTree(model, this, reason);
             }
 
             LandscapeRemovedOutput landscapeRemovedOutput = model.GlobalSettings.OutputManager.LandscapeRemovedOutput;
             if (landscapeRemovedOutput != null && landscapeRemovedOutput.IsEnabled)
             {
-                landscapeRemovedOutput.AccumulateTreeRemoval(this, (int)reason);
+                landscapeRemovedOutput.AdTree(this, reason);
             }
         }
 

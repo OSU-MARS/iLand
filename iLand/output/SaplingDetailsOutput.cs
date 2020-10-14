@@ -49,33 +49,33 @@ namespace iLand.Output
                 SaplingCell[] saplingCells = ru.SaplingCells;
                 for (int px = 0; px < Constant.LightCellsPerHectare; ++px)
                 {
-                    SaplingCell s = saplingCells[px];
-                    int n_on_px = s.GetOccupiedSlotCount();
+                    SaplingCell saplingCell = saplingCells[px];
+                    int n_on_px = saplingCell.GetOccupiedSlotCount();
                     if (n_on_px > 0)
                     {
-                        for (int i = 0; i < SaplingCell.SaplingsPerCell; ++i)
+                        for (int index = 0; index < SaplingCell.SaplingsPerCell; ++index)
                         {
-                            if (s.Saplings[i].IsOccupied())
+                            if (saplingCell.Saplings[index].IsOccupied())
                             {
-                                ResourceUnitSpecies rus = s.Saplings[i].ResourceUnitSpecies(ru);
+                                ResourceUnitSpecies rus = saplingCell.Saplings[index].ResourceUnitSpecies(ru);
                                 Species species = rus.Species;
-                                double dbh = s.Saplings[i].Height / species.SaplingGrowthParameters.HdSapling * 100.0;
+                                double dbh = saplingCell.Saplings[index].Height / species.SaplingGrowthParameters.HdSapling * 100.0;
                                 // check minimum dbh
                                 if (dbh < mMinDbh)
                                 {
                                     continue;
                                 }
-                                double n_repr = species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(s.Saplings[i].Height) / n_on_px;
+                                double n_repr = species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].Height) / n_on_px;
 
-                                this.Add(model.GlobalSettings.CurrentYear);
-                                this.Add(ru.Index);
-                                this.Add(ru.ID);
-                                this.Add(rus.Species.ID);
-                                this.Add(n_repr);
-                                this.Add(dbh);
-                                this.Add(s.Saplings[i].Height);
-                                this.Add(s.Saplings[i].Age);
-                                this.WriteRow(insertRow);
+                                insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                                insertRow.Parameters[1].Value = ru.Index;
+                                insertRow.Parameters[2].Value = ru.ID;
+                                insertRow.Parameters[3].Value = rus.Species.ID;
+                                insertRow.Parameters[4].Value = n_repr;
+                                insertRow.Parameters[5].Value = dbh;
+                                insertRow.Parameters[6].Value = saplingCell.Saplings[index].Height;
+                                insertRow.Parameters[7].Value = saplingCell.Saplings[index].Age;
+                                insertRow.ExecuteNonQuery();
                             }
                         }
                     }

@@ -77,7 +77,6 @@ namespace iLand.Output
                 isRUlevel = false;
             }
 
-
             double[] accumulatedValues   = new double[23]; // 8 data values
             foreach (ResourceUnit ru in model.ResourceUnits)
             {
@@ -90,55 +89,57 @@ namespace iLand.Output
                 double areaFactor = ru.StockableArea / Constant.RUArea; // conversion factor from real area to per ha values
                 if (isRUlevel)
                 {
-                    this.Add(model.GlobalSettings.CurrentYear);
-                    this.Add(ru.Index);
-                    this.Add(ru.ID);
-                    this.Add(areaFactor); // keys
+                    insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                    insertRow.Parameters[1].Value = ru.Index;
+                    insertRow.Parameters[2].Value = ru.ID;
+                    insertRow.Parameters[3].Value = areaFactor; // keys
                     // biomass from trees (scaled to 1ha already)
-                    this.Add(s.StemC);
-                    this.Add(s.StemN);   // stem
-                    this.Add(s.BranchC);
-                    this.Add(s.BranchN);   // branch
-                    this.Add(s.FoliageC);
-                    this.Add(s.FoliageN);   // foliage
-                    this.Add(s.CoarseRootC);
-                    this.Add(s.CoarseRootN);   // coarse roots
-                    this.Add(s.FineRootC);
-                    this.Add(s.FineRootN);   // fine roots
+                    insertRow.Parameters[4].Value = s.StemC;
+                    insertRow.Parameters[5].Value = s.StemN;   // stem
+                    insertRow.Parameters[6].Value = s.BranchC;
+                    insertRow.Parameters[7].Value = s.BranchN;   // branch
+                    insertRow.Parameters[8].Value = s.FoliageC;
+                    insertRow.Parameters[9].Value = s.FoliageN;   // foliage
+                    insertRow.Parameters[10].Value = s.CoarseRootC;
+                    insertRow.Parameters[11].Value = s.CoarseRootN;   // coarse roots
+                    insertRow.Parameters[12].Value = s.FineRootC;
+                    insertRow.Parameters[13].Value = s.FineRootN;   // fine roots
 
                     // biomass from regeneration
-                    this.Add(s.RegenerationC);
-                    this.Add(s.RegenerationN);
+                    insertRow.Parameters[14].Value = s.RegenerationC;
+                    insertRow.Parameters[15].Value = s.RegenerationN;
 
                     // biomass from standing dead woods
                     if (ru.Snags.TotalSwd == null) // expected in year 0
                     {
-                        this.Add(0.0, 0.0);
+                        insertRow.Parameters[16].Value = 0.0;
+                        insertRow.Parameters[17].Value = 0.0;
                     }
                     else
                     {
-                        this.Add(ru.Snags.TotalSwd.C / areaFactor);
-                        this.Add(ru.Snags.TotalSwd.N / areaFactor);   // snags
+                        insertRow.Parameters[16].Value = ru.Snags.TotalSwd.C / areaFactor;
+                        insertRow.Parameters[17].Value = ru.Snags.TotalSwd.N / areaFactor;   // snags
                     }
                     if (ru.Snags.TotalOtherWood == null)
                     {
-                        this.Add(0.0, 0.0);
+                        insertRow.Parameters[18].Value = 0.0;
+                        insertRow.Parameters[19].Value = 0.0;
                     }
                     else
                     {
-                        this.Add(ru.Snags.TotalOtherWood.C / areaFactor);
-                        this.Add(ru.Snags.TotalOtherWood.N / areaFactor);   // snags, other (branch + coarse root)
+                        insertRow.Parameters[18].Value = ru.Snags.TotalOtherWood.C / areaFactor;
+                        insertRow.Parameters[19].Value = ru.Snags.TotalOtherWood.N / areaFactor;   // snags, other (branch + coarse root)
                     }
 
                     // biomass from soil (convert from t/ha . kg/ha)
-                    this.Add(ru.Soil.YoungRefractory.C * 1000.0);
-                    this.Add(ru.Soil.YoungRefractory.N * 1000.0);   // wood
-                    this.Add(ru.Soil.YoungLabile.C * 1000.0);
-                    this.Add(ru.Soil.YoungLabile.N * 1000.0);   // litter
-                    this.Add(ru.Soil.OrganicMatter.C * 1000.0);
-                    this.Add(ru.Soil.OrganicMatter.N * 1000.0);   // soil
+                    insertRow.Parameters[20].Value = ru.Soil.YoungRefractory.C * 1000.0; // wood
+                    insertRow.Parameters[21].Value = ru.Soil.YoungRefractory.N * 1000.0;
+                    insertRow.Parameters[22].Value = ru.Soil.YoungLabile.C * 1000.0; // litter
+                    insertRow.Parameters[23].Value = ru.Soil.YoungLabile.N * 1000.0;
+                    insertRow.Parameters[24].Value = ru.Soil.OrganicMatter.C * 1000.0; // soil
+                    insertRow.Parameters[25].Value = ru.Soil.OrganicMatter.N * 1000.0;
 
-                    this.WriteRow(insertRow);
+                    insertRow.ExecuteNonQuery();
                 }
 
                 // landscape level statistics
@@ -179,13 +180,15 @@ namespace iLand.Output
 
             // write landscape sums
             double totalStockableArea = accumulatedValues[0]; // convert to ha of stockable area
-            this.Add(model.GlobalSettings.CurrentYear, -1, -1); // keys
-            this.Add(accumulatedValues[0]); // stockable area [m2]
+            insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+            insertRow.Parameters[1].Value = -1;
+            insertRow.Parameters[2].Value = -1; // keys
+            insertRow.Parameters[3].Value = accumulatedValues[0]; // stockable area [m2]
             for (int valueIndex = 1; valueIndex < accumulatedValues.Length; ++valueIndex)
             {
-                this.Add(accumulatedValues[valueIndex] / totalStockableArea);
+                insertRow.Parameters[3 + valueIndex].Value = accumulatedValues[valueIndex] / totalStockableArea;
             }
-            this.WriteRow(insertRow);
+            insertRow.ExecuteNonQuery();
         }
     }
 }

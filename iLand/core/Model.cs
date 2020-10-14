@@ -74,11 +74,11 @@ namespace iLand.Core
         public bool IsMultithreaded() { return ThreadRunner.IsMultithreaded; } // BUGBUG
 
         // start/stop/run
-        public void AfterStop() ///< finish and cleanup
-        {
-            // do some cleanup
-            // no op in C++ iLand sources
-        }
+        //public void AfterStop() ///< finish and cleanup
+        //{
+        //    // do some cleanup
+        //    // no op in C++ iLand sources
+        //}
 
         /// beforeRun performs several steps before the models starts running.
         /// inter alia: * setup of the stands
@@ -104,10 +104,6 @@ namespace iLand.Core
 
             // load climate
             {
-                if (this.GlobalSettings.LogDebug())
-                {
-                    Debug.WriteLine("attempting to load climate...");
-                }
                 using DebugTimer loadClimamtes = this.DebugTimers.Create("Model.BeforeRun(Climate.Setup + NextYear)");
                 foreach (Climate c in Climates)
                 {

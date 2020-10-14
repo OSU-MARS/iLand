@@ -95,7 +95,7 @@ namespace iLand.Tools
                         double psum = 0;
                         for (int i = 0; i < 12; ++i)
                         {
-                            psum += ResourceUnit.Climate.PrecipitationMonth[i];
+                            psum += ResourceUnit.Climate.PrecipitationByMonth[i];
                         }
                         return psum;
                     }
