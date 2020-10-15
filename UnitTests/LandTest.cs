@@ -1,4 +1,4 @@
-﻿using iLand.Core;
+﻿using iLand.Simulation;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
 

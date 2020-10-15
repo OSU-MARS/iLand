@@ -30,9 +30,47 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Simulation\SystemStatistics.cs" />
+    <Compile Remove="Output\Snapshot.cs" />
+    <Compile Remove="Tools\ClimateConverter.cs" />
+    <Compile Remove="Tools\ColorExtensions.cs" />
+    <Compile Remove="Tools\Colors.cs" />
+    <Compile Remove="Tools\DebugOutputs.cs" />
+    <Compile Remove="Tools\DebugTimer.cs" />
+    <Compile Remove="Tools\DebugTimerCollection.cs" />
+    <Compile Remove="Tools\Helper.cs" />
+    <Compile Remove="Tools\MapGridRULock.cs" />
+    <Compile Remove="Tools\RumpleIndex.cs" />
+    <Compile Remove="Tools\SpatialAnalysis.cs" />
+    <Compile Remove="Tools\SqlHelper.cs" />
+    <Compile Remove="Tools\TickTack.cs" />
+    <Compile Remove="Tools\UpdateState.cs" />
+    <Compile Remove="Tools\Viewport.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>iLand.UnitTests</_Parameter1>
     </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Unused\SystemStatistics.cs" />
+    <None Include="Unused\Snapshot.cs" />
+    <None Include="Unused\ClimateConverter.cs" />
+    <None Include="Unused\ColorExtensions.cs" />
+    <None Include="Unused\Colors.cs" />
+    <None Include="Unused\DebugOutputs.cs" />
+    <None Include="Unused\DebugTimer.cs" />
+    <None Include="Unused\DebugTimerCollection.cs" />
+    <None Include="Unused\Helper.cs" />
+    <None Include="Unused\MapGridRULock.cs" />
+    <None Include="Unused\RumpleIndex.cs" />
+    <None Include="Unused\SpatialAnalysis.cs" />
+    <None Include="Unused\SqlHelper.cs" />
+    <None Include="Unused\TickTack.cs" />
+    <None Include="Unused\UpdateState.cs" />
+    <None Include="Unused\Viewport.cs" />
   </ItemGroup>
 
   <ItemGroup>
