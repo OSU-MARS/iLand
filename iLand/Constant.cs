@@ -26,37 +26,6 @@ namespace iLand
         public const double QuarterPi = 0.25 * Math.PI;
         public const double Sqrt2 = 1.4142135623731;
 
-        public static class Default
-        {
-            public static class Climate
-            {
-                public const double CarbonDioxidePpm = 400.0;
-                public const int YearsPerLoad = 100;
-                public const double PrecipitationMultiplier = 1.0;
-                public const double TemperatureShift = 0.0;
-            }
-
-            public static class Grass
-            {
-                public const double LifThreshold = 0.2;
-            }
-
-            public static class Soil
-            {
-                public const double AnnualNitrogenDeposition = 0.0;
-                public const double Leaching = 0.15;
-                public const double Qb = 5.0;
-                public const bool UseDynamicAvailableNitrogen = false;
-            }
-
-            public static class WaterCycle
-            {
-                public const double NeedleStorage = 4.0;
-                public const double BroadleafStorage = 2.0;
-                public const double SnowmeltTemperature = 0.0;
-            }
-        }
-
         public static class Setting
         {
             public const string SpeciesTable = "model.species.source";
@@ -68,15 +37,6 @@ namespace iLand
                 public const string PrecipitationMultiplier = "precipitationShift";
                 public const string TemperatureShift = "temperatureShift";
                 public const string YearsPerLoad = "batchYears";
-            }
-
-            public static class Grass
-            {
-                public const string Effect = "model.settings.grass.grassEffect";
-                public const string LifThreshold = "model.settings.grass.LIFThreshold";
-                public const string MaxTimeLag = "model.settings.grass.maxTimeLag";
-                public const string Potential = "model.settings.grass.grassPotential";
-                public const string Type = "model.settings.grass.type";
             }
 
             public static class Snag
@@ -117,13 +77,6 @@ namespace iLand
                 public const string YoungRefractoryC = "model.site.youngRefractoryC";
                 public const string YoungRefractoryDecompositionRate = "model.site.youngRefractoryDecompRate";
                 public const string YoungRefractoryN = "model.site.youngRefractoryN";
-            }
-
-            public static class WaterCycle
-            {
-                public const string NeedleStorage = "model.settings.interceptionStorageNeedle";
-                public const string BroadleafStorage = "model.settings.interceptionStorageBroadleaf";
-                public const string SnowmeltTemperature = "model.settings.snowMeltTemperature";
             }
         }
 

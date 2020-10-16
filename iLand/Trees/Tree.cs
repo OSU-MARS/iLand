@@ -10,7 +10,6 @@ using System.Drawing;
 namespace iLand.Trees
 {
     /** @class Tree
-        @ingroup core
         A tree is the basic simulation entity of iLand and represents a single tree.
         Trees in iLand are designed to be lightweight, thus the list of stored properties is limited. Basic properties
         are dimensions (dbh, height), biomass pools (stem, leaves, roots), the reserve NPP pool. Additionally, the location and species are stored.
@@ -1132,13 +1131,13 @@ namespace iLand.Trees
                 reason = MortalityCause.CutDown;
             }
             // create output for tree removals
-            TreeRemovedOutput treeRemovedOutput = model.GlobalSettings.OutputManager.TreeRemovedOutput;
+            TreeRemovedOutput treeRemovedOutput = model.GlobalSettings.OutputManager.TreeRemoved;
             if (treeRemovedOutput != null && treeRemovedOutput.IsEnabled)
             {
                 treeRemovedOutput.AddTree(model, this, reason);
             }
 
-            LandscapeRemovedOutput landscapeRemovedOutput = model.GlobalSettings.OutputManager.LandscapeRemovedOutput;
+            LandscapeRemovedOutput landscapeRemovedOutput = model.GlobalSettings.OutputManager.LandscapeRemoved;
             if (landscapeRemovedOutput != null && landscapeRemovedOutput.IsEnabled)
             {
                 landscapeRemovedOutput.AddTree(this, reason);

@@ -2,7 +2,6 @@
 using iLand.Tools;
 using iLand.Trees;
 using Microsoft.Data.Sqlite;
-using System;
 
 namespace iLand.Output
 {
@@ -41,14 +40,9 @@ namespace iLand.Output
             Columns.Add(new SqlColumn("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", OutputDatatype.Double));
         }
 
-        public override void Setup(GlobalSettings globalSettings)
+        public override void Setup(Model model)
         {
-            if (globalSettings.Settings.IsValid() == false)
-            {
-                throw new NotSupportedException("No parameter section in project file.");
-            }
-            string filter = globalSettings.Settings.GetStringFromXml(".filter", "");
-            mFilter.SetExpression(filter);
+            mFilter.SetExpression(model.Project.Output.Tree.Filter);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

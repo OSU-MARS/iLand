@@ -5,7 +5,6 @@ using System.Diagnostics;
 namespace iLand.Trees
 {
     /** @class ResourceUnitSpecies
-      @ingroup core
         The class contains data available at ResourceUnit x Species scale.
         Data stored is either statistical (i.e. number of trees per species) or used
         within the model (e.g. fraction of utilizable Radiation).

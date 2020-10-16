@@ -106,14 +106,11 @@ namespace iLand.Output
             insertRow.ExecuteNonQuery();
         }
 
-        public override void Setup(GlobalSettings globalSettings)
+        public override void Setup(Model model)
         {
             // use a condition for to control execuation for the current year
-            string condition = globalSettings.Settings.GetStringFromXml(".condition", "");
-            mFilter.SetExpression(condition);
-
-            condition = globalSettings.Settings.GetStringFromXml(".conditionRU", "");
-            mResourceUnitFilter.SetExpression(condition);
+            mFilter.SetExpression(model.Project.Output.Water.Condition);
+            mResourceUnitFilter.SetExpression(model.Project.Output.Water.ConditionRU);
         }
     }
 }

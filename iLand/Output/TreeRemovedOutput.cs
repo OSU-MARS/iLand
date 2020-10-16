@@ -96,10 +96,9 @@ namespace iLand.Output
             this.removalReasons.Clear();
         }
 
-        public override void Setup(GlobalSettings globalSettings)
+        public override void Setup(Model model)
         {
-            string filter = globalSettings.Settings.GetStringFromXml(".filter", "");
-            this.filter.SetExpression(filter);
+            this.filter.SetExpression(model.Project.Output.TreeRemoved.Filter);
         }
     }
 }

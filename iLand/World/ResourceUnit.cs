@@ -10,7 +10,6 @@ namespace iLand.World
     /** @class ResourceUnit
         ResourceUnit is the spatial unit that encapsulates a forest stand and links to several environmental components
         (Climate, Soil, Water, ...).
-        @ingroup core
         A resource unit has a size of (currently) 100x100m. Many processes in iLand operate on the level of a ResourceUnit.
         Each resource unit has the same Climate and other properties (e.g. available nitrogen).
         Proceses on this level are, inter alia, NPP Production (see Production3PG), water calculations (WaterCycle), the modeling
@@ -86,7 +85,7 @@ namespace iLand.World
 
         public void Setup(Model model)
         {
-            this.WaterCycle.Setup(this, model);
+            this.WaterCycle.Setup(model, this);
 
             this.Snags = null;
             this.Soil = null;
@@ -97,9 +96,9 @@ namespace iLand.World
                 // class size of snag classes
                 // swdDBHClass12: class break between classes 1 and 2 for standing snags(dbh, cm)
                 // swdDBHClass23: class break between classes 2 and 3 for standing snags(dbh, cm)
-                this.Snags.SetupThresholds(model.GlobalSettings.Settings.GetDoubleFromXml(Constant.Setting.Soil.SwhDbhClass12),
-                                           model.GlobalSettings.Settings.GetDoubleFromXml(Constant.Setting.Soil.SwhDbhClass23));
-                this.Snags.Setup(this, model.GlobalSettings); // must call SetupThresholds() first
+                this.Snags.SetupThresholds(model.Project.Model.Settings.Soil.SwdDbhClass12,
+                                           model.Project.Model.Settings.Soil.SwdDdhClass23);
+                this.Snags.Setup(model, this); // must call SetupThresholds() first
             }
 
             if (model.ModelSettings.RegenerationEnabled)

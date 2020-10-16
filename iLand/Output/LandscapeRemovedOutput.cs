@@ -110,10 +110,10 @@ namespace iLand.Output
             }
         }
 
-        public override void Setup(GlobalSettings globalSettings)
+        public override void Setup(Model model)
         {
-            mIncludeHarvestTrees = globalSettings.Settings.GetBooleanFromXml(".includeHarvest", true);
-            mIncludeDeadTrees = globalSettings.Settings.GetBooleanFromXml(".includeNatural", false);
+            mIncludeHarvestTrees = model.Project.Output.LandscapeRemoved.IncludeHarvest;
+            mIncludeDeadTrees = model.Project.Output.LandscapeRemoved.IncludeNatural;
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using iLand.Simulation;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -8,7 +7,6 @@ using System.Linq;
 namespace iLand.World
 {
     /** @class GisGrid
-      @ingroup tools
       GisGrid encapsulates a simple grid of values based on GIS data.
       GisGrid can load input files in ESRI text file format (loadFromFile()) and transforms
       coordinates to the current reference in iLand.

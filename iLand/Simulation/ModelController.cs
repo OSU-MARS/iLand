@@ -81,7 +81,7 @@ namespace iLand.Simulation
         //public void LoadFile(string initFileName)
         //{
         //    mInitFile = initFileName;
-        //    this.Model.GlobalSettings.LoadProjectFile(mInitFile);
+        //    Model.LoadProject(initFileName);
         //}
 
         public void Create()
@@ -98,7 +98,6 @@ namespace iLand.Simulation
             //Debug.WriteLine("**************************************************");
 
             Model = new Model();
-            Model.LoadProject();
             if (!Model.IsSetup)
             {
                 LastError = "An error occured during the loading of the project. Please check the logs.";

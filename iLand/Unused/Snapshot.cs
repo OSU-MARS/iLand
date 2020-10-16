@@ -199,7 +199,7 @@ namespace iLand.Output
             SqliteConnection db = model.GlobalSettings.DatabaseSnapshotStand();
             if (db.State != ConnectionState.Open)
             {
-                OpenStandDatabase(model.GlobalSettings.Path(fileName), model.GlobalSettings, false);
+                OpenStandDatabase(model.GlobalSettings.GetPath(fileName), model.GlobalSettings, false);
 
                 List<string> tableNames = new List<string>();
                 SqliteCommand selectTableNames = new SqliteCommand("SELECT name FROM sqlite_schema WHERE type='table'", db);
@@ -331,7 +331,7 @@ namespace iLand.Output
             SqliteConnection db = model.GlobalSettings.DatabaseSnapshotStand();
             if (db.State != ConnectionState.Open)
             {
-                OpenStandDatabase(model.GlobalSettings.Path(fileName), model.GlobalSettings, false);
+                OpenStandDatabase(model.GlobalSettings.GetPath(fileName), model.GlobalSettings, false);
             }
 
             // load trees

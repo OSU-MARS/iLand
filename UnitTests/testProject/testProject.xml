@@ -24,7 +24,6 @@
       <randomSeed>0</randomSeed>
     </settings>
   </system>
-
   <model>
     <settings>
       <regenerationEnabled>true</regenerationEnabled>
@@ -239,8 +238,8 @@
     </fire>
     <wind>
     </wind>
-    <barkebeetle>
-    </barkebeetle>
+    <barkbeetle>
+    </barkbeetle>
   </modules>
   <user>
   </user>

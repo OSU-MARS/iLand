@@ -1,5 +1,4 @@
-﻿using iLand.Simulation;
-using iLand.Tools;
+﻿using iLand.Tools;
 using iLand.Trees;
 using iLand.World;
 using System;
@@ -12,13 +11,13 @@ using System.Linq;
 namespace iLand.Input
 {
     /// <summary>
-    /// Resource unit climates and soil properties plust a few other settings.
+    /// Resource unit climates and soil properties plus a few other settings.
     /// </summary>
     /// <remarks>
     /// Data is read from various sources and presented to the core model with a standardized interface.
     //  See http://iland.boku.ac.at/simulation+extent.
     /// </remarks>
-    public class Environment
+    public class EnvironmentReader
     {
         private bool isGridMode;
         private List<string> columnNames;
@@ -66,10 +65,10 @@ namespace iLand.Input
         public double SoilLeaching { get; private set; }
         public double SoilQb { get; private set; }
 
-        public Dictionary<string, SpeciesSet> SpeciesSetsByName { get; private set; } // created species sets
+        public Dictionary<string, SpeciesSet> SpeciesSetsByTableName { get; private set; } // created species sets
         public bool UseDynamicAvailableNitrogen { get; private set; } // if true, iLand utilizes the soil-model N for species responses (and the dynamically calculated N available?)
 
-        public Environment()
+        public EnvironmentReader()
         {
             this.isGridMode = false;
             this.mInfile = null;
@@ -79,12 +78,12 @@ namespace iLand.Input
             this.CurrentResourceUnitID = 0;
             this.CurrentSpeciesSet = null;
             this.GisGrid = new GisGrid();
-            this.SpeciesSetsByName = new Dictionary<string, SpeciesSet>();
+            this.SpeciesSetsByTableName = new Dictionary<string, SpeciesSet>();
         }
 
         public bool IsSetup() { return mInfile != null; }
 
-        public bool LoadFromProjectAndEnvironmentFile(Model model, string environmentFilePath)
+        public bool LoadFromProjectAndEnvironmentFile(Simulation.Model model, string environmentFilePath)
         {
             mInfile = new CsvFile();
             mInfile.LoadFile(environmentFilePath);
@@ -97,7 +96,7 @@ namespace iLand.Input
             rowIndexByCoordinateOrID.Clear();
             ClimatesByName.Clear();
             CurrentResourceUnitID = 0;
-            SpeciesSetsByName.Clear();
+            SpeciesSetsByTableName.Clear();
 
             if (isGridMode)
             {
@@ -130,10 +129,10 @@ namespace iLand.Input
             }
 
             // soil parameters
-            this.AnnualNitrogenDeposition = model.GlobalSettings.Settings.GetDoubleFromXml(Constant.Setting.Soil.AnnualNitrogenDeposition, Constant.Default.Soil.AnnualNitrogenDeposition); //	Derived from Zöbelboden-data. Hülber et al.reported values a bit lower than that for the same area: http://onlinelibrary.wiley.com/doi/10.3170/2008-7-18489/pdf
-            this.SoilLeaching = model.GlobalSettings.Settings.GetDoubleFromXml(Constant.Setting.Soil.Leaching, Constant.Default.Soil.Leaching);
-            this.SoilQb = model.GlobalSettings.Settings.GetDoubleFromXml(Constant.Setting.Soil.Qb, Constant.Default.Soil.Qb);
-            this.UseDynamicAvailableNitrogen = model.GlobalSettings.Settings.GetBooleanFromXml(Constant.Setting.Soil.UseDynamicAvailableNitrogen, false);
+            this.AnnualNitrogenDeposition = model.Project.Model.Settings.Soil.NitrogenDeposition;
+            this.SoilLeaching = model.Project.Model.Settings.Soil.Leaching;
+            this.SoilQb = model.Project.Model.Settings.Soil.Qb;
+            this.UseDynamicAvailableNitrogen = model.Project.Model.Settings.Soil.UseDynamicAvailableNitrogen;
 
             // species sets
             int keyIndex;
@@ -146,24 +145,24 @@ namespace iLand.Input
                 {
                     //model.GlobalSettings.Settings.SetParameter(Constant.Setting.SpeciesTable, name); // set xml value
                     // create species sets
-                    SpeciesSet speciesSet = new SpeciesSet();
+                    SpeciesSet speciesSet = new SpeciesSet(name);
                     speciesSet.Setup(model);
 
                     if (this.CurrentSpeciesSet == null)
                     {
                         this.CurrentSpeciesSet = speciesSet;
                     }
-                    this.SpeciesSetsByName.Add(name, speciesSet);
+                    this.SpeciesSetsByTableName.Add(name, speciesSet);
                 }
-                Debug.WriteLine(this.SpeciesSetsByName.Count + " species sets created.");
+                Debug.WriteLine(this.SpeciesSetsByTableName.Count + " species sets created.");
             }
             else
             {
                 // no species sets specified
-                SpeciesSet speciesSet = new SpeciesSet();
-                speciesSet.Setup(model);
-                CurrentSpeciesSet = speciesSet;
-                SpeciesSetsByName.Add("default", speciesSet);
+                SpeciesSet defaultSpeciesSet = new SpeciesSet("species");
+                defaultSpeciesSet.Setup(model);
+                CurrentSpeciesSet = defaultSpeciesSet;
+                SpeciesSetsByTableName.Add(defaultSpeciesSet.SqlTableName, defaultSpeciesSet);
             }
 
             // climates
@@ -191,7 +190,7 @@ namespace iLand.Input
         /** sets the "pointer" to a "position" (metric coordinates).
             All specified values are set (also the climate/species-set pointers).
             */
-        public void SetPosition(PointF position, Model model)
+        public void SetPosition(PointF position, Simulation.Model model)
         {
             // no changes occur, when the "environment" is not loaded
             if (!IsSetup())
@@ -257,7 +256,7 @@ namespace iLand.Input
                 switch (columnNames[columnIndex])
                 {
                     case Constant.Setting.SpeciesTable:
-                        this.CurrentSpeciesSet = this.SpeciesSetsByName[value];
+                        this.CurrentSpeciesSet = this.SpeciesSetsByTableName[value];
                         break;
                     case Constant.Setting.Climate.Name:
                         if (this.ClimatesByName.TryGetValue(value, out Climate climate) == false)

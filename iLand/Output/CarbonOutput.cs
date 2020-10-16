@@ -54,14 +54,11 @@ namespace iLand.Output
             Columns.Add(new SqlColumn("soil_n", "soil organic matter (som), nitrogen kg/ha", OutputDatatype.Double));
         }
 
-        public override void Setup(GlobalSettings globalSettings)
+        public override void Setup(Model model)
         {
             // use a condition for to control execuation for the current year
-            string condition = globalSettings.Settings.GetStringFromXml(".condition", "");
-            mFilter.SetExpression(condition);
-
-            condition = globalSettings.Settings.GetStringFromXml(".conditionRU", "");
-            mResourceUnitFilter.SetExpression(condition);
+            mFilter.SetExpression(model.Project.Output.Carbon.Condition);
+            mResourceUnitFilter.SetExpression(model.Project.Output.Carbon.ConditionRU);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

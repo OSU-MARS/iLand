@@ -10,7 +10,6 @@ using System.Linq;
 namespace iLand.Simulation
 {
     /** @class Management Management executes management routines.
-        @ingroup core
         The actual iLand management is based on Javascript functions. This class provides
         the frame for executing the javascript as well as the functions that are called by scripts and
         that really do the work.

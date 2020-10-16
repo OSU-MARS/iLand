@@ -1,9 +1,13 @@
-﻿namespace iLand.Simulation
+﻿using System.Xml.Serialization;
+
+namespace iLand.Simulation
 {
-    internal enum GrassAlgorithmType
+    public enum GrassAlgorithmType
     {
         Invalid,
+        [XmlEnum(Name = "continuous")]
         Continuous,
+        [XmlEnum(Name = "pixel")]
         Pixel
     }
 }

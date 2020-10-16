@@ -129,8 +129,8 @@ namespace iLand.Tools
             Debug.WriteLine("extractPatches: found " + patch_index + " patches, total valid pixels: " + total_size + " skipped" + patches_skipped);
             if (String.IsNullOrEmpty(fileName) == false)
             {
-                Debug.WriteLine("extractPatches: save to file: " + model.GlobalSettings.Path(fileName));
-                File.WriteAllText(model.GlobalSettings.Path(fileName), Grid.ToEsriRaster(model, mClumpGrid));
+                Debug.WriteLine("extractPatches: save to file: " + model.GlobalSettings.GetPath(fileName));
+                File.WriteAllText(model.GlobalSettings.GetPath(fileName), Grid.ToEsriRaster(model, mClumpGrid));
             }
             return counts;
 
@@ -142,13 +142,13 @@ namespace iLand.Tools
             {
                 mRumple = new RumpleIndex();
             }
-            File.WriteAllText(model.GlobalSettings.Path(fileName), Grid.ToEsriRaster(model, mRumple.RumpleGrid(model)));
+            File.WriteAllText(model.GlobalSettings.GetPath(fileName), Grid.ToEsriRaster(model, mRumple.RumpleGrid(model)));
         }
 
         public void SaveCrownCoverGrid(Model model, string fileName)
         {
             CalculateCrownCover(model);
-            File.WriteAllText(model.GlobalSettings.Path(fileName), Grid.ToEsriRaster(model, mCrownCoverGrid));
+            File.WriteAllText(model.GlobalSettings.GetPath(fileName), Grid.ToEsriRaster(model, mCrownCoverGrid));
         }
 
         private void CalculateCrownCover(Model model)

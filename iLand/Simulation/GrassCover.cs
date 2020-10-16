@@ -61,8 +61,7 @@ namespace iLand.Simulation
 
         public void Setup(Model model)
         {
-            XmlHelper xml = model.GlobalSettings.Settings;
-            if (!xml.GetBooleanFromXml("model.settings.grass.enabled"))
+            if (model.Project.Model.Settings.Grass.Enabled == false)
             {
                 // clear grid
                 Grid.Clear();
@@ -83,19 +82,19 @@ namespace iLand.Simulation
                 }
             }
 
-            mType = Enum.Parse<GrassAlgorithmType>(xml.GetStringFromXml(Constant.Setting.Grass.Type), ignoreCase: true);
+            mType = model.Project.Model.Settings.Grass.Type;
             if (mType == GrassAlgorithmType.Pixel)
             {
                 // setup of pixel based / discrete approach
-                string formula = xml.GetStringFromXml("model.settings.grass.grassDuration");
+                string formula = model.Project.Model.Settings.Grass.GrassDuration;
                 if (String.IsNullOrEmpty(formula))
                 {
                     throw new NotSupportedException("setup(): missing equation for 'grassDuration'.");
                 }
                 mPDF.Setup(model, formula, 0.0, 100.0);
                 //mGrassEffect.setExpression(formula);
-
-                mGrassLIFThreshold = (float)xml.GetDoubleFromXml(Constant.Setting.Grass.LifThreshold, Constant.Default.Grass.LifThreshold);
+                
+                mGrassLIFThreshold = model.Project.Model.Settings.Grass.LifThreshold;
 
                 // clear array
                 for (int stepIndex = 0; stepIndex < Steps; ++stepIndex)
@@ -106,21 +105,22 @@ namespace iLand.Simulation
             else
             {
                 // setup of continuous grass concept
-                string formula = xml.GetStringFromXml(Constant.Setting.Grass.Potential);
-                if (String.IsNullOrEmpty(formula))
+                string grassPotential = model.Project.Model.Settings.Grass.GrassPotential;
+                if (String.IsNullOrEmpty(grassPotential))
                 {
                     throw new NotSupportedException("Required expression 'grassPotential' is missing.");
                 }
-                mGrassPotential.SetExpression(formula);
+                mGrassPotential.SetExpression(grassPotential);
                 mGrassPotential.Linearize(model, 0.0, 1.0, Math.Min(Steps, 1000));
 
-                formula = xml.GetStringFromXml(Constant.Setting.Grass.Effect);
-                if (String.IsNullOrEmpty(formula))
+                string grassEffect = model.Project.Model.Settings.Grass.GrassEffect;
+                if (String.IsNullOrEmpty(grassEffect))
                 {
                     throw new NotSupportedException("Required expression 'grassEffect' is missing.");
                 }
-                mGrassEffect.SetExpression(formula);
-                mMaxTimeLag = (int)(xml.GetDoubleFromXml(Constant.Setting.Grass.MaxTimeLag));
+                mGrassEffect.SetExpression(grassEffect);
+
+                mMaxTimeLag = model.Project.Model.Settings.Grass.MaxTimeLag;
                 if (mMaxTimeLag == 0)
                 {
                     throw new NotSupportedException("Value of 'maxTimeLag' is invalid or missing.");

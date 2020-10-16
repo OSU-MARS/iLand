@@ -1,9 +1,7 @@
 ﻿using iLand.Simulation;
-using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
 
 namespace iLand.Output
@@ -15,74 +13,85 @@ namespace iLand.Output
     {
         private readonly List<Output> outputs; // list of outputs in system
 
-        public CarbonFlowOutput CarbonFlowOutput { get; private set; }
-        public CarbonOutput CarbonOutput { get; private set; }
-        public DynamicStandOutput DynamicStandOutput { get; private set; }
-        public LandscapeOutput LandscapeOutput { get; private set; }
-        public LandscapeRemovedOutput LandscapeRemovedOutput { get; private set; }
-        public ManagementOutput ManagementOutput { get; private set; }
-        public ProductionOutput ProductionOutput { get; private set; }
-        public SaplingOutput SaplingOutput { get; private set; }
-        public SaplingDetailsOutput SaplingDetailsOutput { get; private set; }
-        public StandDeadOutput StandDeadOutput { get; private set; }
-        public StandOutput StandOutput { get; private set; }
-        public TreeOutput TreeOutput { get; private set; }
-        public TreeRemovedOutput TreeRemovedOutput { get; private set; }
-        public WaterOutput WaterOutput { get; private set; }
+        public CarbonFlowOutput CarbonFlow { get; private set; }
+        public CarbonOutput Carbon { get; private set; }
+        public DynamicStandOutput DynamicStand { get; private set; }
+        public LandscapeOutput Landscape { get; private set; }
+        public LandscapeRemovedOutput LandscapeRemoved { get; private set; }
+        public ManagementOutput Management { get; private set; }
+        public ProductionOutput Production { get; private set; }
+        public SaplingOutput Sapling { get; private set; }
+        public SaplingDetailsOutput SaplingDetails { get; private set; }
+        public StandDeadOutput StandDead { get; private set; }
+        public StandOutput Stand { get; private set; }
+        public TreeOutput Tree { get; private set; }
+        public TreeRemovedOutput TreeRemoved { get; private set; }
+        public WaterOutput Water { get; private set; }
 
         // on creation of the output manager
         // an instance of every iLand output
         // must be added to the list of outputs.
         public OutputManager()
         {
-            this.CarbonFlowOutput = new CarbonFlowOutput();
-            this.CarbonOutput = new CarbonOutput();
-            this.DynamicStandOutput = new DynamicStandOutput();
-            this.LandscapeOutput = new LandscapeOutput();
-            this.LandscapeRemovedOutput = new LandscapeRemovedOutput();
-            this.ProductionOutput = new ProductionOutput();
-            this.ManagementOutput = new ManagementOutput();
-            this.StandDeadOutput = new StandDeadOutput();
-            this.SaplingDetailsOutput = new SaplingDetailsOutput();
-            this.SaplingOutput = new SaplingOutput();
-            this.StandOutput = new StandOutput();
-            this.TreeOutput = new TreeOutput();
-            this.TreeRemovedOutput = new TreeRemovedOutput();
-            this.WaterOutput = new WaterOutput();
+            this.CarbonFlow = new CarbonFlowOutput();
+            this.Carbon = new CarbonOutput();
+            this.DynamicStand = new DynamicStandOutput();
+            this.Landscape = new LandscapeOutput();
+            this.LandscapeRemoved = new LandscapeRemovedOutput();
+            this.Production = new ProductionOutput();
+            this.Management = new ManagementOutput();
+            this.StandDead = new StandDeadOutput();
+            this.SaplingDetails = new SaplingDetailsOutput();
+            this.Sapling = new SaplingOutput();
+            this.Stand = new StandOutput();
+            this.Tree = new TreeOutput();
+            this.TreeRemoved = new TreeRemovedOutput();
+            this.Water = new WaterOutput();
 
             // add all the outputs
             this.outputs = new List<Output>() 
             {
-                this.TreeOutput,
-                this.TreeRemovedOutput,
-                this.StandOutput,
-                this.LandscapeOutput,
-                this.LandscapeRemovedOutput,
-                this.DynamicStandOutput,
-                this.ProductionOutput,
-                this.StandDeadOutput,
-                this.ManagementOutput,
-                this.SaplingOutput,
-                this.SaplingDetailsOutput,
-                this.CarbonOutput,
-                this.CarbonFlowOutput,
-                this.WaterOutput
+                this.Tree,
+                this.TreeRemoved,
+                this.Stand,
+                this.Landscape,
+                this.LandscapeRemoved,
+                this.DynamicStand,
+                this.Production,
+                this.StandDead,
+                this.Management,
+                this.Sapling,
+                this.SaplingDetails,
+                this.Carbon,
+                this.CarbonFlow,
+                this.Water
             };
         }
 
-        public void Setup(GlobalSettings globalSettings)
+        public void Setup(Model model)
         {
-            //close();
-            XmlHelper xml = globalSettings.Settings;
+            //Close();
+            this.CarbonFlow.IsEnabled = model.Project.Output.Carbon.Enabled;
+            this.Carbon.IsEnabled = model.Project.Output.Carbon.Enabled;
+            this.DynamicStand.IsEnabled = model.Project.Output.DynamicStand.Enabled;
+            this.Landscape.IsEnabled = model.Project.Output.Landscape.Enabled;
+            this.LandscapeRemoved.IsEnabled = model.Project.Output.LandscapeRemoved.Enabled;
+            this.Production.IsEnabled = model.Project.Output.ProductionMonth.Enabled;
+            this.Management.IsEnabled = model.Project.Output.Management.Enabled;
+            this.StandDead.IsEnabled = model.Project.Output.StandDead.Enabled;
+            this.SaplingDetails.IsEnabled = model.Project.Output.SaplingDetail.Enabled;
+            this.Sapling.IsEnabled = model.Project.Output.Sapling.Enabled;
+            this.Stand.IsEnabled = model.Project.Output.Stand.Enabled;
+            this.Tree.IsEnabled = model.Project.Output.Tree.Enabled;
+            this.TreeRemoved.IsEnabled = model.Project.Output.TreeRemoved.Enabled;
+            this.Water.IsEnabled = model.Project.Output.Water.Enabled;
+
             foreach (Output output in outputs)
             {
-                string nodepath = String.Format("output.{0}", output.TableName);
-                xml.TrySetCurrentNode(nodepath);
-                output.Setup(globalSettings);
-                output.IsEnabled = xml.GetBooleanFromXml(".enabled", false);
                 if (output.IsEnabled)
                 {
-                    output.Open(globalSettings);
+                    output.Setup(model);
+                    output.Open(model);
                 }
             }
         }

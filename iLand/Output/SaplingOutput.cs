@@ -31,11 +31,9 @@ namespace iLand.Output
             Columns.Add(new SqlColumn("age_avg", "arithmetic average age of the sapling cohorts (years)", OutputDatatype.Double));
         }
 
-        public override void Setup(GlobalSettings globalSettings)
+        public override void Setup(Model model)
         {
-            // use a condition for to control execuation for the current year
-            string condition = globalSettings.Settings.GetStringFromXml(".condition", "");
-            mFilter.SetExpression(condition);
+            mFilter.SetExpression(model.Project.Output.Sapling.Condition);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

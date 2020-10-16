@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 namespace iLand.Tools
 {
     /** @class ExpressionWrapper
-      @ingroup tools
       The base class for objects that can be used within Expressions.
       Derived from ExpressionWrapper are wrappers for e.g. Trees or ResourceUnits.
       They must provide a getVariablesList() and a value() function.

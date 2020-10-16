@@ -147,9 +147,8 @@ namespace iLand.Test
         [TestMethod]
         public void MalcolmKnapp14()
         {
-            string projectDirectory = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "OSU", "iLand", "Malcolm Knapp");
             // spacing trials
-            using Model plot14 = this.LoadProject(Path.Combine(projectDirectory, "plot 14.xml"));
+            using Model plot14 = this.LoadProject(this.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Plot14));
 
             // check soil properties at initial load
             this.VerifyMalcolmKnappResourceUnit(plot14);
@@ -167,8 +166,7 @@ namespace iLand.Test
         [TestMethod]
         public void MalcolmKnapp16()
         {
-            string projectDirectory = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "OSU", "iLand", "Malcolm Knapp");
-            using Model plot16 = this.LoadProject(Path.Combine(projectDirectory, "plot 16.xml"));
+            using Model plot16 = this.LoadProject(this.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Plot16));
 
             // check soil properties at initial load
             this.VerifyMalcolmKnappResourceUnit(plot16);
@@ -187,9 +185,7 @@ namespace iLand.Test
         [TestMethod]
         public void MalcolmKnappNelder()
         {
-            string projectDirectory = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "OSU", "iLand", "Malcolm Knapp");
-
-            using Model nelder1 = this.LoadProject(Path.Combine(projectDirectory, "Nelder 1.xml"));
+            using Model nelder1 = this.LoadProject(this.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Nelder1));
             this.VerifyMalcolmKnappResourceUnit(nelder1);
             for (int year = 0; year < 26; ++year) // age 25 to 51
             {

@@ -15,7 +15,6 @@ namespace iLand.Trees
         private readonly double[] mCarbonThreshold = new double[] { 0.0, 0.0, 0.0 }; // carbon content thresholds that are used to decide if the SWD-pool should be emptied
 
         public ResourceUnit mRU; // link to resource unit
-                                 /// access SWDPool as function of diameter (cm)
         public CarbonNitrogenPool[] mStandingWoodyDebris; // standing woody debris pool (0: smallest dimater class, e.g. <10cm, 1: medium, 2: largest class (e.g. >30cm)) kg/ha
         public double[] mNumberOfSnags; // number of snags in diameter class
         public double[] mAvgDbh; // average diameter in class (cm)
@@ -101,7 +100,11 @@ namespace iLand.Trees
 
         public void SetupThresholds(double lower, double upper)
         {
-            if (mDbhLower == lower)
+            if ((lower < 0.0) || (lower >= upper))
+            {
+                throw new ArgumentOutOfRangeException();
+            }
+            if ((mDbhLower == lower) && (mDbhHigher == upper))
             {
                 return;
             }
@@ -119,7 +122,7 @@ namespace iLand.Trees
             }
         }
 
-        public void Setup(ResourceUnit ru, GlobalSettings globalSettings)
+        public void Setup(Model model, ResourceUnit ru)
         {
             mRU = ru;
             ClimateFactor = 0.0;
@@ -143,21 +146,18 @@ namespace iLand.Trees
             }
 
             // Inital values from XML file
-            XmlHelper xml = globalSettings.Settings;
-            double kyr = xml.GetDoubleFromXml(Constant.Setting.Soil.YoungRefractoryDecompositionRate, -1); // TODO: why does the standing woody pool decay at the soil rate rather than the snag decomposition rate?
+            double kyr = model.Project.Model.Site.YoungRefractoryDecompositionRate; // TODO: why does the standing woody pool decay at the soil rate rather than the snag decomposition rate?
             // put carbon of snags to the middle size class
-            if (xml.TrySetCurrentNode("model.initialization.snags") == false)
-            {
-                throw new XmlException("/project/model/initialization/snags element not found.");
-            }
-            mStandingWoodyDebris[1].C = xml.GetDoubleFromXml(".swdC");
-            mStandingWoodyDebris[1].N = mStandingWoodyDebris[1].C / xml.GetDoubleFromXml(".swdCN", 50.0);
+            mStandingWoodyDebris[1].C = model.Project.Model.Initialization.Snags.StandingWoodyDebrisCarbon;
+            mStandingWoodyDebris[1].N = mStandingWoodyDebris[1].C / model.Project.Model.Initialization.Snags.StandingWoodyDebrisCarbonNitrogenRatio;
             mStandingWoodyDebris[1].DecompositionRate = kyr;
-            mKsw[1] = xml.GetDoubleFromXml(".swdDecompRate");
-            mNumberOfSnags[1] = xml.GetDoubleFromXml(".swdCount");
-            mHalfLife[1] = xml.GetDoubleFromXml(".swdHalfLife");
+            mKsw[1] = model.Project.Model.Initialization.Snags.StandingWoodyDebrisDecompositionRate;
+            mNumberOfSnags[1] = model.Project.Model.Initialization.Snags.SnagsPerResourceUnit;
+            mHalfLife[1] = model.Project.Model.Initialization.Snags.StandingWoodyDebrisHalfLife;
             // and for the Branch/coarse root pools: split the init value into five chunks
-            CarbonNitrogenPool other = new CarbonNitrogenPool(xml.GetDoubleFromXml(".otherC"), xml.GetDoubleFromXml(".otherC") / xml.GetDoubleFromXml(".otherCN", 50.0), kyr);
+            CarbonNitrogenPool other = new CarbonNitrogenPool(model.Project.Model.Initialization.Snags.OtherCarbon,
+                                                              model.Project.Model.Initialization.Snags.OtherCarbon / model.Project.Model.Initialization.Snags.OtherCarbonNitrogenRatio,
+                                                              kyr);
 
             mTotalCarbon = other.C + mStandingWoodyDebris[1].C;
 

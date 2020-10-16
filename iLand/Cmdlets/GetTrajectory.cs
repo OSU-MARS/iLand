@@ -22,9 +22,8 @@ namespace iLand.Cmdlets
         protected override void ProcessRecord()
         {
             using Model model = new Model();
-            model.GlobalSettings.LoadProjectFile(this.Project);
+            model.LoadProject(this.Project);
             model.GlobalSettings.CurrentYear = 1;
-            model.LoadProject();
             model.BeforeRun();
             for (int year = 0; year < Years; ++year)
             {

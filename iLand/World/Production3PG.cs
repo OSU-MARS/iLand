@@ -89,7 +89,6 @@ namespace iLand.World
         }
 
         /** calculate the stand-level NPP
-          @ingroup core
           Standlevel (i.e ResourceUnit-level) production (NPP) following the 3PG approach from Landsberg and Waring.
           @sa http://iland.boku.ac.at/primary+production */
         public double Calculate(Model model)
@@ -136,10 +135,10 @@ namespace iLand.World
             RootFraction = 1.0 - AbovegroundFraction(model);
 
             // global value set?
-            double dbg = model.GlobalSettings.Settings.GetDoubleParameter("gpp_per_year", 0);
-            if (dbg > 0.0)
+            double gppOverride = model.Project.Model.Parameter.GppPerYear;
+            if (gppOverride > 0.0)
             {
-                annualRUgpp = dbg;
+                annualRUgpp = gppOverride;
                 RootFraction = 0.4;
             }
 

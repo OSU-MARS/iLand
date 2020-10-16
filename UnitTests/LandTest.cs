@@ -11,13 +11,17 @@ namespace iLand.Test
             return Path.Combine(testContext.TestDir, "..", "..", "UnitTests", "testProject", "testProject.xml");
         }
 
+        protected string GetMalcolmKnappProjectPath(string projectFileName)
+        {
+            return Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "OSU", "iLand", "Malcolm Knapp", projectFileName);
+        }
+
         protected Model LoadProject(string projectFilePath)
         {
             // see also ModelController
             Model model = new Model();
-            model.GlobalSettings.LoadProjectFile(projectFilePath);
-            model.GlobalSettings.CurrentYear = 1;
-            model.LoadProject();
+            model.LoadProject(projectFilePath);
+            model.GlobalSettings.CurrentYear = 1; // TODO: determine if this is needed
             model.BeforeRun();
             return model;
         }

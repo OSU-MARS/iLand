@@ -7,7 +7,6 @@ using System.IO;
 namespace iLand.World
 {
     /** DEM is a digital elevation model class.
-     @ingroup tools
       It uses a float grid internally.
       slope is calculated in "%", i.e. a value of 1 is 45° (90° -> inf)
 

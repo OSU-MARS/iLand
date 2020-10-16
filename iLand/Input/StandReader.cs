@@ -15,14 +15,13 @@ using System.Xml;
 namespace iLand.Input
 {
     /** @class StandLoader
-        @ingroup tools
         loads (initializes) trees for a "stand" from various sources.
         StandLoader initializes trees on the landscape. It reads (usually) from text files, creates the
         trees and distributes the trees on the landscape (on the ResoureceUnit or on a stand defined by a grid).
 
         See http://iland.boku.ac.at/initialize+trees
         */
-    internal class StandLoader
+    internal class StandReader
     {
         // provide a mapping between "Picus"-style and "iLand"-style species Ids
         // TODO: if needed, expand species support
@@ -34,7 +33,7 @@ namespace iLand.Input
         private static readonly int[] EvenList = new int[] { 12, 6, 18, 16, 8, 22, 2, 10, 14, 0, 24, 20, 4, 1, 13, 15, 19, 21, 3, 7, 11, 17, 23, 5, 9 };
         private static readonly int[] UnevenList = new int[] { 11, 13, 7, 17, 1, 19, 5, 21, 9, 23, 3, 15, 6, 18, 2, 10, 4, 24, 12, 0, 8, 14, 20, 22 };
 
-        private readonly Model mModel;
+        private readonly Simulation.Model mModel;
         private RandomCustomPdf mRandom;
         private List<InitFileItem> mInitItems;
         private readonly Dictionary<int, List<InitFileItem>> mStandInitItems;
@@ -46,7 +45,7 @@ namespace iLand.Input
         /// set a constraining height grid (10m resolution)
         public MapGrid InitHeightGrid { get; set; } // grid with tree heights
 
-        public StandLoader(Model model)
+        public StandReader(Simulation.Model model)
         {
             InitHeightGrid = new MapGrid();
             mStandInitItems = new Dictionary<int, List<InitFileItem>>();
@@ -88,19 +87,17 @@ namespace iLand.Input
 
         /** main routine of the stand setup.
           */
-        public void ProcessInit(Model model)
+        public void ProcessInit(Simulation.Model model)
         {
-            XmlHelper xml = new XmlHelper(model.GlobalSettings.Settings.Node("model.initialization"));
+            string initializationMode = model.Project.Model.Initialization.Mode;
+            string type = model.Project.Model.Initialization.Type;
+            string fileName = model.Project.Model.Initialization.File;
 
-            string initializationMode = xml.GetStringFromXml("mode", "copy");
-            string type = xml.GetStringFromXml("type", "");
-            string fileName = xml.GetStringFromXml("file", "");
-
-            bool heightGridEnabled = xml.GetBooleanFromXml("heightGrid.enabled", false);
-            mHeightGridTries = xml.GetInt32FromXml("heightGrid.maxTries", 10);
+            bool heightGridEnabled = model.Project.Model.Initialization.HeightGrid.Enabled;
+            mHeightGridTries = model.Project.Model.Initialization.HeightGrid.MaxTries;
             if (heightGridEnabled)
             {
-                string initHeightGridFile = model.GlobalSettings.Path(xml.GetStringFromXml("heightGrid.fileName"), "init");
+                string initHeightGridFile = model.GlobalSettings.GetPath(model.Project.Model.Initialization.HeightGrid.FileName);
                 Debug.WriteLine("initialization: using predefined tree heights map " + initHeightGridFile);
 
                 MapGrid p = new MapGrid(model, initHeightGridFile, false);
@@ -110,7 +107,7 @@ namespace iLand.Input
                 }
                 InitHeightGrid = p;
 
-                string expr = xml.GetStringFromXml("heightGrid.fitFormula", "polygon(x, 0,0, 0.8,1, 1.1, 1, 1.25,0)");
+                string expr = model.Project.Model.Initialization.HeightGrid.FitFormula;
                 mHeightGridResponse = new Expression(expr);
                 mHeightGridResponse.Linearize(model, 0.0, 2.0);
             }
@@ -118,7 +115,7 @@ namespace iLand.Input
             //Tree.ResetStatistics();
 
             // one global init-file for the whole area:
-            if (initializationMode == "single")
+            if (String.Equals(initializationMode, "single", StringComparison.Ordinal))
             {
                 // useful for 1ha simulations only...
                 if (model.ResourceUnits.Count > 1)
@@ -138,8 +135,9 @@ namespace iLand.Input
                 {
                     // set environment
                     model.Environment.SetPosition(ru.BoundingBox.Center(), model);
-                    type = xml.GetStringFromXml("type", "");
-                    fileName = xml.GetStringFromXml("file", "");
+                    // BUGBUG: SetPosition() doesn't update type and file keys, inherited from C++
+                    //type = xml.GetStringFromXml("type", "");
+                    //fileName = xml.GetStringFromXml("file", "");
                     if (String.IsNullOrEmpty(fileName))
                     {
                         continue;
@@ -161,7 +159,7 @@ namespace iLand.Input
                 {
                     throw new NotSupportedException("Stand-Initialization: model.initialization.mode is 'map' but there is no valid stand grid defined (model.world.standGrid)");
                 }
-                string mapFileName = model.GlobalSettings.Path(xml.GetStringFromXml("mapFileName"), "init");
+                string mapFileName = model.GlobalSettings.GetPath(model.Project.Model.Initialization.MapFileName);
 
                 CsvFile map_file = new CsvFile(mapFileName);
                 if (map_file.RowCount == 0)
@@ -199,7 +197,7 @@ namespace iLand.Input
             // standgrid mode: load one large init file
             if (initializationMode == "standgrid")
             {
-                fileName = model.GlobalSettings.Path(fileName, "init");
+                fileName = model.GlobalSettings.GetPath(fileName, "init");
                 if (!File.Exists(fileName))
                 {
                     throw new NotSupportedException(String.Format("load-ini-file: file '{0}' does not exist.", fileName));
@@ -210,7 +208,7 @@ namespace iLand.Input
                 ParseInitFile(content, fileName);
 
                 // setup the random distribution
-                string density_func = xml.GetStringFromXml("model.initialization.randomFunction", "1-x^2");
+                string density_func = model.Project.Model.Initialization.RandomFunction;
                 if (model.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("density function: " + density_func);
@@ -251,20 +249,18 @@ namespace iLand.Input
             throw new NotSupportedException("processInit: invalid initalization.mode!");
         }
 
-        public void ProcessAfterInit(Model model)
+        public void ProcessAfterInit(Simulation.Model model)
         {
-            XmlHelper xml = new XmlHelper(model.GlobalSettings.Settings.Node("model.initialization"));
-
-            string mode = xml.GetStringFromXml("mode", "copy");
+            string mode = model.Project.Model.Initialization.Mode;
             if (mode == "standgrid")
             {
                 // load a file with saplings per polygon
-                string filename = xml.GetStringFromXml("saplingFile", "");
+                string filename = model.Project.Model.Initialization.SaplingFile;
                 if (String.IsNullOrEmpty(filename))
                 {
                     return;
                 }
-                filename = model.GlobalSettings.Path(filename, "init");
+                filename = model.GlobalSettings.GetPath(filename, "init");
                 if (File.Exists(filename) == false)
                 {
                     throw new NotSupportedException(String.Format("load-sapling-ini-file: file '{0}' does not exist.", filename));
@@ -302,10 +298,10 @@ namespace iLand.Input
             }
         }
 
-        public void EvaluateDebugTrees(Model model)
+        public void EvaluateDebugTrees(Simulation.Model model)
         {
             // evaluate debugging
-            string dbg_str = model.GlobalSettings.Settings.GetStringParameter("debug_tree");
+            string dbg_str = model.Project.Model.Parameter.DebugTree;
             int counter = 0;
             if (String.IsNullOrEmpty(dbg_str) == false)
             {
@@ -346,9 +342,9 @@ namespace iLand.Input
         /// load a single init file. Calls loadPicusFile() or loadiLandFile()
         /// @param fileName file to load
         /// @param type init mode. allowed: "picus"/"single" or "iland"/"distribution"
-        public int LoadInitFile(string fileName, string type, int standID, Model model, ResourceUnit ru = null)
+        public int LoadInitFile(string fileName, string type, int standID, Simulation.Model model, ResourceUnit ru = null)
         {
-            string pathFileName = model.GlobalSettings.Path(fileName, "init");
+            string pathFileName = model.GlobalSettings.GetPath(fileName, "init");
             if (!File.Exists(pathFileName))
             {
                 throw new FileNotFoundException(String.Format("File '{0}' does not exist!", pathFileName));
@@ -369,7 +365,7 @@ namespace iLand.Input
             throw new XmlException("Unknown initialization type '" + type + "'. Is a /project/model/initialization/type element present in the project file?");
         }
 
-        public int LoadPicusFile(string fileName, ResourceUnit ru, Model model)
+        public int LoadPicusFile(string fileName, ResourceUnit ru, Simulation.Model model)
         {
             string content = File.ReadAllText(fileName);
             if (String.IsNullOrEmpty(content))
@@ -383,7 +379,7 @@ namespace iLand.Input
         /** load a list of trees (given by content) to a resource unit. Param fileName is just for error reporting.
             returns the number of loaded trees.
           */
-        private int LoadSingleTreeList(Model model, string treeList, ResourceUnit ru, string fileName)
+        private int LoadSingleTreeList(Simulation.Model model, string treeList, ResourceUnit ru, string fileName)
         {
             if (ru == null)
             {
@@ -501,7 +497,7 @@ namespace iLand.Input
           @param fileName source file name (for error reporting)
           @return number of trees added
           */
-        public int LoadDistributionList(Model model, string content, ResourceUnit ru, int standID, string fileName)
+        public int LoadDistributionList(Simulation.Model model, string content, ResourceUnit ru, int standID, string fileName)
         {
             int total_count = ParseInitFile(content, fileName, ru);
             if (total_count == 0)
@@ -510,7 +506,7 @@ namespace iLand.Input
             }
 
             // setup the random distribution
-            string densityFunction = model.GlobalSettings.Settings.GetStringFromXml("model.initialization.randomFunction", "1-x^2");
+            string densityFunction = model.Project.Model.Initialization.RandomFunction;
             if (model.GlobalSettings.LogDebug())
             {
                 Debug.WriteLine("density function: " + densityFunction);
@@ -628,7 +624,7 @@ namespace iLand.Input
             return totalCount;
         }
 
-        public int LoadiLandFile(Model model, string fileName, ResourceUnit ru, int standID)
+        public int LoadiLandFile(Simulation.Model model, string fileName, ResourceUnit ru, int standID)
         {
             if (!File.Exists(fileName))
             {
@@ -691,7 +687,7 @@ namespace iLand.Input
             return 0;
         }
 
-        private void InitializeResourceUnit(ResourceUnit ru, Model model)
+        private void InitializeResourceUnit(ResourceUnit ru, Simulation.Model model)
         {
             PointF offset = ru.BoundingBox.TopLeft();
             Point offsetIdx = model.LightGrid.IndexAt(offset);
@@ -821,7 +817,7 @@ namespace iLand.Input
         // Basically a list of 10m pixels for a given stand is retrieved
         // and the filled with the same procedure as the resource unit based init
         // see http://iland.boku.ac.at/initialize+trees
-        private void InitializeStand(Model model, int standID)
+        private void InitializeStand(Simulation.Model model, int standID)
         {
             MapGrid grid = model.StandGrid;
             if (CurrentMap != null)
@@ -1042,7 +1038,7 @@ namespace iLand.Input
         }
 
         /// a (hacky) way of adding saplings of a certain age to a stand defined by 'stand_id'.
-        public int LoadSaplings(Model model, string content, int standId)
+        public int LoadSaplings(Simulation.Model model, string content, int standId)
         {
             // Q_UNUSED(fileName);
             MapGrid stand_grid;
@@ -1146,7 +1142,7 @@ namespace iLand.Input
             return 0;
         }
 
-        public int LoadSaplingsLif(Model model, int standID, CsvFile init, int low_index, int high_index)
+        public int LoadSaplingsLif(Simulation.Model model, int standID, CsvFile init, int low_index, int high_index)
         {
             MapGrid standGrid;
             if (CurrentMap != null)

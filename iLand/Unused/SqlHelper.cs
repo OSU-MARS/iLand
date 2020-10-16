@@ -3,7 +3,6 @@
 namespace iLand.Tools
 {
     /** @class SqlHelper
-        @ingroup tools
         A helper class for simple execution of database commands.
         */
     internal class SqlHelper

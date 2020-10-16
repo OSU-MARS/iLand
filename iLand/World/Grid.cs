@@ -71,7 +71,6 @@ namespace iLand.World
     }
 
     /** Grid class (template).
-        @ingroup tools
         Orientation
         The grid is oriented as typically coordinates on the northern hemisphere: higher y-values -> north, higher x-values-> east.
         The projection is reversed for drawing on screen (Viewport).

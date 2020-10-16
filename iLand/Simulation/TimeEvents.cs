@@ -23,7 +23,7 @@ namespace iLand.Simulation
 
         public bool LoadFromFile(string fileName, GlobalSettings globalSettings)
         {
-            string source = File.ReadAllText(globalSettings.Path(fileName));
+            string source = File.ReadAllText(globalSettings.GetPath(fileName));
             if (String.IsNullOrEmpty(source))
             {
                 throw new FileNotFoundException(String.Format("TimeEvents: input file does not exist or is empty ({0})", fileName));
@@ -78,15 +78,9 @@ namespace iLand.Simulation
                 }
                 else
                 {
-                    // no special value: a xml node...
-                    if (globalSettings.Settings.SetXmlNodeValue(key, eventInYear.Item2.ToString()))
-                    {
-                        Debug.WriteLine("TimeEvents: Error: Key " + key + "not found! (tried to set to " + eventInYear.Item2.ToString() + ")");
-                    }
-                    else
-                    {
-                        Debug.WriteLine("TimeEvents: set " + key + "to" + eventInYear.Item2.ToString());
-                    }
+                    throw new NotImplementedException();
+                    //globalSettings.Settings.SetParameter(key, eventInYear.Item2.ToString());
+                    //Debug.WriteLine("TimeEvents: set " + key + "to" + eventInYear.Item2.ToString());
                 }
                 valuesSet++;
             }

@@ -57,21 +57,19 @@ namespace iLand.Output
             // other colums are added during setup...
         }
 
-        public override void Setup(GlobalSettings globalSettings)
+        public override void Setup(Model model)
         {
-            string filter = globalSettings.Settings.GetStringFromXml(".rufilter", "");
-            string tree_filter = globalSettings.Settings.GetStringFromXml(".treefilter", "");
-            string fieldList = globalSettings.Settings.GetStringFromXml(".columns", "");
-            string condition = globalSettings.Settings.GetStringFromXml(".condition", "");
+            string fieldList = model.Project.Output.Dynamic.Columns;
             if (String.IsNullOrEmpty(fieldList))
             {
                 return;
             }
-            mRUFilter.SetExpression(filter);
-            mTreeFilter.SetExpression(tree_filter);
-            mFilter.SetExpression(condition);
+
+            mRUFilter.SetExpression(model.Project.Output.Dynamic.RUFilter);
+            mTreeFilter.SetExpression(model.Project.Output.Dynamic.TreeFilter);
+            mFilter.SetExpression(model.Project.Output.Dynamic.Condition);
             // clear columns
-            Columns.RemoveRange(4, Columns.Count - 4);
+            this.Columns.RemoveRange(4, Columns.Count - 4);
             mFieldList.Clear();
 
             // setup fields
@@ -128,8 +126,8 @@ namespace iLand.Output
 
             //using DebugTimer dt = model.DebugTimers.Create("DynamicStandOutput.LogYear()");
 
-            bool perSpecies = model.GlobalSettings.Settings.GetBooleanFromXml("output.dynamicstand.by_species", true);
-            bool per_ru = model.GlobalSettings.Settings.GetBooleanFromXml("output.dynamicstand.by_ru", true);
+            bool perSpecies = model.Project.Output.DynamicStand.BySpecies;
+            bool per_ru = model.Project.Output.DynamicStand.ByResourceUnit;
 
             if (per_ru)
             {

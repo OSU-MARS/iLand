@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
-namespace iLand.Tools
+namespace iLand.Input
 {
     internal class StampReaderBigEndian : BinaryReader
     {

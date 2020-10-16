@@ -7,7 +7,6 @@ using System.Linq;
 namespace iLand.Tools
 {
     /** @class CSVFile
-        @ingroup tools
         Provides access to table data stored in text files (CSV style).
         Tables have optionally headers in first line (hasCaptions()) and can use various
         delimiters ("tab",";",","," "). If separated by spaces, consecuteive spaces are merged.

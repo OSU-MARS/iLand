@@ -10,8 +10,6 @@ namespace iLand.Tools
 {
     /** @class Expression
       An expression engine for mathematical expressions provided as strings.
-      @ingroup tools
-      @ingroup script
       The main purpose is fast execution speed.
       notes regarding the syntax:
       +,-,*,/ as expected, additionally "^" for power.
@@ -1091,9 +1089,9 @@ namespace iLand.Tools
           */
         public void Linearize(Model model, double lowValue, double highValue, int steps = 1000)
         {
-            if (model.GlobalSettings.LinearizationEnabled == false)
+            if (model.Project.System.Settings.ExpressionLinearizationEnabled == false)
             {
-                return;
+                throw new NotSupportedException("Linearize() called when linearization is not enabled.");
             }
 
             mLinearized.Clear();
@@ -1113,9 +1111,9 @@ namespace iLand.Tools
         /// like 'linearize()' but for 2d-matrices
         public void Linearize(Model model, double lowX, double highX, double lowY, double highY, int stepsX = 50, int stepsY = 50)
         {
-            if (model.GlobalSettings.LinearizationEnabled == false)
+            if (model.Project.System.Settings.ExpressionLinearizationEnabled == false)
             {
-                return;
+                throw new NotSupportedException("Linearize() called when linearization is not enabled.");
             }
             mLinearized.Clear();
             mLinearLow = lowX;

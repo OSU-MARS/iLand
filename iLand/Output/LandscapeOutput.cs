@@ -40,11 +40,10 @@ namespace iLand.Output
             Columns.Add(new SqlColumn("cohort_count_ha", "number of cohorts in the regeneration layer (<4m) /ha", OutputDatatype.Integer));
         }
 
-        public override void Setup(GlobalSettings globalSettings)
+        public override void Setup(Model model)
         {
             // use a condition for to control execuation for the current year
-            string condition = globalSettings.Settings.GetStringFromXml(".condition", "");
-            filter.SetExpression(condition);
+            filter.SetExpression(model.Project.Output.Landscape.Condition);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

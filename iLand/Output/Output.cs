@@ -84,9 +84,9 @@ namespace iLand.Output
 
         /** create the database table and opens up the output.
           */
-        private void EnsureEmptySqlTable(GlobalSettings globalSettings)
+        private void EnsureEmptySqlTable(Model model)
         {
-            SqliteConnection db = globalSettings.DatabaseOutput;
+            SqliteConnection outputDatabase = model.GlobalSettings.DatabaseOutput;
             // create the "create table" statement
             StringBuilder createTableCommand = new StringBuilder("create table " + this.TableName + "(");
             List<string> columnNames = new List<string>(this.Columns.Count);
@@ -111,9 +111,9 @@ namespace iLand.Output
 
             createTableCommand[^1] = ')'; // replace last "," with )
 
-            SqliteCommand dropTable = new SqliteCommand(String.Format("drop table if exists {0}", this.TableName), db);
+            SqliteCommand dropTable = new SqliteCommand(String.Format("drop table if exists {0}", this.TableName), outputDatabase);
             dropTable.ExecuteNonQuery(); // drop table (if exists)
-            SqliteCommand createTable = new SqliteCommand(createTableCommand.ToString(), db);
+            SqliteCommand createTable = new SqliteCommand(createTableCommand.ToString(), outputDatabase);
             createTable.ExecuteNonQuery(); // (re-)create table
 
             this.insertRowSqlText = "insert into " + this.TableName + " (" + String.Join(", ", columnNames) + ") values (@" + String.Join(", @", columnNames) + ")";
@@ -134,17 +134,17 @@ namespace iLand.Output
 
         protected abstract void LogYear(Model model, SqliteCommand insertRow);
 
-        public void Open(GlobalSettings globalSettings)
+        public void Open(Model model)
         {
             if (this.IsOpen)
             {
                 return;
             }
 
-            this.EnsureEmptySqlTable(globalSettings);
+            this.EnsureEmptySqlTable(model);
         }
 
-        public virtual void Setup(GlobalSettings globalSettings)
+        public virtual void Setup(Model model)
         {
         }
 

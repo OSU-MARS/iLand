@@ -1,4 +1,5 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
+using iLand.Simulation;
 using iLand.Tools;
 using iLand.World;
 using System;
@@ -13,7 +14,6 @@ using System.Xml;
 namespace iLand.Trees
 {
     /** @class SeedDispersal
-        @ingroup core
         The class encapsulates the dispersal of seeds of one species over the whole landscape.
         The dispersal algortihm operate on grids with a 20m resolution.
 
@@ -90,7 +90,7 @@ namespace iLand.Trees
         /** setup of the seedmaps.
           This sets the size of the seed map and creates the seed kernel (species specific)
           */
-        public void Setup(Model model)
+        public void Setup(Simulation.Model model)
         {
             if (model == null || model.HeightGrid == null || this.Species == null)
             {
@@ -119,7 +119,7 @@ namespace iLand.Trees
                 throw new NotSupportedException("Setup of SeedDispersal: Species not defined.");
             }
 
-            if ((model.GlobalSettings.Settings.GetDoubleFromXml("model.world.buffer", 0) % Constant.SeedmapSize) != 0.0)
+            if ((model.Project.Model.World.Buffer % Constant.SeedmapSize) != 0.0)
             {
                 throw new NotSupportedException("SeedDispersal:setup(): The buffer (model.world.buffer) must be a integer multiple of the seed pixel size (currently 20m, e.g. 20,40,60,...)).");
             }
@@ -130,11 +130,10 @@ namespace iLand.Trees
             Species.GetTreeMigKernel(ref mTM_as1, ref mTM_as2, ref mTM_ks);
             mTM_fecundity_cell = Species.FecundityM2 * Constant.SeedmapSize * Constant.SeedmapSize * mTM_occupancy; // scale to production for the whole cell
             mNonSeedYearFraction = Species.NonSeedYearFraction;
-            XmlHelper xml = new XmlHelper(model.GlobalSettings.Settings.Node("model.settings.seedDispersal"));
-            mKernelThresholdArea = xml.GetDoubleFromXml(".longDistanceDispersal.thresholdArea", 0.0001);
-            mKernelThresholdLDD = xml.GetDoubleFromXml(".longDistanceDispersal.thresholdLDD", 0.0001);
-            mLDDSeedlings = (float)xml.GetDoubleFromXml(".longDistanceDispersal.LDDSeedlings", 0.0001);
-            mLDDRings = xml.GetInt32FromXml(".longDistanceDispersal.rings", 4);
+            mKernelThresholdArea = model.Project.Model.Settings.SeedDispersal.LongDistanceDispersal.ThresholdArea;
+            mKernelThresholdLDD = model.Project.Model.Settings.SeedDispersal.LongDistanceDispersal.ThresholdLdd;
+            mLDDSeedlings = model.Project.Model.Settings.SeedDispersal.LongDistanceDispersal.LddSeedlings;
+            mLDDRings = model.Project.Model.Settings.SeedDispersal.LongDistanceDispersal.Rings;
 
             mLDDSeedlings = MathF.Max(mLDDSeedlings, (float)mKernelThresholdArea);
 
@@ -162,10 +161,10 @@ namespace iLand.Trees
             mHasPendingSerotiny = false;
 
             // debug info
-            mDumpSeedMaps = model.GlobalSettings.Settings.GetBooleanFromXml("model.settings.seedDispersal.dumpSeedMapsEnabled", false);
+            mDumpSeedMaps = model.Project.Model.Settings.SeedDispersal.DumpSeedMapsEnabled;
             if (mDumpSeedMaps)
             {
-                string path = model.GlobalSettings.Path(model.GlobalSettings.Settings.GetStringFromXml("model.settings.seedDispersal.dumpSeedMapsPath"));
+                string path = model.GlobalSettings.GetPath(model.Project.Model.Settings.SeedDispersal.DumpSeedMapsPath);
                 File.WriteAllText(String.Format("{0}/seedkernelYes_{1}.csv", path, Species.ID), mKernelSeedYear.ToString());
                 File.WriteAllText(String.Format("{0}/seedkernelNo_{1}.csv", path, Species.ID), mKernelNonSeedYear.ToString());
                 if (!mKernelSerotiny.IsEmpty())
@@ -179,9 +178,9 @@ namespace iLand.Trees
             mExternalSeedBuffer = 0;
             mExternalSeedDirection = 0;
             mExternalSeedBackgroundInput = 0.0;
-            if (model.GlobalSettings.Settings.GetBooleanFromXml("model.settings.seedDispersal.externalSeedEnabled", false))
+            if (model.Project.Model.Settings.SeedDispersal.ExternalSeedEnabled)
             {
-                if (model.GlobalSettings.Settings.GetBooleanFromXml("model.settings.seedDispersal.seedBelt.enabled", false))
+                if (model.Project.Model.Settings.SeedDispersal.SeedBelt.Enabled)
                 {
                     // external seed input specified by sectors and around the project area (seedbelt)
                     SetupExternalSeedsForSpecies(model, Species);
@@ -190,14 +189,14 @@ namespace iLand.Trees
                 {
                     // external seeds specified fixedly per cardinal direction
                     // current species in list??
-                    mHasExternalSeedInput = model.GlobalSettings.Settings.GetStringFromXml("model.settings.seedDispersal.externalSeedSpecies").Contains(Species.ID);
-                    string dir = model.GlobalSettings.Settings.GetStringFromXml("model.settings.seedDispersal.externalSeedSource").ToLowerInvariant();
+                    mHasExternalSeedInput = model.Project.Model.Settings.SeedDispersal.ExternalSeedSpecies.Contains(Species.ID);
+                    string direction = model.Project.Model.Settings.SeedDispersal.ExternalSeedSource.ToLowerInvariant();
                     // encode cardinal positions as bits: e.g: "e,w" . 6
-                    mExternalSeedDirection += dir.Contains("n") ? 1 : 0;
-                    mExternalSeedDirection += dir.Contains("e") ? 2 : 0;
-                    mExternalSeedDirection += dir.Contains("s") ? 4 : 0;
-                    mExternalSeedDirection += dir.Contains("w") ? 8 : 0;
-                    List<string> buffer_list = Regex.Matches(model.GlobalSettings.Settings.GetStringFromXml("model.settings.seedDispersal.externalSeedBuffer"), "([^\\.\\w]+)").Select(match => match.Value).ToList();
+                    mExternalSeedDirection += direction.Contains("n") ? 1 : 0;
+                    mExternalSeedDirection += direction.Contains("e") ? 2 : 0;
+                    mExternalSeedDirection += direction.Contains("s") ? 4 : 0;
+                    mExternalSeedDirection += direction.Contains("w") ? 8 : 0;
+                    List<string> buffer_list = Regex.Matches(model.Project.Model.Settings.SeedDispersal.ExternalSeedBuffer, "([^\\.\\w]+)").Select(match => match.Value).ToList();
                     int index = buffer_list.IndexOf(Species.ID);
                     if (index >= 0)
                     {
@@ -206,7 +205,7 @@ namespace iLand.Trees
                     }
 
                     // background seed rain (i.e. for the full landscape), use regexp
-                    List<string> background_input_list = Regex.Matches(model.GlobalSettings.Settings.GetStringFromXml("model.settings.seedDispersal.externalSeedBackgroundInput"), "([^\\.\\w]+)").Select(match => match.Value).ToList();
+                    List<string> background_input_list = Regex.Matches(model.Project.Model.Settings.SeedDispersal.ExternalSeedBackgroundInput, "([^\\.\\w]+)").Select(match => match.Value).ToList();
                     index = background_input_list.IndexOf(Species.ID);
                     if (index >= 0)
                     {
@@ -247,17 +246,16 @@ namespace iLand.Trees
             //    img.save("seedmap_e.png");
         }
 
-        public void SetupExternalSeeds(Model model)
+        public void SetupExternalSeeds(Simulation.Model model)
         {
             mExternalSeedBaseMap = null;
-            if (!model.GlobalSettings.Settings.GetBooleanFromXml("model.settings.seedDispersal.seedBelt.enabled", false))
+            if (model.Project.Model.Settings.SeedDispersal.SeedBelt.Enabled == false)
             {
                 return;
             }
 
             //using DebugTimer t = model.DebugTimers.Create("SeedDispertal.SetupExternalSeeds()");
-            XmlHelper xml = new XmlHelper(model.GlobalSettings.Settings.Node("model.settings.seedDispersal.seedBelt"));
-            int seedbelt_width = xml.GetInt32FromXml(".width", 10);
+            int seedbelt_width = model.Project.Model.Settings.SeedDispersal.SeedBelt.Width;
             // setup of sectors
             // setup of base map
             float seedmap_size = 20.0F;
@@ -383,45 +381,35 @@ namespace iLand.Trees
             }
 
             mExtSeedData.Clear();
-            int sectors_x = xml.GetInt32FromXml("sizeX", 0);
-            int sectors_y = xml.GetInt32FromXml("sizeY", 0);
+            int sectors_x = model.Project.Model.Settings.SeedDispersal.SeedBelt.SizeX;
+            int sectors_y = model.Project.Model.Settings.SeedDispersal.SeedBelt.SizeY;
             if (sectors_x < 1 || sectors_y < 1)
             {
                 throw new NotSupportedException(String.Format("setup of external seed dispersal: invalid number of sectors x={0} y={1]", sectors_x, sectors_y));
             }
 
-            XmlNode elem = xml.Node(".");
-            for (XmlNode n = elem.FirstChild; n != null; n = n.NextSibling)
+            foreach (SeedBeltSpecies species in model.Project.Model.Settings.SeedDispersal.SeedBelt.Species)
             {
-                if (n.Name.StartsWith("species"))
+                int x = species.X;
+                int y = species.Y;
+                if (x < 0 || x >= sectors_x || y < 0 || y >= sectors_y)
                 {
-                    List<string> coords = n.Name.Split("_").ToList();
-                    if (coords.Count() != 3)
-                    {
-                        throw new NotSupportedException("external seed species definition is not valid: " + n.Name);
-                    }
-                    int x = Int32.Parse(coords[1]);
-                    int y = Int32.Parse(coords[2]);
-                    if (x < 0 || x >= sectors_x || y < 0 || y >= sectors_y)
-                    {
-                        throw new NotSupportedException(String.Format("invalid sector for specifiing external seed input (x y): {0} {1} ", x, y));
-                    }
-                    //int index = y * sectors_x + x;
+                    throw new NotSupportedException(String.Format("invalid sector for specifiing external seed input (x y): {0} {1} ", x, y));
+                }
+                //int index = y * sectors_x + x;
 
-                    string text = xml.GetStringFromXml("." + n.Name);
-                    Debug.WriteLine("processing element " + n.Name + " x,y: " + x + y + text);
-                    // we assume pairs of name and fraction
-                    List<string> species = text.Split(" ").ToList();
-                    for (int speciesIndex = 0; speciesIndex < species.Count; ++speciesIndex)
+                Debug.WriteLine("processing species list at x = " + x + ", y = " + y + ", " + species.IDs);
+                // we assume pairs of name and fraction
+                List<string> speciesIDs = species.IDs.Split(" ").ToList();
+                for (int speciesIndex = 0; speciesIndex < speciesIDs.Count; ++speciesIndex)
+                {
+                    List<double> space = mExtSeedData[speciesIDs[speciesIndex]];
+                    if (space.Count == 0)
                     {
-                        List<double> space = mExtSeedData[species[speciesIndex]];
-                        if (space.Count == 0)
-                        {
-                            space.Capacity = sectors_x * sectors_y; // are initialized to 0s
-                        }
-                        double fraction = Double.Parse(species[++speciesIndex]);
-                        space.Add(fraction);
+                        space.Capacity = sectors_x * sectors_y; // are initialized to 0s
                     }
+                    double fraction = Double.Parse(speciesIDs[++speciesIndex]);
+                    space.Add(fraction);
                 }
             }
             mExtSeedSizeX = sectors_x;
@@ -594,7 +582,7 @@ namespace iLand.Trees
             return dist;
         }
 
-        public void SetupExternalSeedsForSpecies(Model model, Species species)
+        public void SetupExternalSeedsForSpecies(Simulation.Model model, Species species)
         {
             if (!mExtSeedData.ContainsKey(species.ID))
             {
@@ -652,28 +640,28 @@ namespace iLand.Trees
             }
         }
 
-        public void Clear(GlobalSettings globalSettings)
+        public void Clear(Simulation.Model model)
         {
-            Grid<float> seed_map = SeedMap;
+            Grid<float> seedMap = SeedMap;
             if (!mProbMode)
             {
-                seed_map = mSourceMap;
+                seedMap = mSourceMap;
                 SeedMap.Initialize(0.0F);
             }
             if (!mExternalSeedMap.IsEmpty())
             {
                 // we have a preprocessed initial value for the external seed map (see setupExternalSeeds() et al)
-                seed_map.CopyFrom(mExternalSeedMap);
+                seedMap.CopyFrom(mExternalSeedMap);
                 return;
             }
             // clear the map
             float background_value = (float)mExternalSeedBackgroundInput; // there is potentitally a background probability <>0 for all pixels.
-            seed_map.Initialize(background_value);
+            seedMap.Initialize(background_value);
             if (mHasExternalSeedInput)
             {
                 // if external seed input is enabled, the buffer area of the seed maps is
                 // "turned on", i.e. set to 1.
-                int buf_size = globalSettings.Settings.GetInt32FromXml("model.world.buffer", 0) / (int)(seed_map.CellSize);
+                int buf_size = (int)(model.Project.Model.World.Buffer / seedMap.CellSize);
                 // if a special buffer is defined, reduce the size of the input
                 if (mExternalSeedBuffer > 0)
                 {
@@ -682,26 +670,26 @@ namespace iLand.Trees
                 if (buf_size > 0)
                 {
                     int ix, iy;
-                    for (iy = 0; iy < seed_map.CellsY; ++iy)
+                    for (iy = 0; iy < seedMap.CellsY; ++iy)
                     {
-                        for (ix = 0; ix < seed_map.CellsX; ++ix)
+                        for (ix = 0; ix < seedMap.CellsX; ++ix)
                         {
-                            if (iy < buf_size || iy >= seed_map.CellsY - buf_size || ix < buf_size || ix >= seed_map.CellsX - buf_size)
+                            if (iy < buf_size || iy >= seedMap.CellsY - buf_size || ix < buf_size || ix >= seedMap.CellsX - buf_size)
                             {
                                 if (mExternalSeedDirection == 0)
                                 {
                                     // seeds from all directions
-                                    seed_map[ix, iy] = 1.0F;
+                                    seedMap[ix, iy] = 1.0F;
                                 }
                                 else
                                 {
                                     // seeds only from specific directions
                                     float value = 0.0F;
-                                    if (Global.IsBitSet(mExternalSeedDirection, 1) && ix >= seed_map.CellsX - buf_size) value = 1; // north
+                                    if (Global.IsBitSet(mExternalSeedDirection, 1) && ix >= seedMap.CellsX - buf_size) value = 1; // north
                                     if (Global.IsBitSet(mExternalSeedDirection, 2) && iy < buf_size) value = 1; // east
                                     if (Global.IsBitSet(mExternalSeedDirection, 3) && ix < buf_size) value = 1; // south
-                                    if (Global.IsBitSet(mExternalSeedDirection, 4) && iy >= seed_map.CellsY - buf_size) value = 1; // west
-                                    seed_map[ix, iy] = value;
+                                    if (Global.IsBitSet(mExternalSeedDirection, 4) && iy >= seedMap.CellsY - buf_size) value = 1; // west
+                                    seedMap[ix, iy] = value;
                                 }
                             }
                         }
@@ -714,7 +702,7 @@ namespace iLand.Trees
             }
         }
 
-        public void Execute(Model model)
+        public void Execute(Simulation.Model model)
         {
             if (mDumpSeedMaps)
             {
@@ -829,7 +817,7 @@ namespace iLand.Trees
         /** do the seed probability distribution.
             This is phase 2. Apply the seed kernel for each "edge" point identified in phase 1.
             */
-        public void Distribute(Model model, Grid<float> seed_map = null)
+        public void Distribute(Simulation.Model model, Grid<float> seed_map = null)
         {
             int x, y;
             Grid<float> seedmap = seed_map ?? SeedMap; // switch to extra seed map if provided
@@ -895,7 +883,7 @@ namespace iLand.Trees
             } // for()
         }
 
-        public void DistributeSeeds(Model model, Grid<float> seed_map = null)
+        public void DistributeSeeds(Simulation.Model model, Grid<float> seed_map = null)
         {
             Grid<float> sourcemap = seed_map ?? mSourceMap; // switch to extra seed map if provided
             Grid<float> kernel = mKernelSeedYear;

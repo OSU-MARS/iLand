@@ -7,7 +7,6 @@ using System.Diagnostics;
 namespace iLand.World
 {
     /** @class WaterCycle
-        @ingroup core
         simulates the water cycle on a ResourceUnit.
         The WaterCycle is simulated with a daily time step on the spatial level of a ResourceUnit. Related are
         the snow module (SnowPack), and Canopy module that simulates the interception (and evaporation) of precipitation and the
@@ -54,7 +53,7 @@ namespace iLand.World
         public double[] ReferenceEvapotranspiration() { return mCanopy.ReferenceEvapotranspiration; }
         public void SetContent(double content, double snow_mm) { CurrentSoilWaterContent = content; mSnowPack.WaterEquivalent = snow_mm; }
 
-        public void Setup(ResourceUnit ru, Model model)
+        public void Setup(Model model, ResourceUnit ru)
         {
             mRU = ru;
             // get values...
@@ -77,8 +76,7 @@ namespace iLand.World
 
             mPermanentWiltingPoint = HeightFromPsi(-4000); // maximum psi is set to a constant of -4MPa
 
-            XmlHelper xml = model.GlobalSettings.Settings;
-            if (xml.GetBooleanFromXml("model.settings.waterUseSoilSaturation", false) == false) // TODO: should be on ModelSettings, why does this default to false?
+            if (model.Project.Model.Settings.WaterUseSoilSaturation == false) // TODO: should be on ModelSettings, why does this default to false?
             {
                 // BUGBUG: may result in field capacity height below permanent wilt point
                 FieldCapacity = HeightFromPsi(-15);
@@ -105,9 +103,9 @@ namespace iLand.World
             mLastYear = -1;
 
             // canopy settings
-            mCanopy.NeedleFactor = xml.GetDoubleFromXml(Constant.Setting.WaterCycle.NeedleStorage, Constant.Default.WaterCycle.NeedleStorage);
-            mCanopy.DecidousFactor = xml.GetDoubleFromXml(Constant.Setting.WaterCycle.BroadleafStorage, Constant.Default.WaterCycle.BroadleafStorage);
-            mSnowPack.Temperature = xml.GetDoubleFromXml(Constant.Setting.WaterCycle.SnowmeltTemperature, Constant.Default.WaterCycle.SnowmeltTemperature);
+            mCanopy.NeedleFactor = model.Project.Model.Settings.InterceptionStorageNeedle;
+            mCanopy.DecidousFactor = model.Project.Model.Settings.InterceptionStorageBroadleaf;
+            mSnowPack.Temperature = model.Project.Model.Settings.SnowMeltTemperature;
 
             TotalEvapotranspiration = TotalWaterLoss = SnowDayRad = 0.0;
             SnowDays = 0;

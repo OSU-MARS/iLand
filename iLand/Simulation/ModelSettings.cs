@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Xml;
 
 namespace iLand.Simulation
 {
@@ -34,29 +33,24 @@ namespace iLand.Simulation
         public double BrowsingPressure { get; private set; }
         public double RecruitmentVariation { get; private set; }
 
-        public void LoadModelSettings(GlobalSettings globalSettings)
+        public void LoadModelSettings(Model model)
         {
-            XmlHelper xml = new XmlHelper(globalSettings.Settings.Node("model.settings"));
-            if (xml.IsValid() == false)
-            {
-                throw new XmlException("/project/model/settings element not found in project file.");
-            }
-            BrowsingPressure = xml.GetDoubleFromXml("browsing.browsingPressure", 0.0);
-            GrowthEnabled = xml.GetBooleanFromXml("growthEnabled", true);
-            MortalityEnabled = xml.GetBooleanFromXml("mortalityEnabled", true);
-            LightExtinctionCoefficient = xml.GetDoubleFromXml("lightExtinctionCoefficient", 0.5);
-            LightExtinctionCoefficientOpacity = xml.GetDoubleFromXml("lightExtinctionCoefficientOpacity", 0.5);
-            TemperatureTau = xml.GetDoubleFromXml("temperatureTau", 5);
-            Epsilon = xml.GetDoubleFromXml("epsilon", 1.8); // max light use efficiency (aka alpha_c)
-            AirDensity = xml.GetDoubleFromXml("airDensity", 1.2);
-            LaiThresholdForClosedStands = xml.GetDoubleFromXml("laiThresholdForClosedStands", 3.0);
-            BoundaryLayerConductance = xml.GetDoubleFromXml("boundaryLayerConductance", 0.2);
-            RecruitmentVariation = xml.GetDoubleFromXml("seedDispersal.recruitmentDimensionVariation", 0.1); // +/- 10%
-            UseParFractionBelowGroundAllocation = xml.GetBooleanFromXml("usePARFractionBelowGroundAllocation", true);
+            BrowsingPressure = model.Project.Model.Settings.Browsing.BrowsingPressure;
+            GrowthEnabled = model.Project.Model.Settings.GrowthEnabled;
+            MortalityEnabled = model.Project.Model.Settings.MortalityEnabled;
+            LightExtinctionCoefficient = model.Project.Model.Settings.LightExtinctionCoefficient;
+            LightExtinctionCoefficientOpacity = model.Project.Model.Settings.LightExtinctionCoefficientOpacity;
+            TemperatureTau = model.Project.Model.Settings.TemperatureTau;
+            Epsilon = model.Project.Model.Settings.Epsilon;
+            AirDensity = model.Project.Model.Settings.AirDensity;
+            LaiThresholdForClosedStands = model.Project.Model.Settings.LaiThresholdForClosedStands;
+            BoundaryLayerConductance = model.Project.Model.Settings.BoundaryLayerConductance;
+            RecruitmentVariation = model.Project.Model.Settings.SeedDispersal.RecruitmentDimensionVariation;
+            UseParFractionBelowGroundAllocation = model.Project.Model.Settings.UseParFractionBelowGroundAllocation;
 
-            Latitude = Global.ToRadians(globalSettings.Settings.GetDoubleFromXml("model.world.latitude", 48.0));
+            Latitude = Global.ToRadians(model.Project.Model.World.Latitude);
             
-            TorusMode = globalSettings.Settings.GetBooleanParameter("torus", false);
+            TorusMode = model.Project.Model.Parameter.Torus;
         }
 
         public void Print()

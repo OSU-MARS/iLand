@@ -48,14 +48,11 @@ namespace iLand.Output
             Columns.Add(new SqlColumn("cumNEP", "cumulative NEP (net ecosystem productivity), kg C. This is a running sum of NEP (positive values: carbon gain, negative values: carbon loss).", OutputDatatype.Double));
         }
 
-        public override void Setup(GlobalSettings globalSettings)
+        public override void Setup(Model model)
         {
-            // use a condition for to control execuation for the current year
-            string condition = globalSettings.Settings.GetStringFromXml(".condition", "");
-            mFilter.SetExpression(condition);
-
-            condition = globalSettings.Settings.GetStringFromXml(".conditionRU", "");
-            mResourceUnitFilter.SetExpression(condition);
+            // use a condition for to control execution for the current year
+            mFilter.SetExpression(model.Project.Output.Carbon.Condition);
+            mResourceUnitFilter.SetExpression(model.Project.Output.Carbon.ConditionRU);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

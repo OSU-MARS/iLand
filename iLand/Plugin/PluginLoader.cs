@@ -4,6 +4,6 @@ namespace iLand.Plugin
 {
     internal class PluginLoader
     {
-        public static readonly List<object> StaticInstances = new List<object>();
+        public static readonly List<IDisturbanceInterface> StaticInstances = new List<IDisturbanceInterface>();
     }
 }

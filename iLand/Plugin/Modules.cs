@@ -1,86 +1,69 @@
-﻿using iLand.Simulation;
-using iLand.Tools;
-using iLand.Trees;
+﻿using iLand.Trees;
 using iLand.World;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace iLand.Plugin
 {
     public class Modules
     {
-        private readonly List<IDisturbanceInterface> mInterfaces; // the list stores only the active modules
+        private readonly List<IDisturbanceInterface> mModules; // the list stores only the active modules
         private readonly List<ISetupResourceUnitInterface> mSetupRUs;
         private readonly List<ITreeDeathInterface> mTreeDeath;
         private readonly List<IWaterInterface> mWater;
 
-        public Modules(GlobalSettings globalSettings)
+        public Modules()
         {
-            this.mInterfaces = new List<IDisturbanceInterface>();
+            this.mModules = new List<IDisturbanceInterface>();
             this.mSetupRUs = new List<ISetupResourceUnitInterface>();
             this.mTreeDeath = new List<ITreeDeathInterface>();
             this.mWater = new List<IWaterInterface>();
 
-            this.Init(globalSettings);
-        }
-
-        public bool HasSetupResourceUnits() { return mSetupRUs.Count != 0; }
-
-        // load the static plugins
-        private void Init(GlobalSettings globalSettings)
-        {
-            foreach (object plugin in PluginLoader.StaticInstances)
+            foreach (IDisturbanceInterface modules in PluginLoader.StaticInstances)
             {
-                if (plugin is IDisturbanceInterface di)
+                // plugin is enabled: store in list of active modules
+                mModules.Add(modules);
+                // check for other interfaces
+                if (modules is ISetupResourceUnitInterface setupResourceUnit)
                 {
-                    Debug.WriteLine(di.Name());
-                    // check xml file
-                    if (globalSettings.Settings.GetBooleanFromXml(String.Format("modules.{0}.enabled", di.Name())))
-                    {
-                        // plugin is enabled: store in list of active modules
-                        mInterfaces.Add(di);
-                        // check for other interfaces
-                        if (plugin is ISetupResourceUnitInterface si)
-                        {
-                            mSetupRUs.Add(si);
-                        }
-                        if (plugin is IWaterInterface wi)
-                        {
-                            mWater.Add(wi);
-                        }
-                        if (plugin is ITreeDeathInterface td)
-                        {
-                            mTreeDeath.Add(td);
-                        }
-                    }
+                    mSetupRUs.Add(setupResourceUnit);
+                }
+                if (modules is IWaterInterface water)
+                {
+                    mWater.Add(water);
+                }
+                if (modules is ITreeDeathInterface treeDeath)
+                {
+                    mTreeDeath.Add(treeDeath);
                 }
             }
 
             // fix the order of modules: make sure that "barkbeetle" is after "wind"
-            IDisturbanceInterface wind = Module("wind");
-            IDisturbanceInterface bb = Module("barkbeetle");
-            if (wind != null && bb != null)
+            IDisturbanceInterface wind = GetModule("wind");
+            IDisturbanceInterface beetles = GetModule("barkbeetle");
+            if (wind != null && beetles != null)
             {
-                int iw = mInterfaces.IndexOf(wind);
-                int ib = mInterfaces.IndexOf(bb);
-                if (ib < iw)
+                int windIndex = mModules.IndexOf(wind);
+                int beetleIndex = mModules.IndexOf(beetles);
+                if (beetleIndex < windIndex)
                 {
                     // swap
-                    IDisturbanceInterface temp = mInterfaces[ib];
-                    mInterfaces[ib] = mInterfaces[iw];
-                    mInterfaces[iw] = temp;
+                    IDisturbanceInterface temp = mModules[beetleIndex];
+                    mModules[beetleIndex] = mModules[windIndex];
+                    mModules[windIndex] = temp;
                 }
             }
         }
 
-        public IDisturbanceInterface Module(string module_name)
+        public bool HasSetupResourceUnits() { return mSetupRUs.Count != 0; }
+
+        public IDisturbanceInterface GetModule(string moduleName)
         {
-            foreach (IDisturbanceInterface di in mInterfaces)
+            foreach (IDisturbanceInterface module in mModules)
             {
-                if (di.Name() == module_name)
+                if (String.Equals(module.Name(), moduleName, StringComparison.Ordinal))
                 {
-                    return di;
+                    return module;
                 }
             }
             return null;
@@ -88,35 +71,30 @@ namespace iLand.Plugin
 
         public void SetupResourceUnit(ResourceUnit ru)
         {
-            foreach (ISetupResourceUnitInterface si in mSetupRUs)
+            foreach (ISetupResourceUnitInterface setupResourceUnit in mSetupRUs)
             {
-                si.SetupResourceUnit(ru);
+                setupResourceUnit.SetupResourceUnit(ru);
             }
         }
 
-        public void Setup()
+        public void SetupDisturbances()
         {
-            foreach (IDisturbanceInterface di in mInterfaces)
+            foreach (IDisturbanceInterface module in mModules)
             {
-                di.Setup();
+                module.Setup();
             }
         }
 
-        public void CalculateWater(ResourceUnit resource_unit, WaterCycleData water_data)
+        public void CalculateWater(ResourceUnit resourceUnit, WaterCycleData waterData)
         {
-            foreach (IWaterInterface wi in mWater)
+            foreach (IWaterInterface water in mWater)
             {
-                wi.CalculateWater(resource_unit, water_data);
+                water.CalculateWater(resourceUnit, waterData);
             }
         }
 
         public void TreeDeath(Tree tree, MortalityCause mortalityCause)
         {
-            if (mTreeDeath.Count == 0)
-            {
-                return;
-            }
-
             for (int index = 0; index < mTreeDeath.Count; ++index)
             {
                 mTreeDeath[index].TreeDeath(tree, mortalityCause);
@@ -128,9 +106,9 @@ namespace iLand.Plugin
             //using DebugTimer t = model.DebugTimers.Create("Modules.Run()");
 
             // *** run in fixed order ***
-            foreach (IDisturbanceInterface di in mInterfaces)
+            foreach (IDisturbanceInterface module in mModules)
             {
-                di.Run();
+                module.Run();
 
                 // *** run in random order ****
                 //    List<DisturbanceInterface> run_list = mInterfaces;
@@ -157,9 +135,9 @@ namespace iLand.Plugin
 
         public void YearBegin()
         {
-            foreach (IDisturbanceInterface di in mInterfaces)
+            foreach (IDisturbanceInterface module in mModules)
             {
-                di.YearBegin();
+                module.YearBegin();
             }
         }
     }
