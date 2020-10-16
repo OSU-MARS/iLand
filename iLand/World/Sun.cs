@@ -9,12 +9,12 @@ namespace iLand.World
         private const double J = Math.PI / 182.625;
         private static readonly double Ecliptic = Global.ToRadians(23.439);
 
-        private double mLatitudeInRadians; ///< latitude in radians
-        private readonly double[] mDayLengthInHours; ///< daylength per day in hours
+        private double mLatitudeInRadians; // latitude in radians
+        private readonly double[] mDayLengthInHours; // daylength per day in hours
 
         public int LastDayLongerThan10_5Hours { get; private set; } // last day of year with a day length > 10.5 hours (see Establishment)
         public int LastDayLongerThan14_5Hours { get; private set; } // last day with at least 14.5 hours of day length
-        public int LongestDay { get; private set; } ///< day of year with maximum day length
+        public int LongestDay { get; private set; } // day of year with maximum day length
 
         public Sun()
         {

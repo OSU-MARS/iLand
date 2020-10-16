@@ -86,7 +86,7 @@ namespace iLand.Output
                     MortalityCause rem_type = (MortalityCause)(removal.Key / 10000);
                     int species_index = removal.Key % 10000;
                     insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
-                    insertRow.Parameters[1].Value = model.SpeciesSet().Species(species_index).ID;
+                    insertRow.Parameters[1].Value = model.GetFirstSpeciesSet().Species(species_index).ID;
                     insertRow.Parameters[2].Value = rem_type switch
                     {
                         MortalityCause.CutDown => "C",
@@ -112,8 +112,8 @@ namespace iLand.Output
 
         public override void Setup(GlobalSettings globalSettings)
         {
-            mIncludeHarvestTrees = globalSettings.Settings.GetBool(".includeHarvest", true);
-            mIncludeDeadTrees = globalSettings.Settings.GetBool(".includeNatural", false);
+            mIncludeHarvestTrees = globalSettings.Settings.GetBooleanFromXml(".includeHarvest", true);
+            mIncludeDeadTrees = globalSettings.Settings.GetBooleanFromXml(".includeNatural", false);
         }
     }
 }

@@ -13,12 +13,12 @@ namespace iLand.Trees
     */
     public class Stamp
     {
-        public int CenterCellPosition { get; set; } ///< delta between edge of the stamp and the logical center point (of the tree). e.g. a 5x5 stamp in an 8x8-grid has an offset from 2.
+        public int CenterCellPosition { get; set; } // delta between edge of the stamp and the logical center point (of the tree). e.g. a 5x5 stamp in an 8x8-grid has an offset from 2.
         public float CrownArea { get; private set; }
         public float CrownRadius { get; private set; }
         public float[] Data { get; private set; }
-        public int DataSize { get; private set; } ///< internal size of the stamp; e.g. 4 -> 4x4 stamp with 16 pixels.
-        public Stamp Reader { get; private set; } ///< pointer to the appropriate reader stamp (if available)
+        public int DataSize { get; private set; } // internal size of the stamp; e.g. 4 -> 4x4 stamp with 16 pixels.
+        public Stamp Reader { get; private set; } // pointer to the appropriate reader stamp (if available)
 
         public Stamp(int dataSize)
         {
@@ -63,7 +63,7 @@ namespace iLand.Trees
             get { return this[x + offset, y + offset]; }
         }
 
-        public int Count() { return DataSize * DataSize; } ///< count of pixels (rectangle)
+        public int Count() { return DataSize * DataSize; } // count of pixels (rectangle)
 
         /// get index (e.g. for data()[index]) for indices x and y
         public int IndexOf(int x, int y) { Debug.Assert((y * DataSize + x) < Data.Length); return y * DataSize + x; }
@@ -80,7 +80,7 @@ namespace iLand.Trees
             CrownArea = r * r * MathF.PI;
         }
 
-        public int Size() { return CenterCellPosition * 2 + 1; } ///< logical size of the stamp
+        public int Size() { return CenterCellPosition * 2 + 1; } // logical size of the stamp
 
         public float GetDistanceToCenter(int ix, int iy)
         {

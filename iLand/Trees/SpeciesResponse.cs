@@ -2,6 +2,7 @@
 using iLand.Tools;
 using iLand.World;
 using System;
+using System.Diagnostics;
 
 namespace iLand.Trees
 {
@@ -25,15 +26,15 @@ namespace iLand.Trees
         public Species Species { get; private set; }
         public ResourceUnit ResourceUnit { get; private set; }
 
-        public double[] TempResponse { get; private set; } ///< average of temperature response
-        public double[] SoilWaterResponse { get; private set; } ///< average of soilwater response
-        public double[] GlobalRadiation { get; private set; } ///< radiation sum in MJ/m2
-        public double[] UtilizableRadiation { get; private set; } ///< sum of daily radiation*minResponse (MJ/m2)
-        public double[] VpdResponse { get; private set; } ///< mean of vpd-response
+        public double[] TempResponse { get; private set; } // average of temperature response
+        public double[] SoilWaterResponse { get; private set; } // average of soilwater response
+        public double[] GlobalRadiation { get; private set; } // radiation sum in MJ/m2
+        public double[] UtilizableRadiation { get; private set; } // sum of daily radiation*minResponse (MJ/m2)
+        public double[] VpdResponse { get; private set; } // mean of vpd-response
         public double[] Co2Response { get; private set; }
         public double NitrogenResponse { get; private set; }
-        public double YearlyRadiation { get; private set; } ///< total radiation of the year (MJ/m2)
-        public double YearlyUtilizableRadiation { get; private set; } ///< yearly sum of utilized radiation (MJ/m2)
+        public double YearlyRadiation { get; private set; } // total radiation of the year (MJ/m2)
+        public double YearlyUtilizableRadiation { get; private set; } // yearly sum of utilized radiation (MJ/m2)
 
         public SpeciesResponse()
         {
@@ -90,10 +91,9 @@ namespace iLand.Trees
             int leafOnIndex = phenonology.LeafOnStart;
             int leafOffIndex = phenonology.LeafOnEnd;
 
-            // yearly response
-            double nitrogen = ResourceUnit.Variables.NitrogenAvailable;
-            // Nitrogen response: a yearly value based on available nitrogen
-            NitrogenResponse = Species.GetNitrogenResponse(nitrogen);
+            // nitrogen response: a yearly value based on available nitrogen
+            this.NitrogenResponse = Species.GetNitrogenResponse(this.ResourceUnit.Soil.PlantAvailableNitrogen);
+            Debug.Assert(this.NitrogenResponse >= 0.0);
             double ambientCo2 = climate.CarbonDioxidePpm; // CO2 level of first day of year (co2 is static)
 
             int dayOfYear = 0;
@@ -102,22 +102,26 @@ namespace iLand.Trees
                 ClimateDay day = ResourceUnit.Climate[dayIndex];
                 int monthIndex = day.Month - 1;
                 // environmental responses
-                double waterResponse = Species.SoilWaterResponse(water.Psi[dayOfYear]);
-                double vpdResponse = Species.VpdResponse(day.Vpd);
+                this.GlobalRadiation[monthIndex] += day.Radiation;
+
+                double soilWaterResponse = Species.SoilWaterResponse(water.Psi[dayOfYear]);
+                this.SoilWaterResponse[monthIndex] += soilWaterResponse;
+                
                 double tempResponse = Species.TemperatureResponse(day.TempDelayed);
-                SoilWaterResponse[monthIndex] += waterResponse;
-                TempResponse[monthIndex] += tempResponse;
-                VpdResponse[monthIndex] += vpdResponse;
-                GlobalRadiation[monthIndex] += day.Radiation;
+                this.TempResponse[monthIndex] += tempResponse;
+                
+                double vpdResponse = Species.VpdResponse(day.Vpd);
+                this.VpdResponse[monthIndex] += vpdResponse;
 
                 double utilizableRadiation;
                 if (dayOfYear >= leafOnIndex && dayOfYear <= leafOffIndex)
                 {
                     // environmental responses for the day
                     // combine responses
-                    double minimumResponse = Math.Min(Math.Min(vpdResponse, tempResponse), waterResponse);
+                    double minimumResponse = Math.Min(Math.Min(vpdResponse, tempResponse), soilWaterResponse);
                     // calculate utilizable radiation, Eq. 4, http://iland.boku.ac.at/primary+production
                     utilizableRadiation = day.Radiation * minimumResponse;
+                    Debug.Assert(minimumResponse >= 0.0);
                 }
                 else
                 {
@@ -133,19 +137,20 @@ namespace iLand.Trees
                 //    output.AddRange(new object[] { water_resp, temp_resp, vpd_resp, day.Radiation, utilizeable_radiation });
                 //}
                 //); // DBGMODE()
-
             }
-            YearlyRadiation = ResourceUnit.Climate.TotalAnnualRadiation;
+
             // monthly values
             for (int monthIndex = 0; monthIndex < 12; monthIndex++)
             {
-                double days = ResourceUnit.Climate.Days(monthIndex);
-                YearlyUtilizableRadiation += UtilizableRadiation[monthIndex];
-                SoilWaterResponse[monthIndex] /= days;
-                TempResponse[monthIndex] /= days;
-                VpdResponse[monthIndex] /= days;
-                Co2Response[monthIndex] = Species.SpeciesSet.CarbonDioxideResponse(ambientCo2, NitrogenResponse, SoilWaterResponse[monthIndex]);
+                double daysInMonth = ResourceUnit.Climate.GetDaysInMonth(monthIndex);
+                this.Co2Response[monthIndex] = Species.SpeciesSet.CarbonDioxideResponse(ambientCo2, NitrogenResponse, SoilWaterResponse[monthIndex]);
+                this.SoilWaterResponse[monthIndex] /= daysInMonth;
+                this.TempResponse[monthIndex] /= daysInMonth;
+                this.VpdResponse[monthIndex] /= daysInMonth;
+                this.YearlyUtilizableRadiation += this.UtilizableRadiation[monthIndex];
+                Debug.Assert(Co2Response[monthIndex] > 0.0);
             }
+            this.YearlyRadiation = this.ResourceUnit.Climate.TotalAnnualRadiation;
         }
     }
 }

@@ -87,7 +87,7 @@ namespace iLand.World
 
         /// get the length of one pixel of the grid
         public float CellSize { get; private set; }
-        ///< returns the number of elements of the grid
+        // returns the number of elements of the grid
         public int Count { get; private set; } 
         /// get the metric rectangle of the grid
         public RectangleF PhysicalExtent { get; private set; }
@@ -162,7 +162,7 @@ namespace iLand.World
             return x >= PhysicalExtent.Left && x < PhysicalExtent.Right && y >= PhysicalExtent.Top && y < PhysicalExtent.Bottom;
         }
 
-        ///< return true, if index is within the grid
+        // return true, if index is within the grid
         public bool Contains(int x, int y)
         {
             return (x >= 0 && x < CellsX && y >= 0 && y < CellsY);
@@ -179,7 +179,7 @@ namespace iLand.World
         }
 
         /// get the (metric) centerpoint of cell with index @p pos
-        public PointF GetCellCenterPoint(Point pos) ///< get metric coordinates of the cells center
+        public PointF GetCellCenterPoint(Point pos) // get metric coordinates of the cells center
         {
             return new PointF((pos.X + 0.5F) * CellSize + PhysicalExtent.Left, (pos.Y + 0.5F) * CellSize + PhysicalExtent.Top);
         }
@@ -191,13 +191,13 @@ namespace iLand.World
         }
 
         /// get the metric rectangle of the cell with index @pos
-        public RectangleF GetCellRect(Point pos) ///< return coordinates of rect given by @param pos.
+        public RectangleF GetCellRect(Point pos) // return coordinates of rect given by @param pos.
         {
             RectangleF r = new RectangleF(PhysicalExtent.Left + CellSize * pos.X, PhysicalExtent.Top + pos.Y * CellSize, CellSize, CellSize);
             return r;
         }
 
-        ///< get index of value at position pos (metric)
+        // get index of value at position pos (metric)
         public Point IndexAt(PointF pos)
         {
             return this.IndexAt(pos.X, pos.Y);
@@ -214,7 +214,7 @@ namespace iLand.World
             return new Point(index % CellsX, index / CellsX);
         }
 
-        ///< returns false if the grid was not setup
+        // returns false if the grid was not setup
         public bool IsEmpty() { return mData == null; }
 
         /// returns the index of an aligned grid (with the same size and matching origin) with the double cell size (e.g. to scale from a 10m grid to a 20m grid)
@@ -224,11 +224,11 @@ namespace iLand.World
         /// returns the index of an aligned grid (the same size) with the 10 times bigger cells (e.g. to scale from a 2m grid to a 20m grid)
         public int Index10(int idx) { return ((idx / CellsX) / 10) * (CellsX / 10) + (idx % CellsX) / 10; }
 
-        public int IndexOf(int ix, int iy) { return iy * CellsX + ix; } ///< get the 0-based index of the cell with indices ix and iy.
-        public int IndexOf(Point pos) { return pos.Y * CellsX + pos.X; } ///< get the 0-based index of the cell at 'pos'.
+        public int IndexOf(int ix, int iy) { return iy * CellsX + ix; } // get the 0-based index of the cell with indices ix and iy.
+        public int IndexOf(Point pos) { return pos.Y * CellsX + pos.X; } // get the 0-based index of the cell at 'pos'.
 
         /// force @param pos to contain valid indices with respect to this grid.
-        public void MakeValid(Point pos) ///< ensure that "pos" is a valid key. if out of range, pos is set to minimum/maximum values.
+        public void MakeValid(Point pos) // ensure that "pos" is a valid key. if out of range, pos is set to minimum/maximum values.
         {
             pos.X = Math.Max(Math.Min(pos.X, CellsX - 1), 0);
             pos.Y = Math.Max(Math.Min(pos.Y, CellsY - 1), 0);

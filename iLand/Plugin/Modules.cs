@@ -10,7 +10,7 @@ namespace iLand.Plugin
 {
     public class Modules
     {
-        private readonly List<IDisturbanceInterface> mInterfaces; ///< the list stores only the active modules
+        private readonly List<IDisturbanceInterface> mInterfaces; // the list stores only the active modules
         private readonly List<ISetupResourceUnitInterface> mSetupRUs;
         private readonly List<ITreeDeathInterface> mTreeDeath;
         private readonly List<IWaterInterface> mWater;
@@ -36,7 +36,7 @@ namespace iLand.Plugin
                 {
                     Debug.WriteLine(di.Name());
                     // check xml file
-                    if (globalSettings.Settings.GetBool(String.Format("modules.{0}.enabled", di.Name())))
+                    if (globalSettings.Settings.GetBooleanFromXml(String.Format("modules.{0}.enabled", di.Name())))
                     {
                         // plugin is enabled: store in list of active modules
                         mInterfaces.Add(di);

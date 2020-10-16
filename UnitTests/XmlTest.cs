@@ -77,9 +77,9 @@ namespace iLand.Test
             Assert.IsTrue(String.Equals(xml.Node(".b[0].d").Name, "d", StringComparison.Ordinal));
             Assert.IsTrue(String.Equals(xml.Node("test.block[1].n[2].o").Name, "o", StringComparison.Ordinal));
 
-            Assert.IsTrue(xml.GetString("test.block.b.c") == "c");
-            Assert.IsTrue(xml.GetString("test.block.b.c.nonexistent", "0") == "0");
-            Assert.IsTrue(xml.GetString("test.block[1].n[2].o") == "o");
+            Assert.IsTrue(xml.GetStringFromXml("test.block.b.c") == "c");
+            Assert.IsTrue(xml.GetStringFromXml("test.block.b.c.nonexistent", "0") == "0");
+            Assert.IsTrue(xml.GetStringFromXml("test.block[1].n[2].o") == "o");
         }
     }
 }

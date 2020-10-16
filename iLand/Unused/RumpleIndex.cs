@@ -28,7 +28,7 @@ namespace iLand.Tools
             mRumpleGrid.Setup(model.ResourceUnitGrid.PhysicalExtent, model.ResourceUnitGrid.CellSize);
         }
 
-        ///< return the rumple index for the full project area
+        // return the rumple index for the full project area
         public Grid<float> RumpleGrid(Model model)
         {
             Value(model); /* calculate if necessary */

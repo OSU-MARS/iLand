@@ -70,9 +70,9 @@ namespace iLand.Tools
 
         private bool isDisposed;
         //private readonly MultiValueDictionary<int, List<object>> mDebugLists;
-        private readonly Dictionary<string, string> mFilePaths; ///< storage for file paths
+        private readonly Dictionary<string, string> mFilePaths; // storage for file paths
         private int mLoglevel;
-        private readonly Dictionary<string, SettingMetaData> mSettingMetaData; ///< storage container (QHash) for settings.
+        private readonly Dictionary<string, SettingMetaData> mSettingMetaData; // storage container (QHash) for settings.
 
         public int CurrentYear { get; set; }
         public SqliteConnection DatabaseClimate { get; private set; }
@@ -113,9 +113,9 @@ namespace iLand.Tools
         //public bool IsDebugEnabled(DebugOutputs dbg) 
         //{ 
         //    return ((int)dbg & DebugOutputs) != 0;
-        //} ///< returns true, if a specific debug outut type is enabled.
+        //} // returns true, if a specific debug outut type is enabled.
 
-        //public List<string> SettingNames() { return mSettingMetaData.Keys.ToList(); } ///< retrieve list of all names of settings.
+        //public List<string> SettingNames() { return mSettingMetaData.Keys.ToList(); } // retrieve list of all names of settings.
 
         private string ChildText(XmlNode elem, string name, string defaultTest = "")
         {
@@ -126,12 +126,12 @@ namespace iLand.Tools
             return defaultTest;
         }
 
-        //public void ClearDebugLists() ///< clear all debug data
+        //public void ClearDebugLists() // clear all debug data
         //{
         //    mDebugLists.Clear();
         //}
 
-        //public List<string> DebugDataTable(DebugOutputs type, string separator, string fileName = null) ///< output for all available items (trees, ...) in table form
+        //public List<string> DebugDataTable(DebugOutputs type, string separator, string fileName = null) // output for all available items (trees, ...) in table form
         //{
         //    List<List<object>> ddl = this.DebugLists(-1, type); // get all debug data
 
@@ -189,7 +189,7 @@ namespace iLand.Tools
         //    return result;
         //}
 
-        //public DebugOutputs DebugOutputID(string debug_name) ///< returns the DebugOutputs bit or 0 if not found
+        //public DebugOutputs DebugOutputID(string debug_name) // returns the DebugOutputs bit or 0 if not found
         //{
         //    int index = DebugOutputNames.IndexOf(debug_name);
         //    if (index == -1)
@@ -199,7 +199,7 @@ namespace iLand.Tools
         //    return (DebugOutputs)(2 << index); // 1,2,4,8, ...
         //}
 
-        //public List<object> DebugList(int ID, DebugOutputs dbg) ///< returns a ref to a list ready to be filled with debug output of a type/id combination.
+        //public List<object> DebugList(int ID, DebugOutputs dbg) // returns a ref to a list ready to be filled with debug output of a type/id combination.
         //{
         //    // serialize creation of debug outputs
         //    lock (mDebugLists)
@@ -223,7 +223,7 @@ namespace iLand.Tools
         //    return Comparer<int>.Default.Compare((int)i[0], (int)j[0]);
         //}
 
-        //public List<string> DebugListCaptions(DebugOutputs dbg) ///< returns stringlist of captions for a specific output type
+        //public List<string> DebugListCaptions(DebugOutputs dbg) // returns stringlist of captions for a specific output type
         //{
         //    List<string> treeCaps = new List<string>() { "Id", "Species", "Dbh", "Height", "x", "y", "ru_index", "LRI", "mWoody", "mRoot", "mFoliage", "LA" };
         //    if (dbg == 0)
@@ -284,7 +284,7 @@ namespace iLand.Tools
         //    }
         //}
 
-        //public List<List<object>> DebugLists(int ID, DebugOutputs dbg) ///< return a list of debug outputs
+        //public List<List<object>> DebugLists(int ID, DebugOutputs dbg) // return a list of debug outputs
         //{
         //    List<List<object>> result_list = new List<List<object>>();
         //    if (ID == -1)
@@ -316,7 +316,7 @@ namespace iLand.Tools
         //    return result_list;
         //}
 
-        //public string DebugOutputName(DebugOutputs d) ///< returns the name attached to 'd' or an empty string if not found
+        //public string DebugOutputName(DebugOutputs d) // returns the name attached to 'd' or an empty string if not found
         //{
         //    // this is a little hacky...(and never really tried!)
         //    for (int index = 0; index < DebugOutputNames.Count; ++index)
@@ -327,7 +327,7 @@ namespace iLand.Tools
         //    throw new NotSupportedException();
         //}
 
-        //public List<Tuple<string, object>> DebugValues(int ID) ///< all debug values for object with given ID
+        //public List<Tuple<string, object>> DebugValues(int ID) // all debug values for object with given ID
         //{
         //    List<Tuple<string, object>> result = new List<Tuple<string, object>>();
         //    foreach (List<object> list in mDebugLists[ID])
@@ -466,7 +466,7 @@ namespace iLand.Tools
         }
 
         // Database connections
-        public void CloseDatabaseConnections() ///< shutdown and clear connections
+        public void CloseDatabaseConnections() // shutdown and clear connections
         {
             if (this.DatabaseClimate != null)
             {
@@ -581,7 +581,7 @@ namespace iLand.Tools
             mFilePaths.Clear();
             mFilePaths.Add("exe", this.GetType().Assembly.Location);
             XmlHelper xml = new XmlHelper(pathNode);
-            string homePath = xml.GetString("home", System.IO.Path.GetDirectoryName(projectFilePath));
+            string homePath = xml.GetStringFromXml("home", System.IO.Path.GetDirectoryName(projectFilePath));
             if (String.IsNullOrEmpty(homePath))
             {
                 throw new ArgumentOutOfRangeException(projectFilePath);
@@ -590,16 +590,16 @@ namespace iLand.Tools
             mFilePaths.Add("home", homePath);
             // make other paths relative to "home" if given as relative paths
             // BUGBUG: doesn't detect missing entries in project file
-            mFilePaths.Add("lip", this.Path(xml.GetString("lip", "lip"), "home"));
-            mFilePaths.Add("database", this.Path(xml.GetString("database", "database"), "home"));
-            mFilePaths.Add("temp", this.Path(xml.GetString("temp", ""), "home"));
-            mFilePaths.Add("log", this.Path(xml.GetString("log", ""), "home"));
-            mFilePaths.Add("script", this.Path(xml.GetString("script", ""), "home"));
-            mFilePaths.Add("init", this.Path(xml.GetString("init", ""), "home"));
-            mFilePaths.Add("output", this.Path(xml.GetString("output", "output"), "home"));
+            mFilePaths.Add("lip", this.Path(xml.GetStringFromXml("lip", "lip"), "home"));
+            mFilePaths.Add("database", this.Path(xml.GetStringFromXml("database", "database"), "home"));
+            mFilePaths.Add("temp", this.Path(xml.GetStringFromXml("temp", ""), "home"));
+            mFilePaths.Add("log", this.Path(xml.GetStringFromXml("log", ""), "home"));
+            mFilePaths.Add("script", this.Path(xml.GetStringFromXml("script", ""), "home"));
+            mFilePaths.Add("init", this.Path(xml.GetStringFromXml("init", ""), "home"));
+            mFilePaths.Add("output", this.Path(xml.GetStringFromXml("output", "output"), "home"));
         }
 
-        //public void SetDebugOutput(DebugOutputs dbg, bool enable = true) ///< enable/disable a specific output type.
+        //public void SetDebugOutput(DebugOutputs dbg, bool enable = true) // enable/disable a specific output type.
         //{
         //    if (enable)
         //    {

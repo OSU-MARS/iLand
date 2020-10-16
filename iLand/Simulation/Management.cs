@@ -38,14 +38,14 @@ namespace iLand.Simulation
             this.mTrees = new List<MutableTuple<Tree, double>>();
         }
 
-        ///< return number of trees currently in list
+        // return number of trees currently in list
         public int Count() { return mTrees.Count; }
         /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
         // public double Mean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
         /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
         // public double Sum(string expression, string filter = null) { return AggregateFunction(expression, filter, "sum"); }
 
-        ///< load all trees, return number of trees
+        // load all trees, return number of trees
         //public int LoadAll()
         //{ 
         //    return Load(null);
@@ -481,7 +481,7 @@ namespace iLand.Simulation
                     ru.Snags.RemoveCarbon(SWDfrac * area_factor);
                 }
                 // soil pools
-                ru.Soil.Disturbance(DWDfrac * area_factor, litterFrac * area_factor, soilFrac * area_factor);
+                ru.Soil.RemoveBiomassFractions(DWDfrac * area_factor, litterFrac * area_factor, soilFrac * area_factor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
             Debug.WriteLine("total area " + total_area + " of " + wrap.StandGrid.Area(key));

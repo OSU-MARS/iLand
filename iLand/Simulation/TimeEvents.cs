@@ -31,7 +31,7 @@ namespace iLand.Simulation
 
             CsvFile infile = new CsvFile();
             infile.LoadFromString(source);
-            List<string> captions = infile.Captions;
+            List<string> captions = infile.ColumnNames;
             int yearcol = infile.GetColumnIndex("year");
             if (yearcol == -1)
             {
@@ -40,7 +40,7 @@ namespace iLand.Simulation
             // BUGBUG: no checking of header line
             for (int row = 1; row < infile.RowCount; row++)
             {
-                int year = Int32.Parse(infile.Value(row, yearcol));
+                int year = Int32.Parse(infile.GetValue(row, yearcol));
                 List<object> line = infile.Values(row);
                 for (int col = 0; col < line.Count; col++)
                 {
@@ -79,7 +79,7 @@ namespace iLand.Simulation
                 else
                 {
                     // no special value: a xml node...
-                    if (globalSettings.Settings.SetNodeValue(key, eventInYear.Item2.ToString()))
+                    if (globalSettings.Settings.SetXmlNodeValue(key, eventInYear.Item2.ToString()))
                     {
                         Debug.WriteLine("TimeEvents: Error: Key " + key + "not found! (tried to set to " + eventInYear.Item2.ToString() + ")");
                     }

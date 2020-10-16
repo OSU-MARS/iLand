@@ -47,7 +47,7 @@ namespace iLand.Output
             {
                 throw new NotSupportedException("No parameter section in project file.");
             }
-            string filter = globalSettings.Settings.GetString(".filter", "");
+            string filter = globalSettings.Settings.GetStringFromXml(".filter", "");
             mFilter.SetExpression(filter);
         }
 

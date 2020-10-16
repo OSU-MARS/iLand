@@ -64,14 +64,14 @@ namespace iLand.Output
     {
         private string insertRowSqlText;
 
-        public bool IsOpen { get; private set; } ///< returns true if output is open, i.e. has a open database connection
-        public bool IsEnabled { get; set; } ///< returns true if output is enabled, i.e. is "turned on"
+        public bool IsOpen { get; private set; } // returns true if output is open, i.e. has a open database connection
+        public bool IsEnabled { get; set; } // returns true if output is enabled, i.e. is "turned on"
 
         public List<SqlColumn> Columns { get; protected set; }
 
-        public string Name { get; set; } ///< descriptive name of the ouptut
-        public string Description { get; protected set; } ///< description of output
-        public string TableName { get; protected set; } ///< internal output name (no spaces allowed)
+        public string Name { get; set; } // descriptive name of the ouptut
+        public string Description { get; protected set; } // description of output
+        public string TableName { get; protected set; } // internal output name (no spaces allowed)
 
         public Output()
         {

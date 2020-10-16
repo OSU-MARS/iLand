@@ -18,13 +18,13 @@ namespace iLand.Trees
         // Penman-Monteith parameters
         private double mAirDensity; // density of air [kg / m3]
         // parameters for interception
-        public double NeedleFactor { get; set; } ///< factor for calculating water storage capacity for intercepted water for conifers
-        public double DecidousFactor { get; set; } ///< the same for broadleaved
+        public double NeedleFactor { get; set; } // factor for calculating water storage capacity for intercepted water for conifers
+        public double DecidousFactor { get; set; } // the same for broadleaved
 
-        public double Interception { get; private set; } ///< mm water that is intercepted by the crown
-        public double EvaporationCanopy { get; private set; } ///< evaporation from canopy (mm)
-        public double AvgMaxCanopyConductance { get; private set; } ///< averaged maximum canopy conductance of current species distribution (m/s)
-        public double[] ReferenceEvapotranspiration { get; private set; } ///< monthly reference ET (see Adair et al 2008)
+        public double Interception { get; private set; } // mm water that is intercepted by the crown
+        public double EvaporationCanopy { get; private set; } // evaporation from canopy (mm)
+        public double AvgMaxCanopyConductance { get; private set; } // averaged maximum canopy conductance of current species distribution (m/s)
+        public double[] ReferenceEvapotranspiration { get; private set; } // monthly reference ET (see Adair et al 2008)
 
         public Canopy()
         {

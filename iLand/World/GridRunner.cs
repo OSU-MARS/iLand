@@ -40,7 +40,7 @@ namespace iLand.World
         /// checks if the state of the GridRunner is valid, returns false if out of scope
         public bool IsValid() { return mCurrent >= mFirst && mCurrent <= mLast; }
 
-        ///< to to next element, return null if finished
+        // to to next element, return null if finished
         /// return the current element, or null
         // BUGBUG: change to bool MoveNext() and update callers
         public T MoveNext()

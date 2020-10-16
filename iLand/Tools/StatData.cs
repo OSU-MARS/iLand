@@ -16,10 +16,10 @@ namespace iLand.Tools
         private double mMedian;
         private double mSD; // standard deviation
 
-        public double Sum { get; private set; } ///< sum of values
-        public double Mean { get; private set; } ///< arithmetic mean
-        public double Min { get; private set; } ///< minimum value
-        public double Max { get; private set; } ///< maximum value
+        public double Sum { get; private set; } // sum of values
+        public double Mean { get; private set; } // arithmetic mean
+        public double Min { get; private set; } // minimum value
+        public double Max { get; private set; } // maximum value
 
         public StatData() 
         {
@@ -43,10 +43,10 @@ namespace iLand.Tools
             Calculate(); 
         }
 
-        public double Median() { if (Double.IsNaN(mP25)) CalculatePercentiles(); return mMedian; } ///< 2nd quartil = median
-        public double Percentile25() { if (Double.IsNaN(mP25)) CalculatePercentiles(); return mP25; } ///< 1st quartil
-        public double Percentile75() { if (Double.IsNaN(mP75)) CalculatePercentiles(); return mP75; } ///< 3rd quartil
-        public double StandardDev() { if (Double.IsNaN(mSD)) CalculateSD(); return mSD; } ///< get the standard deviation (of the population)
+        public double Median() { if (Double.IsNaN(mP25)) CalculatePercentiles(); return mMedian; } // 2nd quartil = median
+        public double Percentile25() { if (Double.IsNaN(mP25)) CalculatePercentiles(); return mP25; } // 1st quartil
+        public double Percentile75() { if (Double.IsNaN(mP75)) CalculatePercentiles(); return mP75; } // 3rd quartil
+        public double StandardDev() { if (Double.IsNaN(mSD)) CalculateSD(); return mSD; } // get the standard deviation (of the population)
 
         private void CalculatePercentiles()
         {

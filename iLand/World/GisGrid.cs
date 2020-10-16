@@ -22,18 +22,18 @@ namespace iLand.World
         private double[] data;
 
         // access
-        public int DataSize { get; private set; }   ///< number of data items (rows*cols)
-        public int Rows { get; private set; } ///< number of rows
-        public int Cols { get; private set; } ///< number of columns
-        public double CellSize { get; private set; } ///< size of a cell (meters)
-        public double MinValue { get; private set; } ///< minimum data value
-        public double MaxValue { get; private set; } ///< maximum data value
-        public int NoDataValue { get; private set; } ///< no data value of the grid
+        public int DataSize { get; private set; }   // number of data items (rows*cols)
+        public int Rows { get; private set; } // number of rows
+        public int Cols { get; private set; } // number of columns
+        public double CellSize { get; private set; } // size of a cell (meters)
+        public double MinValue { get; private set; } // minimum data value
+        public double MaxValue { get; private set; } // maximum data value
+        public int NoDataValue { get; private set; } // no data value of the grid
 
         /// get grid value at local coordinates (X/Y); returs NODATAValue if out of range
         /// @p X and @p Y are local coordinates.
         public double GetValue(PointF p) { return GetValue(p.X, p.Y); }
-        ///< coordinates of the lower left corner of the grid
+        // coordinates of the lower left corner of the grid
         public PointF Origin 
         {
             get { return origin; }

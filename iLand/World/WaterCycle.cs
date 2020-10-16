@@ -2,7 +2,6 @@
 using iLand.Tools;
 using iLand.Trees;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace iLand.World
@@ -19,27 +18,27 @@ namespace iLand.World
         */
     public class WaterCycle
     {
-        private int mLastYear; ///< last year of execution
-        private double mPsi_koeff_b; ///< see psiFromHeight()
-        private double mPsi_sat; ///< see psiFromHeight(), kPa
-        private double mTheta_sat; ///< see psiFromHeight(), [-], m3/m3
-        private ResourceUnit mRU; ///< resource unit to which this watercycle is connected
-        private readonly Canopy mCanopy; ///< object representing the forest canopy (interception, evaporation)
-        private readonly SnowPack mSnowPack; ///< object representing the snow cover (aggregation, melting)
-        private double mPermanentWiltingPoint; ///< bucket "height" of PWP (is fixed to -4MPa) (mm)
+        private int mLastYear; // last year of execution
+        private double mPsi_koeff_b; // see psiFromHeight()
+        private double mPsi_sat; // see psiFromHeight(), kPa
+        private double mTheta_sat; // see psiFromHeight(), [-], m3/m3
+        private ResourceUnit mRU; // resource unit to which this watercycle is connected
+        private readonly Canopy mCanopy; // object representing the forest canopy (interception, evaporation)
+        private readonly SnowPack mSnowPack; // object representing the snow cover (aggregation, melting)
+        private double mPermanentWiltingPoint; // bucket "height" of PWP (is fixed to -4MPa) (mm)
         private double mLAINeedle;
         private double mLAIBroadleaved;
         
-        public double CanopyConductance { get; private set; } ///< current canopy conductance (LAI weighted CC of available tree species) (m/s)
-        public double CurrentSoilWaterContent { get; private set; } ///< current water content in mm water column of the soil
-        public double FieldCapacity { get; private set; } ///<  bucket height of field-capacity (eq. -15kPa) (mm)
-        public double[] Psi { get; private set; } ///< soil water potential for each day in kPa
+        public double CanopyConductance { get; private set; } // current canopy conductance (LAI weighted CC of available tree species) (m/s)
+        public double CurrentSoilWaterContent { get; private set; } // current water content in mm water column of the soil
+        public double FieldCapacity { get; private set; } //  bucket height of field-capacity (eq. -15kPa) (mm)
+        public double[] Psi { get; private set; } // soil water potential for each day in kPa
 
-        public double SoilDepth { get; private set; } ///< soil depth (without rocks) in mm
-        public double SnowDays { get; set; } ///< # of days with snowcover >0
-        public double SnowDayRad { get; set; } ///< sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
-        public double TotalEvapotranspiration { get; set; } ///< annual sum of evapotranspiration (mm)
-        public double TotalWaterLoss { get; set; } ///< annual sum of water loss due to lateral outflow/groundwater flow (mm)
+        public double SoilDepth { get; private set; } // soil depth (without rocks) in mm
+        public double SnowDays { get; set; } // # of days with snowcover >0
+        public double SnowDayRad { get; set; } // sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
+        public double TotalEvapotranspiration { get; set; } // annual sum of evapotranspiration (mm)
+        public double TotalWaterLoss { get; set; } // annual sum of water loss due to lateral outflow/groundwater flow (mm)
 
         public WaterCycle()
         {
@@ -50,7 +49,7 @@ namespace iLand.World
             this.SoilDepth = 0;
         }
 
-        public double CurrentSnowWaterEquivalent() { return mSnowPack.WaterEquivalent; } ///< current water stored as snow (mm water)
+        public double CurrentSnowWaterEquivalent() { return mSnowPack.WaterEquivalent; } // current water stored as snow (mm water)
         /// monthly values for PET (mm sum)
         public double[] ReferenceEvapotranspiration() { return mCanopy.ReferenceEvapotranspiration; }
         public void SetContent(double content, double snow_mm) { CurrentSoilWaterContent = content; mSnowPack.WaterEquivalent = snow_mm; }
@@ -60,11 +59,10 @@ namespace iLand.World
             mRU = ru;
             // get values...
             FieldCapacity = 0.0; // on top
-            XmlHelper xml = model.GlobalSettings.Settings;
-            SoilDepth = xml.GetDouble("model.site.soilDepth", 0.0) * 10; // convert from cm to mm
-            double pct_sand = xml.GetDouble("model.site.pctSand");
-            double pct_silt = xml.GetDouble("model.site.pctSilt");
-            double pct_clay = xml.GetDouble("model.site.pctClay");
+            this.SoilDepth = 10 * model.Environment.CurrentSoilDepth.Value; // convert from cm to mm TODO: zero is not a realistic default
+            double pct_sand = model.Environment.CurrentSoilSand.Value;
+            double pct_silt = model.Environment.CurrentSoilSilt.Value;
+            double pct_clay = model.Environment.CurrentSoilClay.Value;
             if (Math.Abs(100.0 - (pct_sand + pct_silt + pct_clay)) > 0.01)
             {
                 throw new NotSupportedException(String.Format("Setup WaterCycle: soil textures do not sum to 100% within 0.01%. Sand: {0}%, silt: {1}%, clay: {2}%. Are these values specified in /project/model/site?", pct_sand, pct_silt, pct_clay));
@@ -78,7 +76,9 @@ namespace iLand.World
             mCanopy.Setup(model);
 
             mPermanentWiltingPoint = HeightFromPsi(-4000); // maximum psi is set to a constant of -4MPa
-            if (xml.GetBool("model.settings.waterUseSoilSaturation", false) == false)
+
+            XmlHelper xml = model.GlobalSettings.Settings;
+            if (xml.GetBooleanFromXml("model.settings.waterUseSoilSaturation", false) == false) // TODO: should be on ModelSettings, why does this default to false?
             {
                 // BUGBUG: may result in field capacity height below permanent wilt point
                 FieldCapacity = HeightFromPsi(-15);
@@ -105,9 +105,9 @@ namespace iLand.World
             mLastYear = -1;
 
             // canopy settings
-            mCanopy.NeedleFactor = xml.GetDouble("model.settings.interceptionStorageNeedle", 4.0);
-            mCanopy.DecidousFactor = xml.GetDouble("model.settings.interceptionStorageBroadleaf", 2.0);
-            mSnowPack.Temperature = xml.GetDouble("model.settings.snowMeltTemperature", 0.0);
+            mCanopy.NeedleFactor = xml.GetDoubleFromXml(Constant.Setting.WaterCycle.NeedleStorage, Constant.Default.WaterCycle.NeedleStorage);
+            mCanopy.DecidousFactor = xml.GetDoubleFromXml(Constant.Setting.WaterCycle.BroadleafStorage, Constant.Default.WaterCycle.BroadleafStorage);
+            mSnowPack.Temperature = xml.GetDoubleFromXml(Constant.Setting.WaterCycle.SnowmeltTemperature, Constant.Default.WaterCycle.SnowmeltTemperature);
 
             TotalEvapotranspiration = TotalWaterLoss = SnowDayRad = 0.0;
             SnowDays = 0;

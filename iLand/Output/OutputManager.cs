@@ -13,7 +13,7 @@ namespace iLand.Output
       */
     public class OutputManager
     {
-        private readonly List<Output> outputs; ///< list of outputs in system
+        private readonly List<Output> outputs; // list of outputs in system
 
         public CarbonFlowOutput CarbonFlowOutput { get; private set; }
         public CarbonOutput CarbonOutput { get; private set; }
@@ -79,7 +79,7 @@ namespace iLand.Output
                 string nodepath = String.Format("output.{0}", output.TableName);
                 xml.TrySetCurrentNode(nodepath);
                 output.Setup(globalSettings);
-                output.IsEnabled = xml.GetBool(".enabled", false);
+                output.IsEnabled = xml.GetBooleanFromXml(".enabled", false);
                 if (output.IsEnabled)
                 {
                     output.Open(globalSettings);

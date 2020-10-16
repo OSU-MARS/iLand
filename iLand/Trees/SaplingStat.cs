@@ -9,25 +9,25 @@ namespace iLand.Trees
       */
     public class SaplingStat
     {
-        private double mSumDbhDied; ///< running sum of dbh of died trees (used to calculate detritus)
+        private double mSumDbhDied; // running sum of dbh of died trees (used to calculate detritus)
 
-        public double AverageAge { get; set; } ///< average age of saplings (years)
-        public double AverageDeltaHPot { get; set; } ///< average height increment potential (m)
-        public double AverageDeltaHRealized { get; set; } ///< average realized height increment
-        public double AverageHeight { get; set; } ///< average height of saplings (m)
-        public CNPair CarbonLiving { get; private set; } ///< kg Carbon (kg/ru) of saplings
-        public CNPair CarbonGain { get; private set; } ///< net growth (kg / ru) of saplings
-        public int DeadSaplings { get; private set; } ///< number of tree cohorts died
-        public int LivingCohorts { get; set; } ///< get the number of cohorts
-        public double LivingSaplings { get; set; } ///< number of individual trees in the regen layer (using Reinekes R), with h>1.3m
-        public double LivingSaplingsSmall { get; set; } ///< number of individual trees of cohorts < 1.3m height
-        public int NewSaplings { get; set; } ///< number of tree cohorts added
-        public int RecruitedSaplings { get; set; } ///< number of cohorts recruited (i.e. grown out of regeneration layer)
+        public double AverageAge { get; set; } // average age of saplings (years)
+        public double AverageDeltaHPot { get; set; } // average height increment potential (m)
+        public double AverageDeltaHRealized { get; set; } // average realized height increment
+        public double AverageHeight { get; set; } // average height of saplings (m)
+        public CarbonNitrogenTuple CarbonLiving { get; private set; } // kg Carbon (kg/ru) of saplings
+        public CarbonNitrogenTuple CarbonGain { get; private set; } // net growth (kg / ru) of saplings
+        public int DeadSaplings { get; private set; } // number of tree cohorts died
+        public int LivingCohorts { get; set; } // get the number of cohorts
+        public double LivingSaplings { get; set; } // number of individual trees in the regen layer (using Reinekes R), with h>1.3m
+        public double LivingSaplingsSmall { get; set; } // number of individual trees of cohorts < 1.3m height
+        public int NewSaplings { get; set; } // number of tree cohorts added
+        public int RecruitedSaplings { get; set; } // number of cohorts recruited (i.e. grown out of regeneration layer)
 
         public SaplingStat()
         {
-            CarbonGain = new CNPair();
-            CarbonLiving = new CNPair();
+            CarbonGain = new CarbonNitrogenTuple();
+            CarbonLiving = new CarbonNitrogenTuple();
             ClearStatistics();
         }
 
@@ -64,11 +64,11 @@ namespace iLand.Trees
             }
 
             // calculate carbon balance
-            CNPair old_state = CarbonLiving;
+            CarbonNitrogenTuple old_state = CarbonLiving;
             CarbonLiving.Clear();
 
-            CNPair dead_wood = new CNPair(); // pools for mortality
-            CNPair dead_fine = new CNPair();
+            CarbonNitrogenTuple dead_wood = new CarbonNitrogenTuple(); // pools for mortality
+            CarbonNitrogenTuple dead_fine = new CarbonNitrogenTuple();
             // average dbh
             if (LivingCohorts > 0)
             {

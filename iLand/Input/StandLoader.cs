@@ -38,13 +38,13 @@ namespace iLand.Input
         private RandomCustomPdf mRandom;
         private List<InitFileItem> mInitItems;
         private readonly Dictionary<int, List<InitFileItem>> mStandInitItems;
-        private Expression mHeightGridResponse; ///< response function to calculate fitting of pixels with pre-determined height
-        private int mHeightGridTries; ///< maximum number of tries to land at pixel with fitting height
+        private Expression mHeightGridResponse; // response function to calculate fitting of pixels with pre-determined height
+        private int mHeightGridTries; // maximum number of tries to land at pixel with fitting height
 
         /// define a stand grid externally
         public MapGrid CurrentMap { get; set; }
         /// set a constraining height grid (10m resolution)
-        public MapGrid InitHeightGrid { get; set; } ///< grid with tree heights
+        public MapGrid InitHeightGrid { get; set; } // grid with tree heights
 
         public StandLoader(Model model)
         {
@@ -92,15 +92,15 @@ namespace iLand.Input
         {
             XmlHelper xml = new XmlHelper(model.GlobalSettings.Settings.Node("model.initialization"));
 
-            string initializationMode = xml.GetString("mode", "copy");
-            string type = xml.GetString("type", "");
-            string fileName = xml.GetString("file", "");
+            string initializationMode = xml.GetStringFromXml("mode", "copy");
+            string type = xml.GetStringFromXml("type", "");
+            string fileName = xml.GetStringFromXml("file", "");
 
-            bool heightGridEnabled = xml.GetBool("heightGrid.enabled", false);
-            mHeightGridTries = xml.ValueInt("heightGrid.maxTries", 10);
+            bool heightGridEnabled = xml.GetBooleanFromXml("heightGrid.enabled", false);
+            mHeightGridTries = xml.GetInt32FromXml("heightGrid.maxTries", 10);
             if (heightGridEnabled)
             {
-                string initHeightGridFile = model.GlobalSettings.Path(xml.GetString("heightGrid.fileName"), "init");
+                string initHeightGridFile = model.GlobalSettings.Path(xml.GetStringFromXml("heightGrid.fileName"), "init");
                 Debug.WriteLine("initialization: using predefined tree heights map " + initHeightGridFile);
 
                 MapGrid p = new MapGrid(model, initHeightGridFile, false);
@@ -110,7 +110,7 @@ namespace iLand.Input
                 }
                 InitHeightGrid = p;
 
-                string expr = xml.GetString("heightGrid.fitFormula", "polygon(x, 0,0, 0.8,1, 1.1, 1, 1.25,0)");
+                string expr = xml.GetStringFromXml("heightGrid.fitFormula", "polygon(x, 0,0, 0.8,1, 1.1, 1, 1.25,0)");
                 mHeightGridResponse = new Expression(expr);
                 mHeightGridResponse.Linearize(model, 0.0, 2.0);
             }
@@ -138,8 +138,8 @@ namespace iLand.Input
                 {
                     // set environment
                     model.Environment.SetPosition(ru.BoundingBox.Center(), model);
-                    type = xml.GetString("type", "");
-                    fileName = xml.GetString("file", "");
+                    type = xml.GetStringFromXml("type", "");
+                    fileName = xml.GetStringFromXml("file", "");
                     if (String.IsNullOrEmpty(fileName))
                     {
                         continue;
@@ -161,7 +161,7 @@ namespace iLand.Input
                 {
                     throw new NotSupportedException("Stand-Initialization: model.initialization.mode is 'map' but there is no valid stand grid defined (model.world.standGrid)");
                 }
-                string mapFileName = model.GlobalSettings.Path(xml.GetString("mapFileName"), "init");
+                string mapFileName = model.GlobalSettings.Path(xml.GetStringFromXml("mapFileName"), "init");
 
                 CsvFile map_file = new CsvFile(mapFileName);
                 if (map_file.RowCount == 0)
@@ -177,10 +177,10 @@ namespace iLand.Input
                 string file_name;
                 for (int i = 0; i < map_file.RowCount; i++)
                 {
-                    int key = Int32.Parse(map_file.Value(i, ikey));
+                    int key = Int32.Parse(map_file.GetValue(i, ikey));
                     if (key > 0)
                     {
-                        file_name = map_file.Value(i, ivalue);
+                        file_name = map_file.GetValue(i, ivalue);
                         if (model.GlobalSettings.LogDebug())
                         {
                             Debug.WriteLine("loading " + file_name + " for grid id " + key);
@@ -210,7 +210,7 @@ namespace iLand.Input
                 ParseInitFile(content, fileName);
 
                 // setup the random distribution
-                string density_func = xml.GetString("model.initialization.randomFunction", "1-x^2");
+                string density_func = xml.GetStringFromXml("model.initialization.randomFunction", "1-x^2");
                 if (model.GlobalSettings.LogDebug())
                 {
                     Debug.WriteLine("density function: " + density_func);
@@ -255,11 +255,11 @@ namespace iLand.Input
         {
             XmlHelper xml = new XmlHelper(model.GlobalSettings.Settings.Node("model.initialization"));
 
-            string mode = xml.GetString("mode", "copy");
+            string mode = xml.GetStringFromXml("mode", "copy");
             if (mode == "standgrid")
             {
                 // load a file with saplings per polygon
-                string filename = xml.GetString("saplingFile", "");
+                string filename = xml.GetStringFromXml("saplingFile", "");
                 if (String.IsNullOrEmpty(filename))
                 {
                     return;
@@ -281,7 +281,7 @@ namespace iLand.Input
                 int total = 0;
                 for (int i = 0; i < init_file.RowCount; ++i)
                 {
-                    int row_stand = Int32.Parse(init_file.Value(i, istandid));
+                    int row_stand = Int32.Parse(init_file.GetValue(i, istandid));
                     if (row_stand != stand_id)
                     {
                         if (stand_id >= 0)
@@ -431,14 +431,14 @@ namespace iLand.Input
             int treCount = 0;
             for (int rowIndex = 1; rowIndex < infile.RowCount; rowIndex++)
             {
-                double dbh = Double.Parse(infile.Value(rowIndex, dbhColumn));
+                double dbh = Double.Parse(infile.GetValue(rowIndex, dbhColumn));
                 //if (dbh<5.)
                 //    continue;
                 PointF physicalPosition = new PointF();
                 if (xColumn >= 0 && yColumn >= 0)
                 {
-                    physicalPosition.X = Single.Parse(infile.Value(rowIndex, xColumn)) + ruOffset.X;
-                    physicalPosition.Y = Single.Parse(infile.Value(rowIndex, yColumn)) + ruOffset.Y;
+                    physicalPosition.X = Single.Parse(infile.GetValue(rowIndex, xColumn)) + ruOffset.X;
+                    physicalPosition.Y = Single.Parse(infile.GetValue(rowIndex, yColumn)) + ruOffset.Y;
                 }
                 // position valid?
                 if (!mModel.HeightGrid[physicalPosition].IsInWorld())
@@ -449,13 +449,13 @@ namespace iLand.Input
                 tree.SetLightCellIndex(physicalPosition);
                 if (idColumn >= 0)
                 {
-                    tree.ID = Int32.Parse(infile.Value(rowIndex, idColumn));
+                    tree.ID = Int32.Parse(infile.GetValue(rowIndex, idColumn));
                 }
 
                 tree.Dbh = (float)dbh;
-                tree.SetHeight(Single.Parse(infile.Value(rowIndex, heightColumn)) / (float)heightConversionFactor); // convert from Picus-cm to m if necessary
+                tree.SetHeight(Single.Parse(infile.GetValue(rowIndex, heightColumn)) / (float)heightConversionFactor); // convert from Picus-cm to m if necessary
 
-                string speciesID = infile.Value(rowIndex, speciesColumn);
+                string speciesID = infile.GetValue(rowIndex, speciesColumn);
                 if (Int32.TryParse(speciesID, out int picusID))
                 {
                     int idx = PicusSpeciesIDs.IndexOf(picusID);
@@ -476,7 +476,7 @@ namespace iLand.Input
                 if (ageColumn >= 0)
                 {
                     // BUGBUG should probably throw if age parsing fails
-                    ageParsed = Int32.TryParse(infile.Value(rowIndex, ageColumn), out int age);
+                    ageParsed = Int32.TryParse(infile.GetValue(rowIndex, ageColumn), out int age);
                     tree.SetAge(age, tree.Height); // this is a *real* age
                 }
                 if (ageColumn < 0 || !ageParsed || tree.Age == 0)
@@ -510,7 +510,7 @@ namespace iLand.Input
             }
 
             // setup the random distribution
-            string densityFunction = model.GlobalSettings.Settings.GetString("model.initialization.randomFunction", "1-x^2");
+            string densityFunction = model.GlobalSettings.Settings.GetStringFromXml("model.initialization.randomFunction", "1-x^2");
             if (model.GlobalSettings.LogDebug())
             {
                 Debug.WriteLine("density function: " + densityFunction);
@@ -572,10 +572,10 @@ namespace iLand.Input
             {
                 InitFileItem initItem = new InitFileItem()
                 {
-                    Count = Double.Parse(infile.Value(row, countIndex)),
-                    DbhFrom = Double.Parse(infile.Value(row, dbhFromIndex)),
-                    DbhTo = Double.Parse(infile.Value(row, dbhToIndex)),
-                    HD = Double.Parse(infile.Value(row, hdIndex))
+                    Count = Double.Parse(infile.GetValue(row, countIndex)),
+                    DbhFrom = Double.Parse(infile.GetValue(row, dbhFromIndex)),
+                    DbhTo = Double.Parse(infile.GetValue(row, dbhToIndex)),
+                    HD = Double.Parse(infile.GetValue(row, hdIndex))
                 };
                 if (initItem.HD == 0.0 || initItem.DbhFrom / 100.0 * initItem.HD < 4.0)
                 {
@@ -588,7 +588,7 @@ namespace iLand.Input
                 bool setAgeToZero = true;
                 if (ageIndex >= 0)
                 {
-                    setAgeToZero = Int32.TryParse(infile.Value(row, ageIndex), out int age);
+                    setAgeToZero = Int32.TryParse(infile.GetValue(row, ageIndex), out int age);
                     initItem.Age = age;
                 }
                 if (ageIndex < 0 || setAgeToZero == false)
@@ -596,10 +596,10 @@ namespace iLand.Input
                     initItem.Age = 0;
                 }
 
-                initItem.Species = speciesSet.GetSpecies(infile.Value(row, speciesIndex));
+                initItem.Species = speciesSet.GetSpecies(infile.GetValue(row, speciesIndex));
                 if (densityIndex >= 0)
                 {
-                    initItem.Density = Double.Parse(infile.Value(row, densityIndex));
+                    initItem.Density = Double.Parse(infile.GetValue(row, densityIndex));
                 }
                 else
                 {
@@ -613,11 +613,11 @@ namespace iLand.Input
                 if (initItem.Species == null)
                 {
                     throw new NotSupportedException(String.Format("Unknown species '{0}' in file '{1}', line {2}.",
-                                                                  infile.Value(row, speciesIndex), fileName, row));
+                                                                  infile.GetValue(row, speciesIndex), fileName, row));
                 }
                 if (standIDindex >= 0)
                 {
-                    int standid = Int32.Parse(infile.Value(row, standIDindex));
+                    int standid = Int32.Parse(infile.GetValue(row, standIDindex));
                     mStandInitItems[standid].Add(initItem);
                 }
                 else
@@ -1081,14 +1081,14 @@ namespace iLand.Input
             int total = 0;
             for (int row = 0; row < init.RowCount; ++row)
             {
-                int pxcount = (int)Math.Round(Double.Parse(init.Value(row, icount)) * area_factor + 0.5); // no. of pixels that should be filled (sapling grid is the same resolution as the lif-grid)
-                Species species = set.GetSpecies(init.Value(row, ispecies));
+                int pxcount = (int)Math.Round(Double.Parse(init.GetValue(row, icount)) * area_factor + 0.5); // no. of pixels that should be filled (sapling grid is the same resolution as the lif-grid)
+                Species species = set.GetSpecies(init.GetValue(row, ispecies));
                 if (species == null)
                 {
-                    throw new NotSupportedException(String.Format("Error while loading saplings: invalid species '{0}'.", init.Value(row, ispecies)));
+                    throw new NotSupportedException(String.Format("Error while loading saplings: invalid species '{0}'.", init.GetValue(row, ispecies)));
                 }
-                height = iheight == -1 ? 0.05 : Double.Parse(init.Value(row, iheight));
-                age = iage == -1 ? 1 : Double.Parse(init.Value(row, iage));
+                height = iheight == -1 ? 0.05 : Double.Parse(init.GetValue(row, iheight));
+                age = iage == -1 ? 1 : Double.Parse(init.GetValue(row, iage));
 
                 int misses = 0;
                 int hits = 0;
@@ -1216,18 +1216,18 @@ namespace iLand.Input
             int total = 0;
             for (int row = low_index; row <= high_index; ++row)
             {
-                int pxcount = (int)(Double.Parse(init.Value(row, icount)) * area_factor); // no. of pixels that should be filled (sapling grid is the same resolution as the lif-grid)
-                Species species = set.GetSpecies(init.Value(row, ispecies));
+                int pxcount = (int)(Double.Parse(init.GetValue(row, icount)) * area_factor); // no. of pixels that should be filled (sapling grid is the same resolution as the lif-grid)
+                Species species = set.GetSpecies(init.GetValue(row, ispecies));
                 if (species == null)
                 {
-                    throw new NotSupportedException(String.Format("Error while loading saplings: invalid species '{0}'.", init.Value(row, ispecies)));
+                    throw new NotSupportedException(String.Format("Error while loading saplings: invalid species '{0}'.", init.GetValue(row, ispecies)));
                 }
-                height = iheight == -1 ? 0.05 : Double.Parse(init.Value(row, iheight));
-                age = iage == -1 ? 1 : Double.Parse(init.Value(row, iage));
-                double age4m = itopage == -1 ? 10 : Double.Parse(init.Value(row, itopage));
-                double height_from = iheightfrom == -1 ? -1.0 : Double.Parse(init.Value(row, iheightfrom));
-                double height_to = iheightto == -1 ? -1.0 : Double.Parse(init.Value(row, iheightto));
-                double min_lif = iminlif == -1 ? 1.0 : Double.Parse(init.Value(row, iminlif));
+                height = iheight == -1 ? 0.05 : Double.Parse(init.GetValue(row, iheight));
+                age = iage == -1 ? 1 : Double.Parse(init.GetValue(row, iage));
+                double age4m = itopage == -1 ? 10 : Double.Parse(init.GetValue(row, itopage));
+                double height_from = iheightfrom == -1 ? -1.0 : Double.Parse(init.GetValue(row, iheightfrom));
+                double height_to = iheightto == -1 ? -1.0 : Double.Parse(init.GetValue(row, iheightto));
+                double min_lif = iminlif == -1 ? 1.0 : Double.Parse(init.GetValue(row, iminlif));
                 // find LIF-level in the pixels
                 int min_lif_index = 0;
                 if (min_lif < 1.0)

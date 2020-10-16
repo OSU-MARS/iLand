@@ -59,10 +59,10 @@ namespace iLand.Output
 
         public override void Setup(GlobalSettings globalSettings)
         {
-            string filter = globalSettings.Settings.GetString(".rufilter", "");
-            string tree_filter = globalSettings.Settings.GetString(".treefilter", "");
-            string fieldList = globalSettings.Settings.GetString(".columns", "");
-            string condition = globalSettings.Settings.GetString(".condition", "");
+            string filter = globalSettings.Settings.GetStringFromXml(".rufilter", "");
+            string tree_filter = globalSettings.Settings.GetStringFromXml(".treefilter", "");
+            string fieldList = globalSettings.Settings.GetStringFromXml(".columns", "");
+            string condition = globalSettings.Settings.GetStringFromXml(".condition", "");
             if (String.IsNullOrEmpty(fieldList))
             {
                 return;
@@ -128,8 +128,8 @@ namespace iLand.Output
 
             //using DebugTimer dt = model.DebugTimers.Create("DynamicStandOutput.LogYear()");
 
-            bool perSpecies = model.GlobalSettings.Settings.GetBool("output.dynamicstand.by_species", true);
-            bool per_ru = model.GlobalSettings.Settings.GetBool("output.dynamicstand.by_ru", true);
+            bool perSpecies = model.GlobalSettings.Settings.GetBooleanFromXml("output.dynamicstand.by_species", true);
+            bool per_ru = model.GlobalSettings.Settings.GetBooleanFromXml("output.dynamicstand.by_ru", true);
 
             if (per_ru)
             {
@@ -145,9 +145,9 @@ namespace iLand.Output
             StatData stat = new StatData(); // statistcs helper class
             // grouping
             List<Tree> trees = new List<Tree>();
-            for (int index = 0; index < model.SpeciesSet().ActiveSpecies.Count; ++index)
+            for (int index = 0; index < model.GetFirstSpeciesSet().ActiveSpecies.Count; ++index)
             {
-                Species species = model.SpeciesSet().ActiveSpecies[index];
+                Species species = model.GetFirstSpeciesSet().ActiveSpecies[index];
                 trees.Clear();
                 AllTreeIterator all_trees = new AllTreeIterator(model);
                 for (Tree tree = all_trees.MoveNextLiving(); tree != null; tree = all_trees.MoveNextLiving())

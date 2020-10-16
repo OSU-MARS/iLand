@@ -31,10 +31,9 @@ namespace iLand.Tools
         private readonly Expression mExpVpd;
 
         // getters
+        public string ConnectionString { get; set; }
         public string FileName { get; set; }
         public string TableName { get; set; }
-        public string Database { get; set; }
-        public bool Captions { get; set; }
         public string Year { get; set; }
         public string Month { get; set; }
         public string Day { get; set; }
@@ -46,7 +45,6 @@ namespace iLand.Tools
 
         public ClimateConverter()
         {
-            this.Captions = true;
             this.mExpYear = new Expression();
             this.mExpMonth = new Expression();
             this.mExpDay = new Expression();
@@ -91,35 +89,30 @@ namespace iLand.Tools
             mExpRad.SetExpression(Rad);
             mExpVpd.SetExpression(Vpd);
 
-            if (String.IsNullOrEmpty(Database))
+            if (String.IsNullOrEmpty(ConnectionString))
             {
-                throw new NotSupportedException("ClimateConverter: database is empty!");
+                throw new NotSupportedException("Database is empty.");
             }
             if (String.IsNullOrWhiteSpace(TableName))
             {
-                throw new NotSupportedException("run: invalid table name.");
+                throw new NotSupportedException("Invalid table name.");
             }
             if (String.IsNullOrEmpty(FileName))
             {
-                Debug.WriteLine("run: empty filename.");
-                return;
+                throw new NotSupportedException("Empty filename.");
             }
 
             // load file
-            CsvFile file = new CsvFile()
-            {
-                HasCaptions = Captions
-            };
+            CsvFile file = new CsvFile();
             file.LoadFile(FileName);
-            if (file.RowCount == 0)
+            if (file.IsEmpty || (file.RowCount == 0))
             {
-                Debug.WriteLine("run: cannot load file: " + FileName);
-                return;
+                throw new NotSupportedException("File '" + FileName + "' is empty.");
             }
 
             SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
             {
-                DataSource = Database
+                DataSource = ConnectionString
             };
             using SqliteConnection db = new SqliteConnection(connectionString.ConnectionString);
             db.Open();
@@ -140,9 +133,9 @@ namespace iLand.Tools
                 for (int row = 0; row < file.RowCount; row++)
                 {
                     // fetch values from input file
-                    for (int col = 0; col < file.ColCount; col++)
+                    for (int col = 0; col < file.ColumnCount; col++)
                     {
-                        double value = Double.Parse(file.Value(row, col));
+                        double value = Double.Parse(file.GetValue(row, col));
                         // store value in each of the expression variables
                         for (int j = 0; j < 8; j++)
                         {

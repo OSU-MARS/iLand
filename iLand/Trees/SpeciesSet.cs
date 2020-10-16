@@ -19,21 +19,21 @@ namespace iLand.Trees
 
         private readonly Dictionary<string, Species> mSpeciesByID;
         // nitrogen response classes
-        private double mNitrogen1a, mNitrogen1b; ///< parameters of nitrogen response class 1
-        private double mNitrogen2a, mNitrogen2b; ///< parameters of nitrogen response class 2
-        private double mNitrogen3a, mNitrogen3b; ///< parameters of nitrogen response class 3
+        private double mNitrogen1a, mNitrogen1b; // parameters of nitrogen response class 1
+        private double mNitrogen2a, mNitrogen2b; // parameters of nitrogen response class 2
+        private double mNitrogen3a, mNitrogen3b; // parameters of nitrogen response class 3
         // CO2 response
-        private double mCO2base, mCO2comp; ///< CO2 concentration of measurements (base) and CO2 compensation point (comp)
-        private double mCO2p0, mCO2beta0; ///< p0: production multiplier, beta0: relative productivity increase
+        private double mCO2base, mCO2comp; // CO2 concentration of measurements (base) and CO2 compensation point (comp)
+        private double mCO2p0, mCO2beta0; // p0: production multiplier, beta0: relative productivity increase
         // Light Response classes
-        private readonly Expression mLightResponseIntolerant; ///< light response function for the the most shade tolerant species
-        private readonly Expression mLightResponseTolerant; ///< light response function for the most shade intolerant species
-        private readonly Expression mLriCorrection; ///< function to modfiy LRI during read
+        private readonly Expression mLightResponseIntolerant; // light response function for the the most shade tolerant species
+        private readonly Expression mLightResponseTolerant; // light response function for the most shade intolerant species
+        private readonly Expression mLriCorrection; // function to modfiy LRI during read
         /// container holding the seed maps
         private readonly List<SeedDispersal> mSeedDispersal;
 
-        public List<Species> ActiveSpecies { get; private set; } ///< list of species that are "active" (flag active in database)
-        public string Name { get; private set; } ///< table name of the species set
+        public List<Species> ActiveSpecies { get; private set; } // list of species that are "active" (flag active in database)
+        public string Name { get; private set; } // table name of the species set
         public List<int> RandomSpeciesOrder { get; private set; }
         public SpeciesStamps ReaderStamps { get; private set; }
 
@@ -84,9 +84,8 @@ namespace iLand.Trees
         public int Setup(Model model)
         {
             XmlHelper xml = model.GlobalSettings.Settings;
-            string tableName = xml.GetString("model.species.source", "species");
-            Name = tableName;
-            string readerStampFile = xml.GetString("model.species.reader", "readerstamp.bin");
+            this.Name = xml.GetStringFromParameterOrXml(Constant.Setting.SpeciesTable, "species");
+            string readerStampFile = xml.GetStringFromXml("model.species.reader", "readerstamp.bin");
             readerStampFile = model.GlobalSettings.Path(readerStampFile, "lip");
             this.ReaderStamps.Load(readerStampFile);
             if (model.GlobalSettings.Settings.GetBooleanParameter("debugDumpStamps", false))
@@ -95,7 +94,7 @@ namespace iLand.Trees
             }
 
             this.Clear();
-            using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", tableName), model.GlobalSettings.DatabaseInput);
+            using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", this.Name), model.GlobalSettings.DatabaseInput);
             // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");
             using SpeciesReader speciesReader = new SpeciesReader(speciesSelect.ExecuteReader());
             while (speciesReader.Read())
@@ -127,12 +126,12 @@ namespace iLand.Trees
             {
                 throw new XmlException("/project/model/species/nitrogenResponseClasses not present!");
             }
-            this.mNitrogen1a = resp.GetDouble("class_1_a");
-            this.mNitrogen1b = resp.GetDouble("class_1_b");
-            this.mNitrogen2a = resp.GetDouble("class_2_a");
-            this.mNitrogen2b = resp.GetDouble("class_2_b");
-            this.mNitrogen3a = resp.GetDouble("class_3_a");
-            this.mNitrogen3b = resp.GetDouble("class_3_b");
+            this.mNitrogen1a = resp.GetDoubleFromXml("class_1_a");
+            this.mNitrogen1b = resp.GetDoubleFromXml("class_1_b");
+            this.mNitrogen2a = resp.GetDoubleFromXml("class_2_a");
+            this.mNitrogen2b = resp.GetDoubleFromXml("class_2_b");
+            this.mNitrogen3a = resp.GetDoubleFromXml("class_3_a");
+            this.mNitrogen3b = resp.GetDoubleFromXml("class_3_b");
             if ((this.mNitrogen1a == 0.0) || (this.mNitrogen1b == 0.0) || 
                 (this.mNitrogen2a == 0.0) || (this.mNitrogen2b == 0.0) ||
                 (this.mNitrogen3a == 0.0) || (this.mNitrogen3b == 0.0))
@@ -142,10 +141,10 @@ namespace iLand.Trees
 
             // setup CO2 response
             XmlHelper co2 = new XmlHelper(xml.Node("model.species.CO2Response"));
-            this.mCO2base = co2.GetDouble("baseConcentration");
-            this.mCO2comp = co2.GetDouble("compensationPoint");
-            this.mCO2beta0 = co2.GetDouble("beta0");
-            this.mCO2p0 = co2.GetDouble("p0");
+            this.mCO2base = co2.GetDoubleFromXml("baseConcentration");
+            this.mCO2comp = co2.GetDoubleFromXml("compensationPoint");
+            this.mCO2beta0 = co2.GetDoubleFromXml("beta0");
+            this.mCO2p0 = co2.GetDoubleFromXml("p0");
             if ((this.mCO2base == 0.0) || (this.mCO2comp == 0.0) || (mCO2base - mCO2comp) == 0.0 || (this.mCO2beta0 == 0.0) || (this.mCO2p0 == 0.0))
             {
                 throw new XmlException("At least one parameter of /project/model/species/CO2Response is missing, less than zero, or zero.");
@@ -153,8 +152,8 @@ namespace iLand.Trees
 
             // setup Light responses
             XmlHelper light = new XmlHelper(xml.Node("model.species.lightResponse"));
-            mLightResponseTolerant.SetAndParse(light.GetString("shadeTolerant"));
-            mLightResponseIntolerant.SetAndParse(light.GetString("shadeIntolerant"));
+            mLightResponseTolerant.SetAndParse(light.GetStringFromXml("shadeTolerant"));
+            mLightResponseIntolerant.SetAndParse(light.GetStringFromXml("shadeIntolerant"));
             mLightResponseTolerant.Linearize(model, 0.0, 1.0);
             mLightResponseIntolerant.Linearize(model, 0.0, 1.0);
             if (String.IsNullOrEmpty(mLightResponseTolerant.ExpressionString) || String.IsNullOrEmpty(mLightResponseIntolerant.ExpressionString))
@@ -162,7 +161,7 @@ namespace iLand.Trees
                 throw new NotSupportedException("At least one parameter of /project/model/species/lightResponse is missing.");
             }
             // lri-correction
-            mLriCorrection.SetAndParse(light.GetString("LRImodifier", "1"));
+            mLriCorrection.SetAndParse(light.GetStringFromXml("LRImodifier", "1"));
             // x: LRI, y: relative height
             mLriCorrection.Linearize(model, 0.0, 1.0, 0.0, 1.0);
 
@@ -256,17 +255,7 @@ namespace iLand.Trees
             }
         }
 
-        private double NitrogenResponse(double availableNitrogen, double NA, double NB)
-        {
-            if (availableNitrogen <= NB)
-            {
-                return 0;
-            }
-            double x = 1.0 - Math.Exp(NA * (availableNitrogen - NB));
-            return x;
-        }
-
-        /// calculate nitrogen response for a given amount of available nitrogen and a respone class
+        /// calculate nitrogen response for a given amount of available nitrogen and a response class
         /// for fractional values, the response value is interpolated between the fixedly defined classes (1,2,3)
         public double NitrogenResponse(double availableNitrogen, double responseClass)
         {
@@ -296,6 +285,16 @@ namespace iLand.Trees
             double value1 = NitrogenResponse(availableNitrogen, mNitrogen1a, mNitrogen1b);
             double value2 = NitrogenResponse(availableNitrogen, mNitrogen2a, mNitrogen2b);
             return value1 + (responseClass - 1) * (value2 - value1);
+        }
+
+        private double NitrogenResponse(double availableNitrogen, double nitrogenK, double minimumNitrogen)
+        {
+            if (availableNitrogen <= minimumNitrogen)
+            {
+                return 0;
+            }
+            double x = 1.0 - Math.Exp(nitrogenK * (availableNitrogen - minimumNitrogen));
+            return x;
         }
 
         /** calculation for the CO2 response for the ambientCO2 for the water- and nitrogen responses given.

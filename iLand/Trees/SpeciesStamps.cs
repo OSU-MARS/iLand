@@ -17,7 +17,7 @@ namespace iLand.Trees
         Use getStamp(bhd, hd) or getStamp(bhd, height) to access. */
     public class SpeciesStamps
     {
-        ///< grid holding precalculated distances to the stamp center
+        // grid holding precalculated distances to the stamp center
         // thread safe due to lock in FinalizeSetup()
         // BUGBUG: not safe across multiple light cell sizes
         public static Grid<float> DistanceGrid { get; private set; }

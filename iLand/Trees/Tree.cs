@@ -39,27 +39,27 @@ namespace iLand.Trees
             MarkCropCompetitor = 4096 // mark as competitor for a crop tree
         };
 
-        public int Age { get; set; } ///< the tree age (years)
-        public float Dbh { get; set; } ///< dimater at breast height in cm
-        public float DbhDelta { get; private set; } ///< diameter growth [cm]
-        public float Height { get; set; } ///< tree height in m
-        public int ID { get; set; } ///< numerical unique ID of the tree
-        public float LeafArea { get; set; } ///< leaf area (m2) of the tree
-        public Point LightCellPosition { get; set; } ///< index of the trees position on the basic LIF grid
-        public float LightResourceIndex { get; private set; } ///< LRI of the tree (updated during readStamp())
-        public float LightResponse { get; private set; } ///< light response used for distribution of biomass on RU level
-        public float NppReserve { get; set; } ///< NPP reserve pool [kg] - stores a part of assimilates for use in less favorable years
-        public float Opacity { get; set; } ///< multiplier on LIP weights, depending on leaf area status (opacity of the crown)
-        public ResourceUnit RU { get; set; } ///< pointer to the ressource unit the tree belongs to.
-        public Species Species { get; set; } ///< pointer to the tree species of the tree.
-        public Stamp Stamp { get; set; } ///< TODO: only for debugging purposes
+        public int Age { get; set; } // the tree age (years)
+        public float Dbh { get; set; } // dimater at breast height in cm
+        public float DbhDelta { get; private set; } // diameter growth [cm]
+        public float Height { get; set; } // tree height in m
+        public int ID { get; set; } // numerical unique ID of the tree
+        public float LeafArea { get; set; } // leaf area (m2) of the tree
+        public Point LightCellPosition { get; set; } // index of the trees position on the basic LIF grid
+        public float LightResourceIndex { get; private set; } // LRI of the tree (updated during readStamp())
+        public float LightResponse { get; private set; } // light response used for distribution of biomass on RU level
+        public float NppReserve { get; set; } // NPP reserve pool [kg] - stores a part of assimilates for use in less favorable years
+        public float Opacity { get; set; } // multiplier on LIP weights, depending on leaf area status (opacity of the crown)
+        public ResourceUnit RU { get; set; } // pointer to the ressource unit the tree belongs to.
+        public Species Species { get; set; } // pointer to the tree species of the tree.
+        public Stamp Stamp { get; set; } // TODO: only for debugging purposes
 
         // biomass properties
-        public float CoarseRootMass { get; set; } ///< mass (kg) of coarse roots
-        public float FineRootMass { get; set; } ///< mass (kg) of fine roots
-        public float FoliageMass { get; set; } ///< mass (kg) of foliage
-        public float StemMass { get; set; } ///< mass (kg) of stem
-        public float StressIndex { get; set; } ///< the scalar stress rating (0..1), used for mortality
+        public float CoarseRootMass { get; set; } // mass (kg) of coarse roots
+        public float FineRootMass { get; set; } // mass (kg) of fine roots
+        public float FoliageMass { get; set; } // mass (kg) of foliage
+        public float StemMass { get; set; } // mass (kg) of stem
+        public float StressIndex { get; set; } // the scalar stress rating (0..1), used for mortality
 
         public Tree()
         {
@@ -97,7 +97,7 @@ namespace iLand.Trees
 
         // death reasons
         public bool IsCutDown() { return IsFlagSet(Flags.TreeDeadKillAndDrop); }
-        public bool IsDead() { return IsFlagSet(Flags.TreeDead); } ///< returns true if the tree is already dead.
+        public bool IsDead() { return IsFlagSet(Flags.TreeDead); } // returns true if the tree is already dead.
         public bool IsDeadBarkBeetle() { return IsFlagSet(Flags.TreeDeadBarkBeetle); }
         public bool IsDeadFire() { return IsFlagSet(Flags.TreeDeadFire); }
         public bool IsDeadWind() { return IsFlagSet(Flags.TreeDeadWind); }
@@ -752,7 +752,6 @@ namespace iLand.Trees
             double reserve_size = foliage_mass_allo * (1.0 + Species.FinerootFoliageRatio);
             double refill_reserve = Math.Min(reserve_size, (1.0 + Species.FinerootFoliageRatio) * FoliageMass); // not always try to refill reserve 100%
 
-            double apct_wood, apct_root, apct_foliage; // allocation percentages (sum=1) (eta)
             ResourceUnitSpecies rus = RU.ResourceUnitSpecies(Species);
             // turnover rates
             double to_fol = Species.TurnoverLeaf;
@@ -762,16 +761,14 @@ namespace iLand.Trees
 
             double to_wood = refill_reserve / (StemMass + refill_reserve);
 
-            apct_root = rus.BiomassGrowth.RootFraction;
+            double apct_root = rus.BiomassGrowth.RootFraction;
             d.NppAboveground = d.NppTotal * (1.0 - apct_root); // aboveground: total NPP - fraction to roots
             double b_wf = Species.GetWoodFoliageRatio(); // ratio of allometric exponents (b_woody / b_foliage)
 
-            // Duursma 2007, Eq. (20)
-            apct_wood = (foliage_mass_allo * to_wood / npp + b_wf * (1.0 - apct_root) - b_wf * foliage_mass_allo * to_fol / npp) / (foliage_mass_allo / StemMass + b_wf);
-
+            // Duursma 2007, Eq. (20) allocation percentages (sum=1) (eta)
+            double apct_wood = (foliage_mass_allo * to_wood / npp + b_wf * (1.0 - apct_root) - b_wf * foliage_mass_allo * to_fol / npp) / (foliage_mass_allo / StemMass + b_wf);
             apct_wood = Global.Limit(apct_wood, 0.0, 1.0 - apct_root);
-
-            apct_foliage = 1.0 - apct_root - apct_wood;
+            double apct_foliage = 1.0 - apct_root - apct_wood;
 
             //#if DEBUG
             //if (apct_foliage < 0 || apct_wood < 0)

@@ -17,21 +17,21 @@
         private double mSumHeight;
         private double mSumSaplingAge;
 
-        public double AverageDbh { get; private set; } ///< average dbh (cm)
-        public double AverageHeight { get; private set; } ///< average tree height (m)
-        public double BasalArea { get; private set; } ///< sum of basal area of all trees (m2/ha)
-        public int CohortCount { get; private set; } ///< number of cohorts of saplings / ha
+        public double AverageDbh { get; private set; } // average dbh (cm)
+        public double AverageHeight { get; private set; } // average tree height (m)
+        public double BasalArea { get; private set; } // sum of basal area of all trees (m2/ha)
+        public int CohortCount { get; private set; } // number of cohorts of saplings / ha
         public double Count { get; private set; }
-        public double TotalStemGrowth { get; private set; } ///< total increment (gesamtwuchsleistung, m3/ha)
-        public double LeafAreaIndex { get; private set; } ///< [m2/m2]/ha stocked area.
-        public double MeanSaplingAge { get; private set; } ///< average age of sapling (currenty not weighted with represented sapling numbers...)
-        public double Npp { get; private set; } ///< sum. of NPP (kg Biomass increment, above+belowground, trees >4m)/ha
-        public double NppAbove { get; private set; } ///< above ground NPP (kg Biomass increment)/ha
-        public double NppSaplings { get; private set; } ///< carbon gain of saplings (kg Biomass increment)/ha
+        public double TotalStemGrowth { get; private set; } // total increment (gesamtwuchsleistung, m3/ha)
+        public double LeafAreaIndex { get; private set; } // [m2/m2]/ha stocked area.
+        public double MeanSaplingAge { get; private set; } // average age of sapling (currenty not weighted with represented sapling numbers...)
+        public double Npp { get; private set; } // sum. of NPP (kg Biomass increment, above+belowground, trees >4m)/ha
+        public double NppAbove { get; private set; } // above ground NPP (kg Biomass increment)/ha
+        public double NppSaplings { get; private set; } // carbon gain of saplings (kg Biomass increment)/ha
         public ResourceUnitSpecies ResourceUnitSpecies { get; set; }
-        ///< number of sapling (Reinekes Law)
-        public int SaplingCount { get; private set; } ///< number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
-        public double StemVolume { get; private set; } ///< sum of tree volume (m3/ha)
+        // number of sapling (Reinekes Law)
+        public int SaplingCount { get; private set; } // number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
+        public double StemVolume { get; private set; } // sum of tree volume (m3/ha)
         // carbon/nitrogen cycle
         public double BranchC { get; private set; }
         public double BranchN { get; private set; }

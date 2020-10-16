@@ -12,15 +12,15 @@ namespace iLand.Simulation
         private const int Steps = 32000;
 
         private GrassAlgorithmType mType;
-        private readonly Expression mGrassPotential; ///< function defining max. grass cover [0..1] as function of the LIF pixel value
-        private readonly Expression mGrassEffect; ///< equation giving probability of *prohibiting* regeneration as a function of grass level [0..1]
-        private int mMaxTimeLag; ///< maximum duration (years) from 0 to full cover
-        private readonly double[] mEffect; ///< effect lookup table
-        private int mGrowthRate; ///< max. annual growth rate of herbs and grasses (in 1/256th)
-        private Int16 mMaxState; ///< potential at lif=1
+        private readonly Expression mGrassPotential; // function defining max. grass cover [0..1] as function of the LIF pixel value
+        private readonly Expression mGrassEffect; // equation giving probability of *prohibiting* regeneration as a function of grass level [0..1]
+        private int mMaxTimeLag; // maximum duration (years) from 0 to full cover
+        private readonly double[] mEffect; // effect lookup table
+        private int mGrowthRate; // max. annual growth rate of herbs and grasses (in 1/256th)
+        private Int16 mMaxState; // potential at lif=1
 
-        private readonly RandomCustomPdf mPDF; ///< probability density function defining the life time of grass-pixels
-        private float mGrassLIFThreshold; ///< if LIF>threshold, then the grass is considered as occupatied by grass
+        private readonly RandomCustomPdf mPDF; // probability density function defining the life time of grass-pixels
+        private float mGrassLIFThreshold; // if LIF>threshold, then the grass is considered as occupatied by grass
         private readonly GrassCoverLayers mLayers; // visualization
 
         // access
@@ -62,7 +62,7 @@ namespace iLand.Simulation
         public void Setup(Model model)
         {
             XmlHelper xml = model.GlobalSettings.Settings;
-            if (!xml.GetBool("model.settings.grass.enabled"))
+            if (!xml.GetBooleanFromXml("model.settings.grass.enabled"))
             {
                 // clear grid
                 Grid.Clear();
@@ -83,11 +83,11 @@ namespace iLand.Simulation
                 }
             }
 
-            mType = Enum.Parse<GrassAlgorithmType>(xml.GetString("model.settings.grass.type"), ignoreCase: true);
+            mType = Enum.Parse<GrassAlgorithmType>(xml.GetStringFromXml(Constant.Setting.Grass.Type), ignoreCase: true);
             if (mType == GrassAlgorithmType.Pixel)
             {
                 // setup of pixel based / discrete approach
-                string formula = xml.GetString("model.settings.grass.grassDuration");
+                string formula = xml.GetStringFromXml("model.settings.grass.grassDuration");
                 if (String.IsNullOrEmpty(formula))
                 {
                     throw new NotSupportedException("setup(): missing equation for 'grassDuration'.");
@@ -95,7 +95,7 @@ namespace iLand.Simulation
                 mPDF.Setup(model, formula, 0.0, 100.0);
                 //mGrassEffect.setExpression(formula);
 
-                mGrassLIFThreshold = (float)xml.GetDouble("model.settings.grass.LIFThreshold", 0.2);
+                mGrassLIFThreshold = (float)xml.GetDoubleFromXml(Constant.Setting.Grass.LifThreshold, Constant.Default.Grass.LifThreshold);
 
                 // clear array
                 for (int stepIndex = 0; stepIndex < Steps; ++stepIndex)
@@ -106,24 +106,24 @@ namespace iLand.Simulation
             else
             {
                 // setup of continuous grass concept
-                string formula = xml.GetString("model.settings.grass.grassPotential");
+                string formula = xml.GetStringFromXml(Constant.Setting.Grass.Potential);
                 if (String.IsNullOrEmpty(formula))
                 {
-                    throw new NotSupportedException("setup of 'grass': required expression 'grassPotential' is missing.");
+                    throw new NotSupportedException("Required expression 'grassPotential' is missing.");
                 }
                 mGrassPotential.SetExpression(formula);
                 mGrassPotential.Linearize(model, 0.0, 1.0, Math.Min(Steps, 1000));
 
-                formula = xml.GetString("model.settings.grass.grassEffect");
+                formula = xml.GetStringFromXml(Constant.Setting.Grass.Effect);
                 if (String.IsNullOrEmpty(formula))
                 {
-                    throw new NotSupportedException("setup of 'grass': required expression 'grassEffect' is missing.");
+                    throw new NotSupportedException("Required expression 'grassEffect' is missing.");
                 }
                 mGrassEffect.SetExpression(formula);
-                mMaxTimeLag = (int)(xml.GetDouble("model.settings.grass.maxTimeLag"));
+                mMaxTimeLag = (int)(xml.GetDoubleFromXml(Constant.Setting.Grass.MaxTimeLag));
                 if (mMaxTimeLag == 0)
                 {
-                    throw new NotSupportedException("setup of 'grass': value of 'maxTimeLag' is invalid or missing.");
+                    throw new NotSupportedException("Value of 'maxTimeLag' is invalid or missing.");
                 }
                 mGrowthRate = Steps / mMaxTimeLag;
 

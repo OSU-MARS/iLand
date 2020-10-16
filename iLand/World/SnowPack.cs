@@ -4,8 +4,8 @@ namespace iLand.World
 {
     internal class SnowPack
     {
-        public double Temperature { get; set; } ///< Threshold temperature for snowing / snow melt
-        public double WaterEquivalent { get; set; } ///< height of snowpack (mm water column)
+        public double Temperature { get; set; } // Threshold temperature for snowing / snow melt
+        public double WaterEquivalent { get; set; } // height of snowpack (mm water column)
 
         public SnowPack()
         {

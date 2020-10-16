@@ -28,62 +28,76 @@ namespace iLand.Tools
         private string mSeparator;
 
         // properties
-        public bool StreamingMode { get; private set; } ///< return true, if in "streaming mode" (for large files)
-        public bool HasCaptions { get; set; } ///< true, if first line contains headers
-        public bool Flat { get; set; } ///< simple list, not multiple columns
-        public int RowCount { get; private set; } ///< number or rows (excl. captions), or -1.
-        public int ColCount { get; private set; } ///< number of columns, or -1
-        public bool IsEmpty { get; private set; } /// returns true when no valid file has been loaded (returns false when a file with 0 rows is loaded)
-        public List<string> Captions { get; private set; } ///< retrieve (a copy) of column headers
+        public int ColumnCount { get; private set; } // number of columns, or -1
+        public List<string> ColumnNames { get; private set; } // retrieve (a copy) of column headers
         public bool FixedWidth { get; set; }
+        public bool Flat { get; set; } // simple list, not multiple columns
+        public bool HasColumnNames { get; set; } // true, if first line contains headers TODO: never set to false?
+        public bool IsEmpty { get; private set; } /// returns true when no valid file has been loaded (returns false when a file with 0 rows is loaded)
+        public int RowCount { get; private set; } // number or rows (excl. captions), or -1.
+        public bool StreamingMode { get; private set; } // return true, if in "streaming mode" (for large files)
 
-        ///< get caption of ith column.
-        public string GetColumnName(int col) 
-        {
-            if (col < ColCount)
-            {
-                return Captions[col];
-            }
-            return null; 
-        }
-
-        ///< index of column or -1 if not available
-        public int GetColumnIndex(string columnName) 
-        { 
-            return Captions.IndexOf(columnName); 
-        } 
-
-        // value function with a column name
-        public string Value(int row, string column_name) 
-        { 
-            return Value(row, GetColumnIndex(column_name)); 
-        }
-
-        ///< ctor, load @p fileName.
+        // ctor, load @p fileName.
         public CsvFile(string fileName)
             : this()
         {
-            HasCaptions = true;
             LoadFile(fileName);
         }
 
         public CsvFile()
         {
-            Captions = new List<string>();
-            IsEmpty = true;
-            HasCaptions = true;
+            mRows = new List<string>();
+
+            ColumnNames = new List<string>();
             Flat = false;
             FixedWidth = false;
-            mRows = new List<string>();
+            HasColumnNames = true;
+            IsEmpty = true;
             Clear();
+        }
+
+        // get caption of ith column.
+        public string GetColumnName(int col)
+        {
+            if (col < ColumnCount)
+            {
+                return ColumnNames[col];
+            }
+            return null;
+        }
+
+        // index of column or -1 if not available
+        public int GetColumnIndex(string columnName)
+        {
+            return ColumnNames.IndexOf(columnName);
+        }
+
+        // value function with a column name
+        public string Value(int row, string column_name)
+        {
+            return GetValue(row, GetColumnIndex(column_name));
         }
 
         private void Clear()
         {
-            ColCount = RowCount = -1;
-            Captions.Clear();
+            ColumnCount = RowCount = -1;
+            ColumnNames.Clear();
             mRows.Clear();
             IsEmpty = true;
+        }
+
+        public bool LoadFile(string fileName)
+        {
+            using FileStream stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using StreamReader reader = new StreamReader(stream);
+            string content = reader.ReadToEnd();
+            if (String.IsNullOrEmpty(content))
+            {
+                //Debug.WriteLine("loadFile: " + fileName + " does not exist or is empty.");
+                IsEmpty = true;
+                return false;
+            }
+            return LoadFromString(content);
         }
 
         public bool LoadFromString(string content)
@@ -155,9 +169,9 @@ namespace iLand.Tools
             } // !mFlat
 
             // captions
-            if (HasCaptions)
+            if (HasColumnNames)
             {
-                Captions.AddRange(first.Replace("\"", "").Split(mSeparator, StringSplitOptions.None)); // drop \ characters
+                ColumnNames.AddRange(first.Replace("\"", "").Split(mSeparator, StringSplitOptions.None)); // drop \ characters
             }
             else
             {
@@ -165,26 +179,14 @@ namespace iLand.Tools
                 int columns = first.Split(mSeparator, StringSplitOptions.None).Length;
                 for (int i = 0; i < columns; i++)
                 {
-                    Captions.Add(i.ToString());
+                    ColumnNames.Add(i.ToString());
                 }
             }
 
-            ColCount = Captions.Count;
+            ColumnCount = ColumnNames.Count;
             RowCount = mRows.Count;
             StreamingMode = false;
             return true;
-        }
-
-        public bool LoadFile(string fileName)
-        {
-            string content = File.ReadAllText(fileName);
-            if (String.IsNullOrEmpty(content))
-            {
-                Debug.WriteLine("loadFile: " + fileName + " does not exist or is empty.");
-                IsEmpty = true;
-                return false;
-            }
-            return LoadFromString(content);
         }
 
         public List<object> Values(int row)
@@ -194,16 +196,16 @@ namespace iLand.Tools
             return line;
         }
 
-        public string Value(int row, int col)
+        public string GetValue(int row, int col)
         {
             if (StreamingMode)
             {
                 return null;
             }
 
-            if (row < 0 || row >= RowCount || col < 0 || col >= ColCount)
+            if (row < 0 || row >= RowCount || col < 0 || col >= ColumnCount)
             {
-                Debug.WriteLine("value: invalid index: row col: " + row + col + ". Size is:" + RowCount + ColCount);
+                Debug.WriteLine("value: invalid index: row col: " + row + col + ". Size is:" + RowCount + ColumnCount);
                 return null;
             }
 
@@ -212,7 +214,7 @@ namespace iLand.Tools
                 // special case with space (1..n) as separator
                 string s = mRows[row];
                 char sep = mSeparator[0];
-                if (col == ColCount - 1)
+                if (col == ColumnCount - 1)
                 {
                     // last element:
                     return s.Substring(s.LastIndexOf(sep) + 1);
@@ -243,7 +245,7 @@ namespace iLand.Tools
                         lastsep = i + 1;
                     }
                 }
-                Debug.WriteLine("value: found no result: row " + row + " column " + col + ". Size is:" + RowCount + ColCount);
+                Debug.WriteLine("value: found no result: row " + row + " column " + col + ". Size is:" + RowCount + ColumnCount);
                 return null;
             }
 
@@ -253,10 +255,10 @@ namespace iLand.Tools
                 string s = mRows[row];
                 char sep = mSeparator[0];
                 string result = null;
-                if (col == ColCount - 1)
+                if (col == ColumnCount - 1)
                 {
                     // last element:
-                    if (s.Count(character => character == sep) == ColCount - 1)
+                    if (s.Count(character => character == sep) == ColumnCount - 1)
                     {
                         result = s.Substring(s.LastIndexOf(sep) + 1);
                         if (result.StartsWith('\"') && result.EndsWith('\"'))
@@ -325,21 +327,21 @@ namespace iLand.Tools
             return mRows[row];
         }
 
-        public List<string> Column(int col)
+        public List<string> GetColumnValues(int columnIndex)
         {
-            List<string> result = new List<string>();
-            for (int row = 0; row < RowCount; row++)
+            List<string> result = new List<string>(this.RowCount);
+            for (int row = 0; row < this.RowCount; row++)
             {
-                result.Add(Value(row, col));
+                result.Add(this.GetValue(row, columnIndex));
             }
             return result;
         }
 
         public void SetValue(int row, int col, object value)
         {
-            if (row < 0 || row >= RowCount || col < 0 || col > ColCount)
+            if (row < 0 || row >= RowCount || col < 0 || col > ColumnCount)
             {
-                Debug.WriteLine("setValue: invalid index: row col:" + row + col + ". Size is: " + RowCount + " rows, " + ColCount + " columns");
+                Debug.WriteLine("setValue: invalid index: row col:" + row + col + ". Size is: " + RowCount + " rows, " + ColumnCount + " columns");
                 return;
             }
             string[] line = mRows[row].Split(mSeparator);
@@ -357,9 +359,9 @@ namespace iLand.Tools
         {
             using FileStream file = new FileStream(fileName, FileMode.Create, FileAccess.Write);
             using StreamWriter str = new StreamWriter(file);
-            if (HasCaptions)
+            if (HasColumnNames)
             {
-                str.WriteLine(String.Join(mSeparator, Captions));
+                str.WriteLine(String.Join(mSeparator, ColumnNames));
             }
             foreach (string s in mRows)
             {

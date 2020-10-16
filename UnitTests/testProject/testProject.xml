@@ -49,15 +49,15 @@
         </seedBelt>
       </seedDispersal>
       <soil>
-        <qb>5</qb>
-        <qh>14.5</qh>
-        <leaching>0.47</leaching>
-        <el>0.152</el>
-        <er>0.319</er>
         <swdDBHClass12>20</swdDBHClass12>
         <swdDBHClass23>100</swdDBHClass23>
-        <useDynamicAvailableNitrogen>false</useDynamicAvailableNitrogen>
+        <useDynamicAvailableNitrogen>true</useDynamicAvailableNitrogen>
+        <!--<qh>14.5</qh>
+        <el>0.152</el>
+        <er>0.319</er>-->
+        <leaching>0.47</leaching>
         <nitrogenDeposition>21.8</nitrogenDeposition>
+        <qb>5</qb>
       </soil>
       <grass>
         <enabled>true</enabled>
@@ -124,7 +124,7 @@
       <height>200</height>
       <resourceUnitsAsGrid>true</resourceUnitsAsGrid> <!-- required by check in Model.SetupSpace() -->
       <environmentEnabled>true</environmentEnabled>
-      <environmentFile>gis/Kalkalpen environment subset.txt</environmentFile>
+      <environmentFile>gis/Kalkalpen environment subset.csv</environmentFile>
       <timeEventsEnabled>true</timeEventsEnabled>
       <timeEventsFile>empty time event script.txt</timeEventsFile>
       <location>

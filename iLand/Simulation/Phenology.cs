@@ -6,26 +6,26 @@ namespace iLand.Simulation
 {
     public class Phenology
     {
-        private readonly Climate mClimate; ///< link to relevant climate source
-        private readonly double mMinVpd; ///< minimum vpd [kPa]
-        private readonly double mMaxVpd; ///< maximum vpd [kPa]
-        private readonly double mMinDayLength; ///< minimum daylength [hours]
-        private readonly double mMaxDayLength; ///< maximum daylength [hours]
-        private readonly double mMinTemp; ///< minimum temperature [deg]
-        private readonly double mMaxTemp; ///< maximum temperature [deg]
-        private int mChillDaysBefore, mChillDaysAfter; ///< number of days that meet chilling requirements (>-5 deg C, <+5 deg C) before and after the vegetation period in this yeaer
+        private readonly Climate mClimate; // link to relevant climate source
+        private readonly double mMinVpd; // minimum vpd [kPa]
+        private readonly double mMaxVpd; // maximum vpd [kPa]
+        private readonly double mMinDayLength; // minimum daylength [hours]
+        private readonly double mMaxDayLength; // maximum daylength [hours]
+        private readonly double mMinTemp; // minimum temperature [deg]
+        private readonly double mMaxTemp; // maximum temperature [deg]
+        private int mChillDaysBefore, mChillDaysAfter; // number of days that meet chilling requirements (>-5 deg C, <+5 deg C) before and after the vegetation period in this yeaer
 
         public int ChillingDaysLastYear { get; private set; }
-        public int ID { get; private set; } ///< identifier of this Phenology group
+        public int ID { get; private set; } // identifier of this Phenology group
         /// get result of phenology calculation for this year (a pointer to a array of 12 values between 0..1: 0: no days with foliage)
         public double[] LeafOnFraction { get; private set; }
-        public int LeafOnStart { get; private set; } ///< day of year when vegeation period starts
-        public int LeafOnEnd { get; private set; } ///< day of year when vegeation period stops
+        public int LeafOnStart { get; private set; } // day of year when vegeation period starts
+        public int LeafOnEnd { get; private set; } // day of year when vegeation period stops
 
         // chilling days
         /// get days of year that meet chilling requirements: the days in the autumn of the last year + the days of this spring season
         public int ChillingDays() { return mChillDaysBefore + ChillingDaysLastYear; }
-        public int LeafOnDuration() { return LeafOnEnd - LeafOnStart; } ///< length of vegetation period in days, returs 365 for evergreens
+        public int LeafOnDuration() { return LeafOnEnd - LeafOnStart; } // length of vegetation period in days, returs 365 for evergreens
 
         public Phenology(Climate climate)
         {
@@ -171,11 +171,11 @@ namespace iLand.Simulation
                     LeafOnFraction[i] = 1.0;
                     if (i == bMon)
                     {
-                        LeafOnFraction[i] -= (bDay + 1) / mClimate.Days(bMon);
+                        LeafOnFraction[i] -= (bDay + 1) / mClimate.GetDaysInMonth(bMon);
                     }
                     if (i == eMon)
                     {
-                        LeafOnFraction[i] -= (mClimate.Days(eMon) - (bDay + 1)) / mClimate.Days(eMon);
+                        LeafOnFraction[i] -= (mClimate.GetDaysInMonth(eMon) - (bDay + 1)) / mClimate.GetDaysInMonth(eMon);
                     }
                 }
             }

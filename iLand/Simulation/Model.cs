@@ -9,6 +9,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Xml;
 
 namespace iLand.Simulation
@@ -16,18 +17,15 @@ namespace iLand.Simulation
     public class Model : IDisposable
     {
         private bool isDisposed;
-        /// container holding all species sets
-        private readonly List<SpeciesSet> mSpeciesSets;
 
         // access to elements
         public ThreadRunner ThreadRunner { get; private set; }
-        public RectangleF WorldExtentUnbuffered { get; private set; } ///< extent of the model (without buffer)
-        public double TotalStockableHectares { get; private set; } ///< total stockable area of the landscape (ha)
+        public RectangleF WorldExtentUnbuffered { get; private set; } // extent of the model (without buffer)
+        public double TotalStockableHectares { get; private set; } // total stockable area of the landscape (ha)
 
-        public List<Climate> Climates { get; private set; }
         //public DebugTimerCollection DebugTimers { get; private set; }
         public DEM Dem { get; private set; }
-        public World.Environment Environment { get; private set; }
+        public Input.Environment Environment { get; private set; }
         public GrassCover GrassCover { get; private set; }
         public GlobalSettings GlobalSettings { get; private set; }
         public Management Management { get; private set; }
@@ -38,19 +36,16 @@ namespace iLand.Simulation
         public Saplings Saplings { get; private set; }
         public TimeEvents TimeEvents { get; private set; }
 
-        public bool IsSetup { get; private set; } ///< return true if the model world is correctly setup.
+        public bool IsSetup { get; private set; } // return true if the model world is correctly setup.
 
         // global grids
-        public Grid<float> LightGrid { get; private set; } ///< this is the global 'LIF'-grid (light patterns) (currently 2x2m)
-        public Grid<HeightCell> HeightGrid { get; private set; } ///< stores maximum heights of trees and some flags (currently 10x10m)
-        public MapGrid StandGrid { get; private set; } ///< retrieve the spatial grid that defines the stands (10m resolution)
+        public Grid<float> LightGrid { get; private set; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
+        public Grid<HeightCell> HeightGrid { get; private set; } // stores maximum heights of trees and some flags (currently 10x10m)
+        public MapGrid StandGrid { get; private set; } // retrieve the spatial grid that defines the stands (10m resolution)
         public Grid<ResourceUnit> ResourceUnitGrid { get; private set; }
 
         public Model()
         {
-            this.mSpeciesSets = new List<SpeciesSet>();
-
-            this.Climates = new List<Climate>();
             //this.DebugTimers = new DebugTimerCollection();
             this.GlobalSettings = new GlobalSettings()
             {
@@ -78,7 +73,7 @@ namespace iLand.Simulation
         public bool IsMultithreaded() { return ThreadRunner.IsMultithreaded; } // BUGBUG
 
         // start/stop/run
-        //public void AfterStop() ///< finish and cleanup
+        //public void AfterStop() // finish and cleanup
         //{
         //    // do some cleanup
         //    // no op in C++ iLand sources
@@ -87,7 +82,7 @@ namespace iLand.Simulation
         /// beforeRun performs several steps before the models starts running.
         /// inter alia: * setup of the stands
         ///             * setup of the climates
-        public void BeforeRun() ///< initializations
+        public void BeforeRun() // initializations
         {
             // setup outputs
             // setup output database
@@ -104,23 +99,6 @@ namespace iLand.Simulation
             {
                 //using DebugTimer loadTrees = this.DebugTimers.Create("StandLoader.ProcessInit()");
                 loader.ProcessInit(this);
-            }
-
-            // load climate
-            {
-                //using DebugTimer loadClimamtes = this.DebugTimers.Create("Model.BeforeRun(Climate.Setup + NextYear)");
-                foreach (Climate c in Climates)
-                {
-                    if (!c.IsSetup)
-                    {
-                        c.Setup(this);
-                    }
-                }
-                // load the first year of the climate database
-                foreach (Climate c in Climates)
-                {
-                    c.NextYear(this);
-                }
             }
 
             {
@@ -157,7 +135,7 @@ namespace iLand.Simulation
           (9) calculate statistics for the year
           (10) write database outputs
           */
-        public void RunYear() ///< run a single year
+        public void RunYear() // run a single year
         {
             //using DebugTimer t = this.DebugTimers.Create("Model.RunYear()");
             //this.GlobalSettings.SystemStatistics.Reset();
@@ -169,13 +147,10 @@ namespace iLand.Simulation
             {
                 TimeEvents.Run(this.GlobalSettings);
             }
-            // load the next year of the climate database (except for the first year - the first climate year is loaded immediately
-            if (this.GlobalSettings.CurrentYear > 1)
+            // load the next year of the climate database
+            foreach (Climate climate in this.Environment.ClimatesByName.Values)
             {
-                foreach (Climate c in Climates)
-                {
-                    c.NextYear(this);
-                }
+                climate.NextYear(this);
             }
 
             // reset statistics
@@ -184,9 +159,9 @@ namespace iLand.Simulation
                 ru.NewYear();
             }
 
-            foreach (SpeciesSet set in mSpeciesSets)
+            foreach (SpeciesSet speciesSet in this.Environment.SpeciesSetsByName.Values)
             {
-                set.NewYear(this);
+                speciesSet.NewYear(this);
             }
             // management classic
             if (Management != null)
@@ -211,7 +186,7 @@ namespace iLand.Simulation
             {
                 // seed dispersal
                 //using DebugTimer tseed = this.DebugTimers.Create("Model.RunYear(seed dispersal, establishment, sapling growth");
-                foreach (SpeciesSet set in mSpeciesSets)
+                foreach (SpeciesSet set in this.Environment.SpeciesSetsByName.Values)
                 {
                     set.Regeneration(this); // parallel execution for each species set
                 }
@@ -264,14 +239,10 @@ namespace iLand.Simulation
         // setup/maintenance
         /** Clear() frees all ressources allocated with the run of a simulation.
           */
-        public void Clear() ///< free resources
+        public void Clear() // free resources
         {
             // Debug.WriteLine("Model clear: attempting to clear " + ResourceUnits.Count + "RU, " + mSpeciesSets.Count + " SpeciesSets.");
             //this.DebugTimers.WriteTimers();
-
-            this.mSpeciesSets.Clear();
-
-            this.Climates.Clear();
             //this.DebugTimers.Clear();
             this.ResourceUnits.Clear();
 
@@ -317,14 +288,14 @@ namespace iLand.Simulation
         /** Setup of the simulation.
           This really creates the simulation environment and does the setup of various aspects.
           */
-        public void LoadProject() ///< setup and load a project
+        public void LoadProject() // setup and load a project
         {
             //using DebugTimer dt = this.DebugTimers.Create("Model.LoadProject()");
             // this.GlobalSettings.PrintDirectories();
             XmlHelper xml = this.GlobalSettings.Settings;
 
             // log level
-            string logLevelAsString = xml.GetString("system.settings.logLevel", "debug").ToLowerInvariant();
+            string logLevelAsString = xml.GetStringFromXml("system.settings.logLevel", "debug").ToLowerInvariant();
             int logLevel = logLevelAsString switch
             {
                 "debug" => 0,
@@ -337,15 +308,15 @@ namespace iLand.Simulation
 
             // linearization of expressions: if true *and* linearize() is explicitely called, then
             // function results will be cached over a defined range of values.
-            this.GlobalSettings.LinearizationEnabled = xml.GetBool("system.settings.expressionLinearizationEnabled", false);
+            this.GlobalSettings.LinearizationEnabled = xml.GetBooleanFromXml("system.settings.expressionLinearizationEnabled", false);
 
             // database connections: reset
             this.GlobalSettings.CloseDatabaseConnections();
             // input and climate connection
             // see initOutputDatabase() for output database
-            string dbPath = this.GlobalSettings.Path(xml.GetString("system.database.in"), "database");
+            string dbPath = this.GlobalSettings.Path(xml.GetStringFromXml("system.database.in"), "database");
             this.GlobalSettings.SetupDatabaseConnection("in", dbPath, true);
-            dbPath = this.GlobalSettings.Path(xml.GetString("system.database.climate"), "database");
+            dbPath = this.GlobalSettings.Path(xml.GetStringFromXml("system.database.climate"), "database");
             this.GlobalSettings.SetupDatabaseConnection("climate", dbPath, true);
 
             this.ModelSettings.LoadModelSettings(this.GlobalSettings);
@@ -354,15 +325,15 @@ namespace iLand.Simulation
                 this.ModelSettings.Print();
             }
             // random seed: if stored value is <> 0, use this as the random seed (and produce hence always an equal sequence of random numbers)
-            int seed = Int32.Parse(xml.GetString("system.settings.randomSeed", "0"));
+            int seed = Int32.Parse(xml.GetStringFromXml("system.settings.randomSeed", "0"));
             RandomGenerator.Setup(RandomGenerator.RandomGenerators.MersenneTwister, seed); // use the MersenneTwister as default
 
             // snag dynamics / soil model enabled? (info used during setup of world)
-            ModelSettings.CarbonCycleEnabled = xml.GetBool("model.settings.carbonCycleEnabled", false);
+            ModelSettings.CarbonCycleEnabled = xml.GetBooleanFromXml("model.settings.carbonCycleEnabled", false);
 
             // setup of modules
             Modules = new Modules(this.GlobalSettings);
-            ModelSettings.RegenerationEnabled = xml.GetBool("model.settings.regenerationEnabled", false);
+            ModelSettings.RegenerationEnabled = xml.GetBooleanFromXml("model.settings.regenerationEnabled", false);
 
             SetupSpace();
             if (ResourceUnits.Count == 0)
@@ -374,13 +345,13 @@ namespace iLand.Simulation
             // (3.2) setup of regeneration
             if (ModelSettings.RegenerationEnabled)
             {
-                foreach (SpeciesSet ss in mSpeciesSets)
+                foreach (SpeciesSet speciesSet in this.Environment.SpeciesSetsByName.Values)
                 {
-                    ss.SetupRegeneration(this);
+                    speciesSet.SetupRegeneration(this);
                 }
             }
 
-            if (xml.GetBool("model.management.enabled"))
+            if (xml.GetBooleanFromXml("model.management.enabled"))
             {
                 Management = new Management();
                 // string mgmtFile = xml.GetString("model.management.file");
@@ -394,13 +365,10 @@ namespace iLand.Simulation
             return HeightGrid[ix / Constant.LightPerHeightSize, iy / Constant.LightPerHeightSize];
         }
 
-        public SpeciesSet SpeciesSet()
+        public SpeciesSet GetFirstSpeciesSet()
         {
-            if (mSpeciesSets.Count == 1)
-            {
-                return mSpeciesSets[0];
-            }
-            return null;
+            // BUGBUG: unsafe if more than one species set
+            return this.Environment.SpeciesSetsByName.Values.First();
         }
 
         // actions
@@ -434,13 +402,13 @@ namespace iLand.Simulation
             ThreadRunner.Run(funcptr, forceSingleThreaded);
         }
 
-        private void SetupSpace() ///< setup the "world"(spatial grids, ...), create ressource units
+        private void SetupSpace() // setup the "world"(spatial grids, ...), create ressource units
         {
             XmlHelper xml = new XmlHelper(this.GlobalSettings.Settings.Node("model.world"));
-            float lightCellSize = (float)xml.GetDouble("cellSize", Constant.LightSize);
-            float worldWidth = (float)xml.GetDouble("width", Constant.RUSize); // default to a single resource unit
-            float worldHeight = (float)xml.GetDouble("height", Constant.RUSize);
-            float worldBuffer = (float)xml.GetDouble("buffer", 0.6 * Constant.RUSize);
+            float lightCellSize = (float)xml.GetDoubleFromXml("cellSize", Constant.LightSize);
+            float worldWidth = (float)xml.GetDoubleFromXml("width", Constant.RUSize); // default to a single resource unit
+            float worldHeight = (float)xml.GetDoubleFromXml("height", Constant.RUSize);
+            float worldBuffer = (float)xml.GetDoubleFromXml("buffer", 0.6 * Constant.RUSize);
             this.WorldExtentUnbuffered = new RectangleF(0.0F, 0.0F, worldWidth, worldHeight);
 
             Debug.WriteLine(String.Format("Setup of the world: {0}x{1} m with {2} m light cell size and {3} m buffer", worldWidth, worldHeight, lightCellSize, worldBuffer));
@@ -457,36 +425,36 @@ namespace iLand.Simulation
             }
 
             // load environment (multiple climates, speciesSets, ...
-            this.Environment = new World.Environment();
+            this.Environment = new Input.Environment();
 
             // setup the spatial location of the project area
             if (xml.HasNode("location"))
             {
                 // setup of spatial location
-                double loc_x = xml.GetDouble("location.x");
-                double loc_y = xml.GetDouble("location.y");
-                double loc_z = xml.GetDouble("location.z");
-                double loc_rot = xml.GetDouble("location.rotation");
-                this.Environment.GisGrid.SetupGISTransformation(loc_x, loc_y, loc_z, loc_rot);
-                Debug.WriteLine("Setup of spatial location: " + loc_x + "," + loc_y + "," + loc_z + " rotation " + loc_rot);
+                double worldOriginX = xml.GetDoubleFromXml("location.x");
+                double worldOriginY = xml.GetDoubleFromXml("location.y");
+                double worldOriginZ = xml.GetDoubleFromXml("location.z");
+                double worldRotation = xml.GetDoubleFromXml("location.rotation");
+                this.Environment.GisGrid.SetupGISTransformation(worldOriginX, worldOriginY, worldOriginZ, worldRotation);
+                // Debug.WriteLine("Setup of spatial location: " + worldOriginX + "," + worldOriginY + "," + worldOriginZ + " rotation " + worldRotation);
             }
             else
             {
                 this.Environment.GisGrid.SetupGISTransformation(0.0, 0.0, 0.0, 0.0);
             }
 
-            if (xml.GetBool("environmentEnabled", false))
+            if (xml.GetBooleanFromXml("environmentEnabled", false))
             {
-                bool isGridEnvironment = xml.GetString("environmentMode") == "grid";
+                bool isGridEnvironment = xml.GetStringFromXml("environmentMode") == "grid";
                 if (isGridEnvironment)
                 {
-                    string gridFileName = xml.GetString("environmentGrid");
+                    string gridFileName = xml.GetStringFromXml("environmentGrid");
                     if (String.IsNullOrEmpty(gridFileName))
                     {
                         throw new XmlException("/project/model/world/environmentGrid not found.");
                     }
                     string gridFilePath = this.GlobalSettings.Path(gridFileName);
-                    if (File.Exists(gridFilePath) && String.IsNullOrEmpty(xml.GetString("environmentGrid")) == false)
+                    if (File.Exists(gridFilePath) && String.IsNullOrEmpty(xml.GetStringFromXml("environmentGrid")) == false)
                     {
                         Environment.SetGridMode(gridFilePath);
                     }
@@ -496,35 +464,33 @@ namespace iLand.Simulation
                     }
                 }
 
-                string environmentFileName = xml.GetString("environmentFile");
+                string environmentFileName = xml.GetStringFromXml("environmentFile");
                 if (String.IsNullOrEmpty(environmentFileName))
                 {
                     throw new XmlException("/project/model/world/environmentFile not found.");
                 }
                 string environmentFilePath = this.GlobalSettings.Path(environmentFileName);
-                if (!Environment.LoadFromFile(environmentFilePath, this))
+                if (Environment.LoadFromProjectAndEnvironmentFile(this, environmentFilePath) == false)
                 {
-                    return;
+                    return; // TODO: why is this here?
                 }
             }
             else
             {
-                // load and prepare default values
-                // (2) SpeciesSets: currently only one a global species set.
-                SpeciesSet speciesSet = new SpeciesSet();
-                mSpeciesSets.Add(speciesSet);
-                speciesSet.Setup(this);
-                // Climate...
-                Climate c = new Climate();
-                Climates.Add(c);
-                Environment.SetDefaultValues(c, speciesSet);
-            } // environment?
+                throw new NotSupportedException("Environment should create default species set and climate from project file settings.");
+                // create default species set and climate
+                //SpeciesSet speciesSet = new SpeciesSet();
+                //mSpeciesSets.Add(speciesSet);
+                //speciesSet.Setup(this);
+                //Climate c = new Climate();
+                //Climates.Add(c);
+            }
 
             // time series data
-            if (xml.GetBool(".timeEventsEnabled", false))
+            if (xml.GetBooleanFromXml(".timeEventsEnabled", false))
             {
                 TimeEvents = new TimeEvents();
-                string timeEventsFileName = xml.GetString("timeEventsFile");
+                string timeEventsFileName = xml.GetStringFromXml("timeEventsFile");
                 if (String.IsNullOrEmpty(timeEventsFileName))
                 {
                     throw new XmlException("/project/model/world/timeEventsFile not found");
@@ -533,7 +499,7 @@ namespace iLand.Simulation
             }
 
             // simple case: create resource units in a regular grid.
-            if (xml.GetBool("resourceUnitsAsGrid") == false)
+            if (xml.GetBooleanFromXml("resourceUnitsAsGrid") == false)
             {
                 throw new XmlException("/project/world/resourceUnitsAsGrid MUST be set to true - at least currently :)");
             }
@@ -542,9 +508,9 @@ namespace iLand.Simulation
             ResourceUnitGrid.ClearDefault();
 
             bool hasStandGrid = false;
-            if (xml.GetBool("standGrid.enabled"))
+            if (xml.GetBooleanFromXml("standGrid.enabled"))
             {
-                string fileName = this.GlobalSettings.Path(xml.GetString("standGrid.fileName"));
+                string fileName = this.GlobalSettings.Path(xml.GetStringFromXml("standGrid.fileName"));
                 StandGrid = new MapGrid(this, fileName, false); // create stand grid index later
 
                 if (StandGrid.IsValid())
@@ -584,45 +550,41 @@ namespace iLand.Simulation
                 }
             }
 
-            int ru_index = 0;
-            for (int p = 0; p < ResourceUnitGrid.Count; ++p)
+            for (int ruIndex = 0; ruIndex < ResourceUnitGrid.Count; ++ruIndex)
             {
-                RectangleF r = ResourceUnitGrid.GetCellRect(ResourceUnitGrid.IndexOf(p));
                 if (StandGrid == null || !StandGrid.IsValid())
                 {
-                    Environment.SetPosition(r.Center(), this); // if environment is 'disabled' default values from the project file are used.
                     // create resource units for valid positions only
-                    ResourceUnit new_ru = new ResourceUnit(ru_index++) // create resource unit
+                    RectangleF ruExtent = ResourceUnitGrid.GetCellRect(ResourceUnitGrid.IndexOf(ruIndex));
+                    Environment.SetPosition(ruExtent.Center(), this); // if environment is 'disabled' default values from the project file are used.
+                    ResourceUnit newRU = new ResourceUnit(ruIndex)
                     {
-                        Climate = Environment.CurrentClimate
+                        BoundingBox = ruExtent,
+                        Climate = Environment.CurrentClimate,
+                        ID = Environment.CurrentResourceUnitID, // set id of resource unit in grid mode
+                        TopLeftLightOffset = this.LightGrid.IndexAt(ruExtent.TopLeft())
                     };
-                    new_ru.SetSpeciesSet(Environment.CurrentSpeciesSet);
-                    new_ru.Setup(this);
-                    new_ru.ID = Environment.CurrentID; // set id of resource unit in grid mode
-                    new_ru.SetBoundingBox(r, this);
-                    ResourceUnits.Add(new_ru);
-                    ResourceUnitGrid[p] = new_ru; // save in the RUmap grid
+                    newRU.SetSpeciesSet(Environment.CurrentSpeciesSet);
+                    newRU.Setup(this);
+                    ResourceUnits.Add(newRU);
+                    ResourceUnitGrid[ruIndex] = newRU; // save in the RUmap grid
                 }
             }
-            if (Environment != null)
-            {
-                // retrieve species sets and climates (that were really used)
-                mSpeciesSets.AddRange(Environment.SpeciesSets);
-                Climates.AddRange(Environment.Climates);
-                //StringBuilder climateFiles = new StringBuilder();
-                //for (int i = 0, c = 0; i < Climates.Count; ++i)
-                //{
-                //    climateFiles.Append(Climates[i].Name + ", ");
-                //    if (++c > 5)
-                //    {
-                //        climateFiles.Append("...");
-                //        break;
-                //    }
-                //}
-                // Debug.WriteLine("Setup of climates: #loaded: " + Climates.Count + " tables: " + climateFiles);
-            }
-
-            Debug.WriteLine("Setup of " + this.Environment.Climates.Count + " climate(s) performed.");
+            //if (Environment != null)
+            //{
+            //    StringBuilder climateFiles = new StringBuilder();
+            //    for (int i = 0, c = 0; i < Climates.Count; ++i)
+            //    {
+            //        climateFiles.Append(Climates[i].Name + ", ");
+            //        if (++c > 5)
+            //        {
+            //            climateFiles.Append("...");
+            //            break;
+            //        }
+            //    }
+            //    Debug.WriteLine("Setup of climates: #loaded: " + Climates.Count + " tables: " + climateFiles);
+            //}
+            // Debug.WriteLine("Setup of " + this.Environment.ClimatesByName.Count + " climate(s) performed.");
 
             if (StandGrid != null && StandGrid.IsValid())
             {
@@ -639,12 +601,12 @@ namespace iLand.Simulation
             CalculateStockableArea();
 
             // setup of the project area mask
-            if ((hasStandGrid == false) && xml.GetBool("areaMask.enabled", false) && xml.HasNode("areaMask.imageFile"))
+            if ((hasStandGrid == false) && xml.GetBooleanFromXml("areaMask.enabled", false) && xml.HasNode("areaMask.imageFile"))
             {
                 // to be extended!!! e.g. to load ESRI-style text files....
                 // setup a grid with the same size as the height grid...
                 Grid<float> worldMask = new Grid<float>((int)HeightGrid.CellSize, HeightGrid.CellsX, HeightGrid.CellsY);
-                string fileName = this.GlobalSettings.Path(xml.GetString("areaMask.imageFile"));
+                string fileName = this.GlobalSettings.Path(xml.GetStringFromXml("areaMask.imageFile"));
                 Grid.LoadGridFromImage(fileName, worldMask); // fetch from image
                 for (int i = 0; i < worldMask.Count; i++)
                 {
@@ -664,7 +626,7 @@ namespace iLand.Simulation
             }
 
             // setup of the digital elevation map (if present)
-            string dem_file = xml.GetString("DEM");
+            string dem_file = xml.GetStringFromXml("DEM");
             if (String.IsNullOrEmpty(dem_file) == false)
             {
                 this.Dem = new DEM(this.GlobalSettings.Path(dem_file), this);
@@ -706,13 +668,13 @@ namespace iLand.Simulation
 
             // setup the helper that does the multithreading
             ThreadRunner.Setup(valid_rus);
-            ThreadRunner.IsMultithreaded = this.GlobalSettings.Settings.GetBool("system.settings.multithreading");
+            ThreadRunner.IsMultithreaded = this.GlobalSettings.Settings.GetBooleanFromXml("system.settings.multithreading");
             // Debug.WriteLine("Multithreading enabled: " + IsMultithreaded + ", thread count: " + System.Environment.ProcessorCount);
 
             IsSetup = true;
         }
 
-        private void OpenOutputDatabase() ///< setup output database (run metadata, ...)
+        private void OpenOutputDatabase() // setup output database (run metadata, ...)
         {
             // create run-metadata
             //int maxID = (int)(long)SqlHelper.QueryValue("select max(id) from runs", g.DatabaseInput);
@@ -721,7 +683,7 @@ namespace iLand.Simulation
             // replace path information
             // setup final path
             GlobalSettings globalSettings = this.GlobalSettings;
-            string outputDatabaseFile = globalSettings.Settings.GetString("system.database.out");
+            string outputDatabaseFile = globalSettings.Settings.GetStringFromXml("system.database.out");
             if (String.IsNullOrWhiteSpace(outputDatabaseFile))
             {
                 throw new XmlException("The /project/system/database/out element is missing or does not specify an output database file name.");
@@ -733,7 +695,7 @@ namespace iLand.Simulation
             globalSettings.SetupDatabaseConnection("out", outputDatabasePath, false);
         }
 
-        private void ApplyPattern() ///< apply LIP-patterns of all trees
+        private void ApplyPattern() // apply LIP-patterns of all trees
         {
             //using DebugTimer t = this.DebugTimers.Create("Model.ApplyPattern()");
             // intialize grids...
@@ -750,7 +712,7 @@ namespace iLand.Simulation
             //this.GlobalSettings.SystemStatistics.ApplyPatternTime += t.Elapsed();
         }
 
-        private void ReadPattern() ///< retrieve LRI for trees
+        private void ReadPattern() // retrieve LRI for trees
         {
             //using DebugTimer t = this.DebugTimers.Create("Model.ReadPattern()");
             ThreadRunner.Run(ReadPattern);
@@ -764,7 +726,7 @@ namespace iLand.Simulation
            (3) single tree growth (including mortality)
            (4) cleanup of tree lists (remove dead trees)
           */
-        private void Grow() ///< grow - both on RU-level and tree-level
+        private void Grow() // grow - both on RU-level and tree-level
         {
             {
                 //using DebugTimer t = this.DebugTimers.Create("Model.Production()");
@@ -789,7 +751,7 @@ namespace iLand.Simulation
         /** calculate for each resource unit the fraction of area which is stocked.
           This is done by checking the pixels of the global height grid.
           */
-        private void CalculateStockedArea() ///< calculate area stocked with trees for each RU
+        private void CalculateStockedArea() // calculate area stocked with trees for each RU
         {
             // iterate over the whole heightgrid and count pixels for each resource unit
             for (int heightIndex = 0; heightIndex < HeightGrid.Count; ++heightIndex)
@@ -810,7 +772,7 @@ namespace iLand.Simulation
           "stockability" is determined by the isValid flag of resource units which in turn
           is derived from stand grid values.
           */
-        private void CalculateStockableArea() ///< calculate the stockable area for each RU (i.e.: with stand grid values <> -1)
+        private void CalculateStockableArea() // calculate the stockable area for each RU (i.e.: with stand grid values <> -1)
         {
             TotalStockableHectares = 0.0;
             foreach (ResourceUnit ru in ResourceUnits)
@@ -884,7 +846,7 @@ namespace iLand.Simulation
             Debug.WriteLine("Total stockable area of the landscape is" + TotalStockableHectares + "ha.");
         }
 
-        private void InitializeGrid() ///< initialize the LIF grid
+        private void InitializeGrid() // initialize the LIF grid
         {
             // fill the whole grid with a value of "1."
             LightGrid.Initialize(1.0F);
@@ -1035,7 +997,7 @@ namespace iLand.Simulation
             return ResourceUnits[0];
         }
 
-        public ResourceUnit GetResourceUnit(PointF coord) ///< ressource unit at given coordinates
+        public ResourceUnit GetResourceUnit(PointF coord) // ressource unit at given coordinates
         {
             if (!ResourceUnitGrid.IsEmpty() && ResourceUnitGrid.Contains(coord))
             {
@@ -1051,7 +1013,7 @@ namespace iLand.Simulation
             }
         }
 
-        public ResourceUnit GetResourceUnit(int index)  ///< get resource unit by index
+        public ResourceUnit GetResourceUnit(int index)  // get resource unit by index
         {
             return (index >= 0 && index < ResourceUnits.Count) ? ResourceUnits[index] : null;
         }

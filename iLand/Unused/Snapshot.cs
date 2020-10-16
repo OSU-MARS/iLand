@@ -365,7 +365,7 @@ namespace iLand.Output
                 tree.RU = ru;
                 tree.ID = treeReader.GetInt32(1);
                 tree.SetLightCellIndex(coord);
-                Species species = model.SpeciesSet().Species(treeReader.GetInt32(4));
+                Species species = model.GetFirstSpeciesSet().Species(treeReader.GetInt32(4));
                 tree.Species = species ?? throw new NotSupportedException("loadTrees: Invalid species");
                 tree.Age = treeReader.GetInt32(5);
                 tree.Height = treeReader.GetFloat(6);
@@ -509,8 +509,8 @@ namespace iLand.Output
                     ru = mResourceUnits[ru_index];
                     if (ru != null)
                     {
-                        offsetx = ru.CornerPointOffset.X;
-                        offsety = ru.CornerPointOffset.Y;
+                        offsetx = ru.TopLeftLightOffset.X;
+                        offsety = ru.TopLeftLightOffset.Y;
                     }
                 }
                 if (ru == null)
@@ -523,10 +523,10 @@ namespace iLand.Output
                 Tree tree = ru.AddNewTree(model);
                 tree.RU = ru;
                 tree.ID = treeReader.GetInt32(0);
-                tree.LightCellPosition = new Point(offsetx + treeReader.GetInt32(2) % Constant.LightPerRUsize,
-                                            offsety + treeReader.GetInt32(3) % Constant.LightPerRUsize);
-                Species species = model.SpeciesSet().GetSpecies(treeReader.GetString(4));
-                tree.Species = species ?? throw new NotSupportedException("loadTrees: Invalid species");
+                tree.LightCellPosition = new Point(offsetx + treeReader.GetInt32(2) % Constant.LightPerRUsize, // TODO: why modulus?
+                                                   offsety + treeReader.GetInt32(3) % Constant.LightPerRUsize);
+                Species species = model.GetFirstSpeciesSet().GetSpecies(treeReader.GetString(4));
+                tree.Species = species ?? throw new NotSupportedException("Invalid species.");
                 tree.Age = treeReader.GetInt32(5);
                 tree.Height = treeReader.GetFloat(6);
                 tree.Dbh = treeReader.GetFloat(7);
@@ -554,63 +554,63 @@ namespace iLand.Output
             SqliteConnection db = model.GlobalSettings.DatabaseSnapshot();
             using SqliteTransaction soilTransaction = db.BeginTransaction();
             using SqliteCommand soilInsert = new SqliteCommand(String.Format("insert into soil (RUindex, kyl, kyr, inLabC, inLabN, inLabP, inRefC, inRefN, inRefP, YLC, YLN, YLP, YRC, YRN, YRP, SOMC, SOMN, WaterContent, SnowPack) " +
-                                                                             "values (:idx, :kyl, :kyr, :inLabC, :iLN, :iLP, :iRC, :iRN, :iRP, :ylc, :yln, :ylp, :yrc, :yrn, :yrp, :somc, :somn, :wc, :snowpack)"), db, soilTransaction);
-            soilInsert.Parameters.Add(":idx", SqliteType.Integer);
-            soilInsert.Parameters.Add(":kyl", SqliteType.Integer);
-            soilInsert.Parameters.Add(":kyr", SqliteType.Integer);
-            soilInsert.Parameters.Add(":inLabC", SqliteType.Integer);
-            soilInsert.Parameters.Add(":iLN", SqliteType.Integer);
-            soilInsert.Parameters.Add(":iLP", SqliteType.Integer);
-            soilInsert.Parameters.Add(":iRC", SqliteType.Integer);
-            soilInsert.Parameters.Add(":iRN", SqliteType.Integer);
-            soilInsert.Parameters.Add(":iRP", SqliteType.Integer);
-            soilInsert.Parameters.Add(":ylc", SqliteType.Integer);
-            soilInsert.Parameters.Add(":yln", SqliteType.Integer);
-            soilInsert.Parameters.Add(":ylp", SqliteType.Integer);
-            soilInsert.Parameters.Add(":yrc", SqliteType.Integer);
-            soilInsert.Parameters.Add(":yrn", SqliteType.Integer);
-            soilInsert.Parameters.Add(":yrp", SqliteType.Integer);
-            soilInsert.Parameters.Add(":somc", SqliteType.Integer);
-            soilInsert.Parameters.Add(":somn", SqliteType.Integer);
-            soilInsert.Parameters.Add(":wc", SqliteType.Integer);
-            soilInsert.Parameters.Add(":snowpack", SqliteType.Integer);
+                                                                             "values (@idx, @kyl, @kyr, @inLabC, @iLN, @iLP, @iRC, @iRN, @iRP, @ylc, @yln, @ylp, @yrc, @yrn, @yrp, @somc, @somn, @wc, @swe)"), db, soilTransaction);
+            soilInsert.Parameters.Add("@idx", SqliteType.Integer);
+            soilInsert.Parameters.Add("@kyl", SqliteType.Real);
+            soilInsert.Parameters.Add("@kyr", SqliteType.Real);
+            soilInsert.Parameters.Add("@inLabC", SqliteType.Real);
+            soilInsert.Parameters.Add("@iLN", SqliteType.Real);
+            soilInsert.Parameters.Add("@iLP", SqliteType.Real);
+            soilInsert.Parameters.Add("@iRC", SqliteType.Real);
+            soilInsert.Parameters.Add("@iRN", SqliteType.Real);
+            soilInsert.Parameters.Add("@iRP", SqliteType.Real);
+            soilInsert.Parameters.Add("@ylc", SqliteType.Real);
+            soilInsert.Parameters.Add("@yln", SqliteType.Real);
+            soilInsert.Parameters.Add("@ylp", SqliteType.Real);
+            soilInsert.Parameters.Add("@yrc", SqliteType.Real);
+            soilInsert.Parameters.Add("@yrn", SqliteType.Real);
+            soilInsert.Parameters.Add("@yrp", SqliteType.Real);
+            soilInsert.Parameters.Add("@somc", SqliteType.Real);
+            soilInsert.Parameters.Add("@somn", SqliteType.Real);
+            soilInsert.Parameters.Add("@wc", SqliteType.Real);
+            soilInsert.Parameters.Add("@swe", SqliteType.Real);
 
-            int n = 0;
+            //int n = 0;
             foreach (ResourceUnit ru in model.ResourceUnits)
             {
-                Soil s = ru.Soil;
-                if (s != null)
+                Soil soil = ru.Soil;
+                if (soil != null)
                 {
-                    soilInsert.Parameters[0].Value = s.mRU.Index;
-                    soilInsert.Parameters[1].Value = s.mKyl;
-                    soilInsert.Parameters[2].Value = s.mKyr;
-                    soilInsert.Parameters[3].Value = s.mInputLab.C;
-                    soilInsert.Parameters[4].Value = s.mInputLab.N;
-                    soilInsert.Parameters[5].Value = s.mInputLab.Weight;
-                    soilInsert.Parameters[6].Value = s.mInputRef.C;
-                    soilInsert.Parameters[7].Value = s.mInputRef.N;
-                    soilInsert.Parameters[8].Value = s.mInputRef.Weight;
-                    soilInsert.Parameters[9].Value = s.YoungLabile.C;
-                    soilInsert.Parameters[10].Value = s.YoungLabile.N;
-                    soilInsert.Parameters[11].Value = s.YoungLabile.Weight;
-                    soilInsert.Parameters[12].Value = s.YoungRefractory.C;
-                    soilInsert.Parameters[13].Value = s.YoungRefractory.N;
-                    soilInsert.Parameters[14].Value = s.YoungRefractory.Weight;
-                    soilInsert.Parameters[15].Value = s.OrganicMatter.C;
-                    soilInsert.Parameters[16].Value = s.OrganicMatter.N;
+                    soilInsert.Parameters[0].Value = ru.Index;
+                    soilInsert.Parameters[1].Value = soil.Parameters.Kyl;
+                    soilInsert.Parameters[2].Value = soil.Parameters.Kyr;
+                    soilInsert.Parameters[3].Value = soil.InputLabile.C;
+                    soilInsert.Parameters[4].Value = soil.InputLabile.N;
+                    soilInsert.Parameters[5].Value = soil.InputLabile.DecompositionRate;
+                    soilInsert.Parameters[6].Value = soil.InputRefractory.C;
+                    soilInsert.Parameters[7].Value = soil.InputRefractory.N;
+                    soilInsert.Parameters[8].Value = soil.InputRefractory.DecompositionRate;
+                    soilInsert.Parameters[9].Value = soil.YoungLabile.C;
+                    soilInsert.Parameters[10].Value = soil.YoungLabile.N;
+                    soilInsert.Parameters[11].Value = soil.YoungLabile.DecompositionRate;
+                    soilInsert.Parameters[12].Value = soil.YoungRefractory.C;
+                    soilInsert.Parameters[13].Value = soil.YoungRefractory.N;
+                    soilInsert.Parameters[14].Value = soil.YoungRefractory.DecompositionRate;
+                    soilInsert.Parameters[15].Value = soil.OrganicMatter.C;
+                    soilInsert.Parameters[16].Value = soil.OrganicMatter.N;
                     soilInsert.Parameters[17].Value = ru.WaterCycle.CurrentSoilWaterContent;
                     soilInsert.Parameters[18].Value = ru.WaterCycle.CurrentSnowWaterEquivalent();
                     soilInsert.ExecuteNonQuery();
 
-                    if (++n % 1000 == 0)
-                    {
-                        Debug.WriteLine(n + "soil resource units saved...");
-                    }
+                    //if (++n % 1000 == 0)
+                    //{
+                    //    Debug.WriteLine(n + "soil resource units saved...");
+                    //}
                 }
             }
 
             soilTransaction.Commit();
-            Debug.WriteLine("Snapshot: finished Soil. N=" + n);
+            //Debug.WriteLine("Snapshot: finished Soil. N=" + n);
         }
 
         private void LoadSoil(GlobalSettings globalSettings)
@@ -619,7 +619,7 @@ namespace iLand.Output
             using SqliteCommand soilQuery = new SqliteCommand("select RUindex, kyl, kyr, inLabC, inLabN, inLabP, inRefC, inRefN, inRefP, YLC, YLN, YLP, YRC, YRN, YRP, SOMC, SOMN, WaterContent, SnowPack from soil", db);
             int ru_index = -1;
             ResourceUnit ru = null;
-            int n = 0;
+            //int n = 0;
             using SqliteDataReader soilReader = soilQuery.ExecuteReader();
             while (soilReader.Read())
             {
@@ -629,36 +629,36 @@ namespace iLand.Output
                 {
                     continue;
                 }
-                Soil s = ru.Soil;
-                if (s == null)
+                Soil soil = ru.Soil;
+                if (soil == null)
                 {
                     throw new NotSupportedException("loadSoil: trying to load soil data but soil module is disabled.");
                 }
-                s.mKyl = soilReader.GetDouble(1);
-                s.mKyr = soilReader.GetDouble(2);
-                s.mInputLab.C = soilReader.GetDouble(3);
-                s.mInputLab.N = soilReader.GetDouble(4);
-                s.mInputLab.Weight = soilReader.GetDouble(5);
-                s.mInputRef.C = soilReader.GetDouble(6);
-                s.mInputRef.N = soilReader.GetDouble(7);
-                s.mInputRef.Weight = soilReader.GetDouble(8);
-                s.YoungLabile.C = soilReader.GetDouble(9);
-                s.YoungLabile.N = soilReader.GetDouble(10);
-                s.YoungLabile.Weight = soilReader.GetDouble(11);
-                s.YoungRefractory.C = soilReader.GetDouble(12);
-                s.YoungRefractory.N = soilReader.GetDouble(13);
-                s.YoungRefractory.Weight = soilReader.GetDouble(14);
-                s.OrganicMatter.C = soilReader.GetDouble(15);
-                s.OrganicMatter.N = soilReader.GetDouble(16);
+                soil.Parameters.Kyl = soilReader.GetDouble(1);
+                soil.Parameters.Kyr = soilReader.GetDouble(2);
+                soil.InputLabile.C = soilReader.GetDouble(3);
+                soil.InputLabile.N = soilReader.GetDouble(4);
+                soil.InputLabile.DecompositionRate = soilReader.GetDouble(5);
+                soil.InputRefractory.C = soilReader.GetDouble(6);
+                soil.InputRefractory.N = soilReader.GetDouble(7);
+                soil.InputRefractory.DecompositionRate = soilReader.GetDouble(8);
+                soil.YoungLabile.C = soilReader.GetDouble(9);
+                soil.YoungLabile.N = soilReader.GetDouble(10);
+                soil.YoungLabile.DecompositionRate = soilReader.GetDouble(11);
+                soil.YoungRefractory.C = soilReader.GetDouble(12);
+                soil.YoungRefractory.N = soilReader.GetDouble(13);
+                soil.YoungRefractory.DecompositionRate = soilReader.GetDouble(14);
+                soil.OrganicMatter.C = soilReader.GetDouble(15);
+                soil.OrganicMatter.N = soilReader.GetDouble(16);
                 ru.WaterCycle.SetContent(soilReader.GetDouble(17), soilReader.GetDouble(18));
 
-                if (++n % 1000 == 0)
-                {
-                    Debug.WriteLine(n + "soil units loaded...");
-                }
+                //if (++n % 1000 == 0)
+                //{
+                //    Debug.WriteLine(n + " soil units loaded...");
+                //}
             }
 
-            Debug.WriteLine("Snapshot: finished soil. N=" + n);
+            //Debug.WriteLine("Snapshot: finished soil. N=" + n);
         }
 
         private void SaveSnags(Model model)
@@ -726,12 +726,12 @@ namespace iLand.Output
                 }
                 snagInsert.Parameters[0].Value = s.mRU.Index;
                 snagInsert.Parameters[1].Value = s.ClimateFactor;
-                snagInsert.Parameters[2].Value = s.mSWD[0].C;
-                snagInsert.Parameters[3].Value = s.mSWD[0].N;
-                snagInsert.Parameters[4].Value = s.mSWD[1].C;
-                snagInsert.Parameters[5].Value = s.mSWD[1].N;
-                snagInsert.Parameters[7].Value = s.mSWD[2].C;
-                snagInsert.Parameters[8].Value = s.mSWD[2].N;
+                snagInsert.Parameters[2].Value = s.mStandingWoodyDebris[0].C;
+                snagInsert.Parameters[3].Value = s.mStandingWoodyDebris[0].N;
+                snagInsert.Parameters[4].Value = s.mStandingWoodyDebris[1].C;
+                snagInsert.Parameters[5].Value = s.mStandingWoodyDebris[1].N;
+                snagInsert.Parameters[7].Value = s.mStandingWoodyDebris[2].C;
+                snagInsert.Parameters[8].Value = s.mStandingWoodyDebris[2].N;
                 snagInsert.Parameters[9].Value = s.TotalSwd.C;
                 snagInsert.Parameters[10].Value = s.TotalSwd.N;
                 snagInsert.Parameters[11].Value = s.mNumberOfSnags[0];
@@ -749,9 +749,9 @@ namespace iLand.Output
                 snagInsert.Parameters[23].Value = s.mTimeSinceDeath[0];
                 snagInsert.Parameters[24].Value = s.mTimeSinceDeath[21];
                 snagInsert.Parameters[25].Value = s.mTimeSinceDeath[2];
-                snagInsert.Parameters[26].Value = s.mKSW[0];
-                snagInsert.Parameters[27].Value = s.mKSW[21];
-                snagInsert.Parameters[28].Value = s.mKSW[2];
+                snagInsert.Parameters[26].Value = s.mKsw[0];
+                snagInsert.Parameters[27].Value = s.mKsw[21];
+                snagInsert.Parameters[28].Value = s.mKsw[2];
                 snagInsert.Parameters[29].Value = s.mHalfLife[0];
                 snagInsert.Parameters[30].Value = s.mHalfLife[30];
                 snagInsert.Parameters[31].Value = s.mHalfLife[2];
@@ -781,69 +781,69 @@ namespace iLand.Output
         private void LoadSnags(GlobalSettings globalSettings)
         {
             SqliteConnection db = globalSettings.DatabaseSnapshot();
-            int n = 0;
+            //int n = 0;
             using SqliteCommand snagQuery = new SqliteCommand("select RUIndex, climateFactor, SWD1C, SWD1N, SWD2C, SWD2N, SWD3C, SWD3N, totalSWDC, totalSWDN, NSnags1, NSnags2, NSnags3, dbh1, dbh2, dbh3, height1, height2, height3, volume1, volume2, volume3, tsd1, tsd2, tsd3, ksw1, ksw2, ksw3, halflife1, halflife2, halflife3, branch1C, branch1N, branch2C, branch2N, branch3C, branch3N, branch4C, branch4N, branch5C, branch5N, branchIndex from snag", db);
             using SqliteDataReader snagReader = snagQuery.ExecuteReader();
             while (snagReader.Read())
             {
-                ++n;
+                //++n;
 
-                int ci = 0;
-                int ru_index = snagReader.GetInt32(ci++);
-                ResourceUnit ru = mResourceUnits[ru_index];
+                int columnIndex = 0;
+                int ruIndex = snagReader.GetInt32(columnIndex++);
+                ResourceUnit ru = mResourceUnits[ruIndex];
                 if (ru == null)
                 {
                     continue;
                 }
-                Snag s = ru.Snags;
-                if (s == null)
+                Snag snag = ru.Snags;
+                if (snag == null)
                 {
                     continue;
                 }
-                s.ClimateFactor = snagReader.GetDouble(ci++);
-                s.mSWD[0].C = snagReader.GetDouble(ci++);
-                s.mSWD[0].N = snagReader.GetDouble(ci++);
-                s.mSWD[1].C = snagReader.GetDouble(ci++);
-                s.mSWD[1].N = snagReader.GetDouble(ci++);
-                s.mSWD[2].C = snagReader.GetDouble(ci++);
-                s.mSWD[2].N = snagReader.GetDouble(ci++);
-                s.TotalSwd.C = snagReader.GetDouble(ci++);
-                s.TotalSwd.N = snagReader.GetDouble(ci++);
-                s.mNumberOfSnags[0] = snagReader.GetDouble(ci++);
-                s.mNumberOfSnags[1] = snagReader.GetDouble(ci++);
-                s.mNumberOfSnags[2] = snagReader.GetDouble(ci++);
-                s.mAvgDbh[0] = snagReader.GetDouble(ci++);
-                s.mAvgDbh[1] = snagReader.GetDouble(ci++);
-                s.mAvgDbh[2] = snagReader.GetDouble(ci++);
-                s.mAvgHeight[0] = snagReader.GetDouble(ci++);
-                s.mAvgHeight[1] = snagReader.GetDouble(ci++);
-                s.mAvgHeight[2] = snagReader.GetDouble(ci++);
-                s.mAvgVolume[0] = snagReader.GetDouble(ci++);
-                s.mAvgVolume[1] = snagReader.GetDouble(ci++);
-                s.mAvgVolume[2] = snagReader.GetDouble(ci++);
-                s.mTimeSinceDeath[0] = snagReader.GetDouble(ci++);
-                s.mTimeSinceDeath[1] = snagReader.GetDouble(ci++);
-                s.mTimeSinceDeath[2] = snagReader.GetDouble(ci++);
-                s.mKSW[0] = snagReader.GetDouble(ci++);
-                s.mKSW[1] = snagReader.GetDouble(ci++);
-                s.mKSW[2] = snagReader.GetDouble(ci++);
-                s.mHalfLife[0] = snagReader.GetDouble(ci++);
-                s.mHalfLife[1] = snagReader.GetDouble(ci++);
-                s.mHalfLife[2] = snagReader.GetDouble(ci++);
-                s.mOtherWood[0].C = snagReader.GetDouble(ci++); s.mOtherWood[0].N = snagReader.GetDouble(ci++);
-                s.mOtherWood[1].C = snagReader.GetDouble(ci++); s.mOtherWood[1].N = snagReader.GetDouble(ci++);
-                s.mOtherWood[2].C = snagReader.GetDouble(ci++); s.mOtherWood[2].N = snagReader.GetDouble(ci++);
-                s.mOtherWood[3].C = snagReader.GetDouble(ci++); s.mOtherWood[3].N = snagReader.GetDouble(ci++);
-                s.mOtherWood[4].C = snagReader.GetDouble(ci++); s.mOtherWood[4].N = snagReader.GetDouble(ci++);
-                s.mBranchCounter = snagReader.GetInt32(ci++);
+                snag.ClimateFactor = snagReader.GetDouble(columnIndex++);
+                snag.mStandingWoodyDebris[0].C = snagReader.GetDouble(columnIndex++);
+                snag.mStandingWoodyDebris[0].N = snagReader.GetDouble(columnIndex++);
+                snag.mStandingWoodyDebris[1].C = snagReader.GetDouble(columnIndex++);
+                snag.mStandingWoodyDebris[1].N = snagReader.GetDouble(columnIndex++);
+                snag.mStandingWoodyDebris[2].C = snagReader.GetDouble(columnIndex++);
+                snag.mStandingWoodyDebris[2].N = snagReader.GetDouble(columnIndex++);
+                snag.TotalSwd.C = snagReader.GetDouble(columnIndex++);
+                snag.TotalSwd.N = snagReader.GetDouble(columnIndex++);
+                snag.mNumberOfSnags[0] = snagReader.GetDouble(columnIndex++);
+                snag.mNumberOfSnags[1] = snagReader.GetDouble(columnIndex++);
+                snag.mNumberOfSnags[2] = snagReader.GetDouble(columnIndex++);
+                snag.mAvgDbh[0] = snagReader.GetDouble(columnIndex++);
+                snag.mAvgDbh[1] = snagReader.GetDouble(columnIndex++);
+                snag.mAvgDbh[2] = snagReader.GetDouble(columnIndex++);
+                snag.mAvgHeight[0] = snagReader.GetDouble(columnIndex++);
+                snag.mAvgHeight[1] = snagReader.GetDouble(columnIndex++);
+                snag.mAvgHeight[2] = snagReader.GetDouble(columnIndex++);
+                snag.mAvgVolume[0] = snagReader.GetDouble(columnIndex++);
+                snag.mAvgVolume[1] = snagReader.GetDouble(columnIndex++);
+                snag.mAvgVolume[2] = snagReader.GetDouble(columnIndex++);
+                snag.mTimeSinceDeath[0] = snagReader.GetDouble(columnIndex++);
+                snag.mTimeSinceDeath[1] = snagReader.GetDouble(columnIndex++);
+                snag.mTimeSinceDeath[2] = snagReader.GetDouble(columnIndex++);
+                snag.mKsw[0] = snagReader.GetDouble(columnIndex++);
+                snag.mKsw[1] = snagReader.GetDouble(columnIndex++);
+                snag.mKsw[2] = snagReader.GetDouble(columnIndex++);
+                snag.mHalfLife[0] = snagReader.GetDouble(columnIndex++);
+                snag.mHalfLife[1] = snagReader.GetDouble(columnIndex++);
+                snag.mHalfLife[2] = snagReader.GetDouble(columnIndex++);
+                snag.mOtherWood[0].C = snagReader.GetDouble(columnIndex++); snag.mOtherWood[0].N = snagReader.GetDouble(columnIndex++);
+                snag.mOtherWood[1].C = snagReader.GetDouble(columnIndex++); snag.mOtherWood[1].N = snagReader.GetDouble(columnIndex++);
+                snag.mOtherWood[2].C = snagReader.GetDouble(columnIndex++); snag.mOtherWood[2].N = snagReader.GetDouble(columnIndex++);
+                snag.mOtherWood[3].C = snagReader.GetDouble(columnIndex++); snag.mOtherWood[3].N = snagReader.GetDouble(columnIndex++);
+                snag.mOtherWood[4].C = snagReader.GetDouble(columnIndex++); snag.mOtherWood[4].N = snagReader.GetDouble(columnIndex++);
+                snag.mBranchCounter = snagReader.GetInt32(columnIndex++);
 
-                if (++n % 1000 == 0)
-                {
-                    Debug.WriteLine(n + " snags loaded...");
-                }
+                //if (++n % 1000 == 0)
+                //{
+                //    Debug.WriteLine(n + " snags loaded...");
+                //}
             }
 
-            Debug.WriteLine("Snapshot: finished snags. N=" + n);
+            //Debug.WriteLine("Snapshot: finished snags. N=" + n);
         }
 
         private void SaveSaplings(GlobalSettings globalSettings)
@@ -895,31 +895,28 @@ namespace iLand.Output
             //        }
             //    }
 
-            ResourceUnit ru = null;
-            int n = 0, ntotal = 0;
-            int ci;
-            int posx, posy;
+            //int n = 0, ntotal = 0;
             Saplings saplings = model.Saplings;
             SqliteDataReader saplingReader = saplingQuery.ExecuteReader();
             while (saplingReader.Read())
             {
-                ci = 0;
-                int ru_index = saplingReader.GetInt32(ci++);
-                ru = mResourceUnits[ru_index];
+                int columnIndex = 0;
+                int ruIndex = saplingReader.GetInt32(columnIndex++);
+                ResourceUnit ru = mResourceUnits[ruIndex];
                 if (ru == null)
                 {
                     continue;
                 }
-                Species species = ru.SpeciesSet.GetSpecies(saplingReader.GetString(ci++));
+                Species species = ru.SpeciesSet.GetSpecies(saplingReader.GetString(columnIndex++));
                 if (species == null)
                 {
                     throw new NotSupportedException("loadSaplings: Invalid species");
                 }
 
-                int offsetx = ru.CornerPointOffset.X;
-                int offsety = ru.CornerPointOffset.Y;
-                posx = offsetx + saplingReader.GetInt32(ci++) % Constant.LightPerRUsize;
-                posy = offsety + saplingReader.GetInt32(ci++) % Constant.LightPerRUsize;
+                int offsetx = ru.TopLeftLightOffset.X;
+                int offsety = ru.TopLeftLightOffset.Y;
+                int posx = offsetx + saplingReader.GetInt32(columnIndex++) % Constant.LightPerRUsize;
+                int posy = offsety + saplingReader.GetInt32(columnIndex++) % Constant.LightPerRUsize;
 
                 SaplingCell sc = saplings.Cell(new Point(posx, posy), model, true, ref ru);
                 if (sc == null)
@@ -927,26 +924,25 @@ namespace iLand.Output
                     continue;
                 }
 
-                int age = saplingReader.GetInt32(ci++);
-                SaplingTree st = sc.AddSapling(saplingReader.GetFloat(ci++), age, species.Index);
+                int age = saplingReader.GetInt32(columnIndex++);
+                SaplingTree st = sc.AddSapling(saplingReader.GetFloat(columnIndex++), age, species.Index);
                 if (st == null)
                 {
                     continue;
                 }
-                st.StressYears = saplingReader.GetByte(ci++);
-                ++ntotal;
+                st.StressYears = saplingReader.GetByte(columnIndex++);
+                //++ntotal;
 
-
-                if (n < 10000000 && ++n % 10000 == 0)
-                {
-                    Debug.WriteLine(n + " saplings loaded...");
-                }
-                if (n >= 10000000 && ++n % 1000000 == 0)
-                {
-                    Debug.WriteLine(n + " saplings loaded...");
-                }
+                //if (n < 10000000 && ++n % 10000 == 0)
+                //{
+                //    Debug.WriteLine(n + " saplings loaded...");
+                //}
+                //if (n >= 10000000 && ++n % 1000000 == 0)
+                //{
+                //    Debug.WriteLine(n + " saplings loaded...");
+                //}
             }
-            Debug.WriteLine("Snapshot: finished loading saplings. N=" + n + "from N in snapshot:" + ntotal);
+            //Debug.WriteLine("Snapshot: finished loading saplings. N=" + n + "from N in snapshot:" + ntotal);
         }
     }
 }

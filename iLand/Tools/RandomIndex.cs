@@ -16,8 +16,8 @@ namespace iLand.Tools
         private readonly char[] mField;
         private int mRemaining;
 
-        ///< currently selected
-        public int Index { get; private set; } ///< retrieve (random) index
+        // currently selected
+        public int Index { get; private set; } // retrieve (random) index
 
         public RandomIndex(int aCount)
         {

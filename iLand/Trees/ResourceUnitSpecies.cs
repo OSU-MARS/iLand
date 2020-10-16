@@ -19,18 +19,18 @@ namespace iLand.Trees
     {
         private int mLastYear;
 
-        public Production3PG BiomassGrowth { get; private set; } ///< the 3pg production model of this species x resourceunit
-        public Establishment Establishment { get; private set; } ///< establishment submodel
+        public Production3PG BiomassGrowth { get; private set; } // the 3pg production model of this species x resourceunit
+        public Establishment Establishment { get; private set; } // establishment submodel
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
         public double LaiFraction { get; private set; }
-        public double RemovedStemVolume { get; private set; } ///< sum of volume with was remvoved because of death/management (m3/ha)
+        public double RemovedStemVolume { get; private set; } // sum of volume with was remvoved because of death/management (m3/ha)
         public SpeciesResponse Response { get; private set; }
-        public ResourceUnit RU { get; private set; } ///< return pointer to resource unit
-        public SaplingStat SaplingStats { get; private set; } ///< statistics for the sapling sub module
-        public Species Species { get; private set; } ///< return pointer to species
-        public StandStatistics Statistics { get; private set; } ///< statistics of this species on the resourceunit
-        public StandStatistics StatisticsDead { get; private set; } ///< statistics of died trees
-        public StandStatistics StatisticsMgmt { get; private set; } ///< statistics of removed trees
+        public ResourceUnit RU { get; private set; } // return pointer to resource unit
+        public SaplingStat SaplingStats { get; private set; } // statistics for the sapling sub module
+        public Species Species { get; private set; } // return pointer to species
+        public StandStatistics Statistics { get; private set; } // statistics of this species on the resourceunit
+        public StandStatistics StatisticsDead { get; private set; } // statistics of died trees
+        public StandStatistics StatisticsMgmt { get; private set; } // statistics of removed trees
         
         public void SetLaiFactor(double laiFraction)
         {

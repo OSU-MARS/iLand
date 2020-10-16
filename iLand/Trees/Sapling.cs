@@ -21,19 +21,19 @@ namespace iLand.Trees
     {
         private ResourceUnitSpecies mRUS;
         private readonly List<SaplingTreeOld> mSaplingTrees;
-        private double mSumDbhDied; ///< running sum of dbh of died trees (used to calculate detritus)
+        private double mSumDbhDied; // running sum of dbh of died trees (used to calculate detritus)
 
-        public double AverageAge { get; private set; } ///< average age of saplings (years)
-        public double AverageDeltaHPot { get; private set; } ///< average height increment potential (m)
-        public double AverageDeltaHRealized { get; private set; } ///< average realized height increment
-        public double AverageHeight { get; private set; } ///< average height of saplings (m)
-        public CNPair CarbonGain { get; private set; }  ///< net growth (kg / ru) of saplings
-        public CNPair CarbonLiving { get; private set; } ///< state of the living
-        public int DeadSaplings { get; private set; } ///< number of trees died
-        public int LivingSaplings { get; private set; } ///< number of trees (cohorts!!!) currently in the regeneration layer
-        public int NewSaplings { get; private set; } ///< number of trees added
+        public double AverageAge { get; private set; } // average age of saplings (years)
+        public double AverageDeltaHPot { get; private set; } // average height increment potential (m)
+        public double AverageDeltaHRealized { get; private set; } // average realized height increment
+        public double AverageHeight { get; private set; } // average height of saplings (m)
+        public CarbonNitrogenTuple CarbonGain { get; private set; }  // net growth (kg / ru) of saplings
+        public CarbonNitrogenTuple CarbonLiving { get; private set; } // state of the living
+        public int DeadSaplings { get; private set; } // number of trees died
+        public int LivingSaplings { get; private set; } // number of trees (cohorts!!!) currently in the regeneration layer
+        public int NewSaplings { get; private set; } // number of trees added
         public BitArray PresentPositions { get; private set; }
-        public int RecruitedSaplings { get; private set; } ///< number recruited (i.e. grown out of regeneration layer)
+        public int RecruitedSaplings { get; private set; } // number recruited (i.e. grown out of regeneration layer)
 
         public void NewYear() { ClearStatistics(); }
         public void SetRU(ResourceUnitSpecies masterRUS) { mRUS = masterRUS; }
@@ -41,7 +41,7 @@ namespace iLand.Trees
         public Sapling()
         {
             this.NewSaplings = 0;
-            this.CarbonLiving = new CNPair();
+            this.CarbonLiving = new CarbonNitrogenTuple();
             this.mRUS = null;
             this.PresentPositions = new BitArray(Constant.LightPerRUsize * Constant.LightPerRUsize);
             this.mSaplingTrees = new List<SaplingTreeOld>();
@@ -120,7 +120,7 @@ namespace iLand.Trees
         // position: index of pixel on LIF (absolute index)
         public bool HasSapling(Point position)
         {
-            Point  offset = mRUS.RU.CornerPointOffset;
+            Point  offset = mRUS.RU.TopLeftLightOffset;
             int index = (position.X - offset.X) * Constant.LightPerRUsize + (position.Y - offset.Y);
             if (index < 0)
             {
@@ -160,7 +160,7 @@ namespace iLand.Trees
 
         private void SetBit(Point pos_index, bool value)
         {
-            int index = (pos_index.X - mRUS.RU.CornerPointOffset.X) * Constant.LightPerRUsize + (pos_index.Y - mRUS.RU.CornerPointOffset.Y);
+            int index = (pos_index.X - mRUS.RU.TopLeftLightOffset.X) * Constant.LightPerRUsize + (pos_index.Y - mRUS.RU.TopLeftLightOffset.Y);
             PresentPositions[index] = value; // set bit: now there is a sapling there
         }
 
@@ -386,11 +386,11 @@ namespace iLand.Trees
                 AverageDeltaHRealized /= (double)LivingSaplings;
             }
             // calculate carbon balance
-            CNPair old_state = CarbonLiving;
+            CarbonNitrogenTuple old_state = CarbonLiving;
             CarbonLiving.Clear();
 
-            CNPair dead_wood = new CNPair();
-            CNPair dead_fine = new CNPair(); // pools for mortality
+            CarbonNitrogenTuple dead_wood = new CarbonNitrogenTuple();
+            CarbonNitrogenTuple dead_fine = new CarbonNitrogenTuple(); // pools for mortality
             // average dbh
             if (LivingSaplings != 0)
             {

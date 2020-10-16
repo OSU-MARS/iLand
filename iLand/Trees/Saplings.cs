@@ -78,7 +78,7 @@ namespace iLand.Trees
         {
             Grid<float> lif_grid = model.LightGrid;
 
-            Point imap = ru.CornerPointOffset; // offset on LIF/saplings grid
+            Point imap = ru.TopLeftLightOffset; // offset on LIF/saplings grid
             Point iseedmap = new Point(imap.X / 10, imap.Y / 10); // seed-map has 20m resolution, LIF 2m . factor 10
             for (int i = 0; i < ru.Species.Count; ++i)
             {
@@ -193,7 +193,7 @@ namespace iLand.Trees
             Grid<HeightCell> height_grid = model.HeightGrid;
             Grid<float> lif_grid = model.LightGrid;
 
-            Point imap = ru.CornerPointOffset;
+            Point imap = ru.TopLeftLightOffset;
             SaplingCell[] sap_cells = ru.SaplingCells;
 
             for (int iy = 0; iy < Constant.LightPerRUsize; ++iy)
@@ -272,7 +272,7 @@ namespace iLand.Trees
 
             if (ru != null)
             {
-                Point local_coords = lif_coords.Subtract(ru.CornerPointOffset);
+                Point local_coords = lif_coords.Subtract(ru.TopLeftLightOffset);
                 int idx = local_coords.Y * Constant.LightPerRUsize + local_coords.X;
                 Debug.WriteLineIf(idx < 0 || idx >= Constant.LightCellsPerHectare, "invalid coords in cell");
                 SaplingCell s = ru.SaplingCells[idx];

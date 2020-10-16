@@ -1,5 +1,4 @@
 ﻿using iLand.Simulation;
-using iLand.Tools;
 using iLand.Trees;
 using System;
 using System.Collections.Generic;
@@ -19,43 +18,43 @@ namespace iLand.World
         */
     public class ResourceUnit
     {
-        private double mTotalWeightedLeafArea; ///< sum of lightResponse * LeafArea for all trees
-        private double mAggregatedLR; ///< sum of lightresponse*LA of the current unit
+        private double mTotalWeightedLeafArea; // sum of lightResponse * LeafArea for all trees
+        private double mAggregatedLR; // sum of lightresponse*LA of the current unit
         private int mNextTreeID;
-        private int mHeightCells; ///< count of (Heightgrid) pixels thare are inside the RU
-        private int mHeightCellsWithTrees;  ///< count of pixels that are stocked with trees
+        private int mHeightCells; // count of (Heightgrid) pixels thare are inside the RU
+        private int mHeightCellsWithTrees;  // count of pixels that are stocked with trees
 
-        public double AverageAging { get; private set; } ///< leaf area weighted average aging
-        public RectangleF BoundingBox { get; private set; }
-        public Climate Climate { get; set; } ///< link to the climate on this resource unit
-        public Point CornerPointOffset { get; private set; } ///< coordinates on the LIF grid of the upper left corner of the RU
+        public double AverageAging { get; private set; } // leaf area weighted average aging
+        public RectangleF BoundingBox { get; set; }
+        public Climate Climate { get; set; } // link to the climate on this resource unit
+        public Point TopLeftLightOffset { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
         public double EffectiveAreaPerWla { get; private set; } ///<
-        public bool HasDeadTrees { get; private set; } ///< if true, the resource unit has dead trees and needs maybe some cleanup
+        public bool HasDeadTrees { get; private set; } // if true, the resource unit has dead trees and needs maybe some cleanup
         public int ID { get; set; }
         public int Index { get; private set; }
         public double LriModifier { get; private set; }
-        public double PhotosyntheticallyActiveArea { get; private set; } ///< TotalArea - Unstocked Area - loss due to BeerLambert (m2)
-        public Snag Snags { get; private set; } ///< access the snag object
-        public Soil Soil { get; private set; } ///< access the soil model
+        public double PhotosyntheticallyActiveArea { get; private set; } // TotalArea - Unstocked Area - loss due to BeerLambert (m2)
+        public Snag Snags { get; private set; } // access the snag object
+        public Soil Soil { get; private set; } // access the soil model
         public List<ResourceUnitSpecies> Species { get; private set; }
-        public SpeciesSet SpeciesSet { get; private set; } ///< get SpeciesSet this RU links to.
-        public SaplingCell[] SaplingCells { get; private set; } ///< access the array of sapling-cells
+        public SpeciesSet SpeciesSet { get; private set; } // get SpeciesSet this RU links to.
+        public SaplingCell[] SaplingCells { get; private set; } // access the array of sapling-cells
         public StandStatistics Statistics { get; private set; }
-        public double StockedArea { get; private set; } ///< get the stocked area in m2
-        public double StockableArea { get; set; } ///< total stockable area in m2
-        public double TotalLeafArea { get; private set; } ///< total leaf area of resource unit (m2)
-        public List<Tree> Trees { get; private set; } ///< reference to the tree list.
-        public ResourceUnitVariables Variables { get; private set; } ///< access to variables that are specific to resourceUnit (e.g. nitrogenAvailable)
-        public WaterCycle WaterCycle { get; private set; } ///< water model of the unit
+        public double StockedArea { get; private set; } // get the stocked area in m2
+        public double StockableArea { get; set; } // total stockable area in m2
+        public double TotalLeafArea { get; private set; } // total leaf area of resource unit (m2)
+        public List<Tree> Trees { get; private set; } // reference to the tree list.
+        public ResourceUnitVariables Variables { get; private set; } // access to variables that are specific to resourceUnit (e.g. nitrogenAvailable)
+        public WaterCycle WaterCycle { get; private set; } // water model of the unit
 
-        public double HeightArea() { return mHeightCells * Constant.HeightPixelArea; } ///< get the resource unit area in m2
+        public double HeightArea() { return mHeightCells * Constant.HeightPixelArea; } // get the resource unit area in m2
         public double InterceptedArea(double leafArea, double lightResponse) { return EffectiveAreaPerWla * leafArea * lightResponse; }
-        public double LeafAreaIndex() { return StockableArea != 0.0 ? TotalLeafArea / StockableArea : 0.0; } ///< Total Leaf Area Index
+        public double LeafAreaIndex() { return StockableArea != 0.0 ? TotalLeafArea / StockableArea : 0.0; } // Total Leaf Area Index
 
-        public ResourceUnitSpecies ResourceUnitSpecies(int species_index) { return Species[species_index]; } ///< get RU-Species-container with index 'species_index' from the RU
-        public void SnagNewYear() { if (Snags != null) Snags.NewYear(); } ///< clean transfer pools
-        public Tree Tree(int index) { return Trees[index]; } ///< get pointer to a tree
-        public void TreeDied() { HasDeadTrees = true; } ///< sets the flag that indicates that the resource unit contains dead trees
+        public ResourceUnitSpecies ResourceUnitSpecies(int species_index) { return Species[species_index]; } // get RU-Species-container with index 'species_index' from the RU
+        public void SnagNewYear() { if (Snags != null) Snags.NewYear(); } // clean transfer pools
+        public Tree Tree(int index) { return Trees[index]; } // get pointer to a tree
+        public void TreeDied() { HasDeadTrees = true; } // sets the flag that indicates that the resource unit contains dead trees
 
         public ResourceUnit(int index)
         {
@@ -93,24 +92,14 @@ namespace iLand.World
             this.Soil = null;
             if (model.ModelSettings.CarbonCycleEnabled)
             {
-                this.Soil = new Soil(model.GlobalSettings, this);
+                this.Soil = new Soil(model, this);
                 this.Snags = new Snag();
                 // class size of snag classes
-                this.Snags.SetupThresholds(model.GlobalSettings.Settings.GetDouble("model.settings.soil.swdDBHClass12"),
-                                           model.GlobalSettings.Settings.GetDouble("model.settings.soil.swdDBHClass23"));
+                // swdDBHClass12: class break between classes 1 and 2 for standing snags(dbh, cm)
+                // swdDBHClass23: class break between classes 2 and 3 for standing snags(dbh, cm)
+                this.Snags.SetupThresholds(model.GlobalSettings.Settings.GetDoubleFromXml(Constant.Setting.Soil.SwhDbhClass12),
+                                           model.GlobalSettings.Settings.GetDoubleFromXml(Constant.Setting.Soil.SwhDbhClass23));
                 this.Snags.Setup(this, model.GlobalSettings); // must call SetupThresholds() first
-
-                XmlHelper xml = model.GlobalSettings.Settings;
-
-                // setup contents of the soil of the RU; use values for C and N (kg/ha)
-                this.Soil.SetInitialState(new CNPool(xml.GetDouble("model.site.youngLabileC", -1),
-                                                     xml.GetDouble("model.site.youngLabileN", -1),
-                                                     xml.GetDouble("model.site.youngLabileDecompRate", -1)),
-                                          new CNPool(xml.GetDouble("model.site.youngRefractoryC", -1),
-                                                     xml.GetDouble("model.site.youngRefractoryN", -1),
-                                                     xml.GetDouble("model.site.youngRefractoryDecompRate", -1)),
-                                          new CNPair(xml.GetDouble("model.site.somC", -1), 
-                                                     xml.GetDouble("model.site.somN", -1)));
             }
 
             if (model.ModelSettings.RegenerationEnabled)
@@ -118,21 +107,18 @@ namespace iLand.World
                 this.SaplingCells = new SaplingCell[Constant.LightCellsPerHectare];
                 for (int cellIndex = 0; cellIndex < this.SaplingCells.Length; ++cellIndex)
                 {
-                    // BUGBUG: SoA
+                    // TODO: SoA
                     this.SaplingCells[cellIndex] = new SaplingCell();
                 }
             }
 
-            // setup variables
-            this.Variables.NitrogenAvailable = model.GlobalSettings.Settings.GetDouble("model.site.availableNitrogen", 40);
-
             // if dynamic coupling of soil nitrogen is enabled, a starting value for available N is calculated
-            if (this.Soil != null && model.ModelSettings.UseDynamicAvailableNitrogen && model.ModelSettings.CarbonCycleEnabled)
-            {
-                this.Soil.ClimateFactor = 1.0;
-                this.Soil.CalculateYear();
-                this.Variables.NitrogenAvailable = Soil.AvailableNitrogen;
-            }
+            // TODO: but starting values are in the environment file?
+            //if (this.Soil != null && model.ModelSettings.UseDynamicAvailableNitrogen && model.ModelSettings.CarbonCycleEnabled)
+            //{
+            //    this.Soil.ClimateDecompositionFactor = 1.0; // TODO: why is this set to 1.0 without restoring the original value?
+            //    this.Soil.CalculateYear(); // BUGBUG: doesn't just calculate nitrogen, runs a year of decomposition on pools?
+            //}
 
             this.AverageAging = 0.0;
             this.HasDeadTrees = false;
@@ -149,19 +135,13 @@ namespace iLand.World
         }
 
         public void AddLightResponse(float leafArea, float lightResponse) { mAggregatedLR += leafArea * lightResponse; }
-        public void AddTreeAging(double leafArea, double agingFactor) { AverageAging += leafArea * agingFactor; } ///< aggregate the tree aging values (weighted by leaf area)
+        public void AddTreeAging(double leafArea, double agingFactor) { AverageAging += leafArea * agingFactor; } // aggregate the tree aging values (weighted by leaf area)
 
         /// AddWeightedLeafArea() is called by each tree to aggregate the total weighted leaf area on a unit
         public void AddWeightedLeafArea(float leafArea, float lri) 
         { 
             mTotalWeightedLeafArea += leafArea * lri; 
             TotalLeafArea += leafArea; 
-        }
-
-        public void SetBoundingBox(RectangleF bb, Model model)
-        {
-            BoundingBox = bb;
-            CornerPointOffset = model.LightGrid.IndexAt(bb.TopLeft());
         }
 
         /// return the sapling cell at given LIF-coordinates
@@ -468,23 +448,23 @@ namespace iLand.World
             if (Soil != null && model.ModelSettings.CarbonCycleEnabled)
             {
                 double area_factor = StockableArea / Constant.RUArea; //conversion factor
-                Variables.CarbonUptake = Statistics.Npp * Constant.BiomassCFraction;
-                Variables.CarbonUptake += Statistics.NppSaplings * Constant.BiomassCFraction;
+                Variables.Npp = Statistics.Npp * Constant.BiomassCFraction;
+                Variables.Npp += Statistics.NppSaplings * Constant.BiomassCFraction;
 
                 double to_atm = Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha
                 to_atm += Soil.FluxToAtmosphere.C * Constant.RUArea / 10.0; // soil: t/ha . t/m2 . kg/ha
-                Variables.CarbonToAtm = to_atm;
+                Variables.CarbonToAtmosphere = to_atm;
 
                 double to_dist = Snags.FluxToDisturbance.C / area_factor;
                 to_dist += Soil.FluxToDisturbance.C * Constant.RUArea / 10.0;
                 double to_harvest = Snags.FluxToExtern.C / area_factor;
 
-                Variables.Nep = Variables.CarbonUptake - to_atm - to_dist - to_harvest; // kgC/ha
+                Variables.Nep = Variables.Npp - to_atm - to_dist - to_harvest; // kgC/ha
 
                 // incremental values....
-                Variables.CumCarbonUptake += Variables.CarbonUptake;
-                Variables.CumCarbonToAtm += Variables.CarbonToAtm;
-                Variables.CumNep += Variables.Nep;
+                Variables.TotalNpp += Variables.Npp;
+                Variables.TotalCarbonToAtmosphere += Variables.CarbonToAtmosphere;
+                Variables.TotalNep += Variables.Nep;
             }
         }
 
@@ -588,14 +568,9 @@ namespace iLand.World
             // because all carbon/nitrogen-flows from trees to the soil are routed through the snag-layer,
             // all soil inputs (litter + deadwood) are collected in the Snag-object.
             Snags.CalculateYear(model);
-            Soil.ClimateFactor = Snags.ClimateFactor; // the climate factor is only calculated once
+            Soil.ClimateDecompositionFactor = Snags.ClimateFactor; // the climate factor is only calculated once
             Soil.SetSoilInput(Snags.LabileFlux, Snags.RefractoryFlux);
             Soil.CalculateYear(); // update the ICBM/2N model
-                                    // use available nitrogen?
-            if (model.ModelSettings.UseDynamicAvailableNitrogen)
-            {
-                Variables.NitrogenAvailable = Soil.AvailableNitrogen;
-            }
 
             // debug output
             //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.CarbonCycle) && !Snags.IsEmpty())

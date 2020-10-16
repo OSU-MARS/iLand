@@ -22,16 +22,16 @@ namespace iLand.World
     {
         // private static readonly MapGridRULock mapGridLock;
 
-        private readonly Dictionary<int, MutableTuple<RectangleF, double>> mRectIndex; ///< holds the extent and area for each map-id
-        private readonly MultiValueDictionary<int, MutableTuple<ResourceUnit, double>> mRUIndex; ///< holds a list of resource units + areas per map-id
-        private readonly MultiValueDictionary<int, int> mNeighborList; ///< a list of neighboring polygons; for each ID all neighboring IDs are stored.
+        private readonly Dictionary<int, MutableTuple<RectangleF, double>> mRectIndex; // holds the extent and area for each map-id
+        private readonly MultiValueDictionary<int, MutableTuple<ResourceUnit, double>> mRUIndex; // holds a list of resource units + areas per map-id
+        private readonly MultiValueDictionary<int, int> mNeighborList; // a list of neighboring polygons; for each ID all neighboring IDs are stored.
 
         public Grid<int> Grid { get; private set; }
-        ///< file name of the grid
+        // file name of the grid
         public string Name { get; private set; }
 
-        public double Area(int id) { return IsValid(id) ? mRectIndex[id].Item2 : 0.0; } ///< return the area (m2) covered by the polygon
-        public RectangleF BoundingBox(int id) { return IsValid(id) ? mRectIndex[id].Item1 : new RectangleF(); } ///< returns the bounding box of a polygon
+        public double Area(int id) { return IsValid(id) ? mRectIndex[id].Item2 : 0.0; } // return the area (m2) covered by the polygon
+        public RectangleF BoundingBox(int id) { return IsValid(id) ? mRectIndex[id].Item1 : new RectangleF(); } // returns the bounding box of a polygon
         public bool IsValid() { return !Grid.IsEmpty(); }
         /// returns true, if 'id' is a valid id in the grid, false otherwise.
         public bool IsValid(int id) { return mRectIndex.ContainsKey(id); }
@@ -71,7 +71,7 @@ namespace iLand.World
             return Grid[lif_grid_coords.X / Constant.LightPerHeightSize, lif_grid_coords.Y / Constant.LightPerHeightSize];
         }
 
-        ///< load from an already present GisGrid
+        // load from an already present GisGrid
         public bool LoadFromGrid(Model model, GisGrid source_grid, bool create_index = true)
         {
             if (model == null)
@@ -180,7 +180,7 @@ namespace iLand.World
             }
         }
 
-        ///< load ESRI style text file
+        // load ESRI style text file
         public bool LoadFromFile(Model model, string fileName, bool createIndex)
         {
             GisGrid gisGrid = new GisGrid();

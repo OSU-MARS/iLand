@@ -123,8 +123,8 @@ namespace iLand.Tools
         public string ExpressionString { get; set; }
         public ExpressionWrapper Wrapper { get; set; }
 
-        public bool IsConstant { get; private set; } ///< returns true if current expression is a constant.
-        public bool IsEmpty { get; private set; } ///< returns true if expression is empty
+        public bool IsConstant { get; private set; } // returns true if current expression is a constant.
+        public bool IsEmpty { get; private set; } // returns true if expression is empty
         /** strict property: if true, variables must be named before execution.
           When strict=true, all variables in the expression must be added by setVar or addVar.
           if false, variable values are assigned depending on occurence. strict is false by default for calls to "calculate()".
@@ -156,7 +156,7 @@ namespace iLand.Tools
             Wrapper = wrapper;
         }
 
-        //public double ExecuteLocked(Model model) ///< thread safe version
+        //public double ExecuteLocked(Model model) // thread safe version
         //{
         //    lock (this.mTokens)
         //    {

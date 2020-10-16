@@ -203,7 +203,7 @@ namespace iLand.Test
 
         private void VerifyKalkalpenModel(Model model)
         {
-            Assert.IsTrue(model.Climates.Count == 1);
+            Assert.IsTrue(model.Environment.ClimatesByName.Count == 1);
             Assert.IsTrue(model.Dem == null);
             Assert.IsTrue(model.HeightGrid.PhysicalExtent.Height == 200.0F + 2.0F * 60.0F);
             Assert.IsTrue(model.HeightGrid.PhysicalExtent.Width == 100.0F + 2.0F * 60.0F);
@@ -231,8 +231,8 @@ namespace iLand.Test
 
         private void VerifyMalcolmKnappClimate(Model model)
         {
-            Assert.IsTrue(model.Climates.Count == 1);
-            foreach (Climate climate in model.Climates)
+            Assert.IsTrue(model.Environment.ClimatesByName.Count == 1);
+            foreach (Climate climate in model.Environment.ClimatesByName.Values)
             {
                 Phenology conifer = climate.Phenology(0);
                 // private phenology variables read from the project file
@@ -265,9 +265,9 @@ namespace iLand.Test
 
         private void VerifyMalcolmKnappDouglasFir(Model model)
         {
-            Assert.IsTrue(model.SpeciesSet().SpeciesCount() == 1);
+            Assert.IsTrue(model.GetFirstSpeciesSet().SpeciesCount() == 1);
 
-            Species douglasFir = model.SpeciesSet().Species(0);
+            Species douglasFir = model.GetFirstSpeciesSet().Species(0);
             Assert.IsTrue(douglasFir.Active);
             // maximumAge  500
             // maximumHeight   90
@@ -341,7 +341,7 @@ namespace iLand.Test
             Assert.IsTrue(Math.Abs(douglasFir.SnagKsw - 0.08) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.SnagKyl - 0.322) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.SnagKyr - 0.1791) < 0.001);
-            Assert.IsTrue(Object.ReferenceEquals(douglasFir.SpeciesSet, model.SpeciesSet()));
+            Assert.IsTrue(Object.ReferenceEquals(douglasFir.SpeciesSet, model.GetFirstSpeciesSet()));
             Assert.IsTrue(Math.Abs(douglasFir.SpecificLeafArea - 5.84) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.TurnoverLeaf - 0.18) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.TurnoverRoot - 0.617284) < 0.001);
@@ -351,6 +351,8 @@ namespace iLand.Test
 
         private void VerifyMalcolmKnappModel(Model model)
         {
+            Assert.IsTrue(model.Environment.UseDynamicAvailableNitrogen == false);
+
             Assert.IsTrue(model.ModelSettings.RegenerationEnabled == false);
             Assert.IsTrue(model.ModelSettings.MortalityEnabled == true);
             Assert.IsTrue(model.ModelSettings.GrowthEnabled == true);
@@ -362,7 +364,6 @@ namespace iLand.Test
             Assert.IsTrue(model.ModelSettings.AirDensity == 1.204);
             Assert.IsTrue(model.ModelSettings.LaiThresholdForClosedStands == 3.0);
             Assert.IsTrue(model.ModelSettings.BoundaryLayerConductance == 0.2);
-            Assert.IsTrue(model.ModelSettings.UseDynamicAvailableNitrogen == false);
             Assert.IsTrue(model.ModelSettings.UseParFractionBelowGroundAllocation == true);
             Assert.IsTrue(model.ModelSettings.TorusMode == true);
             Assert.IsTrue(Math.Abs(model.ModelSettings.Latitude - Global.ToRadians(49.259)) < 0.0001);
@@ -391,34 +392,32 @@ namespace iLand.Test
                 //ru.Soil.ClimateFactor;
                 //ru.Soil.FluxToAtmosphere;
                 //ru.Soil.FluxToDisturbance;
-                // settings from project file are ignored and values from climate file are used 
-                //Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.C - 128.666) < 0.001);
-                //Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.N - 0.08368) < 0.00001);
-                //Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.C - 12.375) < 0.001);
-                //Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.N - 0.6521) < 0.0001);
-                //Assert.IsTrue(ru.Soil.YoungLabile.Weight == 0.227); // TODO: why is decomposition rate read as weight?
-                //Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.C - 33.832) < 0.001);
-                //Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.N - 0.1212) < 0.0001);
-                //Assert.IsTrue(ru.Soil.YoungRefractory.Weight == 0.071); // decomposition rate
-                // Assert.IsTrue(Math.Abs(ru.Soil.AvailableNitrogen - 56.18682579) < 0.001); // BUGBUG: ignored in climate file
                 Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.C - 161.086884) < 0.001);
                 Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.N - 17.73954044) < 0.00001);
                 Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.C - 4.841498397) < 0.001);
                 Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.N - 0.2554353319) < 0.0001);
-                Assert.IsTrue(ru.Soil.YoungLabile.Weight == 0.322);
+                Assert.IsTrue(ru.Soil.YoungLabile.DecompositionRate == 0.322); // TODO: why is decomposition rate read as weight?
                 Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.C - 45.97414423) < 0.001);
                 Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.N - 0.261731921) < 0.0001);
-                Assert.IsTrue(ru.Soil.YoungRefractory.Weight == 0.1790625);
+                Assert.IsTrue(ru.Soil.YoungRefractory.DecompositionRate == 0.1790625); // decomposition rate
+                Assert.IsTrue(Math.Abs(ru.Soil.PlantAvailableNitrogen - 56.18682579) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.C - 161.086884) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.Soil.OrganicMatter.N - 17.73954044) < 0.00001);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.C - 4.841498397) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungLabile.N - 0.2554353319) < 0.0001);
+                Assert.IsTrue(ru.Soil.YoungLabile.DecompositionRate == 0.322);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.C - 45.97414423) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.Soil.YoungRefractory.N - 0.261731921) < 0.0001);
+                Assert.IsTrue(ru.Soil.YoungRefractory.DecompositionRate == 0.1790625);
                 //ru.Variables.CarbonToAtm;
                 //ru.Variables.CarbonUptake;
                 //ru.Variables.CumCarbonToAtm;
                 //ru.Variables.CumCarbonUptake;
                 //ru.Variables.CumNep;
                 //ru.Variables.Nep;
-                Assert.IsTrue(Math.Abs(ru.Variables.NitrogenAvailable - 56.18682579) < 0.0001); // BUGBUG: read from climate file but never used, project file setting is silently ignored
                 Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0); // initially zero
                 Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity));
-                Assert.IsTrue(Math.Abs(ru.WaterCycle.FieldCapacity - 20.006) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.WaterCycle.FieldCapacity - 66.304010358336242) < 0.001);
                 Assert.IsTrue(ru.WaterCycle.Psi.Length == Constant.DaysInLeapYear);
                 foreach (double psi in ru.WaterCycle.Psi)
                 {
@@ -426,7 +425,7 @@ namespace iLand.Test
                 }
                 Assert.IsTrue((ru.WaterCycle.SnowDayRad >= 0.0) && (ru.WaterCycle.SnowDayRad < 5000.0)); // TODO: linkt to snow days?
                 Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear));
-                Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepth - 112.8) < 0.001);
+                Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepth - 1340) < 0.001);
                 Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0); // zero at initialization
                 Assert.IsTrue(ru.WaterCycle.TotalWaterLoss == 0.0); // zero at initialization
             }

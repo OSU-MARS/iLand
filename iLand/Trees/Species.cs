@@ -16,49 +16,49 @@ namespace iLand.Trees
       */
     public class Species
     {
-        private readonly SpeciesStamps mLIPs; ///< ptr to the container of the LIP-pattern
+        private readonly SpeciesStamps mLIPs; // ptr to the container of the LIP-pattern
 
         // biomass allometries:
-        private double mFoliage_a, mFoliage_b;  ///< allometry (biomass = a * dbh^b) for foliage
-        private double mWoody_a, mWoody_b; ///< allometry (biomass = a * dbh^b) for woody compartments aboveground
-        private double mRoot_a, mRoot_b; ///< allometry (biomass = a * dbh^b) for roots (compound, fine and coarse roots as one pool)
-        private double mBranch_a, mBranch_b; ///< allometry (biomass = a * dbh^b) for branches
+        private double mFoliage_a, mFoliage_b;  // allometry (biomass = a * dbh^b) for foliage
+        private double mWoody_a, mWoody_b; // allometry (biomass = a * dbh^b) for woody compartments aboveground
+        private double mRoot_a, mRoot_b; // allometry (biomass = a * dbh^b) for roots (compound, fine and coarse roots as one pool)
+        private double mBranch_a, mBranch_b; // allometry (biomass = a * dbh^b) for branches
         // cn-ratios
-        private double mBarkThicknessFactor; ///< multiplier to estimate bark thickness (cm) from dbh
+        private double mBarkThicknessFactor; // multiplier to estimate bark thickness (cm) from dbh
 
         // height-diameter-relationships
-        private readonly Expression mHDlow; ///< minimum HD-relation as f(d) (open grown tree)
-        private readonly Expression mHDhigh; ///< maximum HD-relation as f(d)
+        private readonly Expression mHDlow; // minimum HD-relation as f(d) (open grown tree)
+        private readonly Expression mHDhigh; // maximum HD-relation as f(d)
         // stem density and taper
-        private double mFormFactor; ///< taper form factor of the stem [-] used for volume / stem-mass calculation calculation
+        private double mFormFactor; // taper form factor of the stem [-] used for volume / stem-mass calculation calculation
         // mortality
-        private double mDeathProb_stress; ///< max. prob. of death per year when tree suffering maximum stress
+        private double mDeathProb_stress; // max. prob. of death per year when tree suffering maximum stress
         // Aging
-        private double mMaximumAge; ///< maximum age of species (years)
-        private double mMaximumHeight; ///< maximum height of species (m) for aging
+        private double mMaximumAge; // maximum age of species (years)
+        private double mMaximumHeight; // maximum height of species (m) for aging
         private readonly Expression mAging;
         // environmental responses
-        private double mRespVpdExponent; ///< exponent in vpd response calculation (Mkela 2008)
-        private double mRespTempMin; ///< temperature response calculation offset
-        private double mRespTempMax; ///< temperature response calculation: saturation point for temp. response
-        private double mRespNitrogenClass; ///< nitrogen response class (1..3). fractional values (e.g. 1.2) are interpolated.
-        private double mLightResponseClass; ///< light response class (1..5) (1=shade intolerant)
+        private double mRespVpdExponent; // exponent in vpd response calculation (Mkela 2008)
+        private double mRespTempMin; // temperature response calculation offset
+        private double mRespTempMax; // temperature response calculation: saturation point for temp. response
+        private double mRespNitrogenClass; // nitrogen response class (1..3). fractional values (e.g. 1.2) are interpolated.
+        private double mLightResponseClass; // light response class (1..5) (1=shade intolerant)
         // regeneration
-        private int mMaturityYears; ///< a tree produces seeds if it is older than this parameter
-        private double mSeedYearProbability; ///< probability that a year is a seed year (=1/avg.timespan between seedyears)
+        private int mMaturityYears; // a tree produces seeds if it is older than this parameter
+        private double mSeedYearProbability; // probability that a year is a seed year (=1/avg.timespan between seedyears)
         // regeneration - seed dispersal
-        private double mTM_as1; ///< seed dispersal paramaters (treemig)
-        private double mTM_as2; ///< seed dispersal paramaters (treemig)
-        private double mTM_ks; ///< seed dispersal paramaters (treemig)
-        private readonly Expression mSerotiny; ///< function that decides (probabilistic) if a tree is serotinous; empty: serotiny not active
+        private double mTM_as1; // seed dispersal paramaters (treemig)
+        private double mTM_as2; // seed dispersal paramaters (treemig)
+        private double mTM_ks; // seed dispersal paramaters (treemig)
+        private readonly Expression mSerotiny; // function that decides (probabilistic) if a tree is serotinous; empty: serotiny not active
 
         // properties
         /// @property id 4-character unique identification of the tree species
         public string ID { get; private set; }
         /// the full name (e.g. Picea abies) of the species
         public string Name { get; private set; }
-        public int Index { get; private set; } ///< unique index of species within current set
-        public int PhenologyClass { get; private set; } ///< phenology class defined in project file. class 0 = evergreen
+        public int Index { get; private set; } // unique index of species within current set
+        public int PhenologyClass { get; private set; } // phenology class defined in project file. class 0 = evergreen
         public bool IsConiferous { get; private set; }
         public bool IsEvergreen { get; private set; }
         public bool IsSeedYear { get; private set; }
@@ -67,29 +67,29 @@ namespace iLand.Trees
         public double CNRatioFineRoot { get; private set; }
         public double CNRatioWood { get; private set; }
         // turnover rates
-        public double TurnoverLeaf { get; private set; } ///< yearly turnover rate leafs
-        public double TurnoverRoot { get; private set; } ///< yearly turnover rate root
+        public double TurnoverLeaf { get; private set; } // yearly turnover rate leafs
+        public double TurnoverRoot { get; private set; } // yearly turnover rate root
 
         // mortality
-        public double DeathProbabilityIntrinsic { get; private set; } ///< prob. of intrinsic death per year [0..1]
-        public double FecundityM2 { get; private set; } ///< "surviving seeds" (cf. Moles et al) per m2, see also http://iland.boku.ac.at/fecundity
-        public double FecunditySerotiny { get; private set; } ///< multiplier that increases fecundity for post-fire seed rain of serotinous species
-        public double MaxCanopyConductance { get; private set; } ///< maximum canopy conductance in m/s
+        public double DeathProbabilityIntrinsic { get; private set; } // prob. of intrinsic death per year [0..1]
+        public double FecundityM2 { get; private set; } // "surviving seeds" (cf. Moles et al) per m2, see also http://iland.boku.ac.at/fecundity
+        public double FecunditySerotiny { get; private set; } // multiplier that increases fecundity for post-fire seed rain of serotinous species
+        public double MaxCanopyConductance { get; private set; } // maximum canopy conductance in m/s
         public double NonSeedYearFraction { get; private set; }
         public double PsiMin { get; private set; }
 
         // snags
-        public double SnagKsw { get; private set; } ///< standing woody debris (swd) decomposition rate
-        public double SnagHalflife { get; private set; } ///< half-life-period of standing snags (years)
-        public double SnagKyl { get; private set; } ///< decomposition rate for labile matter (litter) used in soil model
-        public double SnagKyr { get; private set; } ///< decomposition rate for refractory matter (woody) used in soil model
+        public double SnagKsw { get; private set; } // standing woody debris (swd) decomposition rate
+        public double SnagHalflife { get; private set; } // half-life-period of standing snags (years)
+        public double SnagKyl { get; private set; } // decomposition rate for labile matter (litter) used in soil model
+        public double SnagKyr { get; private set; } // decomposition rate for refractory matter (woody) used in soil model
 
         // growth
-        public double SpecificLeafArea { get; private set; } ///< conversion factor from kg OTS to m2 LeafArea
-        public double VolumeFactor { get; private set; } ///< factor for volume calculation: V = factor * D^2*H (incorporates density and the form of the bole)
-        public double WoodDensity { get; private set; } ///< density of stem wood [kg/m3]
+        public double SpecificLeafArea { get; private set; } // conversion factor from kg OTS to m2 LeafArea
+        public double VolumeFactor { get; private set; } // factor for volume calculation: V = factor * D^2*H (incorporates density and the form of the bole)
+        public double WoodDensity { get; private set; } // density of stem wood [kg/m3]
 
-        public double FinerootFoliageRatio { get; private set; } ///< ratio of fineroot mass (kg) to foliage mass (kg)
+        public double FinerootFoliageRatio { get; private set; } // ratio of fineroot mass (kg) to foliage mass (kg)
         public EstablishmentParameters EstablishmentParameters { get; private set; }
         public SaplingGrowthParameters SaplingGrowthParameters { get; private set; }
         public SeedDispersal SeedDispersal { get; set; }

@@ -51,10 +51,10 @@ namespace iLand.Output
         public override void Setup(GlobalSettings globalSettings)
         {
             // use a condition for to control execuation for the current year
-            string condition = globalSettings.Settings.GetString(".condition", "");
+            string condition = globalSettings.Settings.GetStringFromXml(".condition", "");
             mFilter.SetExpression(condition);
 
-            condition = globalSettings.Settings.GetString(".conditionRU", "");
+            condition = globalSettings.Settings.GetStringFromXml(".conditionRU", "");
             mResourceUnitFilter.SetExpression(condition);
         }
 
@@ -119,9 +119,9 @@ namespace iLand.Output
                     insertRow.Parameters[7].Value = -to_dist; // disturbance
                     insertRow.Parameters[8].Value = -to_harvest; // management loss
                     insertRow.Parameters[9].Value = nep; // nep
-                    insertRow.Parameters[10].Value = ru.Variables.CumCarbonUptake;
-                    insertRow.Parameters[11].Value = ru.Variables.CumCarbonToAtm;
-                    insertRow.Parameters[12].Value = ru.Variables.CumNep;
+                    insertRow.Parameters[10].Value = ru.Variables.TotalNpp;
+                    insertRow.Parameters[11].Value = ru.Variables.TotalCarbonToAtmosphere;
+                    insertRow.Parameters[12].Value = ru.Variables.TotalNep;
                     insertRow.ExecuteNonQuery();
                 }
 
@@ -133,9 +133,9 @@ namespace iLand.Output
                 accumulatedValues[4] += -to_dist * areaFactor; // disturbance
                 accumulatedValues[5] += -to_harvest * areaFactor; // management loss
                 accumulatedValues[6] += nep * areaFactor; // net ecosystem productivity
-                accumulatedValues[7] += ru.Variables.CumCarbonUptake * areaFactor; // cum. NPP
-                accumulatedValues[8] += ru.Variables.CumCarbonToAtm * areaFactor; // cum. Rh
-                accumulatedValues[9] += ru.Variables.CumNep * areaFactor; // cum. NEP
+                accumulatedValues[7] += ru.Variables.TotalNpp * areaFactor; // cum. NPP
+                accumulatedValues[8] += ru.Variables.TotalCarbonToAtmosphere * areaFactor; // cum. Rh
+                accumulatedValues[9] += ru.Variables.TotalNep * areaFactor; // cum. NEP
             }
 
             // write landscape sums

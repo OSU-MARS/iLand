@@ -98,7 +98,7 @@ namespace iLand.Output
 
         public override void Setup(GlobalSettings globalSettings)
         {
-            string filter = globalSettings.Settings.GetString(".filter", "");
+            string filter = globalSettings.Settings.GetStringFromXml(".filter", "");
             this.filter.SetExpression(filter);
         }
     }

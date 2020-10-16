@@ -2,7 +2,7 @@
 
 namespace iLand
 {
-    internal class Constant
+    internal static class Constant
     {
         public const double AutotrophicRespiration = 0.47;
         public const double BiomassCFraction = 0.5; // fraction of (dry) biomass which is carbon
@@ -19,24 +19,120 @@ namespace iLand
         public const double RUArea = 10000.0; // area of a resource unit (m2)
         public const int RUSize = 100; // size of resource unit, m
         public const int SeedmapSize = 20; // size of seedmap cell, m
+        public const int TimeStepInYears = 1;
 
         public const double TwoPi = 2.0 * Math.PI;
         public const double Ln2 = 0.693147180559945;
         public const double QuarterPi = 0.25 * Math.PI;
         public const double Sqrt2 = 1.4142135623731;
 
-        public class Default
+        public static class Default
         {
-            public const double CarbonDioxidePpm = 400.0;
-            public const int ClimateYearsToLoadPerChunk = 100;
+            public static class Climate
+            {
+                public const double CarbonDioxidePpm = 400.0;
+                public const int YearsPerLoad = 100;
+                public const double PrecipitationMultiplier = 1.0;
+                public const double TemperatureShift = 0.0;
+            }
+
+            public static class Grass
+            {
+                public const double LifThreshold = 0.2;
+            }
+
+            public static class Soil
+            {
+                public const double AnnualNitrogenDeposition = 0.0;
+                public const double Leaching = 0.15;
+                public const double Qb = 5.0;
+                public const bool UseDynamicAvailableNitrogen = false;
+            }
+
+            public static class WaterCycle
+            {
+                public const double NeedleStorage = 4.0;
+                public const double BroadleafStorage = 2.0;
+                public const double SnowmeltTemperature = 0.0;
+            }
         }
 
-        public class Stamp
+        public static class Setting
+        {
+            public const string SpeciesTable = "model.species.source";
+
+            public static class Climate
+            {
+                public const string CarbonDioxidePpm = "model.climate.co2concentration";
+                public const string Name = "model.climate.tableName";
+                public const string PrecipitationMultiplier = "precipitationShift";
+                public const string TemperatureShift = "temperatureShift";
+                public const string YearsPerLoad = "batchYears";
+            }
+
+            public static class Grass
+            {
+                public const string Effect = "model.settings.grass.grassEffect";
+                public const string LifThreshold = "model.settings.grass.LIFThreshold";
+                public const string MaxTimeLag = "model.settings.grass.maxTimeLag";
+                public const string Potential = "model.settings.grass.grassPotential";
+                public const string Type = "model.settings.grass.type";
+            }
+
+            public static class Snag
+            {
+                public const string OtherC = "model.initialization.snags.otherC";
+                public const string OtherCN = "model.initialization.snags.otherCN";
+                public const string SwdC = "model.initialization.snags.swdC";
+                public const string SwdCN = "model.initialization.snags.swdCN";
+                public const string SwdDecompositionRate = "model.initialization.snags.swdDecompRate";
+                public const string SwdHalfLife = "model.initialization.snags.swdHalfLife";
+                public const string SwdN = "model.initialization.snags.swdCount";
+            }
+
+            public static class Soil
+            {
+                public const string AnnualNitrogenDeposition = "model.settings.soil.nitrogenDeposition";
+                public const string AvailableNitrogen = "model.site.availableNitrogen";
+                public const string Depth = "model.site.soilDepth";
+                public const string El = "model.settings.soil.el";
+                public const string Er = "model.settings.soil.er";
+                public const string Leaching = "model.settings.soil.leaching";
+                public const string HumificationRate = "model.site.soilHumificationRate";
+                public const string OrganicMatterC = "model.site.somC";
+                public const string OrganicMatterDecompositionRate = "model.site.somDecompRate";
+                public const string OrganincMatterN = "model.site.somN";
+                public const string PercentClay = "model.site.pctClay";
+                public const string PercentSand = "model.site.pctSand";
+                public const string PercentSilt = "model.site.pctSilt";
+                public const string Qb = "model.settings.soil.qb";
+                public const string Qh = "model.settings.soil.qh";
+
+                public const string SwhDbhClass12 = "model.settings.soil.swdDBHClass12";
+                public const string SwhDbhClass23 = "model.settings.soil.swdDBHClass23";
+                public const string UseDynamicAvailableNitrogen = "model.settings.soil.useDynamicAvailableNitrogen";
+                public const string YoungLabileC = "model.site.youngLabileC";
+                public const string YoungLabileDecompositionRate = "model.site.youngLabileDecompRate";
+                public const string YoungLabileN = "model.site.youngLabileN";
+                public const string YoungRefractoryC = "model.site.youngRefractoryC";
+                public const string YoungRefractoryDecompositionRate = "model.site.youngRefractoryDecompRate";
+                public const string YoungRefractoryN = "model.site.youngRefractoryN";
+            }
+
+            public static class WaterCycle
+            {
+                public const string NeedleStorage = "model.settings.interceptionStorageNeedle";
+                public const string BroadleafStorage = "model.settings.interceptionStorageBroadleaf";
+                public const string SnowmeltTemperature = "model.settings.snowMeltTemperature";
+            }
+        }
+
+        public static class Stamp
         {
             // constants: comments may be wrong; conflicting information in C++
-            public const int DbhClassCount = 70; ///< class count, see StampContainer.GetKey(): for lower dbhs classes are smaller
-            public const int HeightDiameterClassMinimum = 35; ///< hd classes offset is 35: class 0 = 35-45 cm, class 1 = 45-55, ...
-            public const int HeightDiameterClassCount = 16; ///< class count. highest class:  185-195 cm
+            public const int DbhClassCount = 70; // class count, see StampContainer.GetKey(): for lower dbhs classes are smaller
+            public const int HeightDiameterClassMinimum = 35; // hd classes offset is 35: class 0 = 35-45 cm, class 1 = 45-55, ...
+            public const int HeightDiameterClassCount = 16; // class count. highest class:  185-195 cm
             public const int HeightDiameterClassSize = 10;
         }
     }

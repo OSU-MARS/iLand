@@ -15,21 +15,21 @@ namespace iLand.Trees
         */
     public class Establishment
     {
-        private Climate mClimate; ///< link to the current climate
-        private ResourceUnitSpecies mRUS; ///< link to the resource unit species (links to production data and species respones)
+        private Climate mClimate; // link to the current climate
+        private ResourceUnitSpecies mRUS; // link to the resource unit species (links to production data and species respones)
         // TACA switches
         private double mSumLIFvalue;
         private int mLIFcount;
 
-        public double MeanSeedDensity { get; private set; } ///< average seed density on the RU
-        public double AbioticEnvironment { get; private set; } ///< integrated value of abiotic environment (i.e.: TACA-climate + total iLand environment)
-        public int NumberEstablished { get; private set; } ///< return number of newly established trees in the current year
-        public bool TacaMinTemp { get; private set; } ///< TACA flag for minimum temperature
-        public bool TacaChill { get; private set; } ///< TACA flag chilling requirement
-        public bool TacaGdd { get; private set; } ///< TACA flag for growing degree days
-        public bool TacaFrostFree { get; private set; } ///< TACA flag for number of frost free days
-        public int TacaFrostDaysAfterBudburst { get; private set; } ///< number of frost days after bud birst
-        public double WaterLimitation { get; private set; } ///< scalar value between 0 and 1 (1: no limitation, 0: no establishment)
+        public double MeanSeedDensity { get; private set; } // average seed density on the RU
+        public double AbioticEnvironment { get; private set; } // integrated value of abiotic environment (i.e.: TACA-climate + total iLand environment)
+        public int NumberEstablished { get; private set; } // return number of newly established trees in the current year
+        public bool TacaMinTemp { get; private set; } // TACA flag for minimum temperature
+        public bool TacaChill { get; private set; } // TACA flag chilling requirement
+        public bool TacaGdd { get; private set; } // TACA flag for growing degree days
+        public bool TacaFrostFree { get; private set; } // TACA flag for number of frost free days
+        public int TacaFrostDaysAfterBudburst { get; private set; } // number of frost days after bud birst
+        public double WaterLimitation { get; private set; } // scalar value between 0 and 1 (1: no limitation, 0: no establishment)
 
         public Establishment()
         {
@@ -41,7 +41,7 @@ namespace iLand.Trees
             Setup(climate, rus);
         }
 
-        public double MeanLifValue() { return mLIFcount > 0 ? mSumLIFvalue / (double)mLIFcount : 0.0; } ///< average LIF value of LIF pixels where establishment is tested
+        public double MeanLifValue() { return mLIFcount > 0 ? mSumLIFvalue / (double)mLIFcount : 0.0; } // average LIF value of LIF pixels where establishment is tested
 
         public void Setup(Climate climate, ResourceUnitSpecies rus)
         {

@@ -34,7 +34,7 @@ namespace iLand.Output
         public override void Setup(GlobalSettings globalSettings)
         {
             // use a condition for to control execuation for the current year
-            string condition = globalSettings.Settings.GetString(".condition", "");
+            string condition = globalSettings.Settings.GetStringFromXml(".condition", "");
             mFilter.SetExpression(condition);
         }
 

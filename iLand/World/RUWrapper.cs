@@ -45,7 +45,7 @@ namespace iLand.World
             {
                 case 0: return ResourceUnit.ID; // id from grid
                 case 1: return ResourceUnit.EffectiveAreaPerWla;
-                case 2: return ResourceUnit.Variables.NitrogenAvailable;
+                case 2: return ResourceUnit.Soil.PlantAvailableNitrogen;
                 case 3: return ResourceUnit.WaterCycle.SoilDepth;
                 case 4: return ResourceUnit.StockedArea;
                 case 5: return ResourceUnit.StockableArea;
