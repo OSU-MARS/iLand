@@ -29,12 +29,12 @@ namespace iLand.Tools
         public abstract ReadOnlyCollection<string> GetVariablesList();
 
         // must be overloaded!
-        public virtual double Value(int variableIndex, GlobalSettings globalSettings)
+        public virtual double Value(Simulation.Model model, int variableIndex)
         {
             return variableIndex switch
             {
                 // year
-                0 => (double)globalSettings.CurrentYear,
+                0 => (double)model.ModelSettings.CurrentYear,
                 _ => throw new NotSupportedException(string.Format("expression wrapper reached base with invalid index index {0}", variableIndex)),
             };
         }
@@ -44,10 +44,10 @@ namespace iLand.Tools
             return GetVariablesList().IndexOf(variableName);
         }
 
-        public double ValueByName(string variableName, GlobalSettings globalSettings)
+        public double ValueByName(Simulation.Model model, string variableName)
         {
             int idx = GetVariableIndex(variableName);
-            return Value(idx, globalSettings);
+            return Value(model, idx);
         }
     }
 }

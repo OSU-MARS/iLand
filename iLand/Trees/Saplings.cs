@@ -229,7 +229,7 @@ namespace iLand.Trees
             for (int i = 0; i < ru.Species.Count; ++i)
             {
                 ResourceUnitSpecies species = ru.Species[i];
-                species.SaplingStats.Calculate(species.Species, ru, model.GlobalSettings);
+                species.SaplingStats.Calculate(species.Species, ru, model);
                 species.Statistics.Add(species.SaplingStats);
             }
 
@@ -378,7 +378,7 @@ namespace iLand.Trees
             Species species = rus.Species;
 
             // (1) calculate height growth potential for the tree (uses linerization of expressions...)
-            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model, tree.Height);
+            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(model, tree.Height);
             double delta_h_pot = h_pot - tree.Height;
 
             // (2) reduce height growth potential with species growth response f_env_yr and with light state (i.e. LIF-value) of home-pixel.

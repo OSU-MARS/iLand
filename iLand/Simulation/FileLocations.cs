@@ -1,12 +1,11 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Output;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
-/** @class GlobalSettings
+/** @class FileLocations
   This class contains various global structures/definitions. This class is a Singleton and accessed via the static instance() function.
   @par various (textual) meta data (SettingMetaData)
 
@@ -58,56 +57,25 @@ using System.IO;
   @endcode
 
 */
-namespace iLand.Tools
+namespace iLand.Simulation
 {
-    public class GlobalSettings : IDisposable
+    public class FileLocations
     {
-        private bool isDisposed;
         private readonly Dictionary<string, string> mFilePaths; // storage for file paths
         private int mLoglevel;
 
-        public int CurrentYear { get; set; }
-        public SqliteConnection DatabaseClimate { get; private set; }
-        public SqliteConnection DatabaseInput { get; private set; }
-        public SqliteConnection DatabaseOutput { get; private set; }
-
-        public OutputManager OutputManager { get; private set; }
         //public SystemStatistics SystemStatistics { get; private set; }
 
-        public GlobalSettings()
+        public FileLocations()
         {
             // lazy init
             // this.databaseClimate
             // this.databaseIn
             // this.databaseOut
-            this.isDisposed = false;
             this.mFilePaths = new Dictionary<string, string>();
             this.mLoglevel = 0;
 
-            this.OutputManager = new OutputManager();
             //this.SystemStatistics = new SystemStatistics();
-        }
-
-        public SqliteConnection DatabaseSnapshot() { throw new NotImplementedException(); }
-        public SqliteConnection DatabaseSnapshotStand() { throw new NotImplementedException(); }
-
-        public void Dispose()
-        {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!isDisposed)
-            {
-                if (disposing)
-                {
-                    this.CloseDatabaseConnections();
-                }
-
-                isDisposed = true;
-            }
         }
 
         public string GetPath(string fileName, string type = "home")
@@ -132,35 +100,9 @@ namespace iLand.Tools
             return System.IO.Path.Combine(directoryPath, fileName);
         }
 
-        // Database connections
-        public void CloseDatabaseConnections() // shutdown and clear connections
+        public SqliteConnection GetDatabaseConnection(string databaseFilePath, bool openReadOnly)
         {
-            if (this.DatabaseClimate != null)
-            {
-                this.DatabaseClimate.Dispose();
-                this.DatabaseClimate = null;
-            }
-            if (this.DatabaseInput != null)
-            {
-                this.DatabaseInput.Dispose();
-                this.DatabaseInput = null;
-            }
-            if (this.DatabaseOutput != null)
-            {
-                this.DatabaseOutput.Dispose();
-                this.DatabaseOutput = null;
-            }
-        }
-
-        public bool SetupDatabaseConnection(string dbname, string databaseFilePath, bool fileMustExist)
-        {
-            if ((String.Equals(dbname, "in", StringComparison.Ordinal) == false) &&
-                (String.Equals(dbname, "out", StringComparison.Ordinal) == false) &&
-                (String.Equals(dbname, "climate", StringComparison.Ordinal) == false))
-            {
-                throw new ArgumentOutOfRangeException(nameof(dbname));
-            }
-            if (fileMustExist)
+            if (openReadOnly)
             {
                 if (File.Exists(databaseFilePath) == false)
                 {
@@ -173,12 +115,12 @@ namespace iLand.Tools
             SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
             {
                 DataSource = databaseFilePath,
-                Mode = fileMustExist ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
+                Mode = openReadOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
             };
-            SqliteConnection db = new SqliteConnection(connectionString.ConnectionString);
+            SqliteConnection connection = new SqliteConnection(connectionString.ConnectionString);
             // Debug.WriteLine("setup database connection " + dbname + " to " + databaseFilePath);
-            db.Open();
-            if (!fileMustExist)
+            connection.Open();
+            if (openReadOnly == false)
             {
                 // performance settings for output databases (http://www.sqlite.org/pragma.html)
                 // Databases are typically expensive to create and maintain so SQLite defaults to conservative disk interactions. iLand
@@ -186,33 +128,19 @@ namespace iLand.Tools
                 // caution can be exchanged for speed. For example, journal_mode = memory, synchronous = off, and temp_store = memory 
                 // make the model unit tests run 4-5x times faster than default settings.
                 // pragma synchronous cannot be changed within a transaction
-                using SqliteCommand synchronization = new SqliteCommand("pragma synchronous(off)", db);
+                using SqliteCommand synchronization = new SqliteCommand("pragma synchronous(off)", connection);
                 synchronization.ExecuteNonQuery();
 
-                using SqliteTransaction transaction = db.BeginTransaction();
+                using SqliteTransaction transaction = connection.BeginTransaction();
                 // little to no difference between journal_mode = memory and journal_mode = off
-                using SqliteCommand journalMode = new SqliteCommand("pragma journal_mode(memory)", db, transaction);
+                using SqliteCommand journalMode = new SqliteCommand("pragma journal_mode(memory)", connection, transaction);
                 journalMode.ExecuteNonQuery();
-                using SqliteCommand tempStore = new SqliteCommand("pragma temp_store(memory)", db, transaction);
+                using SqliteCommand tempStore = new SqliteCommand("pragma temp_store(memory)", connection, transaction);
                 tempStore.ExecuteNonQuery();
                 transaction.Commit();
             }
 
-            switch (dbname)
-            {
-                case "climate":
-                    this.DatabaseClimate = db;
-                    break;
-                case "in":
-                    this.DatabaseInput = db;
-                    break;
-                case "out":
-                    this.DatabaseOutput = db;
-                    break;
-                default:
-                    throw new NotSupportedException();
-            }
-            return true;
+            return connection;
         }
 
         // true, if detailed debug information is logged

@@ -152,7 +152,7 @@ namespace iLand.Trees
             };
             string stampFile = reader.LipFile();
             // load stamps
-            species.mLIPs.Load(model.GlobalSettings.GetPath(stampFile, "lip"));
+            species.mLIPs.Load(model.Files.GetPath(stampFile, "lip"));
             // attach writer stamps to reader stamps
             species.mLIPs.AttachReaderStamps(species.SpeciesSet.ReaderStamps);
             if (model.Project.Model.Parameter.DebugDumpStamps)
@@ -258,7 +258,7 @@ namespace iLand.Trees
             species.DeathProbabilityIntrinsic = 1.0 - Math.Pow(p_lucky, 1.0 / species.mMaximumAge);
             species.mDeathProb_stress = p_lucky_stress;
 
-            if (model.GlobalSettings.LogDebug())
+            if (model.Files.LogDebug())
             {
                 Debug.WriteLine("species " + species.Name + " probStress " + p_lucky_stress + " resulting probability: " + species.mDeathProb_stress);
             }
@@ -371,7 +371,7 @@ namespace iLand.Trees
             // harmonic mean: http://en.wikipedia.org/wiki/Harmonic_mean
             double x = 1.0 - 2.0 / (1.0 / (1.0 - rel_height) + 1.0 / (1.0 - rel_age)); // Note:
 
-            double aging_factor = mAging.Calculate(model, x);
+            double aging_factor = mAging.Evaluate(model, x);
 
             return Global.Limit(aging_factor, 0.0, 1.0); // limit to [0..1]
         }
@@ -415,7 +415,7 @@ namespace iLand.Trees
                 return false;
             }
             // the function result (e.g. from a logistic regression model, e.g. Schoennagel 2013) is interpreted as probability
-            double pSerotinous = mSerotiny.Calculate(model, age);
+            double pSerotinous = mSerotiny.Evaluate(model, age);
             if (model.RandomGenerator.Random() < pSerotinous)
             {
                 return true;
@@ -435,7 +435,7 @@ namespace iLand.Trees
             {
                 // decide whether current year is a seed year
                 IsSeedYear = (model.RandomGenerator.Random() < mSeedYearProbability);
-                if (IsSeedYear && model.GlobalSettings.LogInfo())
+                if (IsSeedYear && model.Files.LogInfo())
                 {
                     Debug.WriteLine("species " + ID + " has a seed year.");
                 }
@@ -446,8 +446,8 @@ namespace iLand.Trees
 
         public void GetHeightDiameterRatioLimits(Simulation.Model model, double dbh, out double rLowHD, out double rHighHD)
         {
-            rLowHD = mHDlow.Calculate(model, dbh);
-            rHighHD = mHDhigh.Calculate(model, dbh);
+            rLowHD = mHDlow.Evaluate(model, dbh);
+            rHighHD = mHDhigh.Evaluate(model, dbh);
         }
 
         /** vpdResponse calculates response on vpd.

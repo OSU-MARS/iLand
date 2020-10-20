@@ -257,7 +257,7 @@ namespace iLand.Trees
                     ratio = 0.0;
                 }
                 fw_month[m] = 1.0 / (1.0 + 30.0 * Math.Exp(-8.5 * ratio));
-                if (model.GlobalSettings.LogDebug())
+                if (model.Files.LogDebug())
                 {
                     Debug.WriteLine("month " + m + " PET " + mRU.WaterCycle.ReferenceEvapotranspiration()[m] + " prec " + mRU.Climate.PrecipitationByMonth[m]);
                 }

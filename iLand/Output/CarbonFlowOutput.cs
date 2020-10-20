@@ -63,13 +63,13 @@ namespace iLand.Output
                 return;
             }
             // global condition
-            if ((mFilter.IsEmpty == false) && (mFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0))
+            if ((mFilter.IsEmpty == false) && (mFilter.Evaluate(model, model.ModelSettings.CurrentYear) == 0.0))
             {
                 return;
             }
             bool logIndividualResourceUnits = true;
             // switch off details if this is indicated in the conditionRU option
-            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
+            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Evaluate(model, model.ModelSettings.CurrentYear) == 0.0)
             {
                 logIndividualResourceUnits = false;
             }
@@ -106,7 +106,7 @@ namespace iLand.Output
 
                 if (logIndividualResourceUnits)
                 {
-                    insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                    insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
                     insertRow.Parameters[1].Value = ru.Index;
                     insertRow.Parameters[2].Value = ru.ID;
                     insertRow.Parameters[3].Value = areaFactor;
@@ -141,7 +141,7 @@ namespace iLand.Output
             {
                 return;
             }
-            insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+            insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
             insertRow.Parameters[1].Value = -1;
             insertRow.Parameters[2].Value = -1; // codes -1/-1 for landscape level
             insertRow.Parameters[3].Value = accumulatedValues[0]; // stockable area [m2]

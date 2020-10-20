@@ -1131,13 +1131,13 @@ namespace iLand.Trees
                 reason = MortalityCause.CutDown;
             }
             // create output for tree removals
-            TreeRemovedOutput treeRemovedOutput = model.GlobalSettings.OutputManager.TreeRemoved;
+            TreeRemovedOutput treeRemovedOutput = model.Outputs.TreeRemoved;
             if (treeRemovedOutput != null && treeRemovedOutput.IsEnabled)
             {
                 treeRemovedOutput.AddTree(model, this, reason);
             }
 
-            LandscapeRemovedOutput landscapeRemovedOutput = model.GlobalSettings.OutputManager.LandscapeRemoved;
+            LandscapeRemovedOutput landscapeRemovedOutput = model.Outputs.LandscapeRemoved;
             if (landscapeRemovedOutput != null && landscapeRemovedOutput.IsEnabled)
             {
                 landscapeRemovedOutput.AddTree(this, reason);

@@ -97,7 +97,7 @@ namespace iLand.Input
             mHeightGridTries = model.Project.Model.Initialization.HeightGrid.MaxTries;
             if (heightGridEnabled)
             {
-                string initHeightGridFile = model.GlobalSettings.GetPath(model.Project.Model.Initialization.HeightGrid.FileName);
+                string initHeightGridFile = model.Files.GetPath(model.Project.Model.Initialization.HeightGrid.FileName);
                 Debug.WriteLine("initialization: using predefined tree heights map " + initHeightGridFile);
 
                 MapGrid p = new MapGrid(model, initHeightGridFile, false);
@@ -143,7 +143,7 @@ namespace iLand.Input
                         continue;
                     }
                     LoadInitFile(fileName, type, 0, model, ru);
-                    if (model.GlobalSettings.LogDebug())
+                    if (model.Files.LogDebug())
                     {
                         Debug.WriteLine("loaded " + fileName + " on " + ru.BoundingBox + ", " + ru.Trees.Count + "trees.");
                     }
@@ -159,7 +159,7 @@ namespace iLand.Input
                 {
                     throw new NotSupportedException("Stand-Initialization: model.initialization.mode is 'map' but there is no valid stand grid defined (model.world.standGrid)");
                 }
-                string mapFileName = model.GlobalSettings.GetPath(model.Project.Model.Initialization.MapFileName);
+                string mapFileName = model.Files.GetPath(model.Project.Model.Initialization.MapFileName);
 
                 CsvFile map_file = new CsvFile(mapFileName);
                 if (map_file.RowCount == 0)
@@ -179,7 +179,7 @@ namespace iLand.Input
                     if (key > 0)
                     {
                         file_name = map_file.GetValue(i, ivalue);
-                        if (model.GlobalSettings.LogDebug())
+                        if (model.Files.LogDebug())
                         {
                             Debug.WriteLine("loading " + file_name + " for grid id " + key);
                         }
@@ -197,7 +197,7 @@ namespace iLand.Input
             // standgrid mode: load one large init file
             if (initializationMode == "standgrid")
             {
-                fileName = model.GlobalSettings.GetPath(fileName, "init");
+                fileName = model.Files.GetPath(fileName, "init");
                 if (!File.Exists(fileName))
                 {
                     throw new NotSupportedException(String.Format("load-ini-file: file '{0}' does not exist.", fileName));
@@ -209,14 +209,14 @@ namespace iLand.Input
 
                 // setup the random distribution
                 string density_func = model.Project.Model.Initialization.RandomFunction;
-                if (model.GlobalSettings.LogDebug())
+                if (model.Files.LogDebug())
                 {
                     Debug.WriteLine("density function: " + density_func);
                 }
                 if (mRandom == null || (mRandom.DensityFunction != density_func))
                 {
                     mRandom = new RandomCustomPdf(model, density_func);
-                    if (model.GlobalSettings.LogDebug())
+                    if (model.Files.LogDebug())
                     {
                         Debug.WriteLine("new probabilty density function: " + density_func);
                     }
@@ -260,7 +260,7 @@ namespace iLand.Input
                 {
                     return;
                 }
-                filename = model.GlobalSettings.GetPath(filename, "init");
+                filename = model.Files.GetPath(filename, "init");
                 if (File.Exists(filename) == false)
                 {
                     throw new NotSupportedException(String.Format("load-sapling-ini-file: file '{0}' does not exist.", filename));
@@ -309,7 +309,7 @@ namespace iLand.Input
                 {
                     Debug.WriteLine("debug_tree = debugstamp: try touching all trees...");
                     // try to force an error if a stamp is invalid
-                    AllTreeIterator treeIterator = new AllTreeIterator(model);
+                    AllTreeEnumerator treeIterator = new AllTreeEnumerator(model);
                     double total_offset = 0.0;
                     for (Tree tree = treeIterator.MoveNext(); tree != null; tree = treeIterator.MoveNext())
                     {
@@ -324,7 +324,7 @@ namespace iLand.Input
                 }
                 TreeWrapper tw = new TreeWrapper();
                 Expression dexp = new Expression(dbg_str, tw); // load expression dbg_str and enable external model variables
-                AllTreeIterator at = new AllTreeIterator(model);
+                AllTreeEnumerator at = new AllTreeEnumerator(model);
                 for (Tree t = at.MoveNext(); t != null; t = at.MoveNext())
                 {
                     tw.Tree = t;
@@ -344,7 +344,7 @@ namespace iLand.Input
         /// @param type init mode. allowed: "picus"/"single" or "iland"/"distribution"
         public int LoadInitFile(string fileName, string type, int standID, Simulation.Model model, ResourceUnit ru = null)
         {
-            string pathFileName = model.GlobalSettings.GetPath(fileName, "init");
+            string pathFileName = model.Files.GetPath(fileName, "init");
             if (!File.Exists(pathFileName))
             {
                 throw new FileNotFoundException(String.Format("File '{0}' does not exist!", pathFileName));
@@ -507,14 +507,14 @@ namespace iLand.Input
 
             // setup the random distribution
             string densityFunction = model.Project.Model.Initialization.RandomFunction;
-            if (model.GlobalSettings.LogDebug())
+            if (model.Files.LogDebug())
             {
                 Debug.WriteLine("density function: " + densityFunction);
             }
             if (mRandom == null || (mRandom.DensityFunction != densityFunction))
             {
                 mRandom = new RandomCustomPdf(model, densityFunction);
-                if (model.GlobalSettings.LogDebug())
+                if (model.Files.LogDebug())
                 {
                     Debug.WriteLine("new probabilty density function: " + densityFunction);
                 }
@@ -926,7 +926,7 @@ namespace iLand.Input
                         if (InitHeightGrid != null)
                         {
                             // calculate how good the selected pixel fits w.r.t. the predefined height
-                            double p_value = pixel_list[key].MaxHeight > 0.0 ? mHeightGridResponse.Calculate(model, init_max_height / pixel_list[key].MaxHeight) : 0.0;
+                            double p_value = pixel_list[key].MaxHeight > 0.0 ? mHeightGridResponse.Evaluate(model, init_max_height / pixel_list[key].MaxHeight) : 0.0;
                             if (model.RandomGenerator.Random() < p_value)
                             {
                                 found = true;
@@ -981,7 +981,7 @@ namespace iLand.Input
             }
             if (total_misses > 0 || total_tries > total_count)
             {
-                if (model.GlobalSettings.LogDebug())
+                if (model.Files.LogDebug())
                 {
                     Debug.WriteLine("init for stand " + standID + " treecount: " + total_count + ", tries: " + total_tries + ", misses: " + total_misses + ", %miss: " + Math.Round(total_misses * 100 / (double)total_count));
                 }
@@ -1031,7 +1031,7 @@ namespace iLand.Input
                     }
                 }
             }
-            if (model.GlobalSettings.LogDebug())
+            if (model.Files.LogDebug())
             {
                 Debug.WriteLine("init for stand " + standID + " with area" + grid.Area(standID) + " m2, count of 10m pixels: " + indices.Count + "initialized trees: " + total_count);
             }

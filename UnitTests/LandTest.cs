@@ -21,7 +21,7 @@ namespace iLand.Test
             // see also ModelController
             Model model = new Model();
             model.LoadProject(projectFilePath);
-            model.GlobalSettings.CurrentYear = 1; // TODO: determine if this is needed
+            model.ModelSettings.CurrentYear = 1; // TODO: determine if this is needed
             model.BeforeRun();
             return model;
         }

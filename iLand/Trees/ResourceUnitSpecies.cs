@@ -73,7 +73,7 @@ namespace iLand.Trees
             }
 
             // if already processed in this year, do not repeat
-            if (mLastYear == model.GlobalSettings.CurrentYear)
+            if (mLastYear == model.ModelSettings.CurrentYear)
             {
                 return;
             }
@@ -88,7 +88,7 @@ namespace iLand.Trees
                 //using DebugTimer rst = model.DebugTimers.Create("ResourceUnitSpecies.Calculate(Response + BiomassGrowth)");
                 Response.Calculate(this.RU.Climate);// calculate environmental responses per species (vpd, temperature, ...)
                 BiomassGrowth.Calculate(model);// production of NPP
-                mLastYear = model.GlobalSettings.CurrentYear; // mark this year as processed
+                mLastYear = model.ModelSettings.CurrentYear; // mark this year as processed
             }
             else
             {

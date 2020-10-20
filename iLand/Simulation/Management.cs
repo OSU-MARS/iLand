@@ -53,7 +53,7 @@ namespace iLand.Simulation
         public int Remain(int number, Model model)
         {
             Debug.WriteLine("remain called (number): " + number);
-            AllTreeIterator at = new AllTreeIterator(model);
+            AllTreeEnumerator at = new AllTreeEnumerator(model);
             List<Tree> trees = new List<Tree>();
             for (Tree t = at.MoveNext(); t != null; t = at.MoveNext())
             {
@@ -201,7 +201,7 @@ namespace iLand.Simulation
             {
                 tw.Tree = mTrees[tp].Item1;
                 // if expression evaluates to true and if random number below threshold...
-                if (expr.Calculate(tw, model) != 0.0 && model.RandomGenerator.Random() <= fraction)
+                if (expr.Evaluate(model, tw) != 0.0 && model.RandomGenerator.Random() <= fraction)
                 {
                     // remove from system
                     if (management)
@@ -339,7 +339,7 @@ namespace iLand.Simulation
             for (int tp = 0; tp < mTrees.Count; ++tp)
             {
                 tw.Tree = mTrees[tp].Item1;
-                double value = expr.Calculate(tw, model);
+                double value = expr.Evaluate(model, tw);
                 // keep if expression returns true (1)
                 bool keep = value == 1.0;
                 // if value is >0 (i.e. not "false"), then draw a random number
@@ -444,7 +444,7 @@ namespace iLand.Simulation
             GridRunner<float> runner = new GridRunner<float>(model.LightGrid, box);
             for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
             {
-                if (wrap.StandGrid.StandIDFromLifCoord(runner.CurrentIndex()) == key)
+                if (wrap.StandGrid.StandIDFromLightCoordinate(runner.CurrentIndex()) == key)
                 {
                     ResourceUnit ru = null;
                     SaplingCell sc = model.Saplings.Cell(runner.CurrentIndex(), model, true, ref ru);

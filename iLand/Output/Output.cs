@@ -84,9 +84,8 @@ namespace iLand.Output
 
         /** create the database table and opens up the output.
           */
-        private void EnsureEmptySqlTable(Model model)
+        private void EnsureEmptySqlTable(SqliteConnection connection)
         {
-            SqliteConnection outputDatabase = model.GlobalSettings.DatabaseOutput;
             // create the "create table" statement
             StringBuilder createTableCommand = new StringBuilder("create table " + this.TableName + "(");
             List<string> columnNames = new List<string>(this.Columns.Count);
@@ -111,9 +110,9 @@ namespace iLand.Output
 
             createTableCommand[^1] = ')'; // replace last "," with )
 
-            SqliteCommand dropTable = new SqliteCommand(String.Format("drop table if exists {0}", this.TableName), outputDatabase);
+            SqliteCommand dropTable = new SqliteCommand(String.Format("drop table if exists {0}", this.TableName), connection);
             dropTable.ExecuteNonQuery(); // drop table (if exists)
-            SqliteCommand createTable = new SqliteCommand(createTableCommand.ToString(), outputDatabase);
+            SqliteCommand createTable = new SqliteCommand(createTableCommand.ToString(), connection);
             createTable.ExecuteNonQuery(); // (re-)create table
 
             this.insertRowSqlText = "insert into " + this.TableName + " (" + String.Join(", ", columnNames) + ") values (@" + String.Join(", @", columnNames) + ")";
@@ -123,7 +122,7 @@ namespace iLand.Output
 
         public void LogYear(Model model, SqliteTransaction transaction)
         {
-            SqliteCommand insertRow = new SqliteCommand(this.insertRowSqlText, model.GlobalSettings.DatabaseOutput, transaction);
+            SqliteCommand insertRow = new SqliteCommand(this.insertRowSqlText, transaction.Connection, transaction);
             for (int columnIndex = 0; columnIndex < this.Columns.Count; columnIndex++)
             {
                 insertRow.Parameters.Add("@" + this.Columns[columnIndex].Name, this.Columns[columnIndex].Datatype);
@@ -141,7 +140,7 @@ namespace iLand.Output
                 return;
             }
 
-            this.EnsureEmptySqlTable(model);
+            this.EnsureEmptySqlTable(model.Outputs.Database);
         }
 
         public virtual void Setup(Model model)

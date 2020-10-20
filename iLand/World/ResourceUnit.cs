@@ -508,7 +508,7 @@ namespace iLand.World
             // summarize statistics for the whole resource unit
             for (int i = 0; i < Species.Count; i++)
             {
-                Species[i].SaplingStats.Calculate(Species[i].Species, this, model.GlobalSettings);
+                Species[i].SaplingStats.Calculate(Species[i].Species, this, model);
                 Species[i].Statistics.Add(Species[i].SaplingStats);
                 Species[i].Statistics.Calculate();
                 Statistics.Add(Species[i].Statistics);

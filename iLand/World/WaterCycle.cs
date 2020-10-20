@@ -86,7 +86,7 @@ namespace iLand.World
                 // =-EXP((1.54-0.0095* pctSand +0.0063* pctSilt)*LN(10))*0.000098
                 double psi_sat = -Math.Exp((1.54 - 0.0095 * pct_sand + 0.0063 * pct_silt) * Math.Log(10.0)) * 0.000098;
                 FieldCapacity = HeightFromPsi(psi_sat);
-                if (model.GlobalSettings.LogInfo())
+                if (model.Files.LogInfo())
                 {
                     Debug.WriteLine("psi: saturation " + psi_sat + " field capacity: " + FieldCapacity);
                 }
@@ -95,7 +95,7 @@ namespace iLand.World
             // start with full soil water content (in the middle of winter)
             // BUGBUG: depends on model location and input climate data
             CurrentSoilWaterContent = FieldCapacity;
-            if (model.GlobalSettings.LogDebug())
+            if (model.Files.LogDebug())
             {
                 Debug.WriteLine("setup of water: Psi_sat (kPa) " + mPsi_sat + " Theta_sat " + mTheta_sat + " coeff. b " + mPsi_koeff_b);
             }
@@ -176,7 +176,7 @@ namespace iLand.World
                 // http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance
                 CanopyConductance *= total_lai / model.ModelSettings.LaiThresholdForClosedStands;
             }
-            if (model.GlobalSettings.LogDebug())
+            if (model.Files.LogDebug())
             {
                 Debug.WriteLine("WaterCycle.GetStandValues(): LAI needle " + mLAINeedle + " LAI Broadl: " + mLAIBroadleaved + " weighted avg. Conductance (m/2): " + CanopyConductance);
             }
@@ -252,7 +252,7 @@ namespace iLand.World
         public void Run(Model model)
         {
             // necessary?
-            if (model.GlobalSettings.CurrentYear == mLastYear)
+            if (model.ModelSettings.CurrentYear == mLastYear)
             {
                 return;
             }
@@ -349,7 +349,7 @@ namespace iLand.World
 
             // call external modules
             model.Modules.CalculateWater(mRU, hydrologicState);
-            mLastYear = model.GlobalSettings.CurrentYear;
+            mLastYear = model.ModelSettings.CurrentYear;
         }
     }
 }

@@ -68,6 +68,40 @@ namespace iLand.Test
                 {
                     finalDiameters.Add(tree.ID, tree.Dbh);
                     finalHeights.Add(tree.ID, tree.Height);
+
+                    Assert.IsTrue((tree.Age > 0 + year) && (tree.Age < 100 + year));
+                    Assert.IsTrue(tree.BasalArea() > 0.0);
+                    Assert.IsTrue((tree.CoarseRootMass >= 0.0F) && (tree.CoarseRootMass < 1E6F));
+                    Assert.IsTrue((tree.Dbh > 0.0F) && (tree.Dbh < 200.0F));
+                    Assert.IsTrue((tree.DbhDelta >= 0.0F) && (tree.DbhDelta < 10.0F));
+                    Assert.IsTrue((tree.FineRootMass > 0.0F) && (tree.FineRootMass < 1E6F));
+                    Assert.IsTrue((tree.FoliageMass > 0.0F) && (tree.FoliageMass < 1000.0F));
+                    Assert.IsTrue(tree.GetBranchBiomass() > 0.0F);
+                    Assert.IsTrue(tree.GetCrownRadius() > 0.0F);
+                    Assert.IsTrue(tree.IsCutDown() == false);
+                    Assert.IsTrue(tree.IsDead() == false);
+                    Assert.IsTrue(tree.IsDeadBarkBeetle() == false);
+                    Assert.IsTrue(tree.IsDeadFire() == false);
+                    Assert.IsTrue(tree.IsDeadWind() == false);
+                    Assert.IsTrue(tree.IsHarvested() == false);
+                    Assert.IsTrue(tree.IsMarkedAsCropCompetitor() == false);
+                    Assert.IsTrue(tree.IsMarkedAsCropTree() == false);
+                    Assert.IsTrue(tree.IsMarkedForCut() == false);
+                    Assert.IsTrue(tree.IsMarkedForHarvest() == false);
+                    Assert.IsTrue(tree.Volume() > 0.0F);
+                    Assert.IsTrue((tree.Height > 0.0F) && (tree.Height < 100.0F));
+                    Assert.IsTrue((tree.ID > 0) && (tree.ID < 40));
+                    Assert.IsTrue((tree.LeafArea > 0.0F) && (tree.LeafArea < 1000.0F));
+                    // Assert.IsTrue((tree.LightCellPosition);
+                    Assert.IsTrue((tree.LightResourceIndex > 0.0F) && (tree.LightResourceIndex <= 1.0F));
+                    Assert.IsTrue((tree.LightResponse > -0.5F) && (tree.LightResponse <= 1.0F));
+                    Assert.IsTrue((tree.NppReserve > 0.0F) && (tree.NppReserve < 1E4F));
+                    Assert.IsTrue((tree.Opacity > 0.0F) && (tree.Opacity <= 1.0F));
+                    Assert.IsTrue(Object.ReferenceEquals(tree.RU, kalkalpen.ResourceUnits[0]));
+                    // Assert.IsTrue(tree.Species.ID);
+                    // Assert.IsTrue(tree.Stamp);
+                    Assert.IsTrue((tree.StemMass > 0.0) && (tree.CoarseRootMass < 1E6));
+                    Assert.IsTrue((tree.StressIndex >= 0.0) && (tree.CoarseRootMass < 1E6));
                 }
 
                 int minimumTreeCount = 31 - 5 * year;
@@ -153,14 +187,39 @@ namespace iLand.Test
             // check soil properties at initial load
             this.VerifyMalcolmKnappResourceUnit(plot14);
 
+            List<double> volumeByYear = new List<double>();
             for (int year = 0; year < 28; ++year)
             {
                 plot14.RunYear();
+
+                Assert.IsTrue(plot14.ResourceUnits.Count == 1);
+                double volume = 0.0F;
+                foreach (Tree tree in plot14.ResourceUnits[0].Trees)
+                {
+                    volume += tree.Volume();
+                }
+                volumeByYear.Add(volume);
             }
 
             this.VerifyMalcolmKnappClimate(plot14);
             this.VerifyMalcolmKnappModel(plot14);
             this.VerifyMalcolmKnappDouglasFir(plot14);
+
+            List<double> nominalVolumeByYear = new List<double>()
+            {
+                140.524, 152.395, 168.688, 180.640, 194.561, // 0...4
+                204.445, 215.316, 230.528, 242.738, 254.045, // 5...9
+                267.492, 277.237, 284.491, 294.109, 304.218, // 10...14
+                314.284, 324.116, 331.615, 339.723, 348.824, // 15...19
+                360.838, 364.957, 373.480, 382.511, 392.384, // 20...24
+                400.405, 406.831, 414.930                    // 25...27
+            };
+            for (int year = 0; year < nominalVolumeByYear.Count; ++year)
+            {
+                double volume = volumeByYear[year];
+                double targetVolume = nominalVolumeByYear[year];
+                Assert.IsTrue(Math.Abs(1.0 - volume / targetVolume) < 0.02);
+            }
         }
 
         [TestMethod]
@@ -465,9 +524,9 @@ namespace iLand.Test
 
             // PIAB: 44.7*(1-(1-(h/44.7)^(1/3))*exp(-0.044))^3
             // round(44.7*(1-(1-(c(0.25, 1, 4.5)/44.7)^(1/3))*exp(-0.044))^3, 3)
-            double shortPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model, 0.25);
-            double mediumPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model, 1);
-            double tallPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model, 4.5);
+            double shortPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(model, 0.25);
+            double mediumPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(model, 1);
+            double tallPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(model, 4.5);
 
             Assert.IsTrue(Math.Abs(shortPotential - 0.431) < 0.01);
             Assert.IsTrue(Math.Abs(mediumPotential - 1.367) < 0.01);

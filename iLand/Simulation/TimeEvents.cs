@@ -21,9 +21,9 @@ namespace iLand.Simulation
             mData.Clear(); 
         }
 
-        public bool LoadFromFile(string fileName, GlobalSettings globalSettings)
+        public bool LoadFromFile(FileLocations paths, string fileName)
         {
-            string source = File.ReadAllText(globalSettings.GetPath(fileName));
+            string source = File.ReadAllText(paths.GetPath(fileName));
             if (String.IsNullOrEmpty(source))
             {
                 throw new FileNotFoundException(String.Format("TimeEvents: input file does not exist or is empty ({0})", fileName));
@@ -55,9 +55,9 @@ namespace iLand.Simulation
             return true;
         }
 
-        public void Run(GlobalSettings globalSettings)
+        public void Run(Model model)
         {
-            int currentYear = globalSettings.CurrentYear;
+            int currentYear = model.ModelSettings.CurrentYear;
             if (mData.TryGetValue(currentYear, out IReadOnlyCollection<MutableTuple<string, object>> currentEvents) == false || currentEvents.Count == 0)
             {
                 return;

@@ -92,14 +92,14 @@ namespace iLand.Tools
         }
 
         // inc-sum
-        private double m_incSumVar;
+        private double mIncrementalSum;
 
-        private bool m_parsed;
+        private bool isParsed;
         private Token[] mTokens;
         private int m_execListSize; // size of buffer
         private int mExecuteIndex;
         private readonly double[] mVariableValues;
-        private List<string> mExternalVariableNames;
+        //private readonly List<string> mExternalVariableNames;
         private double[] mExternalVariableValues;
         private TokenType mState;
         private TokenType mLastState;
@@ -127,7 +127,7 @@ namespace iLand.Tools
           When strict=true, all variables in the expression must be added by setVar or addVar.
           if false, variable values are assigned depending on occurence. strict is false by default for calls to "calculate()".
         */
-        public bool IsStrict { get; set; }
+        public bool RequireExternalVariableBinding { get; set; }
         public string LastError { get; private set; }
 
         public Expression()
@@ -280,11 +280,11 @@ namespace iLand.Tools
         /** sets expression @p expr and checks the syntax (parse).
             Expressions are setup with strict = false, i.e. no fixed binding of variable names.
           */
-        public void SetAndParse(string expr)
+        public void SetAndParse(string expression)
         {
-            SetExpression(expr);
-            this.IsStrict = false;
-            Parse();
+            this.SetExpression(expression);
+            this.RequireExternalVariableBinding = false;
+            this.Parse();
         }
 
         /// set the current expression.
@@ -298,14 +298,14 @@ namespace iLand.Tools
             {
                 mVariableValues[i] = 0.0;
             }
-            m_parsed = false;
+            isParsed = false;
             CatchExceptions = false;
             LastError = "";
 
             Wrapper = null;
             mExternalVariableValues = null;
 
-            IsStrict = true; // default....
+            RequireExternalVariableBinding = true; // default....
             // m_incSumEnabled = false;
             IsEmpty = String.IsNullOrWhiteSpace(expression);
             // Buffer:
@@ -348,7 +348,7 @@ namespace iLand.Tools
         {
             lock (this.mTokens)
             {
-                if (m_parsed)
+                if (isParsed)
                 {
                     return;
                 }
@@ -381,7 +381,7 @@ namespace iLand.Tools
                 this.mTokens[mExecuteIndex].Value = 0;
                 this.mTokens[mExecuteIndex++].Index = 0;
                 CheckBuffer(mExecuteIndex);
-                this.m_parsed = true;
+                this.isParsed = true;
             }
         }
 
@@ -506,7 +506,7 @@ namespace iLand.Tools
                     //else
                     //{
                         // 'real' variable
-                        if (!IsStrict) // in strict mode, the variable must be available by external bindings. in "lax" mode, the variable is added when encountered first.
+                        if (!RequireExternalVariableBinding) // in strict mode, the variable must be available by external bindings. in "lax" mode, the variable is added when encountered first.
                         {
                             AddVariable(m_token);
                         }
@@ -567,13 +567,13 @@ namespace iLand.Tools
         private void ParseLevel4()
         {
             // Klammer und Funktionen
-            string func;
+            string functionName;
             Atom();
             //double temp=FResult;
             if (m_token == "(" || mState == TokenType.Function)
             {
-                func = m_token;
-                if (func == "(")   // klammerausdruck
+                functionName = m_token;
+                if (functionName == "(")   // klammerausdruck
                 {
                     NextToken();
                     ParseLevelL0();
@@ -581,7 +581,12 @@ namespace iLand.Tools
                 else        // funktion...
                 {
                     int argcount = 0;
-                    int idx = GetFunctionIndex(func);
+                    int idx = Expression.MathFunctions.IndexOf(functionName); // check full names
+                    if (idx < 0)
+                    {
+                        throw new NotSupportedException("Function " + functionName + " not defined!");
+                    }
+
                     NextToken();
                     //m_token="{";
                     // bei funktionen mit mehreren Parametern
@@ -596,7 +601,7 @@ namespace iLand.Tools
                     }
                     if (MaxArgCount[idx] > 0 && MaxArgCount[idx] != argcount)
                     {
-                        throw new NotSupportedException(String.Format("Function {0} assumes {1} arguments!", func, MaxArgCount[idx]));
+                        throw new NotSupportedException(String.Format("Function {0} assumes {1} arguments!", functionName, MaxArgCount[idx]));
                     }
                     //throw std::logic_error("Funktion " + func + " erwartet " + std::string(MaxArgCount[idx]) + " Parameter!");
                     mTokens[mExecuteIndex].Type = TokenType.Function;
@@ -614,7 +619,7 @@ namespace iLand.Tools
 
         public void SetVariable(string name, double value)
         {
-            if (!m_parsed)
+            if (!isParsed)
             {
                 Parse();
             }
@@ -629,48 +634,38 @@ namespace iLand.Tools
             }
         }
 
-        public double Calculate(Model model, double x = 0.0, double y = 0.0, bool forceExecution = false)
+        public double Evaluate(Model model, double variable1 = 0.0, double variable2 = 0.0, bool forceExecution = false)
         {
-            if (mLinearizedDimensionCount > 0 && !forceExecution)
+            if ((mLinearizedDimensionCount > 0) && (forceExecution == false))
             {
                 if (mLinearizedDimensionCount == 1)
                 {
-                    return GetLinearizedValue(model, x);
+                    return GetLinearizedValue(model, variable1);
                 }
-                return GetLinearizedValue(model, x, y); // matrix case
+                return GetLinearizedValue(model, variable1, variable2); // matrix case
             }
-            double[] var_space = new double[10];
-            var_space[0] = x;
-            var_space[1] = y;
-            IsStrict = false;
-            return this.Execute(model, var_space); // execute with local variables on stack
+            double[] variableList = new double[10];
+            variableList[0] = variable1;
+            variableList[1] = variable2;
+            this.RequireExternalVariableBinding = false;
+            return this.Execute(model, variableList); // execute with local variables on stack
         }
 
-        public double Calculate(ExpressionWrapper obj, Model model, double variable1 = 0.0, double variable2 = 0.0)
+        public double Evaluate(Model model, ExpressionWrapper wrapper, double variable1 = 0.0, double variable2 = 0.0)
         {
-            double[] variableStack = new double[10];
-            variableStack[0] = variable1;
-            variableStack[1] = variable2;
-            IsStrict = false;
-            return Execute(model, variableStack, obj); // execute with local variables on stack
+            double[] variableList = new double[10];
+            variableList[0] = variable1;
+            variableList[1] = variable2;
+            this.RequireExternalVariableBinding = false;
+            return this.Execute(model, variableList, wrapper); // execute with local variables on stack
         }
 
-        private int GetFunctionIndex(string functionName)
+        public double Execute(Model model, double[] variableList = null, ExpressionWrapper wrapper = null)
         {
-            int index = Expression.MathFunctions.IndexOf(functionName); // check full names
-            if (index < 0)
+            if (!isParsed)
             {
-                throw new NotSupportedException("Function " + functionName + " not defined!");
-            }
-            return index;
-        }
-
-        public double Execute(Model model, double[] variableList = null, ExpressionWrapper obj = null)
-        {
-            if (!m_parsed)
-            {
-                this.Parse(obj);
-                if (!m_parsed)
+                this.Parse(wrapper);
+                if (!isParsed)
                 {
                     throw new ApplicationException("Expression '" + this.ExpressionString + "' failed to parse.");
                 }
@@ -712,7 +707,7 @@ namespace iLand.Tools
                         }
                         else if (exec.Index < 1000)
                         {
-                            value = GetModelVariable(exec.Index, model.GlobalSettings, obj);
+                            value = this.GetModelVariable(model, exec.Index, wrapper);
                         }
                         else
                         {
@@ -774,8 +769,8 @@ namespace iLand.Tools
                                 stackDepth -= 2; // throw away both arguments
                                 break;
                             case 9: // incrementelle summe
-                                m_incSumVar += stack[stackDepth];
-                                stack[stackDepth] = m_incSumVar;
+                                mIncrementalSum += stack[stackDepth];
+                                stack[stackDepth] = mIncrementalSum;
                                 break;
                             case 10: // Polygon-Funktion
                                 stack[stackDepth - (int)(exec.Value - 1)] = UserDefinedPolygon(stack[stackDepth - (int)(exec.Value - 1)], stack, stackDepth, (int)exec.Value);
@@ -902,22 +897,22 @@ namespace iLand.Tools
                       return 1000+idx;
                 }*/
 
-            // externe variablen
-            if ((mExternalVariableNames != null) && (mExternalVariableNames.Count > 0))
-            {
-                idx = mExternalVariableNames.IndexOf(variableName);
-                if (idx > -1)
-                {
-                    return 1000 + idx;
-                }
-            }
+            // external variablen
+            //if ((mExternalVariableNames != null) && (mExternalVariableNames.Count > 0))
+            //{
+            //    idx = mExternalVariableNames.IndexOf(variableName);
+            //    if (idx > -1)
+            //    {
+            //        return 1000 + idx;
+            //    }
+            //}
             idx = mVariableNames.IndexOf(variableName);
             if (idx > -1)
             {
                 return idx;
             }
             // if in strict mode, all variables must be already available at this stage.
-            if (IsStrict)
+            if (RequireExternalVariableBinding)
             {
                 LastError = String.Format("Variable '{0}' in (strict) expression '{1}' not available!", variableName, ExpressionString);
                 if (!CatchExceptions)
@@ -928,32 +923,32 @@ namespace iLand.Tools
             return -1;
         }
 
-        public double GetModelVariable(int varIdx, GlobalSettings globalSettings, ExpressionWrapper obj = null)
+        public double GetModelVariable(Model model, int valueIndex, ExpressionWrapper wrapper = null)
         {
             // der weg nach draussen....
-            ExpressionWrapper model_object = obj ?? Wrapper;
-            int idx = varIdx - 100; // intern als 100+x gespeichert...
-            if (model_object != null)
+            ExpressionWrapper modelObject = wrapper ?? Wrapper;
+            int idx = valueIndex - 100; // intern als 100+x gespeichert...
+            if (modelObject != null)
             {
-                return model_object.Value(idx, globalSettings);
+                return modelObject.Value(model, idx);
             }
             // hier evtl. verschiedene objekte unterscheiden (Zahlenraum???)
-            throw new NotSupportedException("getModelVar: invalid model variable!");
+            throw new ArgumentOutOfRangeException(nameof(valueIndex), "Model variable not found.");
         }
 
-        public void SetExternalVariableSpace(List<string> externalNames, double[] externalSpace)
-        {
-            // externe variablen (zB von Scripting-Engine) bekannt machen...
-            mExternalVariableValues = externalSpace;
-            mExternalVariableNames = externalNames;
-        }
+        //public void SetExternalVariableSpace(List<string> externalNames, double[] externalSpace)
+        //{
+        //    // externe variablen (zB von Scripting-Engine) bekannt machen...
+        //    mExternalVariableValues = externalSpace;
+        //    mExternalVariableNames = externalNames;
+        //}
 
-        public double GetExternVariable(int Index)
+        public double GetExternVariable(int index)
         {
             //if (Script)
             //   return Script->GetNumVar(Index-1000);
             //else   // berhaupt noch notwendig???
-            return mExternalVariableValues[Index - 1000];
+            return mExternalVariableValues[index - 1000];
         }
 
         public void EnableIncrementalSum()
@@ -961,7 +956,7 @@ namespace iLand.Tools
             // Funktion "inkrementelle summe" einschalten.
             // dabei wird der zhler zurckgesetzt und ein flag gesetzt.
             // m_incSumEnabled = true;
-            m_incSumVar = 0.0;
+            mIncrementalSum = 0.0;
         }
 
         // "Userdefined Function" Polygon
@@ -984,7 +979,10 @@ namespace iLand.Tools
             y = stack[position--];   // 1. Argument: ganz rechts.
             x = stack[position--];
             if (value > x)   // rechts drauen: annahme gerade.
+            {
                 return y;
+            }
+
             for (int i = 0; i < PointCnt - 1; i++)
             {
                 xold = x;
@@ -998,6 +996,7 @@ namespace iLand.Tools
                     return (yold - y) / (xold - x) * (value - x) + y;
                 }
             }
+
             // falls nichts gefunden: value < als linkester x-wert
             return y;
         }
@@ -1102,7 +1101,7 @@ namespace iLand.Tools
             for (int i = 0; i <= steps + 1; i++)
             {
                 double x = mLinearLow + i * mLinearStep;
-                double r = Calculate(model, x);
+                double r = Evaluate(model, x);
                 mLinearized.Add(r);
             }
             mLinearizedDimensionCount = 1;
@@ -1129,7 +1128,7 @@ namespace iLand.Tools
                 {
                     double x = mLinearLow + i * mLinearStep;
                     double y = mLinearLowY + j * mLinearStepY;
-                    double r = Calculate(model, x, y);
+                    double r = Evaluate(model, x, y);
                     mLinearized.Add(r);
                 }
             }
@@ -1142,7 +1141,7 @@ namespace iLand.Tools
         {
             if (x < mLinearLow || x > mLinearHigh)
             {
-                return Calculate(model, x, 0.0, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
+                return Evaluate(model, x, 0.0, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lower = (int)((x - mLinearLow) / mLinearStep); // the lower point
             if (lower + 1 >= mLinearized.Count())
@@ -1160,7 +1159,7 @@ namespace iLand.Tools
         {
             if (x < mLinearLow || x > mLinearHigh || y < mLinearLowY || y > mLinearHighY)
             {
-                return Calculate(model, x, y, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
+                return Evaluate(model, x, y, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lowerx = (int)((x - mLinearLow) / mLinearStep); // the lower point (x-axis)
             int lowery = (int)((y - mLinearLowY) / mLinearStepY); // the lower point (y-axis)

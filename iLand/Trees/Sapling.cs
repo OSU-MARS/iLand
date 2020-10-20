@@ -236,7 +236,7 @@ namespace iLand.Trees
             //GlobalSettings.instance().model().heightGrid()[Grid::index5(tree.pixel-GlobalSettings.instance().model().grid().begin())];
 
             // (1) calculate height growth potential for the tree (uses linerization of expressions...)
-            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Calculate(model, tree.Height); // TODO check if this can be source of crashes (race condition)
+            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(model, tree.Height); // TODO check if this can be source of crashes (race condition)
             double delta_h_pot = h_pot - tree.Height;
 
             // (2) reduce height growth potential with species growth response f_env_yr and with light state (i.e. LIF-value) of home-pixel.

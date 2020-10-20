@@ -37,7 +37,7 @@ namespace iLand.Trees
             return TreeVariableNames;
         }
 
-        public override double Value(int variableIndex, GlobalSettings globalSettings)
+        public override double Value(Simulation.Model model, int variableIndex)
         {
             Debug.Assert(Tree != null);
 
@@ -69,7 +69,7 @@ namespace iLand.Trees
                 23 => Tree.IsMarkedForCut() ? 1 : 0,// markcut
                 24 => Tree.IsMarkedAsCropTree() ? 1 : 0,// markcrop
                 25 => Tree.IsMarkedAsCropCompetitor() ? 1 : 0,// markcompetitor
-                _ => base.Value(variableIndex, globalSettings),
+                _ => base.Value(model, variableIndex),
             };
         }
     }

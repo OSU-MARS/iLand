@@ -177,7 +177,7 @@ namespace iLand.Input
             else
             {
                 // otherwise, instantiate named climates as needed
-                if (model.GlobalSettings.LogDebug())
+                if (model.Files.LogDebug())
                 {
                     List<string> uniqueClimateNames = mInfile.GetColumnValues(keyIndex).Distinct().ToList();
                     Debug.WriteLine("Environment: " + uniqueClimateNames.Count + " climates in environment file.");
@@ -229,7 +229,7 @@ namespace iLand.Input
             }
 
             int row = rowIndexByCoordinateOrID[key];
-            if (model.GlobalSettings.LogDebug())
+            if (model.Files.LogDebug())
             {
                 Debug.WriteLine("settting up point " + position + " with row " + row);
             }

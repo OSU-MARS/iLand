@@ -130,11 +130,11 @@ namespace iLand.Simulation
                 // set up the effect on regeneration in NSTEPS steps
                 for (int stepIndex = 0; stepIndex < Steps; ++stepIndex)
                 {
-                    double effect = mGrassEffect.Calculate(model, stepIndex / (double)(Steps - 1));
+                    double effect = mGrassEffect.Evaluate(model, stepIndex / (double)(Steps - 1));
                     mEffect[stepIndex] = Global.Limit(effect, 0.0, 1.0);
                 }
 
-                mMaxState = (Int16)(Global.Limit(mGrassPotential.Calculate(model, 1.0F), 0.0, 1.0) * (Steps - 1)); // the max value of the potential function
+                mMaxState = (Int16)(Global.Limit(mGrassPotential.Evaluate(model, 1.0F), 0.0, 1.0) * (Steps - 1)); // the max value of the potential function
             }
 
             this.IsEnabled = true;
@@ -199,7 +199,7 @@ namespace iLand.Simulation
                         continue;
                     }
 
-                    int potential = (int)(Global.Limit(mGrassPotential.Calculate(model, lifGrid[lif]), 0.0, 1.0) * (Steps - 1));
+                    int potential = (int)(Global.Limit(mGrassPotential.Evaluate(model, lifGrid[lif]), 0.0, 1.0) * (Steps - 1));
                     Grid[gr] = (Int16)(Math.Min(Grid[gr] + mGrowthRate, potential));
 
                 }

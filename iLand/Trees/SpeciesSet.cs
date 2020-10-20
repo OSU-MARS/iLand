@@ -64,7 +64,7 @@ namespace iLand.Trees
 
         public double GetLriCorrection(Simulation.Model model, double lightResourceIndex, double relativeHeight) 
         { 
-            return mLriCorrection.Calculate(model, lightResourceIndex, relativeHeight); 
+            return mLriCorrection.Evaluate(model, lightResourceIndex, relativeHeight); 
         }
 
         public Species Species(int index)
@@ -84,7 +84,7 @@ namespace iLand.Trees
           */
         public int Setup(Simulation.Model model)
         {
-            string readerStampFile = model.GlobalSettings.GetPath(model.Project.Model.Species.ReaderStampFile, "lip");
+            string readerStampFile = model.Files.GetPath(model.Project.Model.Species.ReaderStampFile, "lip");
             this.ReaderStamps.Load(readerStampFile);
             if (model.Project.Model.Parameter.DebugDumpStamps)
             {
@@ -92,7 +92,10 @@ namespace iLand.Trees
             }
 
             this.Clear();
-            using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", this.SqlTableName), model.GlobalSettings.DatabaseInput);
+
+            string speciesDatabaseFilePath = model.Files.GetPath(model.Project.System.Database.In, "database");
+            using SqliteConnection speciesDatabase = model.Files.GetDatabaseConnection(speciesDatabaseFilePath, true);
+            using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", this.SqlTableName), speciesDatabase);
             // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");
             using SpeciesReader speciesReader = new SpeciesReader(speciesSelect.ExecuteReader());
             while (speciesReader.Read())
@@ -195,7 +198,7 @@ namespace iLand.Trees
             ThreadRunner runner = new ThreadRunner(ActiveSpecies); // initialize a thread runner object with all active species
             runner.Run(SeedDistribution, model);
 
-            if (model.GlobalSettings.LogDebug())
+            if (model.Files.LogDebug())
             {
                 Debug.WriteLine("seed dispersal finished.");
             }
@@ -331,8 +334,8 @@ namespace iLand.Trees
             @sa http://iland.boku.ac.at/allocation#reserve_and_allocation_to_stem_growth */
         public double LightResponse(Simulation.Model model, double lightResourceIndex, double lightResponseClass)
         {
-            double intolerant = mLightResponseIntolerant.Calculate(model, lightResourceIndex);
-            double tolerant = mLightResponseTolerant.Calculate(model, lightResourceIndex);
+            double intolerant = mLightResponseIntolerant.Evaluate(model, lightResourceIndex);
+            double tolerant = mLightResponseTolerant.Evaluate(model, lightResourceIndex);
             double response = intolerant + 0.25 * (lightResponseClass - 1.0) * (tolerant - intolerant);
             return Global.Limit(response, 0.0, 1.0);
         }

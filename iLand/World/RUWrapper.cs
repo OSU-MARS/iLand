@@ -37,7 +37,7 @@ namespace iLand.World
             return VariableNames;
         }
 
-        public override double Value(int variableIndex, GlobalSettings globalSettings)
+        public override double Value(Model model, int variableIndex)
         {
             Debug.Assert(ResourceUnit != null);
 
@@ -103,7 +103,7 @@ namespace iLand.World
                 case 23: 
                     return ResourceUnit.Climate.TotalAnnualRadiation;
                 default:
-                    return base.Value(variableIndex, globalSettings);
+                    return base.Value(model, variableIndex);
             }
         }
     }

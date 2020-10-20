@@ -129,8 +129,8 @@ namespace iLand.Tools
             Debug.WriteLine("extractPatches: found " + patch_index + " patches, total valid pixels: " + total_size + " skipped" + patches_skipped);
             if (String.IsNullOrEmpty(fileName) == false)
             {
-                Debug.WriteLine("extractPatches: save to file: " + model.GlobalSettings.GetPath(fileName));
-                File.WriteAllText(model.GlobalSettings.GetPath(fileName), Grid.ToEsriRaster(model, mClumpGrid));
+                Debug.WriteLine("extractPatches: save to file: " + model.Files.GetPath(fileName));
+                File.WriteAllText(model.Files.GetPath(fileName), Grid.ToEsriRaster(model, mClumpGrid));
             }
             return counts;
 
@@ -142,13 +142,13 @@ namespace iLand.Tools
             {
                 mRumple = new RumpleIndex();
             }
-            File.WriteAllText(model.GlobalSettings.GetPath(fileName), Grid.ToEsriRaster(model, mRumple.RumpleGrid(model)));
+            File.WriteAllText(model.Files.GetPath(fileName), Grid.ToEsriRaster(model, mRumple.RumpleGrid(model)));
         }
 
         public void SaveCrownCoverGrid(Model model, string fileName)
         {
             CalculateCrownCover(model);
-            File.WriteAllText(model.GlobalSettings.GetPath(fileName), Grid.ToEsriRaster(model, mCrownCoverGrid));
+            File.WriteAllText(model.Files.GetPath(fileName), Grid.ToEsriRaster(model, mCrownCoverGrid));
         }
 
         private void CalculateCrownCover(Model model)
@@ -160,7 +160,7 @@ namespace iLand.Tools
             Grid<float> grid = model.LightGrid;
             grid.Initialize(0.0F);
             // we simply iterate over all trees of all resource units (not bothering about multithreading here)
-            AllTreeIterator ati = new AllTreeIterator(model);
+            AllTreeEnumerator ati = new AllTreeEnumerator(model);
             for (Tree t = ati.MoveNextLiving(); t != null; t = ati.MoveNextLiving())
             {
                 // apply the reader-stamp

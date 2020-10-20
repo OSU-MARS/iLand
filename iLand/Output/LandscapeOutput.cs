@@ -50,7 +50,7 @@ namespace iLand.Output
         {
             if (!filter.IsEmpty)
             {
-                if (filter.Calculate(model, model.GlobalSettings.CurrentYear) == 0.0)
+                if (filter.Evaluate(model, model.ModelSettings.CurrentYear) == 0.0)
                 {
                     return;
                 }
@@ -100,7 +100,7 @@ namespace iLand.Output
             foreach (KeyValuePair<string, StandStatistics> species in this.standStatisticsBySpecies)
             {
                 StandStatistics stat = species.Value;
-                insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
                 insertRow.Parameters[1].Value = species.Key; // keys: year, species
                 insertRow.Parameters[2].Value = stat.Count;
                 insertRow.Parameters[3].Value = stat.AverageDbh;

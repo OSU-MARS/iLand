@@ -109,7 +109,7 @@ namespace iLand.Trees
             }
             mExternalSeedMap.Clear();
             mIndexFactor = Constant.SeedmapSize / Constant.LightSize; // ratio seed grid / lip-grid:
-            if (model.GlobalSettings.LogDebug())
+            if (model.Files.LogDebug())
             {
                 Debug.WriteLine("Seed map setup. Species: " + Species.ID + " kernel-size: " + SeedMap.CellsX + " x " + SeedMap.CellsY + " pixels.");
             }
@@ -164,7 +164,7 @@ namespace iLand.Trees
             mDumpSeedMaps = model.Project.Model.Settings.SeedDispersal.DumpSeedMapsEnabled;
             if (mDumpSeedMaps)
             {
-                string path = model.GlobalSettings.GetPath(model.Project.Model.Settings.SeedDispersal.DumpSeedMapsPath);
+                string path = model.Files.GetPath(model.Project.Model.Settings.SeedDispersal.DumpSeedMapsPath);
                 File.WriteAllText(String.Format("{0}/seedkernelYes_{1}.csv", path, Species.ID), mKernelSeedYear.ToString());
                 File.WriteAllText(String.Format("{0}/seedkernelNo_{1}.csv", path, Species.ID), mKernelNonSeedYear.ToString());
                 if (!mKernelSerotiny.IsEmpty())

@@ -23,7 +23,7 @@ namespace iLand.Cmdlets
         {
             using Model model = new Model();
             model.LoadProject(this.Project);
-            model.GlobalSettings.CurrentYear = 1;
+            model.ModelSettings.CurrentYear = 1;
             model.BeforeRun();
             for (int year = 0; year < Years; ++year)
             {

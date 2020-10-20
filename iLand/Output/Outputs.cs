@@ -3,15 +3,19 @@ using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Xml;
 
 namespace iLand.Output
 {
     /** @class OutputManager
        Global container that handles data output.
       */
-    public class OutputManager
+    public class Outputs : IDisposable
     {
+        private bool isDisposed;
         private readonly List<Output> outputs; // list of outputs in system
+
+        public SqliteConnection Database { get; private set; }
 
         public CarbonFlowOutput CarbonFlow { get; private set; }
         public CarbonOutput Carbon { get; private set; }
@@ -31,8 +35,11 @@ namespace iLand.Output
         // on creation of the output manager
         // an instance of every iLand output
         // must be added to the list of outputs.
-        public OutputManager()
+        public Outputs()
         {
+            this.Database = null; // initialized in Setup()
+            this.isDisposed = false;
+
             this.CarbonFlow = new CarbonFlowOutput();
             this.Carbon = new CarbonOutput();
             this.DynamicStand = new DynamicStandOutput();
@@ -68,8 +75,47 @@ namespace iLand.Output
             };
         }
 
+        public void Dispose()
+        {
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!isDisposed)
+            {
+                if (disposing)
+                {
+                    if (this.Database != null)
+                    {
+                        this.Database.Dispose();
+                    }
+                }
+
+                isDisposed = true;
+            }
+        }
+
         public void Setup(Model model)
         {
+            // create run-metadata
+            //int maxID = (int)(long)SqlHelper.QueryValue("select max(id) from runs", g.DatabaseInput);
+            //maxID++;
+            //SqlHelper.ExecuteSql(String.Format("insert into runs (id, timestamp) values ({0}, '{1}')", maxID, timestamp), g.DatabaseInput);
+            // replace path information
+            // setup final path
+            string outputDatabaseFile = model.Project.System.Database.Out;
+            if (String.IsNullOrWhiteSpace(outputDatabaseFile))
+            {
+                throw new XmlException("The /project/system/database/out element is missing or does not specify an output database file name.");
+            }
+            string outputDatabasePath = model.Files.GetPath(outputDatabaseFile, "output");
+            // dbPath.Replace("$id$", maxID.ToString(), StringComparison.Ordinal);
+            string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_hhmmss");
+            outputDatabasePath.Replace("$date$", timestamp, StringComparison.Ordinal);
+            this.Database = model.Files.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
+
             //Close();
             this.CarbonFlow.IsEnabled = model.Project.Output.Carbon.Enabled;
             this.Carbon.IsEnabled = model.Project.Output.Carbon.Enabled;
@@ -111,7 +157,7 @@ namespace iLand.Output
         public void LogYear(Model model)
         {
             //using DebugTimer timer = model.DebugTimers.Create("OutputManager.LogYear()");
-            using SqliteTransaction transaction = model.GlobalSettings.DatabaseOutput.BeginTransaction();
+            using SqliteTransaction transaction = this.Database.BeginTransaction();
             foreach (Output output in this.outputs)
             {
                 if (output.IsEnabled && output.IsOpen)

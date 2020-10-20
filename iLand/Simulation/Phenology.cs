@@ -53,7 +53,7 @@ namespace iLand.Simulation
         }
 
         // some special calculations used for establishment
-        private void CalculateChillDays(GlobalSettings globalSettings, int end_of_season = -1)
+        private void CalculateChillDays(Model model, int end_of_season = -1)
         {
             int iday = 0;
             mChillDaysBefore = 0;
@@ -74,7 +74,7 @@ namespace iLand.Simulation
                     }
                 }
             }
-            if (globalSettings.CurrentYear == 1)
+            if (model.ModelSettings.CurrentYear == 1)
             {
                 // for the first simulation year, use the value of this autumn for the last years autumn
                 ChillingDaysLastYear = days_after;
@@ -87,13 +87,13 @@ namespace iLand.Simulation
         }
 
         /// calculate the phenology for the current year
-        public void Calculate(GlobalSettings globalSettings)
+        public void Calculate(Model model)
         {
             if (ID == 0)
             {
                 // for needles: just calculate the chilling requirement for the establishment
                 // i.e.: use the "bottom line" of 10.5 hrs daylength for the end of the vegetation season
-                CalculateChillDays(globalSettings, mClimate.Sun.LastDayLongerThan10_5Hours);
+                CalculateChillDays(model, mClimate.Sun.LastDayLongerThan10_5Hours);
                 return;
             }
             double vpd, temp, daylength;
@@ -180,7 +180,7 @@ namespace iLand.Simulation
                 }
             }
 
-            CalculateChillDays(globalSettings);
+            CalculateChillDays(model);
         }
 
         private double Ramp(double value, double minValue, double maxValue)

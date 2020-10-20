@@ -1,12 +1,12 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
+using iLand.Output;
 using iLand.Plugin;
 using iLand.Tools;
 using iLand.Trees;
 using iLand.World;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -28,10 +28,11 @@ namespace iLand.Simulation
         public DEM Dem { get; private set; }
         public Input.EnvironmentReader Environment { get; private set; }
         public GrassCover GrassCover { get; private set; }
-        public GlobalSettings GlobalSettings { get; private set; }
+        public FileLocations Files { get; private set; }
         public Management Management { get; private set; }
         public ModelSettings ModelSettings { get; private set; }
         public Plugin.Modules Modules { get; private set; }
+        public Output.Outputs Outputs { get; private set; }
         public Project Project { get; private set; }
         public RandomGenerator RandomGenerator { get; private set; }
         public List<ResourceUnit> ResourceUnits { get; private set; }
@@ -49,11 +50,9 @@ namespace iLand.Simulation
         public Model()
         {
             //this.DebugTimers = new DebugTimerCollection();
-            this.GlobalSettings = new GlobalSettings()
-            {
-                CurrentYear = 0,
-            };
+            this.Files = new FileLocations();
             this.ModelSettings = new ModelSettings();
+            this.Outputs = new Output.Outputs();
             this.RandomGenerator = new RandomGenerator();
             this.ResourceUnits = new List<ResourceUnit>();
             this.ResourceUnitGrid = new Grid<ResourceUnit>();
@@ -87,13 +86,7 @@ namespace iLand.Simulation
         public void BeforeRun() // initializations
         {
             // setup outputs
-            // setup output database
-            if ((this.GlobalSettings.DatabaseOutput != null) && (this.GlobalSettings.DatabaseOutput.State != ConnectionState.Closed))
-            {
-                this.GlobalSettings.DatabaseOutput.Close();
-            }
-            OpenOutputDatabase();
-            this.GlobalSettings.OutputManager.Setup(this);
+            this.Outputs.Setup(this);
             //this.GlobalSettings.ClearDebugLists();
 
             // initialize stands
@@ -104,7 +97,7 @@ namespace iLand.Simulation
             }
 
             {
-                if (this.GlobalSettings.LogDebug())
+                if (this.Files.LogDebug())
                 {
                     Debug.WriteLine("attempting to calculate initial stand statistics (incl. apply and read pattern)...");
                 }
@@ -119,9 +112,9 @@ namespace iLand.Simulation
             }
 
             // outputs to create with inital state (without any growth) are called here:
-            this.GlobalSettings.CurrentYear = 0; // set clock to "0" (for outputs with initial state)
-            this.GlobalSettings.OutputManager.LogYear(this); // log initial state
-            this.GlobalSettings.CurrentYear = 1; // set to first year
+            this.ModelSettings.CurrentYear = 0; // set clock to "0" (for outputs with initial state)
+            this.Outputs.LogYear(this); // log initial state
+            this.ModelSettings.CurrentYear = 1; // set to first year
         }
 
         /** Main model runner.
@@ -147,7 +140,7 @@ namespace iLand.Simulation
             // execute scheduled events for the current year
             if (TimeEvents != null)
             {
-                TimeEvents.Run(this.GlobalSettings);
+                TimeEvents.Run(this);
             }
             // load the next year of the climate database
             foreach (World.Climate climate in this.Environment.ClimatesByName.Values)
@@ -229,13 +222,13 @@ namespace iLand.Simulation
                 ru.YearEnd(this);
             }
             // create outputs
-            this.GlobalSettings.OutputManager.LogYear(this);
+            this.Outputs.LogYear(this);
 
             //this.GlobalSettings.SystemStatistics.WriteOutputTime += toutput.Elapsed();
             //this.GlobalSettings.SystemStatistics.TotalYearTime += t.Elapsed();
             // this.GlobalSettings.SystemStatistics.AddToDebugList();
 
-            ++this.GlobalSettings.CurrentYear;
+            ++this.ModelSettings.CurrentYear;
         }
 
         public void Dispose()
@@ -251,7 +244,7 @@ namespace iLand.Simulation
             {
                 if (disposing)
                 {
-                    this.GlobalSettings.Dispose();
+                    this.Outputs.Dispose();
                 }
                 this.isDisposed = true;
             }
@@ -271,7 +264,7 @@ namespace iLand.Simulation
             //using DebugTimer dt = this.DebugTimers.Create("Model.LoadProject()");
             // this.GlobalSettings.PrintDirectories();
             this.Project = Project.Load(projectFilePath);
-            this.GlobalSettings.SetupDirectories(this.Project.System.Path, Path.GetFullPath(projectFilePath));
+            this.Files.SetupDirectories(this.Project.System.Path, Path.GetFullPath(projectFilePath));
 
             // log level
             string logLevelAsString = this.Project.System.Settings.LogLevel.ToLowerInvariant();
@@ -283,19 +276,10 @@ namespace iLand.Simulation
                 "error" => 3,
                 _ => throw new NotSupportedException("Unhandled log level '" + logLevelAsString + "'.")
             };
-            this.GlobalSettings.SetLogLevel(logLevel);
-
-            // database connections: reset
-            this.GlobalSettings.CloseDatabaseConnections();
-            // input and climate connection
-            // see initOutputDatabase() for output database
-            string dbPath = this.GlobalSettings.GetPath(this.Project.System.Database.In, "database");
-            this.GlobalSettings.SetupDatabaseConnection("in", dbPath, true);
-            dbPath = this.GlobalSettings.GetPath(this.Project.System.Database.Climate, "database");
-            this.GlobalSettings.SetupDatabaseConnection("climate", dbPath, true);
+            this.Files.SetLogLevel(logLevel);
 
             this.ModelSettings.LoadModelSettings(this);
-            if (this.GlobalSettings.LogDebug())
+            if (this.Files.LogDebug())
             {
                 this.ModelSettings.Print();
             }
@@ -427,7 +411,7 @@ namespace iLand.Simulation
                     {
                         throw new XmlException("/project/model/world/environmentGrid not found.");
                     }
-                    string gridFilePath = this.GlobalSettings.GetPath(gridFileName);
+                    string gridFilePath = this.Files.GetPath(gridFileName);
                     if (File.Exists(gridFilePath))
                     {
                         Environment.SetGridMode(gridFilePath);
@@ -443,7 +427,7 @@ namespace iLand.Simulation
                 {
                     throw new XmlException("/project/model/world/environmentFile not found.");
                 }
-                string environmentFilePath = this.GlobalSettings.GetPath(environmentFileName);
+                string environmentFilePath = this.Files.GetPath(environmentFileName);
                 if (Environment.LoadFromProjectAndEnvironmentFile(this, environmentFilePath) == false)
                 {
                     return; // TODO: why is this here?
@@ -469,7 +453,7 @@ namespace iLand.Simulation
                 {
                     throw new XmlException("/project/model/world/timeEventsFile not found");
                 }
-                TimeEvents.LoadFromFile(this.GlobalSettings.GetPath(timeEventsFileName, "script"), this.GlobalSettings);
+                TimeEvents.LoadFromFile(this.Files, this.Files.GetPath(timeEventsFileName, "script"));
             }
 
             // simple case: create resource units in a regular grid.
@@ -580,7 +564,7 @@ namespace iLand.Simulation
                 // to be extended!!! e.g. to load ESRI-style text files....
                 // setup a grid with the same size as the height grid...
                 Grid<float> worldMask = new Grid<float>((int)HeightGrid.CellSize, HeightGrid.CellsX, HeightGrid.CellsY);
-                string fileName = this.GlobalSettings.GetPath(this.Project.Model.World.AreaMask.ImageFile);
+                string fileName = this.Files.GetPath(this.Project.Model.World.AreaMask.ImageFile);
                 Grid.LoadGridFromImage(fileName, worldMask); // fetch from image
                 for (int i = 0; i < worldMask.Count; i++)
                 {
@@ -603,7 +587,7 @@ namespace iLand.Simulation
             string demFileName = this.Project.Model.World.DemFile;
             if (String.IsNullOrEmpty(demFileName) == false)
             {
-                this.Dem = new DEM(this.GlobalSettings.GetPath(demFileName), this);
+                this.Dem = new DEM(this.Files.GetPath(demFileName), this);
             }
 
             // setup of saplings
@@ -646,27 +630,6 @@ namespace iLand.Simulation
             // Debug.WriteLine("Multithreading enabled: " + IsMultithreaded + ", thread count: " + System.Environment.ProcessorCount);
 
             IsSetup = true;
-        }
-
-        private void OpenOutputDatabase() // setup output database (run metadata, ...)
-        {
-            // create run-metadata
-            //int maxID = (int)(long)SqlHelper.QueryValue("select max(id) from runs", g.DatabaseInput);
-            //maxID++;
-            //SqlHelper.ExecuteSql(String.Format("insert into runs (id, timestamp) values ({0}, '{1}')", maxID, timestamp), g.DatabaseInput);
-            // replace path information
-            // setup final path
-            GlobalSettings globalSettings = this.GlobalSettings;
-            string outputDatabaseFile = this.Project.System.Database.Out;
-            if (String.IsNullOrWhiteSpace(outputDatabaseFile))
-            {
-                throw new XmlException("The /project/system/database/out element is missing or does not specify an output database file name.");
-            }
-            string outputDatabasePath = globalSettings.GetPath(outputDatabaseFile, "output");
-            // dbPath.Replace("$id$", maxID.ToString(), StringComparison.Ordinal);
-            string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_hhmmss");
-            outputDatabasePath.Replace("$date$", timestamp, StringComparison.Ordinal);
-            globalSettings.SetupDatabaseConnection("out", outputDatabasePath, false);
         }
 
         private void ApplyPattern() // apply LIP-patterns of all trees
@@ -864,7 +827,7 @@ namespace iLand.Simulation
                     c_rad++;
                 }
             }
-            if (this.GlobalSettings.LogDebug())
+            if (this.Files.LogDebug())
             {
                 Debug.WriteLine("initialize grid:" + c_rad + "radiating pixels...");
             }

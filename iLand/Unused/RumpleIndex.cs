@@ -99,12 +99,12 @@ namespace iLand.Tools
                 float rumple_index = total_surface_area / ((float)total_valid_pixels * hg.CellSize * hg.CellSize);
                 mRumpleIndex = rumple_index;
             }
-            mLastYear = model.GlobalSettings.CurrentYear;
+            mLastYear = model.ModelSettings.CurrentYear;
         }
 
         public double Value(Model model, bool force_recalculate = false)
         {
-            if (force_recalculate || mLastYear != model.GlobalSettings.CurrentYear)
+            if (force_recalculate || mLastYear != model.ModelSettings.CurrentYear)
             {
                 Calculate(model);
             }

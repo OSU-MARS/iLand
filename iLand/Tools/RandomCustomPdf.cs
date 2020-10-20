@@ -58,8 +58,8 @@ namespace iLand.Tools
                 x1 = mLowerBound + i * mDeltaX;
                 x2 = x1 + mDeltaX;
                 // p1, p2: werte der pdf bei unterer und oberer grenze des aktuellen schrittes
-                p1 = mExpression.Calculate(model, x1);
-                p2 = mExpression.Calculate(model, x2);
+                p1 = mExpression.Evaluate(model, x1);
+                p2 = mExpression.Evaluate(model, x2);
                 // areaval: numerische integration zwischen x1 und x2
                 areaval = (p1 + p2) / 2 * step_width;
                 if (isSumFunc)
@@ -93,8 +93,8 @@ namespace iLand.Tools
             if (mSumFunction)
             {
                 double p1, p2;
-                p1 = mExpression.Calculate(model, lowerBound);
-                p2 = mExpression.Calculate(model, upperBound);
+                p1 = mExpression.Evaluate(model, lowerBound);
+                p2 = mExpression.Evaluate(model, upperBound);
                 return p2 - p1;
             }
 

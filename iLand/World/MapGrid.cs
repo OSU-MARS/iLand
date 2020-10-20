@@ -61,11 +61,11 @@ namespace iLand.World
         /// return true, if the point 'lif_grid_coords' (x/y integer key within the LIF-Grid)
         public bool HasValue(int id, Point lif_grid_coords)
         {
-            return this.StandIDFromLifCoord(lif_grid_coords) == id;
+            return this.StandIDFromLightCoordinate(lif_grid_coords) == id;
         }
 
         /// return the stand-ID at the coordinates *from* the LIF-Grid (i.e., 2m grid).
-        public int StandIDFromLifCoord(Point lif_grid_coords)
+        public int StandIDFromLightCoordinate(Point lif_grid_coords)
         {
             return Grid[lif_grid_coords.X / Constant.LightPerHeightSize, lif_grid_coords.Y / Constant.LightPerHeightSize];
         }
@@ -220,7 +220,7 @@ namespace iLand.World
             {
                 foreach (Tree tree in ru.Trees)
                 {
-                    if (StandIDFromLifCoord(tree.LightCellPosition) == id && !tree.IsDead())
+                    if (StandIDFromLightCoordinate(tree.LightCellPosition) == id && !tree.IsDead())
                     {
                         tree_list.Add(tree);
                     }
@@ -252,13 +252,12 @@ namespace iLand.World
             {
                 foreach (Tree tree in ru.Trees)
                 {
-                    if (StandIDFromLifCoord(tree.LightCellPosition) == id && !tree.IsDead())
+                    if (StandIDFromLightCoordinate(tree.LightCellPosition) == id && !tree.IsDead())
                     {
-                        Tree t = tree;
-                        tw.Tree = t;
+                        tw.Tree = tree;
                         if (expression != null)
                         {
-                            double value = expression.Calculate(tw, model);
+                            double value = expression.Evaluate(model, tw);
                             // keep if expression returns true (1)
                             bool keep = value == 1.0;
                             // if value is >0 (i.e. not "false"), then draw a random number
@@ -271,7 +270,7 @@ namespace iLand.World
                                 continue;
                             }
                         }
-                        rList.Add(new MutableTuple<Tree, double>(t, 0.0));
+                        rList.Add(new MutableTuple<Tree, double>(tree, 0.0));
                     }
                 }
             }

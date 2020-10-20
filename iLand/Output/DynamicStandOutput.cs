@@ -118,7 +118,7 @@ namespace iLand.Output
             }
             if (!mFilter.IsEmpty)
             {
-                if (mFilter.Calculate(model, model.GlobalSettings.CurrentYear) != 0.0)
+                if (mFilter.Evaluate(model, model.ModelSettings.CurrentYear) != 0.0)
                 {
                     return;
                 }
@@ -147,7 +147,7 @@ namespace iLand.Output
             {
                 Species species = model.GetFirstSpeciesSet().ActiveSpecies[index];
                 trees.Clear();
-                AllTreeIterator all_trees = new AllTreeIterator(model);
+                AllTreeEnumerator all_trees = new AllTreeEnumerator(model);
                 for (Tree tree = all_trees.MoveNextLiving(); tree != null; tree = all_trees.MoveNextLiving())
                 {
                     if (perSpecies && tree.Species != species)
@@ -180,7 +180,7 @@ namespace iLand.Output
                     }
                     if (field.var_index >= 0)
                     {
-                        data.Add(tw.Value(field.var_index, model.GlobalSettings));
+                        data.Add(tw.Value(model, field.var_index));
                     }
                     else
                     {
@@ -189,7 +189,7 @@ namespace iLand.Output
                     // constant values (if not already present)
                     if (columnIndex == 0)
                     {
-                        insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                        insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
                         insertRow.Parameters[1].Value = -1;
                         insertRow.Parameters[2].Value = -1;
                         if (perSpecies)
@@ -312,7 +312,7 @@ namespace iLand.Output
 
                             if (field.var_index >= 0)
                             {
-                                data.Add(tw.Value(field.var_index, model.GlobalSettings));
+                                data.Add(tw.Value(model, field.var_index));
                             }
                             else
                             {
@@ -328,7 +328,7 @@ namespace iLand.Output
 
                         if (columnIndex == 0)
                         {
-                            insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                            insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
                             insertRow.Parameters[1].Value = ru.Index;
                             insertRow.Parameters[2].Value = ru.ID;
                             if (bySpecies)

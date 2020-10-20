@@ -154,7 +154,10 @@ namespace iLand.World
                 throw new NotImplementedException("Tracking of years loaded is not currently implemented. Consider specifying a larger climate batch size as a workaround.");
             }
             string query = String.Format("select year,month,day,min_temp,max_temp,prec,rad,vpd from {0} {1} order by year, month, day", Name, climateTableQueryFilter);
-            using SqliteCommand queryCommand = new SqliteCommand(query, model.GlobalSettings.DatabaseClimate);
+
+            string climateDatabaseFilePath = model.Files.GetPath(model.Project.System.Database.Climate, "database");
+            using SqliteConnection climateDatabase = model.Files.GetDatabaseConnection(climateDatabaseFilePath, true);
+            using SqliteCommand queryCommand = new SqliteCommand(query, climateDatabase);
             using SqliteDataReader climateReader = queryCommand.ExecuteReader();
 
             int dayIndex = 0;
@@ -169,8 +172,8 @@ namespace iLand.World
                 double temperatureAddition = mDefaultTemperatureAddition;
                 if (model.TimeEvents != null)
                 {
-                    object val_temp = model.TimeEvents.Value(model.GlobalSettings.CurrentYear + yearLoadIndex, "model.climate.temperatureShift");
-                    object val_prec = model.TimeEvents.Value(model.GlobalSettings.CurrentYear + yearLoadIndex, "model.climate.precipitationShift");
+                    object val_temp = model.TimeEvents.Value(model.ModelSettings.CurrentYear + yearLoadIndex, "model.climate.temperatureShift");
+                    object val_prec = model.TimeEvents.Value(model.ModelSettings.CurrentYear + yearLoadIndex, "model.climate.precipitationShift");
                     if (val_temp != null)
                     {
                         temperatureAddition = (double)val_temp;
@@ -299,15 +302,15 @@ namespace iLand.World
                 {
                     // random without list
                     // make sure that the sequence of years is the same for the full landscape
-                    if (mSampledYears.Count < model.GlobalSettings.CurrentYear)
+                    if (mSampledYears.Count < model.ModelSettings.CurrentYear)
                     {
-                        while (mSampledYears.Count - 1 < model.GlobalSettings.CurrentYear)
+                        while (mSampledYears.Count - 1 < model.ModelSettings.CurrentYear)
                         {
                             mSampledYears.Add(model.RandomGenerator.Random(0, mYearsToLoad));
                         }
                     }
 
-                    mCurrentDataYear = mSampledYears[model.GlobalSettings.CurrentYear];
+                    mCurrentDataYear = mSampledYears[model.ModelSettings.CurrentYear];
                 }
                 else
                 {
@@ -323,14 +326,14 @@ namespace iLand.World
                         throw new NotSupportedException(String.Format("Climate: load year with random sampling: the actual year {0} is invalid. Only {1} years are loaded from the climate database.", mCurrentDataYear, mYearsToLoad));
                     }
                 }
-                if (model.GlobalSettings.LogInfo())
+                if (model.Files.LogInfo())
                 {
                     Debug.WriteLine("Climate: current year (randomized): " + mCurrentDataYear);
                 }
             }
 
             this.CarbonDioxidePpm = model.Project.Model.Climate.CO2Concentration;
-            if (model.GlobalSettings.LogInfo())
+            if (model.Files.LogInfo())
             {
                 Debug.WriteLine("CO2 concentration " + this.CarbonDioxidePpm + " ppm.");
             }
@@ -370,7 +373,7 @@ namespace iLand.World
             // calculate phenology
             for (int index = 0; index < mPhenology.Count; ++index)
             {
-                mPhenology[index].Calculate(model.GlobalSettings);
+                mPhenology[index].Calculate(model);
             }
         }
 

@@ -7,6 +7,8 @@ namespace iLand.Simulation
 {
     public class ModelSettings
     {
+        public int CurrentYear { get; set; }
+
         // list of settings
         // general on/off switches
         public bool GrowthEnabled { get; private set; } // if false, trees will apply/read light patterns, but do not grow
@@ -32,6 +34,12 @@ namespace iLand.Simulation
 
         public double BrowsingPressure { get; private set; }
         public double RecruitmentVariation { get; private set; }
+
+        public ModelSettings()
+        {
+            this.CurrentYear = 0;
+            // all other members set in LoadModelSettings()
+        }
 
         public void LoadModelSettings(Model model)
         {

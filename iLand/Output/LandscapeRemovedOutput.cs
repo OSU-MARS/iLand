@@ -85,7 +85,7 @@ namespace iLand.Output
                 {
                     MortalityCause rem_type = (MortalityCause)(removal.Key / 10000);
                     int species_index = removal.Key % 10000;
-                    insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                    insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
                     insertRow.Parameters[1].Value = model.GetFirstSpeciesSet().Species(species_index).ID;
                     insertRow.Parameters[2].Value = rem_type switch
                     {

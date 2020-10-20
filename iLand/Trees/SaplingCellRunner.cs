@@ -44,7 +44,7 @@ namespace iLand.Trees
                 {
                     return null; // end of the bounding box
                 }
-                if (mStandGrid.StandIDFromLifCoord(mRunner.CurrentIndex()) != mStandID)
+                if (mStandGrid.StandIDFromLightCoordinate(mRunner.CurrentIndex()) != mStandID)
                 {
                     continue; // pixel does not belong to the target stand
                 }

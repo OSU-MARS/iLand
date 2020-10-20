@@ -69,7 +69,7 @@ namespace iLand.Output
                                 }
                                 double n_repr = species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].Height) / n_on_px;
 
-                                insertRow.Parameters[0].Value = model.GlobalSettings.CurrentYear;
+                                insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
                                 insertRow.Parameters[1].Value = ru.Index;
                                 insertRow.Parameters[2].Value = ru.ID;
                                 insertRow.Parameters[3].Value = rus.Species.ID;

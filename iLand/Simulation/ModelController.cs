@@ -105,7 +105,7 @@ namespace iLand.Simulation
             }
 
             // reset clock...
-            this.Model.GlobalSettings.CurrentYear = 1;
+            this.Model.ModelSettings.CurrentYear = 1;
             // initialization of trees, output on startup
             this.Model.BeforeRun();
 

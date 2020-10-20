@@ -1,4 +1,5 @@
-﻿using iLand.Tools;
+﻿using iLand.Input.ProjectFile;
+using iLand.Tools;
 using iLand.World;
 using System;
 using System.Diagnostics;
@@ -49,7 +50,7 @@ namespace iLand.Trees
             NewSaplings = 0;
         }
 
-        public void Calculate(Species species, ResourceUnit ru, GlobalSettings globalSettings)
+        public void Calculate(Species species, ResourceUnit ru, Simulation.Model model)
         {
             if (LivingCohorts != 0)
             {
@@ -58,7 +59,7 @@ namespace iLand.Trees
                 AverageDeltaHPot /= (double)LivingCohorts;
                 AverageDeltaHRealized /= (double)LivingCohorts;
             }
-            if (globalSettings.CurrentYear == 0)
+            if (model.ModelSettings.CurrentYear == 0)
             {
                 return; // no need for carbon flows in initial run
             }
