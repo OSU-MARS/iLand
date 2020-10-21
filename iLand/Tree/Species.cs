@@ -1,10 +1,9 @@
-﻿using iLand.Simulation;
-using iLand.Input;
+﻿using iLand.Input;
 using iLand.Tools;
 using System;
 using System.Diagnostics;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     /** @class Species
       The behavior and general properties of tree species.
@@ -18,30 +17,30 @@ namespace iLand.Trees
         private readonly SpeciesStamps mLIPs; // ptr to the container of the LIP-pattern
 
         // biomass allometries:
-        private double mFoliage_a, mFoliage_b;  // allometry (biomass = a * dbh^b) for foliage
-        private double mWoody_a, mWoody_b; // allometry (biomass = a * dbh^b) for woody compartments aboveground
-        private double mRoot_a, mRoot_b; // allometry (biomass = a * dbh^b) for roots (compound, fine and coarse roots as one pool)
-        private double mBranch_a, mBranch_b; // allometry (biomass = a * dbh^b) for branches
+        private float mFoliage_a, mFoliage_b;  // allometry (biomass = a * dbh^b) for foliage
+        private float mWoody_a, mWoody_b; // allometry (biomass = a * dbh^b) for woody compartments aboveground
+        private float mRoot_a, mRoot_b; // allometry (biomass = a * dbh^b) for roots (compound, fine and coarse roots as one pool)
+        private float mBranch_a, mBranch_b; // allometry (biomass = a * dbh^b) for branches
         // cn-ratios
-        private double mBarkThicknessFactor; // multiplier to estimate bark thickness (cm) from dbh
+        private float mBarkThicknessFactor; // multiplier to estimate bark thickness (cm) from dbh
 
         // height-diameter-relationships
         private readonly Expression mHDlow; // minimum HD-relation as f(d) (open grown tree)
         private readonly Expression mHDhigh; // maximum HD-relation as f(d)
         // stem density and taper
-        private double mFormFactor; // taper form factor of the stem [-] used for volume / stem-mass calculation calculation
+        private float mFormFactor; // taper form factor of the stem [-] used for volume / stem-mass calculation calculation
         // mortality
         private double mDeathProb_stress; // max. prob. of death per year when tree suffering maximum stress
         // Aging
-        private double mMaximumAge; // maximum age of species (years)
-        private double mMaximumHeight; // maximum height of species (m) for aging
+        private float mMaximumAge; // maximum age of species (years)
+        private float mMaximumHeight; // maximum height of species (m) for aging
         private readonly Expression mAging;
         // environmental responses
         private double mRespVpdExponent; // exponent in vpd response calculation (Mkela 2008)
         private double mRespTempMin; // temperature response calculation offset
         private double mRespTempMax; // temperature response calculation: saturation point for temp. response
-        private double mRespNitrogenClass; // nitrogen response class (1..3). fractional values (e.g. 1.2) are interpolated.
-        private double mLightResponseClass; // light response class (1..5) (1=shade intolerant)
+        private float mRespNitrogenClass; // nitrogen response class (1..3). fractional values (e.g. 1.2) are interpolated.
+        private float mLightResponseClass; // light response class (1..5) (1=shade intolerant)
         // regeneration
         private int mMaturityYears; // a tree produces seeds if it is older than this parameter
         private double mSeedYearProbability; // probability that a year is a seed year (=1/avg.timespan between seedyears)
@@ -62,12 +61,12 @@ namespace iLand.Trees
         public bool IsEvergreen { get; private set; }
         public bool IsSeedYear { get; private set; }
         // cn ratios
-        public double CNRatioFoliage { get; private set; }
-        public double CNRatioFineRoot { get; private set; }
-        public double CNRatioWood { get; private set; }
+        public float CNRatioFoliage { get; private set; }
+        public float CNRatioFineRoot { get; private set; }
+        public float CNRatioWood { get; private set; }
         // turnover rates
-        public double TurnoverLeaf { get; private set; } // yearly turnover rate leafs
-        public double TurnoverRoot { get; private set; } // yearly turnover rate root
+        public float TurnoverLeaf { get; private set; } // yearly turnover rate leafs
+        public float TurnoverRoot { get; private set; } // yearly turnover rate root
 
         // mortality
         public double DeathProbabilityIntrinsic { get; private set; } // prob. of intrinsic death per year [0..1]
@@ -78,17 +77,17 @@ namespace iLand.Trees
         public double PsiMin { get; private set; }
 
         // snags
-        public double SnagKsw { get; private set; } // standing woody debris (swd) decomposition rate
-        public double SnagHalflife { get; private set; } // half-life-period of standing snags (years)
-        public double SnagKyl { get; private set; } // decomposition rate for labile matter (litter) used in soil model
-        public double SnagKyr { get; private set; } // decomposition rate for refractory matter (woody) used in soil model
+        public float SnagKsw { get; private set; } // standing woody debris (swd) decomposition rate
+        public float SnagHalflife { get; private set; } // half-life-period of standing snags (years)
+        public float SnagKyl { get; private set; } // decomposition rate for labile matter (litter) used in soil model
+        public float SnagKyr { get; private set; } // decomposition rate for refractory matter (woody) used in soil model
 
         // growth
-        public double SpecificLeafArea { get; private set; } // conversion factor from kg OTS to m2 LeafArea
-        public double VolumeFactor { get; private set; } // factor for volume calculation: V = factor * D^2*H (incorporates density and the form of the bole)
+        public float SpecificLeafArea { get; private set; } // conversion factor from kg OTS to m2 LeafArea
+        public float VolumeFactor { get; private set; } // factor for volume calculation: V = factor * D^2*H (incorporates density and the form of the bole)
         public double WoodDensity { get; private set; } // density of stem wood [kg/m3]
 
-        public double FinerootFoliageRatio { get; private set; } // ratio of fineroot mass (kg) to foliage mass (kg)
+        public float FinerootFoliageRatio { get; private set; } // ratio of fineroot mass (kg) to foliage mass (kg)
         public EstablishmentParameters EstablishmentParameters { get; private set; }
         public SaplingGrowthParameters SaplingGrowthParameters { get; private set; }
         public SeedDispersal SeedDispersal { get; set; }
@@ -116,23 +115,23 @@ namespace iLand.Trees
         public bool Active { get; private set; }
 
         // allometries
-        public double GetBarkThickness(double dbh) { return dbh * mBarkThicknessFactor; }
-        public double GetBiomassFoliage(double dbh) { return mFoliage_a * Math.Pow(dbh, mFoliage_b); }
-        public double GetBiomassWoody(double dbh) { return mWoody_a * Math.Pow(dbh, mWoody_b); }
-        public double GetBiomassRoot(double dbh) { return mRoot_a * Math.Pow(dbh, mRoot_b); }
-        public double GetBiomassBranch(double dbh) { return mBranch_a * Math.Pow(dbh, mBranch_b); }
-        public double GetWoodFoliageRatio() { return mWoody_b / mFoliage_b; }
+        public float GetBarkThickness(float dbh) { return dbh * mBarkThicknessFactor; }
+        public float GetBiomassFoliage(float dbh) { return mFoliage_a * MathF.Pow(dbh, mFoliage_b); }
+        public float GetBiomassWoody(float dbh) { return mWoody_a * MathF.Pow(dbh, mWoody_b); }
+        public float GetBiomassRoot(float dbh) { return mRoot_a * MathF.Pow(dbh, mRoot_b); }
+        public float GetBiomassBranch(float dbh) { return mBranch_a * MathF.Pow(dbh, mBranch_b); }
+        public float GetWoodFoliageRatio() { return mWoody_b / mFoliage_b; }
 
         public Stamp GetStamp(float dbh, float height) { return mLIPs.GetStamp(dbh, height); }
 
-        public double GetLightResponse(Simulation.Model model, double lightResourceIndex) 
+        public float GetLightResponse(Simulation.Model model, float lightResourceIndex) 
         { 
-            return SpeciesSet.LightResponse(model, lightResourceIndex, mLightResponseClass); 
+            return this.SpeciesSet.LightResponse(model, lightResourceIndex, mLightResponseClass); 
         }
 
-        public double GetNitrogenResponse(double availableNitrogen) 
+        public float GetNitrogenResponse(float availableNitrogen) 
         {
-            return SpeciesSet.NitrogenResponse(availableNitrogen, mRespNitrogenClass); 
+            return this.SpeciesSet.NitrogenResponse(availableNitrogen, mRespNitrogenClass); 
         }
 
         // parameters for seed dispersal
@@ -208,7 +207,7 @@ namespace iLand.Trees
             species.WoodDensity = reader.WoodDensity();
             species.mFormFactor = reader.FormFactor();
             // volume = formfactor*pi/4 *d^2*h -> volume = volumefactor * d^2 * h
-            species.VolumeFactor = species.mFormFactor * Constant.QuarterPi;
+            species.VolumeFactor = Constant.QuarterPi * species.mFormFactor;
 
             // snags
             species.SnagKsw = reader.SnagKsw(); // decay rate of SWD
@@ -351,9 +350,9 @@ namespace iLand.Trees
         /** calculate fraction of stem wood increment base on dbh.
             allometric equation: a*d^b -> first derivation: a*b*d^(b-1)
             the ratio for stem is 1 minus the ratio of twigs to total woody increment at current "dbh". */
-        public double AllometricFractionStem(double dbh)
+        public float AllometricFractionStem(float dbh)
         {
-            double fraction_stem = 1.0 - (mBranch_a * mBranch_b * Math.Pow(dbh, mBranch_b - 1.0)) / (mWoody_a * mWoody_b * Math.Pow(dbh, mWoody_b - 1));
+            float fraction_stem = 1.0F - (mBranch_a * mBranch_b * MathF.Pow(dbh, mBranch_b - 1.0F)) / (mWoody_a * mWoody_b * MathF.Pow(dbh, mWoody_b - 1.0F));
             return fraction_stem;
         }
 
@@ -363,17 +362,17 @@ namespace iLand.Trees
            see http://iland.boku.ac.at/primary+production#respiration_and_aging
            @param useAge set to true if "real" tree age is available. If false, only the tree height is used.
           */
-        public double Aging(Simulation.Model model, float height, int age)
+        public float Aging(Simulation.Model model, float height, int age)
         {
-            double rel_height = Math.Min(height / mMaximumHeight, 0.999999); // 0.999999 -> avoid div/0
-            double rel_age = Math.Min(age / mMaximumAge, 0.999999);
+            float rel_height = MathF.Min(height / mMaximumHeight, 0.999999F); // 0.999999 -> avoid div/0
+            float rel_age = MathF.Min(age / mMaximumAge, 0.999999F);
 
             // harmonic mean: http://en.wikipedia.org/wiki/Harmonic_mean
-            double x = 1.0 - 2.0 / (1.0 / (1.0 - rel_height) + 1.0 / (1.0 - rel_age)); // Note:
+            float x = 1.0F - 2.0F / (1.0F / (1.0F - rel_height) + 1.0F / (1.0F - rel_age)); // Note:
 
-            double aging_factor = mAging.Evaluate(model, x);
+            float aging_factor = (float)mAging.Evaluate(model, x);
 
-            return Global.Limit(aging_factor, 0.0, 1.0); // limit to [0..1]
+            return Global.Limit(aging_factor, 0.0F, 1.0F); // limit to [0..1]
         }
 
         public int EstimateAge(float height)
@@ -387,7 +386,7 @@ namespace iLand.Trees
            If seeds are produced, this information is stored in a "SeedMap"
           */
         /// check the maturity of the tree and flag the position as seed source appropriately
-        public void SeedProduction(Simulation.Model model, Tree tree)
+        public void SeedProduction(Simulation.Model model, Trees tree, int treeIndex)
         {
             if (this.SeedDispersal == null)
             {
@@ -395,15 +394,15 @@ namespace iLand.Trees
             }
 
             // if the tree is considered as serotinous (i.e. seeds need external trigger such as fire)
-            if (this.IsTreeSerotinous(model, tree.Age))
+            if (this.IsTreeSerotinous(model, tree.Age[treeIndex]))
             {
                 return;
             }
 
             // no seed production if maturity age is not reached (species parameter) or if tree height is below 4m.
-            if (tree.Age > mMaturityYears && tree.Height > 4.0F)
+            if (tree.Age[treeIndex] > mMaturityYears && tree.Height[treeIndex] > 4.0F)
             {
-                SeedDispersal.SetMatureTree(tree.LightCellPosition, tree.LeafArea);
+                this.SeedDispersal.SetMatureTree(tree.LightCellPosition[treeIndex], tree.LeafArea[treeIndex]);
             }
         }
 

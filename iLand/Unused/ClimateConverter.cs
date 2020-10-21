@@ -135,7 +135,7 @@ namespace iLand.Tools
                     // fetch values from input file
                     for (int col = 0; col < file.ColumnCount; col++)
                     {
-                        double value = Double.Parse(file.GetValue(row, col));
+                        double value = Double.Parse(file.GetValue(col, row));
                         // store value in each of the expression variables
                         for (int j = 0; j < 8; j++)
                         {

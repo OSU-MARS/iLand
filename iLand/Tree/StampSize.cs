@@ -1,4 +1,4 @@
-﻿namespace iLand.Trees
+﻿namespace iLand.Tree
 {
     /// @enum StampType defines different grid sizes for stamps (4x4 floats, ... 48x48 floats).
     /// the numeric value indicates also the size of the grid.

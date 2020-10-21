@@ -1,7 +1,7 @@
 ﻿using iLand.World;
 using System;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     public class SaplingTree
     {
@@ -56,8 +56,8 @@ namespace iLand.Trees
             {
                 return null;
             }
-            ResourceUnitSpecies rus = ru.ResourceUnitSpecies(SpeciesIndex);
-            return rus;
+            ResourceUnitSpecies ruSpecies = ru.ResourceUnitSpecies(this.SpeciesIndex);
+            return ruSpecies;
         }
     }
 }

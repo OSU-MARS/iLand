@@ -32,7 +32,7 @@ namespace iLand.World
             ResourceUnit = resourceUnit;
         }
 
-        public override ReadOnlyCollection<string> GetVariablesList()
+        public override ReadOnlyCollection<string> GetVariableNames()
         {
             return VariableNames;
         }

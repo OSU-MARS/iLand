@@ -35,7 +35,7 @@ namespace iLand.Input.ProjectFile
 		public double YoungRefractoryNitrogen { get; set; }
 
 		[XmlElement(ElementName = "youngRefractoryDecompRate")]
-		public double YoungRefractoryDecompositionRate { get; set; }
+		public float YoungRefractoryDecompositionRate { get; set; }
 
 		[XmlElement(ElementName = "somC")]
 		public double SoilOrganicMatterCarbon { get; set; }
@@ -51,7 +51,7 @@ namespace iLand.Input.ProjectFile
 
 		public Site()
         {
-			this.YoungRefractoryDecompositionRate = -1.0;
+			this.YoungRefractoryDecompositionRate = -1.0F;
         }
     }
 }

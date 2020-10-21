@@ -1,9 +1,8 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
-using iLand.Output;
 using iLand.Plugin;
 using iLand.Tools;
-using iLand.Trees;
+using iLand.Tree;
 using iLand.World;
 using System;
 using System.Collections.Generic;
@@ -107,8 +106,13 @@ namespace iLand.Simulation
                 ReadPattern();
                 loader.ProcessAfterInit(this); // e.g. initialization of saplings
 
-                // force the compilation of initial stand statistics
-                CreateStandStatistics();
+                // calculate initial stand statistics
+                this.CalculateStockedArea();
+                foreach (ResourceUnit ru in this.ResourceUnits)
+                {
+                    ru.AddTreeAgingForAllTrees(this);
+                    ru.CreateStandStatistics(this);
+                }
             }
 
             // outputs to create with inital state (without any growth) are called here:
@@ -159,10 +163,10 @@ namespace iLand.Simulation
                 speciesSet.NewYear(this);
             }
             // management classic
-            if (Management != null)
+            if (this.Management != null)
             {
                 //using DebugTimer t2 = this.DebugTimers.Create("Management.Run()");
-                Management.Run();
+                this.Management.Run();
                 //this.GlobalSettings.SystemStatistics.ManagementTime += t.Elapsed();
             }
 
@@ -204,7 +208,7 @@ namespace iLand.Simulation
             // external modules/disturbances
             Modules.Run();
             // cleanup of tree lists if external modules removed trees.
-            CleanTreeLists(false); // do not recalculate statistics - this is done in ru.yearEnd()
+            CleanTreeLists(false); // do not recalculate statistics - this is done in ResourceUnit.YearEnd()
 
 
             // calculate soil / snag dynamics
@@ -330,27 +334,15 @@ namespace iLand.Simulation
             return this.Environment.SpeciesSetsByTableName.Values.First();
         }
 
-        // actions
-        /// build stand statistics (i.e. stats based on resource units)
-        public void CreateStandStatistics()
-        {
-            CalculateStockedArea();
-            foreach (ResourceUnit ru in ResourceUnits)
-            {
-                ru.AddTreeAgingForAllTrees(this);
-                ru.CreateStandStatistics(this);
-            }
-        }
-
         /// clean the tree data structures (remove harvested trees) - call after management operations.
-        public void CleanTreeLists(bool recalculate_stats)
+        public void CleanTreeLists(bool recalculateSpecies)
         {
             foreach (ResourceUnit ru in this.ResourceUnits)
             {
                 if (ru.HasDeadTrees)
                 {
-                    ru.CleanTreeList();
-                    ru.RecreateStandStatistics(recalculate_stats);
+                    ru.RemoveDeadTrees();
+                    ru.RecreateStandStatistics(recalculateSpecies);
                 }
             }
         }
@@ -492,7 +484,7 @@ namespace iLand.Simulation
             }
             else
             {
-                if (ModelSettings.TorusMode == false)
+                if (ModelSettings.IsTorus == false)
                 {
                     // in the case we have no stand grid but only a large rectangle (without the torus option)
                     // we assume a forest outside
@@ -678,7 +670,7 @@ namespace iLand.Simulation
 
             foreach (ResourceUnit ru in ResourceUnits)
             {
-                ru.CleanTreeList();
+                ru.RemoveDeadTrees();
                 ru.AfterGrow();
                 //Debug.WriteLine((b-n) + "trees died (of" + b + ").");
             }
@@ -846,70 +838,68 @@ namespace iLand.Simulation
         }
 
         /// multithreaded running function for LIP printing
-        private void CalculateHeightFieldAndLightIntensityPattern(ResourceUnit unit)
+        private void CalculateHeightFieldAndLightIntensityPattern(ResourceUnit ru)
         {
-            List<Tree> trees = unit.Trees;
-            // light concurrence influence
-            if (this.ModelSettings.TorusMode)
+            foreach (Trees treesOfSpecies in ru.TreesBySpeciesID.Values)
             {
-                for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+                Action<int> calculateDominantHeightField = treesOfSpecies.CalculateDominantHeightField;
+                Action<int> applyLightIntensityPattern = treesOfSpecies.ApplyLightIntensityPattern;
+                if (this.ModelSettings.IsTorus)
                 {
-                    trees[treeIndex].CalculateDominantHeightFieldTorus();
+                    calculateDominantHeightField = treesOfSpecies.CalculateDominantHeightFieldTorus;
+                    applyLightIntensityPattern = treesOfSpecies.ApplyLightIntensityPatternTorus;
                 }
-                for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+
+                for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    trees[treeIndex].ApplyLightIntensityPatternTorus();
+                    calculateDominantHeightField.Invoke(treeIndex);
                 }
-            }
-            else
-            {
-                for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+                for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    trees[treeIndex].CalculateDominantHeightField();
-                }
-                for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
-                {
-                    trees[treeIndex].ApplyLightIntensityPattern();
+                    applyLightIntensityPattern.Invoke(treeIndex);
                 }
             }
         }
 
-        /// multithreaded running function for LIP value extraction
-        private void ReadPattern(ResourceUnit unit)
+        /// LIP value extraction
+        private void ReadPattern(ResourceUnit ru)
         {
-            List<Tree> trees = unit.Trees;
-            if (!this.ModelSettings.TorusMode)
+            foreach (Trees treesOfSpecies in ru.TreesBySpeciesID.Values)
             {
-                for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+                Action<Model, int> readLightInfluenceField = treesOfSpecies.ReadLightInfluenceField;
+                if (this.ModelSettings.IsTorus)
                 {
-                    trees[treeIndex].ReadLightInfluenceField(this); // multiplicative approach
+                    readLightInfluenceField = treesOfSpecies.ReadLightInfluenceFieldTorus;
                 }
-            }
-            else
-            {
-                for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+
+                for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    trees[treeIndex].ReadLightIntensityFieldTorus(this);
+                    readLightInfluenceField.Invoke(this, treeIndex); // multiplicative approach
                 }
             }
         }
 
         /// multithreaded running function for the growth of individual trees
-        private void Grow(ResourceUnit unit)
+        private void Grow(ResourceUnit ru)
         {
-            unit.BeforeGrow(); // reset statistics
+            ru.BeforeGrow(); // reset statistics
             // calculate light responses
             // responses are based on *modified* values for LightResourceIndex
-            List<Tree> trees = unit.Trees;
-            for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+            foreach (Trees treesOfSpecies in ru.TreesBySpeciesID.Values)
             {
-                trees[treeIndex].CalcLightResponse(this);
+                for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                {
+                    treesOfSpecies.CalcLightResponse(this, treeIndex);
+                }
             }
-            unit.CalculateInterceptedArea();
+            ru.CalculateInterceptedArea();
 
-            for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+            foreach (Trees treesOfSpecies in ru.TreesBySpeciesID.Values)
             {
-                trees[treeIndex].Grow(this); // actual growth of individual trees
+                for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                {
+                    treesOfSpecies.Grow(this, treeIndex); // actual growth of individual trees
+                }
             }
 
             //this.GlobalSettings.SystemStatistics.TreeCount += unit.Trees.Count;

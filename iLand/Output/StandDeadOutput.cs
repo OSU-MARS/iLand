@@ -1,5 +1,5 @@
 ﻿using iLand.Simulation;
-using iLand.Trees;
+using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
 

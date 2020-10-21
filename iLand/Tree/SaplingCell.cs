@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     public class SaplingCell
     {

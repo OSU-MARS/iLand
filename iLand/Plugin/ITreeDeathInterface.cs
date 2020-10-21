@@ -1,9 +1,9 @@
-﻿using iLand.Trees;
+﻿using iLand.Tree;
 
 namespace iLand.Plugin
 {
     internal interface ITreeDeathInterface
     {
-        void TreeDeath(Tree tree, MortalityCause mortalityCause);
+        void TreeDeath(Trees tree, MortalityCause mortalityCause);
     }
 }

@@ -1,6 +1,6 @@
 ﻿using iLand.Simulation;
 using iLand.Tools;
-using iLand.Trees;
+using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
 using System;
@@ -9,6 +9,8 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
+using System.Net.Http.Headers;
 
 namespace iLand.Output
 {
@@ -235,27 +237,30 @@ namespace iLand.Output
                 insertTree.Parameters.Add(":si", SqliteType.Real);
 
                 PointF offset = model.Environment.GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
-                List<Tree> tree_list = standGrid.Trees(standID);
-                for (int index = 0; index < tree_list.Count; ++index)
+                List<MutableTuple<Trees, List<int>>> livingTreesInStand = standGrid.GetLivingTreesInStand(standID);
+                for (int speciesIndex = 0; speciesIndex < livingTreesInStand.Count; ++speciesIndex)
                 {
-                    Tree t = tree_list[index];
-                    insertTree.Parameters[0].Value = (standID);
-                    insertTree.Parameters[1].Value = t.ID;
-                    insertTree.Parameters[2].Value = t.GetCellCenterPoint().X + offset.X;
-                    insertTree.Parameters[3].Value = t.GetCellCenterPoint().Y + offset.Y;
-                    insertTree.Parameters[4].Value = t.Species.ID;
-                    insertTree.Parameters[5].Value = t.Age;
-                    insertTree.Parameters[6].Value = t.Height;
-                    insertTree.Parameters[7].Value = t.Dbh;
-                    insertTree.Parameters[8].Value = t.LeafArea;
-                    insertTree.Parameters[10].Value = t.Opacity;
-                    insertTree.Parameters[11].Value = t.FoliageMass;
-                    insertTree.Parameters[12].Value = t.StemMass;
-                    insertTree.Parameters[13].Value = t.FineRootMass;
-                    insertTree.Parameters[14].Value = t.CoarseRootMass;
-                    insertTree.Parameters[15].Value = t.NppReserve;
-                    insertTree.Parameters[16].Value = t.StressIndex;
-                    insertTree.ExecuteNonQuery();
+                    Trees trees = livingTreesInStand[speciesIndex].Item1;
+                    foreach (int treeIndex in livingTreesInStand[speciesIndex].Item2)
+                    {
+                        insertTree.Parameters[0].Value = standID;
+                        insertTree.Parameters[1].Value = trees.ID[treeIndex];
+                        insertTree.Parameters[2].Value = trees.GetCellCenterPoint(treeIndex).X + offset.X;
+                        insertTree.Parameters[3].Value = trees.GetCellCenterPoint(treeIndex).Y + offset.Y;
+                        insertTree.Parameters[4].Value = trees.Species.ID;
+                        insertTree.Parameters[5].Value = trees.Age[treeIndex];
+                        insertTree.Parameters[6].Value = trees.Height[treeIndex];
+                        insertTree.Parameters[7].Value = trees.Dbh[treeIndex];
+                        insertTree.Parameters[8].Value = trees.LeafArea[treeIndex];
+                        insertTree.Parameters[10].Value = trees.Opacity[treeIndex];
+                        insertTree.Parameters[11].Value = trees.FoliageMass[treeIndex];
+                        insertTree.Parameters[12].Value = trees.StemMass[treeIndex];
+                        insertTree.Parameters[13].Value = trees.FineRootMass[treeIndex];
+                        insertTree.Parameters[14].Value = trees.CoarseRootMass[treeIndex];
+                        insertTree.Parameters[15].Value = trees.NppReserve[treeIndex];
+                        insertTree.Parameters[16].Value = trees.StressIndex[treeIndex];
+                        insertTree.ExecuteNonQuery();
+                    }
                 }
                 treesTransaction.Commit();
             }
@@ -313,67 +318,67 @@ namespace iLand.Output
 
             // load trees
             // kill all living trees on the stand
-            List<Tree> tree_list = standGrid.Trees(standID);
-            int n_removed = tree_list.Count;
-            tree_list.Clear();
+            List<MutableTuple<Trees, List<int>>> livingTreesInStand = standGrid.GetLivingTreesInStand(standID);
+            Debug.Assert(livingTreesInStand.Count == 0);
 
             // load from database
             RectangleF extent = model.WorldExtentUnbuffered;
             using SqliteCommand treeQuery = new SqliteCommand(String.Format("select standID, ID, posX, posY, species,  age, height, dbh, leafArea, opacity, " +
-                           "foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex " +
-                           "from trees_stand where standID={0}", standID), db);
+                                                                            "foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex " +
+                                                                            "from trees_stand where standID={0}", standID), db);
             using SqliteDataReader treeReader = treeQuery.ExecuteReader();
-            int n = 0;
+            int treesAdded = 0;
             while (treeReader.Read())
             {
-                ++n;
+                ++treesAdded;
 
-                PointF coord = model.Environment.GisGrid.WorldToModel(new PointF(treeReader.GetInt32(2), treeReader.GetInt32(3)));
-                if (!extent.Contains(coord))
+                PointF treeLocation = model.Environment.GisGrid.WorldToModel(new PointF(treeReader.GetInt32(2), treeReader.GetInt32(3)));
+                if (!extent.Contains(treeLocation))
                 {
                     continue;
                 }
-                ResourceUnit ru = model.GetResourceUnit(coord);
+                ResourceUnit ru = model.GetResourceUnit(treeLocation);
                 if (ru == null)
                 {
                     continue;
                 }
-                Tree tree = ru.AddNewTree(model);
-                tree.RU = ru;
-                tree.ID = treeReader.GetInt32(1);
-                tree.SetLightCellIndex(coord);
+
                 Species species = model.GetFirstSpeciesSet().Species(treeReader.GetInt32(4));
-                tree.Species = species ?? throw new NotSupportedException("loadTrees: Invalid species");
-                tree.Age = treeReader.GetInt32(5);
-                tree.Height = treeReader.GetFloat(6);
-                tree.Dbh = treeReader.GetFloat(7);
-                tree.LeafArea = treeReader.GetFloat(8);
-                tree.Opacity = treeReader.GetFloat(9);
-                tree.FoliageMass = treeReader.GetFloat(10);
-                tree.StemMass = treeReader.GetFloat(11);
-                tree.FineRootMass = treeReader.GetFloat(12);
-                tree.CoarseRootMass = treeReader.GetFloat(13);
-                tree.NppReserve = treeReader.GetFloat(14);
-                tree.StressIndex = treeReader.GetFloat(15);
-                tree.Stamp = species.GetStamp(tree.Dbh, tree.Height);
+                int treeIndex = ru.AddTree(model, species.ID);
+                Trees treesOfSpecies = ru.TreesBySpeciesID[species.ID];
+                treesOfSpecies.ID[treeIndex] = treeReader.GetInt32(1);
+                treesOfSpecies.SetLightCellIndex(treeIndex, treeLocation);
+                treesOfSpecies.Species = species ?? throw new NotSupportedException("loadTrees: Invalid species");
+                treesOfSpecies.Age[treeIndex] = treeReader.GetInt32(5);
+                treesOfSpecies.Height[treeIndex] = treeReader.GetFloat(6);
+                treesOfSpecies.Dbh[treeIndex] = treeReader.GetFloat(7);
+                treesOfSpecies.LeafArea[treeIndex] = treeReader.GetFloat(8);
+                treesOfSpecies.Opacity[treeIndex] = treeReader.GetFloat(9);
+                treesOfSpecies.FoliageMass[treeIndex] = treeReader.GetFloat(10);
+                treesOfSpecies.StemMass[treeIndex] = treeReader.GetFloat(11);
+                treesOfSpecies.FineRootMass[treeIndex] = treeReader.GetFloat(12);
+                treesOfSpecies.CoarseRootMass[treeIndex] = treeReader.GetFloat(13);
+                treesOfSpecies.NppReserve[treeIndex] = treeReader.GetFloat(14);
+                treesOfSpecies.StressIndex[treeIndex] = treeReader.GetFloat(15);
+                treesOfSpecies.Stamp[treeIndex] = species.GetStamp(treesOfSpecies.Dbh[treeIndex], treesOfSpecies.Height[treeIndex]);
             }
 
             // now the saplings
-            int n_sap_removed = 0;
-            int sap_n = 0;
+            int existingSaplingsRemoved = 0;
+            int saplingsAdded = 0;
             if (model.ModelSettings.RegenerationEnabled)
             {
                 // (1) remove all saplings:
-                SaplingCellRunner scr = new SaplingCellRunner(standID, standGrid, model);
-                for (SaplingCell sc = scr.MoveNext(); sc != null; sc = scr.MoveNext())
+                SaplingCellRunner saplingRunner = new SaplingCellRunner(standID, standGrid, model);
+                for (SaplingCell saplingCell = saplingRunner.MoveNext(); saplingCell != null; saplingCell = saplingRunner.MoveNext())
                 {
-                    n_sap_removed += sc.GetOccupiedSlotCount();
-                    model.Saplings.ClearSaplings(sc, scr.RU, true);
+                    existingSaplingsRemoved += saplingCell.GetOccupiedSlotCount();
+                    model.Saplings.ClearSaplings(saplingCell, saplingRunner.RU, true);
                 }
 
                 // (2) load saplings from database
                 SqliteCommand saplingQuery = new SqliteCommand(String.Format("select posx, posy, species_index, age, height, stress_years, flags " +
-                               "from saplings_stand where standID={0}", standID), db);
+                                                                             "from saplings_stand where standID={0}", standID), db);
                 using SqliteDataReader saplingReader = saplingQuery.ExecuteReader();
                 while (saplingReader.Read())
                 {
@@ -394,21 +399,20 @@ namespace iLand.Output
                         st.StressYears = saplingReader.GetByte(5);
                         st.Flags = saplingReader.GetByte(6);
                     }
-                    sap_n++;
+                    saplingsAdded++;
                 }
 
             }
 
             // clean up
             model.CleanTreeLists(true);
-            Debug.WriteLine("load stand snapshot for stand " + standID + ": trees (removed/loaded): " + n_removed + "/" + n + ", saplings (removed/loaded): " + n_sap_removed + "/" + sap_n);
+            Debug.WriteLine("Load snapshot for stand " + standID + ": added " + treesAdded + " trees, saplings (removed/loaded): " + existingSaplingsRemoved + "/" + saplingsAdded);
             return true;
         }
 
         private void SaveTrees(Model model, SqliteConnection db)
         {
             using SqliteTransaction treeTransaction = db.BeginTransaction();
-            AllTreeEnumerator at = new AllTreeEnumerator(model);
             SqliteCommand treeInsert = new SqliteCommand(String.Format("insert into trees (ID, RUindex, posX, posY, species,  age, height, dbh, leafArea, opacity, foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex) " +
                               "values (:id, :index, :x, :y, :spec, :age, :h, :d, :la, :opa, :mfol, :mwood, :mfr, :mcr, :npp, :si)"), db);
             treeInsert.Parameters.Add(":id", SqliteType.Integer);
@@ -428,47 +432,44 @@ namespace iLand.Output
             treeInsert.Parameters.Add(":npp", SqliteType.Integer);
             treeInsert.Parameters.Add(":si", SqliteType.Integer);
 
-            int n = 0;
-            for (Tree tree = at.MoveNext(); tree != null; tree = at.MoveNext())
+            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model);
+            while (allTreeEnumerator.MoveNext())
             {
-                treeInsert.Parameters[0].Value = tree.ID;
-                treeInsert.Parameters[1].Value = tree.RU.Index;
-                treeInsert.Parameters[2].Value = tree.LightCellPosition.X;
-                treeInsert.Parameters[3].Value = tree.LightCellPosition.Y;
-                treeInsert.Parameters[4].Value = tree.Species.ID;
-                treeInsert.Parameters[5].Value = tree.Age;
-                treeInsert.Parameters[6].Value = tree.Height;
-                treeInsert.Parameters[7].Value = tree.Dbh;
-                treeInsert.Parameters[8].Value = tree.LeafArea;
-                treeInsert.Parameters[9].Value = tree.Opacity;
-                treeInsert.Parameters[10].Value = tree.FoliageMass;
-                treeInsert.Parameters[11].Value = tree.StemMass;
-                treeInsert.Parameters[12].Value = tree.FineRootMass;
-                treeInsert.Parameters[13].Value = tree.CoarseRootMass;
-                treeInsert.Parameters[14].Value = tree.NppReserve;
-                treeInsert.Parameters[15].Value = tree.StressIndex;
+                Trees trees = allTreeEnumerator.CurrentTrees;
+                int treeIndex = allTreeEnumerator.CurrentTreeIndex;
+                treeInsert.Parameters[0].Value = trees.ID[treeIndex];
+                treeInsert.Parameters[1].Value = trees.RU.Index;
+                treeInsert.Parameters[2].Value = trees.LightCellPosition[treeIndex].X;
+                treeInsert.Parameters[3].Value = trees.LightCellPosition[treeIndex].Y;
+                treeInsert.Parameters[4].Value = trees.Species.ID;
+                treeInsert.Parameters[5].Value = trees.Age[treeIndex];
+                treeInsert.Parameters[6].Value = trees.Height[treeIndex];
+                treeInsert.Parameters[7].Value = trees.Dbh[treeIndex];
+                treeInsert.Parameters[8].Value = trees.LeafArea[treeIndex];
+                treeInsert.Parameters[9].Value = trees.Opacity[treeIndex];
+                treeInsert.Parameters[10].Value = trees.FoliageMass[treeIndex];
+                treeInsert.Parameters[11].Value = trees.StemMass[treeIndex];
+                treeInsert.Parameters[12].Value = trees.FineRootMass[treeIndex];
+                treeInsert.Parameters[13].Value = trees.CoarseRootMass[treeIndex];
+                treeInsert.Parameters[14].Value = trees.NppReserve[treeIndex];
+                treeInsert.Parameters[15].Value = trees.StressIndex[treeIndex];
                 treeInsert.ExecuteNonQuery();
-
-                if (++n % 10000 == 0)
-                {
-                    Debug.WriteLine(n + "trees saved...");
-                }
             }
             treeTransaction.Commit();
-            Debug.WriteLine("Snapshot: finished trees. N=" + n);
         }
 
         private void LoadTrees(Model model, SqliteConnection db)
         {
-            // clear all trees on the landscape
+            #if DEBUG
             foreach (ResourceUnit ruInList in model.ResourceUnits)
             {
-                ruInList.Trees.Clear();
+                Debug.Assert(ruInList.TreesBySpeciesID.Count == 0);
             }
+            #endif
 
             int ru_index = -1;
             int new_ru;
-            int offsetx = 0, offsety = 0;
+            int offsetX = 0, offsetY = 0;
             ResourceUnit ru = null;
             int n = 0, ntotal = 0;
             // load the trees from the database
@@ -484,38 +485,37 @@ namespace iLand.Output
                     ru = mResourceUnits[ru_index];
                     if (ru != null)
                     {
-                        offsetx = ru.TopLeftLightOffset.X;
-                        offsety = ru.TopLeftLightOffset.Y;
+                        offsetX = ru.TopLeftLightOffset.X;
+                        offsetY = ru.TopLeftLightOffset.Y;
                     }
                 }
                 if (ru == null)
                 {
                     continue;
                 }
-                // add a new tree to the tree list
-                //ru.trees().Add(Tree());
-                //Tree &t = ru.trees().back();
-                Tree tree = ru.AddNewTree(model);
-                tree.RU = ru;
-                tree.ID = treeReader.GetInt32(0);
-                tree.LightCellPosition = new Point(offsetx + treeReader.GetInt32(2) % Constant.LightPerRUsize, // TODO: why modulus?
-                                                   offsety + treeReader.GetInt32(3) % Constant.LightPerRUsize);
-                Species species = model.GetFirstSpeciesSet().GetSpecies(treeReader.GetString(4));
-                tree.Species = species ?? throw new NotSupportedException("Invalid species.");
-                tree.Age = treeReader.GetInt32(5);
-                tree.Height = treeReader.GetFloat(6);
-                tree.Dbh = treeReader.GetFloat(7);
-                tree.LeafArea = treeReader.GetFloat(8);
-                tree.Opacity = treeReader.GetFloat(9);
-                tree.FoliageMass = treeReader.GetFloat(10);
-                tree.StemMass = treeReader.GetFloat(11);
-                tree.FineRootMass = treeReader.GetFloat(12);
-                tree.CoarseRootMass = treeReader.GetFloat(13);
-                tree.NppReserve = treeReader.GetFloat(14);
-                tree.StressIndex = treeReader.GetFloat(15);
-                tree.Stamp = species.GetStamp(tree.Dbh, tree.Height);
 
-                if (n < 10000000 && ++n % 10000 == 0)
+                // add new tree to the tree list
+                Species species = model.GetFirstSpeciesSet().GetSpecies(treeReader.GetString(4));
+                int treeIndex = ru.AddTree(model, species.ID);
+                Trees treesOfSpecies = ru.TreesBySpeciesID[species.ID];
+                treesOfSpecies.ID[treeIndex] = treeReader.GetInt32(0);
+                treesOfSpecies.LightCellPosition[treeIndex] = new Point(offsetX + treeReader.GetInt32(2) % Constant.LightPerRUsize, // TODO: why modulus?
+                                                                        offsetY + treeReader.GetInt32(3) % Constant.LightPerRUsize);
+                treesOfSpecies.Species = species ?? throw new NotSupportedException("Invalid species.");
+                treesOfSpecies.Age[treeIndex] = treeReader.GetInt32(5);
+                treesOfSpecies.Height[treeIndex] = treeReader.GetFloat(6);
+                treesOfSpecies.Dbh[treeIndex] = treeReader.GetFloat(7);
+                treesOfSpecies.LeafArea[treeIndex] = treeReader.GetFloat(8);
+                treesOfSpecies.Opacity[treeIndex] = treeReader.GetFloat(9);
+                treesOfSpecies.FoliageMass[treeIndex] = treeReader.GetFloat(10);
+                treesOfSpecies.StemMass[treeIndex] = treeReader.GetFloat(11);
+                treesOfSpecies.FineRootMass[treeIndex] = treeReader.GetFloat(12);
+                treesOfSpecies.CoarseRootMass[treeIndex] = treeReader.GetFloat(13);
+                treesOfSpecies.NppReserve[treeIndex] = treeReader.GetFloat(14);
+                treesOfSpecies.StressIndex[treeIndex] = treeReader.GetFloat(15);
+                treesOfSpecies.Stamp[treeIndex] = species.GetStamp(treesOfSpecies.Dbh[treeIndex], treesOfSpecies.Height[treeIndex]);
+
+                if (++n % 10000 == 0)
                 {
                     Debug.WriteLine(n + " trees loaded...");
                 }
@@ -607,22 +607,22 @@ namespace iLand.Output
                 {
                     throw new NotSupportedException("loadSoil: trying to load soil data but soil module is disabled.");
                 }
-                soil.Parameters.Kyl = soilReader.GetDouble(1);
-                soil.Parameters.Kyr = soilReader.GetDouble(2);
-                soil.InputLabile.C = soilReader.GetDouble(3);
-                soil.InputLabile.N = soilReader.GetDouble(4);
-                soil.InputLabile.DecompositionRate = soilReader.GetDouble(5);
-                soil.InputRefractory.C = soilReader.GetDouble(6);
-                soil.InputRefractory.N = soilReader.GetDouble(7);
-                soil.InputRefractory.DecompositionRate = soilReader.GetDouble(8);
-                soil.YoungLabile.C = soilReader.GetDouble(9);
-                soil.YoungLabile.N = soilReader.GetDouble(10);
-                soil.YoungLabile.DecompositionRate = soilReader.GetDouble(11);
-                soil.YoungRefractory.C = soilReader.GetDouble(12);
-                soil.YoungRefractory.N = soilReader.GetDouble(13);
-                soil.YoungRefractory.DecompositionRate = soilReader.GetDouble(14);
-                soil.OrganicMatter.C = soilReader.GetDouble(15);
-                soil.OrganicMatter.N = soilReader.GetDouble(16);
+                soil.Parameters.Kyl = soilReader.GetFloat(1);
+                soil.Parameters.Kyr = soilReader.GetFloat(2);
+                soil.InputLabile.C = soilReader.GetFloat(3);
+                soil.InputLabile.N = soilReader.GetFloat(4);
+                soil.InputLabile.DecompositionRate = soilReader.GetFloat(5);
+                soil.InputRefractory.C = soilReader.GetFloat(6);
+                soil.InputRefractory.N = soilReader.GetFloat(7);
+                soil.InputRefractory.DecompositionRate = soilReader.GetFloat(8);
+                soil.YoungLabile.C = soilReader.GetFloat(9);
+                soil.YoungLabile.N = soilReader.GetFloat(10);
+                soil.YoungLabile.DecompositionRate = soilReader.GetFloat(11);
+                soil.YoungRefractory.C = soilReader.GetFloat(12);
+                soil.YoungRefractory.N = soilReader.GetFloat(13);
+                soil.YoungRefractory.DecompositionRate = soilReader.GetFloat(14);
+                soil.OrganicMatter.C = soilReader.GetFloat(15);
+                soil.OrganicMatter.N = soilReader.GetFloat(16);
                 ru.WaterCycle.SetContent(soilReader.GetDouble(17), soilReader.GetDouble(18));
 
                 //if (++n % 1000 == 0)
@@ -771,18 +771,18 @@ namespace iLand.Output
                 {
                     continue;
                 }
-                snag.ClimateFactor = snagReader.GetDouble(columnIndex++);
-                snag.mStandingWoodyDebris[0].C = snagReader.GetDouble(columnIndex++);
-                snag.mStandingWoodyDebris[0].N = snagReader.GetDouble(columnIndex++);
-                snag.mStandingWoodyDebris[1].C = snagReader.GetDouble(columnIndex++);
-                snag.mStandingWoodyDebris[1].N = snagReader.GetDouble(columnIndex++);
-                snag.mStandingWoodyDebris[2].C = snagReader.GetDouble(columnIndex++);
-                snag.mStandingWoodyDebris[2].N = snagReader.GetDouble(columnIndex++);
-                snag.TotalSwd.C = snagReader.GetDouble(columnIndex++);
-                snag.TotalSwd.N = snagReader.GetDouble(columnIndex++);
-                snag.mNumberOfSnags[0] = snagReader.GetDouble(columnIndex++);
-                snag.mNumberOfSnags[1] = snagReader.GetDouble(columnIndex++);
-                snag.mNumberOfSnags[2] = snagReader.GetDouble(columnIndex++);
+                snag.ClimateFactor = snagReader.GetFloat(columnIndex++);
+                snag.mStandingWoodyDebris[0].C = snagReader.GetFloat(columnIndex++);
+                snag.mStandingWoodyDebris[0].N = snagReader.GetFloat(columnIndex++);
+                snag.mStandingWoodyDebris[1].C = snagReader.GetFloat(columnIndex++);
+                snag.mStandingWoodyDebris[1].N = snagReader.GetFloat(columnIndex++);
+                snag.mStandingWoodyDebris[2].C = snagReader.GetFloat(columnIndex++);
+                snag.mStandingWoodyDebris[2].N = snagReader.GetFloat(columnIndex++);
+                snag.TotalSwd.C = snagReader.GetFloat(columnIndex++);
+                snag.TotalSwd.N = snagReader.GetFloat(columnIndex++);
+                snag.mNumberOfSnags[0] = snagReader.GetFloat(columnIndex++);
+                snag.mNumberOfSnags[1] = snagReader.GetFloat(columnIndex++);
+                snag.mNumberOfSnags[2] = snagReader.GetFloat(columnIndex++);
                 snag.mAvgDbh[0] = snagReader.GetDouble(columnIndex++);
                 snag.mAvgDbh[1] = snagReader.GetDouble(columnIndex++);
                 snag.mAvgDbh[2] = snagReader.GetDouble(columnIndex++);
@@ -795,17 +795,22 @@ namespace iLand.Output
                 snag.mTimeSinceDeath[0] = snagReader.GetDouble(columnIndex++);
                 snag.mTimeSinceDeath[1] = snagReader.GetDouble(columnIndex++);
                 snag.mTimeSinceDeath[2] = snagReader.GetDouble(columnIndex++);
-                snag.mKsw[0] = snagReader.GetDouble(columnIndex++);
-                snag.mKsw[1] = snagReader.GetDouble(columnIndex++);
-                snag.mKsw[2] = snagReader.GetDouble(columnIndex++);
-                snag.mHalfLife[0] = snagReader.GetDouble(columnIndex++);
-                snag.mHalfLife[1] = snagReader.GetDouble(columnIndex++);
-                snag.mHalfLife[2] = snagReader.GetDouble(columnIndex++);
-                snag.mOtherWood[0].C = snagReader.GetDouble(columnIndex++); snag.mOtherWood[0].N = snagReader.GetDouble(columnIndex++);
-                snag.mOtherWood[1].C = snagReader.GetDouble(columnIndex++); snag.mOtherWood[1].N = snagReader.GetDouble(columnIndex++);
-                snag.mOtherWood[2].C = snagReader.GetDouble(columnIndex++); snag.mOtherWood[2].N = snagReader.GetDouble(columnIndex++);
-                snag.mOtherWood[3].C = snagReader.GetDouble(columnIndex++); snag.mOtherWood[3].N = snagReader.GetDouble(columnIndex++);
-                snag.mOtherWood[4].C = snagReader.GetDouble(columnIndex++); snag.mOtherWood[4].N = snagReader.GetDouble(columnIndex++);
+                snag.mKsw[0] = snagReader.GetFloat(columnIndex++);
+                snag.mKsw[1] = snagReader.GetFloat(columnIndex++);
+                snag.mKsw[2] = snagReader.GetFloat(columnIndex++);
+                snag.mHalfLife[0] = snagReader.GetFloat(columnIndex++);
+                snag.mHalfLife[1] = snagReader.GetFloat(columnIndex++);
+                snag.mHalfLife[2] = snagReader.GetFloat(columnIndex++);
+                snag.mOtherWood[0].C = snagReader.GetFloat(columnIndex++);
+                snag.mOtherWood[0].N = snagReader.GetFloat(columnIndex++);
+                snag.mOtherWood[1].C = snagReader.GetFloat(columnIndex++);
+                snag.mOtherWood[1].N = snagReader.GetFloat(columnIndex++);
+                snag.mOtherWood[2].C = snagReader.GetFloat(columnIndex++);
+                snag.mOtherWood[2].N = snagReader.GetFloat(columnIndex++);
+                snag.mOtherWood[3].C = snagReader.GetFloat(columnIndex++);
+                snag.mOtherWood[3].N = snagReader.GetFloat(columnIndex++);
+                snag.mOtherWood[4].C = snagReader.GetFloat(columnIndex++);
+                snag.mOtherWood[4].N = snagReader.GetFloat(columnIndex++);
                 snag.mBranchCounter = snagReader.GetInt32(columnIndex++);
 
                 //if (++n % 1000 == 0)

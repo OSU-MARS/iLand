@@ -1,5 +1,5 @@
 ﻿using iLand.Simulation;
-using iLand.Trees;
+using iLand.Tree;
 using System.Diagnostics;
 
 namespace iLand.World
@@ -10,11 +10,11 @@ namespace iLand.World
         public double AnnualGpp { get; private set; }
         // f_env,yr: aggregate environmental factor [0..1}
         // f_env,yr: factor that aggregates the environment for the species over the year (weighted with the radiation pattern)
-        public double EnvironmentalFactor { get; private set; }
+        public float EnvironmentalFactor { get; private set; }
         // monthly Gross Primary Production [kg Biomass / m2]
         public double[] MonthlyGpp { get; private set; }
         /// fraction of biomass that should be distributed to roots
-        public double RootFraction { get; private set; }
+        public float RootFraction { get; private set; }
         // species specific responses
         public SpeciesResponse SpeciesResponse { get; set; }
         // utilizable radiation MJ/m2 and month
@@ -23,10 +23,10 @@ namespace iLand.World
         public Production3PG()
         {
             this.AnnualGpp = 0.0;
-            this.EnvironmentalFactor = 0.0;
+            this.EnvironmentalFactor = 0.0F;
             this.MonthlyGpp = new double[12];
             this.SpeciesResponse = null;
-            this.RootFraction = 0.0;
+            this.RootFraction = 0.0F;
             this.UtilizablePar = new double[12];
         }
 
@@ -61,16 +61,16 @@ namespace iLand.World
             return epsilon;
         }
 
-        private double AbovegroundFraction(Model model)
+        private float AbovegroundFraction(Model model)
         {
-            double utilized_frac = 1.0;
+            float utilized_frac = 1.0F;
             if (model.ModelSettings.UseParFractionBelowGroundAllocation)
             {
                 // the Landsberg & Waring formulation takes into account the fraction of utilizeable to total radiation (but more complicated)
                 // we originally used only nitrogen and added the U_utilized/U_radiation
-                utilized_frac = SpeciesResponse.YearlyUtilizableRadiation / SpeciesResponse.YearlyRadiation;
+                utilized_frac = (float)(this.SpeciesResponse.YearlyUtilizableRadiation / this.SpeciesResponse.YearlyRadiation);
             }
-            double harsh = 1 - 0.8 / (1 + 2.5 * SpeciesResponse.NitrogenResponse * utilized_frac);
+            float harsh = 1.0F - 0.8F / (1.0F + 2.5F * this.SpeciesResponse.NitrogenResponse * utilized_frac);
             return harsh;
         }
 
@@ -82,9 +82,9 @@ namespace iLand.World
                 UtilizablePar[i] = 0.0;
             }
 
-            EnvironmentalFactor = 0.0;
+            EnvironmentalFactor = 0.0F;
             AnnualGpp = 0.0;
-            RootFraction = 0.0;
+            RootFraction = 0.0F;
             // BUGBUG: speciesResponse?
         }
 
@@ -111,35 +111,35 @@ namespace iLand.World
             Debug.Assert(annualRUgpp > 0.0);
 
             // calculate f_env,yr: see http://iland.boku.ac.at/sapling+growth+and+competition
-            double f_sum = 0.0;
-            for (int i = 0; i < 12; i++)
+            double f_sum = 0.0F;
+            for (int month = 0; month < 12; ++month)
             {
-                f_sum += MonthlyGpp[i] / gramsCarbonToKilogramsBiomass; // == uAPar * epsilon_eff
+                f_sum += this.MonthlyGpp[month] / gramsCarbonToKilogramsBiomass; // == uAPar * epsilon_eff
             }
 
             //  the factor f_ref: parameter that scales response values to the range 0..1 (1 for best growth conditions) (species parameter)
             double perf_factor = SpeciesResponse.Species.SaplingGrowthParameters.ReferenceRatio;
             // f_env,yr=(uapar*epsilon_eff) / (APAR * epsilon_0 * fref)
-            EnvironmentalFactor = f_sum / (model.ModelSettings.Epsilon * SpeciesResponse.YearlyRadiation * perf_factor);
-            if (EnvironmentalFactor > 1.0)
+            this.EnvironmentalFactor = (float)(f_sum / (model.ModelSettings.Epsilon * SpeciesResponse.YearlyRadiation * perf_factor));
+            if (this.EnvironmentalFactor > 1.0F)
             {
-                if (EnvironmentalFactor > 1.5) // warning for large deviations
+                if (this.EnvironmentalFactor > 1.5F) // warning for large deviations
                 {
-                    Debug.WriteLine("WARNING: fEnvYear > 1 for " + SpeciesResponse.Species.ID + EnvironmentalFactor + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + model.ModelSettings.Epsilon + SpeciesResponse.YearlyRadiation + perf_factor
+                    Trace.TraceWarning("fEnvYear > 1 for " + SpeciesResponse.Species.ID + EnvironmentalFactor + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + model.ModelSettings.Epsilon + SpeciesResponse.YearlyRadiation + perf_factor
                              + " check calibration of the sapReferenceRatio (fref) for this species!");
                 }
-                EnvironmentalFactor = 1.0;
+                this.EnvironmentalFactor = 1.0F;
             }
 
             // calculate fraction for belowground biomass
-            RootFraction = 1.0 - AbovegroundFraction(model);
+            this.RootFraction = 1.0F - AbovegroundFraction(model);
 
             // global value set?
             double gppOverride = model.Project.Model.Parameter.GppPerYear;
             if (gppOverride > 0.0)
             {
                 annualRUgpp = gppOverride;
-                RootFraction = 0.4;
+                RootFraction = 0.4F;
             }
 
             // year GPP/rad: kg Biomass/m2

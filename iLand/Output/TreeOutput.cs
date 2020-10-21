@@ -1,7 +1,8 @@
 ﻿using iLand.Simulation;
 using iLand.Tools;
-using iLand.Trees;
+using iLand.Tree;
 using Microsoft.Data.Sqlite;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace iLand.Output
 {
@@ -47,40 +48,42 @@ namespace iLand.Output
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            AllTreeEnumerator at = new AllTreeEnumerator(model);
+            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model);
             //using DebugTimer dt = model.DebugTimers.Create("TreeOutput.LogYear()");
-            TreeWrapper tw = new TreeWrapper();
-            mFilter.Wrapper = tw;
-            for (Tree tree = at.MoveNext(); tree != null; tree = at.MoveNext())
+            TreeWrapper treeWrapper = new TreeWrapper();
+            mFilter.Wrapper = treeWrapper;
+            while (allTreeEnumerator.MoveNext())
             {
+                Trees treesOfSpecies = allTreeEnumerator.CurrentTrees;
                 if (mFilter.IsEmpty == false)
                 { // skip fields
-                    tw.Tree = tree;
+                    treeWrapper.Trees = treesOfSpecies;
                     if (mFilter.Execute(model) == 0.0)
                     {
                         continue;
                     }
                 }
+                int treeIndex = allTreeEnumerator.CurrentTreeIndex;
                 insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
-                insertRow.Parameters[1].Value = tree.RU.Index;
-                insertRow.Parameters[2].Value = tree.RU.ID;
-                insertRow.Parameters[3].Value = tree.Species.ID;
-                insertRow.Parameters[4].Value = tree.ID;
-                insertRow.Parameters[5].Value = tree.GetCellCenterPoint().X;
-                insertRow.Parameters[6].Value = tree.GetCellCenterPoint().Y;
-                insertRow.Parameters[7].Value = tree.Dbh;
-                insertRow.Parameters[8].Value = tree.Height;
-                insertRow.Parameters[9].Value = tree.BasalArea();
-                insertRow.Parameters[10].Value = tree.Volume();
-                insertRow.Parameters[11].Value = tree.LeafArea;
-                insertRow.Parameters[12].Value = tree.FoliageMass;
-                insertRow.Parameters[13].Value = tree.StemMass;
-                insertRow.Parameters[14].Value = tree.FineRootMass;
-                insertRow.Parameters[15].Value = tree.CoarseRootMass;
-                insertRow.Parameters[16].Value = tree.LightResourceIndex;
-                insertRow.Parameters[17].Value = tree.LightResponse;
-                insertRow.Parameters[18].Value = tree.StressIndex;
-                insertRow.Parameters[19].Value = tree.NppReserve;
+                insertRow.Parameters[1].Value = treesOfSpecies.RU.Index;
+                insertRow.Parameters[2].Value = treesOfSpecies.RU.ID;
+                insertRow.Parameters[3].Value = treesOfSpecies.Species.ID;
+                insertRow.Parameters[4].Value = treesOfSpecies.ID[treeIndex];
+                insertRow.Parameters[5].Value = treesOfSpecies.GetCellCenterPoint(treeIndex).X;
+                insertRow.Parameters[6].Value = treesOfSpecies.GetCellCenterPoint(treeIndex).Y;
+                insertRow.Parameters[7].Value = treesOfSpecies.Dbh[treeIndex];
+                insertRow.Parameters[8].Value = treesOfSpecies.Height[treeIndex];
+                insertRow.Parameters[9].Value = treesOfSpecies.GetBasalArea(treeIndex);
+                insertRow.Parameters[10].Value = treesOfSpecies.GetStemVolume(treeIndex);
+                insertRow.Parameters[11].Value = treesOfSpecies.LeafArea[treeIndex];
+                insertRow.Parameters[12].Value = treesOfSpecies.FoliageMass[treeIndex];
+                insertRow.Parameters[13].Value = treesOfSpecies.StemMass[treeIndex];
+                insertRow.Parameters[14].Value = treesOfSpecies.FineRootMass[treeIndex];
+                insertRow.Parameters[15].Value = treesOfSpecies.CoarseRootMass[treeIndex];
+                insertRow.Parameters[16].Value = treesOfSpecies.LightResourceIndex[treeIndex];
+                insertRow.Parameters[17].Value = treesOfSpecies.LightResponse[treeIndex];
+                insertRow.Parameters[18].Value = treesOfSpecies.StressIndex[treeIndex];
+                insertRow.Parameters[19].Value = treesOfSpecies.NppReserve[treeIndex];
                 insertRow.ExecuteNonQuery();
             }
         }

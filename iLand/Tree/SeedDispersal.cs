@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     /** @class SeedDispersal
         The class encapsulates the dispersal of seeds of one species over the whole landscape.
@@ -932,7 +932,7 @@ namespace iLand.Trees
                                              // source mode
 
             // *** seed distribution (Kernel + long distance dispersal) ***
-            if (model.ModelSettings.TorusMode == false)
+            if (model.ModelSettings.IsTorus == false)
             {
                 // ** standard case (no torus) **
                 for (int src = 0; src < sourcemap.Count; ++src)

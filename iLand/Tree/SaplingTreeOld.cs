@@ -3,7 +3,7 @@ using iLand.World;
 using System;
 using System.Drawing;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     // TODO: consolidate into SaplingTree
     internal class SaplingTreeOld
@@ -16,7 +16,7 @@ namespace iLand.Trees
 
         public AgeStressYears Age { get; private set; }
         public float Height { get; set; } // height of the sapling in meter
-        public int LightPixel { get; set; } // pointer to the lifpixel the sapling lives on, set to 0 if sapling died/removed
+        public int LightPixelIndex { get; set; } // pointer to the lifpixel the sapling lives on, set to 0 if sapling died/removed
 
         public SaplingTreeOld()
         {
@@ -25,18 +25,18 @@ namespace iLand.Trees
                 Age = 0,
                 StressYears = 0
             };
-            LightPixel = -1;
+            LightPixelIndex = -1;
             Height = 0.05F;
         }
 
         public Point Coordinate(Grid<float> lightGrid)
         {
-            return lightGrid.IndexOf(LightPixel);
+            return lightGrid.IndexOf(LightPixelIndex);
         }
 
         public bool IsValid()
         {
-            return LightPixel != -1;
+            return LightPixelIndex != -1;
         }
     }
 }

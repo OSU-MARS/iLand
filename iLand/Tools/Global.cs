@@ -39,6 +39,20 @@ namespace iLand.Tools
             return 180.0 / Math.PI * radians;
         }
 
+        public static float Limit(float value, float min, float max)
+        {
+            Debug.Assert(max > min);
+            if (value < min)
+            {
+                return min;
+            }
+            if (value > max)
+            {
+                return max;
+            }
+            return value;
+        }
+
         public static double Limit(double value, double min, double max)
         {
             Debug.Assert(max > min);

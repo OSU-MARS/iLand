@@ -18,8 +18,8 @@ namespace iLand.World
         private string climateTableQueryFilter;
         private int mCurrentDataYear; // current year in climate data cached in memory (relative); one less than GlobalSettings.CurrentYear
         private int mNextYearToLoad; // start year of climate data cached in memory
-        private double mDefaultTemperatureAddition; // add this to daily temp
-        private double mDefaultPrecipitationMultiplier; // multiply prec with that
+        private float mDefaultTemperatureAddition; // add this to daily temp
+        private float mDefaultPrecipitationMultiplier; // multiply prec with that
         private readonly List<ClimateDay> mDays; // storage of climate data
         private bool mDoRandomSampling; // if true, the sequence of years is randomized
         private readonly List<int> mMonthDayIndices; // store indices for month / years within store
@@ -168,19 +168,19 @@ namespace iLand.World
             for (int yearLoadIndex = 0; daysAvailableInQuery && (yearLoadIndex < mYearsToLoad); ++yearLoadIndex)
             {
                 // check for year-specific temperature or precipitation modifier
-                double precipitationMultiplier = mDefaultPrecipitationMultiplier;
-                double temperatureAddition = mDefaultTemperatureAddition;
+                float precipitationMultiplier = mDefaultPrecipitationMultiplier;
+                float temperatureAddition = mDefaultTemperatureAddition;
                 if (model.TimeEvents != null)
                 {
-                    object val_temp = model.TimeEvents.Value(model.ModelSettings.CurrentYear + yearLoadIndex, "model.climate.temperatureShift");
-                    object val_prec = model.TimeEvents.Value(model.ModelSettings.CurrentYear + yearLoadIndex, "model.climate.precipitationShift");
-                    if (val_temp != null)
+                    string temperatureAdditionAsString = model.TimeEvents.GetEvent(model.ModelSettings.CurrentYear + yearLoadIndex, "model.climate.temperatureShift");
+                    string precipitationMultiplierAsString = model.TimeEvents.GetEvent(model.ModelSettings.CurrentYear + yearLoadIndex, "model.climate.precipitationShift");
+                    if (temperatureAdditionAsString != null)
                     {
-                        temperatureAddition = (double)val_temp;
+                        temperatureAddition = Single.Parse(temperatureAdditionAsString);
                     }
-                    if (val_prec != null)
+                    if (precipitationMultiplierAsString != null)
                     {
-                        precipitationMultiplier = (double)val_prec;
+                        precipitationMultiplier = Single.Parse(precipitationMultiplierAsString);
                     }
 
                     if (temperatureAddition != 0.0 || precipitationMultiplier != 1.0)

@@ -68,13 +68,13 @@ namespace iLand.Tools
         // index of column or -1 if not available
         public int GetColumnIndex(string columnName)
         {
-            return ColumnNames.IndexOf(columnName);
+            return this.ColumnNames.IndexOf(columnName);
         }
 
         // value function with a column name
-        public string Value(int row, string column_name)
+        public string GetValue(string columnName, int row)
         {
-            return GetValue(row, GetColumnIndex(column_name));
+            return this.GetValue(this.GetColumnIndex(columnName), row);
         }
 
         private void Clear()
@@ -188,32 +188,31 @@ namespace iLand.Tools
             return true;
         }
 
-        public List<object> Values(int row)
+        public List<string> GetRow(int rowIndex)
         {
-            List<object> line = new List<object>();
-            line.AddRange(mRows[row].Split(mSeparator));
+            List<string> line = new List<string>(this.ColumnCount);
+            line.AddRange(mRows[rowIndex].Split(mSeparator));
             return line;
         }
 
-        public string GetValue(int row, int col)
+        public string GetValue(int col, int row)
         {
-            if (StreamingMode)
+            if (this.StreamingMode)
             {
-                return null;
+                throw new NotSupportedException();
             }
 
-            if (row < 0 || row >= RowCount || col < 0 || col >= ColumnCount)
+            if (row < 0 || row >= this.RowCount || col < 0 || col >= this.ColumnCount)
             {
-                Debug.WriteLine("value: invalid index: row col: " + row + col + ". Size is:" + RowCount + ColumnCount);
-                return null;
+                throw new ArgumentOutOfRangeException();
             }
 
-            if (FixedWidth)
+            if (this.FixedWidth)
             {
                 // special case with space (1..n) as separator
                 string s = mRows[row];
                 char sep = mSeparator[0];
-                if (col == ColumnCount - 1)
+                if (col == this.ColumnCount - 1)
                 {
                     // last element:
                     return s.Substring(s.LastIndexOf(sep) + 1);
@@ -331,7 +330,7 @@ namespace iLand.Tools
             List<string> result = new List<string>(this.RowCount);
             for (int row = 0; row < this.RowCount; row++)
             {
-                result.Add(this.GetValue(row, columnIndex));
+                result.Add(this.GetValue(columnIndex, row));
             }
             return result;
         }

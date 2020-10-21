@@ -1,6 +1,6 @@
 ﻿using iLand.Simulation;
 using iLand.Tools;
-using iLand.Trees;
+using iLand.Tree;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
@@ -55,7 +55,7 @@ namespace iLand.Output
             Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.Double));
         }
 
-        public void AddTree(Tree tree, MortalityCause removalType)
+        public void AddTree(Tree.Trees trees, int treeIndex, MortalityCause removalType)
         {
             if (removalType == MortalityCause.Stress && !mIncludeDeadTrees)
             {
@@ -66,14 +66,14 @@ namespace iLand.Output
                 return;
             }
 
-            int key = 10000 * (int)removalType + tree.Species.Index;
+            int key = 10000 * (int)removalType + trees.Species.Index;
             if (removals.TryGetValue(key, out LROdata removalData) == false)
             {
                 removalData = new LROdata();
                 removals.Add(key, removalData);
             }
-            removalData.basal_area += tree.BasalArea();
-            removalData.volume += tree.Volume();
+            removalData.basal_area += trees.GetBasalArea(treeIndex);
+            removalData.volume += trees.GetStemVolume(treeIndex);
             removalData.n++;
         }
 

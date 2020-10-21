@@ -160,43 +160,43 @@ namespace iLand.Input
         public string LipFile() { return reader.GetString(this.lipFile); }
         public bool IsConiferous() { return reader.GetBoolean(this.isConiferous); }
         public bool IsEvergreen() { return reader.GetBoolean(this.isEvergreen); }
-        public double BmFoliageA() { return reader.GetDouble(this.bmFoliageA); }
-        public double BmFoliageB() { return reader.GetDouble(this.bfoliageB); }
-        public double BmWoodyA() { return reader.GetDouble(this.bmWoodyA); }
-        public double BmWoodyB() { return reader.GetDouble(this.bmWoodyB); }
-        public double BmRootA() { return reader.GetDouble(this.bmRootA); }
-        public double BmRootB() { return reader.GetDouble(this.bmRootB); }
-        public double BmBranchA() { return reader.GetDouble(this.bmBranchA); }
-        public double BmBranchB() { return reader.GetDouble(this.bmBranchB); }
-        public double SpecificLeafArea() { return reader.GetDouble(this.specificLeafArea); }
-        public double FinerootFoliageRatio() { return reader.GetDouble(this.finerootFoliageRatio); }
-        public double BarkThickness() { return reader.GetDouble(this.barkThickness); }
-        public double CnFoliage() { return reader.GetDouble(this.cnFoliage); }
-        public double CnFineroot() { return reader.GetDouble(this.cnFineroot); }
-        public double CnWood() { return reader.GetDouble(this.cnWood); }
-        public double TurnoverLeaf() { return reader.GetDouble(this.turnoverLeaf); }
-        public double TurnoverRoot() { return reader.GetDouble(this.turnoverRoot); }
+        public float BmFoliageA() { return reader.GetFloat(this.bmFoliageA); }
+        public float BmFoliageB() { return reader.GetFloat(this.bfoliageB); }
+        public float BmWoodyA() { return reader.GetFloat(this.bmWoodyA); }
+        public float BmWoodyB() { return reader.GetFloat(this.bmWoodyB); }
+        public float BmRootA() { return reader.GetFloat(this.bmRootA); }
+        public float BmRootB() { return reader.GetFloat(this.bmRootB); }
+        public float BmBranchA() { return reader.GetFloat(this.bmBranchA); }
+        public float BmBranchB() { return reader.GetFloat(this.bmBranchB); }
+        public float SpecificLeafArea() { return reader.GetFloat(this.specificLeafArea); }
+        public float FinerootFoliageRatio() { return reader.GetFloat(this.finerootFoliageRatio); }
+        public float BarkThickness() { return reader.GetFloat(this.barkThickness); }
+        public float CnFoliage() { return reader.GetFloat(this.cnFoliage); }
+        public float CnFineroot() { return reader.GetFloat(this.cnFineroot); }
+        public float CnWood() { return reader.GetFloat(this.cnWood); }
+        public float TurnoverLeaf() { return reader.GetFloat(this.turnoverLeaf); }
+        public float TurnoverRoot() { return reader.GetFloat(this.turnoverRoot); }
         public string HdLow() { return reader.GetString(this.hdLow); }
         public string HdHigh() { return reader.GetString(this.hdHigh); }
         public double WoodDensity() { return reader.GetDouble(this.woodDensity); }
-        public double FormFactor() { return reader.GetDouble(this.formFactor); }
-        public double SnagKsw() { return reader.GetDouble(this.snagKsw); }
-        public double SnagHalflife() { return reader.GetDouble(this.snagHalflife); }
-        public double SnagKyl() { return reader.GetDouble(this.snagKyl); }
-        public double SnagKyr() { return reader.GetDouble(this.snagKyr); }
-        public double MaximumAge() { return reader.GetDouble(this.maximumAge); }
-        public double MaximumHeight() { return reader.GetDouble(this.maximumHeight); }
+        public float FormFactor() { return reader.GetFloat(this.formFactor); }
+        public float SnagKsw() { return reader.GetFloat(this.snagKsw); }
+        public float SnagHalflife() { return reader.GetFloat(this.snagHalflife); }
+        public float SnagKyl() { return reader.GetFloat(this.snagKyl); }
+        public float SnagKyr() { return reader.GetFloat(this.snagKyr); }
+        public float MaximumAge() { return reader.GetFloat(this.maximumAge); }
+        public float MaximumHeight() { return reader.GetFloat(this.maximumHeight); }
         public string Aging() { return reader.GetString(this.aging); }
         public double ProbIntrinsic() { return reader.GetDouble(this.probIntrinsic); }
         public double ProbStress() { return reader.GetDouble(this.probStress); }
         public double RespVpdExponent() { return reader.GetDouble(this.respVpdExponent); }
         public double RespTempMin() { return reader.GetDouble(this.respTempMin); }
         public double RespTempMax() { return reader.GetDouble(this.respTempMax); }
-        public double RespNitrogenClass() { return reader.GetDouble(this.respNitrogenClass); }
+        public float RespNitrogenClass() { return reader.GetFloat(this.respNitrogenClass); }
         public int PhenologyClass() { return reader.GetInt32(this.phenologyClass); }
         public double MaxCanopyConductance() { return reader.GetDouble(this.maxCanopyConductance); }
         public double PsiMin() { return -Math.Abs(reader.GetDouble(this.psiMin)); } // force a negative value
-        public double LightResponseClass() { return reader.GetDouble(this.lightResponseClass); }
+        public float LightResponseClass() { return reader.GetFloat(this.lightResponseClass); }
         public int SeedYearInterval() { return reader.GetInt32(this.seedYearInterval); }
         public int MaturityYears() { return reader.GetInt32(this.maturityYears); }
         public double SeedKernelAs1() { return reader.GetDouble(this.seedKernelAs1); }
@@ -231,15 +231,15 @@ namespace iLand.Input
         
         public string SaplingGrowthParametersHeightGrowthPotential() { return reader.GetString(this.saplingGrowthParametersHeightGrowthPotential); }
         public float SaplingGrowthParametersHdSapling() { return reader.GetFloat(this.saplingGrowthParametersHdSapling); }
-        public double SaplingGrowthParametersStressThreshold() { return reader.GetDouble(this.saplingGrowthParametersStressThreshold); }
+        public float SaplingGrowthParametersStressThreshold() { return reader.GetFloat(this.saplingGrowthParametersStressThreshold); }
         public int SaplingGrowthParametersMaxStressYears() { return reader.GetInt32(this.saplingGrowthParametersMaxStressYears); }
         public double SaplingGrowthParametersReferenceRatio() { return reader.GetDouble(this.saplingGrowthParametersReferenceRatio); }
-        public double SaplingGrowthParametersReinekesR() { return reader.GetDouble(this.saplingGrowthParametersReinekesR); }
+        public float SaplingGrowthParametersReinekesR() { return reader.GetFloat(this.saplingGrowthParametersReinekesR); }
         public double SaplingGrowthParametersBrowsingProbability() { return reader.GetDouble(this.saplingGrowthParametersBrowsingProbability); }
         
-        public double SaplingGrowthParametersSproutGrowth() 
+        public float SaplingGrowthParametersSproutGrowth() 
         { 
-            return reader.IsDBNull(this.saplingGrowthParametersSproutGrowth) ? Double.NaN : reader.GetDouble(this.saplingGrowthParametersSproutGrowth); 
+            return reader.IsDBNull(this.saplingGrowthParametersSproutGrowth) ? Single.NaN : reader.GetFloat(this.saplingGrowthParametersSproutGrowth); 
         }
 
         public void Dispose()

@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     /** Stamp is the basic class for the LIP field of a individual tree.
         In iLand jargon, a Stamp is a LIP (light influence pattern). These patterns are pre-calculated using the "LightRoom" (http://iland.boku.ac.at/Lightroom)

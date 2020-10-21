@@ -2,7 +2,7 @@
 using iLand.World;
 using System.Diagnostics;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     /** @class ResourceUnitSpecies
         The class contains data available at ResourceUnit x Species scale.

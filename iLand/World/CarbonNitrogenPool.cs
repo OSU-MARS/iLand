@@ -5,16 +5,16 @@
     /// </summary>
     public class CarbonNitrogenPool : CarbonNitrogenTuple
     {
-        public double DecompositionRate { get; set; } // get weighting parameter
+        public float DecompositionRate { get; set; } // get weighting parameter
 
         public CarbonNitrogenPool()
         {
-            this.C = 0.0;
-            this.N = 0.0;
-            this.DecompositionRate = 0.0;
+            this.C = 0.0F;
+            this.N = 0.0F;
+            this.DecompositionRate = 0.0F;
         }
 
-        public CarbonNitrogenPool(double c, double n, double weight)
+        public CarbonNitrogenPool(float c, float n, float weight)
         {
             this.C = c;
             this.N = n;
@@ -24,10 +24,10 @@
         public new void Clear()
         {
             base.Clear();
-            this.DecompositionRate = 0.0;
+            this.DecompositionRate = 0.0F;
         }
 
-        public void Add(CarbonNitrogenTuple s, double parameter_value)
+        public void Add(CarbonNitrogenTuple s, float parameter_value)
         {
             CarbonNitrogenPool pool = new CarbonNitrogenPool() { C = s.C, N = s.N, DecompositionRate = parameter_value };
             this.DecompositionRate = this.GetWeightedParameter(pool);
@@ -46,7 +46,7 @@
         }
 
         // return the pool multiplied with 'factor'
-        public static CarbonNitrogenPool operator *(CarbonNitrogenPool pool, double factor)
+        public static CarbonNitrogenPool operator *(CarbonNitrogenPool pool, float factor)
         {
             return new CarbonNitrogenPool()
             {
@@ -58,27 +58,27 @@
 
         /// add biomass and weigh the parameter_value with the current C-content of the pool
         /// add biomass with a specific 'CNRatio' and 'parameter_value'
-        public void AddBiomass(double biomass, double CNratio, double decompositionRate)
+        public void AddBiomass(float biomass, float CNratio, float decompositionRate)
         {
             if (biomass == 0.0)
             {
                 return;
             }
-            double newC = biomass * Constant.BiomassCFraction;
-            double oldCfraction = C / (newC + C);
-            DecompositionRate = DecompositionRate * oldCfraction + decompositionRate * (1.0 - oldCfraction);
+            float newC = biomass * Constant.BiomassCFraction;
+            float oldCfraction = C / (newC + C);
+            this.DecompositionRate = this.DecompositionRate * oldCfraction + decompositionRate * (1.0F - oldCfraction);
             base.AddBiomass(biomass, CNratio);
         }
 
         // 'simulate' weighting (get weighted param value of 's' with the current content)
-        public double GetWeightedParameter(CarbonNitrogenPool s)
+        public float GetWeightedParameter(CarbonNitrogenPool s)
         {
-            if (s.C == 0.0)
+            if (s.C == 0.0F)
             {
                 return DecompositionRate;
             }
-            double p_old = C / (s.C + C);
-            double result = DecompositionRate * p_old + s.DecompositionRate * (1.0 - p_old);
+            float p_old = C / (s.C + C);
+            float result = DecompositionRate * p_old + s.DecompositionRate * (1.0F - p_old);
             return result;
         }
     }

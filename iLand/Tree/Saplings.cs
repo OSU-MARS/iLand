@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     /** The Saplings class the container for the establishment and sapling growth in iLand.
      */
@@ -56,7 +56,7 @@ namespace iLand.Trees
                             SaplingTree tree = s.Saplings[j];
                             ResourceUnitSpecies rus = tree.ResourceUnitSpecies(ru);
                             rus.SaplingStats.LivingCohorts++;
-                            double n_repr = rus.Species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(tree.Height) / (double)(cohorts_on_px);
+                            float n_repr = rus.Species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(tree.Height) / cohorts_on_px;
                             if (tree.Height > 1.3f)
                             {
                                 rus.SaplingStats.LivingSaplings += n_repr;
@@ -167,7 +167,7 @@ namespace iLand.Trees
                                 // calculate the LIFcorrected only once per pixel; the relative height is 0 (light level on the forest floor)
                                 if (lif_corrected < 0.0)
                                 {
-                                    lif_corrected = rus.Species.SpeciesSet.GetLriCorrection(model, lif_value, 0.0);
+                                    lif_corrected = rus.Species.SpeciesSet.GetLriCorrection(model, lif_value, 0.0F);
                                 }
 
                                 // check for the combination of seed availability and light on the forest floor
@@ -323,30 +323,30 @@ namespace iLand.Trees
             }
         }
 
-        public int AddSprout(Tree t, Model model)
+        public int AddSprout(Model model, Trees trees, int treeIndex)
         {
-            if (t.Species.SaplingGrowthParameters.SproutGrowth == 0.0)
+            if (trees.Species.SaplingGrowthParameters.SproutGrowth == 0.0)
             {
                 return 0;
             }
             ResourceUnit ru = null;
-            SaplingCell sc = Cell(t.LightCellPosition, model, true, ref ru);
+            SaplingCell sc = Cell(trees.LightCellPosition[treeIndex], model, true, ref ru);
             if (sc == null)
             {
                 return 0;
             }
-            ClearSaplings(sc, t.RU, false);
-            SaplingTree st = sc.AddSapling(0.05f, 0, t.Species.Index);
-            if (st != null)
+            ClearSaplings(sc, trees.RU, false);
+            SaplingTree sapling = sc.AddSapling(0.05F, 0, trees.Species.Index);
+            if (sapling != null)
             {
-                st.SetSprout(true);
+                sapling.SetSprout(true);
             }
 
             // neighboring cells
-            double crown_area = t.GetCrownRadius() * t.GetCrownRadius() * Math.PI; //m2
+            double crownArea = trees.GetCrownRadius(treeIndex) * trees.GetCrownRadius(treeIndex) * Math.PI; //m2
             // calculate how many cells on the ground are covered by the crown (this is a rather rough estimate)
             // n_cells: in addition to the original cell
-            int n_cells = (int)Math.Round(crown_area / (double)(Constant.LightSize * Constant.LightSize) - 1.0);
+            int n_cells = (int)Math.Round(crownArea / (double)(Constant.LightSize * Constant.LightSize) - 1.0);
             if (n_cells > 0)
             {
                 int[] offsets_x = new int[] { 1, 1, 0, -1, -1, -1, 0, 1 };
@@ -355,14 +355,14 @@ namespace iLand.Trees
                 ru = null;
                 while (n_cells > 0)
                 {
-                    sc = Cell(t.LightCellPosition.Add(new Point(offsets_x[s], offsets_y[s])), model, true, ref ru);
+                    sc = Cell(trees.LightCellPosition[treeIndex].Add(new Point(offsets_x[s], offsets_y[s])), model, true, ref ru);
                     if (sc != null)
                     {
                         ClearSaplings(sc, ru, false);
-                        st = sc.AddSapling(0.05F, 0, t.Species.Index);
-                        if (st != null)
+                        sapling = sc.AddSapling(0.05F, 0, trees.Species.Index);
+                        if (sapling != null)
                         {
-                            st.SetSprout(true);
+                            sapling.SetSprout(true);
                         }
                     }
 
@@ -374,12 +374,12 @@ namespace iLand.Trees
 
         private bool GrowSapling(ResourceUnit ru, Model model, SaplingCell scell, SaplingTree tree, int isc, float dom_height, float lif_value, int cohorts_on_px)
         {
-            ResourceUnitSpecies rus = tree.ResourceUnitSpecies(ru);
-            Species species = rus.Species;
+            ResourceUnitSpecies ruSpecies = tree.ResourceUnitSpecies(ru);
+            Species species = ruSpecies.Species;
 
             // (1) calculate height growth potential for the tree (uses linerization of expressions...)
-            double h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(model, tree.Height);
-            double delta_h_pot = h_pot - tree.Height;
+            float h_pot = (float)species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(model, tree.Height);
+            float delta_h_pot = h_pot - tree.Height;
 
             // (2) reduce height growth potential with species growth response f_env_yr and with light state (i.e. LIF-value) of home-pixel.
             if (dom_height == 0.0F)
@@ -387,16 +387,13 @@ namespace iLand.Trees
                 throw new NotSupportedException(String.Format("growSapling: height grid at {0} has value 0", isc));
             }
 
-            double rel_height = tree.Height / dom_height;
+            float rel_height = tree.Height / dom_height;
+            float lif_corrected = species.SpeciesSet.GetLriCorrection(model, lif_value, rel_height); // correction based on height
+            float lr = species.GetLightResponse(model, lif_corrected); // species specific light response (LUI, light utilization index)
 
-            double lif_corrected = species.SpeciesSet.GetLriCorrection(model, lif_value, rel_height); // correction based on height
-
-            double lr = species.GetLightResponse(model, lif_corrected); // species specific light response (LUI, light utilization index)
-
-            rus.Calculate(model, true); // calculate the 3pg module (this is done only once per RU); true: call comes from regeneration
-            double f_env_yr = rus.BiomassGrowth.EnvironmentalFactor;
-
-            double delta_h_factor = f_env_yr * lr; // relative growth
+            ruSpecies.Calculate(model, true); // calculate the 3pg module (this is done only once per RU); true: call comes from regeneration
+            float f_env_yr = ruSpecies.BiomassGrowth.EnvironmentalFactor;
+            float delta_h_factor = f_env_yr * lr; // relative growth
 
             if (h_pot < 0.0 || delta_h_pot < 0.0 || lif_corrected < 0.0 || lif_corrected > 1.0 || delta_h_factor < 0.0 || delta_h_factor > 1.0)
             {
@@ -412,13 +409,13 @@ namespace iLand.Trees
             // check browsing
             if (model.ModelSettings.BrowsingPressure > 0.0 && tree.Height <= 2.0F)
             {
-                double p = rus.Species.SaplingGrowthParameters.BrowsingProbability;
+                double p = ruSpecies.Species.SaplingGrowthParameters.BrowsingProbability;
                 // calculate modifed annual browsing probability via odds-ratios
                 // odds = p/(1-p) . odds_mod = odds * browsingPressure . p_mod = odds_mod /( 1 + odds_mod) === p*pressure/(1-p+p*pressure)
                 double p_browse = p * model.ModelSettings.BrowsingPressure / (1.0 - p + p * model.ModelSettings.BrowsingPressure);
                 if (model.RandomGenerator.Random() < p_browse)
                 {
-                    delta_h_factor = 0.0;
+                    delta_h_factor = 0.0F;
                 }
             }
 
@@ -429,7 +426,7 @@ namespace iLand.Trees
                 if (tree.StressYears > species.SaplingGrowthParameters.MaxStressYears)
                 {
                     // sapling dies...
-                    rus.SaplingStats.AddCarbonOfDeadSapling(tree.Height / species.SaplingGrowthParameters.HdSapling * 100.0F);
+                    ruSpecies.SaplingStats.AddCarbonOfDeadSapling(tree.Height / species.SaplingGrowthParameters.HdSapling * 100.0F);
                     tree.Clear();
                     return true; // need cleanup
                 }
@@ -447,33 +444,33 @@ namespace iLand.Trees
             // recruitment?
             if (tree.Height > 4.0F)
             {
-                rus.SaplingStats.RecruitedSaplings++;
+                ruSpecies.SaplingStats.RecruitedSaplings++;
 
                 float dbh = tree.Height / species.SaplingGrowthParameters.HdSapling * 100.0F;
                 // the number of trees to create (result is in trees per pixel)
                 double n_trees = species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(dbh);
-                int to_establish = (int)(n_trees);
+                int saplingsToEstablish = (int)(n_trees);
 
                 // if n_trees is not an integer, choose randomly if we should add a tree.
                 // e.g.: n_trees = 2.3 . add 2 trees with 70% probability, and add 3 trees with p=30%.
-                if (model.RandomGenerator.Random() < (n_trees - to_establish) || to_establish == 0)
+                if (model.RandomGenerator.Random() < (n_trees - saplingsToEstablish) || saplingsToEstablish == 0)
                 {
-                    to_establish++;
+                    saplingsToEstablish++;
                 }
 
                 // add a new tree
-                for (int i = 0; i < to_establish; i++)
+                for (int sapling = 0; sapling < saplingsToEstablish; sapling++)
                 {
-                    Tree bigtree = ru.AddNewTree(model);
-                    bigtree.LightCellPosition = model.LightGrid.IndexOf(isc);
+                    int treeIndex = ru.AddTree(model, species.ID);
+                    Trees treesOfSpecies = ru.TreesBySpeciesID[species.ID];
+                    treesOfSpecies.LightCellPosition[treeIndex] = model.LightGrid.IndexOf(isc);
                     // add variation: add +/-N% to dbh and *independently* to height.
-                    bigtree.Dbh = (float)(dbh * model.RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation));
-                    bigtree.SetHeight((float)(tree.Height * model.RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation)));
-                    bigtree.Species = species;
-                    bigtree.SetAge(tree.Age, tree.Height);
-                    bigtree.RU = ru;
-                    bigtree.Setup(model);
-                    rus.Statistics.Add(bigtree, null); // count the newly created trees already in the stats
+                    treesOfSpecies.Dbh[treeIndex] = (float)(dbh * model.RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation));
+                    treesOfSpecies.SetHeight(treeIndex, (float)(tree.Height * model.RandomGenerator.Random(1.0 - model.ModelSettings.RecruitmentVariation, 1.0 + model.ModelSettings.RecruitmentVariation)));
+                    treesOfSpecies.Species = species;
+                    treesOfSpecies.SetAge(treeIndex, tree.Age, tree.Height);
+                    treesOfSpecies.Setup(model, treeIndex);
+                    ruSpecies.Statistics.Add(treesOfSpecies, treeIndex, null); // count the newly created trees already in the stats
                 }
                 // clear all regeneration from this pixel (including this tree)
                 tree.Clear(); // clear this tree (no carbon flow to the ground)
@@ -490,21 +487,21 @@ namespace iLand.Trees
                 return true; // need cleanup
             }
             // book keeping (only for survivors) for the sapling of the resource unit / species
-            SaplingStat ss = rus.SaplingStats;
-            double n_repr = species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(tree.Height) / (double)(cohorts_on_px);
+            SaplingStat saplingStats = ruSpecies.SaplingStats;
+            float n_repr = species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(tree.Height) / cohorts_on_px;
             if (tree.Height > 1.3F)
             {
-                ss.LivingSaplings += n_repr;
+                saplingStats.LivingSaplings += n_repr;
             }
             else
             {
-                ss.LivingSaplingsSmall += n_repr;
+                saplingStats.LivingSaplingsSmall += n_repr;
             }
-            ss.LivingCohorts++;
-            ss.AverageHeight += tree.Height;
-            ss.AverageAge += tree.Age;
-            ss.AverageDeltaHPot += delta_h_pot;
-            ss.AverageDeltaHRealized += delta_h_pot * delta_h_factor;
+            saplingStats.LivingCohorts++;
+            saplingStats.AverageHeight += tree.Height;
+            saplingStats.AverageAge += tree.Age;
+            saplingStats.AverageDeltaHPot += delta_h_pot;
+            saplingStats.AverageDeltaHRealized += delta_h_pot * delta_h_factor;
             return false;
         }
     }

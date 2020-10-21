@@ -1,5 +1,5 @@
 ﻿using iLand.Simulation;
-using iLand.Trees;
+using iLand.Tree;
 using iLand.World;
 using System;
 using System.Collections.Generic;
@@ -160,12 +160,13 @@ namespace iLand.Tools
             Grid<float> grid = model.LightGrid;
             grid.Initialize(0.0F);
             // we simply iterate over all trees of all resource units (not bothering about multithreading here)
-            AllTreeEnumerator ati = new AllTreeEnumerator(model);
-            for (Tree t = ati.MoveNextLiving(); t != null; t = ati.MoveNextLiving())
+            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model);
+            while (allTreeEnumerator.MoveNextLiving())
             {
                 // apply the reader-stamp
-                Stamp reader = t.Stamp.Reader;
-                Point pos_reader = t.LightCellPosition; // tree position
+                Trees trees = allTreeEnumerator.CurrentTrees;
+                Stamp reader = trees.Stamp[0].Reader;
+                Point pos_reader = trees.LightCellPosition[0]; // tree position
                 pos_reader.X -= reader.CenterCellPosition;
                 pos_reader.Y -= reader.CenterCellPosition;
                 int reader_size = reader.Size();

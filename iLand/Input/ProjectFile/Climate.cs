@@ -14,10 +14,10 @@ namespace iLand.Input.ProjectFile
         public int BatchYears { get; set; }
 
         [XmlElement(ElementName = "temperatureShift")]
-        public double TemperatureShift { get; set; }
+        public float TemperatureShift { get; set; }
 
         [XmlElement(ElementName = "precipitationShift")]
-        public double PrecipitationMultiplier { get; set; }
+        public float PrecipitationMultiplier { get; set; }
 
         [XmlElement(ElementName = "randomSamplingEnabled")]
         public bool RandomSamplingEnabled { get; set; }
@@ -35,10 +35,10 @@ namespace iLand.Input.ProjectFile
 
             this.BatchYears = 100;
             this.CO2Concentration = 400.0;
-            this.PrecipitationMultiplier = 1.0;
+            this.PrecipitationMultiplier = 1.0F;
             this.RandomSamplingEnabled = false;
             this.RandomSamplingList = null;
-            this.TemperatureShift = 0.0;
+            this.TemperatureShift = 0.0F;
         }
     }
 }

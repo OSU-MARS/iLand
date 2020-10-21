@@ -26,7 +26,7 @@ namespace iLand.Tools
             ExpressionWrapper.BaseVariableNames = new List<string>() { "year" }.AsReadOnly();
         }
 
-        public abstract ReadOnlyCollection<string> GetVariablesList();
+        public abstract ReadOnlyCollection<string> GetVariableNames();
 
         // must be overloaded!
         public virtual double Value(Simulation.Model model, int variableIndex)
@@ -41,7 +41,7 @@ namespace iLand.Tools
 
         public int GetVariableIndex(string variableName)
         {
-            return GetVariablesList().IndexOf(variableName);
+            return GetVariableNames().IndexOf(variableName);
         }
 
         public double ValueByName(Simulation.Model model, string variableName)

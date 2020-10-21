@@ -4,7 +4,7 @@ using iLand.World;
 using System.Diagnostics;
 using System.Drawing;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     internal class SaplingCellRunner
     {
@@ -44,7 +44,7 @@ namespace iLand.Trees
                 {
                     return null; // end of the bounding box
                 }
-                if (mStandGrid.StandIDFromLightCoordinate(mRunner.CurrentIndex()) != mStandID)
+                if (mStandGrid.GetStandIDFromLightCoordinate(mRunner.CurrentIndex()) != mStandID)
                 {
                     continue; // pixel does not belong to the target stand
                 }

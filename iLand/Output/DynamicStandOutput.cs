@@ -1,6 +1,6 @@
 ﻿using iLand.Simulation;
 using iLand.Tools;
-using iLand.Trees;
+using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
 using System;
@@ -14,22 +14,22 @@ namespace iLand.Output
     {
         private static readonly ReadOnlyCollection<string> Aggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95", "sd" }.AsReadOnly();
 
-        private readonly List<SDynamicField> mFieldList;
+        private readonly List<DynamicOutputField> mFieldList;
         private readonly Expression mRUFilter;
         private readonly Expression mTreeFilter;
         private readonly Expression mFilter;
 
-        private struct SDynamicField
+        private struct DynamicOutputField
         {
-            public int aggregationIndex;
-            public int var_index;
-            public string expression;
+            public int AggregationIndex { get; set; }
+            public int VariableIndex { get; set; }
+            public string Expression { get; set; }
         };
 
         public DynamicStandOutput()
         {
             this.mFilter = new Expression();
-            this.mFieldList = new List<SDynamicField>();
+            this.mFieldList = new List<DynamicOutputField>();
             this.mRUFilter = new Expression();
             this.mTreeFilter = new Expression();
 
@@ -81,23 +81,23 @@ namespace iLand.Output
             {
                 string field = match.Groups[1].Value; // field / expresssion
                 string aggregation = match.Groups[2].Value;
-                SDynamicField newField = new SDynamicField();
+                DynamicOutputField newField = new DynamicOutputField();
                 mFieldList.Add(newField);
                 // parse field
                 if (field.Length > 0 && !field.Contains('('))
                 {
                     // simple expression
-                    newField.var_index = tw.GetVariableIndex(field);
+                    newField.VariableIndex = tw.GetVariableIndex(field);
                 }
                 else
                 {
                     // complex expression
-                    newField.var_index = -1;
-                    newField.expression = field;
+                    newField.VariableIndex = -1;
+                    newField.Expression = field;
                 }
 
-                newField.aggregationIndex = DynamicStandOutput.Aggregations.IndexOf(aggregation);
-                if (newField.aggregationIndex == -1)
+                newField.AggregationIndex = DynamicStandOutput.Aggregations.IndexOf(aggregation);
+                if (newField.AggregationIndex == -1)
                 {
                     throw new NotSupportedException(String.Format("Invalid aggregate expression for dynamic output: {0}{2}allowed:{1}",
                                                                   aggregation, String.Join(" ", Aggregations), System.Environment.NewLine));
@@ -137,50 +137,52 @@ namespace iLand.Output
             }
 
             List<double> data = new List<double>(); //statistics data
-            TreeWrapper tw = new TreeWrapper();
+            TreeWrapper treeWrapper = new TreeWrapper();
             Expression custom_expr = new Expression();
 
             StatData stat = new StatData(); // statistcs helper class
             // grouping
-            List<Tree> trees = new List<Tree>();
+            List<Trees> treesOfSpecies = new List<Trees>();
             for (int index = 0; index < model.GetFirstSpeciesSet().ActiveSpecies.Count; ++index)
             {
                 Species species = model.GetFirstSpeciesSet().ActiveSpecies[index];
-                trees.Clear();
-                AllTreeEnumerator all_trees = new AllTreeEnumerator(model);
-                for (Tree tree = all_trees.MoveNextLiving(); tree != null; tree = all_trees.MoveNextLiving())
+                treesOfSpecies.Clear();
+                AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model);
+                while (allTreeEnumerator.MoveNextLiving())
                 {
-                    if (perSpecies && tree.Species != species)
+                    if (perSpecies && allTreeEnumerator.CurrentTrees.Species != species)
                     {
                         continue;
                     }
-                    trees.Add(tree);
+                    treesOfSpecies.Add(allTreeEnumerator.CurrentTrees);
                 }
-                if (trees.Count == 0)
+                if (treesOfSpecies.Count == 0)
                 {
                     continue;
                 }
 
                 // dynamic calculations
                 int columnIndex = 0;
-                foreach (SDynamicField field in mFieldList)
+                foreach (DynamicOutputField field in mFieldList)
                 {
-                    if (String.IsNullOrEmpty(field.expression) == false)
+                    if (String.IsNullOrEmpty(field.Expression) == false)
                     {
                         // setup dynamic dynamic expression if present
-                        custom_expr.SetExpression(field.expression);
-                        custom_expr.Wrapper = tw;
+                        custom_expr.SetExpression(field.Expression);
+                        custom_expr.Wrapper = treeWrapper;
                     }
 
                     // fetch data values from the trees
                     data.Clear();
-                    foreach (Tree t in trees)
+                    foreach (Trees trees in treesOfSpecies)
                     {
-                        tw.Tree = t;
+                        // TODO: this loop sets the wrapper to the last trees in the list without doing anything?
+                        treeWrapper.Trees = trees;
                     }
-                    if (field.var_index >= 0)
+
+                    if (field.VariableIndex >= 0)
                     {
-                        data.Add(tw.Value(model, field.var_index));
+                        data.Add(treeWrapper.Value(model, field.VariableIndex));
                     }
                     else
                     {
@@ -205,7 +207,7 @@ namespace iLand.Output
 
                     // calculate statistics
                     stat.SetData(data);
-                    double value = field.aggregationIndex switch
+                    double value = field.AggregationIndex switch
                     {
                         0 => stat.Mean,
                         1 => stat.Sum,
@@ -246,11 +248,11 @@ namespace iLand.Output
 
             List<double> data = new List<double>(); //statistics data
             StatData stat = new StatData(); // statistcs helper class
-            TreeWrapper tw = new TreeWrapper();
-            RUWrapper ruwrapper = new RUWrapper();
-            mRUFilter.Wrapper = ruwrapper;
+            TreeWrapper treeWrapper = new TreeWrapper();
+            RUWrapper ruWrapper = new RUWrapper();
+            mRUFilter.Wrapper = ruWrapper;
 
-            Expression custom_expr = new Expression();
+            Expression fieldExpression = new Expression();
             foreach (ResourceUnit ru in model.ResourceUnits)
             {
                 if (ru.ID == -1)
@@ -261,7 +263,7 @@ namespace iLand.Output
                 // test filter
                 if (!mRUFilter.IsEmpty)
                 {
-                    ruwrapper.ResourceUnit = ru;
+                    ruWrapper.ResourceUnit = ru;
                     if (mRUFilter.Execute(model) == 0.0)
                     {
                         continue;
@@ -269,59 +271,60 @@ namespace iLand.Output
                 }
 
                 int columnIndex = 0;
-                foreach (ResourceUnitSpecies rus in ru.Species)
+                foreach (ResourceUnitSpecies ruSpecies in ru.Species)
                 {
-                    if (bySpecies && rus.Statistics.Count == 0)
+                    if (bySpecies && ruSpecies.Statistics.Count == 0)
                     {
                         continue;
                     }
 
                     // dynamic calculations
-                    foreach (SDynamicField field in mFieldList)
+                    foreach (DynamicOutputField field in mFieldList)
                     {
-                        if (String.IsNullOrEmpty(field.expression) == false)
+                        if (String.IsNullOrEmpty(field.Expression) == false)
                         {
                             // setup dynamic dynamic expression if present
-                            custom_expr.SetExpression(field.expression);
-                            custom_expr.Wrapper = tw;
+                            fieldExpression.SetExpression(field.Expression);
+                            fieldExpression.Wrapper = treeWrapper;
                         }
                         data.Clear();
-                        bool has_trees = false;
-                        foreach (Tree tree in ru.Trees)
+                        bool hasTrees = false;
+                        Trees treesOfSpecies = ru.TreesBySpeciesID[ruSpecies.Species.ID];
+                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                         {
-                            if (bySpecies && tree.Species.Index != rus.Species.Index)
+                            if (bySpecies && treesOfSpecies.Species.Index != ruSpecies.Species.Index)
                             {
                                 continue;
                             }
-                            if (tree.IsDead())
+                            if (treesOfSpecies.IsDead(treeIndex))
                             {
                                 continue;
                             }
-                            tw.Tree = tree;
+                            treeWrapper.Trees = treesOfSpecies;
 
                             // apply treefilter
                             if (!mTreeFilter.IsEmpty)
                             {
-                                mTreeFilter.Wrapper = tw;
+                                mTreeFilter.Wrapper = treeWrapper;
                                 if (mTreeFilter.Execute(model) == 0.0)
                                 {
                                     continue;
                                 }
                             }
-                            has_trees = true;
+                            hasTrees = true;
 
-                            if (field.var_index >= 0)
+                            if (field.VariableIndex >= 0)
                             {
-                                data.Add(tw.Value(model, field.var_index));
+                                data.Add(treeWrapper.Value(model, field.VariableIndex));
                             }
                             else
                             {
-                                data.Add(custom_expr.Execute(model));
+                                data.Add(fieldExpression.Execute(model));
                             }
                         }
 
                         // do nothing if no trees are avaiable
-                        if (!has_trees)
+                        if (hasTrees == false)
                         {
                             continue;
                         }
@@ -333,7 +336,7 @@ namespace iLand.Output
                             insertRow.Parameters[2].Value = ru.ID;
                             if (bySpecies)
                             {
-                                insertRow.Parameters[3].Value = rus.Species.ID;
+                                insertRow.Parameters[3].Value = ruSpecies.Species.ID;
                             }
                             else
                             {
@@ -344,7 +347,7 @@ namespace iLand.Output
 
                         // calculate statistics
                         stat.SetData(data);
-                        double value = field.aggregationIndex switch
+                        double value = field.AggregationIndex switch
                         {
                             0 => stat.Mean,
                             1 => stat.Sum,
@@ -362,8 +365,8 @@ namespace iLand.Output
                         };
                         // add current value to output
                         insertRow.Parameters[++columnIndex].Value = value;
+                    } // foreach field
 
-                    } // foreach (field)
                     if (columnIndex > 0)
                     {
                         insertRow.ExecuteNonQuery();
@@ -372,7 +375,7 @@ namespace iLand.Output
                     {
                         break;
                     }
-                } //foreach species
+                } // foreach tree species
             } // foreach resource unit
         }
     }

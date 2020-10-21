@@ -1,4 +1,4 @@
-﻿namespace iLand.Trees
+﻿namespace iLand.Tree
 {
     /** @class StandStatistics
       Collects information on stand level for each tree species.
@@ -90,30 +90,35 @@
             /*mCRegeneration=0.0; mNRegeneration=0.0;*/
         }
 
-        public void Add(Tree tree, TreeGrowthData treeGrowth)
+        public void Add(Trees trees, int treeIndex, TreeGrowthData treeGrowth, bool skipDead = false)
         {
-            Count++;
-            mSumDbh += tree.Dbh;
-            mSumHeight += tree.Height;
-            BasalArea += tree.BasalArea();
-            StemVolume += tree.Volume();
-            LeafAreaIndex += tree.LeafArea; // warning: sum of leafarea!
+            if (skipDead && trees.IsDead(treeIndex))
+            {
+                return;
+            }
+
+            this.Count++;
+            this.mSumDbh += trees.Dbh[treeIndex];
+            this.mSumHeight += trees.Height[treeIndex];
+            this.BasalArea += trees.GetBasalArea(treeIndex);
+            this.StemVolume += trees.GetStemVolume(treeIndex);
+            this.LeafAreaIndex += trees.LeafArea[treeIndex]; // warning: sum of leafarea!
             if (treeGrowth != null)
             {
-                Npp += treeGrowth.NppTotal;
-                NppAbove += treeGrowth.NppAboveground;
+                this.Npp += treeGrowth.NppTotal;
+                this.NppAbove += treeGrowth.NppAboveground;
             }
             // carbon and nitrogen pools
-            this.BranchC += Constant.BiomassCFraction * tree.GetBranchBiomass();
-            this.BranchN += Constant.BiomassCFraction / tree.Species.CNRatioWood * tree.GetBranchBiomass();
-            this.CoarseRootC += Constant.BiomassCFraction * tree.CoarseRootMass;
-            this.CoarseRootN += Constant.BiomassCFraction / tree.Species.CNRatioWood * tree.CoarseRootMass;
-            this.FineRootC += Constant.BiomassCFraction * tree.FineRootMass;
-            this.FineRootN += Constant.BiomassCFraction / tree.Species.CNRatioFineRoot * tree.FineRootMass;
-            this.FoliageC += Constant.BiomassCFraction * tree.FoliageMass;
-            this.FoliageN += Constant.BiomassCFraction / tree.Species.CNRatioFineRoot * tree.FoliageMass;
-            this.StemC += Constant.BiomassCFraction * tree.StemMass;
-            this.StemN += Constant.BiomassCFraction / tree.Species.CNRatioWood * tree.StemMass;
+            this.BranchC += Constant.BiomassCFraction * trees.GetBranchBiomass(treeIndex);
+            this.BranchN += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.GetBranchBiomass(treeIndex);
+            this.CoarseRootC += Constant.BiomassCFraction * trees.CoarseRootMass[treeIndex];
+            this.CoarseRootN += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.CoarseRootMass[treeIndex];
+            this.FineRootC += Constant.BiomassCFraction * trees.FineRootMass[treeIndex];
+            this.FineRootN += Constant.BiomassCFraction / trees.Species.CNRatioFineRoot * trees.FineRootMass[treeIndex];
+            this.FoliageC += Constant.BiomassCFraction * trees.FoliageMass[treeIndex];
+            this.FoliageN += Constant.BiomassCFraction / trees.Species.CNRatioFineRoot * trees.FoliageMass[treeIndex];
+            this.StemC += Constant.BiomassCFraction * trees.StemMass[treeIndex];
+            this.StemN += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.StemMass[treeIndex];
         }
 
         // note: mRUS = 0 for aggregated statistics

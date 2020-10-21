@@ -7,7 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     /** Collection of stamps for one tree species.
         Per species several stamps are stored (different BHD, different HD relations). This class

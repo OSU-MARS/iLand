@@ -3,7 +3,7 @@ using iLand.Tools;
 using iLand.World;
 using System;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     /** Interception in crown canopy.
         Calculates the amount of preciptitation that does not reach the ground and

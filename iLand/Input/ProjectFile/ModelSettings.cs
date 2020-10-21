@@ -26,11 +26,11 @@ namespace iLand.Input.ProjectFile
 
 		// "k" parameter (beer lambert) used for calc. of absorbed light on resourceUnit level
 		[XmlElement(ElementName = "lightExtinctionCoefficient")]
-		public double LightExtinctionCoefficient { get; set; }
+		public float LightExtinctionCoefficient { get; set; }
 
 		// "k" for beer lambert used for opacity of single trees
 		[XmlElement(ElementName = "lightExtinctionCoefficientOpacity")]
-		public double LightExtinctionCoefficientOpacity { get; set; }
+		public float LightExtinctionCoefficientOpacity { get; set; }
 
 		// "tau"-value for delayed temperature calculation acc. to Maekela 2008
 		[XmlElement(ElementName = "temperatureTau")]
@@ -86,8 +86,8 @@ namespace iLand.Input.ProjectFile
 			this.InterceptionStorageBroadleaf = 2.0;
 			this.InterceptionStorageNeedle = 4.0;
 			this.LaiThresholdForClosedStands = 3.0;
-			this.LightExtinctionCoefficient = 0.5;
-			this.LightExtinctionCoefficientOpacity = 0.5;
+			this.LightExtinctionCoefficient = 0.5F;
+			this.LightExtinctionCoefficientOpacity = 0.5F;
 			this.MortalityEnabled = true;
 			this.RegenerationEnabled = false;
 			this.SnowMeltTemperature = 0.0;

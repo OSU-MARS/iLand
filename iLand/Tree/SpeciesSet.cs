@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Xml;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     /** @class SpeciesSet
         A SpeciesSet acts as a container for individual Species objects. In iLand, theoretically,
@@ -19,9 +19,9 @@ namespace iLand.Trees
 
         private readonly Dictionary<string, Species> mSpeciesByID;
         // nitrogen response classes
-        private double mNitrogen1a, mNitrogen1b; // parameters of nitrogen response class 1
-        private double mNitrogen2a, mNitrogen2b; // parameters of nitrogen response class 2
-        private double mNitrogen3a, mNitrogen3b; // parameters of nitrogen response class 3
+        private float mNitrogen1a, mNitrogen1b; // parameters of nitrogen response class 1
+        private float mNitrogen2a, mNitrogen2b; // parameters of nitrogen response class 2
+        private float mNitrogen3a, mNitrogen3b; // parameters of nitrogen response class 3
         // CO2 response
         private double mCO2base, mCO2comp; // CO2 concentration of measurements (base) and CO2 compensation point (comp)
         private double mCO2p0, mCO2beta0; // p0: production multiplier, beta0: relative productivity increase
@@ -62,9 +62,9 @@ namespace iLand.Trees
             ActiveSpecies.Clear();
         }
 
-        public double GetLriCorrection(Simulation.Model model, double lightResourceIndex, double relativeHeight) 
+        public float GetLriCorrection(Simulation.Model model, float lightResourceIndex, float relativeHeight) 
         { 
-            return mLriCorrection.Evaluate(model, lightResourceIndex, relativeHeight); 
+            return (float)mLriCorrection.Evaluate(model, lightResourceIndex, relativeHeight); 
         }
 
         public Species Species(int index)
@@ -105,7 +105,7 @@ namespace iLand.Trees
                 {
                     continue;
                 }
-                Species species = Trees.Species.Load(model, speciesReader, this);
+                Species species = Tree.Species.Load(model, speciesReader, this);
                 mSpeciesByID.Add(species.ID, species);
                 if (species.Active)
                 {
@@ -259,43 +259,43 @@ namespace iLand.Trees
 
         /// calculate nitrogen response for a given amount of available nitrogen and a response class
         /// for fractional values, the response value is interpolated between the fixedly defined classes (1,2,3)
-        public double NitrogenResponse(double availableNitrogen, double responseClass)
+        public float NitrogenResponse(float availableNitrogen, float responseClass)
         {
-            if (responseClass > 2.0)
+            if (responseClass > 2.0F)
             {
-                if (responseClass == 3.0)
+                if (responseClass == 3.0F)
                 {
                     return NitrogenResponse(availableNitrogen, mNitrogen3a, mNitrogen3b);
                 }
                 else
                 {
                     // interpolate between 2 and 3
-                    double value4 = NitrogenResponse(availableNitrogen, mNitrogen2a, mNitrogen2b);
-                    double value3 = NitrogenResponse(availableNitrogen, mNitrogen3a, mNitrogen3b);
-                    return value4 + (responseClass - 2) * (value3 - value4);
+                    float value4 = NitrogenResponse(availableNitrogen, mNitrogen2a, mNitrogen2b);
+                    float value3 = NitrogenResponse(availableNitrogen, mNitrogen3a, mNitrogen3b);
+                    return value4 + (responseClass - 2.0F) * (value3 - value4);
                 }
             }
-            if (responseClass == 2.0)
+            if (responseClass == 2.0F)
             {
                 return NitrogenResponse(availableNitrogen, mNitrogen2a, mNitrogen2b);
             }
-            if (responseClass == 1.0)
+            if (responseClass == 1.0F)
             {
                 return NitrogenResponse(availableNitrogen, mNitrogen1a, mNitrogen1b);
             }
             // last ressort: interpolate between 1 and 2
-            double value1 = NitrogenResponse(availableNitrogen, mNitrogen1a, mNitrogen1b);
-            double value2 = NitrogenResponse(availableNitrogen, mNitrogen2a, mNitrogen2b);
-            return value1 + (responseClass - 1) * (value2 - value1);
+            float value1 = NitrogenResponse(availableNitrogen, mNitrogen1a, mNitrogen1b);
+            float value2 = NitrogenResponse(availableNitrogen, mNitrogen2a, mNitrogen2b);
+            return value1 + (responseClass - 1.0F) * (value2 - value1);
         }
 
-        private double NitrogenResponse(double availableNitrogen, double nitrogenK, double minimumNitrogen)
+        private float NitrogenResponse(float availableNitrogen, float nitrogenK, float minimumNitrogen)
         {
             if (availableNitrogen <= minimumNitrogen)
             {
-                return 0;
+                return 0.0F;
             }
-            double x = 1.0 - Math.Exp(nitrogenK * (availableNitrogen - minimumNitrogen));
+            float x = 1.0F - MathF.Exp(nitrogenK * (availableNitrogen - minimumNitrogen));
             return x;
         }
 
@@ -332,12 +332,12 @@ namespace iLand.Trees
             LightResponse is classified from 1 (very shade inolerant) and 5 (very shade tolerant) and interpolated for values between 1 and 5.
             Returns a value between 0..1
             @sa http://iland.boku.ac.at/allocation#reserve_and_allocation_to_stem_growth */
-        public double LightResponse(Simulation.Model model, double lightResourceIndex, double lightResponseClass)
+        public float LightResponse(Simulation.Model model, float lightResourceIndex, float lightResponseClass)
         {
-            double intolerant = mLightResponseIntolerant.Evaluate(model, lightResourceIndex);
-            double tolerant = mLightResponseTolerant.Evaluate(model, lightResourceIndex);
-            double response = intolerant + 0.25 * (lightResponseClass - 1.0) * (tolerant - intolerant);
-            return Global.Limit(response, 0.0, 1.0);
+            float intolerant = (float)mLightResponseIntolerant.Evaluate(model, lightResourceIndex);
+            float tolerant = (float)mLightResponseTolerant.Evaluate(model, lightResourceIndex);
+            float response = intolerant + 0.25F * (lightResponseClass - 1.0F) * (tolerant - intolerant);
+            return Global.Limit(response, 0.0F, 1.0F);
         }
     }
 }

@@ -4,7 +4,7 @@ using iLand.World;
 using System;
 using System.Diagnostics;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     /** @class SpeciesResponse
         Environmental responses relevant for production of a tree species on resource unit level.
@@ -31,7 +31,7 @@ namespace iLand.Trees
         public double[] UtilizableRadiation { get; private set; } // sum of daily radiation*minResponse (MJ/m2)
         public double[] VpdResponse { get; private set; } // mean of vpd-response
         public double[] Co2Response { get; private set; }
-        public double NitrogenResponse { get; private set; }
+        public float NitrogenResponse { get; private set; }
         public double YearlyRadiation { get; private set; } // total radiation of the year (MJ/m2)
         public double YearlyUtilizableRadiation { get; private set; } // yearly sum of utilized radiation (MJ/m2)
 
@@ -53,7 +53,7 @@ namespace iLand.Trees
             {
                 Co2Response[month] = SoilWaterResponse[month] = TempResponse[month] = GlobalRadiation[month] = UtilizableRadiation[month] = VpdResponse[month] = 0.0;
             }
-            NitrogenResponse = 0.0;
+            NitrogenResponse = 0.0F;
             YearlyRadiation = 0.0;
             YearlyUtilizableRadiation = 0.0;
         }
@@ -91,7 +91,7 @@ namespace iLand.Trees
             int leafOffIndex = phenonology.LeafOnEnd;
 
             // nitrogen response: a yearly value based on available nitrogen
-            this.NitrogenResponse = Species.GetNitrogenResponse(this.ResourceUnit.Soil.PlantAvailableNitrogen);
+            this.NitrogenResponse = this.Species.GetNitrogenResponse(this.ResourceUnit.Soil.PlantAvailableNitrogen);
             Debug.Assert(this.NitrogenResponse >= 0.0);
             double ambientCo2 = climate.CarbonDioxidePpm; // CO2 level of first day of year (co2 is static)
 

@@ -1,4 +1,4 @@
-﻿using iLand.Trees;
+﻿using iLand.Tree;
 using iLand.World;
 using System;
 using System.Collections.Generic;
@@ -93,7 +93,7 @@ namespace iLand.Plugin
             }
         }
 
-        public void TreeDeath(Tree tree, MortalityCause mortalityCause)
+        public void TreeDeath(Trees tree, MortalityCause mortalityCause)
         {
             for (int index = 0; index < mTreeDeath.Count; ++index)
             {

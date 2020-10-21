@@ -1,11 +1,12 @@
 ﻿using iLand.Simulation;
 using iLand.Tools;
-using iLand.Trees;
-using Microsoft.Collections.Extensions;
+using iLand.Tree;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace iLand.World
 {
@@ -21,19 +22,19 @@ namespace iLand.World
     {
         // private static readonly MapGridRULock mapGridLock;
 
-        private readonly Dictionary<int, MutableTuple<RectangleF, double>> mRectIndex; // holds the extent and area for each map-id
-        private readonly MultiValueDictionary<int, MutableTuple<ResourceUnit, double>> mRUIndex; // holds a list of resource units + areas per map-id
-        private readonly MultiValueDictionary<int, int> mNeighborList; // a list of neighboring polygons; for each ID all neighboring IDs are stored.
+        private readonly Dictionary<int, MutableTuple<RectangleF, float>> mBoundingBoxByStandID; // holds the extent and area for each map-id
+        private readonly Dictionary<int, List<MutableTuple<ResourceUnit, float>>> mResourceUnitsByStandID; // holds a list of resource units + areas per map-id
+        private readonly Dictionary<int, List<int>> mNeighborListByStandID; // a list of neighboring polygons; for each ID all neighboring IDs are stored.
 
         public Grid<int> Grid { get; private set; }
         // file name of the grid
         public string Name { get; private set; }
 
-        public double Area(int id) { return IsValid(id) ? mRectIndex[id].Item2 : 0.0; } // return the area (m2) covered by the polygon
-        public RectangleF BoundingBox(int id) { return IsValid(id) ? mRectIndex[id].Item1 : new RectangleF(); } // returns the bounding box of a polygon
-        public bool IsValid() { return !Grid.IsEmpty(); }
+        public double Area(int standID) { return this.IsValid(standID) ? mBoundingBoxByStandID[standID].Item2 : 0.0; } // return the area (m2) covered by the polygon
+        public RectangleF BoundingBox(int id) { return this.IsValid(id) ? mBoundingBoxByStandID[id].Item1 : new RectangleF(); } // returns the bounding box of a polygon
+        public bool IsValid() { return !this.Grid.IsEmpty(); }
         /// returns true, if 'id' is a valid id in the grid, false otherwise.
-        public bool IsValid(int id) { return mRectIndex.ContainsKey(id); }
+        public bool IsValid(int standID) { return mBoundingBoxByStandID.ContainsKey(standID); }
 
         //static MapGrid()
         //{
@@ -43,9 +44,9 @@ namespace iLand.World
         public MapGrid()
         {
             this.Grid = new Grid<int>();
-            this.mRectIndex = new Dictionary<int, MutableTuple<RectangleF, double>>();
-            this.mRUIndex = new MultiValueDictionary<int, MutableTuple<ResourceUnit, double>>();
-            this.mNeighborList = new MultiValueDictionary<int, int>();
+            this.mBoundingBoxByStandID = new Dictionary<int, MutableTuple<RectangleF, float>>();
+            this.mResourceUnitsByStandID = new Dictionary<int, List<MutableTuple<ResourceUnit, float>>>();
+            this.mNeighborListByStandID = new Dictionary<int, List<int>>();
         }
 
         public MapGrid(Model model, GisGrid sourceGrid)
@@ -61,11 +62,11 @@ namespace iLand.World
         /// return true, if the point 'lif_grid_coords' (x/y integer key within the LIF-Grid)
         public bool HasValue(int id, Point lif_grid_coords)
         {
-            return this.StandIDFromLightCoordinate(lif_grid_coords) == id;
+            return this.GetStandIDFromLightCoordinate(lif_grid_coords) == id;
         }
 
         /// return the stand-ID at the coordinates *from* the LIF-Grid (i.e., 2m grid).
-        public int StandIDFromLightCoordinate(Point lif_grid_coords)
+        public int GetStandIDFromLightCoordinate(Point lif_grid_coords)
         {
             return Grid[lif_grid_coords.X / Constant.LightPerHeightSize, lif_grid_coords.Y / Constant.LightPerHeightSize];
         }
@@ -103,8 +104,8 @@ namespace iLand.World
             }
 
             // create spatial index
-            mRectIndex.Clear();
-            mRUIndex.Clear();
+            mBoundingBoxByStandID.Clear();
+            mResourceUnitsByStandID.Clear();
 
             if (create_index)
             {
@@ -132,49 +133,49 @@ namespace iLand.World
             }
 
             // reset spatial index
-            mRectIndex.Clear();
-            mRUIndex.Clear();
+            mBoundingBoxByStandID.Clear();
+            mResourceUnitsByStandID.Clear();
         }
 
         public void CreateIndex(Model model)
         {
             // reset spatial index
-            mRectIndex.Clear();
-            mRUIndex.Clear();
+            mBoundingBoxByStandID.Clear();
+            mResourceUnitsByStandID.Clear();
             // create new
-            for (int p = 0; p < Grid.Count; ++p)
+            for (int gridIndex = 0; gridIndex < this.Grid.Count; ++gridIndex)
             {
-                if (Grid[p] == -1)
+                if (this.Grid[gridIndex] == -1)
                 {
                     continue;
                 }
-                MutableTuple<RectangleF, double> data = mRectIndex[p];
-                data.Item1 = RectangleF.Union(data.Item1, Grid.GetCellRect(Grid.IndexOf(p)));
+                MutableTuple<RectangleF, float> data = mBoundingBoxByStandID[gridIndex];
+                data.Item1 = RectangleF.Union(data.Item1, this.Grid.GetCellRect(this.Grid.IndexOf(gridIndex)));
                 data.Item2 += Constant.LightSize * Constant.LightPerHeightSize * Constant.LightSize * Constant.LightPerHeightSize; // 100m2
 
-                ResourceUnit ru = model.GetResourceUnit(Grid.GetCellCenterPoint(Grid.IndexOf(p)));
+                ResourceUnit ru = model.GetResourceUnit(this.Grid.GetCellCenterPoint(this.Grid.IndexOf(gridIndex)));
                 if (ru == null)
                 {
                     continue;
                 }
                 // find all entries for the current grid id
-                List<MutableTuple<ResourceUnit, double>> pos = mRUIndex[p].ToList();
+                List<MutableTuple<ResourceUnit, float>> pos = mResourceUnitsByStandID[gridIndex].ToList();
 
                 // look for the resource unit 'ru'
-                bool found = false;
+                bool ruFound = false;
                 for (int index = 0; index < pos.Count; ++index)
                 {
-                    MutableTuple<ResourceUnit, double> candidate = pos[index];
+                    MutableTuple<ResourceUnit, float> candidate = pos[index];
                     if (candidate.Item1 == ru)
                     {
-                        candidate.Item2 += 0.01; // 1 pixel = 1% of the area
-                        found = true;
+                        candidate.Item2 += 0.01F; // 1 pixel = 1% of the area
+                        ruFound = true;
                         break;
                     }
                 }
-                if (!found)
+                if (ruFound == false)
                 {
-                    mRUIndex.Add(p, new MutableTuple<ResourceUnit, double>(ru, 0.01));
+                    mResourceUnitsByStandID.AddToList(gridIndex, new MutableTuple<ResourceUnit, float>(ru, 0.01F));
                 }
             }
         }
@@ -194,43 +195,53 @@ namespace iLand.World
 
         /// returns a list with resource units and area factors per 'id'.
         /// the area is '1' if the resource unit is fully covered by the grid-value.
-        public IReadOnlyCollection<MutableTuple<ResourceUnit, double>> ResourceUnitAreas(int id)
+        public IReadOnlyCollection<MutableTuple<ResourceUnit, float>> ResourceUnitAreas(int standID)
         {
-            return mRUIndex[id]; 
+            return mResourceUnitsByStandID[standID]; 
         }
 
         /// returns the list of resource units with at least one pixel within the area designated by 'id'
-        public List<ResourceUnit> ResourceUnits(int id)
+        public List<ResourceUnit> GetResourceUnitsInStand(int standID)
         {
-            List<ResourceUnit> result = new List<ResourceUnit>();
-            IReadOnlyCollection<MutableTuple<ResourceUnit, double>> list = mRUIndex[id];
-            foreach (MutableTuple<ResourceUnit, double> ru in list)
+            IReadOnlyCollection<MutableTuple<ResourceUnit, float>> list = mResourceUnitsByStandID[standID];
+            List<ResourceUnit> resourceUnits = new List<ResourceUnit>(list.Count);
+            foreach (MutableTuple<ResourceUnit, float> ru in list)
             {
-                result.Add(ru.Item1);
+                resourceUnits.Add(ru.Item1);
             }
-            return result;
+            return resourceUnits;
         }
 
         /// return a list of all living trees on the area denoted by 'id'
-        public List<Tree> Trees(int id)
+        public List<MutableTuple<Trees, List<int>>> GetLivingTreesInStand(int standID)
         {
-            List<Tree> tree_list = new List<Tree>();
-            List<ResourceUnit> resource_units = ResourceUnits(id);
-            foreach (ResourceUnit ru in resource_units)
+            List<MutableTuple<Trees, List<int>>> livingTrees = new List<MutableTuple<Trees, List<int>>>();
+            List<ResourceUnit> resourceUnitsInStand = this.GetResourceUnitsInStand(standID);
+            foreach (ResourceUnit ru in resourceUnitsInStand)
             {
-                foreach (Tree tree in ru.Trees)
+                foreach (Trees trees in ru.TreesBySpeciesID.Values)
                 {
-                    if (StandIDFromLightCoordinate(tree.LightCellPosition) == id && !tree.IsDead())
+                    MutableTuple<Trees, List<int>> livingTreesInStand = new MutableTuple<Trees, List<int>>()
                     {
-                        tree_list.Add(tree);
+                        Item1 = trees,
+                        Item2 = new List<int>()
+                    };
+                    for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+                    {
+                        if ((this.GetStandIDFromLightCoordinate(trees.LightCellPosition[treeIndex]) == standID) && (trees.IsDead(treeIndex) == false))
+                        {
+                            livingTreesInStand.Item2.Add(treeIndex);
+                        }
                     }
+
+                    livingTrees.Add(livingTreesInStand);
                 }
             }
             //    qDebug() << "trees: found" << c << "/" << tree_list.size();
-            return tree_list;
+            return livingTrees;
         }
 
-        public int LoadTrees(Model model, int id, List<MutableTuple<Tree, double>> rList, string filter, int n_estimate)
+        public int LoadTrees(Model model, int id, List<MutableTuple<Tree.Trees, double>> rList, string filter, int n_estimate)
         {
             rList.Clear();
             if (n_estimate > 0)
@@ -238,39 +249,42 @@ namespace iLand.World
                 rList.Capacity = n_estimate;
             }
             Expression expression = null;
-            TreeWrapper tw = new TreeWrapper();
+            TreeWrapper treeWrapper = new TreeWrapper();
             if (String.IsNullOrEmpty(filter) == false)
             {
-                expression = new Expression(filter, tw);
+                expression = new Expression(filter, treeWrapper);
                 expression.EnableIncrementalSum();
             }
-            List<ResourceUnit> resource_units = ResourceUnits(id);
             // lock the resource units: removed again, WR20140821
             // mapGridLock.lock(id, resource_units);
 
-            foreach (ResourceUnit ru in resource_units)
+            List<ResourceUnit> resourceUnitsInStand = GetResourceUnitsInStand(id);
+            foreach (ResourceUnit ru in resourceUnitsInStand)
             {
-                foreach (Tree tree in ru.Trees)
+                foreach (Trees trees in ru.TreesBySpeciesID.Values)
                 {
-                    if (StandIDFromLightCoordinate(tree.LightCellPosition) == id && !tree.IsDead())
+                    for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                     {
-                        tw.Tree = tree;
-                        if (expression != null)
+                        if ((this.GetStandIDFromLightCoordinate(trees.LightCellPosition[treeIndex]) == id) && (trees.IsDead(treeIndex) == false))
                         {
-                            double value = expression.Evaluate(model, tw);
-                            // keep if expression returns true (1)
-                            bool keep = value == 1.0;
-                            // if value is >0 (i.e. not "false"), then draw a random number
-                            if (!keep && value > 0.0)
+                            treeWrapper.Trees = trees;
+                            if (expression != null)
                             {
-                                keep = model.RandomGenerator.Random() < value;
+                                double value = expression.Evaluate(model, treeWrapper);
+                                // keep if expression returns true (1)
+                                bool loadTree = value == 1.0;
+                                // if value is >0 (i.e. not "false"), then draw a random number
+                                if ((loadTree == false) && (value > 0.0))
+                                {
+                                    loadTree = model.RandomGenerator.Random() < value;
+                                }
+                                if (loadTree == false)
+                                {
+                                    continue;
+                                }
                             }
-                            if (!keep)
-                            {
-                                continue;
-                            }
+                            rList.Add(new MutableTuple<Tree.Trees, double>(trees, 0.0));
                         }
-                        rList.Add(new MutableTuple<Tree, double>(tree, 0.0));
                     }
                 }
             }
@@ -288,17 +302,17 @@ namespace iLand.World
         /// return a list of grid-indices of a given stand-id (a grid-index
         /// is the index of 10m x 10m pixels within the internal storage)
         /// The selection is limited to pixels within the world's extent
-        public List<int> GridIndices(int id)
+        public List<int> GetGridIndices(int standID)
         {
             List<int> result = new List<int>();
-            RectangleF rect = mRectIndex[id].Item1;
+            RectangleF rect = mBoundingBoxByStandID[standID].Item1;
             GridRunner<int> runner = new GridRunner<int>(Grid, rect);
             for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
             {
-                int cell = runner.Current;
-                if (cell == id)
+                int cellStandID = runner.Current;
+                if (cellStandID == standID)
                 {
-                    result.Add(cell - Grid[0]);
+                    result.Add(cellStandID - Grid[0]);
                 }
             }
             return result;
@@ -323,39 +337,34 @@ namespace iLand.World
         //}
 
         /// retrieve a list of all stands that are neighbors of the stand with ID "index".
-        public List<int> NeighborsOf(int index)
+        public List<int> GetNeighborsOf(int index)
         {
-            if (mNeighborList.Count == 0)
+            if (mNeighborListByStandID.Count == 0)
             {
-                this.UpdateNeighborList(); // fill the list
+                this.BuildNeighborList(); // fill the list
             }
-            return mNeighborList[index].ToList();
+            return mNeighborListByStandID[index];
         }
 
         /// scan the map and add neighborhood-relations to the mNeighborList
         /// the 4-neighborhood is used to identify neighbors.
-        public void UpdateNeighborList()
+        private void BuildNeighborList()
         {
-            mNeighborList.Clear();
-            GridRunner<int> gr = new GridRunner<int>(Grid, Grid.CellExtent()); // the full grid
-            int[] n4 = new int[4];
-            for (gr.MoveNext(); gr.IsValid(); gr.MoveNext())
+            mNeighborListByStandID.Clear();
+
+            GridRunner<int> gridRuner = new GridRunner<int>(this.Grid, this.Grid.CellExtent()); // the full grid
+            int[] neighbors4 = new int[4];
+            for (gridRuner.MoveNext(); gridRuner.IsValid(); gridRuner.MoveNext())
             {
-                gr.Neighbors4(n4); // get the four-neighborhood (0-pointers possible)
-                for (int i = 0; i < 4; ++i)
+                gridRuner.Neighbors4(neighbors4); // get the four-neighborhood (0-pointers possible)
+                foreach (int neighborID in neighbors4)
                 {
-                    if (n4[i] != 0 && gr.Current != n4[i])
+                    // TODO: neighborID > 0?
+                    if ((neighborID != 0) && (gridRuner.Current != neighborID))
                     {
-                        // look if we already have the pair
-                        if (mNeighborList.ContainsKey(gr.Current) == false)
-                        {
-                            // add the "edge" two times in the hash
-                            mNeighborList.Add(gr.Current, n4[i]);
-                        }
-                        if (mNeighborList.ContainsKey(n4[i]) == false)
-                        {
-                            mNeighborList.Add(n4[i], gr.Current);
-                        }
+                        // add both adjacencies
+                        mNeighborListByStandID.AddToList(gridRuner.Current, neighborID);
+                        mNeighborListByStandID.AddToList(neighborID, gridRuner.Current);
                     }
                 }
             }

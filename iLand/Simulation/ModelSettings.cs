@@ -16,9 +16,9 @@ namespace iLand.Simulation
         public bool RegenerationEnabled { get; set; } // if true, seed dispersal, establishment, ... is modelled
         public bool CarbonCycleEnabled { get; set; } // if true, snag dynamics and soil CN cycle is modelled
         // light
-        public double LightExtinctionCoefficient { get; private set; } // "k" parameter (beer lambert) used for calc. of absorbed light on resourceUnit level
-        public double LightExtinctionCoefficientOpacity { get; private set; } // "k" for beer lambert used for opacity of single trees
-        public bool TorusMode { get; private set; } // special mode that treats each resource unit as a "torus" (light calculation, seed distribution)
+        public float LightExtinctionCoefficient { get; private set; } // "k" parameter (beer lambert) used for calc. of absorbed light on resourceUnit level
+        public float LightExtinctionCoefficientOpacity { get; private set; } // "k" for beer lambert used for opacity of single trees
+        public bool IsTorus { get; private set; } // special mode that treats each resource unit as a "torus" (light calculation, seed distribution)
         // climate
         public double TemperatureTau { get; private set; } // "tau"-value for delayed temperature calculation acc. to Maekela 2008
         // water
@@ -58,7 +58,7 @@ namespace iLand.Simulation
 
             Latitude = Global.ToRadians(model.Project.Model.World.Latitude);
             
-            TorusMode = model.Project.Model.Parameter.Torus;
+            IsTorus = model.Project.Model.Parameter.Torus;
         }
 
         public void Print()

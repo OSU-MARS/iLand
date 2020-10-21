@@ -1,4 +1,4 @@
-﻿namespace iLand.Trees
+﻿namespace iLand.Tree
 {
     public enum MortalityCause 
     { 

@@ -3,7 +3,7 @@ using iLand.Tools;
 using iLand.World;
 using System;
 
-namespace iLand.Trees
+namespace iLand.Tree
 {
     /** @class Establishment
         Establishment deals with the establishment process of saplings.
