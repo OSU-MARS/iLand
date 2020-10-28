@@ -101,7 +101,7 @@ namespace iLand.Plugin
             }
         }
 
-        public void Run()
+        public void RunYear()
         {
             //using DebugTimer t = model.DebugTimers.Create("Modules.Run()");
 
@@ -133,7 +133,7 @@ namespace iLand.Plugin
             }
         }
 
-        public void YearBegin()
+        public void OnStartYear()
         {
             foreach (IDisturbanceInterface module in mModules)
             {

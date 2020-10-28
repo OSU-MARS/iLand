@@ -15,26 +15,26 @@ namespace iLand.Output
             this.mFilter = new Expression();
             this.mResourceUnitFilter = new Expression();
 
-            Name = "Water output";
-            TableName = "water";
-            Description = "Annual water cycle output on resource unit/landscape unit." + System.Environment.NewLine +
-                          "The output includes annual averages of precipitation, evapotranspiration, water excess, " +
-                          "snow cover, and radiation input. The spatial resolution is landscape averages and/or resource unit level (i.e. 100m pixels). " +
-                          "Landscape level averages are indicated by -1 for the 'ru' and 'index' columns." + System.Environment.NewLine + System.Environment.NewLine +
-                          "You can specify a 'condition' to limit output execution to specific years (variable 'year'). " +
-                          "The 'conditionRU' can be used to suppress resource-unit-level details; eg. specifying 'in(year,100,200,300)' limits output on reosurce unit level to the years 100,200,300 " +
-                          "(leaving 'conditionRU' blank enables details per default).";
-            Columns.Add(SqlColumn.CreateYear());
-            Columns.Add(SqlColumn.CreateResourceUnit());
-            Columns.Add(SqlColumn.CreateID());
-            Columns.Add(new SqlColumn("stocked_area", "area (ha/ha) which is stocked (covered by crowns, absorbing radiation)", OutputDatatype.Double));
-            Columns.Add(new SqlColumn("stockable_area", "area (ha/ha) which is stockable (and within the project area)", OutputDatatype.Double));
-            Columns.Add(new SqlColumn("precipitation_mm", "Annual precipitation sum (mm)", OutputDatatype.Double));
-            Columns.Add(new SqlColumn("et_mm", "Evapotranspiration (mm)", OutputDatatype.Double));
-            Columns.Add(new SqlColumn("excess_mm", "annual sum of water loss due to lateral outflow/groundwater flow (mm)", OutputDatatype.Double));
-            Columns.Add(new SqlColumn("snowcover_days", "days with snowcover >0mm", OutputDatatype.Integer));
-            Columns.Add(new SqlColumn("total_radiation", "total incoming radiation over the year (MJ/m2), sum of data in climate input)", OutputDatatype.Double));
-            Columns.Add(new SqlColumn("radiation_snowcover", "sum of radiation input (MJ/m2) for days with snow cover", OutputDatatype.Integer));
+            this.Name = "Water output";
+            this.TableName = "water";
+            this.Description = "Annual water cycle output on resource unit/landscape unit." + System.Environment.NewLine +
+                               "The output includes annual averages of precipitation, evapotranspiration, water excess, " +
+                               "snow cover, and radiation input. The spatial resolution is landscape averages and/or resource unit level (i.e. 100m pixels). " +
+                               "Landscape level averages are indicated by -1 for the 'ru' and 'index' columns." + System.Environment.NewLine + System.Environment.NewLine +
+                               "You can specify a 'condition' to limit output execution to specific years (variable 'year'). " +
+                               "The 'conditionRU' can be used to suppress resource-unit-level details; eg. specifying 'in(year,100,200,300)' limits output on reosurce unit level to the years 100,200,300 " +
+                               "(leaving 'conditionRU' blank enables details per default).";
+            this.Columns.Add(SqlColumn.CreateYear());
+            this.Columns.Add(SqlColumn.CreateResourceUnit());
+            this.Columns.Add(SqlColumn.CreateID());
+            this.Columns.Add(new SqlColumn("stocked_area", "area (ha/ha) which is stocked (covered by crowns, absorbing radiation)", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("stockable_area", "area (ha/ha) which is stockable (and within the project area)", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("precipitation_mm", "Annual precipitation sum (mm)", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("et_mm", "Evapotranspiration (mm)", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("excess_mm", "annual sum of water loss due to lateral outflow/groundwater flow (mm)", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("snowcover_days", "days with snowcover >0mm", OutputDatatype.Integer));
+            this.Columns.Add(new SqlColumn("total_radiation", "total incoming radiation over the year (MJ/m2), sum of data in climate input)", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("radiation_snowcover", "sum of radiation input (MJ/m2) for days with snow cover", OutputDatatype.Integer));
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
@@ -57,7 +57,7 @@ namespace iLand.Output
             double stockable = 0.0, stocked = 0.0;
             foreach (ResourceUnit ru in model.ResourceUnits)
             {
-                if (ru.ID == -1)
+                if (ru.EnvironmentID == -1)
                 {
                     continue; // do not include if out of project area
                 }
@@ -65,26 +65,26 @@ namespace iLand.Output
                 if (logResourceUnits)
                 {
                     insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
-                    insertRow.Parameters[1].Value = ru.Index;
-                    insertRow.Parameters[2].Value = ru.ID;
+                    insertRow.Parameters[1].Value = ru.GridIndex;
+                    insertRow.Parameters[2].Value = ru.EnvironmentID;
                     insertRow.Parameters[3].Value = ru.StockedArea / Constant.RUArea;
                     insertRow.Parameters[4].Value = ru.StockableArea / Constant.RUArea;
-                    insertRow.Parameters[5].Value = ru.Climate.AnnualPrecipitation();
+                    insertRow.Parameters[5].Value = ru.Climate.GetTotalPrecipitationInCurrentYear();
                     insertRow.Parameters[6].Value = wc.TotalEvapotranspiration;
                     insertRow.Parameters[7].Value = wc.TotalWaterLoss;
                     insertRow.Parameters[8].Value = wc.SnowDays;
                     insertRow.Parameters[9].Value = ru.Climate.TotalAnnualRadiation;
-                    insertRow.Parameters[10].Value = wc.SnowDayRad;
+                    insertRow.Parameters[10].Value = wc.SnowDayRadiation;
                     insertRow.ExecuteNonQuery();
                 }
                 ++resourceUnitCount;
                 stockable += ru.StockableArea; 
                 stocked += ru.StockedArea;
-                precip += ru.Climate.AnnualPrecipitation();
+                precip += ru.Climate.GetTotalPrecipitationInCurrentYear();
                 evapotranspiration += wc.TotalEvapotranspiration; runoff += wc.TotalWaterLoss; 
                 snowDays += (int)wc.SnowDays;
                 rad += ru.Climate.TotalAnnualRadiation;
-                snowRad += wc.SnowDayRad;
+                snowRad += wc.SnowDayRadiation;
             }
 
             // write landscape sums

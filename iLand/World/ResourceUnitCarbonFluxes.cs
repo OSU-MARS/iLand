@@ -1,6 +1,6 @@
 ﻿namespace iLand.World
 {
-    public class ResourceUnitVariables
+    public class ResourceUnitCarbonFluxes
     {
         // values of the current year = NPP, flux to atmosphere, net ecosystem productivity, all in kgC/ha
         public double CarbonToAtmosphere { get; set; }
@@ -13,7 +13,7 @@
         // NPP, kg C/ha
         public double TotalNpp { get; set; }
 
-        public ResourceUnitVariables()
+        public ResourceUnitCarbonFluxes()
         {
             this.CarbonToAtmosphere = 0.0;
             this.Npp = 0.0;

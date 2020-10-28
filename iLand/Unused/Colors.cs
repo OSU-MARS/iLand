@@ -218,7 +218,7 @@ namespace iLand.Tools
                 float val = dem.EnsureViewGrid()[coordinates]; // scales from 0..1
                 col.ToHsv(out double h, out double s, out double v);
                 // we adjust the 'v', the lightness: if val=0.5 -> nothing changes
-                v = Global.Limit(v - (1.0 - val) * 0.4, 0.1, 1.0);
+                v = Maths.Limit(v - (1.0 - val) * 0.4, 0.1, 1.0);
                 return ColorExtensions.FromHsv(h, s, v);
             }
 

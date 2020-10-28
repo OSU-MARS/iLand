@@ -11,7 +11,7 @@ namespace iLand.World
             6  7  8  9  10 11
             12 13 14 15 16 17
             Note: north and south are reversed, thus the item with index 0 is located in the south-western edge of the grid! */
-        public static Point IndexOf<T>(this Grid<T> grid, T element) where T : class
+        public static Point CellIndexOf<T>(this Grid<T> grid, T element) where T : class
         {
             //    Point result(-1,-1);
             if (element != null)
@@ -20,7 +20,7 @@ namespace iLand.World
                 {
                     if (grid[idx] == element)
                     {
-                        return grid.IndexOf(idx);
+                        return grid.GetCellPosition(idx);
                     }
                 }
             }

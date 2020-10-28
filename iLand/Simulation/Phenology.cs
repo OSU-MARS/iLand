@@ -112,7 +112,7 @@ namespace iLand.Simulation
                 }
                 vpd = 1.0 - Ramp(day.Vpd, mMinVpd, mMaxVpd); // high value for low vpd
                 temp = Ramp(day.MinTemperature, mMinTemp, mMaxTemp);
-                daylength = Ramp(mClimate.Sun.GetDaylength(iday), mMinDayLength, mMaxDayLength);
+                daylength = Ramp(mClimate.Sun.GetDayLengthInHours(iday), mMinDayLength, mMaxDayLength);
                 gsi = vpd * temp * daylength;
                 if (!inside_period && gsi > 0.5)
                 {
@@ -143,7 +143,7 @@ namespace iLand.Simulation
             {
                 //throw IException(QString("Phenology::calculation(): was not able to determine the length of the vegetation period for group {0}. climate table: '{1}'.", id(), mClimate.name()));
                 Debug.WriteLine("Phenology::calculation(): vegetation period is 0 for group " + ID + ", climate table: " + mClimate.Name);
-                day_start = mClimate.DaysOfYear() - 1; // last day of the year, never reached
+                day_start = mClimate.GetDaysInYear() - 1; // last day of the year, never reached
                 day_stop = day_start; // never reached
             }
             //if (GlobalSettings.Instance.LogDebug())
@@ -153,8 +153,8 @@ namespace iLand.Simulation
             LeafOnStart = day_start;
             LeafOnEnd = day_stop;
             // convert yeardays to dates
-            mClimate.ToDate(day_start, out int bDay, out int bMon, out int _);
-            mClimate.ToDate(day_stop, out int _, out int eMon, out int _);
+            mClimate.ToZeroBasedDate(day_start, out int bDay, out int bMon, out int _);
+            mClimate.ToZeroBasedDate(day_stop, out int _, out int eMon, out int _);
             for (int i = 0; i < 12; i++)
             {
                 if (i < bMon || i > eMon)

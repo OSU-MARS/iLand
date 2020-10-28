@@ -67,11 +67,11 @@ namespace iLand.Tools
                     areaval -= p1 * step_width; // summenwahrscheinlichkeit: nur das Delta zaehlt.
                                                 // tsetWeightghted operiert mit integers . umrechnung: * huge_val
                 }
-                mRandomIndex.SetWeight(i, (int)(areaval * 100000000));
+                mRandomIndex.SetCellWeight(i, (int)(areaval * 100000000));
             }
         }
 
-        public double Get(Model model)
+        public double GetRandomValue(Model model)
         {
             // zufallszahl ziehen.
             if (mExpression == null)
@@ -80,15 +80,15 @@ namespace iLand.Tools
             }
 
             // (1) select slot randomly:
-            int slot = mRandomIndex.Random(model);
+            int slot = mRandomIndex.GetRandomCellIndex(model);
             // the current slot is:
             double basevalue = mLowerBound + slot * mDeltaX;
             // (2): draw a uniform random number within the slot
-            double value = model.RandomGenerator.Random(basevalue, basevalue + mDeltaX);
+            double value = model.RandomGenerator.GetRandomDouble(basevalue, basevalue + mDeltaX);
             return value;
         }
 
-        public double GetProbOfRange(Model model, double lowerBound, double upperBound)
+        public double GetProbabilityOfRange(Model model, double lowerBound, double upperBound)
         {
             if (mSumFunction)
             {
@@ -115,7 +115,7 @@ namespace iLand.Tools
             {
                 return -1;
             }
-            return mRandomIndex.GetRelWeight(iLow, iHigh);
+            return mRandomIndex.GetRelativeWeight(iLow, iHigh);
         }
     }
 }

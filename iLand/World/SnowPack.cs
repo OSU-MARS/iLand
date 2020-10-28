@@ -4,56 +4,55 @@ namespace iLand.World
 {
     internal class SnowPack
     {
-        public double Temperature { get; set; } // Threshold temperature for snowing / snow melt
-        public double WaterEquivalent { get; set; } // height of snowpack (mm water column)
+        public float MeltTemperature { get; set; } // Threshold temperature for snowing / snow melt
+        public float WaterEquivalent { get; set; } // height of snowpack (mm water column)
 
         public SnowPack()
         {
-            WaterEquivalent = 0.0;
+            this.MeltTemperature = 0.0F;
+            this.WaterEquivalent = 0.0F;
         }
 
-        public void Setup() { WaterEquivalent = 0.0; }
-
         /// additional precipitation (e.g. non evaporated water of canopy interception).
-        public double Add(double preciptitation_mm, double temperature)
+        public float AddSnowWaterEquivalent(float preciptitationInMM, float temperatureC)
         {
-            // do nothing for temps > 0 C
-            if (temperature > Temperature)
+            // no snow to add if temp >0 C
+            if (temperatureC > this.MeltTemperature)
             {
-                return preciptitation_mm;
+                return preciptitationInMM;
             }
 
             // temps < 0 C: add to snow
-            WaterEquivalent += preciptitation_mm;
-            return 0.0;
+            this.WaterEquivalent += preciptitationInMM;
+            return 0.0F;
         }
 
         /// process the snow layer. Returns the mm of preciptitation/melt water that leaves the snow layer.
         /** calculates the input/output of water that is stored in the snow pack.
             The approach is similar to Picus 1.3 and ForestBGC (Running, 1988).
             Returns the amount of water that exits the snowpack (precipitation, snow melt) */
-        public double Flow(double preciptitation_mm, double temperature)
+        public float Flow(float preciptitationInMM, float temperatureC)
         {
-            if (temperature > Temperature)
+            if (temperatureC > this.MeltTemperature)
             {
-                if (WaterEquivalent == 0.0)
+                if (this.WaterEquivalent == 0.0F)
                 {
-                    return preciptitation_mm; // no change
+                    return preciptitationInMM; // no change
                 }
                 else
                 {
-                    // snow melts
-                    const double melting_coefficient = 0.7; // mm/C
-                    double melt = Math.Min((temperature - Temperature) * melting_coefficient, WaterEquivalent);
-                    WaterEquivalent -= melt;
-                    return preciptitation_mm + melt;
+                    // melting from rain on snow event
+                    const float meltingCoefficient = 0.7F; // mm/C
+                    float melt = MathF.Min((temperatureC - this.MeltTemperature) * meltingCoefficient, WaterEquivalent);
+                    this.WaterEquivalent -= melt;
+                    return preciptitationInMM + melt;
                 }
             }
             else
             {
                 // snow:
-                WaterEquivalent += preciptitation_mm;
-                return 0.0; // no output.
+                this.WaterEquivalent += preciptitationInMM;
+                return 0.0F; // no output.
             }
         }
     }

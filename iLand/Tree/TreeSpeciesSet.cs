@@ -13,67 +13,59 @@ namespace iLand.Tree
         A SpeciesSet acts as a container for individual Species objects. In iLand, theoretically,
         multiple species sets can be used in parallel.
         */
-    public class SpeciesSet
+    public class TreeSpeciesSet
     {
         private const int RandomSets = 20;
 
-        private readonly Dictionary<string, Species> mSpeciesByID;
+        private readonly Dictionary<string, TreeSpecies> mSpeciesByID;
         // nitrogen response classes
-        private float mNitrogen1a, mNitrogen1b; // parameters of nitrogen response class 1
-        private float mNitrogen2a, mNitrogen2b; // parameters of nitrogen response class 2
-        private float mNitrogen3a, mNitrogen3b; // parameters of nitrogen response class 3
+        private float mNitrogen1A, mNitrogen1B; // parameters of nitrogen response class 1
+        private float mNitrogen2A, mNitrogen2B; // parameters of nitrogen response class 2
+        private float mNitrogen3A, mNitrogen3B; // parameters of nitrogen response class 3
         // CO2 response
-        private double mCO2base, mCO2comp; // CO2 concentration of measurements (base) and CO2 compensation point (comp)
-        private double mCO2p0, mCO2beta0; // p0: production multiplier, beta0: relative productivity increase
+        private float mCO2base, mCO2compensationPoint; // CO2 concentration of measurements (base) and CO2 compensation point (comp)
+        private float mCO2p0, mCO2beta0; // p0: production multiplier, beta0: relative productivity increase
         // Light Response classes
         private readonly Expression mLightResponseIntolerant; // light response function for the the most shade tolerant species
         private readonly Expression mLightResponseTolerant; // light response function for the most shade intolerant species
         private readonly Expression mLriCorrection; // function to modfiy LRI during read
         /// container holding the seed maps
-        private readonly List<SeedDispersal> mSeedDispersal;
+        //private readonly List<SeedDispersal> mSeedDispersal;
 
-        public List<Species> ActiveSpecies { get; private set; } // list of species that are "active" (flag active in database)
+        public List<TreeSpecies> ActiveSpecies { get; private set; } // list of species that are "active" (flag active in database)
         public List<int> RandomSpeciesOrder { get; private set; }
-        public SpeciesStamps ReaderStamps { get; private set; }
+        public TreeSpeciesStamps ReaderStamps { get; private set; }
         public string SqlTableName { get; private set; } // table name of the species set
 
-        public SpeciesSet(string sqlTableName)
+        public TreeSpeciesSet(string sqlTableName)
         {
             this.mLightResponseIntolerant = new Expression();
             this.mLightResponseTolerant = new Expression();
             this.mLriCorrection = new Expression();
-            this.mSeedDispersal = new List<SeedDispersal>();
-            this.mSpeciesByID = new Dictionary<string, Species>();
+            //this.mSeedDispersal = new List<SeedDispersal>();
+            this.mSpeciesByID = new Dictionary<string, TreeSpecies>();
 
-            this.ActiveSpecies = new List<Species>();
+            this.ActiveSpecies = new List<TreeSpecies>();
             this.RandomSpeciesOrder = new List<int>();
-            this.ReaderStamps = new SpeciesStamps();
+            this.ReaderStamps = new TreeSpeciesStamps();
             this.SqlTableName = sqlTableName;
         }
 
-        public Species GetSpecies(string speciesID) { return mSpeciesByID[speciesID]; }
+        public TreeSpecies GetSpecies(string speciesID) { return mSpeciesByID[speciesID]; }
         public int SpeciesCount() { return mSpeciesByID.Count; }
-
-        public void Clear()
-        {
-            // BUGBUG: C++ doesn't clear other collections?
-            mSeedDispersal.Clear();
-            mSpeciesByID.Clear();
-            ActiveSpecies.Clear();
-        }
 
         public float GetLriCorrection(Simulation.Model model, float lightResourceIndex, float relativeHeight) 
         { 
             return (float)mLriCorrection.Evaluate(model, lightResourceIndex, relativeHeight); 
         }
 
-        public Species Species(int index)
+        public TreeSpecies GetSpecies(int index)
         {
-            foreach (Species s in mSpeciesByID.Values)
+            foreach (TreeSpecies species in mSpeciesByID.Values)
             {
-                if (s.Index == index)
+                if (species.Index == index)
                 {
-                    return s;
+                    return species;
                 }
             }
             return null;
@@ -91,8 +83,6 @@ namespace iLand.Tree
                 Debug.WriteLine(ReaderStamps.Dump());
             }
 
-            this.Clear();
-
             string speciesDatabaseFilePath = model.Files.GetPath(model.Project.System.Database.In, "database");
             using SqliteConnection speciesDatabase = model.Files.GetDatabaseConnection(speciesDatabaseFilePath, true);
             using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", this.SqlTableName), speciesDatabase);
@@ -105,7 +95,7 @@ namespace iLand.Tree
                 {
                     continue;
                 }
-                Species species = Tree.Species.Load(model, speciesReader, this);
+                TreeSpecies species = Tree.TreeSpecies.Load(model, speciesReader, this);
                 mSpeciesByID.Add(species.ID, species);
                 if (species.Active)
                 {
@@ -122,29 +112,29 @@ namespace iLand.Tree
             //}
 
             // setup nitrogen response
-            this.mNitrogen1a = model.Project.Model.Species.NitrogenResponseClasses.Class1A;
-            this.mNitrogen1b = model.Project.Model.Species.NitrogenResponseClasses.Class1B;
-            this.mNitrogen2a = model.Project.Model.Species.NitrogenResponseClasses.Class2A;
-            this.mNitrogen2b = model.Project.Model.Species.NitrogenResponseClasses.Class2B;
-            this.mNitrogen3a = model.Project.Model.Species.NitrogenResponseClasses.Class3A;
-            this.mNitrogen3b = model.Project.Model.Species.NitrogenResponseClasses.Class3B;
-            if ((this.mNitrogen1a >= 0.0) || (this.mNitrogen1b <= 0.0) || 
-                (this.mNitrogen2a >= 0.0) || (this.mNitrogen2b <= 0.0) ||
-                (this.mNitrogen3a >= 0.0) || (this.mNitrogen3b <= 0.0))
+            this.mNitrogen1A = model.Project.Model.Species.NitrogenResponseClasses.Class1A;
+            this.mNitrogen1B = model.Project.Model.Species.NitrogenResponseClasses.Class1B;
+            this.mNitrogen2A = model.Project.Model.Species.NitrogenResponseClasses.Class2A;
+            this.mNitrogen2B = model.Project.Model.Species.NitrogenResponseClasses.Class2B;
+            this.mNitrogen3A = model.Project.Model.Species.NitrogenResponseClasses.Class3A;
+            this.mNitrogen3B = model.Project.Model.Species.NitrogenResponseClasses.Class3B;
+            if ((this.mNitrogen1A >= 0.0) || (this.mNitrogen1B <= 0.0) || 
+                (this.mNitrogen2A >= 0.0) || (this.mNitrogen2B <= 0.0) ||
+                (this.mNitrogen3A >= 0.0) || (this.mNitrogen3B <= 0.0))
             {
                 throw new XmlException("At least one parameter of /project/model/species/nitrogenResponseClasses/class_[1..3]_[a..b] is missing, has an incorrect sign, or is zero.");
             }
 
             // setup CO2 response
             this.mCO2base = model.Project.Model.Species.CO2Response.BaseConcentration;
-            this.mCO2comp = model.Project.Model.Species.CO2Response.CompensationPoint;
+            this.mCO2compensationPoint = model.Project.Model.Species.CO2Response.CompensationPoint;
             this.mCO2beta0 = model.Project.Model.Species.CO2Response.Beta0;
             this.mCO2p0 = model.Project.Model.Species.CO2Response.P0;
-            if ((this.mCO2base <= 0.0) || (this.mCO2comp <= 0.0) || (this.mCO2beta0 <= 0.0) || (this.mCO2p0 <= 0.0))
+            if ((this.mCO2base <= 0.0) || (this.mCO2compensationPoint <= 0.0) || (this.mCO2beta0 <= 0.0) || (this.mCO2p0 <= 0.0))
             {
                 throw new XmlException("At least one parameter of /project/model/species/CO2Response is missing, less than zero, or zero.");
             }
-            if (mCO2base <= mCO2comp)
+            if (mCO2base <= mCO2compensationPoint)
             {
                 throw new XmlException("Atmospheric CO₂ concentration is at or below the compensation point. Plants would be unable to grow and GPP would be negative.");
             }
@@ -167,13 +157,13 @@ namespace iLand.Tree
                 mLriCorrection.Linearize(model, 0.0, 1.0, 0.0, 1.0);
             }
 
-            CreateRandomSpeciesOrder(model);
+            this.CreateRandomSpeciesOrder(model);
             return mSpeciesByID.Count;
         }
 
-        public void SetupRegeneration(Simulation.Model model)
+        public void SetupSeedDispersal(Simulation.Model model)
         {
-            foreach (Species species in ActiveSpecies) 
+            foreach (TreeSpecies species in this.ActiveSpecies) 
             {
                 species.SeedDispersal = new SeedDispersal(species);
                 species.SeedDispersal.Setup(model); // setup memory for the seed map (grid)
@@ -182,56 +172,56 @@ namespace iLand.Tree
             // Debug.WriteLine("Setup of seed dispersal maps finished.");
         }
 
-        public void SeedDistribution(Species species, Simulation.Model model)
-        {
-            species.SeedDispersal.Execute(model);
-        }
-
-        public void Regeneration(Simulation.Model model)
-        {
-            if (!model.ModelSettings.RegenerationEnabled)
-            {
-                return;
-            }
-            //using DebugTimer t = model.DebugTimers.Create("SpeciesSet.Regeneration()");
-
-            ThreadRunner runner = new ThreadRunner(ActiveSpecies); // initialize a thread runner object with all active species
-            runner.Run(SeedDistribution, model);
-
-            if (model.Files.LogDebug())
-            {
-                Debug.WriteLine("seed dispersal finished.");
-            }
-        }
-
-        /** newYear is called by Model::runYear at the beginning of a year before any growth occurs.
-          This is used for various initializations, e.g. to clear seed dispersal maps
-          */
-        public void NewYear(Simulation.Model model)
+        public void DisperseSeedsForYear(Simulation.Model model)
         {
             if (model.ModelSettings.RegenerationEnabled == false)
             {
                 return;
             }
-            foreach (Species species in ActiveSpecies) 
+            //using DebugTimer t = model.DebugTimers.Create("SpeciesSet.Regeneration()");
+
+            ThreadRunner runner = new ThreadRunner(this.ActiveSpecies); // initialize a thread runner object with all active species
+            runner.Run(model, this.DisperseSeedsForYear);
+
+            if (model.Files.LogDebug())
             {
-                species.NewYear(model);
+                Debug.WriteLine("Seed dispersal finished.");
             }
         }
 
-        public object GetVariable(SqliteDataReader reader, string columnName)
+        private void DisperseSeedsForYear(Simulation.Model model, TreeSpecies species)
         {
-            int idx = reader.GetOrdinal(columnName);
-            if (idx >= 0)
-            {
-                return reader.GetValue(idx);
-            }
-            throw new NotSupportedException("SpeciesSet: variable not set: " + columnName);
+            species.SeedDispersal.DisperseSeeds(model);
         }
+
+        /** newYear is called by Model::runYear at the beginning of a year before any growth occurs.
+          This is used for various initializations, e.g. to clear seed dispersal maps
+          */
+        public void OnStartYear(Simulation.Model model)
+        {
+            if (model.ModelSettings.RegenerationEnabled == false)
+            {
+                return;
+            }
+            foreach (TreeSpecies species in this.ActiveSpecies) 
+            {
+                species.OnStartYear(model);
+            }
+        }
+
+        //public object GetVariable(SqliteDataReader reader, string columnName)
+        //{
+        //    int index = reader.GetOrdinal(columnName);
+        //    if (index >= 0)
+        //    {
+        //        return reader.GetValue(index);
+        //    }
+        //    throw new SqliteException("Column " + columnName + " not present.", (int)SqliteErrorCode.Error);
+        //}
 
         public void GetRandomSpeciesSampleIndices(Simulation.Model model, out int beginIndex, out int endIndex)
         {
-            beginIndex = this.ActiveSpecies.Count * model.RandomGenerator.Random(0, RandomSets - 1);
+            beginIndex = this.ActiveSpecies.Count * model.RandomGenerator.GetRandomInteger(0, TreeSpeciesSet.RandomSets - 1);
             endIndex = beginIndex + this.ActiveSpecies.Count;
         }
 
@@ -243,14 +233,14 @@ namespace iLand.Tree
             {
                 List<int> samples = new List<int>(ActiveSpecies.Count);
                 // fill list
-                foreach (Species s in ActiveSpecies)
+                foreach (TreeSpecies s in ActiveSpecies)
                 {
                     samples.Add(s.Index);
                 }
                 // sample and reduce list
                 while (samples.Count > 0)
                 {
-                    int index = model.RandomGenerator.Random(0, samples.Count);
+                    int index = model.RandomGenerator.GetRandomInteger(0, samples.Count);
                     RandomSpeciesOrder.Add(samples[index]);
                     samples.RemoveAt(index);
                 }
@@ -259,44 +249,44 @@ namespace iLand.Tree
 
         /// calculate nitrogen response for a given amount of available nitrogen and a response class
         /// for fractional values, the response value is interpolated between the fixedly defined classes (1,2,3)
-        public float NitrogenResponse(float availableNitrogen, float responseClass)
+        public float GetNitrogenResponse(float availableNitrogen, float responseClass)
         {
             if (responseClass > 2.0F)
             {
                 if (responseClass == 3.0F)
                 {
-                    return NitrogenResponse(availableNitrogen, mNitrogen3a, mNitrogen3b);
+                    return this.GetNitrogenResponse(availableNitrogen, mNitrogen3A, mNitrogen3B);
                 }
                 else
                 {
                     // interpolate between 2 and 3
-                    float value4 = NitrogenResponse(availableNitrogen, mNitrogen2a, mNitrogen2b);
-                    float value3 = NitrogenResponse(availableNitrogen, mNitrogen3a, mNitrogen3b);
+                    float value4 = this.GetNitrogenResponse(availableNitrogen, mNitrogen2A, mNitrogen2B);
+                    float value3 = this.GetNitrogenResponse(availableNitrogen, mNitrogen3A, mNitrogen3B);
                     return value4 + (responseClass - 2.0F) * (value3 - value4);
                 }
             }
             if (responseClass == 2.0F)
             {
-                return NitrogenResponse(availableNitrogen, mNitrogen2a, mNitrogen2b);
+                return this.GetNitrogenResponse(availableNitrogen, mNitrogen2A, mNitrogen2B);
             }
             if (responseClass == 1.0F)
             {
-                return NitrogenResponse(availableNitrogen, mNitrogen1a, mNitrogen1b);
+                return this.GetNitrogenResponse(availableNitrogen, mNitrogen1A, mNitrogen1B);
             }
             // last ressort: interpolate between 1 and 2
-            float value1 = NitrogenResponse(availableNitrogen, mNitrogen1a, mNitrogen1b);
-            float value2 = NitrogenResponse(availableNitrogen, mNitrogen2a, mNitrogen2b);
+            float value1 = this.GetNitrogenResponse(availableNitrogen, mNitrogen1A, mNitrogen1B);
+            float value2 = this.GetNitrogenResponse(availableNitrogen, mNitrogen2A, mNitrogen2B);
             return value1 + (responseClass - 1.0F) * (value2 - value1);
         }
 
-        private float NitrogenResponse(float availableNitrogen, float nitrogenK, float minimumNitrogen)
+        private float GetNitrogenResponse(float availableNitrogen, float nitrogenK, float minimumNitrogen)
         {
             if (availableNitrogen <= minimumNitrogen)
             {
                 return 0.0F;
             }
-            float x = 1.0F - MathF.Exp(nitrogenK * (availableNitrogen - minimumNitrogen));
-            return x;
+            float response = 1.0F - MathF.Exp(nitrogenK * (availableNitrogen - minimumNitrogen));
+            return response;
         }
 
         /** calculation for the CO2 response for the ambientCO2 for the water- and nitrogen responses given.
@@ -306,38 +296,37 @@ namespace iLand.Tree
             @param nitrogenResponse (yearly) nitrogen response of the species
             @param soilWaterReponse soil water response (mean value for a month)
             */
-        public double CarbonDioxideResponse(double ambientCO2, double nitrogenResponse, double soilWaterResponse)
+        public float GetCarbonDioxideResponse(float ambientCO2, float nitrogenResponse, float soilWaterResponse)
         {
-            if (nitrogenResponse == 0.0)
+            Debug.Assert((nitrogenResponse >= 0.0F) && (nitrogenResponse <= 1.000001F));
+            Debug.Assert((soilWaterResponse >= 0.0F) && (soilWaterResponse <= 1.000001F));
+            if (nitrogenResponse == 0.0F)
             {
-                return 0.0;
+                return 0.0F;
             }
 
-            double co2_water = 2.0 - soilWaterResponse;
-            double beta = mCO2beta0 * co2_water * nitrogenResponse;
-
-            double r = 1.0 + Constant.Ln2 * beta; // NPP increase for a doubling of atmospheric CO2 (Eq. 17)
+            float beta = mCO2beta0 * (2.0F - soilWaterResponse) * nitrogenResponse;
+            float r = 1.0F + Constant.Ln2 * beta; // NPP increase for a doubling of atmospheric CO2 (Eq. 17)
 
             // fertilization function (cf. Farquhar, 1980) based on Michaelis-Menten expressions
-            double deltaC = mCO2base - mCO2comp;
-            double K2 = ((2 * mCO2base - mCO2comp) - r * deltaC) / ((r - 1.0) * deltaC * (2 * mCO2base - mCO2comp)); // Eq. 16
-            double K1 = (1.0 + K2 * deltaC) / deltaC;
+            float deltaC = mCO2base - mCO2compensationPoint;
+            float k2 = (2.0F * mCO2base - mCO2compensationPoint - r * deltaC) / ((r - 1.0F) * deltaC * (2.0F * mCO2base - mCO2compensationPoint)); // Eq. 16
+            float k1 = (1.0F + k2 * deltaC) / deltaC;
 
-            double response = mCO2p0 * K1 * (ambientCO2 - mCO2comp) / (1 + K2 * (ambientCO2 - mCO2comp)); // Eq. 16
+            float response = mCO2p0 * k1 * (ambientCO2 - mCO2compensationPoint) / (1 + k2 * (ambientCO2 - mCO2compensationPoint)); // Eq. 16
             return response;
-
         }
 
         /** calculates the lightResponse based on a value for LRI and the species lightResponseClass.
             LightResponse is classified from 1 (very shade inolerant) and 5 (very shade tolerant) and interpolated for values between 1 and 5.
             Returns a value between 0..1
             @sa http://iland.boku.ac.at/allocation#reserve_and_allocation_to_stem_growth */
-        public float LightResponse(Simulation.Model model, float lightResourceIndex, float lightResponseClass)
+        public float GetLightResponse(Simulation.Model model, float lightResourceIndex, float lightResponseClass)
         {
             float intolerant = (float)mLightResponseIntolerant.Evaluate(model, lightResourceIndex);
             float tolerant = (float)mLightResponseTolerant.Evaluate(model, lightResourceIndex);
             float response = intolerant + 0.25F * (lightResponseClass - 1.0F) * (tolerant - intolerant);
-            return Global.Limit(response, 0.0F, 1.0F);
+            return Maths.Limit(response, 0.0F, 1.0F);
         }
     }
 }

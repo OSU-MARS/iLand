@@ -7,16 +7,16 @@ namespace iLand.Tools
     // a new set of numbers is generated for every 5*500000 = 2.500.000 numbers
     public class RandomGenerator
     {
-        private const int RandomGeneratorSize = 500000;
+        private const int RandomByteBufferSize = 500000;
 
         // thread safe; accessed under lock
-        private readonly int[] mBuffer = new int[RandomGeneratorSize + 5];
+        private readonly int[] mBuffer = new int[RandomByteBufferSize + 5];
         private int mIndex = 0;
         private int mRotationCount = 1;
         // private static int mRefillCounter = 0;
-        private RandomGenerators mGeneratorType = RandomGenerators.MersenneTwister;
+        private RandomGeneratorType mGeneratorType = RandomGeneratorType.MersenneTwister;
 
-        public enum RandomGenerators
+        public enum RandomGeneratorType
         {
             MersenneTwister,
             WellRng512,
@@ -56,42 +56,41 @@ namespace iLand.Tools
                         return;
                     }
 
-                    RGenerators gen = new RGenerators();
-                    gen.Seed(mBuffer[RandomGeneratorSize + 4]); // use the last value as seed for the next round....
+                    RandomGenerators generator = new RandomGenerators();
+                    generator.SetSeed(mBuffer[RandomByteBufferSize + 4]); // use the last value as seed for the next round....
                     switch (mGeneratorType)
                     {
-                        case RandomGenerators.MersenneTwister:
+                        case RandomGeneratorType.MersenneTwister:
                             {
-                                Random mersenne = MT64Random.Create(mBuffer[RandomGeneratorSize + 4]);
+                                Random mersenne = MT64Random.Create(mBuffer[RandomByteBufferSize + 4]);
                                 // qDebug() << "refill random numbers. seed" <<mBuffer[RANDOMGENERATORSIZE+4];
-                                for (int i = 0; i < RandomGeneratorSize + 5; ++i)
+                                for (int i = 0; i < RandomByteBufferSize + 5; ++i)
                                 {
                                     mBuffer[i] = mersenne.Next();
                                 }
                                 break;
                             }
-                        case RandomGenerators.WellRng512:
+                        case RandomGeneratorType.WellRng512:
                             {
-
-                                for (int i = 0; i < RandomGeneratorSize + 5; ++i)
+                                for (int i = 0; i < RandomByteBufferSize + 5; ++i)
                                 {
-                                    mBuffer[i] = gen.RandomFunction(0);
+                                    mBuffer[i] = generator.RandomFunction(0);
                                 }
                                 break;
                             }
-                        case RandomGenerators.XorShift96:
+                        case RandomGeneratorType.XorShift96:
                             {
-                                for (int i = 0; i < RandomGeneratorSize + 5; ++i)
+                                for (int i = 0; i < RandomByteBufferSize + 5; ++i)
                                 {
-                                    mBuffer[i] = gen.RandomFunction(1);
+                                    mBuffer[i] = generator.RandomFunction(1);
                                 }
                                 break;
                             }
-                        case RandomGenerators.Fast:
+                        case RandomGeneratorType.Fast:
                             {
-                                for (int i = 0; i < RandomGeneratorSize + 5; ++i)
+                                for (int i = 0; i < RandomByteBufferSize + 5; ++i)
                                 {
-                                    mBuffer[i] = gen.RandomFunction(2);
+                                    mBuffer[i] = generator.RandomFunction(2);
                                 }
                                 break;
                             }
@@ -104,7 +103,7 @@ namespace iLand.Tools
             }
         }
 
-        public void Setup(RandomGenerators gen, int oneSeed)
+        public void Setup(RandomGeneratorType gen, int oneSeed)
         {
             mGeneratorType = gen;
             mRotationCount = 1;
@@ -114,34 +113,34 @@ namespace iLand.Tools
             if (oneSeed == 0)
             {
                 Random random = new Random();
-                mBuffer[RandomGeneratorSize + 4] = random.Next();
+                mBuffer[RandomByteBufferSize + 4] = random.Next();
             }
             else
             {
-                mBuffer[RandomGeneratorSize + 4] = oneSeed; // set a specific seed as seed for the next round
+                mBuffer[RandomByteBufferSize + 4] = oneSeed; // set a specific seed as seed for the next round
             }
 
             CheckGenerator();
         }
 
         /// returns a random number in [0,1] (i.e.="1" is a possible result!)
-        public double Random() 
+        public double GetRandomDouble() 
         {
-            double value = ((double)RandomInteger() - Int32.MinValue) / (2.0 * Int32.MaxValue + 1);
+            double value = ((double)GetRandomInteger() - Int32.MinValue) / (2.0 * Int32.MaxValue + 1);
             Debug.Assert((value >= 0.0) && (value <= 1.0));
             return value;
         }
 
-        public double Random(double max_value)
+        public double GetRandomDouble(double maxValue)
         { 
-            return max_value * Random(); 
+            return maxValue * GetRandomDouble(); 
         }
 
         /// get a random integer in [0,2^32-1]
-        public int RandomInteger()
+        public int GetRandomInteger()
         {
             ++mIndex;
-            if (mIndex > RandomGeneratorSize)
+            if (mIndex > RandomByteBufferSize)
             {
                 mRotationCount++;
                 mIndex = 0;
@@ -150,34 +149,34 @@ namespace iLand.Tools
             return mBuffer[mIndex];
         }
 
-        public int Random(int max_value) 
+        public int GetRandomInteger(int maxValue) 
         { 
-            return max_value > 0 ? RandomInteger() % max_value : 0; 
+            return maxValue > 0 ? GetRandomInteger() % maxValue : 0; 
         }
 
         /// nrandom returns a random number from [p1, p2] -> p2 is a possible result!
-        public double Random(double p1, double p2)
+        public double GetRandomDouble(double p1, double p2)
         {
-            return p1 + Random(p2 - p1);
+            return p1 + GetRandomDouble(p2 - p1);
             //return p1 + (p2-p1)*(rand()/double(RAND_MAX));
         }
 
         /// return a random number from "from" to "to" (excluding 'to'.), i.e. irandom(3,6) results in 3, 4 or 5.
-        public int Random(int from, int to)
+        public int GetRandomInteger(int from, int to)
         {
-            return from + Random(to - from);
+            return from + GetRandomInteger(to - from);
             //return from +  rand()%(to-from);
         }
 
-        public double RandNorm(double mean, double stddev)
+        public double GetRandomNormal(double mean, double stddev)
         {
             // Return a real number from a normal (Gaussian) distribution with given
             // mean and standard deviation by polar form of Box-Muller transformation
             double x, y, r;
             do
             {
-                x = 2.0 * Random() - 1.0;
-                y = 2.0 * Random() - 1.0;
+                x = 2.0 * GetRandomDouble() - 1.0;
+                y = 2.0 * GetRandomDouble() - 1.0;
                 r = x * x + y * y;
             }
             while (r >= 1.0 || r == 0.0);

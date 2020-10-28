@@ -14,11 +14,11 @@ namespace iLand.Tree
         encapsulates storage and access to these stamps. The design goal is to deliver high
         access speeds for the "stamp()" method.
         Use getStamp(bhd, hd) or getStamp(bhd, height) to access. */
-    public class SpeciesStamps
+    public class TreeSpeciesStamps
     {
         // grid holding precalculated distances to the stamp center
         // thread safe due to lock in FinalizeSetup()
-        // BUGBUG: not safe across multiple light cell sizes
+        // TODO: not safe across multiple light cell sizes
         public static Grid<float> DistanceGrid { get; private set; }
 
         private struct StampItem
@@ -26,30 +26,30 @@ namespace iLand.Tree
             public float CrownRadius { get; set; }
             public float Dbh { get; set; }
             public float HDratio { get; set; }
-            public Stamp Stamp { get; set; }
+            public LightStamp Stamp { get; set; }
         }
 
         private string mFileName;
-        private readonly Grid<Stamp> mStampsByClass;
+        private readonly Grid<LightStamp> mStampsByClass;
         private readonly List<StampItem> mStamps;
 
         public string Description { get; set; }
         public bool UseLookup { get; set; } // use lookup table?
 
-        static SpeciesStamps()
+        static TreeSpeciesStamps()
         {
-            SpeciesStamps.DistanceGrid = new Grid<float>();
+            TreeSpeciesStamps.DistanceGrid = new Grid<float>();
         }
 
-        public SpeciesStamps()
+        public TreeSpeciesStamps()
         {
-            this.mStampsByClass = new Grid<Stamp>();
+            this.mStampsByClass = new Grid<LightStamp>();
             this.mStamps = new List<StampItem>();
 
-            this.mStampsByClass.Setup(1.0F, // cellsize
-                                      Constant.Stamp.DbhClassCount, // count x
-                                      Constant.Stamp.HeightDiameterClassCount); // count y
-            this.mStampsByClass.Initialize(null);
+            this.mStampsByClass.Setup(Constant.Stamp.DbhClassCount, // cellsize
+                                      Constant.Stamp.HeightDiameterClassCount, // count x
+                                      1.0F); // count y
+            this.mStampsByClass.Fill(null);
             //Debug.WriteLine("grid after init" << gridToString(m_lookup);
             this.UseLookup = true;
         }
@@ -93,7 +93,7 @@ namespace iLand.Tree
             {
                 // find lowest value...
                 int hdIndex = 0;
-                Stamp stamp = null;
+                LightStamp stamp = null;
                 for (; hdIndex < Constant.Stamp.HeightDiameterClassCount; hdIndex++)
                 {
                     stamp = mStampsByClass[diameterClass, hdIndex];
@@ -154,25 +154,25 @@ namespace iLand.Tree
             }
 
             // distance grid
-            if (SpeciesStamps.DistanceGrid.CellsX < maxStampSize)
+            if (TreeSpeciesStamps.DistanceGrid.CellsX < maxStampSize)
             {
-                lock (SpeciesStamps.DistanceGrid)
+                lock (TreeSpeciesStamps.DistanceGrid)
                 {
-                    if (SpeciesStamps.DistanceGrid.CellsX < maxStampSize)
+                    if (TreeSpeciesStamps.DistanceGrid.CellsX < maxStampSize)
                     {
                         float lightCellSize = Constant.LightSize;
-                        SpeciesStamps.DistanceGrid.Setup(lightCellSize, maxStampSize, maxStampSize);
-                        for (int index = 0; index < SpeciesStamps.DistanceGrid.Count; ++index)
+                        TreeSpeciesStamps.DistanceGrid.Setup(maxStampSize, maxStampSize, lightCellSize);
+                        for (int index = 0; index < TreeSpeciesStamps.DistanceGrid.Count; ++index)
                         {
-                            Point cellPosition = SpeciesStamps.DistanceGrid.IndexOf(index);
-                            SpeciesStamps.DistanceGrid[index] = lightCellSize * MathF.Sqrt(cellPosition.X * cellPosition.X + cellPosition.Y * cellPosition.Y);
+                            Point cellPosition = TreeSpeciesStamps.DistanceGrid.GetCellPosition(index);
+                            TreeSpeciesStamps.DistanceGrid[index] = lightCellSize * MathF.Sqrt(cellPosition.X * cellPosition.X + cellPosition.Y * cellPosition.Y);
                         }
                     }
                 }
             }
         }
 
-        private void AddStamp(Stamp stamp, int diameterClass, int hdClass, float crownRadiusInM, float dbh, float hdRatio)
+        private void AddStamp(LightStamp stamp, int diameterClass, int hdClass, float crownRadiusInM, float dbh, float hdRatio)
         {
             if (this.UseLookup)
             {
@@ -183,7 +183,7 @@ namespace iLand.Tree
                 mStampsByClass[diameterClass, hdClass] = stamp; // save address in look up table
             } // if (useLookup)
 
-            stamp.SetCrownRadius(crownRadiusInM);
+            stamp.SetCrownRadiusAndArea(crownRadiusInM);
             StampItem si = new StampItem()
             {
                 Dbh = dbh,
@@ -196,13 +196,13 @@ namespace iLand.Tree
 
         /** add a stamp to the internal storage.
             After loading the function finalizeSetup() must be called to ensure that gaps in the matrix get filled. */
-        public void AddStamp(Stamp stamp, float dbh, float hdRatio, float crownRadius)
+        public void AddStamp(LightStamp stamp, float dbh, float hdRatio, float crownRadius)
         {
             this.GetClasses(dbh, hdRatio, out int diameterClass, out int hdClass); // decode dbh/hd-value
             this.AddStamp(stamp, diameterClass, hdClass, crownRadius, dbh, hdRatio); // dont set crownradius
         }
 
-        public void AddReaderStamp(Stamp stamp, float crownRadiusInMeters)
+        public void AddReaderStamp(LightStamp stamp, float crownRadiusInMeters)
         {
             double rest = (crownRadiusInMeters % 1.0F) + 0.0001;
             int hdClass = (int)(rest * 10); // 0 .. 9.99999999
@@ -212,7 +212,7 @@ namespace iLand.Tree
             }
             int diameterClass = (int)crownRadiusInMeters;
             //Debug.WriteLine("Readerstamp r="<< crown_radius_m<<" index dbh hd:" << cls_dbh << cls_hd;
-            stamp.SetCrownRadius(crownRadiusInMeters);
+            stamp.SetCrownRadiusAndArea(crownRadiusInMeters);
 
             // prepare special keys for reader stamps
             this.AddStamp(stamp, diameterClass, hdClass, crownRadiusInMeters, 0.0F, 0.0F); // set crownradius, but not dbh/hd
@@ -220,7 +220,7 @@ namespace iLand.Tree
 
         /** retrieve a read-out-stamp. Readers depend solely on a crown radius.
             Internally, readers are stored in the same lookup-table, but using a encoding/decoding trick.*/
-        public Stamp GetReaderStamp(float crownRadiusInMeters)
+        public LightStamp GetReaderStamp(float crownRadiusInMeters)
         {
             // Readers: from 0..10m in 50 steps???
             int heightDiameterClass = (int)(((crownRadiusInMeters % 1.0F) + 0.0001) * 10); // 0 .. 9.99999999
@@ -229,7 +229,7 @@ namespace iLand.Tree
                 heightDiameterClass = Constant.Stamp.HeightDiameterClassCount - 1;
             }
             int diameterClass = (int)crownRadiusInMeters;
-            Stamp stamp = mStampsByClass[diameterClass, heightDiameterClass];
+            LightStamp stamp = mStampsByClass[diameterClass, heightDiameterClass];
             if (stamp == null)
             {
                 throw new ArgumentOutOfRangeException(nameof(crownRadiusInMeters));
@@ -240,13 +240,13 @@ namespace iLand.Tree
         /** fast access for an individual stamp using a lookup table.
             the dimensions of the lookup table are defined by class-constants.
             If stamp is not found there, the more complete list of stamps is searched. */
-        public Stamp GetStamp(float dbhInCm, float heightInM)
+        public LightStamp GetStamp(float dbhInCm, float heightInM)
         {
             float hdRatio = 100.0F * heightInM / dbhInCm;
             this.GetClasses(dbhInCm, hdRatio, out int diameterClass, out int hdClass);
 
             // retrieve stamp from lookup table when tree is within the lookup table's size range
-            Stamp stamp = null;
+            LightStamp stamp = null;
             if ((diameterClass < Constant.Stamp.DbhClassCount) && (diameterClass >= 0) && 
                 (hdClass < Constant.Stamp.HeightDiameterClassCount) && (hdClass >= 0))
             {
@@ -310,12 +310,12 @@ namespace iLand.Tree
             return stamp;
         }
 
-        public void AttachReaderStamps(SpeciesStamps source)
+        public void AttachReaderStamps(TreeSpeciesStamps source)
         {
             int found = 0, total = 0;
             foreach (StampItem si in mStamps)
             {
-                Stamp stamp = source.GetReaderStamp(si.CrownRadius);
+                LightStamp stamp = source.GetReaderStamp(si.CrownRadius);
                 si.Stamp.SetReader(stamp);
                 if (stamp != null)
                 {
@@ -334,7 +334,7 @@ namespace iLand.Tree
         {
             foreach (StampItem si in mStamps)
             {
-                Stamp s = si.Stamp;
+                LightStamp s = si.Stamp;
                 float[] p = s.Data;
                 for (int index = 0; index < p.Length; ++index)
                 {
@@ -396,7 +396,7 @@ namespace iLand.Tree
                 Debug.Assert((crownRadius >= 0.0F) && (crownRadius < 50.0F)); // m
                 //Debug.WriteLine("stamp bhd hdvalue type readsum dominance type" + bhd + hdvalue + type + readsum + domvalue + type;
 
-                Stamp stamp = new Stamp(type);
+                LightStamp stamp = new LightStamp(type);
                 stamp.Load(stampReader);
 
                 if (dbh > 0.0F)
@@ -468,7 +468,7 @@ namespace iLand.Tree
             {
                 if (mStampsByClass[s] != null)
                 {
-                    res.AppendFormat("P: x/y: {0}/{1}{2}", mStampsByClass.IndexOf(s).X, mStampsByClass.IndexOf(s).Y, System.Environment.NewLine);
+                    res.AppendFormat("P: x/y: {0}/{1}{2}", mStampsByClass.GetCellPosition(s).X, mStampsByClass.GetCellPosition(s).Y, System.Environment.NewLine);
                 }
             }
             res.AppendLine(mStampsByClass.ToString());

@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace iLand.Tools
 {
-    internal class Global
+    internal class Maths
     {
         //typedef int TreeSpecies;
 
@@ -28,6 +28,11 @@ namespace iLand.Tools
 
         // conversions rad/degree
         //#define RAD(x) (x*M_PI/180.)
+        public static float ToRadians(float degrees)
+        {
+            return MathF.PI / 180.0F * degrees;
+        }
+
         public static double ToRadians(double degrees)
         {
             return Math.PI / 180.0 * degrees;

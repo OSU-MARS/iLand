@@ -6,11 +6,11 @@ namespace iLand.World
 {
     public class Sun
     {
-        private const double J = Math.PI / 182.625;
-        private static readonly double Ecliptic = Global.ToRadians(23.439);
+        private const float J = MathF.PI / 182.625F;
+        private static readonly float Ecliptic = Maths.ToRadians(23.439F);
 
-        private double mLatitudeInRadians; // latitude in radians
-        private readonly double[] mDayLengthInHours; // daylength per day in hours
+        private float mLatitudeInRadians; // latitude in radians
+        private readonly float[] mDayLengthInHours; // daylength per day in hours
 
         public int LastDayLongerThan10_5Hours { get; private set; } // last day of year with a day length > 10.5 hours (see Establishment)
         public int LastDayLongerThan14_5Hours { get; private set; } // last day with at least 14.5 hours of day length
@@ -18,10 +18,10 @@ namespace iLand.World
 
         public Sun()
         {
-            this.mDayLengthInHours = new double[Constant.DaysInLeapYear];
+            this.mDayLengthInHours = new float[Constant.DaysInLeapYear];
         }
 
-        public double GetDaylength(int day) { return mDayLengthInHours[day]; }
+        public float GetDayLengthInHours(int dayOfYear) { return mDayLengthInHours[dayOfYear]; }
         public bool NorthernHemisphere() { return LongestDay < 300; }
 
         public string Dump()
@@ -36,41 +36,40 @@ namespace iLand.World
             return result.ToString();
         }
 
-        public void Setup(double latitudeInRadians)
+        public void Setup(float latitudeInRadians)
         {
-            mLatitudeInRadians = latitudeInRadians;
-            if (mLatitudeInRadians > 0)
+            this.mLatitudeInRadians = latitudeInRadians;
+            if (this.mLatitudeInRadians > 0.0F)
             {
-                LongestDay = 182 - 10; // 21.juni
+                this.LongestDay = 182 - 10; // 21.juni
             }
             else
             {
-                LongestDay = 365 - 10; //southern hemisphere
+                this.LongestDay = 365 - 10; //southern hemisphere
             }
              
-            // calculate length of day using  the approximation formulae of: http://herbert.gandraxa.com/length_of_day.aspx
-            double m;
-            for (int day = 0; day < this.mDayLengthInHours.Length; day++)
+            // calculate length of day using the approximation formulae of: http://herbert.gandraxa.com/length_of_day.aspx
+            for (int dayOfYear = 0; dayOfYear < this.mDayLengthInHours.Length; ++dayOfYear)
             {
-                m = 1.0 - Math.Tan(latitudeInRadians) * Math.Tan(Ecliptic * Math.Cos(J * (day + 10))); // day=0: winter solstice => subtract 10 days
-                m = Global.Limit(m, 0.0, 2.0);
-                mDayLengthInHours[day] = Math.Acos(1 - m) / Math.PI * 24.0; // result in hours [0..24]
+                float m = 1.0F - MathF.Tan(latitudeInRadians) * MathF.Tan(Sun.Ecliptic * MathF.Cos(Sun.J * (dayOfYear + 10))); // day=0: winter solstice => subtract 10 days
+                m = Maths.Limit(m, 0.0F, 2.0F);
+                mDayLengthInHours[dayOfYear] = 24.0F / MathF.PI * MathF.Acos(1.0F - m); // result in hours [0..24]
             }
-            LastDayLongerThan10_5Hours = 0;
+            this.LastDayLongerThan10_5Hours = 0;
             for (int day = LongestDay; day < this.mDayLengthInHours.Length; day++)
             {
                 if (mDayLengthInHours[day] < 10.5)
                 {
-                    LastDayLongerThan10_5Hours = day;
+                    this.LastDayLongerThan10_5Hours = day;
                     break;
                 }
             }
-            LastDayLongerThan14_5Hours = 0;
+            this.LastDayLongerThan14_5Hours = 0;
             for (int day = LongestDay; day < this.mDayLengthInHours.Length; day++)
             {
                 if (mDayLengthInHours[day] < 14.5)
                 {
-                    LastDayLongerThan14_5Hours = day;
+                    this.LastDayLongerThan14_5Hours = day;
                     break;
                 }
             }

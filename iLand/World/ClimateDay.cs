@@ -9,21 +9,20 @@ namespace iLand.World
         public int Year { get; set; } // year
         public int Month { get; set; } // month (1..12)
         public int DayOfMonth { get; set; } // day of the month (1..31)
-        public double MeanDaytimeTemperature { get; set; } // average day  degree C (of the light hours)
-        public double MinTemperature { get; set; } // minimum temperature of the day
-        public double MaxTemperature { get; set; } // maximum temperature of the day
-        public double TempDelayed { get; set; } // temperature delayed (after Maekela, 2008) for response calculations
-        public double Preciptitation { get; set; } // sum of day [mm]
-        public double Radiation { get; set; } // sum of day (MJ/m2)
-        public double Vpd { get; set; } // average of day [kPa] = [0.1 mbar] (1 bar = 100kPa)
+        public float MeanDaytimeTemperature { get; set; } // average day  degree C (of the light hours)
+        public float MinTemperature { get; set; } // minimum temperature of the day
+        public float MaxTemperature { get; set; } // maximum temperature of the day
+        public float TempDelayed { get; set; } // temperature delayed (after Maekela, 2008) for response calculations
+        public float Preciptitation { get; set; } // sum of day [mm]
+        public float Radiation { get; set; } // sum of day (MJ/m2)
+        public float Vpd { get; set; } // average of day [kPa] = [0.1 mbar] (1 bar = 100kPa)
 
-        public int ID() { return Year * 10000 + Month * 100 + DayOfMonth; }
-        public bool IsValid() { return Year >= 0; }
-        public double MeanTemperature() { return (MinTemperature + MaxTemperature) / 2.0; } // mean temperature
+        //public int ID() { return Year * 10000 + Month * 100 + DayOfMonth; }
+        public float MeanTemperature() { return 0.5F * (this.MinTemperature + MaxTemperature); } // mean temperature
 
         public override string ToString()
         {
-            return String.Concat(DayOfMonth + "." + Month + "." + Year);
+            return String.Concat(this.Year + "-" + this.Month + "-" + this.DayOfMonth);
         }
     }
 }

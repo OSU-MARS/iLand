@@ -20,8 +20,8 @@ namespace iLand.Simulation
         private Int16 mMaxState; // potential at lif=1
 
         private readonly RandomCustomPdf mPDF; // probability density function defining the life time of grass-pixels
-        private float mGrassLIFThreshold; // if LIF>threshold, then the grass is considered as occupatied by grass
-        private readonly GrassCoverLayers mLayers; // visualization
+        private float mGrassLifThreshold; // if LIF>threshold, then the grass is considered as occupatied by grass
+        //private readonly GrassCoverLayers mLayers; // visualization
 
         // access
         /// returns 'true' if the module is enabled
@@ -38,52 +38,53 @@ namespace iLand.Simulation
             this.mEffect = new double[GrassCover.Steps];
             this.mGrassEffect = new Expression();
             this.mGrassPotential = new Expression();
-            this.mLayers = new GrassCoverLayers();
-            this.mLayers.SetGrid(Grid);
+            //this.mLayers = new GrassCoverLayers();
             this.mPDF = new RandomCustomPdf();
             this.mType = GrassAlgorithmType.Invalid;
 
             this.Grid = new Grid<short>();
             this.IsEnabled = false;
+
+            //this.mLayers.SetGrid(this.Grid);
         }
 
-        /// main function
-        public double RegenerationInhibition(Point lif_index)
-        {
-            if (mType == GrassAlgorithmType.Pixel)
-            {
-                // -1: off, out of project area, 0: off, ready to get grassy again, 1: off (waiting for LIF threshold), >1 on, counting down
-                return Grid[lif_index] > 1 ? 1.0 : 0.0;
-            }
-            // type continuous
-            return IsEnabled ? Effect(Grid[lif_index]) : 0.0;
-        }
+        // TODO: should be connected to seedling establishment
+        //public double GetRegenerationInhibition(Point lightCellIndex)
+        //{
+        //    if (mType == GrassAlgorithmType.Pixel)
+        //    {
+        //        // -1: off, out of project area, 0: off, ready to get grassy again, 1: off (waiting for LIF threshold), >1 on, counting down
+        //        return this.Grid[lightCellIndex] > 1 ? 1.0 : 0.0;
+        //    }
+        //    // type continuous
+        //    return this.IsEnabled ? this.Effect(Grid[lightCellIndex]) : 0.0;
+        //}
 
         public void Setup(Model model)
         {
             if (model.Project.Model.Settings.Grass.Enabled == false)
             {
                 // clear grid
-                Grid.Clear();
-                IsEnabled = false;
+                this.Grid.Clear();
+                this.IsEnabled = false;
                 Debug.WriteLine("grass module not enabled");
                 return;
             }
             // create the grid
-            Grid.Setup(model.LightGrid.PhysicalExtent, model.LightGrid.CellSize);
-            Grid.ClearDefault();
+            this.Grid.Setup(model.LightGrid.PhysicalExtent, model.LightGrid.CellSize);
+            this.Grid.FillDefault();
             // mask out out-of-project areas
             Grid<HeightCell> heightGrid = model.HeightGrid;
-            for (int i = 0; i < Grid.Count; ++i)
+            for (int index = 0; index < this.Grid.Count; ++index)
             {
-                if (!heightGrid[Grid.Index5(i)].IsInWorld())
+                if (heightGrid[this.Grid.Index5(index)].IsInWorld() == false)
                 {
-                    Grid[i] = -1;
+                    this.Grid[index] = -1;
                 }
             }
 
-            mType = model.Project.Model.Settings.Grass.Type;
-            if (mType == GrassAlgorithmType.Pixel)
+            this.mType = model.Project.Model.Settings.Grass.Type;
+            if (this.mType == GrassAlgorithmType.Pixel)
             {
                 // setup of pixel based / discrete approach
                 string formula = model.Project.Model.Settings.Grass.GrassDuration;
@@ -91,15 +92,15 @@ namespace iLand.Simulation
                 {
                     throw new NotSupportedException("setup(): missing equation for 'grassDuration'.");
                 }
-                mPDF.Setup(model, formula, 0.0, 100.0);
+                this.mPDF.Setup(model, formula, 0.0, 100.0);
                 //mGrassEffect.setExpression(formula);
-                
-                mGrassLIFThreshold = model.Project.Model.Settings.Grass.LifThreshold;
+
+                this.mGrassLifThreshold = model.Project.Model.Settings.Grass.LifThreshold;
 
                 // clear array
                 for (int stepIndex = 0; stepIndex < Steps; ++stepIndex)
                 {
-                    mEffect[stepIndex] = 0.0;
+                    this.mEffect[stepIndex] = 0.0;
                 }
             }
             else
@@ -110,97 +111,97 @@ namespace iLand.Simulation
                 {
                     throw new NotSupportedException("Required expression 'grassPotential' is missing.");
                 }
-                mGrassPotential.SetExpression(grassPotential);
-                mGrassPotential.Linearize(model, 0.0, 1.0, Math.Min(Steps, 1000));
+                this.mGrassPotential.SetExpression(grassPotential);
+                this.mGrassPotential.Linearize(model, 0.0, 1.0, Math.Min(GrassCover.Steps, 1000));
 
                 string grassEffect = model.Project.Model.Settings.Grass.GrassEffect;
                 if (String.IsNullOrEmpty(grassEffect))
                 {
                     throw new NotSupportedException("Required expression 'grassEffect' is missing.");
                 }
-                mGrassEffect.SetExpression(grassEffect);
+                this.mGrassEffect.SetExpression(grassEffect);
 
-                mMaxTimeLag = model.Project.Model.Settings.Grass.MaxTimeLag;
-                if (mMaxTimeLag == 0)
+                this.mMaxTimeLag = model.Project.Model.Settings.Grass.MaxTimeLag;
+                if (this.mMaxTimeLag == 0)
                 {
                     throw new NotSupportedException("Value of 'maxTimeLag' is invalid or missing.");
                 }
-                mGrowthRate = Steps / mMaxTimeLag;
+                this.mGrowthRate = GrassCover.Steps / this.mMaxTimeLag;
 
                 // set up the effect on regeneration in NSTEPS steps
                 for (int stepIndex = 0; stepIndex < Steps; ++stepIndex)
                 {
                     double effect = mGrassEffect.Evaluate(model, stepIndex / (double)(Steps - 1));
-                    mEffect[stepIndex] = Global.Limit(effect, 0.0, 1.0);
+                    this.mEffect[stepIndex] = Maths.Limit(effect, 0.0, 1.0);
                 }
 
-                mMaxState = (Int16)(Global.Limit(mGrassPotential.Evaluate(model, 1.0F), 0.0, 1.0) * (Steps - 1)); // the max value of the potential function
+                this.mMaxState = (Int16)(Maths.Limit(mGrassPotential.Evaluate(model, 1.0F), 0.0, 1.0) * (Steps - 1)); // the max value of the potential function
             }
 
             this.IsEnabled = true;
             // Debug.WriteLine("setup of grass cover complete.");
         }
 
-        public void SetInitialValues(Model model, List<KeyValuePair<int, float>> LIFpixels, int percent)
+        public void SetInitialValues(Model model, List<KeyValuePair<int, float>> lightCells, int percentGrassCover)
         {
-            if (!IsEnabled)
+            Debug.Assert((percentGrassCover >= 0) && (percentGrassCover <= 100));
+            if (this.IsEnabled == false)
             {
                 return;
             }
             if (mType == GrassAlgorithmType.Continuous)
             {
-                Int16 cval = (Int16)(Global.Limit(percent / 100.0, 0.0, 1.0) * (Steps - 1));
-                if (cval > mMaxState)
+                Int16 grassValue = (Int16)(0.01 * percentGrassCover * (GrassCover.Steps - 1));
+                if (grassValue > mMaxState)
                 {
-                    cval = mMaxState;
+                    grassValue = mMaxState;
                 }
-                for (int it = 0; it < LIFpixels.Count; ++it)
+                for (int lightCell = 0; lightCell < lightCells.Count; ++lightCell)
                 {
-                    Grid[LIFpixels[it].Key] = cval;
+                    this.Grid[lightCells[lightCell].Key] = grassValue;
                 }
             }
             else
             {
-                for (int it = 0; it < LIFpixels.Count; ++it)
+                for (int lightCell = 0; lightCell < lightCells.Count; ++lightCell)
                 {
-                    if (percent > model.RandomGenerator.Random(0, 100))
+                    if (percentGrassCover > model.RandomGenerator.GetRandomInteger(0, 100))
                     {
-                        Grid[LIFpixels[it].Key] = (Int16)mPDF.Get(model);
+                        this.Grid[lightCells[lightCell].Key] = (Int16)mPDF.GetRandomValue(model);
                     }
                     else
                     {
-                        Grid[LIFpixels[it].Key] = 0;
+                        this.Grid[lightCells[lightCell].Key] = 0;
                     }
                 }
             }
         }
 
-        public void Execute(Model model)
+        public void UpdateCoverage(Model model)
         {
-            if (!IsEnabled)
+            if (this.IsEnabled == false)
             {
                 return;
             }
             //using DebugTimer t = model.DebugTimers.Create("GrassCover.Execute()");
 
             // Main function of the grass submodule
-            Grid<float> lifGrid = model.LightGrid;
-            int gr = 0;
+            Grid<float> lightGrid = model.LightGrid;
             if (mType == GrassAlgorithmType.Continuous)
             {
                 // loop over every LIF pixel
-                int skipped = 0;
-                for (int lif = 0; lif != lifGrid.Count; ++lif, ++gr)
+                //int cellsSkipped = 0;
+                for (int cellIndex = 0; cellIndex != lightGrid.Count; ++cellIndex)
                 {
                     // calculate potential grass vegetation cover
-                    if (lifGrid[lif] == 1.0F && Grid[gr] == mMaxState)
+                    if (lightGrid[cellIndex] == 1.0F && this.Grid[cellIndex] == mMaxState)
                     {
-                        ++skipped;
+                        //++cellsSkipped;
                         continue;
                     }
 
-                    int potential = (int)(Global.Limit(mGrassPotential.Evaluate(model, lifGrid[lif]), 0.0, 1.0) * (Steps - 1));
-                    Grid[gr] = (Int16)(Math.Min(Grid[gr] + mGrowthRate, potential));
+                    int potential = (int)(Maths.Limit(mGrassPotential.Evaluate(model, lightGrid[cellIndex]), 0.0, 1.0) * (Steps - 1));
+                    this.Grid[cellIndex] = (Int16)Math.Min(this.Grid[cellIndex] + mGrowthRate, potential);
 
                 }
                 //Debug.WriteLine("skipped" << skipped;
@@ -208,26 +209,26 @@ namespace iLand.Simulation
             else
             {
                 // type = Pixel
-                for (int lif = 0; lif < lifGrid.Count; ++lif, ++gr)
+                for (int cellIndex = 0; cellIndex < lightGrid.Count; ++cellIndex)
                 {
-                    if (Grid[gr] < 0)
+                    if (this.Grid[cellIndex] < 0)
                     {
                         continue;
                     }
-                    if (Grid[gr] > 1)
+                    if (this.Grid[cellIndex] > 1)
                     {
-                        Grid[gr]--; // count down the years (until gr=1)
+                        this.Grid[cellIndex]--; // count down the years (until gr=1)
                     }
 
-                    if (Grid[gr] == 0 && lifGrid[lif] > mGrassLIFThreshold)
+                    if (this.Grid[cellIndex] == 0 && lightGrid[cellIndex] > mGrassLifThreshold)
                     {
                         // enable grass cover
-                        Grid[gr] = (Int16)(Math.Max(mPDF.Get(model), 0.0) + 1); // switch on...
+                        this.Grid[cellIndex] = (Int16)(Math.Max(mPDF.GetRandomValue(model), 0.0) + 1); // switch on...
                     }
-                    if (Grid[gr] == 1 && lifGrid[lif] < mGrassLIFThreshold)
+                    if (this.Grid[cellIndex] == 1 && lightGrid[cellIndex] < mGrassLifThreshold)
                     {
                         // now LIF is below the threshold - this enables the pixel get grassy again
-                        Grid[gr] = 0;
+                        this.Grid[cellIndex] = 0;
                     }
                 }
             }

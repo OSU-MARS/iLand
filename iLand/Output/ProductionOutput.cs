@@ -1,5 +1,4 @@
 ﻿using iLand.Simulation;
-using iLand.Tools;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
@@ -11,9 +10,9 @@ namespace iLand.Output
     {
         public ProductionOutput()
         {
-            Name = "Production per month, species and resource unit";
-            TableName = "production_month";
-            Description = "Details about the 3PG production submodule on monthly basis and for each species and resource unit.";
+            this.Name = "Production per month, species and resource unit";
+            this.TableName = "production_month";
+            this.Description = "Details about the 3PG production submodule on monthly basis and for each species and resource unit.";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
@@ -29,26 +28,26 @@ namespace iLand.Output
             this.Columns.Add(new SqlColumn("GPP_kg_m2", "GPP (without Aging) in kg Biomass/m2", OutputDatatype.Double));
         }
 
-        private void LogYear(Model model, ResourceUnitSpecies rus, SqliteCommand insertRow)
+        private void LogYear(Model model, ResourceUnitSpecies ruSpecies, SqliteCommand insertRow)
         {
-            Production3PG prod = rus.BiomassGrowth;
-            SpeciesResponse resp = prod.SpeciesResponse;
-            for (int i = 0; i < 12; i++)
+            ResourceUnitSpeciesGrowth growth = ruSpecies.BiomassGrowth;
+            ResourceUnitSpeciesResponse speciesResponse = growth.SpeciesResponse;
+            for (int month = 0; month < 12; month++)
             {
                 insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
-                insertRow.Parameters[1].Value = rus.RU.Index;
-                insertRow.Parameters[2].Value = rus.RU.ID;
-                insertRow.Parameters[3].Value = rus.Species.ID;
-                insertRow.Parameters[4].Value = i + 1; // month
+                insertRow.Parameters[1].Value = ruSpecies.RU.GridIndex;
+                insertRow.Parameters[2].Value = ruSpecies.RU.EnvironmentID;
+                insertRow.Parameters[3].Value = ruSpecies.Species.ID;
+                insertRow.Parameters[4].Value = month + 1; // month
                 // responses
-                insertRow.Parameters[5].Value = resp.TempResponse[i];
-                insertRow.Parameters[6].Value = resp.SoilWaterResponse[i];
-                insertRow.Parameters[7].Value = resp.VpdResponse[i];
-                insertRow.Parameters[8].Value = resp.Co2Response[i];
-                insertRow.Parameters[9].Value = resp.NitrogenResponse;
-                insertRow.Parameters[10].Value = resp.GlobalRadiation[i];
-                insertRow.Parameters[11].Value = prod.UtilizablePar[i];
-                insertRow.Parameters[12].Value = prod.MonthlyGpp[i];
+                insertRow.Parameters[5].Value = speciesResponse.TempResponseByMonth[month];
+                insertRow.Parameters[6].Value = speciesResponse.SoilWaterResponseByMonth[month];
+                insertRow.Parameters[7].Value = speciesResponse.VpdResponseByMonth[month];
+                insertRow.Parameters[8].Value = speciesResponse.CO2ResponseByMonth[month];
+                insertRow.Parameters[9].Value = speciesResponse.NitrogenResponseForYear;
+                insertRow.Parameters[10].Value = speciesResponse.GlobalRadiationByMonth[month];
+                insertRow.Parameters[11].Value = growth.UtilizablePar[month];
+                insertRow.Parameters[12].Value = growth.MonthlyGpp[month];
                 insertRow.ExecuteNonQuery();
             }
         }
@@ -58,11 +57,11 @@ namespace iLand.Output
             //using DebugTimer t = model.DebugTimers.Create("ProductionOutput.LogYear()");
             foreach (ResourceUnit ru in model.ResourceUnits)
             {
-                if (ru.ID == -1)
+                if (ru.EnvironmentID == -1)
                 {
                     continue; // do not include if out of project area
                 }
-                foreach (ResourceUnitSpecies rus in ru.Species)
+                foreach (ResourceUnitSpecies rus in ru.TreeSpecies)
                 {
                     this.LogYear(model, rus, insertRow);
                 }

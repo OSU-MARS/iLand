@@ -2,14 +2,14 @@
 
 namespace iLand.Input.ProjectFile
 {
-    public class FilterOutput : Enablable
+    public class ConditionOutput : Enablable
     {
-        [XmlElement(ElementName = "filter")]
-        public string Filter { get; set; }
+        [XmlElement(ElementName = "condition")]
+        public string Condition { get; set; }
 
-        public FilterOutput()
+        public ConditionOutput()
         {
-            this.Filter = null;
+            this.Condition = null;
         }
     }
 }

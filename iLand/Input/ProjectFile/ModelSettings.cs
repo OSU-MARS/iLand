@@ -22,7 +22,7 @@ namespace iLand.Input.ProjectFile
 
 		// maximum light use efficency used for the 3PG model
 		[XmlElement(ElementName = "epsilon")]
-		public double Epsilon { get; set; }
+		public float Epsilon { get; set; }
 
 		// "k" parameter (beer lambert) used for calc. of absorbed light on resourceUnit level
 		[XmlElement(ElementName = "lightExtinctionCoefficient")]
@@ -34,28 +34,28 @@ namespace iLand.Input.ProjectFile
 
 		// "tau"-value for delayed temperature calculation acc. to Maekela 2008
 		[XmlElement(ElementName = "temperatureTau")]
-		public double TemperatureTau { get; set; }
+		public float TemperatureTau { get; set; }
 
 		// density of air [kg / m3]
 		[XmlElement(ElementName = "airDensity")]
-		public double AirDensity { get; set; }
+		public float AirDensity { get; set; }
 
 		// for calculation of max-canopy-conductance
 		[XmlElement(ElementName = "laiThresholdForClosedStands")]
-		public double LaiThresholdForClosedStands { get; set; }
+		public float LaiThresholdForClosedStands { get; set; }
 
 		// 3pg-evapotranspiration
 		[XmlElement(ElementName = "boundaryLayerConductance")]
-		public double BoundaryLayerConductance { get; set; }
+		public float BoundaryLayerConductance { get; set; }
 
 		[XmlElement(ElementName = "interceptionStorageNeedle")]
-		public double InterceptionStorageNeedle { get; set; }
+		public float InterceptionStorageNeedle { get; set; }
 
 		[XmlElement(ElementName = "interceptionStorageBroadleaf")]
-		public double InterceptionStorageBroadleaf { get; set; }
+		public float InterceptionStorageBroadleaf { get; set; }
 
 		[XmlElement(ElementName = "snowMeltTemperature")]
-		public double SnowMeltTemperature { get; set; }
+		public float SnowMeltTemperature { get; set; }
 
 		[XmlElement(ElementName = "waterUseSoilSaturation")]
 		public bool WaterUseSoilSaturation { get; set; }
@@ -78,20 +78,20 @@ namespace iLand.Input.ProjectFile
 
 		public ModelSettings()
         {
-			this.AirDensity = 1.2;
-			this.BoundaryLayerConductance = 0.2;
+			this.AirDensity = 1.2F;
+			this.BoundaryLayerConductance = 0.2F;
 			this.CarbonCycleEnabled = false;
-			this.Epsilon = 1.8; // max light use efficiency (aka alpha_c)
+			this.Epsilon = 1.8F; // max light use efficiency (aka alpha_c)
 			this.GrowthEnabled = true;
-			this.InterceptionStorageBroadleaf = 2.0;
-			this.InterceptionStorageNeedle = 4.0;
-			this.LaiThresholdForClosedStands = 3.0;
+			this.InterceptionStorageBroadleaf = 2.0F;
+			this.InterceptionStorageNeedle = 4.0F;
+			this.LaiThresholdForClosedStands = 3.0F;
 			this.LightExtinctionCoefficient = 0.5F;
 			this.LightExtinctionCoefficientOpacity = 0.5F;
 			this.MortalityEnabled = true;
 			this.RegenerationEnabled = false;
-			this.SnowMeltTemperature = 0.0;
-			this.TemperatureTau = 5.0;
+			this.SnowMeltTemperature = 0.0F;
+			this.TemperatureTau = 5.0F;
 			this.UseParFractionBelowGroundAllocation = true;
 			this.WaterUseSoilSaturation = false; // TODO: unhelpful default since soil water capacity is ignored
 

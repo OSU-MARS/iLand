@@ -3,6 +3,7 @@ using iLand.Tools;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NuGet.Frameworks;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -55,15 +56,20 @@ namespace iLand.Test
                     //ru.Variables;
                     Assert.IsTrue(kalkalpen.ResourceUnitGrid.PhysicalExtent.Contains(ru.BoundingBox));
                     Assert.IsTrue((ru.AverageAging > 0.0) && (ru.AverageAging < 1.0));
+                    Assert.IsTrue((ru.BoundingBox.Height == Constant.RUSize) && (ru.BoundingBox.Width == Constant.RUSize) && 
+                                  (ru.BoundingBox.X == 0.0F) && (MathF.Abs(ru.BoundingBox.Y % 100.0F) < 0.001F));
                     Assert.IsTrue((ru.EffectiveAreaPerWla > 0.0) && (ru.EffectiveAreaPerWla <= 1.0));
-                    Assert.IsTrue(ru.ID >= 0);
-                    Assert.IsTrue(ru.Index >= 0);
+                    Assert.IsTrue(ru.EnvironmentID >= 0);
+                    Assert.IsTrue(ru.GridIndex >= 0);
                     Assert.IsTrue((ru.LriModifier > 0.0) && (ru.LriModifier <= 1.0));
                     Assert.IsTrue((ru.PhotosyntheticallyActiveArea > 0.0) && (ru.PhotosyntheticallyActiveArea <= Constant.RUArea));
                     Assert.IsTrue(ru.StockableArea == Constant.RUArea);
                     Assert.IsTrue((ru.StockedArea > 0.0) && (ru.StockedArea <= Constant.RUArea));
                     Assert.IsTrue((ru.TotalLeafArea > 0.0) && (ru.TotalLeafArea < 20.0 * Constant.RUArea));
                 }
+
+                Assert.IsTrue(kalkalpen.ResourceUnits.Count == 2);
+                Assert.IsTrue(kalkalpen.ResourceUnitGrid.Count == 2);
 
                 finalDiameters.Clear();
                 finalHeights.Clear();
@@ -220,12 +226,12 @@ namespace iLand.Test
 
             List<double> nominalVolumeByYear = new List<double>()
             {
-                140.524, 152.395, 168.688, 180.640, 194.561, // 0...4
-                204.445, 215.316, 230.528, 242.738, 254.045, // 5...9
-                267.492, 277.237, 284.491, 294.109, 304.218, // 10...14
-                314.284, 324.116, 331.615, 339.723, 348.824, // 15...19
-                360.838, 364.957, 373.480, 382.511, 392.384, // 20...24
-                400.405, 406.831, 414.930                    // 25...27
+                143.076, 157.751, 175.994, 190.599, 207.294, // 0...4
+                216.857, 229.379, 248.292, 263.868, 277.212, // 5...9
+                290.818, 302.361, 310.121, 321.509, 332.719, // 10...14
+                345.902, 356.460, 368.301, 373.557, 383.531, // 15...19
+                397.316, 404.170, 414.817, 421.084, 433.938, // 20...24
+                446.297, 456.167, 465.235                    // 25...27
             };
             for (int year = 0; year < nominalVolumeByYear.Count; ++year)
             {
@@ -302,7 +308,7 @@ namespace iLand.Test
             Assert.IsTrue(model.Environment.ClimatesByName.Count == 1);
             foreach (Climate climate in model.Environment.ClimatesByName.Values)
             {
-                Phenology conifer = climate.Phenology(0);
+                Phenology conifer = climate.GetPhenology(0);
                 // private phenology variables read from the project file
                 //   vpdMin, vpdMax, dayLengthMin, dayLengthMax, tempMintempMax
                 //conifer.ChillingDaysLastYear;
@@ -310,8 +316,8 @@ namespace iLand.Test
                 //conifer.LeafOnEnd;
                 //conifer.LeafOnFraction;
                 //conifer.LeafOnStart;
-                Phenology broadleaf = climate.Phenology(1);
-                Phenology deciduousConifer = climate.Phenology(2);
+                Phenology broadleaf = climate.GetPhenology(1);
+                Phenology deciduousConifer = climate.GetPhenology(2);
 
                 // private climate variables
                 //   tableName, batchYears, temperatureShift, precipitationShift, randomSamplingEnabled, randomSamplingList, filter
@@ -333,10 +339,9 @@ namespace iLand.Test
 
         private void VerifyMalcolmKnappDouglasFir(Model model)
         {
-            Assert.IsTrue(model.GetFirstSpeciesSet().SpeciesCount() == 1);
-
-            Species douglasFir = model.GetFirstSpeciesSet().Species(0);
+            TreeSpecies douglasFir = model.ResourceUnits[0].TreeSpeciesSet.GetSpecies(0);
             Assert.IsTrue(douglasFir.Active);
+            Assert.IsTrue(String.Equals(douglasFir.ID, "psme", StringComparison.Ordinal));
             // maximumAge  500
             // maximumHeight   90
             // aging   1 / (1 + (x / 0.7) ^ 2)
@@ -353,7 +358,7 @@ namespace iLand.Test
             Assert.IsTrue(Math.Abs(douglasFir.CNRatioFineRoot - 42.11) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.CNRatioFoliage - 72.0) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.CNRatioWood - 880.33) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.DeathProbabilityIntrinsic - 0.00080063445425371249) < 0.000001); // transformed from 0.67
+            Assert.IsTrue(Math.Abs(douglasFir.DeathProbabilityFixed - 0.00080063445425371249) < 0.000001); // transformed from 0.67
             // probStress  6.9
             // displayColor D6F288
             Assert.IsTrue(douglasFir.EstablishmentParameters.ChillRequirement == 56);
@@ -375,7 +380,7 @@ namespace iLand.Test
             Assert.IsTrue(douglasFir.IsConiferous == true);
             Assert.IsTrue(douglasFir.IsEvergreen == true);
             Assert.IsTrue(douglasFir.IsSeedYear == false);
-            Assert.IsTrue(douglasFir.IsTreeSerotinous(model, 40) == false);
+            Assert.IsTrue(douglasFir.IsTreeSerotinousRandom(model, 40) == false);
             // lightResponseClass  2.78
             Assert.IsTrue(Math.Abs(douglasFir.MaxCanopyConductance - 0.017) < 0.001);
             Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menzisii", StringComparison.OrdinalIgnoreCase));
@@ -393,11 +398,11 @@ namespace iLand.Test
             // seedKernel_as2  200
             // seedKernel_ks0  0.2
             Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.BrowsingProbability - 0.3509615) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.HdSapling - 89.0F) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.HeightDiameterRatio - 89.0F) < 0.001);
             Assert.IsTrue(String.Equals(douglasFir.SaplingGrowthParameters.HeightGrowthPotential.ExpressionString, "41.4*(1-(1-(h/41.4)^(1/3))*exp(-0.0408))^3", StringComparison.OrdinalIgnoreCase));
             Assert.IsTrue(douglasFir.SaplingGrowthParameters.MaxStressYears == 3);
             Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.ReferenceRatio - 0.506) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.ReinekesR - 159.0) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.ReinekeR - 159.0) < 0.001);
             Assert.IsTrue(douglasFir.SaplingGrowthParameters.RepresentedClasses.Count == 41);
             Assert.IsTrue(Double.IsNaN(douglasFir.SaplingGrowthParameters.SproutGrowth));
             Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.StressThreshold - 0.1) < 0.001);
@@ -409,12 +414,18 @@ namespace iLand.Test
             Assert.IsTrue(Math.Abs(douglasFir.SnagKsw - 0.08) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.SnagKyl - 0.322) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.SnagKyr - 0.1791) < 0.001);
-            Assert.IsTrue(Object.ReferenceEquals(douglasFir.SpeciesSet, model.GetFirstSpeciesSet()));
             Assert.IsTrue(Math.Abs(douglasFir.SpecificLeafArea - 5.84) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.TurnoverLeaf - 0.18) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.TurnoverRoot - 0.617284) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.VolumeFactor - 0.423492) < 0.001); // 0.539208 * pi/4
             Assert.IsTrue(Math.Abs(douglasFir.WoodDensity - 450.0) < 0.001);
+
+            foreach (ResourceUnit ru in model.ResourceUnits)
+            {
+                Assert.IsTrue(Object.ReferenceEquals(douglasFir.SpeciesSet, ru.TreeSpeciesSet));
+                Assert.IsTrue(ru.TreeSpeciesSet.SpeciesCount() == 1);
+                Assert.IsTrue(Object.ReferenceEquals(douglasFir, ru.TreeSpeciesSet.ActiveSpecies[0]));
+            }
         }
 
         private void VerifyMalcolmKnappModel(Model model)
@@ -425,16 +436,16 @@ namespace iLand.Test
             Assert.IsTrue(model.ModelSettings.MortalityEnabled == true);
             Assert.IsTrue(model.ModelSettings.GrowthEnabled == true);
             Assert.IsTrue(model.ModelSettings.CarbonCycleEnabled == true);
-            Assert.IsTrue(model.ModelSettings.Epsilon == 2.7);
+            Assert.IsTrue(model.ModelSettings.Epsilon == 2.7F);
             Assert.IsTrue(model.ModelSettings.LightExtinctionCoefficient == 0.6F);
             Assert.IsTrue(model.ModelSettings.LightExtinctionCoefficientOpacity == 0.6F);
-            Assert.IsTrue(model.ModelSettings.TemperatureTau == 6.0);
-            Assert.IsTrue(model.ModelSettings.AirDensity == 1.204);
-            Assert.IsTrue(model.ModelSettings.LaiThresholdForClosedStands == 3.0);
-            Assert.IsTrue(model.ModelSettings.BoundaryLayerConductance == 0.2);
+            Assert.IsTrue(model.ModelSettings.TemperatureTau == 6.0F);
+            Assert.IsTrue(model.ModelSettings.AirDensity == 1.204F);
+            Assert.IsTrue(model.ModelSettings.LaiThresholdForClosedStands == 3.0F);
+            Assert.IsTrue(model.ModelSettings.BoundaryLayerConductance == 0.2F);
             Assert.IsTrue(model.ModelSettings.UseParFractionBelowGroundAllocation == true);
             Assert.IsTrue(model.ModelSettings.IsTorus == true);
-            Assert.IsTrue(Math.Abs(model.ModelSettings.Latitude - Global.ToRadians(49.259)) < 0.0001);
+            Assert.IsTrue(Math.Abs(model.ModelSettings.Latitude - Maths.ToRadians(49.259F)) < 0.0001);
         }
 
         private void VerifyMalcolmKnappResourceUnit(Model model)
@@ -480,28 +491,31 @@ namespace iLand.Test
                 Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0); // initially zero
                 Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity));
                 Assert.IsTrue(Math.Abs(ru.WaterCycle.FieldCapacity - 66.304010358336242) < 0.001);
-                Assert.IsTrue(ru.WaterCycle.Psi.Length == Constant.DaysInLeapYear);
-                foreach (double psi in ru.WaterCycle.Psi)
+                Assert.IsTrue(ru.WaterCycle.SoilWaterPsi.Length == Constant.DaysInLeapYear);
+                foreach (double psi in ru.WaterCycle.SoilWaterPsi)
                 {
                     Assert.IsTrue((psi <= 0.0) && (psi > -6000.0));
                 }
-                Assert.IsTrue((ru.WaterCycle.SnowDayRad >= 0.0) && (ru.WaterCycle.SnowDayRad < 5000.0)); // TODO: linkt to snow days?
+                Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0) && (ru.WaterCycle.SnowDayRadiation < 5000.0)); // TODO: linkt to snow days?
                 Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear));
                 Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepth - 1340) < 0.001);
                 Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0); // zero at initialization
                 Assert.IsTrue(ru.WaterCycle.TotalWaterLoss == 0.0); // zero at initialization
             }
+
+            Assert.IsTrue(model.ResourceUnits.Count == 1);
+            Assert.IsTrue(model.ResourceUnitGrid.Count == 1);
         }
 
         private void VerifyNorwaySpruce(Model model)
         {
-            Species species = model.FirstResourceUnit().SpeciesSet.GetSpecies("piab");
+            TreeSpecies species = model.ResourceUnits[0].TreeSpeciesSet.GetSpecies("piab");
             Assert.IsTrue(species != null);
 
             // PIAB: 1/(1 + (x/0.55)^2)
-            double youngAgingFactor = species.Aging(model, 10.0F, 10);
-            double middleAgingFactor = species.Aging(model, 40.0F, 80);
-            double oldAgingFactor = species.Aging(model, 55.5F, 575);
+            double youngAgingFactor = species.GetAgingFactor(model, 10.0F, 10);
+            double middleAgingFactor = species.GetAgingFactor(model, 40.0F, 80);
+            double oldAgingFactor = species.GetAgingFactor(model, 55.5F, 575);
 
             Assert.IsTrue(Math.Abs(youngAgingFactor - 0.964912) < 0.001);
             Assert.IsTrue(Math.Abs(middleAgingFactor - 0.481931) < 0.001);
@@ -518,16 +532,16 @@ namespace iLand.Test
             // PIAB: HDlow = 170*(1)*d^-0.5, HDhigh = (195.547*1.004*(-0.2396+1)*d^-0.2396)*1
             // round(170*(1)*c(3.3, 10, 33)^-0.5, 2)
             // round((195.547*1.004*(-0.2396+1)*c(3.3, 10, 33)^-0.2396)*1, 2)
-            species.GetHeightDiameterRatioLimits(model, 3.3, out double lowLimitSmall, out double highLimitSmall);
-            species.GetHeightDiameterRatioLimits(model, 10.0, out double lowLimitMedium, out double highLimitMedium);
-            species.GetHeightDiameterRatioLimits(model, 33, out double lowLimitLarge, out double highLimitLarge);
+            species.GetHeightDiameterRatioLimits(model, 3.3F, out float lowLimitSmall, out float highLimitSmall);
+            species.GetHeightDiameterRatioLimits(model, 10.0F, out float lowLimitMedium, out float highLimitMedium);
+            species.GetHeightDiameterRatioLimits(model, 33.0F, out float lowLimitLarge, out float highLimitLarge);
 
-            Assert.IsTrue(Math.Abs(lowLimitSmall - 93.58) < 0.01);
-            Assert.IsTrue(Math.Abs(lowLimitMedium - 53.76) < 0.01);
-            Assert.IsTrue(Math.Abs(lowLimitLarge - 29.59) < 0.01);
-            Assert.IsTrue(Math.Abs(highLimitSmall - 112.15) < 0.01);
-            Assert.IsTrue(Math.Abs(highLimitMedium - 85.99) < 0.01);
-            Assert.IsTrue(Math.Abs(highLimitLarge - 64.59) < 0.01);
+            Assert.IsTrue(MathF.Abs(lowLimitSmall - 93.58F) < 0.01F);
+            Assert.IsTrue(MathF.Abs(lowLimitMedium - 53.76F) < 0.01F);
+            Assert.IsTrue(MathF.Abs(lowLimitLarge - 29.59F) < 0.01F);
+            Assert.IsTrue(MathF.Abs(highLimitSmall - 112.15F) < 0.01F);
+            Assert.IsTrue(MathF.Abs(highLimitMedium - 85.99F) < 0.01F);
+            Assert.IsTrue(MathF.Abs(highLimitLarge - 64.59F) < 0.01F);
 
             // PIAB: 44.7*(1-(1-(h/44.7)^(1/3))*exp(-0.044))^3
             // round(44.7*(1-(1-(c(0.25, 1, 4.5)/44.7)^(1/3))*exp(-0.044))^3, 3)

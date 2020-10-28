@@ -5,7 +5,7 @@ namespace iLand.Input.ProjectFile
     public class Climate
     {
         [XmlElement(ElementName = "co2concentration")]
-        public double CO2Concentration { get; set; }
+        public float CO2ConcentrationInPpm { get; set; }
 
         [XmlElement(ElementName = "tableName")]
         public string TableName { get; set; }
@@ -34,7 +34,7 @@ namespace iLand.Input.ProjectFile
             // this.Filter;
 
             this.BatchYears = 100;
-            this.CO2Concentration = 400.0;
+            this.CO2ConcentrationInPpm = 400.0F; 
             this.PrecipitationMultiplier = 1.0F;
             this.RandomSamplingEnabled = false;
             this.RandomSamplingList = null;

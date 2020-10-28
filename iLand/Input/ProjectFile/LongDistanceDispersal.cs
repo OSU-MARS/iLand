@@ -8,10 +8,10 @@ namespace iLand.Input.ProjectFile
         public int Rings { get; set; }
 
         [XmlElement(ElementName = "thresholdArea")]
-        public double ThresholdArea { get; set; }
+        public float ThresholdArea { get; set; }
 
         [XmlElement(ElementName = "thresholdLDD")]
-        public double ThresholdLdd { get; set; }
+        public float ThresholdLdd { get; set; }
 
         [XmlElement(ElementName = "LDDSeedlings")]
         public float LddSeedlings { get; set; }
@@ -19,8 +19,8 @@ namespace iLand.Input.ProjectFile
         public LongDistanceDispersal()
         {
             this.LddSeedlings = 0.0001F;
-            this.ThresholdArea = 0.0001;
-            this.ThresholdLdd = 0.0001;
+            this.ThresholdArea = 0.0001F;
+            this.ThresholdLdd = 0.0001F;
             this.Rings = 4;
         }
     }

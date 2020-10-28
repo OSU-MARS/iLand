@@ -6,47 +6,40 @@ using System.IO;
 
 namespace iLand.Simulation
 {
-    public class TimeEvents
+    public class ScheduledEvents
     {
         private readonly Dictionary<int, List<MutableTuple<string, string>>> eventsByYear;
 
-        public TimeEvents()
+        public ScheduledEvents()
         {
             this.eventsByYear = new Dictionary<int, List<MutableTuple<string, string>>>();
         }
 
-        public void Clear() 
+        public void Clear()
         { 
             this.eventsByYear.Clear();
         }
 
-        public bool LoadFromFile(FileLocations paths, string fileName)
+        public void LoadFromFile(FileLocations paths, string fileName)
         {
-            string source = File.ReadAllText(paths.GetPath(fileName));
-            if (String.IsNullOrEmpty(source))
-            {
-                throw new FileNotFoundException(String.Format("TimeEvents: input file does not exist or is empty ({0})", fileName));
-            }
-
-            CsvFile infile = new CsvFile();
-            infile.LoadFromString(source);
-            List<string> headers = infile.ColumnNames;
-            int yearIndex = infile.GetColumnIndex("year");
+            CsvFile eventFile = new CsvFile(paths.GetPath(fileName));
+            List<string> headers = eventFile.ColumnNames;
+            int yearIndex = eventFile.GetColumnIndex("year");
             if (yearIndex == -1)
             {
                 throw new NotSupportedException(String.Format("TimeEvents: input file '{0}' has no 'year' column.", fileName));
             }
-            // BUGBUG: no checking of header line
-            for (int row = 1; row < infile.RowCount; row++)
+            // TODO: validate header
+            for (int row = 1; row < eventFile.RowCount; ++row)
             {
-                int year = Int32.Parse(infile.GetValue(yearIndex, row));
+                int year = Int32.Parse(eventFile.GetValue(yearIndex, row));
                 if (this.eventsByYear.TryGetValue(year, out List<MutableTuple<string, string>> eventsOfYear) == false)
                 {
                     eventsOfYear = new List<MutableTuple<string, string>>();
                     this.eventsByYear.Add(year, eventsOfYear);
                 }
 
-                List<string> line = infile.GetRow(row);
+                List<string> line = eventFile.GetRow(row);
                 for (int column = 0; column < line.Count; column++)
                 {
                     if (column != yearIndex)
@@ -55,21 +48,20 @@ namespace iLand.Simulation
                         eventsOfYear.Add(eventInYear);
                     }
                 }
-            } // for each row
-            Debug.WriteLine(String.Format("loaded TimeEvents (file: {0}). {1} items stored.", fileName, eventsByYear.Count));
-            return true;
+            } // foreach row
+            // Debug.WriteLine(String.Format("ScheduledEvents.LoadFromFile('{0}'). {1} items stored.", fileName, eventsByYear.Count));
         }
 
-        public void Run(Model model)
+        public void RunYear(Model model)
         {
             int currentYear = model.ModelSettings.CurrentYear;
-            if (eventsByYear.TryGetValue(currentYear, out List<MutableTuple<string, string>> currentEvents) == false || currentEvents.Count == 0)
+            if (eventsByYear.TryGetValue(currentYear, out List<MutableTuple<string, string>> eventsOfYear) == false)
             {
                 return;
             }
 
             int valuesSet = 0;
-            foreach (MutableTuple<string, string> eventInYear in currentEvents)
+            foreach (MutableTuple<string, string> eventInYear in eventsOfYear)
             {
                 string key = eventInYear.Item1; // key
                 // special values: if (key=="xxx" ->
@@ -87,7 +79,7 @@ namespace iLand.Simulation
                     //globalSettings.Settings.SetParameter(key, eventInYear.Item2.ToString());
                     //Debug.WriteLine("TimeEvents: set " + key + "to" + eventInYear.Item2.ToString());
                 }
-                valuesSet++;
+                ++valuesSet;
             }
 
             if (valuesSet != 0)

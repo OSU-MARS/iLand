@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -8,8 +7,7 @@ namespace iLand.Tools
 {
     /** @class CSVFile
         Provides access to table data stored in text files (CSV style).
-        Tables have optionally headers in first line (hasCaptions()) and can use various
-        delimiters ("tab",";",","," "). If separated by spaces, consecuteive spaces are merged.
+        Tables have headers in first line and can use "tab", ";", ",", and " " as delimeters.
         Table dimensions can be accessed with colCount() and rowCount(), cell values as object are retrieved
         by value(). full rows are retrieved using row().
         Files are loaded by loadFile() or by passing a filename to the constructor:
@@ -24,46 +22,32 @@ namespace iLand.Tools
     internal class CsvFile
     {
         private readonly List<string> mRows;
-        private string mSeparator;
+        private char mSeparator;
 
         // properties
-        public int ColumnCount { get; private set; } // number of columns, or -1
         public List<string> ColumnNames { get; private set; } // retrieve (a copy) of column headers
-        public bool FixedWidth { get; set; }
-        public bool Flat { get; set; } // simple list, not multiple columns
-        public bool HasColumnNames { get; set; } // true, if first line contains headers TODO: never set to false?
-        public bool IsEmpty { get; private set; } /// returns true when no valid file has been loaded (returns false when a file with 0 rows is loaded)
-        public int RowCount { get; private set; } // number or rows (excl. captions), or -1.
-        public bool StreamingMode { get; private set; } // return true, if in "streaming mode" (for large files)
 
         // ctor, load @p fileName.
         public CsvFile(string fileName)
             : this()
         {
-            LoadFile(fileName);
+            this.LoadFile(fileName);
         }
 
         public CsvFile()
         {
             mRows = new List<string>();
-
-            ColumnNames = new List<string>();
-            Flat = false;
-            FixedWidth = false;
-            HasColumnNames = true;
-            IsEmpty = true;
-            Clear();
+            this.ColumnNames = new List<string>();
         }
+
+        public int ColumnCount { get { return this.ColumnNames.Count; } }
+        public int RowCount { get { return this.mRows.Count; } }
 
         // get caption of ith column.
-        public string GetColumnName(int col)
-        {
-            if (col < ColumnCount)
-            {
-                return ColumnNames[col];
-            }
-            return null;
-        }
+        //public string GetColumnName(int col)
+        //{
+        //    return this.ColumnNames[col];
+        //}
 
         // index of column or -1 if not available
         public int GetColumnIndex(string columnName)
@@ -79,10 +63,8 @@ namespace iLand.Tools
 
         private void Clear()
         {
-            ColumnCount = RowCount = -1;
-            ColumnNames.Clear();
-            mRows.Clear();
-            IsEmpty = true;
+            this.mRows.Clear();
+            this.ColumnNames.Clear();
         }
 
         public bool LoadFile(string fileName)
@@ -93,15 +75,14 @@ namespace iLand.Tools
             if (String.IsNullOrEmpty(content))
             {
                 //Debug.WriteLine("loadFile: " + fileName + " does not exist or is empty.");
-                IsEmpty = true;
                 return false;
             }
-            return LoadFromString(content);
+            return this.LoadFromString(content);
         }
 
         public bool LoadFromString(string content)
         {
-            Clear();
+            this.Clear();
             // split into rows: use either with windows or unix style delimiter
             string[] rows;
             ReadOnlySpan<char> contentSampleForNewlineDetection = content.AsSpan(0, Math.Min(content.Length, 1000));
@@ -119,7 +100,6 @@ namespace iLand.Tools
                 return false;
             }
 
-            IsEmpty = false;
             // trimming of whitespaces is a problem
             // when having e.g. tabs as delimiters...
             //    if (!mFixedWidth) {
@@ -137,170 +117,53 @@ namespace iLand.Tools
                 mRows.Add(row);
             }
 
-            mSeparator = ";"; // default
+            mSeparator = ';'; // default
             string first = mRows[0];
-            if (!Flat)
-            {
-                // detect separator
-                int c_tab = first.IndexOf('\t');
-                int c_semi = first.IndexOf(';');
-                int c_comma = first.IndexOf(',');
-                int c_space = first.IndexOf(' ');
-                if (c_tab == -1 && c_semi == -1 && c_comma == -1 && c_space == -1)
-                {
-                    Debug.WriteLine("loadFile: cannot recognize separator. first line: " + first);
-                    return false;
-                }
 
-                mSeparator = " ";
-                if (c_tab != -1)
-                {
-                    mSeparator = "\t";
-                }
-                if (c_semi != -1)
-                {
-                    mSeparator = ";";
-                }
-                if (c_comma != -1)
-                {
-                    mSeparator = ",";
-                }
-            } // !mFlat
+            // detect separator
+            int tabIndex = first.IndexOf('\t');
+            int semicolonIndex = first.IndexOf(';');
+            int commaIndex = first.IndexOf(',');
+            int spaceIndex = first.IndexOf(' ');
+            if (tabIndex < 0 && semicolonIndex < 0 && commaIndex < 0 && spaceIndex < 0)
+            {
+                throw new NotSupportedException("Cannot recognize separator. first line: " + first);
+            }
+
+            mSeparator = ' ';
+            if (tabIndex != -1)
+            {
+                mSeparator = '\t';
+            }
+            if (semicolonIndex != -1)
+            {
+                mSeparator = ';';
+            }
+            if (commaIndex != -1)
+            {
+                mSeparator = ',';
+            }
 
             // captions
-            if (HasColumnNames)
-            {
-                ColumnNames.AddRange(first.Replace("\"", "").Split(mSeparator, StringSplitOptions.None)); // drop \ characters
-            }
-            else
-            {
-                // create pseudo captions
-                int columns = first.Split(mSeparator, StringSplitOptions.None).Length;
-                for (int i = 0; i < columns; i++)
-                {
-                    ColumnNames.Add(i.ToString());
-                }
-            }
-
-            ColumnCount = ColumnNames.Count;
-            RowCount = mRows.Count;
-            StreamingMode = false;
+            this.ColumnNames.AddRange(first.Replace("\"", "").Split(mSeparator, StringSplitOptions.None)); // drop \ characters
             return true;
         }
 
         public List<string> GetRow(int rowIndex)
         {
             List<string> line = new List<string>(this.ColumnCount);
-            line.AddRange(mRows[rowIndex].Split(mSeparator));
+            line.AddRange(mRows[rowIndex].Split(mSeparator, StringSplitOptions.None));
             return line;
         }
 
+        // TODO: remove and convert callers to GetRow()
         public string GetValue(int col, int row)
         {
-            if (this.StreamingMode)
-            {
-                throw new NotSupportedException();
-            }
-
             if (row < 0 || row >= this.RowCount || col < 0 || col >= this.ColumnCount)
             {
                 throw new ArgumentOutOfRangeException();
             }
 
-            if (this.FixedWidth)
-            {
-                // special case with space (1..n) as separator
-                string s = mRows[row];
-                char sep = mSeparator[0];
-                if (col == this.ColumnCount - 1)
-                {
-                    // last element:
-                    return s.Substring(s.LastIndexOf(sep) + 1);
-                }
-                int sepcount = 0;
-                int lastsep = 0;
-                int i = 0;
-                while (s[i] == sep && i < s.Length)
-                {
-                    i++; // skip initial spaces
-                }
-                for (; i < s.Length; i++)
-                {
-                    if (s[i] == sep)
-                    {
-                        // skip all spaces
-                        while (s[i] == sep)
-                        {
-                            i++;
-                        }
-                        i--; // go back to last separator
-                             // count the separators up to the wanted column
-                        if (sepcount == col)
-                        {
-                            return s[lastsep..i];
-                        }
-                        sepcount++;
-                        lastsep = i + 1;
-                    }
-                }
-                Debug.WriteLine("value: found no result: row " + row + " column " + col + ". Size is:" + RowCount + ColumnCount);
-                return null;
-            }
-
-            // one-character separators....
-            if (mSeparator.Length == 1)
-            {
-                string s = mRows[row];
-                char sep = mSeparator[0];
-                string result = null;
-                if (col == ColumnCount - 1)
-                {
-                    // last element:
-                    if (s.Count(character => character == sep) == ColumnCount - 1)
-                    {
-                        result = s.Substring(s.LastIndexOf(sep) + 1);
-                        if (result.StartsWith('\"') && result.EndsWith('\"'))
-                        {
-                            result = result[1..^1];
-                        }
-                    }
-                    // if there are less than colcount-1 separators, then
-                    // the last columns is empty
-                    return result;
-                }
-
-                int sepcount = 0;
-                int lastsep = 0;
-                for (int i = 0; i < s.Length; i++)
-                {
-                    if (s[i] == sep)
-                    {
-                        // count the separators up to the wanted column
-                        if (sepcount == col)
-                        {
-                            if (s[lastsep] == '\"' && s[i - 1] == '\"')
-                            {
-                                result = s.Substring(lastsep + 1, i - lastsep - 2); // ignore "
-                            }
-                            else
-                            {
-                                result = s[lastsep..i];
-                            }
-                            return result;
-                        }
-                        sepcount++;
-                        lastsep = i + 1;
-                    }
-                }
-                if (sepcount == col)
-                {
-                    result = s.Substring(s.LastIndexOf(sep) + 1);
-                }
-                //Debug.WriteLine("value: found no result:" + row + col + ". Size is:" + mRowCount + mColCount;
-                return result;
-            }
-
-            // fallback, if separator is more than one character. This is very slow approach.... (old)
             string[] line = mRows[row].Split(mSeparator);
             if (col < line.Length)
             {
@@ -309,21 +172,10 @@ namespace iLand.Tools
             return null;
         }
 
-        public string Row(int row)
-        {
-            if (StreamingMode)
-            {
-                return null;
-            }
-
-            if (row < 0 || row >= RowCount)
-            {
-                Debug.WriteLine("row: invalid index: row " + row + ". Size is:" + RowCount);
-                return null;
-            }
-
-            return mRows[row];
-        }
+        //public string Row(int row)
+        //{
+        //    return mRows[row];
+        //}
 
         public List<string> GetColumnValues(int columnIndex)
         {
@@ -335,36 +187,35 @@ namespace iLand.Tools
             return result;
         }
 
-        public void SetValue(int row, int col, object value)
-        {
-            if (row < 0 || row >= RowCount || col < 0 || col > ColumnCount)
-            {
-                Debug.WriteLine("setValue: invalid index: row col:" + row + col + ". Size is: " + RowCount + " rows, " + ColumnCount + " columns");
-                return;
-            }
-            string[] line = mRows[row].Split(mSeparator);
-            if (col < line.Length)
-            {
-                // BUGBUG: input ignored if past end of line
-                line[col] = value.ToString();
-            }
-            mRows[row] = String.Join(mSeparator, line);
-        }
+        //public void SetValue(int row, int col, object value)
+        //{
+        //    if (row < 0 || row >= this.RowCount || col < 0 || col > this.ColumnCount)
+        //    {
+        //        throw new ArgumentOutOfRangeException("Invalid index: row col:" + row + col + ". Size is " + this.RowCount + " rows, " + this.ColumnCount + " columns.");
+        //    }
+        //    string[] line = mRows[row].Split(mSeparator);
+        //    if (col < line.Length)
+        //    {
+        //        // TODO: input ignored if past end of line
+        //        line[col] = value.ToString();
+        //    }
+        //    mRows[row] = String.Join(mSeparator, line);
+        //}
 
         /// save the contents of the CSVFile back to a file.
         /// this removes all comments and uses the system line-end
-        public void SaveFile(string fileName)
-        {
-            using FileStream file = new FileStream(fileName, FileMode.Create, FileAccess.Write);
-            using StreamWriter str = new StreamWriter(file);
-            if (HasColumnNames)
-            {
-                str.WriteLine(String.Join(mSeparator, ColumnNames));
-            }
-            foreach (string s in mRows)
-            {
-                str.WriteLine(s);
-            }
-        }
+        //public void SaveFile(string fileName)
+        //{
+        //    using FileStream file = new FileStream(fileName, FileMode.Create, FileAccess.Write);
+        //    using StreamWriter str = new StreamWriter(file);
+        //    if (HasColumnNames)
+        //    {
+        //        str.WriteLine(String.Join(mSeparator, ColumnNames));
+        //    }
+        //    foreach (string s in mRows)
+        //    {
+        //        str.WriteLine(s);
+        //    }
+        //}
     }
 }

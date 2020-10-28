@@ -2,13 +2,10 @@
 
 namespace iLand.Input.ProjectFile
 {
-    public class DynamicOutput : ConditionOutput
+    public class DynamicOutput : ResourceUnitFilterOutput
     {
         [XmlElement(ElementName = "columns")]
         public string Columns { get; set; }
-
-        [XmlElement(ElementName = "rufilter")]
-        public string RUFilter { get; set; }
 
         [XmlElement(ElementName = "treefilter")]
         public string TreeFilter { get; set; }
@@ -16,7 +13,7 @@ namespace iLand.Input.ProjectFile
         public DynamicOutput()
         {
             this.Columns = null;
-            this.RUFilter = null;
+            this.ResourceUnitFilter = null;
             this.TreeFilter = null;
         }
     }

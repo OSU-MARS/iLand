@@ -1,4 +1,5 @@
-﻿using System;
+﻿using iLand.Tools;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -22,7 +23,7 @@ namespace iLand.World
         // access
         public int DataSize { get; private set; }   // number of data items (rows*cols)
         public int Rows { get; private set; } // number of rows
-        public int Cols { get; private set; } // number of columns
+        public int Columns { get; private set; } // number of columns
         public double CellSize { get; private set; } // size of a cell (meters)
         public double MinValue { get; private set; } // minimum data value
         public double MaxValue { get; private set; } // maximum data value
@@ -32,35 +33,31 @@ namespace iLand.World
         /// @p X and @p Y are local coordinates.
         public double GetValue(PointF p) { return GetValue(p.X, p.Y); }
         // coordinates of the lower left corner of the grid
-        public PointF Origin 
-        {
-            get { return origin; }
-        }
+        public PointF Origin { get { return origin; } }
 
         // setup of global GIS transformation
         // not a good place to put that code here.... please relocate!
-        public void SetupGISTransformation(double offsetx, double offsety, double offsetz, double angle_degree)
+        public void SetupTransformation(double offsetx, double offsety, double offsetz, double angle_degree)
         {
             gisCoordTrans.SetupTransformation(offsetx, offsety, offsetz, angle_degree);
         }
 
-        public void WorldToModel(Vector3D From, Vector3D To)
+        public void WorldToModel(Vector3D world, out Vector3D model)
         {
-            double x = From.X - gisCoordTrans.OffsetX;
-            double y = From.Y - gisCoordTrans.OffsetY;
-            To.X = x * gisCoordTrans.CosRotate - y * gisCoordTrans.SinRotate;
-            To.Y = x * gisCoordTrans.SinRotate + y * gisCoordTrans.CosRotate;
-            To.Z = From.Z - gisCoordTrans.OffsetZ;
-            //To.setY(-To.y()); // spiegeln
+            double x = world.X - gisCoordTrans.OffsetX;
+            double y = world.Y - gisCoordTrans.OffsetY;
+            model = new Vector3D(x * gisCoordTrans.CosRotate - y * gisCoordTrans.SinRotate,
+                                 x * gisCoordTrans.SinRotate + y * gisCoordTrans.CosRotate,
+                                 world.Z - gisCoordTrans.OffsetZ);
         }
 
-        public void ModelToWorld(Vector3D From, Vector3D To)
+        public void ModelToWorld(Vector3D model, out Vector3D world)
         {
-            double x = From.X;
-            double y = From.Y; // spiegeln
-            To.X = x * gisCoordTrans.CosRotateReverse - y * gisCoordTrans.SinRotateReverse + gisCoordTrans.OffsetX;
-            To.Y = x * gisCoordTrans.SinRotateReverse + y * gisCoordTrans.CosRotateReverse + gisCoordTrans.OffsetY;
-            To.Z = From.Z + gisCoordTrans.OffsetZ;
+            double x = model.X;
+            double y = model.Y; // spiegeln
+            world = new Vector3D(x * gisCoordTrans.CosRotateReverse - y * gisCoordTrans.SinRotateReverse + gisCoordTrans.OffsetX,
+                                 x * gisCoordTrans.SinRotateReverse + y * gisCoordTrans.CosRotateReverse + gisCoordTrans.OffsetY,
+                                 model.Z + gisCoordTrans.OffsetZ);
         }
 
         public GisGrid()
@@ -69,7 +66,7 @@ namespace iLand.World
             this.gisCoordTrans = new CoordinateTransform();
 
             this.CellSize = 1; // default value (for line mode)
-            this.Cols = 0;
+            this.Columns = 0;
             this.Rows = 0;
         }
 
@@ -102,7 +99,7 @@ namespace iLand.World
                     double value = Double.Parse(line.Substring(line.IndexOf(' ')));
                     if (key == "ncols")
                     {
-                        Cols = (int)value;
+                        Columns = (int)value;
                     }
                     else if (key == "nrows")
                     {
@@ -133,14 +130,14 @@ namespace iLand.World
             } while (header) ;
 
             // create data
-            DataSize = Rows * Cols;
+            DataSize = Rows * Columns;
             data = new double[DataSize];
 
             // loop thru datalines
             for (;  row < lines.Length; ++row)
             {
                 string[] values = lines[row].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                for (int col = 0; col < Cols; col++)
+                for (int col = 0; col < Columns; col++)
                 {
                     double value = Double.Parse(values[col]);
                     if (value != NoDataValue)
@@ -148,7 +145,7 @@ namespace iLand.World
                         MinValue = Math.Min(MinValue, value);
                         MaxValue = Math.Max(MaxValue, value);
                     }
-                    data[row * Cols + col] = value;
+                    data[row * Columns + col] = value;
                 }
             }
             return true;
@@ -169,17 +166,15 @@ namespace iLand.World
             return temp_map.Keys.ToList();
         }
 
-        public PointF ModelToWorld(PointF model_coordinates)
+        public PointF ModelToWorld(PointF modelCoordinate)
         {
-            Vector3D to = new Vector3D();
-            ModelToWorld(new Vector3D(model_coordinates.X, model_coordinates.Y, 0.0), to);
+            ModelToWorld(new Vector3D(modelCoordinate.X, modelCoordinate.Y, 0.0), out Vector3D to);
             return new PointF((float)to.X, (float)to.Y);
         }
 
-        public PointF WorldToModel(PointF world_coordinates)
+        public PointF WorldToModel(PointF worldCoordinate)
         {
-            Vector3D to = new Vector3D();
-            WorldToModel(new Vector3D(world_coordinates.X, world_coordinates.Y, 0.0), to);
+            WorldToModel(new Vector3D(worldCoordinate.X, worldCoordinate.Y, 0.0), out Vector3D to);
             return new PointF((float)to.X, (float)to.Y);
         }
 
@@ -212,9 +207,9 @@ namespace iLand.World
         /// get value of grid at index positions
         public double GetValue(int indexx, int indexy)
         {
-            if (indexx >= 0 && indexx < Cols && indexy >= 0 && indexy < Rows)
+            if (indexx >= 0 && indexx < Columns && indexy >= 0 && indexy < Rows)
             {
-                return data[indexy * Cols + indexx];
+                return data[indexy * Columns + indexx];
             }
             return -1.0;  // out of scope
         }
@@ -229,11 +224,10 @@ namespace iLand.World
             return -1.0;  // out of scope
         }
 
-        public double GetValue(double X, double Y)
+        public double GetValue(double x, double y)
         {
-            Vector3D model = new Vector3D(X, Y, 0.0);
-            Vector3D world = new Vector3D();
-            ModelToWorld(model, world);
+            Vector3D model = new Vector3D(x, y, 0.0);
+            ModelToWorld(model, out Vector3D world);
 
             world.X -= Origin.X;
             world.Y -= Origin.Y;
@@ -247,9 +241,9 @@ namespace iLand.World
             }
             int ix = (int)(world.X / CellSize);
             int iy = (int)(world.Y / CellSize);
-            if (ix >= 0 && ix < Cols && iy >= 0 && iy < Rows)
+            if (ix >= 0 && ix < Columns && iy >= 0 && iy < Rows)
             {
-                double value = data[iy * Cols + ix];
+                double value = data[iy * Columns + ix];
                 if (value != NoDataValue)
                 {
                     return value;
@@ -263,34 +257,32 @@ namespace iLand.World
             Vector3D world = new Vector3D((indexx + 0.5) * CellSize + Origin.X,
                                           (indexy + 0.5) * CellSize + Origin.Y,
                                           0.0);
-            Vector3D model = new Vector3D();
-            WorldToModel(world, model);
+            WorldToModel(world, out Vector3D model);
             return model;
         }
 
         public RectangleF GetCellExtent(int indexX, int indexY)
         {
             Vector3D world = new Vector3D(indexX * CellSize + Origin.X,
-                                        indexY * CellSize + Origin.Y,
-                                        0.0);
-            Vector3D model = new Vector3D();
-            WorldToModel(world, model);
+                                          indexY * CellSize + Origin.Y,
+                                          0.0);
+            WorldToModel(world, out Vector3D model);
             RectangleF rect = new RectangleF((float)model.X, // left
-                        (float)model.Y, // top
-                        (float)CellSize, // width
-                        (float)CellSize); // height
+                                             (float)model.Y, // top
+                                             (float)CellSize, // width
+                                             (float)CellSize); // height
             return rect;
         }
 
-        public Vector3D GetCoordinate(int Index)
+        public Vector3D GetCoordinate(int cellIndex)
         {
-            if (Index < 0 || Index >= DataSize)
+            if (cellIndex < 0 || cellIndex >= DataSize)
             {
-                throw new ArgumentOutOfRangeException(nameof(Index), "gisgrid:coord: invalid index.");
+                throw new ArgumentOutOfRangeException(nameof(cellIndex), "gisgrid:coord: invalid index.");
             }
-            int ix = Index % Cols;
-            int iy = Index / Cols;
-            return GetCoordinate(ix, iy);
+            int indexX = cellIndex % Columns;
+            int indexY = cellIndex / Columns;
+            return this.GetCoordinate(indexX, indexY);
         }
 
         /*
@@ -382,14 +374,14 @@ namespace iLand.World
         {
             // auf das angegebene Rechteck zuschneiden, alle
             // werte draussen auf -1 setzen.
-            for (int ix = 0; ix < Cols; ix++)
+            for (int indexX = 0; indexX < this.Columns; indexX++)
             {
-                for (int iy = 0; iy < Rows; iy++)
+                for (int indexY = 0; indexY < this.Rows; indexY++)
                 {
-                    Vector3D akoord = GetCoordinate(iy * Cols + ix);
+                    Vector3D akoord = GetCoordinate(indexY * Columns + indexX);
                     if (!box.Contains((float)akoord.X, (float)akoord.Y))
                     {
-                        data[iy * Cols + ix] = -1.0;
+                        data[indexY * Columns + indexX] = -1.0;
                     }
                 }
             }

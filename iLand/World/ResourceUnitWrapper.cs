@@ -6,15 +6,15 @@ using System.Diagnostics;
 
 namespace iLand.World
 {
-    internal class RUWrapper : ExpressionWrapper
+    internal class ResourceUnitWrapper : ExpressionWrapper
     {
         private static readonly ReadOnlyCollection<string> VariableNames;
 
         public ResourceUnit ResourceUnit { get; set; }
 
-        static RUWrapper()
+        static ResourceUnitWrapper()
         {
-            RUWrapper.VariableNames = new List<string>(ExpressionWrapper.BaseVariableNames) 
+            ResourceUnitWrapper.VariableNames = new List<string>(ExpressionWrapper.BaseVariableNames) 
             { 
                 "id", "totalEffectiveArea", "nitrogenAvailable", "soilDepth", "stockedArea", "stockableArea",
                 "count", "volume", "avgDbh", "avgHeight", "basalArea", "leafAreaIndex", "aging", "cohortCount", "saplingCount", "saplingAge",
@@ -22,12 +22,12 @@ namespace iLand.World
             }.AsReadOnly();
         }
 
-        public RUWrapper()
+        public ResourceUnitWrapper()
         {
             ResourceUnit = null;
         }
 
-        public RUWrapper(ResourceUnit resourceUnit)
+        public ResourceUnitWrapper(ResourceUnit resourceUnit)
         {
             ResourceUnit = resourceUnit;
         }
@@ -37,19 +37,19 @@ namespace iLand.World
             return VariableNames;
         }
 
-        public override double Value(Model model, int variableIndex)
+        public override double GetValue(Model model, int variableIndex)
         {
             Debug.Assert(ResourceUnit != null);
 
             switch (variableIndex - BaseVariableNames.Count)
             {
-                case 0: return ResourceUnit.ID; // id from grid
+                case 0: return ResourceUnit.EnvironmentID; // id from grid
                 case 1: return ResourceUnit.EffectiveAreaPerWla;
                 case 2: return ResourceUnit.Soil.PlantAvailableNitrogen;
                 case 3: return ResourceUnit.WaterCycle.SoilDepth;
                 case 4: return ResourceUnit.StockedArea;
                 case 5: return ResourceUnit.StockableArea;
-                case 6: return ResourceUnit.Statistics.Count;
+                case 6: return ResourceUnit.Statistics.TreesPerHectare;
                 case 7: return ResourceUnit.Statistics.StemVolume;
                 case 8: return ResourceUnit.Statistics.AverageDbh;
                 case 9: return ResourceUnit.Statistics.AverageHeight;
@@ -83,13 +83,13 @@ namespace iLand.World
                 case 19:
                     if (ResourceUnit.Snags != null)
                     {
-                        return ResourceUnit.Snags.TotalCarbon;
+                        return ResourceUnit.Snags.StandingAndDebrisCarbon;
                     }
                     else
                     {
                         return 0.0;
                     }
-                case 20: return ResourceUnit.Index; // numeric index
+                case 20: return ResourceUnit.GridIndex; // numeric index
                 case 21: return ResourceUnit.Climate.MeanAnnualTemperature; // mean temperature
                 case 22:
                     {
@@ -103,7 +103,7 @@ namespace iLand.World
                 case 23: 
                     return ResourceUnit.Climate.TotalAnnualRadiation;
                 default:
-                    return base.Value(model, variableIndex);
+                    return base.GetValue(model, variableIndex);
             }
         }
     }

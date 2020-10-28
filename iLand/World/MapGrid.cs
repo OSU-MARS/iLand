@@ -3,10 +3,8 @@ using iLand.Tools;
 using iLand.Tree;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
+using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
-using System.Runtime.CompilerServices;
 
 namespace iLand.World
 {
@@ -30,12 +28,6 @@ namespace iLand.World
         // file name of the grid
         public string Name { get; private set; }
 
-        public double Area(int standID) { return this.IsValid(standID) ? mBoundingBoxByStandID[standID].Item2 : 0.0; } // return the area (m2) covered by the polygon
-        public RectangleF BoundingBox(int id) { return this.IsValid(id) ? mBoundingBoxByStandID[id].Item1 : new RectangleF(); } // returns the bounding box of a polygon
-        public bool IsValid() { return !this.Grid.IsEmpty(); }
-        /// returns true, if 'id' is a valid id in the grid, false otherwise.
-        public bool IsValid(int standID) { return mBoundingBoxByStandID.ContainsKey(standID); }
-
         //static MapGrid()
         //{
         //    mapGridLock = new MapGridRULock();
@@ -43,63 +35,70 @@ namespace iLand.World
 
         public MapGrid()
         {
-            this.Grid = new Grid<int>();
             this.mBoundingBoxByStandID = new Dictionary<int, MutableTuple<RectangleF, float>>();
-            this.mResourceUnitsByStandID = new Dictionary<int, List<MutableTuple<ResourceUnit, float>>>();
             this.mNeighborListByStandID = new Dictionary<int, List<int>>();
+            this.mResourceUnitsByStandID = new Dictionary<int, List<MutableTuple<ResourceUnit, float>>>();
+
+            this.Grid = new Grid<int>();
         }
 
         public MapGrid(Model model, GisGrid sourceGrid)
         {
-            LoadFromGrid(model, sourceGrid);
+            this.LoadFromGrid(model, sourceGrid);
         }
 
-        public MapGrid(Model model, string fileName, bool createIndex = true)
+        public MapGrid(Model model, string fileName)
         {
-            LoadFromFile(model, fileName, createIndex);
+            this.LoadFromFile(model, fileName);
         }
+
+        public double GetArea(int standID) { return this.IsValid(standID) ? mBoundingBoxByStandID[standID].Item2 : 0.0; } // return the area (m2) covered by the polygon
+        public RectangleF GetBoundingBox(int id) { return this.IsValid(id) ? mBoundingBoxByStandID[id].Item1 : new RectangleF(); } // returns the bounding box of a polygon
+        public bool IsValid() { return !this.Grid.IsEmpty(); }
+        /// returns true, if 'id' is a valid id in the grid, false otherwise.
+        public bool IsValid(int standID) { return mBoundingBoxByStandID.ContainsKey(standID); }
 
         /// return true, if the point 'lif_grid_coords' (x/y integer key within the LIF-Grid)
-        public bool HasValue(int id, Point lif_grid_coords)
+        public bool HasValue(int id, Point lightCoordinate)
         {
-            return this.GetStandIDFromLightCoordinate(lif_grid_coords) == id;
+            return this.GetStandIDFromLightCoordinate(lightCoordinate) == id;
         }
 
         /// return the stand-ID at the coordinates *from* the LIF-Grid (i.e., 2m grid).
-        public int GetStandIDFromLightCoordinate(Point lif_grid_coords)
+        public int GetStandIDFromLightCoordinate(Point lightCoordinate)
         {
-            return Grid[lif_grid_coords.X / Constant.LightPerHeightSize, lif_grid_coords.Y / Constant.LightPerHeightSize];
+            return this.Grid[lightCoordinate.X, lightCoordinate.Y, Constant.LightCellsPerHeightSize];
         }
 
         // load from an already present GisGrid
-        public bool LoadFromGrid(Model model, GisGrid source_grid, bool create_index = true)
+        public bool LoadFromGrid(Model model, GisGrid sourceGrid, bool createIndex = true)
         {
             if (model == null)
             {
-                throw new NotSupportedException("GisGrid::create10mGrid: no valid model to retrieve height grid.");
+                throw new ArgumentNullException(nameof(model), "No model to retrieve height grid.");
             }
 
-            Grid<HeightCell> h_grid = model.HeightGrid;
-            if (h_grid == null || h_grid.IsEmpty())
+            Grid<HeightCell> heightGrid = model.HeightGrid;
+            if (heightGrid == null || heightGrid.IsEmpty())
             {
-                throw new NotSupportedException("MapGrid.loadFromGrid(): no valid height grid to copy grid size.");
+                throw new ArgumentOutOfRangeException(nameof(model), "No valid height grid to copy grid size.");
             }
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
-            Grid.Clear();
-            Grid.Setup(h_grid.PhysicalExtent, h_grid.CellSize);
+            this.Grid.Clear();
+            this.Grid.Setup(heightGrid.PhysicalExtent, heightGrid.CellSize);
 
             RectangleF world = model.WorldExtentUnbuffered;
-            for (int i = 0; i < Grid.Count; i++)
+            for (int gridIndex = 0; gridIndex < this.Grid.Count; gridIndex++)
             {
-                PointF p = Grid.GetCellCenterPoint(Grid.IndexOf(i));
-                if (source_grid.GetValue(p) != source_grid.NoDataValue && world.Contains(p))
+                PointF centerPoint = this.Grid.GetCellCenterPosition(this.Grid.GetCellPosition(gridIndex));
+                if (sourceGrid.GetValue(centerPoint) != sourceGrid.NoDataValue && world.Contains(centerPoint))
                 {
-                    Grid[i] = (int)source_grid.GetValue(p);
+                    this.Grid[gridIndex] = (int)sourceGrid.GetValue(centerPoint);
                 }
                 else
                 {
-                    Grid[i] = -1;
+                    this.Grid[gridIndex] = -1;
                 }
             }
 
@@ -107,34 +106,29 @@ namespace iLand.World
             mBoundingBoxByStandID.Clear();
             mResourceUnitsByStandID.Clear();
 
-            if (create_index)
+            if (createIndex)
             {
-                CreateIndex(model);
+                this.CreateIndex(model);
             }
             return true;
         }
 
         public void CreateEmptyGrid(Model model)
         {
-            Grid<HeightCell> h_grid = model.HeightGrid;
-            if (h_grid == null || h_grid.IsEmpty())
+            Grid<HeightCell> heightGrid = model.HeightGrid;
+            if (heightGrid == null || heightGrid.IsEmpty())
             {
                 throw new NotSupportedException("GisGrid::createEmptyGrid: 10mGrid: no valid height grid to copy grid size.");
             }
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
-            Grid.Clear();
-            Grid.Setup(h_grid.PhysicalExtent, h_grid.CellSize);
-
-            for (int i = 0; i < Grid.Count; i++)
-            {
-                // PointF p = mGrid.cellCenterPoint(mGrid.indexOf(i)); // BUGBUG: why was this in C++ code?
-                Grid[i] = 0;
-            }
+            this.Grid.Clear();
+            this.Grid.Setup(heightGrid.PhysicalExtent, heightGrid.CellSize);
+            this.Grid.Fill(0);
 
             // reset spatial index
-            mBoundingBoxByStandID.Clear();
-            mResourceUnitsByStandID.Clear();
+            this.mBoundingBoxByStandID.Clear();
+            this.mResourceUnitsByStandID.Clear();
         }
 
         public void CreateIndex(Model model)
@@ -150,22 +144,25 @@ namespace iLand.World
                     continue;
                 }
                 MutableTuple<RectangleF, float> data = mBoundingBoxByStandID[gridIndex];
-                data.Item1 = RectangleF.Union(data.Item1, this.Grid.GetCellRect(this.Grid.IndexOf(gridIndex)));
-                data.Item2 += Constant.LightSize * Constant.LightPerHeightSize * Constant.LightSize * Constant.LightPerHeightSize; // 100m2
+                data.Item1 = RectangleF.Union(data.Item1, this.Grid.GetCellExtent(this.Grid.GetCellPosition(gridIndex)));
+                data.Item2 += Constant.LightSize * Constant.LightCellsPerHeightSize * Constant.LightSize * Constant.LightCellsPerHeightSize; // 100m2
 
-                ResourceUnit ru = model.GetResourceUnit(this.Grid.GetCellCenterPoint(this.Grid.IndexOf(gridIndex)));
+                ResourceUnit ru = model.GetResourceUnit(this.Grid.GetCellCenterPosition(this.Grid.GetCellPosition(gridIndex)));
                 if (ru == null)
                 {
                     continue;
                 }
                 // find all entries for the current grid id
-                List<MutableTuple<ResourceUnit, float>> pos = mResourceUnitsByStandID[gridIndex].ToList();
+                // TODO: why is lookup by grid index rather than stand ID?
+                List<MutableTuple<ResourceUnit, float>> resourceUnitsInStand = mResourceUnitsByStandID[gridIndex];
 
                 // look for the resource unit 'ru'
                 bool ruFound = false;
-                for (int index = 0; index < pos.Count; ++index)
+                Debug.Assert(Constant.HeightSizePerRU * Constant.HeightSizePerRU == 100); // 100 height cells per RU -> 1% RU area per height cell
+                Debug.Assert(this.Grid.CellSize == Constant.HeightSizePerRU);
+                for (int index = 0; index < resourceUnitsInStand.Count; ++index)
                 {
-                    MutableTuple<ResourceUnit, float> candidate = pos[index];
+                    MutableTuple<ResourceUnit, float> candidate = resourceUnitsInStand[index];
                     if (candidate.Item1 == ru)
                     {
                         candidate.Item2 += 0.01F; // 1 pixel = 1% of the area
@@ -175,37 +172,40 @@ namespace iLand.World
                 }
                 if (ruFound == false)
                 {
-                    mResourceUnitsByStandID.AddToList(gridIndex, new MutableTuple<ResourceUnit, float>(ru, 0.01F));
+                    mResourceUnitsByStandID.AddToList(gridIndex, new MutableTuple<ResourceUnit, float>(ru, 0.01F)); // TODO: why add non-intersecting RUs with 0.01 instead of 0.0?
                 }
             }
         }
 
         // load ESRI style text file
-        public bool LoadFromFile(Model model, string fileName, bool createIndex)
+        public bool LoadFromFile(Model model, string fileName)
         {
             GisGrid gisGrid = new GisGrid();
-            Name = "invalid";
             if (gisGrid.LoadFromFile(fileName))
             {
-                Name = fileName;
-                return LoadFromGrid(model, gisGrid, createIndex);
+                this.Name = fileName;
+                return LoadFromGrid(model, gisGrid, createIndex: false);
+            }
+            else
+            {
+                this.Name = "invalid";
             }
             return false;
         }
 
         /// returns a list with resource units and area factors per 'id'.
         /// the area is '1' if the resource unit is fully covered by the grid-value.
-        public IReadOnlyCollection<MutableTuple<ResourceUnit, float>> ResourceUnitAreas(int standID)
+        public IList<MutableTuple<ResourceUnit, float>> GetResourceUnitAreaFractions(int standID)
         {
-            return mResourceUnitsByStandID[standID]; 
+            return this.mResourceUnitsByStandID[standID]; 
         }
 
         /// returns the list of resource units with at least one pixel within the area designated by 'id'
         public List<ResourceUnit> GetResourceUnitsInStand(int standID)
         {
-            IReadOnlyCollection<MutableTuple<ResourceUnit, float>> list = mResourceUnitsByStandID[standID];
-            List<ResourceUnit> resourceUnits = new List<ResourceUnit>(list.Count);
-            foreach (MutableTuple<ResourceUnit, float> ru in list)
+            IReadOnlyCollection<MutableTuple<ResourceUnit, float>> resourceUnitsInStand = mResourceUnitsByStandID[standID];
+            List<ResourceUnit> resourceUnits = new List<ResourceUnit>(resourceUnitsInStand.Count);
+            foreach (MutableTuple<ResourceUnit, float> ru in resourceUnitsInStand)
             {
                 resourceUnits.Add(ru.Item1);
             }
@@ -241,12 +241,12 @@ namespace iLand.World
             return livingTrees;
         }
 
-        public int LoadTrees(Model model, int id, List<MutableTuple<Tree.Trees, double>> rList, string filter, int n_estimate)
+        public int LoadTrees(Model model, int id, List<MutableTuple<Tree.Trees, double>> rList, string filter, int estimatedTreeCount)
         {
             rList.Clear();
-            if (n_estimate > 0)
+            if (estimatedTreeCount > 0)
             {
-                rList.Capacity = n_estimate;
+                rList.Capacity = estimatedTreeCount;
             }
             Expression expression = null;
             TreeWrapper treeWrapper = new TreeWrapper();
@@ -276,7 +276,7 @@ namespace iLand.World
                                 // if value is >0 (i.e. not "false"), then draw a random number
                                 if ((loadTree == false) && (value > 0.0))
                                 {
-                                    loadTree = model.RandomGenerator.Random() < value;
+                                    loadTree = model.RandomGenerator.GetRandomDouble() < value;
                                 }
                                 if (loadTree == false)
                                 {
@@ -306,13 +306,13 @@ namespace iLand.World
         {
             List<int> result = new List<int>();
             RectangleF rect = mBoundingBoxByStandID[standID].Item1;
-            GridRunner<int> runner = new GridRunner<int>(Grid, rect);
-            for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
+            GridWindowEnumerator<int> runner = new GridWindowEnumerator<int>(this.Grid, rect);
+            while (runner.MoveNext())
             {
                 int cellStandID = runner.Current;
                 if (cellStandID == standID)
                 {
-                    result.Add(cellStandID - Grid[0]);
+                    result.Add(runner.CurrentIndex);
                 }
             }
             return result;
@@ -337,29 +337,29 @@ namespace iLand.World
         //}
 
         /// retrieve a list of all stands that are neighbors of the stand with ID "index".
-        public List<int> GetNeighborsOf(int index)
+        public List<int> GetNeighboringStandIDs(int standID)
         {
             if (mNeighborListByStandID.Count == 0)
             {
                 this.BuildNeighborList(); // fill the list
             }
-            return mNeighborListByStandID[index];
+            return this.mNeighborListByStandID[standID];
         }
 
         /// scan the map and add neighborhood-relations to the mNeighborList
         /// the 4-neighborhood is used to identify neighbors.
         private void BuildNeighborList()
         {
-            mNeighborListByStandID.Clear();
+            this.mNeighborListByStandID.Clear();
 
-            GridRunner<int> gridRuner = new GridRunner<int>(this.Grid, this.Grid.CellExtent()); // the full grid
+            GridWindowEnumerator<int> gridRuner = new GridWindowEnumerator<int>(this.Grid, this.Grid.GetCellExtent()); // the full grid
             int[] neighbors4 = new int[4];
-            for (gridRuner.MoveNext(); gridRuner.IsValid(); gridRuner.MoveNext())
+            while (gridRuner.MoveNext())
             {
-                gridRuner.Neighbors4(neighbors4); // get the four-neighborhood (0-pointers possible)
+                gridRuner.GetNeighbors4(neighbors4); // get the four-neighborhood (0-pointers possible)
                 foreach (int neighborID in neighbors4)
                 {
-                    // TODO: neighborID > 0?
+                    // TODO: why neighborID > 0?
                     if ((neighborID != 0) && (gridRuner.Current != neighborID))
                     {
                         // add both adjacencies

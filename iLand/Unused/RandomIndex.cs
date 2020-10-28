@@ -19,10 +19,10 @@ namespace iLand.Tools
         // currently selected
         public int Index { get; private set; } // retrieve (random) index
 
-        public RandomIndex(int aCount)
+        public RandomIndex(int count)
         {
             mField = null;
-            mCount = aCount;
+            mCount = count;
             if (mCount > 0)
             {
                 mField = new char[mCount];
@@ -43,7 +43,7 @@ namespace iLand.Tools
                 return false;
             }
             mRemaining--;
-            int random_index = model.RandomGenerator.Random(0, mRemaining + 1); //RandomRange(0,mRemaining+1);
+            int random_index = model.RandomGenerator.GetRandomInteger(0, mRemaining + 1); //RandomRange(0,mRemaining+1);
             int found = 0;
             for (int i = 0; i < mCount; i++)
             {

@@ -26,12 +26,12 @@ namespace iLand.Tree
                 StressYears = 0
             };
             LightPixelIndex = -1;
-            Height = 0.05F;
+            Height = Constant.Sapling.MinimumHeight;
         }
 
         public Point Coordinate(Grid<float> lightGrid)
         {
-            return lightGrid.IndexOf(LightPixelIndex);
+            return lightGrid.GetCellPosition(LightPixelIndex);
         }
 
         public bool IsValid()

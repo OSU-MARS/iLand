@@ -105,9 +105,9 @@ namespace iLand.Tools
             // load file
             CsvFile file = new CsvFile();
             file.LoadFile(FileName);
-            if (file.IsEmpty || (file.RowCount == 0))
+            if (file.RowCount < 2)
             {
-                throw new NotSupportedException("File '" + FileName + "' is empty.");
+                throw new NotSupportedException("File '" + this.FileName + "' is empty.");
             }
 
             SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
@@ -133,13 +133,13 @@ namespace iLand.Tools
                 for (int row = 0; row < file.RowCount; row++)
                 {
                     // fetch values from input file
-                    for (int col = 0; col < file.ColumnCount; col++)
+                    for (int columnIndex = 0; columnIndex < file.ColumnCount; ++columnIndex)
                     {
-                        double value = Double.Parse(file.GetValue(col, row));
+                        double value = Double.Parse(file.GetValue(columnIndex, row));
                         // store value in each of the expression variables
                         for (int j = 0; j < 8; j++)
                         {
-                            mVars[j * 10 + col] = value; // store in the locataion mVars[x] points to.
+                            mVars[j * 10 + columnIndex] = value; // store in the locataion mVars[x] points to.
                         }
                     }
 

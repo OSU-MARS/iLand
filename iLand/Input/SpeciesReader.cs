@@ -73,7 +73,7 @@ namespace iLand.Input
         private readonly int saplingGrowthParametersHdSapling;
         private readonly int saplingGrowthParametersStressThreshold;
         private readonly int saplingGrowthParametersMaxStressYears;
-        private readonly int saplingGrowthParametersReferenceRatio;
+        private readonly int saplingGrowthReferenceRatio;
         private readonly int saplingGrowthParametersReinekesR;
         private readonly int saplingGrowthParametersBrowsingProbability;
         private readonly int saplingGrowthParametersSproutGrowth;
@@ -148,7 +148,7 @@ namespace iLand.Input
             this.saplingGrowthParametersHdSapling = reader.GetOrdinal("sapHDSapling");
             this.saplingGrowthParametersStressThreshold = reader.GetOrdinal("sapStressThreshold");
             this.saplingGrowthParametersMaxStressYears = reader.GetOrdinal("sapMaxStressYears");
-            this.saplingGrowthParametersReferenceRatio = reader.GetOrdinal("sapReferenceRatio");
+            this.saplingGrowthReferenceRatio = reader.GetOrdinal("sapReferenceRatio");
             this.saplingGrowthParametersReinekesR = reader.GetOrdinal("sapReinekesR");
             this.saplingGrowthParametersBrowsingProbability = reader.GetOrdinal("browsingProbability");
             this.saplingGrowthParametersSproutGrowth = reader.GetOrdinal("sapSproutGrowth");
@@ -178,7 +178,7 @@ namespace iLand.Input
         public float TurnoverRoot() { return reader.GetFloat(this.turnoverRoot); }
         public string HdLow() { return reader.GetString(this.hdLow); }
         public string HdHigh() { return reader.GetString(this.hdHigh); }
-        public double WoodDensity() { return reader.GetDouble(this.woodDensity); }
+        public float WoodDensity() { return reader.GetFloat(this.woodDensity); }
         public float FormFactor() { return reader.GetFloat(this.formFactor); }
         public float SnagKsw() { return reader.GetFloat(this.snagKsw); }
         public float SnagHalflife() { return reader.GetFloat(this.snagHalflife); }
@@ -187,32 +187,32 @@ namespace iLand.Input
         public float MaximumAge() { return reader.GetFloat(this.maximumAge); }
         public float MaximumHeight() { return reader.GetFloat(this.maximumHeight); }
         public string Aging() { return reader.GetString(this.aging); }
-        public double ProbIntrinsic() { return reader.GetDouble(this.probIntrinsic); }
-        public double ProbStress() { return reader.GetDouble(this.probStress); }
-        public double RespVpdExponent() { return reader.GetDouble(this.respVpdExponent); }
-        public double RespTempMin() { return reader.GetDouble(this.respTempMin); }
-        public double RespTempMax() { return reader.GetDouble(this.respTempMax); }
+        public float ProbIntrinsic() { return reader.GetFloat(this.probIntrinsic); }
+        public float ProbStress() { return reader.GetFloat(this.probStress); }
+        public float RespVpdExponent() { return reader.GetFloat(this.respVpdExponent); }
+        public float RespTempMin() { return reader.GetFloat(this.respTempMin); }
+        public float RespTempMax() { return reader.GetFloat(this.respTempMax); }
         public float RespNitrogenClass() { return reader.GetFloat(this.respNitrogenClass); }
         public int PhenologyClass() { return reader.GetInt32(this.phenologyClass); }
-        public double MaxCanopyConductance() { return reader.GetDouble(this.maxCanopyConductance); }
-        public double PsiMin() { return -Math.Abs(reader.GetDouble(this.psiMin)); } // force a negative value
+        public float MaxCanopyConductance() { return reader.GetFloat(this.maxCanopyConductance); }
+        public float PsiMin() { return -Math.Abs(reader.GetFloat(this.psiMin)); } // force a negative value
         public float LightResponseClass() { return reader.GetFloat(this.lightResponseClass); }
         public int SeedYearInterval() { return reader.GetInt32(this.seedYearInterval); }
         public int MaturityYears() { return reader.GetInt32(this.maturityYears); }
-        public double SeedKernelAs1() { return reader.GetDouble(this.seedKernelAs1); }
-        public double SeedKernelAs2() { return reader.GetDouble(this.seedKernelAs2); }
-        public double SeedKernelKs0() { return reader.GetDouble(this.seedKernelKs0); }
-        public double FecundityM2() { return reader.GetDouble(this.fecundityM2); }
-        public double NonSeedYearFraction() { return reader.GetDouble(this.nonSeedYearFraction); }
+        public float SeedKernelAs1() { return reader.GetFloat(this.seedKernelAs1); }
+        public float SeedKernelAs2() { return reader.GetFloat(this.seedKernelAs2); }
+        public float SeedKernelKs0() { return reader.GetFloat(this.seedKernelKs0); }
+        public float FecundityM2() { return reader.GetFloat(this.fecundityM2); }
+        public float NonSeedYearFraction() { return reader.GetFloat(this.nonSeedYearFraction); }
 
         public string SerotinyFormula() 
         { 
             return reader.IsDBNull(this.serotinyFormula) ? null : reader.GetString(this.serotinyFormula); 
         }
 
-        public double FecunditySerotiny()
+        public float FecunditySerotiny()
         { 
-            return reader.IsDBNull(this.fecunditySerotiny) ? 0.0 : reader.GetDouble(this.fecunditySerotiny); 
+            return reader.IsDBNull(this.fecunditySerotiny) ? 0.0F : reader.GetFloat(this.fecunditySerotiny); 
         }
 
         public double EstablishmentParametersMinTemp() { return reader.GetDouble(this.establishmentParametersMinTemp); }
@@ -233,7 +233,7 @@ namespace iLand.Input
         public float SaplingGrowthParametersHdSapling() { return reader.GetFloat(this.saplingGrowthParametersHdSapling); }
         public float SaplingGrowthParametersStressThreshold() { return reader.GetFloat(this.saplingGrowthParametersStressThreshold); }
         public int SaplingGrowthParametersMaxStressYears() { return reader.GetInt32(this.saplingGrowthParametersMaxStressYears); }
-        public double SaplingGrowthParametersReferenceRatio() { return reader.GetDouble(this.saplingGrowthParametersReferenceRatio); }
+        public double SaplingGrowthParametersReferenceRatio() { return reader.GetDouble(this.saplingGrowthReferenceRatio); }
         public float SaplingGrowthParametersReinekesR() { return reader.GetFloat(this.saplingGrowthParametersReinekesR); }
         public double SaplingGrowthParametersBrowsingProbability() { return reader.GetDouble(this.saplingGrowthParametersBrowsingProbability); }
         

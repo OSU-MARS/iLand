@@ -29,7 +29,7 @@ namespace iLand.Tools
         public abstract ReadOnlyCollection<string> GetVariableNames();
 
         // must be overloaded!
-        public virtual double Value(Simulation.Model model, int variableIndex)
+        public virtual double GetValue(Simulation.Model model, int variableIndex)
         {
             return variableIndex switch
             {
@@ -44,10 +44,10 @@ namespace iLand.Tools
             return GetVariableNames().IndexOf(variableName);
         }
 
-        public double ValueByName(Simulation.Model model, string variableName)
+        public double GetValueByName(Simulation.Model model, string variableName)
         {
             int idx = GetVariableIndex(variableName);
-            return Value(model, idx);
+            return GetValue(model, idx);
         }
     }
 }

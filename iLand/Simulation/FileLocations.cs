@@ -82,10 +82,10 @@ namespace iLand.Simulation
         {
             if (!String.IsNullOrEmpty(fileName))
             {
-                if (System.IO.Path.IsPathRooted(fileName))
+                if (Path.IsPathRooted(fileName))
                 {
                     // canonicalize path
-                    return System.IO.Path.GetFullPath(fileName);
+                    return Path.GetFullPath(fileName);
                 }
             }
 
@@ -97,7 +97,7 @@ namespace iLand.Simulation
             {
                 return directoryPath;
             }
-            return System.IO.Path.Combine(directoryPath, fileName);
+            return Path.Combine(directoryPath, fileName);
         }
 
         public SqliteConnection GetDatabaseConnection(string databaseFilePath, bool openReadOnly)
@@ -168,7 +168,7 @@ namespace iLand.Simulation
             string homePath = paths.Home;
             if (String.IsNullOrEmpty(homePath))
             {
-                homePath = System.IO.Path.GetDirectoryName(projectFilePath);
+                homePath = Path.GetDirectoryName(projectFilePath);
                 if (String.IsNullOrEmpty(homePath))
                 {
                     throw new ArgumentOutOfRangeException(projectFilePath);

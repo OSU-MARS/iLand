@@ -2,26 +2,26 @@
 
 namespace iLand.Tools
 {
-    internal class RGenerators
+    internal class RandomGenerators
     {
         /* initialize state to random bits  */
-        private readonly uint[] state;
+        private readonly uint[] wellrngState;
         /* init should also reset this to 0 */
         private int index;
         /* return 32 bit random number      */
 
-        private int g_seed;
+        private int fastrandState;
         private uint x, y, z;
 
-        public RGenerators()
+        public RandomGenerators()
         {
-            state = new uint[16];
+            wellrngState = new uint[16];
         }
 
         private int Fastrand()
         {
-            g_seed = (214013 * g_seed + 2531011); // BUGBUG: always same value
-            return g_seed;
+            fastrandState = 214013 * fastrandState + 2531011;
+            return fastrandState;
         }
 
         public int RandomFunction(int type)
@@ -46,17 +46,17 @@ namespace iLand.Tools
         public uint WellRng512()
         {
             uint a, b, c, d;
-            a = state[index];
-            c = state[(index + 13) & 15];
+            a = wellrngState[index];
+            c = wellrngState[(index + 13) & 15];
             b = a ^ c ^ (a << 16) ^ (c << 15);
-            c = state[(index + 9) & 15];
+            c = wellrngState[(index + 9) & 15];
             c ^= (c >> 11);
-            a = state[index] = b ^ c;
+            a = wellrngState[index] = b ^ c;
             d = a ^ ((a << 5) & (uint)0xDA442D24UL);
             index = (index + 15) & 15;
-            a = state[index];
-            state[index] = a ^ b ^ d ^ (a << 2) ^ (b << 18) ^ (c << 28);
-            return state[index];
+            a = wellrngState[index];
+            wellrngState[index] = a ^ b ^ d ^ (a << 2) ^ (b << 18) ^ (c << 28);
+            return wellrngState[index];
         }
 
         // The Marsaglia's xorshf generator:
@@ -79,27 +79,27 @@ namespace iLand.Tools
             return z;
         }
 
-        public void Seed()
+        public void SetSeed()
         {
             Random random = new Random();
-            for (int i = 0; i < 16; i++)
+            for (int index = 0; index < this.wellrngState.Length; ++index)
             {
-                state[i] = (uint)random.Next();
+                this.wellrngState[index] = (uint)random.Next();
             }
-            index = 0;
+            this.index = 0;
             // inits for the fast rand....
-            g_seed = random.Next();
+            this.fastrandState = random.Next();
         }
 
-        public void Seed(int oneSeed)
+        public void SetSeed(int seed)
         {
-            Random random = new Random(oneSeed);
-            for (int i = 0; i < 16; i++)
+            Random random = new Random(seed);
+            for (int index = 0; index < this.wellrngState.Length; ++index)
             {
-                state[i] = (uint)random.Next();
+                this.wellrngState[index] = (uint)random.Next();
             }
-            index = 0;
-            g_seed = oneSeed;
+            this.index = 0;
+            this.fastrandState = seed;
         }
     }
 }

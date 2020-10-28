@@ -16,10 +16,10 @@ namespace iLand.Tree
     public class Establishment
     {
         private Climate mClimate; // link to the current climate
-        private ResourceUnitSpecies mRUS; // link to the resource unit species (links to production data and species respones)
+        private ResourceUnitSpecies mRUspecies; // link to the resource unit species (links to production data and species respones)
         // TACA switches
-        private double mSumLIFvalue;
-        private int mLIFcount;
+        private double mSumLifValue;
+        private int mLifCount;
 
         public double MeanSeedDensity { get; private set; } // average seed density on the RU
         public double AbioticEnvironment { get; private set; } // integrated value of abiotic environment (i.e.: TACA-climate + total iLand environment)
@@ -41,47 +41,48 @@ namespace iLand.Tree
             Setup(climate, rus);
         }
 
-        public double MeanLifValue() { return mLIFcount > 0 ? mSumLIFvalue / (double)mLIFcount : 0.0; } // average LIF value of LIF pixels where establishment is tested
+        public double GetMeanLifValue() { return mLifCount > 0 ? mSumLifValue / (double)mLifCount : 0.0; } // average LIF value of LIF pixels where establishment is tested
 
-        public void Setup(Climate climate, ResourceUnitSpecies rus)
+        public void Setup(Climate climate, ResourceUnitSpecies ruSpecies)
         {
-            mClimate = climate;
-            mRUS = rus;
-            AbioticEnvironment = 0.0;
-            MeanSeedDensity = 0.0;
-            NumberEstablished = 0;
-            if (climate == null)
+            if (ruSpecies == null || ruSpecies.Species == null || ruSpecies.RU == null)
             {
-                throw new NotSupportedException("setup: no valid climate for a resource unit.");
+                throw new ArgumentException("Species or resource unit is null");
             }
-            if (rus == null || rus.Species == null || rus.RU == null)
-            {
-                throw new NotSupportedException("setup: important variable is null (are the species properly set up?).");
-            }
+
+            this.mClimate = climate ?? throw new ArgumentNullException("No valid climate for a resource unit.");
+            this.mRUspecies = ruSpecies;
+            this.AbioticEnvironment = 0.0;
+            this.MeanSeedDensity = 0.0;
+            this.NumberEstablished = 0;
         }
 
         public void Clear()
         {
-            AbioticEnvironment = 0.0;
-            NumberEstablished = 0;
-            MeanSeedDensity = 0.0;
-            TacaMinTemp = TacaChill = TacaGdd = TacaFrostFree = false;
-            TacaFrostDaysAfterBudburst = 0;
-            mSumLIFvalue = 0.0;
-            mLIFcount = 0;
-            WaterLimitation = 0.0;
+            this.mLifCount = 0;
+            this.mSumLifValue = 0.0;
+
+            this.AbioticEnvironment = 0.0;
+            this.NumberEstablished = 0;
+            this.MeanSeedDensity = 0.0;
+            this.TacaMinTemp = false;
+            this.TacaChill = false;
+            this.TacaGdd = false;
+            this.TacaFrostFree = false;
+            this.TacaFrostDaysAfterBudburst = 0;
+            this.WaterLimitation = 0.0;
         }
 
-        private double CalculateWaterLimitation(int veg_period_start, int veg_period_end)
+        private double CalculateWaterLimitation(int leafOnStart, int leafOnEnd)
         {
             // return 1 if effect is disabled
-            if (mRUS.Species.EstablishmentParameters.PsiMin >= 0.0)
+            if (mRUspecies.Species.EstablishmentParameters.PsiMin >= 0.0)
             {
                 return 1.0;
             }
 
-            double psi_min = mRUS.Species.EstablishmentParameters.PsiMin;
-            WaterCycle water = mRUS.RU.WaterCycle;
+            double psi_min = mRUspecies.Species.EstablishmentParameters.PsiMin;
+            WaterCycle water = mRUspecies.RU.WaterCycle;
 
             // two week (14 days) running average of actual psi-values on the resource unit
             const int valuesToAverage = 14;
@@ -89,15 +90,15 @@ namespace iLand.Tree
             double current_sum = 0.0;
             
             double min_average = 9999999.0;
-            int daysInYear = mRUS.RU.Climate.DaysOfYear();
+            int daysInYear = mRUspecies.RU.Climate.GetDaysInYear();
             for (int dayOfYear = 0, averageIndex = 0; dayOfYear < daysInYear; ++dayOfYear)
             {
                 // running average: remove oldest item, add new item in a ringbuffer
                 current_sum -= valuesInAverage[averageIndex];
-                valuesInAverage[averageIndex] = water.Psi[dayOfYear];
+                valuesInAverage[averageIndex] = water.SoilWaterPsi[dayOfYear];
                 current_sum += valuesInAverage[averageIndex];
 
-                if (dayOfYear >= veg_period_start && dayOfYear <= veg_period_end)
+                if (dayOfYear >= leafOnStart && dayOfYear <= leafOnEnd)
                 {
                     double current_avg = dayOfYear > 0 ? current_sum / Math.Min(dayOfYear, valuesToAverage) : current_sum;
                     min_average = Math.Min(min_average, current_avg);
@@ -114,7 +115,7 @@ namespace iLand.Tree
 
             // calculate the response of the species to this value of psi (see also Species::soilwaterResponse())
             double psi_mpa = min_average / 1000.0; // convert to MPa
-            double result = Global.Limit((psi_mpa - psi_min) / (-0.015 - psi_min), 0.0, 1.0);
+            double result = Maths.Limit((psi_mpa - psi_min) / (-0.015 - psi_min), 0.0, 1.0);
 
             return result;
         }
@@ -128,10 +129,10 @@ namespace iLand.Tree
         {
             //DebugTimer t("est_abiotic"); t.setSilent();
             // make sure that required calculations (e.g. watercycle are already performed)
-            mRUS.Calculate(model, fromEstablishment: true); // calculate the 3pg module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
+            mRUspecies.CalculateBiomassGrowthForYear(model, fromEstablishment: true); // calculate the 3pg module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
 
-            EstablishmentParameters p = mRUS.Species.EstablishmentParameters;
-            Phenology pheno = mClimate.Phenology(mRUS.Species.PhenologyClass);
+            EstablishmentParameters p = mRUspecies.Species.EstablishmentParameters;
+            Phenology pheno = mClimate.GetPhenology(mRUspecies.Species.PhenologyClass);
 
             TacaMinTemp = true; // minimum temperature threshold
             TacaChill = false;  // (total) chilling requirement

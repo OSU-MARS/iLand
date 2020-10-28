@@ -1,4 +1,5 @@
 ﻿using iLand.Simulation;
+using iLand.Tools;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -106,7 +107,7 @@ namespace iLand.World
                 // simple copy of the data
                 for (int i = 0; i < Count; i++)
                 {
-                    p = GetCellCenterPoint(IndexOf(i));
+                    p = GetCellCenterPosition(GetCellPosition(i));
                     if (gis_grid.GetValue(p) != gis_grid.NoDataValue && world.Contains(p))
                     {
                         this[i] = (float)gis_grid.GetValue(p);
@@ -122,16 +123,16 @@ namespace iLand.World
                 // bilinear approximation approach
                 Debug.WriteLine("DEM: built-in bilinear interpolation from cell size " + gis_grid.CellSize);
                 int sizeFactor = (int)(gis_grid.CellSize / this.CellSize); // size-factor
-                Initialize(-1.0F);
+                Fill(-1.0F);
                 int ixmin = 10000000, iymin = 1000000, ixmax = -1, iymax = -1;
                 for (int y = 0; y < gis_grid.Rows; ++y)
                 {
-                    for (int x = 0; x < gis_grid.Cols; ++x)
+                    for (int x = 0; x < gis_grid.Columns; ++x)
                     {
                         Vector3D p3d = gis_grid.GetCoordinate(x, y);
                         if (world.Contains((float)p3d.X, (float)p3d.Y))
                         {
-                            Point pt = IndexAt(new PointF((float)p3d.X, (float)p3d.Y));
+                            Point pt = GetCellIndex(new PointF((float)p3d.X, (float)p3d.Y));
                             this[(float)p3d.X, (float)p3d.Y] = (float)gis_grid.GetValue(x, y);
                             ixmin = Math.Min(ixmin, pt.X); ixmax = Math.Max(ixmax, pt.X);
                             iymin = Math.Min(iymin, pt.Y); iymax = Math.Max(iymax, pt.Y);
@@ -151,7 +152,7 @@ namespace iLand.World
                         {
                             for (int mx = 0; mx < sizeFactor; ++mx)
                             {
-                                this[x + mx, y + my] = Bilinear(mx / (float)sizeFactor, my / (float)sizeFactor, c00, c10, c01, c11);
+                                this[x + mx, y + my] = this.InterpolateBilinear(mx / (float)sizeFactor, my / (float)sizeFactor, c00, c10, c01, c11);
                             }
                         }
                     }
@@ -171,7 +172,7 @@ namespace iLand.World
         /// @param rslope_aspect RESULTING slope direction in degrees (0: North, 90: east, 180: south, 270: west)
         public float GetOrientation(PointF point, out float rslope_angle, out float rslope_aspect)
         {
-            Point pt = IndexAt(point);
+            Point pt = GetCellIndex(point);
             if (pt.X > 0 && pt.X < CellsX + 1 && pt.Y > 0 && pt.Y < CellsY - 1)
             {
                 int p = this.IndexOf(pt);
@@ -232,7 +233,7 @@ namespace iLand.World
             float a_x, a_y, a_z;
             for (int p = 0; p < this.Count; ++p)
             {
-                PointF pt = GetCellCenterPoint(p);
+                PointF pt = GetCellCenterPosition(p);
                 float height = GetOrientation(pt, out float slope, out float aspect);
                 slopeGrid[p] = slope;
                 aspectGrid[p] = aspect;
@@ -256,7 +257,7 @@ namespace iLand.World
         }
 
         // from here: http://www.scratchapixel.com/lessons/3d-advanced-lessons/interpolation/bilinear-interpolation/
-        private float Bilinear(float tx, float ty, float c00, float c10, float c01, float c11)
+        private float InterpolateBilinear(float tx, float ty, float c00, float c10, float c01, float c11)
         {
             float a = c00 * (1.0F - tx) + c10 * tx;
             float b = c01 * (1.0F - tx) + c11 * tx;

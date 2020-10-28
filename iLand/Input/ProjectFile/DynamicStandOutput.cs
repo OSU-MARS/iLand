@@ -1,13 +1,9 @@
-﻿using iLand.Output;
-using System.Xml.Serialization;
+﻿using System.Xml.Serialization;
 
 namespace iLand.Input.ProjectFile
 {
-    public class DynamicStandOutput : ConditionOutput
+    public class DynamicStandOutput : ResourceUnitFilterOutput
     {
-        [XmlElement(ElementName = "rufilter")]
-        public string RUFilter { get; set; }
-
         [XmlElement(ElementName = "treefilter")]
         public string TreeFilter { get; set; }
 
@@ -25,7 +21,7 @@ namespace iLand.Input.ProjectFile
             this.ByResourceUnit = true;
             this.BySpecies = true;
             this.Columns = null;
-            this.RUFilter = null;
+            this.ResourceUnitFilter = null;
             this.TreeFilter = null;
         }
     }

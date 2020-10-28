@@ -59,13 +59,13 @@ namespace iLand.Input
         public Nullable<float> CurrentSoilYoungRefractoryDecompositionRate { get; private set; }
         public Nullable<float> CurrentSoilYoungRefractoryN { get; private set; }
 
-        public SpeciesSet CurrentSpeciesSet { get; private set; } // get species set on current pos
+        public TreeSpeciesSet CurrentSpeciesSet { get; private set; } // get species set on current pos
         public GisGrid GisGrid { get; private set; }
 
         public float SoilLeaching { get; private set; }
         public float SoilQb { get; private set; }
 
-        public Dictionary<string, SpeciesSet> SpeciesSetsByTableName { get; private set; } // created species sets
+        public Dictionary<string, TreeSpeciesSet> SpeciesSetsByTableName { get; private set; } // created species sets
         public bool UseDynamicAvailableNitrogen { get; private set; } // if true, iLand utilizes the soil-model N for species responses (and the dynamically calculated N available?)
 
         public EnvironmentReader()
@@ -78,7 +78,7 @@ namespace iLand.Input
             this.CurrentResourceUnitID = 0;
             this.CurrentSpeciesSet = null;
             this.GisGrid = new GisGrid();
-            this.SpeciesSetsByTableName = new Dictionary<string, SpeciesSet>();
+            this.SpeciesSetsByTableName = new Dictionary<string, TreeSpeciesSet>();
         }
 
         public bool IsSetup() { return mInfile != null; }
@@ -87,7 +87,7 @@ namespace iLand.Input
         {
             mInfile = new CsvFile();
             mInfile.LoadFile(environmentFilePath);
-            if (mInfile.IsEmpty)
+            if (mInfile.RowCount < 2)
             {
                 throw new NotSupportedException("Input file '" + environmentFilePath + "' is empty.");
             }
@@ -135,17 +135,17 @@ namespace iLand.Input
             this.UseDynamicAvailableNitrogen = model.Project.Model.Settings.Soil.UseDynamicAvailableNitrogen;
 
             // species sets
-            int keyIndex;
-            if ((keyIndex = columnNames.IndexOf(Constant.Setting.SpeciesTable)) > -1)
+            int speciesTableNameIndex;
+            if ((speciesTableNameIndex = columnNames.IndexOf(Constant.Setting.SpeciesTable)) > -1)
             {
                 //using DebugTimer t = model.DebugTimers.Create("Environment.LoadFromString(species)");
-                List<string> uniqueSpeciesSetNames = mInfile.GetColumnValues(keyIndex).Distinct().ToList();
+                List<string> uniqueSpeciesSetNames = mInfile.GetColumnValues(speciesTableNameIndex).Distinct().ToList();
                 //Debug.WriteLine("Environment: Creating " + uniqueSpeciesSetNames + " species sets.");
                 foreach (string name in uniqueSpeciesSetNames)
                 {
                     //model.GlobalSettings.Settings.SetParameter(Constant.Setting.SpeciesTable, name); // set xml value
                     // create species sets
-                    SpeciesSet speciesSet = new SpeciesSet(name);
+                    TreeSpeciesSet speciesSet = new TreeSpeciesSet(name);
                     speciesSet.Setup(model);
 
                     if (this.CurrentSpeciesSet == null)
@@ -159,14 +159,14 @@ namespace iLand.Input
             else
             {
                 // no species sets specified
-                SpeciesSet defaultSpeciesSet = new SpeciesSet("species");
+                TreeSpeciesSet defaultSpeciesSet = new TreeSpeciesSet("species");
                 defaultSpeciesSet.Setup(model);
                 CurrentSpeciesSet = defaultSpeciesSet;
                 SpeciesSetsByTableName.Add(defaultSpeciesSet.SqlTableName, defaultSpeciesSet);
             }
 
             // climates
-            if ((keyIndex = columnNames.IndexOf(Constant.Setting.Climate.Name)) == -1)
+            if ((speciesTableNameIndex = columnNames.IndexOf(Constant.Setting.Climate.Name)) == -1)
             {
                 // no named climates defined: create a single default climate
                 Climate defaultClimate = new Climate("default");
@@ -179,7 +179,7 @@ namespace iLand.Input
                 // otherwise, instantiate named climates as needed
                 if (model.Files.LogDebug())
                 {
-                    List<string> uniqueClimateNames = mInfile.GetColumnValues(keyIndex).Distinct().ToList();
+                    List<string> uniqueClimateNames = mInfile.GetColumnValues(speciesTableNameIndex).Distinct().ToList();
                     Debug.WriteLine("Environment: " + uniqueClimateNames.Count + " climates in environment file.");
                 }
             }
@@ -238,7 +238,7 @@ namespace iLand.Input
             {
                 if (columnNames[columnIndex] == "id")
                 {
-                    CurrentResourceUnitID = Int32.Parse(mInfile.GetValue(columnIndex, row));
+                    this.CurrentResourceUnitID = Int32.Parse(mInfile.GetValue(columnIndex, row));
                     continue;
                 }
                 if (columnNames[columnIndex] == "x" || columnNames[columnIndex] == "y") // ignore "x" and "y" keys

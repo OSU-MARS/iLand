@@ -10,39 +10,39 @@ namespace iLand.Tree
         and stand for a field of influence (w.r.t. light) of a individual tree of a given size and species.
         see http://iland.boku.ac.at/competition+for+light
     */
-    public class Stamp
+    public class LightStamp
     {
         public int CenterCellPosition { get; set; } // delta between edge of the stamp and the logical center point (of the tree). e.g. a 5x5 stamp in an 8x8-grid has an offset from 2.
         public float CrownArea { get; private set; }
         public float CrownRadius { get; private set; }
         public float[] Data { get; private set; }
         public int DataSize { get; private set; } // internal size of the stamp; e.g. 4 -> 4x4 stamp with 16 pixels.
-        public Stamp Reader { get; private set; } // pointer to the appropriate reader stamp (if available)
+        public LightStamp Reader { get; private set; } // pointer to the appropriate reader stamp (if available)
 
-        public Stamp(int dataSize)
+        public LightStamp(int dataSize)
         {
-            StampSize size = (StampSize)dataSize;
+            LightStampSize size = (LightStampSize)dataSize;
             switch (size)
             {
-                case StampSize.Grid4x4:
-                case StampSize.Grid8x8:
-                case StampSize.Grid12x12:
-                case StampSize.Grid16x16:
-                case StampSize.Grid24x24:
-                case StampSize.Grid32x32:
-                case StampSize.Grid48x48:
-                case StampSize.Grid64x64:
+                case LightStampSize.Grid4x4:
+                case LightStampSize.Grid8x8:
+                case LightStampSize.Grid12x12:
+                case LightStampSize.Grid16x16:
+                case LightStampSize.Grid24x24:
+                case LightStampSize.Grid32x32:
+                case LightStampSize.Grid48x48:
+                case LightStampSize.Grid64x64:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(dataSize));
             }
 
-            this.Data = new float[dataSize * dataSize];
-            this.DataSize = dataSize;
             this.CenterCellPosition = 0;
-            this.Reader = null;
             this.CrownArea = 0.0F;
             this.CrownRadius = 0.0F;
+            this.Data = new float[dataSize * dataSize];
+            this.DataSize = dataSize;
+            this.Reader = null;
         }
 
         /// get pointer to the element after the last element (iterator style)
@@ -53,8 +53,8 @@ namespace iLand.Tree
         /// retrieve the value of the stamp at given indices x and y
         public float this[int x, int y]
         {
-            get { return Data[IndexOf(x, y)]; }
-            set { Data[IndexOf(x, y)] = value; }
+            get { return this.Data[IndexOf(x, y)]; }
+            set { this.Data[IndexOf(x, y)] = value; }
         }
 
         public float this[int x, int y, int offset]
@@ -62,28 +62,27 @@ namespace iLand.Tree
             get { return this[x + offset, y + offset]; }
         }
 
-        public int Count() { return DataSize * DataSize; } // count of pixels (rectangle)
+        public int Count() { return this.DataSize * this.DataSize; } // count of light cells in stamp
+        public int Size() { return this.CenterCellPosition * 2 + 1; } // size of the stamp in light cells
 
         /// get index (e.g. for data()[index]) for indices x and y
         public int IndexOf(int x, int y) { Debug.Assert((y * DataSize + x) < Data.Length); return y * DataSize + x; }
 
-        public void SetReader(Stamp reader)
+        public void SetReader(LightStamp reader)
         {
-            Reader = reader;
-            SetCrownRadius(reader.CrownRadius); /*calculates also the Area*/
+            this.Reader = reader;
+            this.SetCrownRadiusAndArea(reader.CrownRadius);
         }
 
-        public void SetCrownRadius(float r)
+        public void SetCrownRadiusAndArea(float radius)
         {
-            CrownRadius = r;
-            CrownArea = r * r * MathF.PI;
+            this.CrownRadius = radius;
+            this.CrownArea = MathF.PI * radius * radius;
         }
 
-        public int Size() { return CenterCellPosition * 2 + 1; } // logical size of the stamp
-
-        public float GetDistanceToCenter(int ix, int iy)
+        public float GetDistanceToCenter(int indexX, int indexY)
         {
-            return SpeciesStamps.DistanceGrid[Math.Abs(ix - CenterCellPosition), Math.Abs(iy - CenterCellPosition)];
+            return TreeSpeciesStamps.DistanceGrid[Math.Abs(indexX - CenterCellPosition), Math.Abs(indexY - CenterCellPosition)];
         }
 
         //float distanceToCenter(int ix, int iy)
@@ -95,11 +94,10 @@ namespace iLand.Tree
         public string Dump()
         {
             StringBuilder result = new StringBuilder();
-            int x, y;
-            for (y = 0; y < DataSize; ++y)
+            for (int y = 0; y < this.DataSize; ++y)
             {
                 string line = "";
-                for (x = 0; x < DataSize; ++x)
+                for (int x = 0; x < this.DataSize; ++x)
                 {
                     line += this[x, y].ToString() + " ";
                 }
@@ -149,9 +147,9 @@ namespace iLand.Tree
         {
             // see StampContainer doc for file stamp binary format
             output.Write(this.CenterCellPosition);
-            for (int i = 0; i < this.Count(); i++)
+            for (int index = 0; index < this.Count(); index++)
             {
-                output.Write(this.Data[i]);
+                output.Write(this.Data[index]);
             }
         }
 

@@ -6,14 +6,10 @@
         public string Name { get; set; }
         public GridViewType ViewType { get; set; }
 
-        public LayerElement() 
-        {
-        }
-
-        public LayerElement(string name, string desc, GridViewType type)
+        public LayerElement(string name, string description, GridViewType type)
         {
             this.Name = name;
-            this.Description = desc;
+            this.Description = description;
             this.ViewType = type;
         }
     }

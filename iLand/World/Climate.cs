@@ -31,17 +31,17 @@ namespace iLand.World
 
         public int CurrentJanuary1 { get; private set; } // STL-like (pointer)-iterator  to the first day of the current year
         public int NextJanuary1 { get; private set; } // STL-like pointer iterator to the day *after* last day of the current year
-        public double CarbonDioxidePpm { get; private set; }
+        public float CarbonDioxidePpm { get; private set; }
         public bool IsSetup { get; private set; }
         /// the mean annual temperature of the current year (degree C)
-        public double MeanAnnualTemperature { get; private set; }
+        public float MeanAnnualTemperature { get; private set; }
         public string Name { get; private set; } // table name of this climate
-        public double[] PrecipitationByMonth { get; private set; }
+        public float[] PrecipitationByMonth { get; private set; }
         // access to other subsystems
         public Sun Sun { get; private set; } // solar radiation class
         // get a array with mean temperatures per month (deg C)
-        public double[] TemperatureByMonth { get; private set; }
-        public double TotalAnnualRadiation { get; private set; } // return radiation sum (MJ) of the whole year
+        public float[] TemperatureByMonth { get; private set; }
+        public float TotalAnnualRadiation { get; private set; } // return radiation sum (MJ) of the whole year
 
         public Climate(string name)
         {
@@ -70,9 +70,9 @@ namespace iLand.World
             // this.TotalAnnualRadiation
 
             this.Name = name;
-            this.PrecipitationByMonth = new double[12];
+            this.PrecipitationByMonth = new float[Constant.MonthsInYear];
             this.Sun = new Sun();
-            this.TemperatureByMonth = new double[12];
+            this.TemperatureByMonth = new float[Constant.MonthsInYear];
         }
 
         public ClimateDay this[int index]
@@ -80,59 +80,39 @@ namespace iLand.World
             get { return this.mDays[index]; }
         }
 
-        /// annual precipitation sum (mm)
-        public double AnnualPrecipitation() { double r = 0.0; for (int i = 0; i < 12; ++i) r += PrecipitationByMonth[i]; return r; }
-        public double DayLengthInHours(int day) { return Sun.GetDaylength(day); } // length of the day in hours
+        public float GetDayLengthInHours(int day) { return this.Sun.GetDayLengthInHours(day); } // length of the day in hours
         // access to climate data
-        public int DayOfYear(int dayofyear) { return CurrentJanuary1 + dayofyear; } // get pointer to climate structure by day of year (0-based-index)
-        public int WhichDayOfYear(int dayIndex) { return dayIndex - CurrentJanuary1; } // get the 0-based index of the climate given by 'climate' within the current year
+        public int GetIndexOfDayInCurrentYear(int dayOfYear) { return CurrentJanuary1 + dayOfYear; } // get pointer to climate structure by day of year (0-based-index)
+        public int GetDayOfCurrentYear(int dayIndex) { return dayIndex - CurrentJanuary1; } // get the 0-based index of the climate given by 'climate' within the current year
 
-        // more calculations done after loading of climate data
-        private void ClimateCalculations(Simulation.Model model, int lastIndex)
-        {
-            ClimateDay lastDayOfYear = mDays[lastIndex];
-            double tau = model.ModelSettings.TemperatureTau;
-            // handle first day: use tissue temperature of the last day of the last year (if available)
-            if (lastDayOfYear.IsValid())
+        /// annual precipitation sum (mm)
+        public float GetTotalPrecipitationInCurrentYear() 
+        { 
+            float totalPrecip = 0.0F;
+            for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
-                mDays[0].TempDelayed = lastDayOfYear.TempDelayed + 1.0 / tau * (mDays[0].MeanDaytimeTemperature - lastDayOfYear.TempDelayed);
+                totalPrecip += this.PrecipitationByMonth[month];
             }
-            else
-            {
-                mDays[0].TempDelayed = mDays[0].MeanDaytimeTemperature;
-            }
-
-            for (int c = 1; c < mDays.Count; ++c)
-            {
-                // first order dynamic delayed model (Maekela 2008)
-                mDays[c].TempDelayed = mDays[c - 1].TempDelayed + 1.0 / tau * (mDays[c].MeanDaytimeTemperature - mDays[c - 1].TempDelayed);
-            }
+            return totalPrecip; 
         }
 
         // gets mStore index of climate structure of given day (0-based indices, i.e. month=11=december!)
         public int IndexOf(int month, int day)
         {
-            if (mMonthDayIndices.Count == 0)
-            {
-                return -1;
-            }
-            return mMonthDayIndices[mCurrentDataYear * 12 + month] + day;
+            return mMonthDayIndices[mCurrentDataYear * Constant.MonthsInYear + month] + day;
         }
 
         // returns number of days of given month (0..11)
-        public double GetDaysInMonth(int month)
+        public int GetDaysInMonth(int month)
         {
-            return (double)mMonthDayIndices[mCurrentDataYear * 12 + month + 1] - mMonthDayIndices[mCurrentDataYear * 12 + month];
+            return mMonthDayIndices[mCurrentDataYear * Constant.MonthsInYear + month + 1] - mMonthDayIndices[mCurrentDataYear * Constant.MonthsInYear + month];
         }
 
         // returns number of days of current year.
-        public int DaysOfYear()
+        public int GetDaysInYear()
         {
-            if (mMonthDayIndices.Count == 0)
-            {
-                return -1;
-            }
-            return NextJanuary1 - CurrentJanuary1;
+            Debug.Assert(this.NextJanuary1 > this.CurrentJanuary1);
+            return this.NextJanuary1 - this.CurrentJanuary1;
         }
 
         // load mLoadYears years from database
@@ -170,10 +150,10 @@ namespace iLand.World
                 // check for year-specific temperature or precipitation modifier
                 float precipitationMultiplier = mDefaultPrecipitationMultiplier;
                 float temperatureAddition = mDefaultTemperatureAddition;
-                if (model.TimeEvents != null)
+                if (model.ScheduledEvents != null)
                 {
-                    string temperatureAdditionAsString = model.TimeEvents.GetEvent(model.ModelSettings.CurrentYear + yearLoadIndex, "model.climate.temperatureShift");
-                    string precipitationMultiplierAsString = model.TimeEvents.GetEvent(model.ModelSettings.CurrentYear + yearLoadIndex, "model.climate.precipitationShift");
+                    string temperatureAdditionAsString = model.ScheduledEvents.GetEvent(model.ModelSettings.CurrentYear + yearLoadIndex, "model.climate.temperatureShift");
+                    string precipitationMultiplierAsString = model.ScheduledEvents.GetEvent(model.ModelSettings.CurrentYear + yearLoadIndex, "model.climate.precipitationShift");
                     if (temperatureAdditionAsString != null)
                     {
                         temperatureAddition = Single.Parse(temperatureAdditionAsString);
@@ -185,10 +165,10 @@ namespace iLand.World
 
                     if (temperatureAddition != 0.0 || precipitationMultiplier != 1.0)
                     {
-                        Debug.WriteLine("Climate modification: add temperature:" + temperatureAddition + ". Multiply precipitation: " + precipitationMultiplier);
+                        Debug.WriteLine("Climate modification: temperature change " + temperatureAddition + "C. Precipitation multiplier: " + precipitationMultiplier);
                         if (mDoRandomSampling)
                         {
-                            Trace.TraceWarning("WARNING - Climate: using a randomSamplingList and temperatureShift/precipitationShift at the same time. The same offset is applied for *every instance* of a year!!");
+                            Trace.TraceWarning("WARNING - Climate: using a randomSamplingList and a temperature shift or precipitation multiplier at the same time. The same offset is applied for *every instance* of a year!!");
                             //throw new NotSupportedException("Climate: cannot use a randomSamplingList and temperatureShift/precipitationShift at the same time. Sorry.");
                         }
                     }
@@ -215,21 +195,21 @@ namespace iLand.World
                     day.Year = climateReader.GetInt32(0);
                     day.Month = climateReader.GetInt32(1);
                     day.DayOfMonth = climateReader.GetInt32(2);
-                    day.MinTemperature = climateReader.GetDouble(3) + temperatureAddition;
-                    day.MaxTemperature = climateReader.GetDouble(4) + temperatureAddition;
+                    day.MinTemperature = climateReader.GetFloat(3) + temperatureAddition;
+                    day.MaxTemperature = climateReader.GetFloat(4) + temperatureAddition;
                     //References for calculation the temperature of the day:
                     //Floyd, R. B., Braddock, R. D. 1984. A simple method for fitting average diurnal temperature curves.  Agricultural and Forest Meteorology 32: 107-119.
                     //Landsberg, J. J. 1986. Physiological ecology of forest production. Academic Press Inc., 197 S.
-                    day.MeanDaytimeTemperature = 0.212 * (day.MaxTemperature - day.MeanTemperature()) + day.MeanTemperature();
-                    day.Preciptitation = climateReader.GetDouble(5) * precipitationMultiplier;
-                    day.Radiation = climateReader.GetDouble(6);
-                    day.Vpd = climateReader.GetDouble(7);
+                    day.MeanDaytimeTemperature = 0.212F * (day.MaxTemperature - day.MeanTemperature()) + day.MeanTemperature();
+                    day.Preciptitation = climateReader.GetFloat(5) * precipitationMultiplier;
+                    day.Radiation = climateReader.GetFloat(6);
+                    day.Vpd = climateReader.GetFloat(7);
                     // sanity checks
-                    if (day.Month < 1 || day.DayOfMonth < 1 || day.Month > 12 || day.DayOfMonth > DateTime.DaysInMonth(day.Year, day.Month))
+                    if (day.Month < 1 || day.DayOfMonth < 1 || day.Month > Constant.MonthsInYear || day.DayOfMonth > DateTime.DaysInMonth(day.Year, day.Month))
                     {
                         throw new SqliteException(String.Format("Invalid dates in climate table {0}: year {1} month {2} day {3}!", Name, day.Year, day.Month, day.DayOfMonth), (int)SqliteErrorCode.DataTypeMismatch);
                     }
-                    Debug.WriteLineIf(day.Month < 1 || day.DayOfMonth < 1 || day.Month > 12 || day.DayOfMonth > 31, "Climate:load", "invalid dates");
+                    Debug.WriteLineIf(day.Month < 1 || day.DayOfMonth < 1 || day.Month > Constant.MonthsInYear || day.DayOfMonth > 31, "Climate:load", "invalid dates");
                     Debug.WriteLineIf(day.MeanDaytimeTemperature < -70 || day.MeanDaytimeTemperature > 50, "Climate:load", "temperature out of range (-70..+50 degree C)");
                     Debug.WriteLineIf(day.Preciptitation < 0 || day.Preciptitation > 200, "Climate:load", "precipitation out of range (0..200mm)");
                     Debug.WriteLineIf(day.Radiation < 0 || day.Radiation > 50, "Climate:load", "radiation out of range (0..50 MJ/m2/day)");
@@ -252,7 +232,7 @@ namespace iLand.World
                     }
 
                     previousYear = day.Year;
-                    if (day.Month == 12 && day.DayOfMonth == 31)
+                    if (day.Month == Constant.MonthsInYear && day.DayOfMonth == 31)
                     {
                         // increment day insert point since break statement skips this inner loop's increment
                         // Prevents the next iteration of the outer loop from overwriting the last day of the year.
@@ -265,23 +245,32 @@ namespace iLand.World
             this.mMonthDayIndices.Add(dayIndex); // the absolute last day...
             this.mNextYearToLoad += this.mYearsToLoad;
 
-            this.CurrentJanuary1 = this.mMonthDayIndices[12 * this.mCurrentDataYear];
-            this.NextJanuary1 = this.mMonthDayIndices[12 * (this.mCurrentDataYear + 1)]; // point to 1 January of the next year
+            this.CurrentJanuary1 = this.mMonthDayIndices[Constant.MonthsInYear * this.mCurrentDataYear];
+            this.NextJanuary1 = this.mMonthDayIndices[Constant.MonthsInYear * (this.mCurrentDataYear + 1)]; // point to 1 January of the next year
             
             int lastDay = this.IndexOf(11, 30); // 31 December in zero based indexing
-            this.ClimateCalculations(model, lastDay); // perform additional calculations based on the climate data loaded from the database
+            ClimateDay lastDayOfYear = mDays[lastDay];
+            float tau = model.ModelSettings.TemperatureTau;
+            // handle first day: use tissue temperature of the last day of the last year (if available)
+            mDays[0].TempDelayed = lastDayOfYear.TempDelayed + 1.0F / tau * (mDays[0].MeanDaytimeTemperature - lastDayOfYear.TempDelayed);
+
+            for (int c = 1; c < mDays.Count; ++c)
+            {
+                // first order dynamic delayed model (Maekela 2008)
+                mDays[c].TempDelayed = mDays[c - 1].TempDelayed + 1.0F / tau * (mDays[c].MeanDaytimeTemperature - mDays[c - 1].TempDelayed);
+            }
         }
 
         // returns two pointer (arguments!!!) to the begin and one after end of the given month (month: 0..11)
-        public void MonthRange(int month, out int rBegin, out int rEnd)
+        public void GetMonthIndices(int zeroBasedMonth, out int firstDayInMonthIndex, out int firstDayInNextMonthIndex)
         {
-            rBegin = mMonthDayIndices[mCurrentDataYear * 12 + month];
-            rEnd = mMonthDayIndices[mCurrentDataYear * 12 + month + 1];
+            firstDayInMonthIndex = mMonthDayIndices[mCurrentDataYear * Constant.MonthsInYear + zeroBasedMonth];
+            firstDayInNextMonthIndex = mMonthDayIndices[mCurrentDataYear * Constant.MonthsInYear + zeroBasedMonth + 1];
             //Debug.WriteLine("monthRange returning: begin:"+ (*rBegin).toString() + "end-1:" + (*rEnd-1).toString();
         }
 
         // activity
-        public void NextYear(Simulation.Model model)
+        public void OnStartYear(Simulation.Model model)
         {
             if (mDoRandomSampling == false)
             {
@@ -306,7 +295,7 @@ namespace iLand.World
                     {
                         while (mSampledYears.Count - 1 < model.ModelSettings.CurrentYear)
                         {
-                            mSampledYears.Add(model.RandomGenerator.Random(0, mYearsToLoad));
+                            mSampledYears.Add(model.RandomGenerator.GetRandomInteger(0, mYearsToLoad));
                         }
                     }
 
@@ -315,7 +304,7 @@ namespace iLand.World
                 else
                 {
                     // random with fixed list
-                    mRandomListIndex++;
+                    ++mRandomListIndex;
                     if (mRandomListIndex >= mRandomYearList.Count)
                     {
                         mRandomListIndex = 0;
@@ -332,74 +321,74 @@ namespace iLand.World
                 }
             }
 
-            this.CarbonDioxidePpm = model.Project.Model.Climate.CO2Concentration;
+            this.CarbonDioxidePpm = model.Project.Model.Climate.CO2ConcentrationInPpm;
             if (model.Files.LogInfo())
             {
-                Debug.WriteLine("CO2 concentration " + this.CarbonDioxidePpm + " ppm.");
+                Trace.WriteLine("CO2 concentration " + this.CarbonDioxidePpm + " ppm.");
             }
-            int currentJanuary1dayIndex = 12 * mCurrentDataYear;
-            int nextJanuary1dayIndex = currentJanuary1dayIndex + 12;
+            int currentJanuary1dayIndex = Constant.MonthsInYear * mCurrentDataYear;
+            int nextJanuary1dayIndex = currentJanuary1dayIndex + Constant.MonthsInYear;
             if ((currentJanuary1dayIndex > mMonthDayIndices.Count) || (nextJanuary1dayIndex > mMonthDayIndices.Count))
             {
                 throw new NotSupportedException("Climate data is not available for simulation year " + mCurrentDataYear + ".");
             }
-            CurrentJanuary1 = mMonthDayIndices[mCurrentDataYear * 12];
-            NextJanuary1 = mMonthDayIndices[(mCurrentDataYear + 1) * 12];
+            this.CurrentJanuary1 = mMonthDayIndices[mCurrentDataYear * Constant.MonthsInYear];
+            this.NextJanuary1 = mMonthDayIndices[(mCurrentDataYear + 1) * Constant.MonthsInYear];
 
             // some aggregates:
             // calculate radiation sum of the year and monthly precipitation
-            TotalAnnualRadiation = 0.0;
-            MeanAnnualTemperature = 0.0;
-            for (int monthIndex = 0; monthIndex < 12; ++monthIndex)
+            this.TotalAnnualRadiation = 0.0F;
+            this.MeanAnnualTemperature = 0.0F;
+            for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
             {
-                PrecipitationByMonth[monthIndex] = 0.0;
-                TemperatureByMonth[monthIndex] = 0.0;
+                this.PrecipitationByMonth[monthIndex] = 0.0F;
+                this.TemperatureByMonth[monthIndex] = 0.0F;
             }
 
-            for (int dayIndex = CurrentJanuary1; dayIndex < NextJanuary1; ++dayIndex)
+            for (int dayIndex = this.CurrentJanuary1; dayIndex < this.NextJanuary1; ++dayIndex)
             {
                 ClimateDay day = mDays[dayIndex];
-                TotalAnnualRadiation += day.Radiation;
-                MeanAnnualTemperature += day.MeanDaytimeTemperature;
-                PrecipitationByMonth[day.Month - 1] += day.Preciptitation;
-                TemperatureByMonth[day.Month - 1] += day.MeanDaytimeTemperature;
+                this.TotalAnnualRadiation += day.Radiation;
+                this.MeanAnnualTemperature += day.MeanDaytimeTemperature;
+                this.PrecipitationByMonth[day.Month - 1] += day.Preciptitation;
+                this.TemperatureByMonth[day.Month - 1] += day.MeanDaytimeTemperature;
             }
-            for (int month = 0; month < 12; ++month)
+            for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
-                TemperatureByMonth[month] /= GetDaysInMonth(month);
+                this.TemperatureByMonth[month] /= this.GetDaysInMonth(month);
             }
-            MeanAnnualTemperature /= DaysOfYear();
+            this.MeanAnnualTemperature /= this.GetDaysInYear();
 
             // calculate phenology
-            for (int index = 0; index < mPhenology.Count; ++index)
+            for (int index = 0; index < this.mPhenology.Count; ++index)
             {
-                mPhenology[index].Calculate(model);
+                this.mPhenology[index].Calculate(model);
             }
         }
 
         // phenology class of given type
-        public Phenology Phenology(int phenologyGroup)
+        public Phenology GetPhenology(int phenologyIndex)
         {
-            if (phenologyGroup >= mPhenology.Count)
+            if (phenologyIndex >= mPhenology.Count)
             {
-                throw new ArgumentOutOfRangeException(nameof(phenologyGroup), "Phenology group " + phenologyGroup + "not present. Is /project/model/species/phenology missing elements?");
+                throw new ArgumentOutOfRangeException(nameof(phenologyIndex), "Phenology group " + phenologyIndex + "not present. Is /project/model/species/phenology missing elements?");
             }
 
-            Phenology p = mPhenology[phenologyGroup];
-            if (p.ID == phenologyGroup)
+            Phenology phenology = mPhenology[phenologyIndex];
+            if (phenology.ID == phenologyIndex)
             {
-                return p;
+                return phenology;
             }
 
             // search...
-            for (int i = 0; i < mPhenology.Count; i++)
+            for (int index = 0; index < mPhenology.Count; index++)
             {
-                if (mPhenology[i].ID == phenologyGroup)
+                if (mPhenology[index].ID == phenologyIndex)
                 {
-                    return mPhenology[i];
+                    return mPhenology[index];
                 }
             }
-            throw new ArgumentOutOfRangeException(nameof(phenologyGroup), String.Format("Error at SpeciesSet::phenology(): invalid group: {0}", phenologyGroup));
+            throw new ArgumentOutOfRangeException(nameof(phenologyIndex), String.Format("Error at SpeciesSet::phenology(): invalid group: {0}", phenologyIndex));
         }
 
         // setup routine that opens database connection
@@ -441,23 +430,23 @@ namespace iLand.World
                 }
             }
             mDefaultTemperatureAddition = model.Project.Model.Climate.TemperatureShift;
-            mDefaultPrecipitationMultiplier = model.Project.Model.Climate.PrecipitationMultiplier;
-            if (mDefaultTemperatureAddition != 0.0 || mDefaultPrecipitationMultiplier != 1.0)
+            this.mDefaultPrecipitationMultiplier = model.Project.Model.Climate.PrecipitationMultiplier;
+            if (this.mDefaultTemperatureAddition != 0.0F || this.mDefaultPrecipitationMultiplier != 1.0F)
             {
                 Debug.WriteLine("Climate modification: add temperature: " + mDefaultTemperatureAddition + ". Multiply precipitation: " + mDefaultPrecipitationMultiplier);
             }
 
-            mCurrentDataYear = 0;
-            mNextYearToLoad = 0;
+            this.mCurrentDataYear = 0;
+            this.mNextYearToLoad = 0;
 
             // setup query
             // load first chunk...
-            Load(model);
-            SetupPhenology(model);
-            Sun.Setup(model.ModelSettings.Latitude);
-            --mCurrentDataYear; // go to "-1" -> the first call to next year will go to year 0.
-            mSampledYears.Clear();
-            IsSetup = true;
+            this.Load(model);
+            this.SetupPhenology(model);
+            this.Sun.Setup(model.ModelSettings.Latitude);
+            --this.mCurrentDataYear; // go to "-1" -> the first call to next year will go to year 0.
+            this.mSampledYears.Clear();
+            this.IsSetup = true;
         }
 
         // setup of phenology groups
@@ -485,12 +474,12 @@ namespace iLand.World
         }
 
         // decode "yearday" to the actual year, month, day if provided
-        public void ToDate(int yearday, out int rDay, out int rMonth, out int rYear)
+        public void ToZeroBasedDate(int dayOfYear, out int zeroBasedDay, out int zeroBasedMonth, out int year)
         {
-            ClimateDay d = mDays[DayOfYear(yearday)];
-            rDay = d.DayOfMonth - 1;
-            rMonth = d.Month - 1;
-            rYear = d.Year;
+            ClimateDay day = mDays[this.GetIndexOfDayInCurrentYear(dayOfYear)];
+            zeroBasedDay = day.DayOfMonth - 1;
+            zeroBasedMonth = day.Month - 1;
+            year = day.Year;
         }
     }
 }

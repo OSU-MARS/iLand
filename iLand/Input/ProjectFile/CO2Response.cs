@@ -5,24 +5,24 @@ namespace iLand.Input.ProjectFile
     public class CO2Response
     {
         [XmlElement(ElementName = "p0")]
-        public double P0 { get; set; }
+        public float P0 { get; set; }
 
         [XmlElement(ElementName = "baseConcentration")]
-        public double BaseConcentration { get; set; }
+        public float BaseConcentration { get; set; }
 
         [XmlElement(ElementName = "compensationPoint")]
-        public double CompensationPoint { get; set; }
+        public float CompensationPoint { get; set; }
 
         [XmlElement(ElementName = "beta0")]
-        public double Beta0 { get; set; }
+        public float Beta0 { get; set; }
 
         public CO2Response()
         {
             // must be set in project file
-            this.BaseConcentration = 0.0;
-            this.Beta0 = 0.0;
-            this.CompensationPoint = 0.0;
-            this.P0 = 0.0;
+            this.BaseConcentration = 0.0F;
+            this.Beta0 = 0.0F;
+            this.CompensationPoint = 0.0F;
+            this.P0 = 0.0F;
         }
     }
 }

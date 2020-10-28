@@ -24,8 +24,6 @@ namespace iLand.Tools
 
         public SpatialAnalysis()
         {
-            // BUGBUG: parent not ported to C# - does this matteR?
-            // QObject(parent)
             this.mClumpGrid = new Grid<int>();
             this.mCrownCoverGrid = new Grid<float>();
             this.mRumple = null;
@@ -47,7 +45,7 @@ namespace iLand.Tools
         public List<int> ExtractPatches(Model model, Grid<double> src, int min_size, string fileName)
         {
             mClumpGrid.Setup(src.PhysicalExtent, src.CellSize);
-            mClumpGrid.ClearDefault();
+            mClumpGrid.FillDefault();
 
             // now loop over all pixels and run a floodfill algorithm
             Point start;
@@ -60,7 +58,7 @@ namespace iLand.Tools
             {
                 if (src[i] > 0.0 && mClumpGrid[i] == 0)
                 {
-                    start = src.IndexOf(i);
+                    start = src.GetCellPosition(i);
                     pqueue.Clear();
                     patch_index++;
 
@@ -158,14 +156,14 @@ namespace iLand.Tools
             // calculate the crown cover per resource unit. We use the "reader"-stamps of the individual trees
             // as they represent the crown (size). We also simply hijack the LIF grid for our calculations.
             Grid<float> grid = model.LightGrid;
-            grid.Initialize(0.0F);
+            grid.Fill(0.0F);
             // we simply iterate over all trees of all resource units (not bothering about multithreading here)
             AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model);
             while (allTreeEnumerator.MoveNextLiving())
             {
                 // apply the reader-stamp
                 Trees trees = allTreeEnumerator.CurrentTrees;
-                Stamp reader = trees.Stamp[0].Reader;
+                LightStamp reader = trees.Stamp[0].Reader;
                 Point pos_reader = trees.LightCellPosition[0]; // tree position
                 pos_reader.X -= reader.CenterCellPosition;
                 pos_reader.Y -= reader.CenterCellPosition;
@@ -190,18 +188,18 @@ namespace iLand.Tools
             // now aggregate values for each resource unit
             for (int crownIndex = 0; crownIndex < mCrownCoverGrid.Count; ++crownIndex)
             {
-                ResourceUnit ru = model.ResourceUnitGrid[mCrownCoverGrid.IndexOf(crownIndex)];
+                ResourceUnit ru = model.ResourceUnitGrid[mCrownCoverGrid.GetCellPosition(crownIndex)];
                 if (ru == null)
                 {
                     mCrownCoverGrid[crownIndex] = 0.0F;
                     continue;
                 }
                 int cellsWithCrownCoverage = 0;
-                GridRunner<float> coverRunner = new GridRunner<float>(grid, mCrownCoverGrid.GetCellRect(mCrownCoverGrid.IndexOf(crownIndex)));
-                for (coverRunner.MoveNext(); coverRunner.IsValid(); coverRunner.MoveNext())
+                GridWindowEnumerator<float> coverRunner = new GridWindowEnumerator<float>(grid, mCrownCoverGrid.GetCellExtent(mCrownCoverGrid.GetCellPosition(crownIndex)));
+                while (coverRunner.MoveNext())
                 {
                     float canopyCover = coverRunner.Current;
-                    if (model.HeightGridValue(coverRunner.CurrentIndex().X, coverRunner.CurrentIndex().Y).IsInWorld())
+                    if (model.HeightGrid[coverRunner.GetCellPosition().X, coverRunner.GetCellPosition().Y, Constant.LightCellsPerHeightSize].IsInWorld())
                     {
                         if (canopyCover >= 0.5F) // 0.5: half of a 2m cell is covered by a tree crown; is a bit pragmatic but seems reasonable (and works)
                         {
@@ -213,7 +211,7 @@ namespace iLand.Tools
                 if (ru.StockableArea > 0.0)
                 {
                     double value = Constant.LightSize * Constant.LightSize * cellsWithCrownCoverage / ru.StockableArea;
-                    mCrownCoverGrid[crownIndex] = (float)Global.Limit(value, 0.0, 1.0);
+                    mCrownCoverGrid[crownIndex] = (float)Maths.Limit(value, 0.0, 1.0);
                 }
             }
         }

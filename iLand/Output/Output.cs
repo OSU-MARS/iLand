@@ -1,5 +1,4 @@
 ﻿using iLand.Simulation;
-using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
@@ -147,19 +146,19 @@ namespace iLand.Output
         {
         }
 
-        public string WriteHeaderToWiki()
-        {
-            StringBuilder result = new StringBuilder();
-            result.AppendLine(Name);
-            result.AppendLine(String.Format("Table Name: {0}{2}{1}", Name, TableName, Description, System.Environment.NewLine));
-            // loop over columns...
-            result.AppendLine("||__caption__|__datatype__|__description__"); // table begin
-            foreach (SqlColumn col in Columns)
-            {
-                result.AppendLine(String.Format("{0}|{1}|{2}", col.Name, col.Datatype, col.Description));
-            }
-            result.AppendLine("||");
-            return result.ToString();
-        }
+        //public string WriteHeaderToWiki()
+        //{
+        //    StringBuilder result = new StringBuilder();
+        //    result.AppendLine(Name);
+        //    result.AppendLine(String.Format("Table Name: {0}{2}{1}", Name, TableName, Description, System.Environment.NewLine));
+        //    // loop over columns...
+        //    result.AppendLine("||__caption__|__datatype__|__description__"); // table begin
+        //    foreach (SqlColumn col in Columns)
+        //    {
+        //        result.AppendLine(String.Format("{0}|{1}|{2}", col.Name, col.Datatype, col.Description));
+        //    }
+        //    result.AppendLine("||");
+        //    return result.ToString();
+        //}
     }
 }

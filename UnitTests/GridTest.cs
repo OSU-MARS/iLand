@@ -14,7 +14,7 @@ namespace iLand.Test
         private Grid<float> CreateAveragedGrid(int cellSize)
         {
             Grid<float> grid = new Grid<float>();
-            grid.Setup(cellSize, Constant.RUSize / cellSize, Constant.RUSize / cellSize);
+            grid.Setup(Constant.RUSize / cellSize, Constant.RUSize / cellSize, cellSize);
             for (int xIndex = 0; xIndex < grid.CellsX; xIndex++)
             {
                 for (int yIndex = 0; yIndex < grid.CellsY; yIndex++)

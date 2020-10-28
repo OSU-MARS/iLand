@@ -48,6 +48,16 @@
     <Compile Remove="Tools\TickTack.cs" />
     <Compile Remove="Tools\UpdateState.cs" />
     <Compile Remove="Tools\Viewport.cs" />
+    <Compile Remove="Unused\GrassCoverLayers.cs" />
+    <Compile Remove="Unused\LayeredGrid.cs" />
+    <Compile Remove="Unused\LayeredGridBase.cs" />
+    <Compile Remove="Unused\LayerElement.cs" />
+    <Compile Remove="Unused\MapGridWrapper.cs" />
+    <Compile Remove="Unused\ModelController.cs" />
+    <Compile Remove="Unused\RandomIndex.cs" />
+    <Compile Remove="Unused\Sapling.cs" />
+    <Compile Remove="Unused\SaplingTreeOld.cs" />
+    <Compile Remove="Unused\SettingMetaData.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -57,6 +67,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Unused\GrassCoverLayers.cs" />
+    <None Include="Unused\LayeredGrid.cs" />
+    <None Include="Unused\LayeredGridBase.cs" />
+    <None Include="Unused\LayerElement.cs" />
+    <None Include="Unused\MapGridWrapper.cs" />
+    <None Include="Unused\ModelController.cs" />
+    <None Include="Unused\RandomIndex.cs" />
+    <None Include="Unused\Sapling.cs" />
+    <None Include="Unused\SaplingTreeOld.cs" />
+    <None Include="Unused\SettingMetaData.cs" />
     <None Include="Unused\SystemStatistics.cs" />
     <None Include="Unused\Snapshot.cs" />
     <None Include="Unused\ClimateConverter.cs" />

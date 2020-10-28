@@ -38,7 +38,7 @@ namespace iLand.Tree
         public bool MoveNext()
         {
             // first call to MoveNext()
-            if (CurrentTreeIndex == -1)
+            if (this.CurrentTreeIndex == -1)
             {
                 // move to first RU with trees
                 for (; this.resourceUnitIndex < this.model.ResourceUnits.Count; ++this.resourceUnitIndex)
@@ -61,7 +61,7 @@ namespace iLand.Tree
                 Debug.Assert(this.treeSpeciesEnumerator.Current.Value.Count > 0);
                 this.CurrentTreeIndex = 0;
             }
-            // move to next resource unit with trees since positioned at last tree in this resource unit
+            // move to next resource unit with trees when positioned at last tree in current resource unit
             else if (this.CurrentTreeIndex == this.treeSpeciesEnumerator.Current.Value.Count - 1)
             {
                 // move to next RU with trees

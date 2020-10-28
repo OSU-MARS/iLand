@@ -8,9 +8,9 @@ namespace iLand.Tree
     {
         Dead = 1,
         Debugging = 2,
-        DeadBarkBeetle = 16,
-        DeadWind = 32,
-        DeadFire = 64,
+        DeadFromBarkBeetles = 16,
+        DeadFromWind = 32,
+        DeadFromFire = 64,
         DeadCutAndDrop = 128,
         Harvested = 256,
         MarkedForCut = 512, // mark tree for being cut down

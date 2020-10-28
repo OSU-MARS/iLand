@@ -168,14 +168,14 @@ namespace iLand.Output
             transaction.Commit();
         }
 
-        public string WikiFormat()
-        {
-            StringBuilder result = new StringBuilder();
-            foreach (Output output in outputs)
-            {
-                result.AppendLine(output.WriteHeaderToWiki());
-            }
-            return result.ToString();
-        }
+        //public string WikiFormat()
+        //{
+        //    StringBuilder result = new StringBuilder();
+        //    foreach (Output output in outputs)
+        //    {
+        //        result.AppendLine(output.WriteHeaderToWiki());
+        //    }
+        //    return result.ToString();
+        //}
     }
 }

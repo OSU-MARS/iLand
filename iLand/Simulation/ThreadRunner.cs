@@ -17,7 +17,7 @@ namespace iLand.Simulation
         private readonly List<ResourceUnit> mResourceUnits;
 
         public bool IsMultithreaded { get; set; }
-        public List<Species> Species { get; set; }
+        public List<TreeSpecies> Species { get; set; }
 
         public ThreadRunner()
         {
@@ -27,7 +27,7 @@ namespace iLand.Simulation
             this.Species = null;
         }
 
-        public ThreadRunner(List<Species> speciesList)
+        public ThreadRunner(List<TreeSpecies> speciesList)
             : this()
         {
             this.Species = speciesList;
@@ -46,21 +46,21 @@ namespace iLand.Simulation
         }
 
         /// run a given function for each species
-        public void Run(Action<Species, Model> funcptr, Model model, bool forceSingleThreaded = false)
+        public void Run(Model model, Action<Model, TreeSpecies> funcptr, bool forceSingleThreaded = false)
         {
             if (this.IsMultithreaded && this.Species.Count > 3 && forceSingleThreaded == false)
             {
-                Parallel.ForEach(Species, (Species species) =>
+                Parallel.ForEach(this.Species, (TreeSpecies species) =>
                 {
-                    funcptr.Invoke(species, model);
+                    funcptr.Invoke(model, species);
                 });
             }
             else
             {
                 // single threaded operation
-                foreach (Species species in this.Species)
+                foreach (TreeSpecies species in this.Species)
                 {
-                    funcptr.Invoke(species, model);
+                    funcptr.Invoke(model, species);
                 }
             }
         }
@@ -98,7 +98,7 @@ namespace iLand.Simulation
         //    }
         //}
 
-        public void Run<T>(Action<T> funcptr, List<T> container, bool forceSingleThreaded = false)
+        private void Run<T>(Action<T> funcptr, List<T> container, bool forceSingleThreaded = false)
         {
             if (this.IsMultithreaded && container.Count > 3 && forceSingleThreaded == false)
             {

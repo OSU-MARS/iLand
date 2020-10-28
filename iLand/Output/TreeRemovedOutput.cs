@@ -83,8 +83,8 @@ namespace iLand.Output
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
                     insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
-                    insertRow.Parameters[1].Value = trees.RU.Index;
-                    insertRow.Parameters[2].Value = trees.RU.ID;
+                    insertRow.Parameters[1].Value = trees.RU.GridIndex;
+                    insertRow.Parameters[2].Value = trees.RU.EnvironmentID;
                     insertRow.Parameters[3].Value = trees.Species.ID;
                     insertRow.Parameters[4].Value = trees.ID[treeIndex];
                     insertRow.Parameters[5].Value = (int)removedTreesOfSpecies.Item2[treeIndex];

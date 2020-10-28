@@ -36,7 +36,7 @@ namespace iLand.Tools
             mUpdated = false;
         }
 
-        public void SetWeight(int index, int value)
+        public void SetCellWeight(int index, int value)
         {
             if (mGrid == null || index < 0 || index >= mSize)
             {
@@ -46,7 +46,7 @@ namespace iLand.Tools
             mUpdated = false;
         }
 
-        public int Random(Model model)
+        public int GetRandomCellIndex(Model model)
         {
             if (mGrid == null)
             {
@@ -56,16 +56,16 @@ namespace iLand.Tools
             {
                 UpdateValues();
             }
-            int rnd = model.RandomGenerator.Random(0, mMaxVal);
+            int rnd = model.RandomGenerator.GetRandomInteger(0, mMaxVal);
             int index = 0;
             while (rnd >= mGrid[index] && index < mSize)
             {
-                index++;
+                ++index;
             }
             return index;
         }
 
-        public double GetRelWeight(int index)
+        public double GetRelativeWeight(int index)
         {
             // das relative gewicht der Zelle "Index".
             // das ist das Delta zu Index-1 relativ zu "MaxVal".
@@ -91,13 +91,13 @@ namespace iLand.Tools
             return (mGrid[index] - mGrid[index - 1]) / (double)mMaxVal;
         }
 
-        public double GetRelWeight(int from, int to)
+        public double GetRelativeWeight(int from, int to)
         {
             // das relative gewicht der Zelle "Index".
             // das ist das Delta zu Index-1 relativ zu "MaxVal".
             if (from == to)
             {
-                return GetRelWeight(from);
+                return GetRelativeWeight(from);
             }
             if (from < 0 || from >= mSize || to < 0 || to >= mSize || from > to)
             {

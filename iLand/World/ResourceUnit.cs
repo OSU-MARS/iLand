@@ -25,34 +25,33 @@ namespace iLand.World
 
         public float AverageAging { get; private set; } // leaf area weighted average aging
         public RectangleF BoundingBox { get; set; }
+        public ResourceUnitCarbonFluxes CarbonCycle { get; private set; }
         public Climate Climate { get; set; } // link to the climate on this resource unit
-        public Point TopLeftLightOffset { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
+        public Point TopLeftLightPosition { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
         public float EffectiveAreaPerWla { get; private set; } ///<
         public bool HasDeadTrees { get; private set; } // if true, the resource unit has dead trees and needs maybe some cleanup
-        public int ID { get; set; }
-        public int Index { get; private set; }
+        public int EnvironmentID { get; set; }
+        public int GridIndex { get; private set; }
         public float LriModifier { get; private set; }
         public float PhotosyntheticallyActiveArea { get; private set; } // TotalArea - Unstocked Area - loss due to BeerLambert (m2)
-        public Snag Snags { get; private set; } // access the snag object
+        public Snags Snags { get; private set; } // access the snag object
         public Soil Soil { get; private set; } // access the soil model
-        public List<ResourceUnitSpecies> Species { get; private set; }
-        public SpeciesSet SpeciesSet { get; private set; } // get SpeciesSet this RU links to.
         public SaplingCell[] SaplingCells { get; private set; } // access the array of sapling-cells
-        public StandStatistics Statistics { get; private set; }
+        public ResourceUnitSpeciesStatistics Statistics { get; private set; }
         public float StockedArea { get; private set; } // get the stocked area in m2
         public float StockableArea { get; set; } // total stockable area in m2
         public float TotalLeafArea { get; private set; } // total leaf area of resource unit (m2)
         public Dictionary<string, Trees> TreesBySpeciesID { get; private set; } // reference to the tree list.
-        public ResourceUnitVariables Variables { get; private set; } // access to variables that are specific to resourceUnit (e.g. nitrogenAvailable)
+        public List<ResourceUnitSpecies> TreeSpecies { get; private set; }
+        public TreeSpeciesSet TreeSpeciesSet { get; private set; } // get SpeciesSet this RU links to.
         public WaterCycle WaterCycle { get; private set; } // water model of the unit
 
-        public float HeightArea() { return mHeightCells * Constant.HeightPixelArea; } // get the resource unit area in m2
-        public float InterceptedArea(float leafArea, float lightResponse) { return EffectiveAreaPerWla * leafArea * lightResponse; }
-        public float LeafAreaIndex() { return StockableArea != 0.0F ? TotalLeafArea / StockableArea : 0.0F; } // Total Leaf Area Index
+        public float GetHeightCellArea() { return this.mHeightCells * Constant.HeightPixelArea; } // get the resource unit area in m2 TODO: when would this ever not be 1 ha?
+        public float GetInterceptedArea(float leafArea, float lightResponse) { return this.EffectiveAreaPerWla * leafArea * lightResponse; }
+        public float GetLeafAreaIndex() { return this.StockableArea != 0.0F ? this.TotalLeafArea / this.StockableArea : 0.0F; } // Total Leaf Area Index
 
-        public ResourceUnitSpecies ResourceUnitSpecies(int speciesIndex) { return this.Species[speciesIndex]; } // get RU-Species-container with index 'species_index' from the RU
-        public void SnagNewYear() { if (this.Snags != null) this.Snags.NewYear(); } // clean transfer pools
-        public void TreeDied() { HasDeadTrees = true; } // sets the flag that indicates that the resource unit contains dead trees
+        public ResourceUnitSpecies GetResourceUnitSpecies(int speciesIndex) { return this.TreeSpecies[speciesIndex]; } // get RU-Species-container with index 'species_index' from the RU
+        public void OnTreeDied() { this.HasDeadTrees = true; } // sets the flag that indicates that the resource unit contains dead trees
 
         public ResourceUnit(int index)
         {
@@ -64,21 +63,21 @@ namespace iLand.World
 
             this.Climate = null;
             this.EffectiveAreaPerWla = 0.0F;
-            this.ID = 0;
-            this.Index = index;
+            this.EnvironmentID = 0;
+            this.GridIndex = index;
             this.LriModifier = 0.0F;
             this.PhotosyntheticallyActiveArea = 0.0F;
-            this.Species = new List<ResourceUnitSpecies>();
+            this.TreeSpecies = new List<ResourceUnitSpecies>();
             this.SaplingCells = null;
             this.Snags = null;
             this.Soil = null;
-            this.SpeciesSet = null;
-            this.Statistics = new StandStatistics();
+            this.TreeSpeciesSet = null;
+            this.Statistics = new ResourceUnitSpeciesStatistics();
             this.StockableArea = 0.0F;
             this.StockedArea = 0.0F;
             this.TotalLeafArea = 0.0F;
             this.TreesBySpeciesID = new Dictionary<string, Trees>();
-            this.Variables = new ResourceUnitVariables();
+            this.CarbonCycle = new ResourceUnitCarbonFluxes();
             this.WaterCycle = new WaterCycle();
         }
 
@@ -86,12 +85,10 @@ namespace iLand.World
         {
             this.WaterCycle.Setup(model, this);
 
-            this.Snags = null;
-            this.Soil = null;
             if (model.ModelSettings.CarbonCycleEnabled)
             {
                 this.Soil = new Soil(model, this);
-                this.Snags = new Snag();
+                this.Snags = new Snags();
                 // class size of snag classes
                 // swdDBHClass12: class break between classes 1 and 2 for standing snags(dbh, cm)
                 // swdDBHClass23: class break between classes 2 and 3 for standing snags(dbh, cm)
@@ -123,7 +120,7 @@ namespace iLand.World
         }
 
         // stocked area calculation
-        public void AddHeightCell(bool cellHasTrees) 
+        public void CountHeightCell(bool cellHasTrees) 
         {
             ++this.mHeightCells;
             if (cellHasTrees)
@@ -146,30 +143,31 @@ namespace iLand.World
         public SaplingCell SaplingCell(Point lifCoords)
         {
             // LIF-Coordinates are global, we here need (RU-)local coordinates
-            int ix = lifCoords.X % Constant.LightPerRUsize;
-            int iy = lifCoords.Y % Constant.LightPerRUsize;
-            int i = iy * Constant.LightPerRUsize + ix;
+            int ix = lifCoords.X % Constant.LightCellsPerRUsize;
+            int iy = lifCoords.Y % Constant.LightCellsPerRUsize;
+            int i = iy * Constant.LightCellsPerRUsize + ix;
             Debug.Assert(i >= 0 && i < Constant.LightCellsPerHectare);
             return SaplingCells[i];
         }
 
         /// set species and setup the species-per-RU-data
-        public void SetSpeciesSet(SpeciesSet set)
+        public void SetSpeciesSet(TreeSpeciesSet speciesSet)
         {
-            SpeciesSet = set;
-            Species.Clear();
+            this.TreeSpeciesSet = speciesSet;
+            this.TreeSpecies.Clear();
 
             //mRUSpecies.Capacity = set.count(); // ensure that the vector space is not relocated
-            for (int i = 0; i < set.SpeciesCount(); i++)
+            for (int index = 0; index < speciesSet.SpeciesCount(); index++)
             {
-                Species s = SpeciesSet.Species(i);
-                if (s == null)
+                // TODO: this is an unnecessarily complex way of enumerating over all species in the species set
+                TreeSpecies species = this.TreeSpeciesSet.GetSpecies(index);
+                if (species == null)
                 {
-                    throw new NotSupportedException("setSpeciesSet: invalid index!");
+                    throw new NotSupportedException("Species index " + index + " not found.");
                 }
 
-                ResourceUnitSpecies rus = new ResourceUnitSpecies(s, this);
-                Species.Add(rus);
+                ResourceUnitSpecies ruSpecies = new ResourceUnitSpecies(species, this);
+                this.TreeSpecies.Add(ruSpecies);
                 /* be careful: setup() is called with a pointer somewhere to the content of the mRUSpecies container.
                    If the container memory is relocated (List), the pointer gets invalid!!!
                    Therefore, a resize() is called before the loop (no resize()-operations during the loop)! */
@@ -177,9 +175,9 @@ namespace iLand.World
             }
         }
 
-        public ResourceUnitSpecies GetSpecies(Species species)
+        public ResourceUnitSpecies GetResourceUnitSpecies(TreeSpecies species)
         {
-            return this.Species[species.Index];
+            return this.TreeSpecies[species.Index];
         }
 
         public int AddTree(Model model, string speciesID)
@@ -187,7 +185,7 @@ namespace iLand.World
             if (this.TreesBySpeciesID.TryGetValue(speciesID, out Trees treesOfSpecies) == false)
             {
                 int speciesIndex = -1;
-                foreach (ResourceUnitSpecies species in this.Species)
+                foreach (ResourceUnitSpecies species in this.TreeSpecies)
                 {
                     if (String.Equals(speciesID, species.Species.ID))
                     {
@@ -202,7 +200,7 @@ namespace iLand.World
 
                 treesOfSpecies = new Trees(model, this)
                 {
-                    Species = this.ResourceUnitSpecies(speciesIndex).Species
+                    Species = this.GetResourceUnitSpecies(speciesIndex).Species
                 };
                 this.TreesBySpeciesID.Add(speciesID, treesOfSpecies);
             }
@@ -276,7 +274,7 @@ namespace iLand.World
             this.HasDeadTrees = false;
         }
 
-        public void NewYear()
+        public void OnStartYear()
         {
             this.mAggregatedLR = 0.0F;
             this.mHeightCells = 0;
@@ -286,17 +284,21 @@ namespace iLand.World
             this.PhotosyntheticallyActiveArea = 0.0F;
             this.TotalLeafArea = 0.0F;
 
-            SnagNewYear();
-            if (Soil != null)
+            if (this.Snags != null)
             {
-                Soil.NewYear();
+                // clean transfer pools
+                this.Snags.OnStartYear();
+            }
+            if (this.Soil != null)
+            {
+                this.Soil.OnStartYear();
             }
             // clear statistics global and per species...
-            Statistics.Clear();
-            for (int i = 0; i < Species.Count; ++i)
+            this.Statistics.Zero();
+            foreach (ResourceUnitSpecies ruSpecies in this.TreeSpecies)
             {
-                Species[i].StatisticsDead.Clear();
-                Species[i].StatisticsMgmt.Clear();
+                ruSpecies.StatisticsDead.Zero();
+                ruSpecies.StatisticsManagement.Zero();
             }
         }
 
@@ -306,14 +308,14 @@ namespace iLand.World
             - statistics for each species are cleared
             - The 3PG production for each species and ressource unit is called (calculates species-responses and NPP production)
             see also: http://iland.boku.ac.at/individual+tree+light+availability */
-        public void Production(Model model)
+        public void CalculateBiomassGrowthForYear(Model model)
         {
             if (mTotalWeightedLeafArea == 0.0 || mHeightCells == 0)
             {
                 // clear statistics of resourceunitspecies
-                for (int i = 0; i < Species.Count; ++i)
+                for (int i = 0; i < TreeSpecies.Count; ++i)
                 {
-                    Species[i].Statistics.Clear();
+                    TreeSpecies[i].Statistics.Zero();
                 }
                 PhotosyntheticallyActiveArea = 0.0F;
                 StockedArea = 0.0F;
@@ -322,7 +324,7 @@ namespace iLand.World
 
             // the pixel counters are filled during the height-grid-calculations
             StockedArea = Constant.HeightSize * Constant.HeightSize * mHeightCellsWithTrees; // m2 (1 height grid pixel = 10x10m)
-            if (LeafAreaIndex() < 3.0)
+            if (GetLeafAreaIndex() < 3.0)
             {
                 // estimate stocked area based on crown projections
                 double totalCrownArea = 0.0;
@@ -340,7 +342,7 @@ namespace iLand.World
                 //{
                 //    Debug.WriteLine("crown area: lai " + LeafAreaIndex() + " stocked area (pixels) " + StockedArea + " area (crown) " + totalCrownArea);
                 //}
-                if (LeafAreaIndex() < 1.0)
+                if (GetLeafAreaIndex() < 1.0)
                 {
                     this.StockedArea = MathF.Min((float)totalCrownArea, this.StockedArea);
                 }
@@ -350,7 +352,7 @@ namespace iLand.World
                     // interpolate between sum of crown area of trees (at LAI=1) and the pixel-based value (at LAI=3 and above)
                     // only results in a change if crown area is less than stocked area
                     // BUGBUG: assumes trees are homogeneously distributed across resource unit and that crowns don't overlap
-                    float px_frac = (LeafAreaIndex() - 1.0F) / 2.0F; // 0 at LAI=1, 1 at LAI=3
+                    float px_frac = (GetLeafAreaIndex() - 1.0F) / 2.0F; // 0 at LAI=1, 1 at LAI=3
                     this.StockedArea = this.StockedArea * px_frac + MathF.Min((float)totalCrownArea, StockedArea) * (1.0F - px_frac);
                 }
                 if (this.StockedArea == 0.0)
@@ -364,12 +366,12 @@ namespace iLand.World
             // calculate the intercepted radiation fraction using the law of Beer Lambert
             float k = model.ModelSettings.LightExtinctionCoefficient;
             float lightInterceptionfraction = 1.0F - MathF.Exp(-k * leafAreaIndex);
-            PhotosyntheticallyActiveArea = StockedArea * lightInterceptionfraction; // m2
+            this.PhotosyntheticallyActiveArea = StockedArea * lightInterceptionfraction; // m2
 
             // calculate the total weighted leaf area on this RU:
             this.LriModifier = (float)(this.PhotosyntheticallyActiveArea / mTotalWeightedLeafArea); // p_WLA
-            Debug.Assert(LriModifier >= 0.0 && LriModifier < 2.0); // sanity upper bound
-            if (LriModifier == 0.0)
+            Debug.Assert(this.LriModifier >= 0.0F && LriModifier < 2.0F); // sanity upper bound
+            if (this.LriModifier == 0.0F)
             {
                 Debug.WriteLine("lri modification==0!");
             }
@@ -380,40 +382,30 @@ namespace iLand.World
             //}
 
             // calculate LAI fractions
-            double allSpeciesLeafAreaIndex = this.LeafAreaIndex(); // TODO: should this be the same as two LAI calculations above?
-            if (allSpeciesLeafAreaIndex < 1.0)
+            float allSpeciesLeafAreaIndex = this.GetLeafAreaIndex(); // TODO: should this be the same as two LAI calculations above?
+            if (allSpeciesLeafAreaIndex < 1.0F)
             {
-                allSpeciesLeafAreaIndex = 1.0;
+                allSpeciesLeafAreaIndex = 1.0F;
             }
             // note: LAIFactors are only 1 if sum of LAI is > 1.0 (see WaterCycle)
-            for (int speciesIndex = 0; speciesIndex < Species.Count; ++speciesIndex)
+            for (int ruSpeciesIndex = 0; ruSpeciesIndex < this.TreeSpecies.Count; ++ruSpeciesIndex)
             {
-                double lai_factor = Species[speciesIndex].Statistics.LeafAreaIndex / allSpeciesLeafAreaIndex;
-
-                //DBGMODE(
-                if (lai_factor > 1.0)
+                float speciesLeafAreaFraction = this.TreeSpecies[ruSpeciesIndex].Statistics.LeafAreaIndex / allSpeciesLeafAreaIndex;
+                if (speciesLeafAreaFraction > 1.000001F) // allow numerical error
                 {
-                    ResourceUnitSpecies rus = Species[speciesIndex];
-                    Debug.WriteLine("LAI factor > 1: species ru-index: " + rus.Species.Name + rus.RU.Index);
+                    ResourceUnitSpecies ruSpecies = TreeSpecies[ruSpeciesIndex];
+                    throw new NotSupportedException(ruSpecies.Species.Name + " (index " + ruSpecies.RU.GridIndex + ") leaf area exceeds area of all species in resource unit.");
                 }
-                //);
-                Species[speciesIndex].SetLaiFactor(lai_factor);
+                this.TreeSpecies[ruSpeciesIndex].SetRULaiFraction(speciesLeafAreaFraction);
             }
 
             // soil water model - this determines soil water contents needed for response calculations
-            WaterCycle.Run(model);
+            this.WaterCycle.CalculateYear(model);
 
             // invoke species specific calculation (3PG)
-            for (int speciesIndex = 0; speciesIndex < Species.Count; ++speciesIndex)
+            for (int speciesIndex = 0; speciesIndex < TreeSpecies.Count; ++speciesIndex)
             {
-                //DBGMODE(
-                if (Species[speciesIndex].LaiFraction > 1.0)
-                {
-                    ResourceUnitSpecies rus = Species[speciesIndex];
-                    Debug.WriteLine("LAI factor > 1: species ru-index value: " + rus.Species.Name + rus.RU.Index + rus.LaiFraction);
-                }
-                //);
-                Species[speciesIndex].Calculate(model); // CALCULATE 3PG
+                this.TreeSpecies[speciesIndex].CalculateBiomassGrowthForYear(model, fromEstablishment: false); // CALCULATE 3PG
 
                 // debug output related to production
                 //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.StandGpp) && Species[speciesIndex].LaiFraction > 0.0)
@@ -431,11 +423,11 @@ namespace iLand.World
         {
             if (mAggregatedLR == 0.0)
             {
-                EffectiveAreaPerWla = 0.0F;
+                this.EffectiveAreaPerWla = 0.0F;
                 return;
             }
             Debug.Assert(mAggregatedLR > 0.0);
-            EffectiveAreaPerWla = PhotosyntheticallyActiveArea / mAggregatedLR;
+            this.EffectiveAreaPerWla = this.PhotosyntheticallyActiveArea / mAggregatedLR;
             //if (GlobalSettings.Instance.LogDebug())
             //{
             //    Debug.WriteLine("RU: aggregated lightresponse: " + mAggregatedLR + " eff.area./wla: " + mEffectiveArea_perWLA);
@@ -443,59 +435,59 @@ namespace iLand.World
         }
 
         // function is called immediately before the growth of individuals
-        public void BeforeGrow()
+        public void BeforeTreeGrowth()
         {
-            AverageAging = 0.0F;
+            this.AverageAging = 0.0F;
         }
 
-        // function is called after finishing the indivdual growth / mortality.
-        public void AfterGrow()
+        // function is called after finishing the individual growth / mortality.
+        public void AfterTreeGrowth()
         {
-            AverageAging = TotalLeafArea > 0.0 ? AverageAging / TotalLeafArea : 0; // calculate aging value (calls to addAverageAging() by individual trees)
-            if (AverageAging > 0.0 && AverageAging < 0.00001)
+            this.AverageAging = this.TotalLeafArea > 0.0F ? this.AverageAging / this.TotalLeafArea : 0.0F; // calculate aging value (calls to addAverageAging() by individual trees)
+            if ((this.AverageAging > 0.0F) && (this.AverageAging < 0.00001F))
             {
-                Debug.WriteLine("ru " + Index + " aging <0.00001");
+                Debug.WriteLine("RU-index " + this.GridIndex + " average aging < 0.00001.");
             }
-            if (AverageAging < 0.0 || AverageAging > 1.0)
+            if ((this.AverageAging < 0.0F) || (this.AverageAging > 1.0F))
             {
-                Debug.WriteLine("Average aging invalid: (RU, LAI): " + Index + Statistics.LeafAreaIndex);
+                throw new ArithmeticException("Average aging invalid: RU-index " + this.GridIndex + ", LAI " + this.Statistics.LeafAreaIndex);
             }
         }
 
-        public void YearEnd(Model model)
+        public void OnEndYear(Model model)
         {
             // calculate statistics for all tree species of the ressource unit
-            for (int species = 0; species < this.Species.Count; species++)
+            for (int species = 0; species < this.TreeSpecies.Count; ++species)
             {
-                this.Species[species].StatisticsDead.Calculate(); // calculate the dead trees
-                this.Species[species].StatisticsMgmt.Calculate(); // stats of removed trees
-                this.Species[species].UpdateGwl(); // get sum of dead trees (died + removed)
-                this.Species[species].Statistics.Calculate(); // calculate the living (and add removed volume to gwl)
-                this.Statistics.Add(Species[species].Statistics);
+                this.TreeSpecies[species].StatisticsDead.CalculateFromAccumulatedValues(); // calculate the dead trees
+                this.TreeSpecies[species].StatisticsManagement.CalculateFromAccumulatedValues(); // stats of removed trees
+                this.TreeSpecies[species].UpdateGwl(); // get sum of dead trees (died + removed)
+                this.TreeSpecies[species].Statistics.CalculateFromAccumulatedValues(); // calculate the living (and add removed volume to gwl)
+                this.Statistics.Add(this.TreeSpecies[species].Statistics);
             }
-            this.Statistics.Calculate(); // aggreagte on stand level
+            this.Statistics.CalculateFromAccumulatedValues(); // aggregate on stand level
 
             // update carbon flows
             if (this.Soil != null && model.ModelSettings.CarbonCycleEnabled)
             {
-                double area_factor = this.StockableArea / Constant.RUArea; //conversion factor
-                this.Variables.Npp = this.Statistics.Npp * Constant.BiomassCFraction;
-                this.Variables.Npp += this.Statistics.NppSaplings * Constant.BiomassCFraction;
+                this.CarbonCycle.Npp = this.Statistics.Npp * Constant.BiomassCFraction;
+                this.CarbonCycle.Npp += this.Statistics.NppSaplings * Constant.BiomassCFraction;
 
+                double area_factor = this.StockableArea / Constant.RUArea; //conversion factor
                 double to_atm = this.Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha
-                to_atm += this.Soil.FluxToAtmosphere.C * Constant.RUArea / 10.0; // soil: t/ha . t/m2 . kg/ha
-                this.Variables.CarbonToAtmosphere = to_atm;
+                to_atm += this.Soil.FluxToAtmosphere.C * Constant.RUArea / 10.0; // soil: t/ha * 0.0001 ha/m2 * 1000 kg/ton = 0.1 kg/m2
+                this.CarbonCycle.CarbonToAtmosphere = to_atm;
 
                 double to_dist = this.Snags.FluxToDisturbance.C / area_factor;
                 to_dist += this.Soil.FluxToDisturbance.C * Constant.RUArea / 10.0;
                 double to_harvest = this.Snags.FluxToExtern.C / area_factor;
 
-                this.Variables.Nep = this.Variables.Npp - to_atm - to_dist - to_harvest; // kgC/ha
+                this.CarbonCycle.Nep = this.CarbonCycle.Npp - to_atm - to_dist - to_harvest; // kgC/ha
 
                 // incremental values....
-                this.Variables.TotalNpp += this.Variables.Npp;
-                this.Variables.TotalCarbonToAtmosphere += this.Variables.CarbonToAtmosphere;
-                this.Variables.TotalNep += this.Variables.Nep;
+                this.CarbonCycle.TotalNpp += this.CarbonCycle.Npp;
+                this.CarbonCycle.TotalCarbonToAtmosphere += this.CarbonCycle.CarbonToAtmosphere;
+                this.CarbonCycle.TotalNep += this.CarbonCycle.Nep;
             }
         }
 
@@ -506,7 +498,7 @@ namespace iLand.World
             {
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    this.AddTreeAging(treesOfSpecies.LeafArea[treeIndex], treesOfSpecies.Species.Aging(model, treesOfSpecies.Height[treeIndex], treesOfSpecies.Age[treeIndex]));
+                    this.AddTreeAging(treesOfSpecies.LeafArea[treeIndex], treesOfSpecies.Species.GetAgingFactor(model, treesOfSpecies.Height[treeIndex], treesOfSpecies.Age[treeIndex]));
                 }
             }
         }
@@ -517,13 +509,13 @@ namespace iLand.World
         public void CreateStandStatistics(Model model)
         {
             // clear statistics (ru-level and ru-species level)
-            this.Statistics.Clear();
-            for (int species = 0; species < this.Species.Count; species++)
+            this.Statistics.Zero();
+            for (int species = 0; species < this.TreeSpecies.Count; species++)
             {
-                this.Species[species].Statistics.Clear();
-                this.Species[species].StatisticsDead.Clear();
-                this.Species[species].StatisticsMgmt.Clear();
-                this.Species[species].SaplingStats.ClearStatistics();
+                this.TreeSpecies[species].Statistics.Zero();
+                this.TreeSpecies[species].StatisticsDead.Zero();
+                this.TreeSpecies[species].StatisticsManagement.Zero();
+                this.TreeSpecies[species].SaplingStats.ClearStatistics();
             }
 
             // add all trees to the statistics objects of the species
@@ -531,7 +523,7 @@ namespace iLand.World
             {
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    this.GetSpecies(treesOfSpecies.Species).Statistics.Add(treesOfSpecies, treeIndex, null, skipDead: true);
+                    this.GetResourceUnitSpecies(treesOfSpecies.Species).Statistics.Add(treesOfSpecies, treeIndex, null, skipDead: true);
                 }
             }
 
@@ -542,18 +534,18 @@ namespace iLand.World
             }
 
             // summarize statistics for the whole resource unit
-            for (int i = 0; i < Species.Count; i++)
+            for (int species = 0; species < TreeSpecies.Count; species++)
             {
-                Species[i].SaplingStats.Calculate(Species[i].Species, this, model);
-                Species[i].Statistics.Add(Species[i].SaplingStats);
-                Species[i].Statistics.Calculate();
-                Statistics.Add(Species[i].Statistics);
+                TreeSpecies[species].SaplingStats.Recalculate(model, this, TreeSpecies[species].Species);
+                TreeSpecies[species].Statistics.Add(TreeSpecies[species].SaplingStats);
+                TreeSpecies[species].Statistics.CalculateFromAccumulatedValues();
+                Statistics.Add(TreeSpecies[species].Statistics);
             }
-            Statistics.Calculate();
+            Statistics.CalculateFromAccumulatedValues();
             this.AverageAging = this.Statistics.LeafAreaIndex > 0.0 ? AverageAging / ((float)Statistics.LeafAreaIndex * StockableArea) : 0.0F;
             if (this.AverageAging < 0.0F || this.AverageAging > 1.0F)
             {
-                throw new OverflowException("Average aging invalid: (RU, LAI): " + Index + Statistics.LeafAreaIndex);
+                throw new OverflowException("Average aging invalid: (RU, LAI): " + GridIndex + Statistics.LeafAreaIndex);
             }
         }
 
@@ -567,15 +559,15 @@ namespace iLand.World
             // and then re-add all trees (since TreeGrowthData is NULL no NPP is available).
             // The statistics are not summarised here, because this happens for all resource units
             // in the yearEnd function of RU.
-            for (int species = 0; species < Species.Count; species++)
+            for (int species = 0; species < TreeSpecies.Count; species++)
             {
                 if (recalculateSpecies)
                 {
-                    this.Species[species].Statistics.Clear();
+                    this.TreeSpecies[species].Statistics.Zero();
                 }
                 else
                 {
-                    this.Species[species].Statistics.ClearOnlyTrees();
+                    this.TreeSpecies[species].Statistics.ZeroTreeStatistics();
                 }
             }
 
@@ -583,22 +575,22 @@ namespace iLand.World
             {
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    this.ResourceUnitSpecies(treesOfSpecies.Species.Index).Statistics.Add(treesOfSpecies, treeIndex, null);
+                    this.GetResourceUnitSpecies(treesOfSpecies.Species.Index).Statistics.Add(treesOfSpecies, treeIndex, null);
                 }
             }
 
             if (recalculateSpecies)
             {
-                for (int species = 0; species < Species.Count; species++)
+                for (int species = 0; species < TreeSpecies.Count; species++)
                 {
-                    this.Species[species].Statistics.Calculate();
+                    this.TreeSpecies[species].Statistics.CalculateFromAccumulatedValues();
                 }
             }
         }
 
         public void CalculateCarbonCycle(Model model)
         {
-            if (Snags == null) // TODO: what about other pools?
+            if (this.Snags == null) // TODO: what about other pools?
             {
                 return;
             }

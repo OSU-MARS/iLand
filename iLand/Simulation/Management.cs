@@ -63,7 +63,7 @@ namespace iLand.Simulation
             for (int treesKilled = 0; treesKilled < treesToKill; treesKilled++)
             {
                 // TODO: change from O(all trees in model) scaling to O(trees to kill) with data structure for more efficient removal?
-                int killIndex = model.RandomGenerator.Random(0, livingTrees.Count);
+                int killIndex = model.RandomGenerator.GetRandomInteger(0, livingTrees.Count);
                 livingTrees[killIndex].Item1.Remove(model, livingTrees[killIndex].Item2);
                 livingTrees.RemoveAt(killIndex);
             }
@@ -75,7 +75,7 @@ namespace iLand.Simulation
             int initialTreeCount = mTreesInMostRecentlyLoadedStand.Count;
             foreach (MutableTuple<Trees, List<int>> treesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
             {
-                // BUGBUG: doesn't check IsCutDown() flag?
+                // TODO: doesn't check IsCutDown() flag?
                 Trees trees = treesOfSpecies.Item1;
                 foreach (int treeIndex in treesOfSpecies.Item2)
                 {
@@ -101,22 +101,23 @@ namespace iLand.Simulation
                 Trees trees = treesOfSpecies.Item1;
                 foreach (int treeIndex in treesOfSpecies.Item2)
                 {
+                    // TODO: why 10%?
                     trees.RemoveDisturbance(model, treeIndex, 0.1F, 0.1F, 0.1F, 0.1F, 1.0F);
                     ++treeCount;
                 }
             }
-            mTreesInMostRecentlyLoadedStand.Clear();
+            this.mTreesInMostRecentlyLoadedStand.Clear(); // TODO: why?
             return treeCount;
         }
 
         public int Kill(Model model, string filter, double fraction)
         {
-            return RemoveTrees(model, filter, fraction, false);
+            return this.RemoveTrees(model, filter, fraction, false);
         }
 
         public int Manage(Model model, string filter, double fraction)
         {
-            return RemoveTrees(model, filter, fraction, true);
+            return this.RemoveTrees(model, filter, fraction, true);
         }
 
         public void CutAndDropAllTreesInStand(Model model)
@@ -130,7 +131,7 @@ namespace iLand.Simulation
                     trees.Die(model, treeIndex);
                 }
             }
-            mTreesInMostRecentlyLoadedStand.Clear();
+            this.mTreesInMostRecentlyLoadedStand.Clear();
         }
 
         //private int RemovePercentageFromStand(Model model, int pctFrom, int pctTo, int maxTreesToKill, bool removeBiomassFractions)
@@ -251,7 +252,7 @@ namespace iLand.Simulation
                 for (int removalIndex = 0; removalIndex < treeIndices.Count; ++removalIndex)
                 {
                     int treeIndex = treeIndices[removalIndex];
-                    if (selectionExpression.Evaluate(model, treeWrapper) != 0.0 && model.RandomGenerator.Random() <= removalProbabilityIfSelected)
+                    if (selectionExpression.Evaluate(model, treeWrapper) != 0.0 && model.RandomGenerator.GetRandomDouble() <= removalProbabilityIfSelected)
                     {
                         if (management)
                         {
@@ -320,7 +321,7 @@ namespace iLand.Simulation
         //    return 0.0;
         //}
 
-        public void Run()
+        public void RunYear()
         {
             this.mTreesInMostRecentlyLoadedStand.Clear();
         }
@@ -356,34 +357,34 @@ namespace iLand.Simulation
 
         public int Filter(Model model, string filter)
         {
-            TreeWrapper tw = new TreeWrapper();
-            Expression expr = new Expression(filter, tw);
-            expr.EnableIncrementalSum();
-            int n_before = mTreesInMostRecentlyLoadedStand.Count;
-            for (int tp = 0; tp < mTreesInMostRecentlyLoadedStand.Count; ++tp)
+            TreeWrapper treeWrapper = new TreeWrapper();
+            Expression filterExpression = new Expression(filter, treeWrapper);
+            filterExpression.EnableIncrementalSum();
+            int totalTreesInStand = mTreesInMostRecentlyLoadedStand.Count;
+            for (int treeIndex = 0; treeIndex < mTreesInMostRecentlyLoadedStand.Count; ++treeIndex)
             {
-                tw.Trees = mTreesInMostRecentlyLoadedStand[tp].Item1;
-                double value = expr.Evaluate(model, tw);
+                treeWrapper.Trees = mTreesInMostRecentlyLoadedStand[treeIndex].Item1;
+                double value = filterExpression.Evaluate(model, treeWrapper);
                 // keep if expression returns true (1)
                 bool keep = value == 1.0;
                 // if value is >0 (i.e. not "false"), then draw a random number
                 if (!keep && value > 0.0)
                 {
-                    keep = model.RandomGenerator.Random() < value;
+                    keep = model.RandomGenerator.GetRandomDouble() < value;
                 }
-                if (!keep)
+                if (keep == false)
                 {
-                    mTreesInMostRecentlyLoadedStand.RemoveAt(tp);
-                    --tp;
+                    this.mTreesInMostRecentlyLoadedStand.RemoveAt(treeIndex);
+                    --treeIndex;
                 }
                 else
                 {
-                    ++tp;
+                    ++treeIndex;
                 }
             }
 
-            Debug.WriteLine("filtering with " + filter + " N=" + n_before + "/" + mTreesInMostRecentlyLoadedStand.Count + " trees (before/after filtering).");
-            return mTreesInMostRecentlyLoadedStand.Count;
+            Debug.WriteLine("filtering with " + filter + " N=" + totalTreesInStand + "/" + mTreesInMostRecentlyLoadedStand.Count + " trees (before/after filtering).");
+            return this.mTreesInMostRecentlyLoadedStand.Count;
         }
 
         //public int LoadResourceUnit(int ruindex)
@@ -437,17 +438,7 @@ namespace iLand.Simulation
         //    return mTrees.Count;
         //}
 
-        // loadFromMap: script access
-        public void LoadFromMap(MapGridWrapper standWrapper, int standID)
-        {
-            if (standWrapper == null)
-            {
-                throw new ArgumentNullException(nameof(standWrapper));
-            }
-            this.LoadFromMap(standWrapper.StandGrid, standID);
-        }
-
-        public void KillSaplings(MapGridWrapper wrap, Model model, int key)
+        public void KillSaplings(MapGrid standGrid, Model model, int key)
         {
             //MapGridWrapper *wrap = qobject_cast<MapGridWrapper*>(map_grid_object.toQObject());
             //if (!wrap) {
@@ -455,17 +446,16 @@ namespace iLand.Simulation
             //    return;
             //}
             //loadFromMap(wrap.map(), key);
-            RectangleF box = wrap.StandGrid.BoundingBox(key);
-            GridRunner<float> runner = new GridRunner<float>(model.LightGrid, box);
-            for (runner.MoveNext(); runner.IsValid(); runner.MoveNext())
+            RectangleF boundingBox = standGrid.GetBoundingBox(key);
+            GridWindowEnumerator<float> runner = new GridWindowEnumerator<float>(model.LightGrid, boundingBox);
+            while (runner.MoveNext())
             {
-                if (wrap.StandGrid.GetStandIDFromLightCoordinate(runner.CurrentIndex()) == key)
+                if (standGrid.GetStandIDFromLightCoordinate(runner.GetCellPosition()) == key)
                 {
-                    ResourceUnit ru = null;
-                    SaplingCell sc = model.Saplings.Cell(runner.CurrentIndex(), model, true, ref ru);
-                    if (sc != null)
+                    SaplingCell saplingCell = model.Saplings.GetCell(model, runner.GetCellPosition(), true, out ResourceUnit ru);
+                    if (saplingCell != null)
                     {
-                        model.Saplings.ClearSaplings(sc, ru, true);
+                        model.Saplings.ClearSaplings(ru, saplingCell, true);
                     }
                 }
             }
@@ -476,29 +466,32 @@ namespace iLand.Simulation
         /// @param DWDfrac 0: no change, 1: remove all of downled woody debris
         /// @param litterFrac 0: no change, 1: remove all of soil litter
         /// @param soilFrac 0: no change, 1: remove all of soil organic matter
-        public void RemoveSoilCarbon(MapGridWrapper wrap, int key, float SWDfrac, float DWDfrac, float litterFrac, float soilFrac)
+        public void RemoveSoilCarbon(MapGrid standGrid, int key, float standingWoodyFraction, float downWoodFraction, float litterFraction, float soilFraction)
         {
-            if (!(SWDfrac >= 0.0 && SWDfrac <= 1.0 && DWDfrac >= 0.0 && DWDfrac <= 1.0 && soilFrac >= 0.0 && soilFrac <= 1.0 && litterFrac >= 0.0 && litterFrac <= 1.0))
+            if ((standingWoodyFraction < 0.0F) || (standingWoodyFraction > 1.0F) || 
+                (downWoodFraction < 0.0F) || (downWoodFraction > 1.0F) || 
+                (soilFraction < 0.0F) || (soilFraction > 1.0F) || 
+                (litterFraction > 0.0F && litterFraction > 1.0F))
             {
-                throw new ArgumentException("removeSoilCarbon called with invalid parameters!!");
+                throw new ArgumentOutOfRangeException("removeSoilCarbon called with one or more invalid parameters.");
             }
-            List<MutableTuple<ResourceUnit, float>> ruAreas = wrap.StandGrid.ResourceUnitAreas(key).ToList();
-            double total_area = 0.0;
-            for (int ruIndex = 0; ruIndex < ruAreas.Count; ++ruIndex)
+            IList<MutableTuple<ResourceUnit, float>> ruAreas = standGrid.GetResourceUnitAreaFractions(key);
+            //float totalArea = 0.0F;
+            for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
-                ResourceUnit ru = ruAreas[ruIndex].Item1;
-                float area_factor = ruAreas[ruIndex].Item2; // 0..1
-                total_area += area_factor;
+                ResourceUnit ru = ruAreas[areaIndex].Item1;
+                float areaFactor = ruAreas[areaIndex].Item2; // 0..1
+                //totalArea += areaFactor;
                 // swd
-                if (SWDfrac > 0.0)
+                if (standingWoodyFraction > 0.0F)
                 {
-                    ru.Snags.RemoveCarbon(SWDfrac * area_factor);
+                    ru.Snags.RemoveCarbon(standingWoodyFraction * areaFactor);
                 }
                 // soil pools
-                ru.Soil.RemoveBiomassFractions(DWDfrac * area_factor, litterFrac * area_factor, soilFrac * area_factor);
+                ru.Soil.RemoveBiomassFractions(downWoodFraction * areaFactor, litterFraction * areaFactor, soilFraction * areaFactor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
-            Debug.WriteLine("total area " + total_area + " of " + wrap.StandGrid.Area(key));
+            //Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));
         }
 
         /** slash snags (SWD and otherWood-Pools) of polygon \p key on the map \p wrap.
@@ -507,23 +500,23 @@ namespace iLand.Simulation
           @param key ID of the polygon.
           @param slash_fraction 0: no change, 1: 100%
            */
-        public void SlashSnags(MapGridWrapper wrap, int key, float slash_fraction)
+        public void SlashSnags(MapGrid standGrid, int key, float slash_fraction)
         {
             if (slash_fraction < 0.0F || slash_fraction > 1.0F)
             {
                 throw new ArgumentOutOfRangeException(nameof(slash_fraction));
             }
-            List<MutableTuple<ResourceUnit, float>> ru_areas = wrap.StandGrid.ResourceUnitAreas(key).ToList();
-            double total_area = 0.0;
-            for (int i = 0; i < ru_areas.Count; ++i)
+            List<MutableTuple<ResourceUnit, float>> ruAreas = standGrid.GetResourceUnitAreaFractions(key).ToList();
+            //float totalArea = 0.0F;
+            for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
-                ResourceUnit ru = ru_areas[i].Item1;
-                float area_factor = ru_areas[i].Item2; // 0..1
-                total_area += area_factor;
-                ru.Snags.Management(slash_fraction * area_factor);
+                ResourceUnit ru = ruAreas[areaIndex].Item1;
+                float area_factor = ruAreas[areaIndex].Item2; // 0..1
+                //totalArea += area_factor;
+                ru.Snags.TransferStandingWoodToSoil(slash_fraction * area_factor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
-            Debug.WriteLine("total area " + total_area + " of " + wrap.StandGrid.Area(key));
+            //Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));
         }
 
         /** loadFromMap selects trees located on pixels with value 'key' within the grid 'map_grid'.
@@ -532,8 +525,7 @@ namespace iLand.Simulation
         {
             if (mapGrid == null)
             {
-                Debug.WriteLine("invalid parameter for loadFromMap: Map expected!");
-                return;
+                throw new ArgumentNullException(nameof(mapGrid));
             }
             if (mapGrid.IsValid())
             {
@@ -541,7 +533,7 @@ namespace iLand.Simulation
             }
             else
             {
-                Debug.WriteLine("loadFromMap: grid is not valid - no trees loaded");
+                throw new ArgumentException("Grid is not valid. No trees loaded");
             }
         }
 

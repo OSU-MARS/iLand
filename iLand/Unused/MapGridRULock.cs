@@ -67,7 +67,7 @@ namespace iLand.Tools
                     }
                 }
             }
-            // BUGBUG: what if id couldn't be unlocked?
+            // TODO: what if id couldn't be unlocked?
         }
     }
 }

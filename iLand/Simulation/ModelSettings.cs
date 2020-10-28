@@ -20,16 +20,16 @@ namespace iLand.Simulation
         public float LightExtinctionCoefficientOpacity { get; private set; } // "k" for beer lambert used for opacity of single trees
         public bool IsTorus { get; private set; } // special mode that treats each resource unit as a "torus" (light calculation, seed distribution)
         // climate
-        public double TemperatureTau { get; private set; } // "tau"-value for delayed temperature calculation acc. to Maekela 2008
+        public float TemperatureTau { get; private set; } // "tau"-value for delayed temperature calculation acc. to Maekela 2008
         // water
-        public double AirDensity { get; private set; } // density of air [kg / m3]
-        public double LaiThresholdForClosedStands { get; private set; } // for calculation of max-canopy-conductance
-        public double BoundaryLayerConductance { get; private set; } // 3pg-evapotranspiration
+        public float AirDensity { get; private set; } // density of air [kg / m3]
+        public float LaiThresholdForClosedStands { get; private set; } // for calculation of max-canopy-conductance
+        public float BoundaryLayerConductance { get; private set; } // 3pg-evapotranspiration
 
         // site variables (for now!)
-        public double Latitude { get; private set; } // latitude of project site in radians
+        public float Latitude { get; private set; } // latitude of project site in radians
         // production
-        public double Epsilon { get; private set; } // maximum light use efficency used for the 3PG model
+        public float Epsilon { get; private set; } // maximum light use efficency used for the 3PG model
         public bool UseParFractionBelowGroundAllocation { get; private set; } // if true, the 'correct' version of the calculation of belowground allocation is used (default=true)
 
         public double BrowsingPressure { get; private set; }
@@ -43,22 +43,26 @@ namespace iLand.Simulation
 
         public void LoadModelSettings(Model model)
         {
-            BrowsingPressure = model.Project.Model.Settings.Browsing.BrowsingPressure;
-            GrowthEnabled = model.Project.Model.Settings.GrowthEnabled;
-            MortalityEnabled = model.Project.Model.Settings.MortalityEnabled;
-            LightExtinctionCoefficient = model.Project.Model.Settings.LightExtinctionCoefficient;
-            LightExtinctionCoefficientOpacity = model.Project.Model.Settings.LightExtinctionCoefficientOpacity;
-            TemperatureTau = model.Project.Model.Settings.TemperatureTau;
-            Epsilon = model.Project.Model.Settings.Epsilon;
-            AirDensity = model.Project.Model.Settings.AirDensity;
-            LaiThresholdForClosedStands = model.Project.Model.Settings.LaiThresholdForClosedStands;
-            BoundaryLayerConductance = model.Project.Model.Settings.BoundaryLayerConductance;
-            RecruitmentVariation = model.Project.Model.Settings.SeedDispersal.RecruitmentDimensionVariation;
-            UseParFractionBelowGroundAllocation = model.Project.Model.Settings.UseParFractionBelowGroundAllocation;
+            this.BrowsingPressure = model.Project.Model.Settings.Browsing.BrowsingPressure;
+            this.GrowthEnabled = model.Project.Model.Settings.GrowthEnabled;
+            this.MortalityEnabled = model.Project.Model.Settings.MortalityEnabled;
+            this.LightExtinctionCoefficient = model.Project.Model.Settings.LightExtinctionCoefficient;
+            this.LightExtinctionCoefficientOpacity = model.Project.Model.Settings.LightExtinctionCoefficientOpacity;
+            this.TemperatureTau = model.Project.Model.Settings.TemperatureTau;
+            this.Epsilon = model.Project.Model.Settings.Epsilon;
+            this.AirDensity = model.Project.Model.Settings.AirDensity;
+            this.LaiThresholdForClosedStands = model.Project.Model.Settings.LaiThresholdForClosedStands;
+            this.BoundaryLayerConductance = model.Project.Model.Settings.BoundaryLayerConductance;
+            this.RecruitmentVariation = model.Project.Model.Settings.SeedDispersal.RecruitmentDimensionVariation;
+            this.UseParFractionBelowGroundAllocation = model.Project.Model.Settings.UseParFractionBelowGroundAllocation;
 
-            Latitude = Global.ToRadians(model.Project.Model.World.Latitude);
+            this.Latitude = Maths.ToRadians(model.Project.Model.World.Latitude);
             
-            IsTorus = model.Project.Model.Parameter.Torus;
+            this.IsTorus = model.Project.Model.Parameter.Torus;
+
+            // snag dynamics / soil model enabled? (info used during setup of world)
+            this.CarbonCycleEnabled = model.Project.Model.Settings.CarbonCycleEnabled;
+            this.RegenerationEnabled = model.Project.Model.Settings.RegenerationEnabled;
         }
 
         public void Print()
@@ -71,7 +75,7 @@ namespace iLand.Simulation
                                                     String.Format("temperatureTau={0}", TemperatureTau),
                                                     String.Format("epsilon={0}", Epsilon),
                                                     String.Format("airDensity={0}", AirDensity),
-                                                    String.Format("latitude={0}", Global.ToDegrees(Latitude)) };
+                                                    String.Format("latitude={0}", Maths.ToDegrees(Latitude)) };
             Debug.WriteLine(String.Join(System.Environment.NewLine, set));
         }
     }

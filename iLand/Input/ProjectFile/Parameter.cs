@@ -16,7 +16,7 @@ namespace iLand.Input.ProjectFile
         public bool DebugClear { get; set; }
 
         [XmlElement(ElementName = "gpp_per_year")]
-        public double GppPerYear { get; set; }
+        public float GppPerYear { get; set; }
 
         [XmlElement(ElementName = "debugDumpStamps")]
         public bool DebugDumpStamps { get; set; }
@@ -25,7 +25,7 @@ namespace iLand.Input.ProjectFile
         {
             this.DebugDumpStamps = false;
             this.DebugTree = null;
-            this.GppPerYear = 0.0;
+            this.GppPerYear = 0.0F;
             this.Torus = false;
         }
     }

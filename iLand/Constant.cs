@@ -13,8 +13,9 @@ namespace iLand
         public const int HeightSize = 10; // size of a height grid pixel, m
         public const int LightSize = 2; // size of light grid, m
         public const int LightCellsPerHectare = 2500; // pixel/ha ( 10000 / (2*2) )
-        public const int LightPerHeightSize = 5; // 10 / 2 LIF pixels per height pixel
-        public const int LightPerRUsize = 50; // 100/2
+        public const int LightCellsPerSeedmapSize = 20; // 20 m / 2 m
+        public const int LightCellsPerHeightSize = 5; // 10 / 2 LIF pixels per height pixel
+        public const int LightCellsPerRUsize = 50; // 100/2
         public const float RegenerationLayerHeight = 4.0F; // m
         public const float RUArea = 10000.0F; // area of a resource unit (m2)
         public const int RUSize = 100; // size of resource unit, m
@@ -23,8 +24,17 @@ namespace iLand
 
         public const double TwoPi = 2.0 * Math.PI;
         public const float Ln2 = 0.693147180559945F;
+        public const int MonthsInYear = 12;
         public const float QuarterPi = 0.25F * MathF.PI;
         public const double Sqrt2 = 1.4142135623731;
+
+        public static class Sapling
+        {
+            public const int HeightClasses = 41;
+            public const float HeightClassSize = 0.1F; // m
+            public const float MaximumHeight = 4.0F; // m
+            public const float MinimumHeight = 0.05F; // m
+        }
 
         public static class Setting
         {

@@ -1,5 +1,4 @@
 ﻿using iLand.Simulation;
-using iLand.Tools;
 using iLand.World;
 using System.Diagnostics;
 using System.Drawing;
@@ -11,54 +10,55 @@ namespace iLand.Tree
         private readonly Model mModel;
         private readonly MapGrid mStandGrid;
         private readonly int mStandID;
-        private readonly GridRunner<float> mRunner;
+        private readonly GridWindowEnumerator<float> standLightRunner;
 
         public ResourceUnit RU { get; private set; }
 
-        public SaplingCellRunner(int standID, MapGrid standGrid, Model model)
+        public SaplingCellRunner(Model model, int standID, MapGrid standGrid)
         {
             this.mModel = model;
             this.mStandID = standID;
             this.mStandGrid = standGrid ?? model.StandGrid;
-            RectangleF box = mStandGrid.BoundingBox(standID);
-            this.mRunner = new GridRunner<float>(model.LightGrid, box);
+            RectangleF standBoundingBox = mStandGrid.GetBoundingBox(standID);
+            this.standLightRunner = new GridWindowEnumerator<float>(model.LightGrid, standBoundingBox);
 
             this.RU = null;
         }
 
         public PointF CurrentCoordinate()
         {
-            return mRunner.CurrentCoordinate();
+            return standLightRunner.GetPhysicalPosition();
         }
 
+        // TODO: change to bool MoveNext()
         public SaplingCell MoveNext()
         {
-            if (mRunner == null)
+            if (standLightRunner == null)
             {
                 return null;
             }
-            for (mRunner.MoveNext(); mRunner.IsValid(); mRunner.MoveNext())
+            while (standLightRunner.MoveNext())
             {
-                float n = mRunner.Current;
+                float n = standLightRunner.Current;
                 if (n == 0.0F)
                 {
                     return null; // end of the bounding box
                 }
-                if (mStandGrid.GetStandIDFromLightCoordinate(mRunner.CurrentIndex()) != mStandID)
+                if (mStandGrid.GetStandIDFromLightCoordinate(standLightRunner.GetCellPosition()) != mStandID)
                 {
                     continue; // pixel does not belong to the target stand
                 }
-                RU = mModel.GetResourceUnit(mRunner.CurrentCoordinate());
-                SaplingCell sc = null;
-                if (RU != null)
+                this.RU = mModel.GetResourceUnit(standLightRunner.GetPhysicalPosition());
+                SaplingCell saplingCell = null;
+                if (this.RU != null)
                 {
-                    sc = RU.SaplingCell(mRunner.CurrentIndex());
+                    saplingCell = RU.SaplingCell(standLightRunner.GetCellPosition());
                 }
-                if (sc != null)
+                if (saplingCell != null)
                 {
-                    return sc;
+                    return saplingCell;
                 }
-                Debug.WriteLine("next(): unexected missing SaplingCell!");
+                Debug.WriteLine("MoveNext(): unexected missing SaplingCell.");
                 return null; // TODO: is this correct?
             }
             return null;
