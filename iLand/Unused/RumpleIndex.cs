@@ -25,7 +25,7 @@ namespace iLand.Tools
             }
 
             // the rumple grid has the same dimensions as the resource unit grid (i.e. 100 meters)
-            mRumpleGrid.Setup(model.ResourceUnitGrid.PhysicalExtent, model.ResourceUnitGrid.CellSize);
+            mRumpleGrid.Setup(model.Landscape.ResourceUnitGrid.PhysicalExtent, model.Landscape.ResourceUnitGrid.CellSize);
         }
 
         // return the rumple index for the full project area
@@ -43,7 +43,7 @@ namespace iLand.Tools
             }
 
             mRumpleGrid.Fill(0.0F);
-            Grid<HeightCell> hg = model.HeightGrid;
+            Grid<HeightCell> hg = model.Landscape.HeightGrid;
 
             // iterate over the resource units and calculate the rumple index / surface area for each resource unit
             HeightCell[] hgv_8 = new HeightCell[8]; // array holding pointers to height grid values (neighborhood)
@@ -57,7 +57,7 @@ namespace iLand.Tools
                 GridWindowEnumerator<HeightCell> runner = new GridWindowEnumerator<HeightCell>(hg, mRumpleGrid.GetCellExtent(mRumpleGrid.GetCellPosition(rg)));
                 while (runner.MoveNext())
                 {
-                    if (runner.Current.IsInWorld())
+                    if (runner.Current.IsOnLandscape())
                     {
                         runner.GetNeighbors8(hgv_8);
                         bool valid = true;
@@ -67,7 +67,7 @@ namespace iLand.Tools
                         for (int i = 0; i < 8; ++i)
                         {
                             heights[hp++] = hgv_8[i] != null ? hgv_8[i].Height : 0;
-                            if (hgv_8[i] != null && !hgv_8[i].IsInWorld())
+                            if (hgv_8[i] != null && !hgv_8[i].IsOnLandscape())
                             {
                                 valid = false;
                             }
@@ -99,12 +99,12 @@ namespace iLand.Tools
                 float rumple_index = total_surface_area / ((float)total_valid_pixels * hg.CellSize * hg.CellSize);
                 mRumpleIndex = rumple_index;
             }
-            mLastYear = model.ModelSettings.CurrentYear;
+            mLastYear = model.CurrentYear;
         }
 
         public double Value(Model model, bool force_recalculate = false)
         {
-            if (force_recalculate || mLastYear != model.ModelSettings.CurrentYear)
+            if (force_recalculate || mLastYear != model.CurrentYear)
             {
                 Calculate(model);
             }

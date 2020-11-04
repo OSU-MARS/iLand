@@ -47,9 +47,9 @@ namespace iLand.Output
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model);
+            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model.Landscape);
             //using DebugTimer dt = model.DebugTimers.Create("TreeOutput.LogYear()");
-            TreeWrapper treeWrapper = new TreeWrapper();
+            TreeWrapper treeWrapper = new TreeWrapper(model);
             mFilter.Wrapper = treeWrapper;
             while (allTreeEnumerator.MoveNext())
             {
@@ -57,13 +57,13 @@ namespace iLand.Output
                 if (mFilter.IsEmpty == false)
                 { // skip fields
                     treeWrapper.Trees = treesOfSpecies;
-                    if (mFilter.Execute(model) == 0.0)
+                    if (mFilter.Execute() == 0.0)
                     {
                         continue;
                     }
                 }
                 int treeIndex = allTreeEnumerator.CurrentTreeIndex;
-                insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
+                insertRow.Parameters[0].Value = model.CurrentYear;
                 insertRow.Parameters[1].Value = treesOfSpecies.RU.GridIndex;
                 insertRow.Parameters[2].Value = treesOfSpecies.RU.EnvironmentID;
                 insertRow.Parameters[3].Value = treesOfSpecies.Species.ID;

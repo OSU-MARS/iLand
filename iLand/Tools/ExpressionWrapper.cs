@@ -1,4 +1,5 @@
-﻿using System;
+﻿using iLand.Simulation;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -21,33 +22,40 @@ namespace iLand.Tools
     {
         protected static readonly ReadOnlyCollection<string> BaseVariableNames;
 
+        public Model Model { get; private set; }
+
         static ExpressionWrapper()
         {
             ExpressionWrapper.BaseVariableNames = new List<string>() { "year" }.AsReadOnly();
         }
 
+        protected ExpressionWrapper(Model model)
+        {
+            this.Model = model;
+        }
+
         public abstract ReadOnlyCollection<string> GetVariableNames();
 
         // must be overloaded!
-        public virtual double GetValue(Simulation.Model model, int variableIndex)
+        public virtual double GetValue(int variableIndex)
         {
             return variableIndex switch
             {
                 // year
-                0 => (double)model.ModelSettings.CurrentYear,
+                0 => this.Model.CurrentYear,
                 _ => throw new NotSupportedException(string.Format("expression wrapper reached base with invalid index index {0}", variableIndex)),
             };
         }
 
         public int GetVariableIndex(string variableName)
         {
-            return GetVariableNames().IndexOf(variableName);
+            return this.GetVariableNames().IndexOf(variableName);
         }
 
-        public double GetValueByName(Simulation.Model model, string variableName)
+        public double GetValueByName(string variableName)
         {
-            int idx = GetVariableIndex(variableName);
-            return GetValue(model, idx);
+            int index = this.GetVariableIndex(variableName);
+            return this.GetValue(index);
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using iLand.Simulation;
-using iLand.World;
+﻿using iLand.World;
 using System.Diagnostics;
 using System.Drawing;
 
@@ -7,20 +6,18 @@ namespace iLand.Tree
 {
     internal class SaplingCellRunner
     {
-        private readonly Model mModel;
-        private readonly MapGrid mStandGrid;
-        private readonly int mStandID;
+        private readonly Landscape landscape;
+        private readonly int standID;
         private readonly GridWindowEnumerator<float> standLightRunner;
 
         public ResourceUnit RU { get; private set; }
 
-        public SaplingCellRunner(Model model, int standID, MapGrid standGrid)
+        public SaplingCellRunner(Landscape landscape, int standID)
         {
-            this.mModel = model;
-            this.mStandID = standID;
-            this.mStandGrid = standGrid ?? model.StandGrid;
-            RectangleF standBoundingBox = mStandGrid.GetBoundingBox(standID);
-            this.standLightRunner = new GridWindowEnumerator<float>(model.LightGrid, standBoundingBox);
+            this.landscape = landscape;
+            this.standID = standID;
+            RectangleF standBoundingBox = landscape.StandGrid.GetBoundingBox(standID);
+            this.standLightRunner = new GridWindowEnumerator<float>(landscape.LightGrid, standBoundingBox);
 
             this.RU = null;
         }
@@ -44,11 +41,11 @@ namespace iLand.Tree
                 {
                     return null; // end of the bounding box
                 }
-                if (mStandGrid.GetStandIDFromLightCoordinate(standLightRunner.GetCellPosition()) != mStandID)
+                if (landscape.StandGrid.GetStandIDFromLightCoordinate(standLightRunner.GetCellPosition()) != standID)
                 {
                     continue; // pixel does not belong to the target stand
                 }
-                this.RU = mModel.GetResourceUnit(standLightRunner.GetPhysicalPosition());
+                this.RU = landscape.GetResourceUnit(standLightRunner.GetPhysicalPosition());
                 SaplingCell saplingCell = null;
                 if (this.RU != null)
                 {

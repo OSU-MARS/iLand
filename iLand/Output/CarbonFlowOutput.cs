@@ -57,25 +57,25 @@ namespace iLand.Output
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            if (model.ResourceUnits.Count == 0)
+            if (model.Landscape.ResourceUnits.Count == 0)
             {
                 // TODO: when would there be zero RUs?
                 return;
             }
             // global condition
-            if ((mFilter.IsEmpty == false) && (mFilter.Evaluate(model, model.ModelSettings.CurrentYear) == 0.0))
+            if ((mFilter.IsEmpty == false) && (mFilter.Evaluate(model.CurrentYear) == 0.0))
             {
                 return;
             }
             bool logIndividualResourceUnits = true;
             // switch off details if this is indicated in the conditionRU option
-            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Evaluate(model, model.ModelSettings.CurrentYear) == 0.0)
+            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Evaluate(model.CurrentYear) == 0.0)
             {
                 logIndividualResourceUnits = false;
             }
 
             double[] accumulatedValues = new double[10]; // 10 data values
-            foreach (ResourceUnit ru in model.ResourceUnits) 
+            foreach (ResourceUnit ru in model.Landscape.ResourceUnits) 
             {
                 if (ru.EnvironmentID == -1)
                 {
@@ -106,7 +106,7 @@ namespace iLand.Output
 
                 if (logIndividualResourceUnits)
                 {
-                    insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
+                    insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = ru.GridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
                     insertRow.Parameters[3].Value = areaFactor;
@@ -141,7 +141,7 @@ namespace iLand.Output
             {
                 return;
             }
-            insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
+            insertRow.Parameters[0].Value = model.CurrentYear;
             insertRow.Parameters[1].Value = -1;
             insertRow.Parameters[2].Value = -1; // codes -1/-1 for landscape level
             insertRow.Parameters[3].Value = accumulatedValues[0]; // stockable area [m2]

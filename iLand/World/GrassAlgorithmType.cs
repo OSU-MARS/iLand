@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 
-namespace iLand.Simulation
+namespace iLand.World
 {
     public enum GrassAlgorithmType
     {

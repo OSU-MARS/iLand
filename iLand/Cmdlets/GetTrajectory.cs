@@ -1,5 +1,7 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
+using iLand.World;
 using System.Management.Automation;
+using Model = iLand.Simulation.Model;
 
 namespace iLand.Cmdlets
 {
@@ -21,10 +23,11 @@ namespace iLand.Cmdlets
 
         protected override void ProcessRecord()
         {
-            using Model model = new Model();
-            model.LoadProject(this.Project);
-            model.ModelSettings.CurrentYear = 1;
-            model.BeforeRun();
+            Project projectFile = Input.ProjectFile.Project.Load(this.Project);
+            Landscape landscape = new Landscape(projectFile);
+
+            using Model model = new Model(projectFile, landscape);
+            model.Setup();
             for (int year = 0; year < Years; ++year)
             {
                 model.RunYear();

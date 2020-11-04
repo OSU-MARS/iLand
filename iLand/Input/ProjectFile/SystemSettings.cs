@@ -1,4 +1,5 @@
-﻿using System.Xml.Serialization;
+﻿using System;
+using System.Xml.Serialization;
 
 namespace iLand.Input.ProjectFile
 {
@@ -14,7 +15,7 @@ namespace iLand.Input.ProjectFile
         public bool DebugOutputAutoSave { get; set; }
 
         [XmlElement(ElementName = "randomSeed")]
-        public int RandomSeed { get; set; }
+        public Nullable<int> RandomSeed { get; set; }
 
         // linearization of expressions: if true *and* linearize() is explicitely called, then
         // function results will be cached over a defined range of values.
@@ -29,7 +30,7 @@ namespace iLand.Input.ProjectFile
             this.ExpressionLinearizationEnabled = false;
             this.LogLevel = "debug";
             this.Multithreading = false;
-            this.RandomSeed = 0;
+            this.RandomSeed = null;
         }
     }
 }

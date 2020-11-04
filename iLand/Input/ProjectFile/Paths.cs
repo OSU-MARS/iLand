@@ -10,6 +10,9 @@ namespace iLand.Input.ProjectFile
         [XmlElement(ElementName = "database")]
         public string Database { get; set; }
 
+        [XmlElement(ElementName = "gis")]
+        public string Gis { get; set; }
+
         [XmlElement(ElementName = "lip")]
         public string LightIntensityProfile { get; set; }
 
@@ -33,6 +36,7 @@ namespace iLand.Input.ProjectFile
             this.Home = null;
 
             this.Database = "database";
+            this.Gis = "gis";
             this.Init = "init";
             this.LightIntensityProfile = "lip";
             this.Log = "log";

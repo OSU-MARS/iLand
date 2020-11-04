@@ -22,58 +22,54 @@ namespace iLand.World
             }.AsReadOnly();
         }
 
-        public ResourceUnitWrapper()
+        public ResourceUnitWrapper(Model model)
+            : base(model)
         {
-            ResourceUnit = null;
-        }
-
-        public ResourceUnitWrapper(ResourceUnit resourceUnit)
-        {
-            ResourceUnit = resourceUnit;
+            this.ResourceUnit = null;
         }
 
         public override ReadOnlyCollection<string> GetVariableNames()
         {
-            return VariableNames;
+            return ResourceUnitWrapper.VariableNames;
         }
 
-        public override double GetValue(Model model, int variableIndex)
+        public override double GetValue(int variableIndex)
         {
-            Debug.Assert(ResourceUnit != null);
+            Debug.Assert(this.ResourceUnit != null);
 
             switch (variableIndex - BaseVariableNames.Count)
             {
-                case 0: return ResourceUnit.EnvironmentID; // id from grid
-                case 1: return ResourceUnit.EffectiveAreaPerWla;
-                case 2: return ResourceUnit.Soil.PlantAvailableNitrogen;
-                case 3: return ResourceUnit.WaterCycle.SoilDepth;
-                case 4: return ResourceUnit.StockedArea;
-                case 5: return ResourceUnit.StockableArea;
-                case 6: return ResourceUnit.Statistics.TreesPerHectare;
-                case 7: return ResourceUnit.Statistics.StemVolume;
-                case 8: return ResourceUnit.Statistics.AverageDbh;
-                case 9: return ResourceUnit.Statistics.AverageHeight;
-                case 10: return ResourceUnit.Statistics.BasalArea;
-                case 11: return ResourceUnit.Statistics.LeafAreaIndex;
-                case 12: return ResourceUnit.AverageAging;
-                case 13: return ResourceUnit.Statistics.CohortCount;
-                case 14: return ResourceUnit.Statistics.SaplingCount;
-                case 15: return ResourceUnit.Statistics.MeanSaplingAge;
-                case 16: return ResourceUnit.WaterCycle.CanopyConductance;
+                case 0: return this.ResourceUnit.EnvironmentID; // id from grid
+                case 1: return this.ResourceUnit.EffectiveAreaPerWla;
+                case 2: return this.ResourceUnit.Soil.PlantAvailableNitrogen;
+                case 3: return this.ResourceUnit.WaterCycle.SoilDepth;
+                case 4: return this.ResourceUnit.StockedArea;
+                case 5: return this.ResourceUnit.StockableArea;
+                case 6: return this.ResourceUnit.Statistics.TreesPerHectare;
+                case 7: return this.ResourceUnit.Statistics.StemVolume;
+                case 8: return this.ResourceUnit.Statistics.AverageDbh;
+                case 9: return this.ResourceUnit.Statistics.AverageHeight;
+                case 10: return this.ResourceUnit.Statistics.BasalArea;
+                case 11: return this.ResourceUnit.Statistics.LeafAreaIndex;
+                case 12: return this.ResourceUnit.AverageAging;
+                case 13: return this.ResourceUnit.Statistics.CohortCount;
+                case 14: return this.ResourceUnit.Statistics.SaplingCount;
+                case 15: return this.ResourceUnit.Statistics.MeanSaplingAge;
+                case 16: return this.ResourceUnit.WaterCycle.CanopyConductance;
                 // soil C + soil N
                 case 17:
-                    if (ResourceUnit.Soil != null)
+                    if (this.ResourceUnit.Soil != null)
                     {
-                        return ResourceUnit.Soil.YoungLabile.C + ResourceUnit.Soil.YoungRefractory.C + ResourceUnit.Soil.OrganicMatter.C;
+                        return this.ResourceUnit.Soil.YoungLabile.C + this.ResourceUnit.Soil.YoungRefractory.C + this.ResourceUnit.Soil.OrganicMatter.C;
                     }
                     else
                     {
                         return 0.0;
                     }
                 case 18:
-                    if (ResourceUnit.Soil != null)
+                    if (this.ResourceUnit.Soil != null)
                     {
-                        return ResourceUnit.Soil.YoungLabile.N + ResourceUnit.Soil.YoungRefractory.N + ResourceUnit.Soil.OrganicMatter.N;
+                        return this.ResourceUnit.Soil.YoungLabile.N + this.ResourceUnit.Soil.YoungRefractory.N + this.ResourceUnit.Soil.OrganicMatter.N;
                     }
                     else
                     {
@@ -81,29 +77,29 @@ namespace iLand.World
                     }
                 // snags
                 case 19:
-                    if (ResourceUnit.Snags != null)
+                    if (this.ResourceUnit.Snags != null)
                     {
-                        return ResourceUnit.Snags.StandingAndDebrisCarbon;
+                        return this.ResourceUnit.Snags.StandingAndDebrisCarbon;
                     }
                     else
                     {
                         return 0.0;
                     }
-                case 20: return ResourceUnit.GridIndex; // numeric index
-                case 21: return ResourceUnit.Climate.MeanAnnualTemperature; // mean temperature
+                case 20: return this.ResourceUnit.GridIndex; // numeric index
+                case 21: return this.ResourceUnit.Climate.MeanAnnualTemperature; // mean temperature
                 case 22:
                     {
                         double psum = 0;
                         for (int i = 0; i < 12; ++i)
                         {
-                            psum += ResourceUnit.Climate.PrecipitationByMonth[i];
+                            psum += this.ResourceUnit.Climate.PrecipitationByMonth[i];
                         }
                         return psum;
                     }
                 case 23: 
-                    return ResourceUnit.Climate.TotalAnnualRadiation;
+                    return this.ResourceUnit.Climate.TotalAnnualRadiation;
                 default:
-                    return base.GetValue(model, variableIndex);
+                    return base.GetValue(variableIndex);
             }
         }
     }

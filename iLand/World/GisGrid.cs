@@ -31,7 +31,7 @@ namespace iLand.World
 
         /// get grid value at local coordinates (X/Y); returs NODATAValue if out of range
         /// @p X and @p Y are local coordinates.
-        public double GetValue(PointF p) { return GetValue(p.X, p.Y); }
+        public double GetValue(PointF position) { return this.GetValue(position.X, position.Y); }
         // coordinates of the lower left corner of the grid
         public PointF Origin { get { return origin; } }
 

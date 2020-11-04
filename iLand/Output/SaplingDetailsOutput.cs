@@ -33,7 +33,7 @@ namespace iLand.Output
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            foreach (ResourceUnit ru in model.ResourceUnits)
+            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 if (ru.EnvironmentID == -1)
                 {
@@ -43,7 +43,7 @@ namespace iLand.Output
                 // exclude if a condition is specified and condition is not met
                 if (!mFilter.IsEmpty)
                 {
-                    if (mFilter.Execute(model) == 0.0)
+                    if (mFilter.Execute() == 0.0)
                     {
                         continue;
                     }
@@ -69,7 +69,7 @@ namespace iLand.Output
                                 }
                                 double n_repr = species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].Height) / n_on_px;
 
-                                insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
+                                insertRow.Parameters[0].Value = model.CurrentYear;
                                 insertRow.Parameters[1].Value = ru.GridIndex;
                                 insertRow.Parameters[2].Value = ru.EnvironmentID;
                                 insertRow.Parameters[3].Value = rus.Species.ID;

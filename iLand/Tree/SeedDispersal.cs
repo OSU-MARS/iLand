@@ -8,6 +8,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Model = iLand.Simulation.Model;
 
 namespace iLand.Tree
 {
@@ -87,13 +88,13 @@ namespace iLand.Tree
         /** setup of the seedmaps.
           This sets the size of the seed map and creates the seed kernel (species specific)
           */
-        public void Setup(Simulation.Model model)
+        public void Setup(Model model)
         {
             this.mProbMode = false;
 
             // setup of seed map
             this.SeedMap.Clear();
-            this.SeedMap.Setup(model.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
+            this.SeedMap.Setup(model.Landscape.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
             this.SeedMap.Fill(0.0F);
             if (mProbMode == false)
             {
@@ -143,7 +144,7 @@ namespace iLand.Tree
             {
                 // an extra seed map is used for storing information related to post-fire seed rain
                 this.mSeedMapSerotiny.Clear();
-                this.mSeedMapSerotiny.Setup(model.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
+                this.mSeedMapSerotiny.Setup(model.Landscape.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
                 this.mSeedMapSerotiny.Fill(0.0F);
 
                 // set up the special seed kernel for post fire seed rain
@@ -156,7 +157,7 @@ namespace iLand.Tree
             this.mDumpSeedMaps = model.Project.Model.Settings.SeedDispersal.DumpSeedMapsEnabled;
             if (mDumpSeedMaps)
             {
-                string path = model.Files.GetPath(model.Project.Model.Settings.SeedDispersal.DumpSeedMapsPath);
+                string path = model.Project.GetFilePath(ProjectDirectory.Home, model.Project.Model.Settings.SeedDispersal.DumpSeedMapsPath);
                 File.WriteAllText(String.Format("{0}/seedkernelYes_{1}.csv", path, Species.ID), mKernelSeedYear.ToString());
                 File.WriteAllText(String.Format("{0}/seedkernelNo_{1}.csv", path, Species.ID), mKernelNonSeedYear.ToString());
                 if (!mKernelSerotiny.IsEmpty())
@@ -238,7 +239,7 @@ namespace iLand.Tree
             //    img.save("seedmap_e.png");
         }
 
-        public void SetupExternalSeeds(Simulation.Model model)
+        public void SetupExternalSeeds(Model model)
         {
             this.mExternalSeedBaseMap = null;
             if (model.Project.Model.Settings.SeedDispersal.SeedBelt.Enabled == false)
@@ -252,9 +253,9 @@ namespace iLand.Tree
             // setup of base map
             float seedmap_size = 20.0F;
             this.mExternalSeedBaseMap = new Grid<float>();
-            this.mExternalSeedBaseMap.Setup(model.HeightGrid.PhysicalExtent, seedmap_size);
+            this.mExternalSeedBaseMap.Setup(model.Landscape.HeightGrid.PhysicalExtent, seedmap_size);
             this.mExternalSeedBaseMap.Fill(0.0F);
-            if (this.mExternalSeedBaseMap.Count * 4 != model.HeightGrid.Count)
+            if (this.mExternalSeedBaseMap.Count * 4 != model.Landscape.HeightGrid.Count)
             {
                 throw new NotSupportedException("Width and height of the project area need to be a multiple of 20m when external seeds are enabled.");
             }
@@ -264,7 +265,7 @@ namespace iLand.Tree
             {
                 for (int indexX = 0; indexX < mExternalSeedBaseMap.CellsX; ++indexX)
                 {
-                    bool cellIsInWorld = model.HeightGrid[2 * indexX, 2 * indexY].IsInWorld();
+                    bool cellIsInWorld = model.Landscape.HeightGrid[2 * indexX, 2 * indexY].IsOnLandscape();
                     this.mExternalSeedBaseMap[indexX, indexY] = cellIsInWorld ? -1.0F : 1.0F;
                 }
             }
@@ -570,7 +571,7 @@ namespace iLand.Tree
             return dist;
         }
 
-        public void SetupExternalSeedsForSpecies(Simulation.Model model, TreeSpecies species)
+        public void SetupExternalSeedsForSpecies(Model model, TreeSpecies species)
         {
             if (!mExtSeedData.ContainsKey(species.ID))
             {
@@ -631,7 +632,7 @@ namespace iLand.Tree
             }
         }
 
-        public void Clear(Simulation.Model model)
+        public void Clear(Model model)
         {
             Grid<float> seedMap = this.SeedMap;
             if (mProbMode == false)
@@ -703,7 +704,7 @@ namespace iLand.Tree
             }
         }
 
-        public void DisperseSeeds(Simulation.Model model)
+        public void DisperseSeeds(Model model)
         {
             if (this.mDumpSeedMaps)
             {
@@ -815,7 +816,7 @@ namespace iLand.Tree
         /** do the seed probability distribution.
             This is phase 2. Apply the seed kernel for each "edge" point identified in phase 1.
             */
-        private void DistributeSeedProbability(Simulation.Model model, Grid<float> seedmap, Grid<float> kernel)
+        private void DistributeSeedProbability(Model model, Grid<float> seedmap, Grid<float> kernel)
         {
             int kernelCenter = kernel.CellsX / 2; // offset is the index of the center pixel
             for (int seedIndex = 0; seedIndex < seedmap.Count; ++seedIndex)
@@ -870,7 +871,7 @@ namespace iLand.Tree
             } // for()
         }
 
-        private void DistributeSeeds(Simulation.Model model, Grid<float> sourceMap)
+        private void DistributeSeeds(Model model, Grid<float> sourceMap)
         {
             Grid<float> kernel = mKernelSeedYear;
 
@@ -916,7 +917,7 @@ namespace iLand.Tree
             // source mode
 
             // *** seed distribution (Kernel + long distance dispersal) ***
-            if (model.ModelSettings.IsTorus == false)
+            if (model.Project.Model.Parameter.Torus == false)
             {
                 // ** standard case (no torus) **
                 for (int sourceIndex = 0; sourceIndex < sourceMap.Count; ++sourceIndex)

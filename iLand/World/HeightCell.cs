@@ -25,7 +25,7 @@
             }
         }
 
-        public bool IsInWorld() { return this.mFlags.HasFlag(HeightCellFlags.InWorld); } // a value of 1: not valid (returns false)
+        public bool IsOnLandscape() { return this.mFlags.HasFlag(HeightCellFlags.OnLandscape); }
         public bool IsRadiating() { return this.mFlags.HasFlag(HeightCellFlags.Radiating); }
 
         // set the count to 0
@@ -43,11 +43,11 @@
         { 
             if (isInWorld)
             {
-                this.mFlags |= HeightCellFlags.InWorld;
+                this.mFlags |= HeightCellFlags.OnLandscape;
             }
             else
             {
-                this.mFlags &= ~HeightCellFlags.InWorld;
+                this.mFlags &= ~HeightCellFlags.OnLandscape;
             }
         }
 

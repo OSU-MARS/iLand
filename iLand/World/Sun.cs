@@ -21,8 +21,8 @@ namespace iLand.World
             this.mDayLengthInHours = new float[Constant.DaysInLeapYear];
         }
 
-        public float GetDayLengthInHours(int dayOfYear) { return mDayLengthInHours[dayOfYear]; }
-        public bool NorthernHemisphere() { return LongestDay < 300; }
+        public float GetDayLengthInHours(int dayOfYear) { return this.mDayLengthInHours[dayOfYear]; }
+        public bool IsNorthernHemisphere() { return this.LongestDay < 300; }
 
         public string Dump()
         {
@@ -38,6 +38,11 @@ namespace iLand.World
 
         public void Setup(float latitudeInRadians)
         {
+            if ((latitudeInRadians < -Constant.HalfPi) || (latitudeInRadians > Constant.HalfPi))
+            {
+                throw new ArgumentOutOfRangeException(nameof(latitudeInRadians), "Latitude is beyond 90° north or south.");
+            }
+
             this.mLatitudeInRadians = latitudeInRadians;
             if (this.mLatitudeInRadians > 0.0F)
             {

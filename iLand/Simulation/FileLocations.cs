@@ -61,7 +61,7 @@ namespace iLand.Simulation
 {
     public class FileLocations
     {
-        private readonly Dictionary<string, string> mFilePaths; // storage for file paths
+        //private readonly Dictionary<string, string> mFilePaths; // storage for file paths
         private int mLoglevel;
 
         //public SystemStatistics SystemStatistics { get; private set; }
@@ -72,76 +72,76 @@ namespace iLand.Simulation
             // this.databaseClimate
             // this.databaseIn
             // this.databaseOut
-            this.mFilePaths = new Dictionary<string, string>();
+            //this.mFilePaths = new Dictionary<string, string>();
             this.mLoglevel = 0;
 
             //this.SystemStatistics = new SystemStatistics();
         }
 
-        public string GetPath(string fileName, string type = "home")
-        {
-            if (!String.IsNullOrEmpty(fileName))
-            {
-                if (Path.IsPathRooted(fileName))
-                {
-                    // canonicalize path
-                    return Path.GetFullPath(fileName);
-                }
-            }
+        //public string GetPath(string fileName, string type = "home")
+        //{
+        //    if (!String.IsNullOrEmpty(fileName))
+        //    {
+        //        if (Path.IsPathRooted(fileName))
+        //        {
+        //            // canonicalize path
+        //            return Path.GetFullPath(fileName);
+        //        }
+        //    }
 
-            if (mFilePaths.TryGetValue(type, out string directoryPath) == false)
-            {
-                directoryPath = System.Environment.CurrentDirectory;
-            }
-            if (String.IsNullOrEmpty(fileName))
-            {
-                return directoryPath;
-            }
-            return Path.Combine(directoryPath, fileName);
-        }
+        //    if (this.mFilePaths.TryGetValue(type, out string directoryPath) == false)
+        //    {
+        //        directoryPath = System.Environment.CurrentDirectory;
+        //    }
+        //    if (String.IsNullOrEmpty(fileName))
+        //    {
+        //        return directoryPath;
+        //    }
+        //    return Path.Combine(directoryPath, fileName);
+        //}
 
-        public SqliteConnection GetDatabaseConnection(string databaseFilePath, bool openReadOnly)
-        {
-            if (openReadOnly)
-            {
-                if (File.Exists(databaseFilePath) == false)
-                {
-                    throw new ArgumentException("Database file '" + databaseFilePath + "'does not exist!", nameof(databaseFilePath));
-                }
-            }
+        //public SqliteConnection GetDatabaseConnection(string databaseFilePath, bool openReadOnly)
+        //{
+        //    if (openReadOnly)
+        //    {
+        //        if (File.Exists(databaseFilePath) == false)
+        //        {
+        //            throw new ArgumentException("Database file '" + databaseFilePath + "'does not exist!", nameof(databaseFilePath));
+        //        }
+        //    }
 
-            // TODO: check if database is already open
-            //QSqlDatabase::database(dbname).close(); // close database
-            SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
-            {
-                DataSource = databaseFilePath,
-                Mode = openReadOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
-            };
-            SqliteConnection connection = new SqliteConnection(connectionString.ConnectionString);
-            // Debug.WriteLine("setup database connection " + dbname + " to " + databaseFilePath);
-            connection.Open();
-            if (openReadOnly == false)
-            {
-                // performance settings for output databases (http://www.sqlite.org/pragma.html)
-                // Databases are typically expensive to create and maintain so SQLite defaults to conservative disk interactions. iLand
-                // output data is cheap to generate and easy to recreate in the unlikely event something goes wrong flushing to disk, so
-                // caution can be exchanged for speed. For example, journal_mode = memory, synchronous = off, and temp_store = memory 
-                // make the model unit tests run 4-5x times faster than default settings.
-                // pragma synchronous cannot be changed within a transaction
-                using SqliteCommand synchronization = new SqliteCommand("pragma synchronous(off)", connection);
-                synchronization.ExecuteNonQuery();
+        //    // TODO: check if database is already open
+        //    //QSqlDatabase::database(dbname).close(); // close database
+        //    SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
+        //    {
+        //        DataSource = databaseFilePath,
+        //        Mode = openReadOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
+        //    };
+        //    SqliteConnection connection = new SqliteConnection(connectionString.ConnectionString);
+        //    // Debug.WriteLine("setup database connection " + dbname + " to " + databaseFilePath);
+        //    connection.Open();
+        //    if (openReadOnly == false)
+        //    {
+        //        // performance settings for output databases (http://www.sqlite.org/pragma.html)
+        //        // Databases are typically expensive to create and maintain so SQLite defaults to conservative disk interactions. iLand
+        //        // output data is cheap to generate and easy to recreate in the unlikely event something goes wrong flushing to disk, so
+        //        // caution can be exchanged for speed. For example, journal_mode = memory, synchronous = off, and temp_store = memory 
+        //        // make the model unit tests run 4-5x times faster than default settings.
+        //        // pragma synchronous cannot be changed within a transaction
+        //        using SqliteCommand synchronization = new SqliteCommand("pragma synchronous(off)", connection);
+        //        synchronization.ExecuteNonQuery();
 
-                using SqliteTransaction transaction = connection.BeginTransaction();
-                // little to no difference between journal_mode = memory and journal_mode = off
-                using SqliteCommand journalMode = new SqliteCommand("pragma journal_mode(memory)", connection, transaction);
-                journalMode.ExecuteNonQuery();
-                using SqliteCommand tempStore = new SqliteCommand("pragma temp_store(memory)", connection, transaction);
-                tempStore.ExecuteNonQuery();
-                transaction.Commit();
-            }
+        //        using SqliteTransaction transaction = connection.BeginTransaction();
+        //        // little to no difference between journal_mode = memory and journal_mode = off
+        //        using SqliteCommand journalMode = new SqliteCommand("pragma journal_mode(memory)", connection, transaction);
+        //        journalMode.ExecuteNonQuery();
+        //        using SqliteCommand tempStore = new SqliteCommand("pragma temp_store(memory)", connection, transaction);
+        //        tempStore.ExecuteNonQuery();
+        //        transaction.Commit();
+        //    }
 
-            return connection;
-        }
+        //    return connection;
+        //}
 
         // true, if detailed debug information is logged
         public bool LogDebug()
@@ -161,30 +161,30 @@ namespace iLand.Simulation
             return mLoglevel < 3;
         }
 
-        public void SetupDirectories(Paths paths, string projectFilePath)
-        {
-            mFilePaths.Clear();
-            mFilePaths.Add("exe", this.GetType().Assembly.Location);
-            string homePath = paths.Home;
-            if (String.IsNullOrEmpty(homePath))
-            {
-                homePath = Path.GetDirectoryName(projectFilePath);
-                if (String.IsNullOrEmpty(homePath))
-                {
-                    throw new ArgumentOutOfRangeException(projectFilePath);
-                }
-            }
+        //public void SetupDirectories(Paths paths, string projectFilePath)
+        //{
+        //    this.mFilePaths.Clear();
+        //    this.mFilePaths.Add("exe", this.GetType().Assembly.Location);
+        //    string homePath = paths.Home;
+        //    if (String.IsNullOrEmpty(homePath))
+        //    {
+        //        homePath = Path.GetDirectoryName(projectFilePath);
+        //        if (String.IsNullOrEmpty(homePath))
+        //        {
+        //            throw new ArgumentOutOfRangeException(projectFilePath);
+        //        }
+        //    }
 
-            mFilePaths.Add("home", homePath);
-            // make other paths relative to "home" if given as relative paths
-            mFilePaths.Add("lip", this.GetPath(paths.LightIntensityProfile, "home"));
-            mFilePaths.Add("database", this.GetPath(paths.Database, "home"));
-            mFilePaths.Add("temp", this.GetPath(paths.Temp, "home"));
-            mFilePaths.Add("log", this.GetPath(paths.Log, "home"));
-            mFilePaths.Add("script", this.GetPath(paths.Script, "home"));
-            mFilePaths.Add("init", this.GetPath(paths.Init, "home"));
-            mFilePaths.Add("output", this.GetPath(paths.Output, "home"));
-        }
+        //    this.mFilePaths.Add("home", homePath);
+        //    // make other paths relative to "home" if given as relative paths
+        //    this.mFilePaths.Add("lip", this.GetPath(paths.LightIntensityProfile, "home"));
+        //    this.mFilePaths.Add("database", this.GetPath(paths.Database, "home"));
+        //    this.mFilePaths.Add("temp", this.GetPath(paths.Temp, "home"));
+        //    this.mFilePaths.Add("log", this.GetPath(paths.Log, "home"));
+        //    this.mFilePaths.Add("script", this.GetPath(paths.Script, "home"));
+        //    this.mFilePaths.Add("init", this.GetPath(paths.Init, "home"));
+        //    this.mFilePaths.Add("output", this.GetPath(paths.Output, "home"));
+        //}
 
         public void SetLogLevel(int loglevel)
         {

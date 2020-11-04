@@ -1,4 +1,4 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
 using iLand.Tree;
 using iLand.World;
 using System;
@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using Model = iLand.Simulation.Model;
 
 namespace iLand.Tools
 {
@@ -127,8 +128,8 @@ namespace iLand.Tools
             Debug.WriteLine("extractPatches: found " + patch_index + " patches, total valid pixels: " + total_size + " skipped" + patches_skipped);
             if (String.IsNullOrEmpty(fileName) == false)
             {
-                Debug.WriteLine("extractPatches: save to file: " + model.Files.GetPath(fileName));
-                File.WriteAllText(model.Files.GetPath(fileName), Grid.ToEsriRaster(model, mClumpGrid));
+                Debug.WriteLine("extractPatches: save to file: " + model.Project.GetFilePath(ProjectDirectory.Home, fileName));
+                File.WriteAllText(model.Project.GetFilePath(ProjectDirectory.Home, fileName), Grid.ToEsriRaster(model.Landscape, mClumpGrid));
             }
             return counts;
 
@@ -140,25 +141,25 @@ namespace iLand.Tools
             {
                 mRumple = new RumpleIndex();
             }
-            File.WriteAllText(model.Files.GetPath(fileName), Grid.ToEsriRaster(model, mRumple.RumpleGrid(model)));
+            File.WriteAllText(model.Project.GetFilePath(ProjectDirectory.Home, fileName), Grid.ToEsriRaster(model.Landscape, mRumple.RumpleGrid(model)));
         }
 
         public void SaveCrownCoverGrid(Model model, string fileName)
         {
             CalculateCrownCover(model);
-            File.WriteAllText(model.Files.GetPath(fileName), Grid.ToEsriRaster(model, mCrownCoverGrid));
+            File.WriteAllText(model.Project.GetFilePath(ProjectDirectory.Home, fileName), Grid.ToEsriRaster(model.Landscape, mCrownCoverGrid));
         }
 
         private void CalculateCrownCover(Model model)
         {
-            mCrownCoverGrid.Setup(model.ResourceUnitGrid.PhysicalExtent, model.ResourceUnitGrid.CellSize);
+            mCrownCoverGrid.Setup(model.Landscape.ResourceUnitGrid.PhysicalExtent, model.Landscape.ResourceUnitGrid.CellSize);
 
             // calculate the crown cover per resource unit. We use the "reader"-stamps of the individual trees
             // as they represent the crown (size). We also simply hijack the LIF grid for our calculations.
-            Grid<float> grid = model.LightGrid;
+            Grid<float> grid = model.Landscape.LightGrid;
             grid.Fill(0.0F);
             // we simply iterate over all trees of all resource units (not bothering about multithreading here)
-            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model);
+            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model.Landscape);
             while (allTreeEnumerator.MoveNextLiving())
             {
                 // apply the reader-stamp
@@ -188,7 +189,7 @@ namespace iLand.Tools
             // now aggregate values for each resource unit
             for (int crownIndex = 0; crownIndex < mCrownCoverGrid.Count; ++crownIndex)
             {
-                ResourceUnit ru = model.ResourceUnitGrid[mCrownCoverGrid.GetCellPosition(crownIndex)];
+                ResourceUnit ru = model.Landscape.ResourceUnitGrid[mCrownCoverGrid.GetCellPosition(crownIndex)];
                 if (ru == null)
                 {
                     mCrownCoverGrid[crownIndex] = 0.0F;
@@ -199,7 +200,7 @@ namespace iLand.Tools
                 while (coverRunner.MoveNext())
                 {
                     float canopyCover = coverRunner.Current;
-                    if (model.HeightGrid[coverRunner.GetCellPosition().X, coverRunner.GetCellPosition().Y, Constant.LightCellsPerHeightSize].IsInWorld())
+                    if (model.Landscape.HeightGrid[coverRunner.GetCellPosition().X, coverRunner.GetCellPosition().Y, Constant.LightCellsPerHeightSize].IsOnLandscape())
                     {
                         if (canopyCover >= 0.5F) // 0.5: half of a 2m cell is covered by a tree crown; is a bit pragmatic but seems reasonable (and works)
                         {

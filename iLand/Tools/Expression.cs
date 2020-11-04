@@ -1,5 +1,4 @@
-﻿using iLand.Simulation;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -51,6 +50,7 @@ namespace iLand.Tools
     {
         public static readonly ReadOnlyCollection<string> MathFunctions = new List<string>()
         {
+            // 0   1      2      3      4     5       6      7      8     9         10         11     12         13     14      15    16
             "sin", "cos", "tan", "exp", "ln", "sqrt", "min", "max", "if", "incsum", "polygon", "mod", "sigmoid", "rnd", "rndg", "in", "round"
         }.AsReadOnly();
 
@@ -599,33 +599,33 @@ namespace iLand.Tools
             }
         }
 
-        public double Evaluate(Model model, double variable1 = 0.0, double variable2 = 0.0, bool forceExecution = false)
+        public double Evaluate(double variable1 = 0.0, double variable2 = 0.0, bool forceExecution = false)
         {
             if ((mLinearizedDimensionCount > 0) && (forceExecution == false))
             {
                 if (mLinearizedDimensionCount == 1)
                 {
-                    return GetLinearizedValue(model, variable1);
+                    return this.GetLinearizedValue(variable1);
                 }
-                return GetLinearizedValue(model, variable1, variable2); // matrix case
+                return this.GetLinearizedValue(variable1, variable2); // matrix case
             }
             double[] variableList = new double[10];
             variableList[0] = variable1;
             variableList[1] = variable2;
             this.RequireExternalVariableBinding = false;
-            return this.Execute(model, variableList); // execute with local variables on stack
+            return this.Execute(variableList); // execute with local variables on stack
         }
 
-        public double Evaluate(Model model, ExpressionWrapper wrapper, double variable1 = 0.0, double variable2 = 0.0)
+        public double Evaluate(ExpressionWrapper wrapper, double variable1 = 0.0, double variable2 = 0.0)
         {
             double[] variableList = new double[10];
             variableList[0] = variable1;
             variableList[1] = variable2;
             this.RequireExternalVariableBinding = false;
-            return this.Execute(model, variableList, wrapper); // execute with local variables on stack
+            return this.Execute(variableList, wrapper); // execute with local variables on stack
         }
 
-        public double Execute(Model model, double[] variableList = null, ExpressionWrapper wrapper = null)
+        public double Execute(double[] variableList = null, ExpressionWrapper wrapper = null)
         {
             if (!isParsed)
             {
@@ -672,7 +672,7 @@ namespace iLand.Tools
                         }
                         else if (exec.Index < 1000)
                         {
-                            value = this.GetModelVariable(model, exec.Index, wrapper);
+                            value = this.GetModelVariable(exec.Index, wrapper);
                         }
                         else
                         {
@@ -753,7 +753,7 @@ namespace iLand.Tools
                             case 14: // rnd(from, to) bzw. rndg(mean, stddev)
                                 stackDepth--;
                                 // index-13: 1 bei rnd, 0 bei rndg
-                                stack[stackDepth] = ExecuteUserDefinedRandom(model, exec.Index - 13, stack[stackDepth], stack[stackDepth + 1]);
+                                stack[stackDepth] = this.ExecuteUserDefinedRandom(exec.Index - 13, stack[stackDepth], stack[stackDepth + 1]);
                                 break;
                             case 15: // in-list in() operator
                                 stack[stackDepth - (int)(exec.Value - 1)] = ExecuteUserDefinedFunctionInList(stack[stackDepth - (int)(exec.Value - 1)], stack, stackDepth, (int)exec.Value);
@@ -888,14 +888,14 @@ namespace iLand.Tools
             return -1;
         }
 
-        public double GetModelVariable(Model model, int valueIndex, ExpressionWrapper wrapper = null)
+        private double GetModelVariable(int valueIndex, ExpressionWrapper wrapper = null)
         {
             // der weg nach draussen....
-            ExpressionWrapper modelObject = wrapper ?? Wrapper;
-            int idx = valueIndex - 100; // intern als 100+x gespeichert...
+            ExpressionWrapper modelObject = wrapper ?? this.Wrapper;
+            int index = valueIndex - 100; // intern als 100+x gespeichert...
             if (modelObject != null)
             {
-                return modelObject.GetValue(model, idx);
+                return modelObject.GetValue(index);
             }
             // hier evtl. verschiedene objekte unterscheiden (Zahlenraum???)
             throw new ArgumentOutOfRangeException(nameof(valueIndex), "Model variable not found.");
@@ -1032,16 +1032,21 @@ namespace iLand.Tools
             mExecListSize = NewSize;
         }
 
-        private double ExecuteUserDefinedRandom(Model model, int type, double p1, double p2)
+        private double ExecuteUserDefinedRandom(int type, double p1, double p2)
         {
+            if ((this.Wrapper == null) || (this.Wrapper.Model == null))
+            {
+                throw new NotSupportedException("Unable to access random number generator. Ensure that a wrapper is specified with a non-null model.");
+            }
+
             // random / gleichverteilt - normalverteilt
             if (type == 0)
             {
-                return model.RandomGenerator.GetRandomDouble(p1, p2);
+                return this.Wrapper.Model.RandomGenerator.GetRandomDouble(p1, p2);
             }
             else    // gaussverteilt
             {
-                return model.RandomGenerator.GetRandomNormal(p1, p2);
+                return this.Wrapper.Model.RandomGenerator.GetRandomNormal(p1, p2);
             }
         }
 
@@ -1051,13 +1056,8 @@ namespace iLand.Tools
             high_value: upper limit
             steps: number of steps the function is split into
           */
-        public void Linearize(Model model, double lowValue, double highValue, int steps = 1000)
+        public void Linearize(double lowValue, double highValue, int steps = 1000)
         {
-            if (model.Project.System.Settings.ExpressionLinearizationEnabled == false)
-            {
-                throw new NotSupportedException("Linearize() called when linearization is not enabled.");
-            }
-
             mLinearized.Clear();
             mLinearLow = lowValue;
             mLinearHigh = highValue;
@@ -1066,19 +1066,15 @@ namespace iLand.Tools
             for (int i = 0; i <= steps + 1; i++)
             {
                 double x = mLinearLow + i * mLinearStep;
-                double r = Evaluate(model, x);
+                double r = this.Evaluate(x);
                 mLinearized.Add(r);
             }
             mLinearizedDimensionCount = 1;
         }
 
         /// like 'linearize()' but for 2d-matrices
-        public void Linearize(Model model, double lowX, double highX, double lowY, double highY, int stepsX = 50, int stepsY = 50)
+        public void Linearize(double lowX, double highX, double lowY, double highY, int stepsX = 50, int stepsY = 50)
         {
-            if (model.Project.System.Settings.ExpressionLinearizationEnabled == false)
-            {
-                throw new NotSupportedException("Linearize() called when linearization is not enabled.");
-            }
             mLinearized.Clear();
             mLinearLow = lowX;
             mLinearHigh = highX;
@@ -1093,7 +1089,7 @@ namespace iLand.Tools
                 {
                     double x = mLinearLow + indexX * mLinearStep;
                     double y = mLinearLowY + indexY * mLinearStepY;
-                    double r = Evaluate(model, x, y);
+                    double r = this.Evaluate(x, y);
                     mLinearized.Add(r);
                 }
             }
@@ -1102,11 +1098,11 @@ namespace iLand.Tools
         }
 
         /// calculate the linear approximation of the result value
-        private double GetLinearizedValue(Model model, double x)
+        private double GetLinearizedValue(double x)
         {
             if (x < mLinearLow || x > mLinearHigh)
             {
-                return Evaluate(model, x, 0.0, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
+                return this.Evaluate(x, 0.0, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lower = (int)((x - mLinearLow) / mLinearStep); // the lower point
             if (lower + 1 >= mLinearized.Count())
@@ -1120,11 +1116,11 @@ namespace iLand.Tools
         }
 
         /// calculate the linear approximation of the result value
-        private double GetLinearizedValue(Model model, double x, double y)
+        private double GetLinearizedValue(double x, double y)
         {
             if (x < mLinearLow || x > mLinearHigh || y < mLinearLowY || y > mLinearHighY)
             {
-                return Evaluate(model, x, y, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
+                return this.Evaluate(x, y, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lowerx = (int)((x - mLinearLow) / mLinearStep); // the lower point (x-axis)
             int lowery = (int)((y - mLinearLowY) / mLinearStepY); // the lower point (y-axis)

@@ -25,10 +25,10 @@ namespace iLand.World
         //    return result + line;
         //}
 
-        public static string ToEsriRaster<T>(Model model, Grid<T> grid)
+        public static string ToEsriRaster<T>(Landscape landscape, Grid<T> grid)
         {
             Vector3D local = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
-            model.Environment.GisGrid.ModelToWorld(local, out Vector3D world);
+            landscape.Environment.GisGrid.ModelToWorld(local, out Vector3D world);
             StringBuilder result = new StringBuilder();
             result.Append(String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
                                         grid.CellsX, grid.CellsY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine));

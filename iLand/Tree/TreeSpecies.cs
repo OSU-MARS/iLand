@@ -1,8 +1,10 @@
 ﻿using iLand.Input;
+using iLand.Input.ProjectFile;
 using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Diagnostics;
+using Model = iLand.Simulation.Model;
 
 namespace iLand.Tree
 {
@@ -125,9 +127,9 @@ namespace iLand.Tree
 
         public LightStamp GetStamp(float dbh, float height) { return mLightIntensityProfiles.GetStamp(dbh, height); }
 
-        public float GetLightResponse(Simulation.Model model, float lightResourceIndex) 
+        public float GetLightResponse(float lightResourceIndex) 
         { 
-            return this.SpeciesSet.GetLightResponse(model, lightResourceIndex, mLightResponseClass); 
+            return this.SpeciesSet.GetLightResponse(lightResourceIndex, mLightResponseClass); 
         }
 
         public float GetNitrogenResponse(float availableNitrogen) 
@@ -147,7 +149,7 @@ namespace iLand.Tree
             Data is fetched from the open query (or file, ...) in the parent SpeciesSet using xyzVar() functions.
             This is called
             */
-        public static TreeSpecies Load(Simulation.Model model, SpeciesReader reader, TreeSpeciesSet speciesSet)
+        public static TreeSpecies Load(Project projectFile, SpeciesReader reader, TreeSpeciesSet speciesSet)
         {
             TreeSpecies species = new TreeSpecies(speciesSet)
             {
@@ -157,10 +159,10 @@ namespace iLand.Tree
             };
             string stampFile = reader.LipFile();
             // load stamps
-            species.mLightIntensityProfiles.Load(model.Files.GetPath(stampFile, "lip"));
+            species.mLightIntensityProfiles.Load(projectFile.GetFilePath(ProjectDirectory.LightIntensityProfile, stampFile));
             // attach writer stamps to reader stamps
             species.mLightIntensityProfiles.AttachReaderStamps(species.SpeciesSet.ReaderStamps);
-            if (model.Project.Model.Parameter.DebugDumpStamps)
+            if (projectFile.Model.Parameter.DebugDumpStamps)
             {
                 Debug.WriteLine(species.mLightIntensityProfiles.Dump());
             }
@@ -205,10 +207,10 @@ namespace iLand.Tree
             // hd-relations
             species.mHDlow.SetAndParse(reader.HdLow());
             species.mHDhigh.SetAndParse(reader.HdHigh());
-            if (model.Project.System.Settings.ExpressionLinearizationEnabled)
+            if (projectFile.System.Settings.ExpressionLinearizationEnabled)
             {
-                species.mHDlow.Linearize(model, 0.0, 100.0); // input: dbh (cm). above 100cm the formula will be directly executed
-                species.mHDhigh.Linearize(model, 0.0, 100.0);
+                species.mHDlow.Linearize(0.0, 100.0); // input: dbh (cm). above 100cm the formula will be directly executed
+                species.mHDhigh.Linearize(0.0, 100.0);
             }
 
             // form/density
@@ -242,9 +244,9 @@ namespace iLand.Tree
             species.mMaximumAge = reader.MaximumAge();
             species.mMaximumHeight = reader.MaximumHeight();
             species.mAging.SetAndParse(reader.Aging());
-            if (model.Project.System.Settings.ExpressionLinearizationEnabled)
+            if (projectFile.System.Settings.ExpressionLinearizationEnabled)
             {
-                species.mAging.Linearize(model, 0.0, 1.0); // input is harmonic mean of relative age and relative height
+                species.mAging.Linearize(0.0, 1.0); // input is harmonic mean of relative age and relative height
             }
             if ((species.mMaximumAge <= 0.0F) || (species.mMaximumAge > 1000.0F * 1000.0F) ||
                 (species.mMaximumHeight <= 0.0) || (species.mMaximumHeight > 200.0)) // Sequoia semperivirens (Hyperion) 115.7 m
@@ -265,11 +267,6 @@ namespace iLand.Tree
             // TODO: probability of senescence as a function of age
             species.DeathProbabilityFixed = 1.0F - MathF.Pow(fixedMortalityBase, 1.0F / species.mMaximumAge);
             species.mStressMortalityCoefficient = stressMortalityCoefficient;
-
-            if (model.Files.LogDebug())
-            {
-                Debug.WriteLine("Load species " + species.Name + ": probStress " + stressMortalityCoefficient + " resulting probability: " + species.mStressMortalityCoefficient);
-            }
 
             // envirionmental responses
             species.mRespVpdExponent = reader.RespVpdExponent();
@@ -351,9 +348,9 @@ namespace iLand.Tree
                 }
             }
             species.SaplingGrowthParameters.SetupReinekeLookup();
-            if (model.Project.System.Settings.ExpressionLinearizationEnabled)
+            if (projectFile.System.Settings.ExpressionLinearizationEnabled)
             {
-                species.SaplingGrowthParameters.HeightGrowthPotential.Linearize(model, 0.0, Constant.Sapling.MaximumHeight);
+                species.SaplingGrowthParameters.HeightGrowthPotential.Linearize(0.0, Constant.Sapling.MaximumHeight);
             }
             return species;
         }
@@ -373,7 +370,7 @@ namespace iLand.Tree
            see http://iland.boku.ac.at/primary+production#respiration_and_aging
            @param useAge set to true if "real" tree age is available. If false, only the tree height is used.
           */
-        public float GetAgingFactor(Simulation.Model model, float height, int age)
+        public float GetAgingFactor(float height, int age)
         {
             Debug.Assert(height > 0.0F);
             Debug.Assert(age > 1);
@@ -384,7 +381,7 @@ namespace iLand.Tree
             // harmonic mean: http://en.wikipedia.org/wiki/Harmonic_mean
             float x = 1.0F - 2.0F / (1.0F / (1.0F - relativeHeight) + 1.0F / (1.0F - relativeAge)); // Note:
 
-            float agingFactor = (float)mAging.Evaluate(model, x);
+            float agingFactor = (float)mAging.Evaluate(x);
 
             return Maths.Limit(agingFactor, 0.0F, 1.0F);
         }
@@ -400,7 +397,7 @@ namespace iLand.Tree
            If seeds are produced, this information is stored in a "SeedMap"
           */
         /// check the maturity of the tree and flag the position as seed source appropriately
-        public void DisperseSeeds(Simulation.Model model, Trees tree, int treeIndex)
+        public void DisperseSeeds(Model model, Trees tree, int treeIndex)
         {
             if (this.SeedDispersal == null)
             {
@@ -421,23 +418,23 @@ namespace iLand.Tree
         }
 
         /// returns true of a tree with given age/height is serotinous (i.e. seed release after fire)
-        public bool IsTreeSerotinousRandom(Simulation.Model model, int age)
+        public bool IsTreeSerotinousRandom(Model model, int age)
         {
             if (mSerotiny.IsEmpty)
             {
                 return false;
             }
             // the function result (e.g. from a logistic regression model, e.g. Schoennagel 2013) is interpreted as probability
-            double pSerotinous = mSerotiny.Evaluate(model, age);
+            double pSerotinous = mSerotiny.Evaluate(age);
             return model.RandomGenerator.GetRandomDouble() < pSerotinous;
         }
 
         /** newYear is called by the SpeciesSet at the beginning of a year before any growth occurs.
           This is used for various initializations, e.g. to clear seed dispersal maps
           */
-        public void OnStartYear(Simulation.Model model)
+        public void OnStartYear(Model model)
         {
-            if (SeedDispersal != null)
+            if (this.SeedDispersal != null)
             {
                 // decide whether current year is a seed year
                 // TODO: link to weather conditions and time since last seed year/
@@ -447,14 +444,14 @@ namespace iLand.Tree
                     Debug.WriteLine("species " + ID + " has a seed year.");
                 }
                 // clear seed map
-                SeedDispersal.Clear(model);
+                this.SeedDispersal.Clear(model);
             }
         }
 
-        public void GetHeightDiameterRatioLimits(Simulation.Model model, float dbh, out float hdRatioLowerBound, out float hdRatioUpperBound)
+        public void GetHeightDiameterRatioLimits(float dbh, out float hdRatioLowerBound, out float hdRatioUpperBound)
         {
-            hdRatioLowerBound = (float)mHDlow.Evaluate(model, dbh);
-            hdRatioUpperBound = (float)mHDhigh.Evaluate(model, dbh);
+            hdRatioLowerBound = (float)mHDlow.Evaluate(dbh);
+            hdRatioUpperBound = (float)mHDhigh.Evaluate(dbh);
         }
 
         /** vpdResponse calculates response on vpd.

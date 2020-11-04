@@ -40,13 +40,13 @@ namespace iLand.Output
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             // global condition
-            if (!mFilter.IsEmpty && mFilter.Evaluate(model, model.ModelSettings.CurrentYear) == 0.0)
+            if (!mFilter.IsEmpty && mFilter.Evaluate(model.CurrentYear) == 0.0)
             {
                 return;
             }
             bool logResourceUnits = true;
             // switch off details if this is indicated in the conditionRU option
-            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Evaluate(model, model.ModelSettings.CurrentYear) == 0.0)
+            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Evaluate(model.CurrentYear) == 0.0)
             {
                 logResourceUnits = false;
             }
@@ -55,7 +55,7 @@ namespace iLand.Output
             int snowDays = 0;
             double evapotranspiration = 0.0, runoff = 0.0, rad = 0.0, snowRad = 0.0, precip = 0.0;
             double stockable = 0.0, stocked = 0.0;
-            foreach (ResourceUnit ru in model.ResourceUnits)
+            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 if (ru.EnvironmentID == -1)
                 {
@@ -64,14 +64,14 @@ namespace iLand.Output
                 WaterCycle wc = ru.WaterCycle;
                 if (logResourceUnits)
                 {
-                    insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
+                    insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = ru.GridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
                     insertRow.Parameters[3].Value = ru.StockedArea / Constant.RUArea;
                     insertRow.Parameters[4].Value = ru.StockableArea / Constant.RUArea;
                     insertRow.Parameters[5].Value = ru.Climate.GetTotalPrecipitationInCurrentYear();
                     insertRow.Parameters[6].Value = wc.TotalEvapotranspiration;
-                    insertRow.Parameters[7].Value = wc.TotalWaterLoss;
+                    insertRow.Parameters[7].Value = wc.TotalRunoff;
                     insertRow.Parameters[8].Value = wc.SnowDays;
                     insertRow.Parameters[9].Value = ru.Climate.TotalAnnualRadiation;
                     insertRow.Parameters[10].Value = wc.SnowDayRadiation;
@@ -81,7 +81,7 @@ namespace iLand.Output
                 stockable += ru.StockableArea; 
                 stocked += ru.StockedArea;
                 precip += ru.Climate.GetTotalPrecipitationInCurrentYear();
-                evapotranspiration += wc.TotalEvapotranspiration; runoff += wc.TotalWaterLoss; 
+                evapotranspiration += wc.TotalEvapotranspiration; runoff += wc.TotalRunoff; 
                 snowDays += (int)wc.SnowDays;
                 rad += ru.Climate.TotalAnnualRadiation;
                 snowRad += wc.SnowDayRadiation;
@@ -92,7 +92,7 @@ namespace iLand.Output
             {
                 return;
             }
-            insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear; // codes -1/-1 for landscape level
+            insertRow.Parameters[0].Value = model.CurrentYear; // codes -1/-1 for landscape level
             insertRow.Parameters[1].Value = -1;
             insertRow.Parameters[2].Value = -1;
             insertRow.Parameters[3].Value = stocked / resourceUnitCount / Constant.RUArea;

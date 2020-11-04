@@ -1,4 +1,5 @@
-﻿using iLand.Tools;
+﻿using iLand.Input.ProjectFile;
+using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,9 +21,9 @@ namespace iLand.Simulation
             this.eventsByYear.Clear();
         }
 
-        public void LoadFromFile(FileLocations paths, string fileName)
+        public void LoadFromFile(Project projectFile, string fileName)
         {
-            CsvFile eventFile = new CsvFile(paths.GetPath(fileName));
+            CsvFile eventFile = new CsvFile(projectFile.GetFilePath(ProjectDirectory.Home, fileName));
             List<string> headers = eventFile.ColumnNames;
             int yearIndex = eventFile.GetColumnIndex("year");
             if (yearIndex == -1)
@@ -54,7 +55,7 @@ namespace iLand.Simulation
 
         public void RunYear(Model model)
         {
-            int currentYear = model.ModelSettings.CurrentYear;
+            int currentYear = model.CurrentYear;
             if (eventsByYear.TryGetValue(currentYear, out List<MutableTuple<string, string>> eventsOfYear) == false)
             {
                 return;

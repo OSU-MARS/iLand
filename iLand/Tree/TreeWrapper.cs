@@ -1,4 +1,5 @@
-﻿using iLand.Tools;
+﻿using iLand.Simulation;
+using iLand.Tools;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -23,7 +24,8 @@ namespace iLand.Tree
             }.AsReadOnly(); // 22-25
         }
 
-        public TreeWrapper()
+        public TreeWrapper(Model model)
+            : base(model)
         {
             this.Trees = null;
             this.TreeIndex = -1;
@@ -40,7 +42,7 @@ namespace iLand.Tree
             return TreeWrapper.TreeVariableNames;
         }
 
-        public override double GetValue(Simulation.Model model, int variableIndex)
+        public override double GetValue(int variableIndex)
         {
             Debug.Assert(this.Trees != null);
 
@@ -49,7 +51,7 @@ namespace iLand.Tree
                 0 => this.Trees.ID[this.TreeIndex],// id
                 1 => this.Trees.Dbh[this.TreeIndex],// dbh
                 2 => this.Trees.Height[this.TreeIndex],// height
-                3 => (double)this.Trees.RU.GridIndex,// ruindex
+                3 => this.Trees.RU.GridIndex,// ruindex
                 4 => this.Trees.GetCellCenterPoint(this.TreeIndex).X,// x
                 5 => this.Trees.GetCellCenterPoint(this.TreeIndex).Y,// y
                 6 => this.Trees.GetStemVolume(this.TreeIndex),// volume
@@ -72,7 +74,7 @@ namespace iLand.Tree
                 23 => this.Trees.IsMarkedForCut(this.TreeIndex) ? 1 : 0,// markcut
                 24 => this.Trees.IsMarkedAsCropTree(this.TreeIndex) ? 1 : 0,// markcrop
                 25 => this.Trees.IsMarkedAsCropCompetitor(this.TreeIndex) ? 1 : 0,// markcompetitor
-                _ => base.GetValue(model, variableIndex),
+                _ => base.GetValue(variableIndex),
             };
         }
     }

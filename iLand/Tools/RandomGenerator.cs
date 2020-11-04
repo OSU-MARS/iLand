@@ -103,24 +103,24 @@ namespace iLand.Tools
             }
         }
 
-        public void Setup(RandomGeneratorType gen, int oneSeed)
+        public void Setup(RandomGeneratorType gen, Nullable<int> oneSeed)
         {
-            mGeneratorType = gen;
-            mRotationCount = 1;
-            mIndex = 0;
+            this.mGeneratorType = gen;
+            this.mRotationCount = 1;
+            this.mIndex = 0;
             // mRefillCounter = 0;
 
-            if (oneSeed == 0)
+            if (oneSeed.HasValue == false)
             {
                 Random random = new Random();
-                mBuffer[RandomByteBufferSize + 4] = random.Next();
+                this.mBuffer[RandomGenerator.RandomByteBufferSize + 4] = random.Next();
             }
             else
             {
-                mBuffer[RandomByteBufferSize + 4] = oneSeed; // set a specific seed as seed for the next round
+                this.mBuffer[RandomGenerator.RandomByteBufferSize + 4] = oneSeed.Value; // set a specific seed as seed for the next round
             }
 
-            CheckGenerator();
+            this.CheckGenerator();
         }
 
         /// returns a random number in [0,1] (i.e.="1" is a possible result!)

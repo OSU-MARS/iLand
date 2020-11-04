@@ -1,4 +1,4 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
 using iLand.World;
 using System;
 
@@ -9,10 +9,10 @@ namespace iLand.Tree
         is stored in the canopy. The approach is adopted from Picus 1.3.
         Returns the amount of precipitation (mm) that surpasses the canopy layer.
         @sa http://iland.boku.ac.at/water+cycle#precipitation_and_interception */
-    internal class Canopy
+    public class Canopy
     {
         // Penman-Monteith parameters
-        private float mAirDensity; // density of air [kg / m3]
+        private readonly float mAirDensity; // density of air [kg / m3]
 
         private float mLaiNeedle; // leaf area index of coniferous species
         private float mLaiBroadleaved; // leaf area index of broadlevaed species
@@ -27,8 +27,10 @@ namespace iLand.Tree
         public float Interception { get; private set; } // mm water that is intercepted by the crown
         public double[] ReferenceEvapotranspirationByMonth { get; private set; } // monthly reference ET (see Adair et al 2008)
 
-        public Canopy()
+        public Canopy(float airDensity)
         {
+            this.mAirDensity = airDensity; // kg / m3
+
             this.ReferenceEvapotranspirationByMonth = new double[Constant.MonthsInYear];
         }
 
@@ -80,12 +82,6 @@ namespace iLand.Tree
             return preciptitationInMM - this.Interception;
         }
 
-        /// sets up the canopy. fetch some global parameter values...
-        public void Setup(Model model)
-        {
-            mAirDensity = model.ModelSettings.AirDensity; // kg / m3
-        }
-
         public void SetStandParameters(float laiNeedle, float laiBroadleaf, float maxCanopyConductance)
         {
             this.mLaiNeedle = laiNeedle;
@@ -100,7 +96,7 @@ namespace iLand.Tree
         }
 
         // Returns the total sum of evaporation+transpiration in mm of the day.
-        public float GetEvapotranspiration3PG(Model model, ClimateDay day, float dayLengthInHours, float combinedResponse)
+        public float GetEvapotranspiration3PG(Project projectFile, ClimateDay day, float dayLengthInHours, float combinedResponse)
         {
             float vpdInMillibar = 10.0F * day.Vpd; // convert from kPa to mbar
             float meanDaytimeTemperature = day.MeanDaytimeTemperature; // average temperature of the day (degree C)
@@ -116,7 +112,7 @@ namespace iLand.Tree
             const float vpdToSaturationDeficit = 0.000622F; //convert VPD to saturation deficit = 18/29/1000 = molecular weight of H2O/molecular weight of air
             const float latentHeatOfVaporization = 2460000.0F; // Latent heat of vaporization. Energy required per unit mass of water vaporized [J kg-1]
 
-            float boudndaryLayerConductance = model.ModelSettings.BoundaryLayerConductance; // boundary layer conductance
+            float boudndaryLayerConductance = projectFile.Model.Settings.BoundaryLayerConductance; // boundary layer conductance
 
             // canopy conductance.
             // The species traits are weighted by LAI on the RU.

@@ -1,9 +1,9 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Xml;
+using Model = iLand.Simulation.Model;
 
 namespace iLand.Output
 {
@@ -110,11 +110,11 @@ namespace iLand.Output
             {
                 throw new XmlException("The /project/system/database/out element is missing or does not specify an output database file name.");
             }
-            string outputDatabasePath = model.Files.GetPath(outputDatabaseFile, "output");
+            string outputDatabasePath = model.Project.GetFilePath(ProjectDirectory.Output, outputDatabaseFile);
             // dbPath.Replace("$id$", maxID.ToString(), StringComparison.Ordinal);
             string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_hhmmss");
             outputDatabasePath.Replace("$date$", timestamp, StringComparison.Ordinal);
-            this.Database = model.Files.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
+            this.Database = model.Landscape.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
 
             //Close();
             this.CarbonFlow.IsEnabled = model.Project.Output.Carbon.Enabled;

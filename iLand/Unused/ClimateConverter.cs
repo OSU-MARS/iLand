@@ -77,34 +77,34 @@ namespace iLand.Tools
             }
         }
 
-        public void Run(Model model)
+        public void ConvertFileToDatabase()
         {
-            mExpYear.SetExpression(Year);
-            mExpMonth.SetExpression(Month);
-            mExpDay.SetExpression(Day);
+            mExpYear.SetExpression(this.Year);
+            mExpMonth.SetExpression(this.Month);
+            mExpDay.SetExpression(this.Day);
 
-            mExpTemp.SetExpression(Temp);
-            mExpMinTemp.SetExpression(MinTemp);
-            mExpPrec.SetExpression(Prec);
-            mExpRad.SetExpression(Rad);
-            mExpVpd.SetExpression(Vpd);
+            mExpTemp.SetExpression(this.Temp);
+            mExpMinTemp.SetExpression(this.MinTemp);
+            mExpPrec.SetExpression(this.Prec);
+            mExpRad.SetExpression(this.Rad);
+            mExpVpd.SetExpression(this.Vpd);
 
-            if (String.IsNullOrEmpty(ConnectionString))
+            if (String.IsNullOrEmpty(this.ConnectionString))
             {
                 throw new NotSupportedException("Database is empty.");
             }
-            if (String.IsNullOrWhiteSpace(TableName))
+            if (String.IsNullOrWhiteSpace(this.TableName))
             {
                 throw new NotSupportedException("Invalid table name.");
             }
-            if (String.IsNullOrEmpty(FileName))
+            if (String.IsNullOrEmpty(this.FileName))
             {
                 throw new NotSupportedException("Empty filename.");
             }
 
             // load file
             CsvFile file = new CsvFile();
-            file.LoadFile(FileName);
+            file.LoadFile(this.FileName);
             if (file.RowCount < 2)
             {
                 throw new NotSupportedException("File '" + this.FileName + "' is empty.");
@@ -112,7 +112,7 @@ namespace iLand.Tools
 
             SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
             {
-                DataSource = ConnectionString
+                DataSource = this.ConnectionString
             };
             using SqliteConnection db = new SqliteConnection(connectionString.ConnectionString);
             db.Open();
@@ -144,14 +144,14 @@ namespace iLand.Tools
                     }
 
                     // calculate new values....
-                    int year = (int)mExpYear.Execute(model);
-                    int month = (int)mExpMonth.Execute(model);
-                    int day = (int)mExpDay.Execute(model);
-                    double temp = mExpTemp.Execute(model);
-                    double min_temp = mExpMinTemp.Execute(model);
-                    double prec = mExpPrec.Execute(model);
-                    double rad = mExpRad.Execute(model);
-                    double vpd = mExpVpd.Execute(model);
+                    int year = (int)mExpYear.Execute();
+                    int month = (int)mExpMonth.Execute();
+                    int day = (int)mExpDay.Execute();
+                    double temp = mExpTemp.Execute();
+                    double min_temp = mExpMinTemp.Execute();
+                    double prec = mExpPrec.Execute();
+                    double rad = mExpRad.Execute();
+                    double vpd = mExpVpd.Execute();
 
                     // bind values
                     insert.Parameters[0].Value = year;

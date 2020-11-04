@@ -49,10 +49,10 @@ namespace iLand.Output
             if (filter.IsEmpty == false)
             { 
                 // skip trees if filter is present
-                TreeWrapper treeWrapper = new TreeWrapper();
+                TreeWrapper treeWrapper = new TreeWrapper(model);
                 filter.Wrapper = treeWrapper;
                 treeWrapper.Trees = trees;
-                if (filter.Execute(model) == 0.0)
+                if (filter.Execute() == 0.0)
                 {
                     return;
                 }
@@ -62,7 +62,7 @@ namespace iLand.Output
             {
                 removedTreesOfSpecies = new MutableTuple<Trees, List<MortalityCause>>
                 {
-                    Item1 = new Trees(model, trees.RU)
+                    Item1 = new Trees(model.Landscape, trees.RU)
                     {
                         Species = trees.Species
                     },
@@ -82,7 +82,7 @@ namespace iLand.Output
                 Trees trees = removedTreesOfSpecies.Item1;
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
-                    insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
+                    insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = trees.RU.GridIndex;
                     insertRow.Parameters[2].Value = trees.RU.EnvironmentID;
                     insertRow.Parameters[3].Value = trees.Species.ID;

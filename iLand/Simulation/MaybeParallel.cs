@@ -1,6 +1,4 @@
-﻿using iLand.Tree;
-using iLand.World;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,55 +10,33 @@ namespace iLand.Simulation
         are divided in two lists based on the index (even vs. uneven). These (for almost all cases)
         ensures, that no directly neighboring resourceUnits are processed.
         */
-    public class ThreadRunner
+    public class MaybeParallel<TLocal>
     {
-        private readonly List<ResourceUnit> mResourceUnits;
+        private readonly List<TLocal> workUnitCollection;
 
         public bool IsMultithreaded { get; set; }
-        public List<TreeSpecies> Species { get; set; }
 
-        public ThreadRunner()
+        public MaybeParallel(List<TLocal> workUnits)
         {
-            this.mResourceUnits = new List<ResourceUnit>();
-
-            this.IsMultithreaded = true;
-            this.Species = null;
-        }
-
-        public ThreadRunner(List<TreeSpecies> speciesList)
-            : this()
-        {
-            this.Species = speciesList;
-        }
-
-        public void Setup(List<ResourceUnit> resourceUnits)
-        {
-            this.mResourceUnits.Clear();
-            this.mResourceUnits.AddRange(resourceUnits);
-        }
-
-        /// run a given function for each ressource unit either multithreaded or not.
-        public void Run(Action<ResourceUnit> funcptr, bool forceSingleThreaded = false)
-        {
-            this.Run(funcptr, this.mResourceUnits, forceSingleThreaded);
+            this.workUnitCollection = workUnits;
         }
 
         /// run a given function for each species
-        public void Run(Model model, Action<Model, TreeSpecies> funcptr, bool forceSingleThreaded = false)
+        public void ForEach(Action<TLocal> action, bool forceSingleThreaded = false)
         {
-            if (this.IsMultithreaded && this.Species.Count > 3 && forceSingleThreaded == false)
+            if (this.IsMultithreaded && this.workUnitCollection.Count > 3 && forceSingleThreaded == false)
             {
-                Parallel.ForEach(this.Species, (TreeSpecies species) =>
+                Parallel.ForEach(this.workUnitCollection, (TLocal workUnit) =>
                 {
-                    funcptr.Invoke(model, species);
+                    action.Invoke(workUnit);
                 });
             }
             else
             {
                 // single threaded operation
-                foreach (TreeSpecies species in this.Species)
+                foreach (TLocal workUnit in this.workUnitCollection)
                 {
-                    funcptr.Invoke(model, species);
+                    action.Invoke(workUnit);
                 }
             }
         }
@@ -97,24 +73,5 @@ namespace iLand.Simulation
         //        funcptr.Invoke(begin, end);
         //    }
         //}
-
-        private void Run<T>(Action<T> funcptr, List<T> container, bool forceSingleThreaded = false)
-        {
-            if (this.IsMultithreaded && container.Count > 3 && forceSingleThreaded == false)
-            {
-                Parallel.ForEach(container, (T element) =>
-                {
-                    funcptr.Invoke(element);
-                });
-            }
-            else
-            {
-                // execute serialized in main thread
-                foreach (T element in container)
-                {
-                    funcptr.Invoke(element);
-                }
-            }
-        }
     }
 }

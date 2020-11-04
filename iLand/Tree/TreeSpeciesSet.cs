@@ -1,11 +1,13 @@
-﻿using iLand.Simulation;
-using iLand.Input;
+﻿using iLand.Input;
+using iLand.Input.ProjectFile;
+using iLand.World;
 using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Xml;
+using Model = iLand.Simulation.Model;
 
 namespace iLand.Tree
 {
@@ -46,7 +48,7 @@ namespace iLand.Tree
             this.mSpeciesByID = new Dictionary<string, TreeSpecies>();
 
             this.ActiveSpecies = new List<TreeSpecies>();
-            this.RandomSpeciesOrder = new List<int>();
+            this.RandomSpeciesOrder = null; // lazy initialization
             this.ReaderStamps = new TreeSpeciesStamps();
             this.SqlTableName = sqlTableName;
         }
@@ -54,9 +56,9 @@ namespace iLand.Tree
         public TreeSpecies GetSpecies(string speciesID) { return mSpeciesByID[speciesID]; }
         public int SpeciesCount() { return mSpeciesByID.Count; }
 
-        public float GetLriCorrection(Simulation.Model model, float lightResourceIndex, float relativeHeight) 
+        public float GetLriCorrection(float lightResourceIndex, float relativeHeight) 
         { 
-            return (float)mLriCorrection.Evaluate(model, lightResourceIndex, relativeHeight); 
+            return (float)mLriCorrection.Evaluate(lightResourceIndex, relativeHeight); 
         }
 
         public TreeSpecies GetSpecies(int index)
@@ -74,17 +76,17 @@ namespace iLand.Tree
         /** loads active species from a database table and creates/setups the species.
             The function uses the global database-connection.
           */
-        public int Setup(Simulation.Model model)
+        public int Setup(Project projectFile, Landscape landscape)
         {
-            string readerStampFile = model.Files.GetPath(model.Project.Model.Species.ReaderStampFile, "lip");
+            string readerStampFile = projectFile.GetFilePath(ProjectDirectory.LightIntensityProfile, projectFile.Model.Species.ReaderStampFile);
             this.ReaderStamps.Load(readerStampFile);
-            if (model.Project.Model.Parameter.DebugDumpStamps)
+            if (projectFile.Model.Parameter.DebugDumpStamps)
             {
                 Debug.WriteLine(ReaderStamps.Dump());
             }
 
-            string speciesDatabaseFilePath = model.Files.GetPath(model.Project.System.Database.In, "database");
-            using SqliteConnection speciesDatabase = model.Files.GetDatabaseConnection(speciesDatabaseFilePath, true);
+            string speciesDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.System.Database.In);
+            using SqliteConnection speciesDatabase = landscape.GetDatabaseConnection(speciesDatabaseFilePath, true);
             using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", this.SqlTableName), speciesDatabase);
             // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");
             using SpeciesReader speciesReader = new SpeciesReader(speciesSelect.ExecuteReader());
@@ -95,7 +97,7 @@ namespace iLand.Tree
                 {
                     continue;
                 }
-                TreeSpecies species = Tree.TreeSpecies.Load(model, speciesReader, this);
+                TreeSpecies species = Tree.TreeSpecies.Load(projectFile, speciesReader, this);
                 mSpeciesByID.Add(species.ID, species);
                 if (species.Active)
                 {
@@ -112,12 +114,12 @@ namespace iLand.Tree
             //}
 
             // setup nitrogen response
-            this.mNitrogen1A = model.Project.Model.Species.NitrogenResponseClasses.Class1A;
-            this.mNitrogen1B = model.Project.Model.Species.NitrogenResponseClasses.Class1B;
-            this.mNitrogen2A = model.Project.Model.Species.NitrogenResponseClasses.Class2A;
-            this.mNitrogen2B = model.Project.Model.Species.NitrogenResponseClasses.Class2B;
-            this.mNitrogen3A = model.Project.Model.Species.NitrogenResponseClasses.Class3A;
-            this.mNitrogen3B = model.Project.Model.Species.NitrogenResponseClasses.Class3B;
+            this.mNitrogen1A = projectFile.Model.Species.NitrogenResponseClasses.Class1A;
+            this.mNitrogen1B = projectFile.Model.Species.NitrogenResponseClasses.Class1B;
+            this.mNitrogen2A = projectFile.Model.Species.NitrogenResponseClasses.Class2A;
+            this.mNitrogen2B = projectFile.Model.Species.NitrogenResponseClasses.Class2B;
+            this.mNitrogen3A = projectFile.Model.Species.NitrogenResponseClasses.Class3A;
+            this.mNitrogen3B = projectFile.Model.Species.NitrogenResponseClasses.Class3B;
             if ((this.mNitrogen1A >= 0.0) || (this.mNitrogen1B <= 0.0) || 
                 (this.mNitrogen2A >= 0.0) || (this.mNitrogen2B <= 0.0) ||
                 (this.mNitrogen3A >= 0.0) || (this.mNitrogen3B <= 0.0))
@@ -126,10 +128,10 @@ namespace iLand.Tree
             }
 
             // setup CO2 response
-            this.mCO2base = model.Project.Model.Species.CO2Response.BaseConcentration;
-            this.mCO2compensationPoint = model.Project.Model.Species.CO2Response.CompensationPoint;
-            this.mCO2beta0 = model.Project.Model.Species.CO2Response.Beta0;
-            this.mCO2p0 = model.Project.Model.Species.CO2Response.P0;
+            this.mCO2base = projectFile.Model.Species.CO2Response.BaseConcentration;
+            this.mCO2compensationPoint = projectFile.Model.Species.CO2Response.CompensationPoint;
+            this.mCO2beta0 = projectFile.Model.Species.CO2Response.Beta0;
+            this.mCO2p0 = projectFile.Model.Species.CO2Response.P0;
             if ((this.mCO2base <= 0.0) || (this.mCO2compensationPoint <= 0.0) || (this.mCO2beta0 <= 0.0) || (this.mCO2p0 <= 0.0))
             {
                 throw new XmlException("At least one parameter of /project/model/species/CO2Response is missing, less than zero, or zero.");
@@ -140,28 +142,27 @@ namespace iLand.Tree
             }
 
             // setup Light responses
-            mLightResponseTolerant.SetAndParse(model.Project.Model.Species.LightResponse.ShadeTolerant);
-            mLightResponseIntolerant.SetAndParse(model.Project.Model.Species.LightResponse.ShadeIntolerant);
+            mLightResponseTolerant.SetAndParse(projectFile.Model.Species.LightResponse.ShadeTolerant);
+            mLightResponseIntolerant.SetAndParse(projectFile.Model.Species.LightResponse.ShadeIntolerant);
             if (String.IsNullOrEmpty(mLightResponseTolerant.ExpressionString) || String.IsNullOrEmpty(mLightResponseIntolerant.ExpressionString))
             {
                 throw new NotSupportedException("At least one parameter of /project/model/species/lightResponse is missing.");
             }
             // lri-correction
-            mLriCorrection.SetAndParse(model.Project.Model.Species.LightResponse.LriModifier);
+            mLriCorrection.SetAndParse(projectFile.Model.Species.LightResponse.LriModifier);
 
-            if (model.Project.System.Settings.ExpressionLinearizationEnabled)
+            if (projectFile.System.Settings.ExpressionLinearizationEnabled)
             {
-                mLightResponseTolerant.Linearize(model, 0.0, 1.0);
-                mLightResponseIntolerant.Linearize(model, 0.0, 1.0);
+                mLightResponseTolerant.Linearize(0.0, 1.0);
+                mLightResponseIntolerant.Linearize(0.0, 1.0);
                 // x: LRI, y: relative height
-                mLriCorrection.Linearize(model, 0.0, 1.0, 0.0, 1.0);
+                mLriCorrection.Linearize(0.0, 1.0, 0.0, 1.0);
             }
 
-            this.CreateRandomSpeciesOrder(model);
             return mSpeciesByID.Count;
         }
 
-        public void SetupSeedDispersal(Simulation.Model model)
+        public void SetupSeedDispersal(Model model)
         {
             foreach (TreeSpecies species in this.ActiveSpecies) 
             {
@@ -172,32 +173,10 @@ namespace iLand.Tree
             // Debug.WriteLine("Setup of seed dispersal maps finished.");
         }
 
-        public void DisperseSeedsForYear(Simulation.Model model)
-        {
-            if (model.ModelSettings.RegenerationEnabled == false)
-            {
-                return;
-            }
-            //using DebugTimer t = model.DebugTimers.Create("SpeciesSet.Regeneration()");
-
-            ThreadRunner runner = new ThreadRunner(this.ActiveSpecies); // initialize a thread runner object with all active species
-            runner.Run(model, this.DisperseSeedsForYear);
-
-            if (model.Files.LogDebug())
-            {
-                Debug.WriteLine("Seed dispersal finished.");
-            }
-        }
-
-        private void DisperseSeedsForYear(Simulation.Model model, TreeSpecies species)
-        {
-            species.SeedDispersal.DisperseSeeds(model);
-        }
-
         /** newYear is called by Model::runYear at the beginning of a year before any growth occurs.
           This is used for various initializations, e.g. to clear seed dispersal maps
           */
-        public void OnStartYear(Simulation.Model model)
+        public void OnStartYear(Model model)
         {
             if (model.ModelSettings.RegenerationEnabled == false)
             {
@@ -219,29 +198,29 @@ namespace iLand.Tree
         //    throw new SqliteException("Column " + columnName + " not present.", (int)SqliteErrorCode.Error);
         //}
 
-        public void GetRandomSpeciesSampleIndices(Simulation.Model model, out int beginIndex, out int endIndex)
+        public void GetRandomSpeciesSampleIndices(RandomGenerator randomGenerator, out int beginIndex, out int endIndex)
         {
-            beginIndex = this.ActiveSpecies.Count * model.RandomGenerator.GetRandomInteger(0, TreeSpeciesSet.RandomSets - 1);
+            beginIndex = this.ActiveSpecies.Count * randomGenerator.GetRandomInteger(0, TreeSpeciesSet.RandomSets - 1);
             endIndex = beginIndex + this.ActiveSpecies.Count;
         }
 
-        private void CreateRandomSpeciesOrder(Simulation.Model model)
+        public void CreateRandomSpeciesOrder(RandomGenerator randomGenerator)
         {
-            RandomSpeciesOrder.Clear();
-            RandomSpeciesOrder.Capacity = ActiveSpecies.Count * RandomSets;
-            for (int i = 0; i < RandomSets; ++i)
+            this.RandomSpeciesOrder.Clear();
+            this.RandomSpeciesOrder.Capacity = this.ActiveSpecies.Count * TreeSpeciesSet.RandomSets;
+            for (int setIndex = 0; setIndex < TreeSpeciesSet.RandomSets; ++setIndex)
             {
                 List<int> samples = new List<int>(ActiveSpecies.Count);
                 // fill list
-                foreach (TreeSpecies s in ActiveSpecies)
+                foreach (TreeSpecies species in this.ActiveSpecies)
                 {
-                    samples.Add(s.Index);
+                    samples.Add(species.Index);
                 }
                 // sample and reduce list
                 while (samples.Count > 0)
                 {
-                    int index = model.RandomGenerator.GetRandomInteger(0, samples.Count);
-                    RandomSpeciesOrder.Add(samples[index]);
+                    int index = randomGenerator.GetRandomInteger(0, samples.Count);
+                    this.RandomSpeciesOrder.Add(samples[index]);
                     samples.RemoveAt(index);
                 }
             }
@@ -321,10 +300,10 @@ namespace iLand.Tree
             LightResponse is classified from 1 (very shade inolerant) and 5 (very shade tolerant) and interpolated for values between 1 and 5.
             Returns a value between 0..1
             @sa http://iland.boku.ac.at/allocation#reserve_and_allocation_to_stem_growth */
-        public float GetLightResponse(Simulation.Model model, float lightResourceIndex, float lightResponseClass)
+        public float GetLightResponse(float lightResourceIndex, float lightResponseClass)
         {
-            float intolerant = (float)mLightResponseIntolerant.Evaluate(model, lightResourceIndex);
-            float tolerant = (float)mLightResponseTolerant.Evaluate(model, lightResourceIndex);
+            float intolerant = (float)mLightResponseIntolerant.Evaluate(lightResourceIndex);
+            float tolerant = (float)mLightResponseTolerant.Evaluate(lightResourceIndex);
             float response = intolerant + 0.25F * (lightResponseClass - 1.0F) * (tolerant - intolerant);
             return Maths.Limit(response, 0.0F, 1.0F);
         }

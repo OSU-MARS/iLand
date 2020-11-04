@@ -1,5 +1,4 @@
-﻿using iLand.Simulation;
-using System;
+﻿using System;
 
 namespace iLand.Tools
 {
@@ -25,10 +24,10 @@ namespace iLand.Tools
             this.mRandomIndex = new RandomWeighted();
         }
 
-        public RandomCustomPdf(Model model, string densityFunction)
+        public RandomCustomPdf(string densityFunction)
             : this()
         {
-            Setup(model, densityFunction);
+            this.Setup(densityFunction);
         }
 
         /** setup of the properites of the RandomCustomPDF.
@@ -38,7 +37,7 @@ namespace iLand.Tools
             @p isSumFunc if true, the function given in 'funcExpr' is a cumulative probabilty density function (default=false)
             @p stepCount internal degree of 'slots' - the more slots, the more accurate (default=100)
          */
-        public void Setup(Model model, string funcExpr, double lowerBound = 0, double upperBound = 1, bool isSumFunc = false, int stepCount = 100)
+        public void Setup(string funcExpr, double lowerBound = 0, double upperBound = 1, bool isSumFunc = false, int stepCount = 100)
         {
             DensityFunction = funcExpr;
             mSteps = stepCount;
@@ -49,29 +48,26 @@ namespace iLand.Tools
             mLowerBound = lowerBound;
             mUpperBound = upperBound;
             mDeltaX = (mUpperBound - mLowerBound) / mSteps;
-            double x1, x2;
-            double p1, p2;
-            double areaval;
             double step_width = 1.0 / mSteps;
-            for (int i = 0; i < mSteps; i++)
+            for (int step = 0; step < mSteps; ++step)
             {
-                x1 = mLowerBound + i * mDeltaX;
-                x2 = x1 + mDeltaX;
+                double x1 = mLowerBound + step * mDeltaX;
+                double x2 = x1 + mDeltaX;
                 // p1, p2: werte der pdf bei unterer und oberer grenze des aktuellen schrittes
-                p1 = mExpression.Evaluate(model, x1);
-                p2 = mExpression.Evaluate(model, x2);
+                double p1 = mExpression.Evaluate(x1);
+                double p2 = mExpression.Evaluate(x2);
                 // areaval: numerische integration zwischen x1 und x2
-                areaval = (p1 + p2) / 2 * step_width;
+                double areaval = (p1 + p2) / 2 * step_width;
                 if (isSumFunc)
                 {
                     areaval -= p1 * step_width; // summenwahrscheinlichkeit: nur das Delta zaehlt.
                                                 // tsetWeightghted operiert mit integers . umrechnung: * huge_val
                 }
-                mRandomIndex.SetCellWeight(i, (int)(areaval * 100000000));
+                mRandomIndex.SetCellWeight(step, (int)(areaval * 100000000));
             }
         }
 
-        public double GetRandomValue(Model model)
+        public double GetRandomValue(RandomGenerator randomGenerator)
         {
             // zufallszahl ziehen.
             if (mExpression == null)
@@ -80,21 +76,21 @@ namespace iLand.Tools
             }
 
             // (1) select slot randomly:
-            int slot = mRandomIndex.GetRandomCellIndex(model);
+            int slot = mRandomIndex.GetRandomCellIndex(randomGenerator);
             // the current slot is:
             double basevalue = mLowerBound + slot * mDeltaX;
             // (2): draw a uniform random number within the slot
-            double value = model.RandomGenerator.GetRandomDouble(basevalue, basevalue + mDeltaX);
+            double value = randomGenerator.GetRandomDouble(basevalue, basevalue + mDeltaX);
             return value;
         }
 
-        public double GetProbabilityOfRange(Model model, double lowerBound, double upperBound)
+        public double GetProbabilityOfRange(double lowerBound, double upperBound)
         {
             if (mSumFunction)
             {
                 double p1, p2;
-                p1 = mExpression.Evaluate(model, lowerBound);
-                p2 = mExpression.Evaluate(model, upperBound);
+                p1 = mExpression.Evaluate(lowerBound);
+                p2 = mExpression.Evaluate(upperBound);
                 return p2 - p1;
             }
 

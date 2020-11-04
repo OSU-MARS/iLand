@@ -1,4 +1,5 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
+using iLand.Simulation;
 using System.Diagnostics;
 
 namespace iLand.Tree
@@ -46,7 +47,7 @@ namespace iLand.Tree
         /** calculate a resource unit's GPP
           ResourceUnit-level production following the 3PG approach from Landsberg and Waring.
           @sa http://iland.boku.ac.at/primary+production */
-        public void CalculateGppForYear(Model model)
+        public void CalculateGppForYear(Project projectFile)
         {
             Debug.Assert(this.SpeciesResponse != null);
             this.Zero();
@@ -73,7 +74,7 @@ namespace iLand.Tree
                 // calculate the alphac (=photosynthetic efficiency) for the given month, gC/MJ radiation
                 //  this is based on a global efficiency, and modified per species
                 // maximum radiation use efficiency
-                float epsilon = model.ModelSettings.Epsilon * this.SpeciesResponse.NitrogenResponseForYear * this.SpeciesResponse.CO2ResponseByMonth[month];
+                float epsilon = projectFile.Model.Settings.Epsilon * this.SpeciesResponse.NitrogenResponseForYear * this.SpeciesResponse.CO2ResponseByMonth[month];
 
                 this.UtilizablePar[month] = utilizableRadiation;
                 this.MonthlyGpp[month] = utilizableRadiation * epsilon * gramsCarbonToKilogramsBiomass; // ... results in GPP of the month kg Biomass/m2 (converted from gC/m2)
@@ -92,12 +93,12 @@ namespace iLand.Tree
             // the factor f_ref: parameter that scales response values to the range 0..1 (1 for best growth conditions) (species parameter)
             double siteEnvironmentHeightDivisor = this.SpeciesResponse.Species.SaplingGrowthParameters.ReferenceRatio;
             // f_env,yr=(uapar*epsilon_eff) / (APAR * epsilon_0 * fref)
-            this.SiteEnvironmentSaplingHeightGrowthMultiplier = (float)(f_sum / (model.ModelSettings.Epsilon * this.SpeciesResponse.RadiationForYear * siteEnvironmentHeightDivisor));
+            this.SiteEnvironmentSaplingHeightGrowthMultiplier = (float)(f_sum / (projectFile.Model.Settings.Epsilon * this.SpeciesResponse.RadiationForYear * siteEnvironmentHeightDivisor));
             if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.0F)
             {
                 if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.5F) // warning for large deviations
                 {
-                    Trace.TraceWarning("fEnvYear > 1 for " + this.SpeciesResponse.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + model.ModelSettings.Epsilon + SpeciesResponse.RadiationForYear + siteEnvironmentHeightDivisor
+                    Trace.TraceWarning("fEnvYear > 1 for " + this.SpeciesResponse.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Settings.Epsilon + this.SpeciesResponse.RadiationForYear + siteEnvironmentHeightDivisor
                              + " check calibration of the sapReferenceRatio (fref) for this species!");
                 }
                 this.SiteEnvironmentSaplingHeightGrowthMultiplier = 1.0F;
@@ -105,7 +106,7 @@ namespace iLand.Tree
 
             // calculate fraction for belowground biomass
             float utilizedRadiationFraction = 1.0F;
-            if (model.ModelSettings.UseParFractionBelowGroundAllocation)
+            if (projectFile.Model.Settings.UseParFractionBelowGroundAllocation)
             {
                 // the Landsberg & Waring formulation takes into account the fraction of utilizeable to total radiation (but more complicated)
                 // we originally used only nitrogen and added the U_utilized/U_radiation
@@ -115,7 +116,7 @@ namespace iLand.Tree
             this.RootFraction = 1.0F - abovegroundFraction;
 
             // global value set?
-            float gppOverride = model.Project.Model.Parameter.GppPerYear;
+            float gppOverride = projectFile.Model.Parameter.GppPerYear;
             if (gppOverride > 0.0F)
             {
                 annualRUgpp = gppOverride;

@@ -1,64 +1,57 @@
-﻿using iLand.Simulation;
-using System;
+﻿using System;
 
 namespace iLand.Tools
 {
     internal class RandomWeighted
     {
-        private int[] mGrid;
+        private int[] mCellProbabilities;
         private int mSize;
-        private int mMemorySize;
         private int mMaxVal;
         private bool mUpdated;
 
         public RandomWeighted()
         {
-            mSize = 10;
-            mMemorySize = mSize;
-            mGrid = new int[mMemorySize];
+            this.mSize = 10;
+            this.mCellProbabilities = new int[this.mSize];
         }
 
-        public void Setup(int gridSize)
+        public void Setup(int gridCellCount)
         {
-            if (gridSize > mMemorySize)
+            if (gridCellCount > this.mCellProbabilities.Length)
             {
-                // extend memory
-                mMemorySize = gridSize;
-                mGrid = new int[mMemorySize];
+                // extend memory if needed
+                this.mCellProbabilities = new int[gridCellCount];
             }
 
-            mSize = gridSize;
-            for (int i = 0; i < mSize; i++)
+            this.mSize = gridCellCount;
+            for (int index = 0; index < this.mSize; ++index)
             {
-                mGrid[i] = 0;
+                this.mCellProbabilities[index] = 0;
             }
-            mMaxVal = 0;
-            mUpdated = false;
+            this.mMaxVal = 0;
+            this.mUpdated = false;
         }
 
         public void SetCellWeight(int index, int value)
         {
-            if (mGrid == null || index < 0 || index >= mSize)
-            {
-                return;
-            }
-            mGrid[index] = value;
-            mUpdated = false;
+            this.mCellProbabilities[index] = value;
+            this.mUpdated = false;
         }
 
-        public int GetRandomCellIndex(Model model)
+        public int GetRandomCellIndex(RandomGenerator randomGenerator)
         {
-            if (mGrid == null)
+            if (this.mCellProbabilities == null)
             {
                 return -1;
             }
-            if (!mUpdated)
+            if (this.mUpdated == false)
             {
-                UpdateValues();
+                this.UpdateValues();
             }
-            int rnd = model.RandomGenerator.GetRandomInteger(0, mMaxVal);
+
+            int random = randomGenerator.GetRandomInteger(0, this.mMaxVal);
             int index = 0;
-            while (rnd >= mGrid[index] && index < mSize)
+            while (random >= this.mCellProbabilities[index] && index < this.mSize)
             {
                 ++index;
             }
@@ -69,13 +62,13 @@ namespace iLand.Tools
         {
             // das relative gewicht der Zelle "Index".
             // das ist das Delta zu Index-1 relativ zu "MaxVal".
-            if (index < 0 || index >= mSize)
+            if (index < 0 || index >= this.mSize)
             {
                 return 0.0;
             }
-            if (!mUpdated)
+            if (this.mUpdated == false)
             {
-                UpdateValues();
+                this.UpdateValues();
             }
 
             if (mMaxVal != 0)
@@ -85,10 +78,10 @@ namespace iLand.Tools
 
             if (index == 0)
             {
-                return mGrid[0] / (double)mMaxVal;
+                return this.mCellProbabilities[0] / (double)this.mMaxVal;
             }
 
-            return (mGrid[index] - mGrid[index - 1]) / (double)mMaxVal;
+            return (this.mCellProbabilities[index] - this.mCellProbabilities[index - 1]) / (double)this.mMaxVal;
         }
 
         public double GetRelativeWeight(int from, int to)
@@ -97,41 +90,40 @@ namespace iLand.Tools
             // das ist das Delta zu Index-1 relativ zu "MaxVal".
             if (from == to)
             {
-                return GetRelativeWeight(from);
+                return this.GetRelativeWeight(from);
             }
-            if (from < 0 || from >= mSize || to < 0 || to >= mSize || from > to)
+            if (from < 0 || from >= this.mSize || to < 0 || to >= this.mSize || from > to)
             {
                 return 0.0;
             }
-            if (!mUpdated)
+            if (this.mUpdated == false)
             {
-                UpdateValues();
+                this.UpdateValues();
             }
 
             if (mMaxVal != 0)
             {
                 return 0.0;
             }
-            return (mGrid[to] - mGrid[from]) / (double)mMaxVal;
+            return (this.mCellProbabilities[to] - this.mCellProbabilities[from]) / (double)this.mMaxVal;
         }
 
         private void UpdateValues()
         {
-            int i;
-            mMaxVal = 0;
-            for (i = 0; i < mSize; i++)
+            this.mMaxVal = 0;
+            for (int index = 0; index < this.mSize; ++index)
             {
-                if (mGrid[i] != 0)
+                if (this.mCellProbabilities[index] != 0)
                 {
-                    mMaxVal += mGrid[i];
-                    if (mMaxVal < 0)
+                    this.mMaxVal += this.mCellProbabilities[index];
+                    if (this.mMaxVal < 0)
                     {
                         throw new ArithmeticException("Error: updateValues: integer overflow.");
                     }
                 }
-                mGrid[i] = mMaxVal;
+                this.mCellProbabilities[index] = this.mMaxVal;
             }
-            mUpdated = true;
+            this.mUpdated = true;
         }
     }
 }

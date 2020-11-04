@@ -8,34 +8,34 @@ namespace iLand.Input.ProjectFile
         public int ID { get; set; }
 
         [XmlElement(ElementName = "vpdMin")]
-        public double VpdMin { get; set; }
+        public float VpdMin { get; set; }
 
         [XmlElement(ElementName = "vpdMax")]
-        public double VpdMax { get; set; }
+        public float VpdMax { get; set; }
 
         [XmlElement(ElementName = "dayLengthMin")]
-        public double DayLengthMin { get; set; }
+        public float DayLengthMin { get; set; }
 
         [XmlElement(ElementName = "dayLengthMax")]
-        public double DayLengthMax { get; set; }
+        public float DayLengthMax { get; set; }
 
         [XmlElement(ElementName = "tempMin")]
-        public double TempMin { get; set; }
+        public float TempMin { get; set; }
 
         [XmlElement(ElementName = "tempMax")]
-        public double TempMax { get; set; }
+        public float TempMax { get; set; }
 
         public PhenologyType()
         {
             // no default in C++
             // this.ID;
 
-            this.VpdMax = 5.0;
-            this.VpdMin = 0.5;
-            this.DayLengthMax = 11.0;
-            this.DayLengthMin = 10.0;
-            this.TempMax = 9.0;
-            this.TempMin = 2.0;
+            this.VpdMax = 5.0F;
+            this.VpdMin = 0.5F;
+            this.DayLengthMax = 11.0F;
+            this.DayLengthMin = 10.0F;
+            this.TempMax = 9.0F;
+            this.TempMin = 2.0F;
         }
     }
 }

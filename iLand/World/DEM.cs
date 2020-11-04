@@ -1,5 +1,4 @@
-﻿using iLand.Simulation;
-using iLand.Tools;
+﻿using iLand.Tools;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -26,13 +25,13 @@ namespace iLand.World
         private readonly Grid<float> slopeGrid;
         private readonly Grid<float> viewGrid;
 
-        public DEM(string fileName, Model model)
+        public DEM(Landscape landscape, string demFilePath)
         {
             this.aspectGrid = new Grid<float>();
             this.slopeGrid = new Grid<float>();
             this.viewGrid = new Grid<float>();
 
-            this.LoadFromFile(fileName, model);
+            this.LoadFromFile(landscape, demFilePath);
         }
 
         public Grid<float> EnsureAspectGrid()
@@ -72,68 +71,61 @@ namespace iLand.World
 
         /// loads a DEM from a ESRI style text file.
         /// internally, the DEM has always a resolution of 10m
-        public bool LoadFromFile(string fileName, Model model)
+        private bool LoadFromFile(Landscape landscape, string demFilePath)
         {
-            if (model == null)
+            if ((landscape == null) || (landscape.HeightGrid == null) || (landscape.HeightGrid.IsEmpty()))
             {
-                throw new NotSupportedException("No valid model to retrieve height grid.");
+                throw new ArgumentNullException(nameof(landscape), "No height grid available.");
             }
 
-            Grid<HeightCell> h_grid = model.HeightGrid;
-            if (h_grid == null || h_grid.IsEmpty())
+            Grid<HeightCell> heightGrid = landscape.HeightGrid;
+            GisGrid demGrid = new GisGrid();
+            if (demGrid.LoadFromFile(demFilePath) == false)
             {
-                throw new NotSupportedException("GisGrid::create10mGrid: no valid height grid to copy grid size.");
-            }
-
-            GisGrid gis_grid = new GisGrid();
-            if (!gis_grid.LoadFromFile(fileName))
-            {
-                throw new FileLoadException(String.Format("Unable to load DEM file {0}", fileName));
+                throw new FileLoadException("Unable to load DEM file " + demFilePath + ".");
             }
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
-            Clear();
-            aspectGrid.Clear();
-            slopeGrid.Clear();
-            viewGrid.Clear();
+            this.Clear();
+            this.aspectGrid.Clear();
+            this.slopeGrid.Clear();
+            this.viewGrid.Clear();
 
-            Setup(h_grid.PhysicalExtent, h_grid.CellSize);
+            this.Setup(heightGrid.PhysicalExtent, heightGrid.CellSize);
 
-            RectangleF world = model.WorldExtentUnbuffered;
-
-            if ((gis_grid.CellSize % CellSize) != 0.0)
+            if ((demGrid.CellSize % CellSize) != 0.0)
             {
-                PointF p;
                 // simple copy of the data
-                for (int i = 0; i < Count; i++)
+                for (int demCellIndex = 0; demCellIndex < this.Count; ++demCellIndex)
                 {
-                    p = GetCellCenterPosition(GetCellPosition(i));
-                    if (gis_grid.GetValue(p) != gis_grid.NoDataValue && world.Contains(p))
+                    PointF cellCenter = this.GetCellCenterPosition(this.GetCellPosition(demCellIndex));
+                    double elevation = demGrid.GetValue(cellCenter);
+                    if ((elevation != demGrid.NoDataValue) && landscape.Extent.Contains(cellCenter))
                     {
-                        this[i] = (float)gis_grid.GetValue(p);
+                        this[demCellIndex] = (float)elevation;
                     }
                     else
                     {
-                        this[i] = -1;
+                        this[demCellIndex] = -1;
                     }
                 }
             }
             else
             {
                 // bilinear approximation approach
-                Debug.WriteLine("DEM: built-in bilinear interpolation from cell size " + gis_grid.CellSize);
-                int sizeFactor = (int)(gis_grid.CellSize / this.CellSize); // size-factor
+                Debug.WriteLine("DEM: built-in bilinear interpolation from cell size " + demGrid.CellSize);
+                int sizeFactor = (int)(demGrid.CellSize / this.CellSize); // size-factor
                 Fill(-1.0F);
                 int ixmin = 10000000, iymin = 1000000, ixmax = -1, iymax = -1;
-                for (int y = 0; y < gis_grid.Rows; ++y)
+                for (int y = 0; y < demGrid.Rows; ++y)
                 {
-                    for (int x = 0; x < gis_grid.Columns; ++x)
+                    for (int x = 0; x < demGrid.Columns; ++x)
                     {
-                        Vector3D p3d = gis_grid.GetCoordinate(x, y);
-                        if (world.Contains((float)p3d.X, (float)p3d.Y))
+                        Vector3D p3d = demGrid.GetCoordinate(x, y);
+                        if (landscape.Extent.Contains((float)p3d.X, (float)p3d.Y))
                         {
                             Point pt = GetCellIndex(new PointF((float)p3d.X, (float)p3d.Y));
-                            this[(float)p3d.X, (float)p3d.Y] = (float)gis_grid.GetValue(x, y);
+                            this[(float)p3d.X, (float)p3d.Y] = (float)demGrid.GetValue(x, y);
                             ixmin = Math.Min(ixmin, pt.X); ixmax = Math.Max(ixmax, pt.X);
                             iymin = Math.Min(iymin, pt.Y); iymax = Math.Max(iymax, pt.Y);
                         }

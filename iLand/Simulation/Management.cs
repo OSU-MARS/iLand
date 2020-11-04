@@ -52,7 +52,7 @@ namespace iLand.Simulation
 
         public int KillTreesAboveRetentionThreshold(Model model, int treesToRetain)
         {
-            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model);
+            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model.Landscape);
             List<MutableTuple<Trees, int>> livingTrees = new List<MutableTuple<Trees, int>>();
             while (allTreeEnumerator.MoveNextLiving())
             {
@@ -239,7 +239,7 @@ namespace iLand.Simulation
           */
         private int RemoveTrees(Model model, string treeSelectionExpressionString, double removalProbabilityIfSelected, bool management)
         {
-            TreeWrapper treeWrapper = new TreeWrapper();
+            TreeWrapper treeWrapper = new TreeWrapper(model);
             Expression selectionExpression = new Expression(treeSelectionExpressionString, treeWrapper);
             selectionExpression.EnableIncrementalSum();
             int treesRemoved = 0;
@@ -252,7 +252,7 @@ namespace iLand.Simulation
                 for (int removalIndex = 0; removalIndex < treeIndices.Count; ++removalIndex)
                 {
                     int treeIndex = treeIndices[removalIndex];
-                    if (selectionExpression.Evaluate(model, treeWrapper) != 0.0 && model.RandomGenerator.GetRandomDouble() <= removalProbabilityIfSelected)
+                    if (selectionExpression.Evaluate(treeWrapper) != 0.0 && model.RandomGenerator.GetRandomDouble() <= removalProbabilityIfSelected)
                     {
                         if (management)
                         {
@@ -357,14 +357,14 @@ namespace iLand.Simulation
 
         public int Filter(Model model, string filter)
         {
-            TreeWrapper treeWrapper = new TreeWrapper();
+            TreeWrapper treeWrapper = new TreeWrapper(model);
             Expression filterExpression = new Expression(filter, treeWrapper);
             filterExpression.EnableIncrementalSum();
             int totalTreesInStand = mTreesInMostRecentlyLoadedStand.Count;
             for (int treeIndex = 0; treeIndex < mTreesInMostRecentlyLoadedStand.Count; ++treeIndex)
             {
                 treeWrapper.Trees = mTreesInMostRecentlyLoadedStand[treeIndex].Item1;
-                double value = filterExpression.Evaluate(model, treeWrapper);
+                double value = filterExpression.Evaluate(treeWrapper);
                 // keep if expression returns true (1)
                 bool keep = value == 1.0;
                 // if value is >0 (i.e. not "false"), then draw a random number
@@ -447,15 +447,15 @@ namespace iLand.Simulation
             //}
             //loadFromMap(wrap.map(), key);
             RectangleF boundingBox = standGrid.GetBoundingBox(key);
-            GridWindowEnumerator<float> runner = new GridWindowEnumerator<float>(model.LightGrid, boundingBox);
+            GridWindowEnumerator<float> runner = new GridWindowEnumerator<float>(model.Landscape.LightGrid, boundingBox);
             while (runner.MoveNext())
             {
                 if (standGrid.GetStandIDFromLightCoordinate(runner.GetCellPosition()) == key)
                 {
-                    SaplingCell saplingCell = model.Saplings.GetCell(model, runner.GetCellPosition(), true, out ResourceUnit ru);
+                    SaplingCell saplingCell = model.Landscape.Saplings.GetCell(model.Landscape, runner.GetCellPosition(), true, out ResourceUnit ru);
                     if (saplingCell != null)
                     {
-                        model.Saplings.ClearSaplings(ru, saplingCell, true);
+                        model.Landscape.Saplings.ClearSaplings(ru, saplingCell, true);
                     }
                 }
             }

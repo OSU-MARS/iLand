@@ -49,6 +49,7 @@
     <Compile Remove="Tools\UpdateState.cs" />
     <Compile Remove="Tools\Viewport.cs" />
     <Compile Remove="Unused\GrassCoverLayers.cs" />
+    <Compile Remove="Unused\GridViewType.cs" />
     <Compile Remove="Unused\LayeredGrid.cs" />
     <Compile Remove="Unused\LayeredGridBase.cs" />
     <Compile Remove="Unused\LayerElement.cs" />

@@ -1,4 +1,5 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
+using iLand.Simulation;
 using iLand.World;
 using System;
 using System.Diagnostics;
@@ -17,8 +18,6 @@ namespace iLand.Tree
       */
     public class ResourceUnitSpecies
     {
-        private int mLastYear;
-
         public ResourceUnitSpeciesGrowth BiomassGrowth { get; private set; } // the 3pg production model of this species x resourceunit
         public Establishment Establishment { get; private set; } // establishment submodel
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
@@ -32,28 +31,29 @@ namespace iLand.Tree
         public ResourceUnitSpeciesStatistics StatisticsDead { get; private set; } // statistics of trees that have died
         public ResourceUnitSpeciesStatistics StatisticsManagement { get; private set; } // statistics of removed trees
         
-        public ResourceUnitSpecies(TreeSpecies species, ResourceUnit ru)
+        public ResourceUnitSpecies(TreeSpecies treeSpecies, ResourceUnit ru)
         {
+            if ((treeSpecies.Index < 0) || (treeSpecies.Index > 1000))
+            {
+                throw new ArgumentOutOfRangeException(nameof(treeSpecies), "Implausible tree species index.");
+            }
+            this.RU = ru;
+            this.Species = treeSpecies;
+
             this.BiomassGrowth = new ResourceUnitSpeciesGrowth();
-            this.Establishment = new Establishment();
-            this.mLastYear = -1;
+            this.Establishment = new Establishment(ru.Climate, this); // requires this.Species and this.RU be set
             this.RemovedStemVolume = 0.0;
             this.Response = new ResourceUnitSpeciesResponse();
-            this.RU = ru;
             this.SaplingStats = new SaplingProperties();
-            this.Species = species;
             this.Statistics = new ResourceUnitSpeciesStatistics();
             this.StatisticsDead = new ResourceUnitSpeciesStatistics();
             this.StatisticsManagement = new ResourceUnitSpeciesStatistics();
 
             this.BiomassGrowth.SpeciesResponse = this.Response;
-            this.Establishment.Setup(ru.Climate, this);
             this.Response.Setup(this);
             this.Statistics.ResourceUnitSpecies = this;
             this.StatisticsDead.ResourceUnitSpecies = this;
             this.StatisticsManagement.ResourceUnitSpecies = this;
-
-            Debug.WriteLineIf(Species.Index > 1000 || Species.Index < 0, "suspicious species in ResourecUnitSpecies.Setup()");
         }
 
         public void SetRULaiFraction(float laiFraction)
@@ -65,7 +65,7 @@ namespace iLand.Tree
             this.LaiFraction = laiFraction;
         }
 
-        public void CalculateBiomassGrowthForYear(Model model, bool fromEstablishment = false)
+        public void CalculateBiomassGrowthForYear(Project projectFile, bool fromEstablishment = false)
         {
             // if *not* called from establishment, clear the species-level-stats
             if (fromEstablishment == false)
@@ -73,24 +73,12 @@ namespace iLand.Tree
                 this.Statistics.Zero();
             }
 
-            // if already processed in this year, do not repeat
-            if (this.mLastYear == model.ModelSettings.CurrentYear)
-            {
-                // TODO: why is this check needed?
-                return;
-            }
-
             if (this.LaiFraction > 0.0F || fromEstablishment == true)
             {
-                // execute the water calculation...
-                if (fromEstablishment)
-                {
-                    this.RU.WaterCycle.CalculateYear(model); // run the water sub model (only if this has not be done already)
-                }
+                // assumes the water cycle is already updated for the current year
                 //using DebugTimer rst = model.DebugTimers.Create("ResourceUnitSpecies.Calculate(Response + BiomassGrowth)");
                 this.Response.CalculateUtilizableRadiation(this.RU.Climate);// calculate environmental responses per species (vpd, temperature, ...)
-                this.BiomassGrowth.CalculateGppForYear(model);// production of NPP
-                this.mLastYear = model.ModelSettings.CurrentYear; // mark this year as processed
+                this.BiomassGrowth.CalculateGppForYear(projectFile);// production of NPP
             }
             else
             {

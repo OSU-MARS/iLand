@@ -1,4 +1,5 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input;
+using iLand.Simulation;
 using iLand.Tools;
 using System;
 using System.Diagnostics;
@@ -25,7 +26,7 @@ namespace iLand.World
         public CarbonNitrogenPool YoungLabile { get; private set; } // young labile matter (litter) (t/ha)
         public CarbonNitrogenPool YoungRefractory { get; private set; } // young refractory (woody debris)  matter (t/ha)
 
-        public Soil(Model model, ResourceUnit ru)
+        public Soil(EnvironmentReader environmentReader, ResourceUnit ru)
         {
             this.mRU = ru;
 
@@ -34,17 +35,17 @@ namespace iLand.World
             // decomposition model. Ecological Modelling 219(1–2):1-16. https://doi.org/10.1016/j.ecolmodel.2008.07.020
             this.Parameters = new SoilParameters()
             {
-                AnnualNitrogenDeposition = model.Environment.AnnualNitrogenDeposition,
-                El = model.Environment.CurrentSoilEl.Value, // past default 0.0577
-                Er = model.Environment.CurrentSoilEr.Value, // past default 0.073
-                Hc = model.Environment.CurrentSoilHumificationRate.Value, // past default: 0.3
-                Ko = model.Environment.CurrentSoilOrganicDecompositionRate.Value, // past default: 0.02
-                Kyl = model.Environment.CurrentSoilYoungLabileDecompositionRate.Value,
-                Kyr = model.Environment.CurrentSoilYoungRefractoryDecompositionRate.Value,
-                Leaching = model.Environment.SoilLeaching,
-                Qb = model.Environment.SoilQb,
-                Qh = model.Environment.CurrentSoilQh.Value, // past default 25.0
-                UseDynamicAvailableNitrogen = model.Environment.UseDynamicAvailableNitrogen
+                AnnualNitrogenDeposition = environmentReader.AnnualNitrogenDeposition,
+                El = environmentReader.CurrentSoilEl.Value, // past default 0.0577
+                Er = environmentReader.CurrentSoilEr.Value, // past default 0.073
+                Hc = environmentReader.CurrentSoilHumificationRate.Value, // past default: 0.3
+                Ko = environmentReader.CurrentSoilOrganicDecompositionRate.Value, // past default: 0.02
+                Kyl = environmentReader.CurrentSoilYoungLabileDecompositionRate.Value,
+                Kyr = environmentReader.CurrentSoilYoungRefractoryDecompositionRate.Value,
+                Leaching = environmentReader.SoilLeaching,
+                Qb = environmentReader.SoilQb,
+                Qh = environmentReader.CurrentSoilQh.Value, // past default 25.0
+                UseDynamicAvailableNitrogen = environmentReader.UseDynamicAvailableNitrogen
             };
             if (this.Parameters.Kyl <= 0.0 || this.Parameters.Kyr <= 0.0)
             {
@@ -57,16 +58,16 @@ namespace iLand.World
             this.InputLabile = null;
             this.InputRefractory = null;
             // ICBM/2 "old" carbon pool: humified soil organic content
-            this.OrganicMatter = new CarbonNitrogenTuple(0.001F * model.Environment.CurrentSoilOrganicC.Value, // environment values are in kg/ha, pool sizes are in t/ha
-                                                         0.001F * model.Environment.CurrentSoilOrganicN.Value);
-            this.PlantAvailableNitrogen = model.Environment.CurrentSoilAvailableNitrogen.Value; // TODO: gets overwritten rather than modified in NewYear()?
+            this.OrganicMatter = new CarbonNitrogenTuple(0.001F * environmentReader.CurrentSoilOrganicC.Value, // environment values are in kg/ha, pool sizes are in t/ha
+                                                         0.001F * environmentReader.CurrentSoilOrganicN.Value);
+            this.PlantAvailableNitrogen = environmentReader.CurrentSoilAvailableNitrogen.Value; // TODO: gets overwritten rather than modified in NewYear()?
             // ICBM/2 litter layer
-            this.YoungLabile = new CarbonNitrogenPool(0.001F * model.Environment.CurrentSoilYoungLabileC.Value,
-                                                      0.001F * model.Environment.CurrentSoilYoungLabileN.Value,
+            this.YoungLabile = new CarbonNitrogenPool(0.001F * environmentReader.CurrentSoilYoungLabileC.Value,
+                                                      0.001F * environmentReader.CurrentSoilYoungLabileN.Value,
                                                       this.Parameters.Kyl);
             // ICBM/2 coarse woody debris
-            this.YoungRefractory = new CarbonNitrogenPool(0.001F * model.Environment.CurrentSoilYoungRefractoryC.Value,
-                                                          0.001F * model.Environment.CurrentSoilYoungRefractoryN.Value,
+            this.YoungRefractory = new CarbonNitrogenPool(0.001F * environmentReader.CurrentSoilYoungRefractoryC.Value,
+                                                          0.001F * environmentReader.CurrentSoilYoungRefractoryN.Value,
                                                           this.Parameters.Kyr);
 
             if (!this.OrganicMatter.HasCarbonAndNitrogen())

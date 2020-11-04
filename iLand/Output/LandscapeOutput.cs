@@ -50,7 +50,7 @@ namespace iLand.Output
         {
             if (!this.filter.IsEmpty)
             {
-                if (this.filter.Evaluate(model, model.ModelSettings.CurrentYear) == 0.0)
+                if (this.filter.Evaluate(model.CurrentYear) == 0.0)
                 {
                     return;
                 }
@@ -64,7 +64,7 @@ namespace iLand.Output
 
             // extract total stockable area
             float totalStockableArea = 0.0F;
-            foreach (ResourceUnit ru in model.ResourceUnits)
+            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 totalStockableArea += ru.StockableArea;
             }
@@ -74,7 +74,7 @@ namespace iLand.Output
                 return;
             }
 
-            foreach (ResourceUnit ru in model.ResourceUnits)
+            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 if (ru.EnvironmentID == -1)
                 {
@@ -100,7 +100,7 @@ namespace iLand.Output
             foreach (KeyValuePair<string, ResourceUnitSpeciesStatistics> species in this.standStatisticsBySpecies)
             {
                 ResourceUnitSpeciesStatistics stat = species.Value;
-                insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
+                insertRow.Parameters[0].Value = model.CurrentYear;
                 insertRow.Parameters[1].Value = species.Key; // keys: year, species
                 insertRow.Parameters[2].Value = stat.TreesPerHectare;
                 insertRow.Parameters[3].Value = stat.AverageDbh;

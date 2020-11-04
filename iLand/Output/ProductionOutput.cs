@@ -34,7 +34,7 @@ namespace iLand.Output
             ResourceUnitSpeciesResponse speciesResponse = growth.SpeciesResponse;
             for (int month = 0; month < 12; month++)
             {
-                insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
+                insertRow.Parameters[0].Value = model.CurrentYear;
                 insertRow.Parameters[1].Value = ruSpecies.RU.GridIndex;
                 insertRow.Parameters[2].Value = ruSpecies.RU.EnvironmentID;
                 insertRow.Parameters[3].Value = ruSpecies.Species.ID;
@@ -55,7 +55,7 @@ namespace iLand.Output
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             //using DebugTimer t = model.DebugTimers.Create("ProductionOutput.LogYear()");
-            foreach (ResourceUnit ru in model.ResourceUnits)
+            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 if (ru.EnvironmentID == -1)
                 {

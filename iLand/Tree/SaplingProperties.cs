@@ -1,4 +1,5 @@
-﻿using iLand.World;
+﻿using iLand.Simulation;
+using iLand.World;
 using System;
 using System.Diagnostics;
 
@@ -49,42 +50,42 @@ namespace iLand.Tree
             NewSaplings = 0;
         }
 
-        public void Recalculate(Simulation.Model model, ResourceUnit ru, TreeSpecies species)
+        public void Recalculate(Model model, ResourceUnit ru, TreeSpecies species)
         {
-            if (LivingCohorts != 0)
+            if (this.LivingCohorts != 0)
             {
                 this.AverageHeight /= this.LivingCohorts;
                 this.AverageAge /= this.LivingCohorts;
                 this.AverageDeltaHPot /= this.LivingCohorts;
                 this.AverageDeltaHRealized /= this.LivingCohorts;
             }
-            if (model.ModelSettings.CurrentYear == 0)
+            if (model.CurrentYear == 0)
             {
                 return; // no need for carbon flows in initial run
             }
 
             // calculate carbon balance
-            CarbonNitrogenTuple old_state = CarbonLiving;
-            CarbonLiving.Zero();
+            CarbonNitrogenTuple previousCarbonLiving = this.CarbonLiving;
+            this.CarbonLiving.Zero();
 
-            CarbonNitrogenTuple dead_wood = new CarbonNitrogenTuple(); // pools for mortality
-            CarbonNitrogenTuple dead_fine = new CarbonNitrogenTuple();
+            CarbonNitrogenTuple deadWood = new CarbonNitrogenTuple(); // pools for mortality
+            CarbonNitrogenTuple deadFine = new CarbonNitrogenTuple();
             // average dbh
-            if (LivingCohorts > 0)
+            if (this.LivingCohorts > 0)
             {
                 // calculate the avg dbh and number of stems
-                float avg_dbh = 100.0F * this.AverageHeight / species.SaplingGrowthParameters.HeightDiameterRatio;
+                float averageDbh = 100.0F * this.AverageHeight / species.SaplingGrowthParameters.HeightDiameterRatio;
                 // the number of "real" stems is given by the Reineke formula
-                float n = this.LivingSaplings; // total number of saplings (>0.05m)
+                float nSaplings = this.LivingSaplings; // total number of saplings (>0.05m)
 
                 // woody parts: stem, branchse and coarse roots
-                float woody_bm = species.GetBiomassWoody(avg_dbh) + species.GetBiomassBranch(avg_dbh) + species.GetBiomassRoot(avg_dbh);
-                float foliage = species.GetBiomassFoliage(avg_dbh);
+                float woodyBiomass = species.GetBiomassWoody(averageDbh) + species.GetBiomassBranch(averageDbh) + species.GetBiomassRoot(averageDbh);
+                float foliage = species.GetBiomassFoliage(averageDbh);
                 float fineroot = foliage * species.FinerootFoliageRatio;
 
-                CarbonLiving.AddBiomass(woody_bm * n, species.CNRatioWood);
-                CarbonLiving.AddBiomass(foliage * n, species.CNRatioFoliage);
-                CarbonLiving.AddBiomass(fineroot * n, species.CNRatioFineRoot);
+                CarbonLiving.AddBiomass(woodyBiomass * nSaplings, species.CNRatioWood);
+                CarbonLiving.AddBiomass(foliage * nSaplings, species.CNRatioFoliage);
+                CarbonLiving.AddBiomass(fineroot * nSaplings, species.CNRatioFineRoot);
 
                 Debug.Assert(Double.IsNaN(CarbonLiving.C) == false, "carbon NaN in calculate (living trees).");
 
@@ -96,16 +97,16 @@ namespace iLand.Tree
                 // calculate the "mortality from competition", i.e. carbon that stems from reduction of stem numbers
                 // from Reinekes formula.
                 //
-                if (avg_dbh > 1.0)
+                if (averageDbh > 1.0F)
                 {
-                    float avg_dbh_before = 100.0F * (AverageHeight - AverageDeltaHRealized) / species.SaplingGrowthParameters.HeightDiameterRatio;
-                    float n_before = LivingCohorts * species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(MathF.Max(1.0F, avg_dbh_before));
-                    if (n < n_before)
+                    float previousAverageDbh = 100.0F * (AverageHeight - AverageDeltaHRealized) / species.SaplingGrowthParameters.HeightDiameterRatio;
+                    float nPreviousSaplings = this.LivingCohorts * species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(MathF.Max(1.0F, previousAverageDbh));
+                    if (nSaplings < nPreviousSaplings)
                     {
-                        dead_wood.AddBiomass(woody_bm * (n_before - n), species.CNRatioWood);
-                        dead_fine.AddBiomass(foliage * (n_before - n), species.CNRatioFoliage);
-                        dead_fine.AddBiomass(fineroot * (n_before - n), species.CNRatioFineRoot);
-                        Debug.WriteLineIf(Double.IsNaN(dead_fine.C), "carbon NaN in calculate (self thinning).");
+                        deadWood.AddBiomass(woodyBiomass * (nPreviousSaplings - nSaplings), species.CNRatioWood);
+                        deadFine.AddBiomass(foliage * (nPreviousSaplings - nSaplings), species.CNRatioFoliage);
+                        deadFine.AddBiomass(fineroot * (nPreviousSaplings - nSaplings), species.CNRatioFineRoot);
+                        Debug.WriteLineIf(Double.IsNaN(deadFine.C), "carbon NaN in calculate (self thinning).");
                     }
                 }
             }
@@ -115,27 +116,27 @@ namespace iLand.Tree
                 float n = this.DeadSaplings * species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(avg_dbh_dead);
                 // woody parts: stem, branchse and coarse roots
 
-                dead_wood.AddBiomass((species.GetBiomassWoody(avg_dbh_dead) + species.GetBiomassBranch(avg_dbh_dead) + species.GetBiomassRoot(avg_dbh_dead)) * n, species.CNRatioWood);
+                deadWood.AddBiomass((species.GetBiomassWoody(avg_dbh_dead) + species.GetBiomassBranch(avg_dbh_dead) + species.GetBiomassRoot(avg_dbh_dead)) * n, species.CNRatioWood);
                 float foliage = species.GetBiomassFoliage(avg_dbh_dead) * n;
 
-                dead_fine.AddBiomass(foliage, species.CNRatioFoliage);
-                dead_fine.AddBiomass(foliage * species.FinerootFoliageRatio, species.CNRatioFineRoot);
-                Debug.WriteLineIf(Double.IsNaN(dead_fine.C), "carbon NaN in calculate (died trees).");
+                deadFine.AddBiomass(foliage, species.CNRatioFoliage);
+                deadFine.AddBiomass(foliage * species.FinerootFoliageRatio, species.CNRatioFineRoot);
+                Debug.WriteLineIf(Double.IsNaN(deadFine.C), "carbon NaN in calculate (died trees).");
             }
-            if (!dead_wood.HasNoCarbon() || !dead_fine.HasNoCarbon())
+            if (!deadWood.HasNoCarbon() || !deadFine.HasNoCarbon())
             {
                 if (ru.Snags != null)
                 {
-                    ru.Snags.AddToSoil(species, dead_wood, dead_fine);
+                    ru.Snags.AddToSoil(species, deadWood, deadFine);
                 }
             }
 
             // calculate net growth:
             // delta of stocks
-            CarbonGain = CarbonLiving + dead_fine + dead_wood - old_state;
-            if (CarbonGain.C < 0)
+            this.CarbonGain = this.CarbonLiving + deadFine + deadWood - previousCarbonLiving;
+            if (this.CarbonGain.C < 0)
             {
-                CarbonGain.Zero();
+                this.CarbonGain.Zero();
             }
 
             //globalSettings.SystemStatistics.SaplingCount += LivingCohorts;
@@ -143,13 +144,13 @@ namespace iLand.Tree
         }
 
         ///  returns the *represented* (Reineke's Law) number of trees (N/ha) and the mean dbh/height (cm/m)
-        public double GetLivingStemNumber(TreeSpecies species, out float averageDbh, out float averageHeight, out float averageAge)
+        public float GetLivingStemNumber(TreeSpecies species, out float averageDbh, out float averageHeight, out float averageAge)
         {
             averageHeight = this.AverageHeight;
             averageDbh = 100.0F * averageHeight / species.SaplingGrowthParameters.HeightDiameterRatio;
             averageAge = this.AverageAge;
-            double n = species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(averageDbh);
-            return n;
+            float nSaplings = species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(averageDbh);
+            return nSaplings;
             // *** old code (sapling.cpp) ***
             //    double total = 0.0;
             //    double dbh_sum = 0.0;

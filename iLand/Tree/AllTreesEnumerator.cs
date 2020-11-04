@@ -1,4 +1,4 @@
-﻿using iLand.Simulation;
+﻿using iLand.World;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -6,15 +6,15 @@ namespace iLand.Tree
 {
     internal class AllTreesEnumerator
     {
-        private readonly Model model;
+        private readonly Landscape landscape;
         private int resourceUnitIndex;
         private Dictionary<string, Trees>.Enumerator treeSpeciesEnumerator;
 
         public int CurrentTreeIndex { get; private set; }
 
-        public AllTreesEnumerator(Model model)
+        public AllTreesEnumerator(Landscape landscape)
         {
-            this.model = model;
+            this.landscape = landscape;
             this.Reset();
         }
 
@@ -41,22 +41,22 @@ namespace iLand.Tree
             if (this.CurrentTreeIndex == -1)
             {
                 // move to first RU with trees
-                for (; this.resourceUnitIndex < this.model.ResourceUnits.Count; ++this.resourceUnitIndex)
+                for (; this.resourceUnitIndex < this.landscape.ResourceUnits.Count; ++this.resourceUnitIndex)
                 {
-                    if (this.model.ResourceUnits[this.resourceUnitIndex].TreesBySpeciesID.Count > 0)
+                    if (this.landscape.ResourceUnits[this.resourceUnitIndex].TreesBySpeciesID.Count > 0)
                     {
                         // for now, assume if a tree species entry is present that at least one tree of the species is present
                         break;
                     }
                 }
                 // finished if all RU processed
-                if (resourceUnitIndex == model.ResourceUnits.Count)
+                if (resourceUnitIndex == this.landscape.ResourceUnits.Count)
                 {
                     return false;
                 }
 
                 // positioned at first tree of first resource unit with trees
-                this.treeSpeciesEnumerator = this.model.ResourceUnits[resourceUnitIndex].TreesBySpeciesID.GetEnumerator();
+                this.treeSpeciesEnumerator = this.landscape.ResourceUnits[resourceUnitIndex].TreesBySpeciesID.GetEnumerator();
                 this.treeSpeciesEnumerator.MoveNext();
                 Debug.Assert(this.treeSpeciesEnumerator.Current.Value.Count > 0);
                 this.CurrentTreeIndex = 0;
@@ -65,15 +65,15 @@ namespace iLand.Tree
             else if (this.CurrentTreeIndex == this.treeSpeciesEnumerator.Current.Value.Count - 1)
             {
                 // move to next RU with trees
-                for (++this.resourceUnitIndex; this.resourceUnitIndex < model.ResourceUnits.Count; ++this.resourceUnitIndex)
+                for (++this.resourceUnitIndex; this.resourceUnitIndex < landscape.ResourceUnits.Count; ++this.resourceUnitIndex)
                 {
-                    if (this.model.ResourceUnits[this.resourceUnitIndex].TreesBySpeciesID.Count > 0)
+                    if (this.landscape.ResourceUnits[this.resourceUnitIndex].TreesBySpeciesID.Count > 0)
                     {
                         // for now, assume if a tree species entry is present that at least one tree of the species is present
                         break;
                     }
                 }
-                if (resourceUnitIndex == model.ResourceUnits.Count)
+                if (resourceUnitIndex == this.landscape.ResourceUnits.Count)
                 {
                     // no more resource units with trees
                     return false;
@@ -81,7 +81,7 @@ namespace iLand.Tree
                 else
                 {
                     // first tree of next resource unit
-                    this.treeSpeciesEnumerator = this.model.ResourceUnits[this.resourceUnitIndex].TreesBySpeciesID.GetEnumerator();
+                    this.treeSpeciesEnumerator = this.landscape.ResourceUnits[this.resourceUnitIndex].TreesBySpeciesID.GetEnumerator();
                     this.treeSpeciesEnumerator.MoveNext();
                     Debug.Assert(this.treeSpeciesEnumerator.Current.Value.Count > 0);
                     this.CurrentTreeIndex = 0;

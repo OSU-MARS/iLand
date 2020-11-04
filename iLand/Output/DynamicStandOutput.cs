@@ -75,7 +75,7 @@ namespace iLand.Output
 
             // setup fields
             // int pos = 0;
-            TreeWrapper treeWrapper = new TreeWrapper();
+            TreeWrapper treeWrapper = new TreeWrapper(model);
             Regex regex = new Regex("([^\\.]+).(\\w+)[,\\s]*"); // two parts: before dot and after dot, and , + whitespace at the end
             MatchCollection fields = regex.Matches(fieldList);
             foreach (Match match in fields)
@@ -119,7 +119,7 @@ namespace iLand.Output
             }
             if (!mFilter.IsEmpty)
             {
-                if (mFilter.Evaluate(model, model.ModelSettings.CurrentYear) != 0.0)
+                if (mFilter.Evaluate(model.CurrentYear) != 0.0)
                 {
                     return;
                 }
@@ -138,23 +138,23 @@ namespace iLand.Output
             }
 
             List<double> data = new List<double>(); //statistics data
-            TreeWrapper treeWrapper = new TreeWrapper();
+            TreeWrapper treeWrapper = new TreeWrapper(model);
             Expression customExpression = new Expression();
 
             SummaryStatistics stat = new SummaryStatistics(); // statistcs helper class
             // grouping
-            if (model.Environment.SpeciesSetsByTableName.Count != 1)
+            if (model.Landscape.Environment.SpeciesSetsByTableName.Count != 1)
             {
                 throw new NotImplementedException("Generation of a unique list of species from multiple species sets is not currently supported.");
             }
-            TreeSpeciesSet treeSpeciesSet = model.Environment.SpeciesSetsByTableName.First().Value;
+            TreeSpeciesSet treeSpeciesSet = model.Landscape.Environment.SpeciesSetsByTableName.First().Value;
             List<Trees> liveTreesOfSpecies = new List<Trees>();
             for (int speciesSet = 0; speciesSet < treeSpeciesSet.ActiveSpecies.Count; ++speciesSet)
             {
                 liveTreesOfSpecies.Clear();
 
                 TreeSpecies species = treeSpeciesSet.ActiveSpecies[speciesSet];
-                AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model);
+                AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model.Landscape);
                 while (allTreeEnumerator.MoveNextLiving())
                 {
                     if (perSpecies && allTreeEnumerator.CurrentTrees.Species != species)
@@ -189,16 +189,16 @@ namespace iLand.Output
 
                     if (field.VariableIndex >= 0)
                     {
-                        data.Add(treeWrapper.GetValue(model, field.VariableIndex));
+                        data.Add(treeWrapper.GetValue(field.VariableIndex));
                     }
                     else
                     {
-                        data.Add(customExpression.Execute(model));
+                        data.Add(customExpression.Execute());
                     }
                     // constant values (if not already present)
                     if (columnIndex == 0)
                     {
-                        insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
+                        insertRow.Parameters[0].Value = model.CurrentYear;
                         insertRow.Parameters[1].Value = -1;
                         insertRow.Parameters[2].Value = -1;
                         if (perSpecies)
@@ -255,12 +255,12 @@ namespace iLand.Output
 
             List<double> data = new List<double>(); //statistics data
             SummaryStatistics stat = new SummaryStatistics(); // statistcs helper class
-            TreeWrapper treeWrapper = new TreeWrapper();
-            ResourceUnitWrapper ruWrapper = new ResourceUnitWrapper();
+            TreeWrapper treeWrapper = new TreeWrapper(model);
+            ResourceUnitWrapper ruWrapper = new ResourceUnitWrapper(model);
             mRUfilter.Wrapper = ruWrapper;
 
             Expression fieldExpression = new Expression();
-            foreach (ResourceUnit ru in model.ResourceUnits)
+            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 if (ru.EnvironmentID == -1)
                 {
@@ -271,7 +271,7 @@ namespace iLand.Output
                 if (!mRUfilter.IsEmpty)
                 {
                     ruWrapper.ResourceUnit = ru;
-                    if (mRUfilter.Execute(model) == 0.0)
+                    if (mRUfilter.Execute() == 0.0)
                     {
                         continue;
                     }
@@ -313,7 +313,7 @@ namespace iLand.Output
                             if (!mTreeFilter.IsEmpty)
                             {
                                 mTreeFilter.Wrapper = treeWrapper;
-                                if (mTreeFilter.Execute(model) == 0.0)
+                                if (mTreeFilter.Execute() == 0.0)
                                 {
                                     continue;
                                 }
@@ -322,11 +322,11 @@ namespace iLand.Output
 
                             if (field.VariableIndex >= 0)
                             {
-                                data.Add(treeWrapper.GetValue(model, field.VariableIndex));
+                                data.Add(treeWrapper.GetValue(field.VariableIndex));
                             }
                             else
                             {
-                                data.Add(fieldExpression.Execute(model));
+                                data.Add(fieldExpression.Execute());
                             }
                         }
 
@@ -338,7 +338,7 @@ namespace iLand.Output
 
                         if (columnIndex == 0)
                         {
-                            insertRow.Parameters[0].Value = model.ModelSettings.CurrentYear;
+                            insertRow.Parameters[0].Value = model.CurrentYear;
                             insertRow.Parameters[1].Value = ru.GridIndex;
                             insertRow.Parameters[2].Value = ru.EnvironmentID;
                             if (bySpecies)

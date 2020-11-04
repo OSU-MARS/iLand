@@ -42,14 +42,14 @@ namespace iLand.World
             this.Grid = new Grid<int>();
         }
 
-        public MapGrid(Model model, GisGrid sourceGrid)
+        public MapGrid(Landscape landscape, GisGrid sourceGrid)
         {
-            this.LoadFromGrid(model, sourceGrid);
+            this.LoadFromGrid(landscape, sourceGrid);
         }
 
-        public MapGrid(Model model, string fileName)
+        public MapGrid(Landscape landscape, string fileName)
         {
-            this.LoadFromFile(model, fileName);
+            this.LoadFromFile(landscape, fileName);
         }
 
         public double GetArea(int standID) { return this.IsValid(standID) ? mBoundingBoxByStandID[standID].Item2 : 0.0; } // return the area (m2) covered by the polygon
@@ -71,28 +71,23 @@ namespace iLand.World
         }
 
         // load from an already present GisGrid
-        public bool LoadFromGrid(Model model, GisGrid sourceGrid, bool createIndex = true)
+        public bool LoadFromGrid(Landscape landscape, GisGrid sourceGrid, bool createIndex = true)
         {
-            if (model == null)
+            if ((landscape == null) || (landscape.HeightGrid == null) || landscape.HeightGrid.IsEmpty())
             {
-                throw new ArgumentNullException(nameof(model), "No model to retrieve height grid.");
+                throw new ArgumentNullException(nameof(landscape), "No height grid available.");
             }
 
-            Grid<HeightCell> heightGrid = model.HeightGrid;
-            if (heightGrid == null || heightGrid.IsEmpty())
-            {
-                throw new ArgumentOutOfRangeException(nameof(model), "No valid height grid to copy grid size.");
-            }
+            Grid<HeightCell> heightGrid = landscape.HeightGrid;
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
             this.Grid.Clear();
             this.Grid.Setup(heightGrid.PhysicalExtent, heightGrid.CellSize);
 
-            RectangleF world = model.WorldExtentUnbuffered;
             for (int gridIndex = 0; gridIndex < this.Grid.Count; gridIndex++)
             {
                 PointF centerPoint = this.Grid.GetCellCenterPosition(this.Grid.GetCellPosition(gridIndex));
-                if (sourceGrid.GetValue(centerPoint) != sourceGrid.NoDataValue && world.Contains(centerPoint))
+                if (sourceGrid.GetValue(centerPoint) != sourceGrid.NoDataValue && landscape.Extent.Contains(centerPoint))
                 {
                     this.Grid[gridIndex] = (int)sourceGrid.GetValue(centerPoint);
                 }
@@ -108,17 +103,17 @@ namespace iLand.World
 
             if (createIndex)
             {
-                this.CreateIndex(model);
+                this.CreateIndex(landscape);
             }
             return true;
         }
 
-        public void CreateEmptyGrid(Model model)
+        public void CreateEmptyGrid(Landscape landscape)
         {
-            Grid<HeightCell> heightGrid = model.HeightGrid;
+            Grid<HeightCell> heightGrid = landscape.HeightGrid;
             if (heightGrid == null || heightGrid.IsEmpty())
             {
-                throw new NotSupportedException("GisGrid::createEmptyGrid: 10mGrid: no valid height grid to copy grid size.");
+                throw new NotSupportedException("No valid height grid from which to copy grid size.");
             }
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
@@ -131,11 +126,11 @@ namespace iLand.World
             this.mResourceUnitsByStandID.Clear();
         }
 
-        public void CreateIndex(Model model)
+        public void CreateIndex(Landscape landscape)
         {
             // reset spatial index
-            mBoundingBoxByStandID.Clear();
-            mResourceUnitsByStandID.Clear();
+            this.mBoundingBoxByStandID.Clear();
+            this.mResourceUnitsByStandID.Clear();
             // create new
             for (int gridIndex = 0; gridIndex < this.Grid.Count; ++gridIndex)
             {
@@ -143,11 +138,11 @@ namespace iLand.World
                 {
                     continue;
                 }
-                MutableTuple<RectangleF, float> data = mBoundingBoxByStandID[gridIndex];
+                MutableTuple<RectangleF, float> data = this.mBoundingBoxByStandID[gridIndex];
                 data.Item1 = RectangleF.Union(data.Item1, this.Grid.GetCellExtent(this.Grid.GetCellPosition(gridIndex)));
                 data.Item2 += Constant.LightSize * Constant.LightCellsPerHeightSize * Constant.LightSize * Constant.LightCellsPerHeightSize; // 100m2
 
-                ResourceUnit ru = model.GetResourceUnit(this.Grid.GetCellCenterPosition(this.Grid.GetCellPosition(gridIndex)));
+                ResourceUnit ru = landscape.GetResourceUnit(this.Grid.GetCellCenterPosition(this.Grid.GetCellPosition(gridIndex)));
                 if (ru == null)
                 {
                     continue;
@@ -178,13 +173,13 @@ namespace iLand.World
         }
 
         // load ESRI style text file
-        public bool LoadFromFile(Model model, string fileName)
+        public bool LoadFromFile(Landscape landscape, string fileName)
         {
             GisGrid gisGrid = new GisGrid();
             if (gisGrid.LoadFromFile(fileName))
             {
                 this.Name = fileName;
-                return LoadFromGrid(model, gisGrid, createIndex: false);
+                return this.LoadFromGrid(landscape, gisGrid, createIndex: false);
             }
             else
             {
@@ -249,7 +244,7 @@ namespace iLand.World
                 rList.Capacity = estimatedTreeCount;
             }
             Expression expression = null;
-            TreeWrapper treeWrapper = new TreeWrapper();
+            TreeWrapper treeWrapper = new TreeWrapper(model);
             if (String.IsNullOrEmpty(filter) == false)
             {
                 expression = new Expression(filter, treeWrapper);
@@ -270,7 +265,7 @@ namespace iLand.World
                             treeWrapper.Trees = trees;
                             if (expression != null)
                             {
-                                double value = expression.Evaluate(model, treeWrapper);
+                                double value = expression.Evaluate(treeWrapper);
                                 // keep if expression returns true (1)
                                 bool loadTree = value == 1.0;
                                 // if value is >0 (i.e. not "false"), then draw a random number
