@@ -64,7 +64,7 @@ namespace iLand.Input.ProjectFile
 			{
 				this.Tree.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("treeremoved"))
+			else if (reader.IsStartElement("treeRemoved"))
 			{
 				this.TreeRemoved.ReadXml(reader);
 			}
@@ -76,7 +76,7 @@ namespace iLand.Input.ProjectFile
 			{
 				this.StandDead.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("production_month"))
+			else if (reader.IsStartElement("productionMonth"))
 			{
 				this.ProductionMonth.ReadXml(reader);
 			}
@@ -108,7 +108,7 @@ namespace iLand.Input.ProjectFile
 			{
 				this.Landscape.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("dynamicstand"))
+			else if (reader.IsStartElement("dynamicStand"))
 			{
 				this.DynamicStand.ReadXml(reader);
 			}

@@ -23,7 +23,7 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("dynamicstand"))
+            if (reader.IsStartElement("dynamicStand"))
             {
                 reader.Read();
             }
@@ -47,11 +47,11 @@ namespace iLand.Input.ProjectFile
             {
                 this.TreeFilter = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("by_species"))
+            else if (reader.IsStartElement("bySpecies"))
             {
                 this.BySpecies = reader.ReadElementContentAsBoolean();
             }
-            else if (reader.IsStartElement("by_ru"))
+            else if (reader.IsStartElement("byResourceUnit"))
             {
                 this.ByResourceUnit = reader.ReadElementContentAsBoolean();
             }

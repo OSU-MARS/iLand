@@ -48,26 +48,50 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("vpdMin"))
             {
                 this.VpdMin = reader.ReadElementContentAsFloat();
+                if (this.VpdMin < 0.0F)
+                {
+                    throw new XmlException("Minimum vapor pressure deficit is negative.");
+                }
             }
             else if (reader.IsStartElement("vpdMax"))
             {
                 this.VpdMax = reader.ReadElementContentAsFloat();
+                if (this.VpdMax < 0.0F)
+                {
+                    throw new XmlException("Minimum vapor pressure deficit is negative.");
+                }
             }
             else if (reader.IsStartElement("dayLengthMin"))
             {
                 this.DayLengthMin = reader.ReadElementContentAsFloat();
+                if (this.DayLengthMin < 0.0F)
+                {
+                    throw new XmlException("Minimum day length is negative.");
+                }
             }
             else if (reader.IsStartElement("dayLengthMax"))
             {
                 this.DayLengthMax = reader.ReadElementContentAsFloat();
+                if (this.DayLengthMax < 0.0F)
+                {
+                    throw new XmlException("Maximum day length is negative.");
+                }
             }
             else if (reader.IsStartElement("tempMin"))
             {
                 this.TempMin = reader.ReadElementContentAsFloat();
+                if (this.TempMin < -273.15F)
+                {
+                    throw new XmlException("Minimum temperature is below absolute zero.");
+                }
             }
             else if (reader.IsStartElement("tempMax"))
             {
                 this.TempMax = reader.ReadElementContentAsFloat();
+                if (this.TempMax < -273.15F)
+                {
+                    throw new XmlException("Maximum temperature is below absolute zero.");
+                }
             }
             else
             {

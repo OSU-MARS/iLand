@@ -19,7 +19,7 @@ namespace iLand.Input.ProjectFile
             }
 
             if (reader.IsStartElement("tree") ||
-                reader.IsStartElement("treeremoved"))
+                reader.IsStartElement("treeRemoved"))
             {
                 reader.Read();
             }

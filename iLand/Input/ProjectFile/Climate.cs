@@ -40,6 +40,10 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("co2concentration"))
             {
                 this.CO2ConcentrationInPpm = reader.ReadElementContentAsFloat();
+                if ((this.CO2ConcentrationInPpm < 0.0F) || (this.CO2ConcentrationInPpm > 1E6F))
+                {
+                    throw new XmlException("CO₂ concentration is negative or greater than 100%.");
+                }
             }
             else if (reader.IsStartElement("tableName"))
             {
@@ -48,18 +52,20 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("batchYears"))
             {
                 this.BatchYears = reader.ReadElementContentAsInt();
-            }
-            else if (reader.IsStartElement("co2concentration"))
-            {
-                this.CO2ConcentrationInPpm = reader.ReadElementContentAsFloat();
+                if (this.BatchYears < 1)
+                {
+                    throw new XmlException("Maximum number of years to load per climate table read (batchYears) is zero or negative.");
+                }
             }
             else if (reader.IsStartElement("temperatureShift"))
             {
                 this.TemperatureShift = reader.ReadElementContentAsFloat();
+                // no restriction on value range
             }
             else if (reader.IsStartElement("precipitationShift"))
             {
                 this.PrecipitationMultiplier = reader.ReadElementContentAsFloat();
+                // no restriction on value range
             }
             else if (reader.IsStartElement("randomSamplingEnabled"))
             {

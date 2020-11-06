@@ -52,6 +52,7 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("randomSeed"))
             {
                 this.RandomSeed = reader.ReadElementContentAsInt();
+                // no restriction on range of values
             }
             else if (reader.IsStartElement("expressionLinearizationEnabled"))
             {

@@ -18,7 +18,7 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("production_month") ||
+            if (reader.IsStartElement("productionMonth") ||
                 reader.IsStartElement("management") ||
                 reader.IsStartElement("barkbeetle") ||
                 reader.IsStartElement("wind") ||

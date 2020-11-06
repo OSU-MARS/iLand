@@ -60,22 +60,42 @@ namespace iLand.Input.ProjectFile
 			else if (reader.IsStartElement("cellSize"))
 			{
 				this.CellSize = reader.ReadElementContentAsFloat();
+				if (this.CellSize <= 0.0F)
+				{
+					throw new XmlException("Light cell size is zero or negative.");
+				}
 			}
 			else if (reader.IsStartElement("width"))
 			{
 				this.Width = reader.ReadElementContentAsFloat();
+				if (this.Width <= 0.0F)
+				{
+					throw new XmlException("Model width is zero or negative.");
+				}
 			}
 			else if (reader.IsStartElement("height"))
 			{
 				this.Height = reader.ReadElementContentAsFloat();
+				if (this.Height <= 0.0F)
+				{
+					throw new XmlException("Model height is zero or negative.");
+				}
 			}
 			else if (reader.IsStartElement("buffer"))
 			{
 				this.Buffer = reader.ReadElementContentAsFloat();
+				if (this.Buffer <= 0.0F)
+				{
+					throw new XmlException("Light buffer width is zero or negative.");
+				}
 			}
 			else if (reader.IsStartElement("latitude"))
 			{
 				this.Latitude = reader.ReadElementContentAsFloat();
+				if ((this.Latitude < -90.0F) || (this.Latitude > 90.0F))
+				{
+					throw new XmlException("Latitude is not between -90 and 90°.");
+				}
 			}
 			else if (reader.IsStartElement("resourceUnitsAsGrid"))
 			{

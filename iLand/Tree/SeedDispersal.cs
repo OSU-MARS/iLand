@@ -30,7 +30,7 @@ namespace iLand.Tree
         private float mTM_fecundity_cell; // maximum seeds per source cell
         private float mTM_occupancy; // seeds required per destination regeneration pixel
         private float mNonSeedYearFraction; // fraction of the seed production in non-seed-years
-        private float mKernelThresholdArea, mKernelThresholdLDD; // value of the kernel function that is the threhold for full coverage and LDD, respectively
+        private float mKernelThresholdArea, mKernelThresholdLdd; // value of the kernel function that is the threhold for full coverage and LDD, respectively
         private int mIndexFactor; // multiplier between light-pixel-size and seed-pixel-size
         private readonly Grid<float> mSourceMap; // (large) seedmap used to denote the sources
         private readonly Grid<float> mKernelSeedYear; // species specific "seed kernel" (small) for seed years
@@ -121,7 +121,7 @@ namespace iLand.Tree
             this.mTM_fecundity_cell = this.Species.FecundityM2 * Constant.SeedmapSize * Constant.SeedmapSize * mTM_occupancy; // scale to production for the whole cell
             this.mNonSeedYearFraction = this.Species.NonSeedYearFraction;
             this.mKernelThresholdArea = model.Project.Model.Settings.SeedDispersal.LongDistanceDispersal.ThresholdArea;
-            this.mKernelThresholdLDD = model.Project.Model.Settings.SeedDispersal.LongDistanceDispersal.ThresholdLdd;
+            this.mKernelThresholdLdd = model.Project.Model.Settings.SeedDispersal.LongDistanceDispersal.ThresholdLdd;
             this.mLddSeedlings = model.Project.Model.Settings.SeedDispersal.LongDistanceDispersal.LddSeedlings;
             this.mLDDRings = model.Project.Model.Settings.SeedDispersal.LongDistanceDispersal.Rings;
 
@@ -476,14 +476,14 @@ namespace iLand.Tree
         {
             mLddDensity.Clear();
             mLDDDistance.Clear();
-            if (mKernelThresholdLDD >= mKernelThresholdArea)
+            if (mKernelThresholdLdd >= mKernelThresholdArea)
             {
                 // no long distance dispersal
                 return 0.0F;
 
             }
             float r_min = this.TreemigDistanceforProbability(this.mKernelThresholdArea / this.Species.FecundityM2);
-            float r_max = this.TreemigDistanceforProbability(this.mKernelThresholdLDD / this.Species.FecundityM2);
+            float r_max = this.TreemigDistanceforProbability(this.mKernelThresholdLdd / this.Species.FecundityM2);
             mLDDDistance.Add(r_min);
             float ldd_sum = 0.0F;
             for (int ring = 0; ring < mLDDRings; ++ring)

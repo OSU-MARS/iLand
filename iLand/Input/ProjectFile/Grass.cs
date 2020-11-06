@@ -53,6 +53,10 @@ namespace iLand.Input.ProjectFile
 			else if (reader.IsStartElement("LIFThreshold"))
 			{
 				this.LifThreshold = reader.ReadElementContentAsFloat();
+				if ((this.LifThreshold < 0.0F) || (this.LifThreshold > 1.0F))
+				{
+					throw new XmlException("Grass LIF threshold is negative or greater than 1.0.");
+				}
 			}
 			else if (reader.IsStartElement("grassPotential"))
 			{
@@ -61,6 +65,10 @@ namespace iLand.Input.ProjectFile
 			else if (reader.IsStartElement("maxTimeLag"))
 			{
 				this.MaxTimeLag = reader.ReadElementContentAsInt();
+				if (this.MaxTimeLag < 0)
+                {
+					throw new XmlException("Maxium grass time lag is negative.");
+                }
 			}
 			else if (reader.IsStartElement("grassEffect"))
 			{

@@ -32,18 +32,22 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("x"))
             {
                 this.X = reader.ReadElementContentAsFloat();
+                // no restriction on range of values
             }
             else if (reader.IsStartElement("y"))
             {
                 this.Y = reader.ReadElementContentAsFloat();
+                // no restriction on range of values
             }
             else if (reader.IsStartElement("z"))
             {
                 this.Z = reader.ReadElementContentAsFloat();
+                // no restriction on range of values
             }
             else if (reader.IsStartElement("rotation"))
             {
                 this.Rotation = reader.ReadElementContentAsFloat();
+                // no meaningful restriction on range of values, could constrain to 0-360 if needed
             }
             else
             {

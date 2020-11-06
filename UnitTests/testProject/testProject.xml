@@ -163,8 +163,7 @@
       <mode>unit</mode>
       <file>all European species.txt</file>
       <type>picus</type>
-      <snags>
-      </snags>
+      <snags></snags>
     </initialization>
     <parameter>
       <!-- presence of model/parameter element required by XmlHelper.LoadFromFile() -->
@@ -181,19 +180,19 @@
            When simulation speed is a concern, consider disabling tree logging or filtering trees. -->
       <enabled>true</enabled>
     </tree>
-    <treeremoved>
+    <treeRemoved>
       <!-- not currently supported due to chatty rather than buffered logging model -->
       <enabled>false</enabled>
-    </treeremoved>
+    </treeRemoved>
     <stand>
       <enabled>true</enabled>
     </stand>
     <standdead>
       <enabled>true</enabled>
     </standdead>
-    <production_month>
+    <productionMonth>
       <enabled>true</enabled>
-    </production_month>
+    </productionMonth>
     <management>
       <enabled>true</enabled>
     </management>
@@ -215,9 +214,9 @@
     <landscape>
       <enabled>true</enabled>
     </landscape>
-    <dynamicstand>
+    <dynamicStand>
       <enabled>true</enabled>
-    </dynamicstand>
+    </dynamicStand>
     <barkbeetle>
       <enabled>true</enabled>
     </barkbeetle>

@@ -11,7 +11,7 @@ namespace iLand.Output
         public ProductionOutput()
         {
             this.Name = "Production per month, species and resource unit";
-            this.TableName = "production_month";
+            this.TableName = "productionMonth";
             this.Description = "Details about the 3PG production submodule on monthly basis and for each species and resource unit.";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnit());

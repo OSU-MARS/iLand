@@ -75,6 +75,10 @@ namespace iLand.Input.ProjectFile
 			else if (reader.IsStartElement("recruitmentDimensionVariation"))
 			{
 				this.RecruitmentDimensionVariation = reader.ReadElementContentAsDouble();
+				if (this.RecruitmentDimensionVariation < 0.0)
+                {
+					throw new XmlException("Variation in sapling recruitment dimensions is negative.");
+                }
 			}
 			else if (reader.IsStartElement("longDistanceDispersal"))
 			{

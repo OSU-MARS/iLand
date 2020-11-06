@@ -18,7 +18,7 @@ namespace iLand.Output
             this.removedTreesByResourceUnit = new Dictionary<ResourceUnit, MutableTuple<Trees, List<MortalityCause>>>();
 
             this.Name = "Tree Removed Output";
-            this.TableName = "treeremoved";
+            this.TableName = "treeRemoved";
             this.Description = "Output of removed indivdual trees. Use the ''filter'' property to reduce amount of data (filter by resource-unit, year, species, ...)." + System.Environment.NewLine +
                                "The output is triggered immediately when a tree is removed due to mortality or management.";
             this.Columns.Add(SqlColumn.CreateYear());

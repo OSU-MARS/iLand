@@ -47,6 +47,10 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("gpp_per_year"))
             {
                 this.GppPerYear = reader.ReadElementContentAsFloat();
+                if (this.GppPerYear < 0.0F)
+                {
+                    throw new XmlException("Fixed annual GPP override is negative.");
+                }
             }
             else if (reader.IsStartElement("debugDumpStamps"))
             {

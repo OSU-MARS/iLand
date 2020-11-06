@@ -36,26 +36,50 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("el"))
             {
                 this.El = reader.ReadElementContentAsFloat();
+                if (this.El < 0.0F)
+                {
+                    throw new XmlException("El is negative.");
+                }
             }
             else if (reader.IsStartElement("er"))
             {
                 this.Er = reader.ReadElementContentAsFloat();
+                if (this.Er < 0.0F)
+                {
+                    throw new XmlException("Er is negative.");
+                }
             }
             else if (reader.IsStartElement("qb"))
             {
                 this.Qb = reader.ReadElementContentAsFloat();
+                if (this.Qb < 0.0F)
+                {
+                    throw new XmlException("Qb is negative.");
+                }
             }
             else if (reader.IsStartElement("qh"))
             {
                 this.Qh = reader.ReadElementContentAsFloat();
+                if (this.Qh < 0.0F)
+                {
+                    throw new XmlException("Qh is negative.");
+                }
             }
             else if (reader.IsStartElement("swdDBHClass12"))
             {
                 this.SwdDbhClass12 = reader.ReadElementContentAsFloat();
+                if (this.SwdDbhClass12 < 0.0F)
+                {
+                    throw new XmlException("Breakpoint between DBH classes 1 and 2 is negative.");
+                }
             }
             else if (reader.IsStartElement("swdDBHClass23"))
             {
                 this.SwdDdhClass23 = reader.ReadElementContentAsFloat();
+                if (this.SwdDdhClass23 < 0.0F)
+                {
+                    throw new XmlException("Breakpoint between DBH classes 2 and 3 is negative.");
+                }
             }
             else if (reader.IsStartElement("useDynamicAvailableNitrogen"))
             {
@@ -64,10 +88,18 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("leaching"))
             {
                 this.Leaching = reader.ReadElementContentAsFloat();
+                if (this.Leaching < 0.0F)
+                {
+                    throw new XmlException("Leaching rate is negative.");
+                }
             }
             else if (reader.IsStartElement("nitrogenDeposition"))
             {
                 this.NitrogenDeposition = reader.ReadElementContentAsFloat();
+                if (this.NitrogenDeposition < 0.0F)
+                {
+                    throw new XmlException("Nitrogen deposition rate is negative.");
+                }
             }
             else
             {

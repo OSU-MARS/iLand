@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -21,10 +22,18 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("file"))
             {
                 this.File = reader.ReadElementContentAsString().Trim();
+                if (String.IsNullOrEmpty(this.File) == false)
+                {
+                    throw new NotImplementedException();
+                }
             }
             else if (reader.IsStartElement("agentDataFile"))
             {
                 this.AgentDataFile = reader.ReadElementContentAsString().Trim();
+                if (String.IsNullOrEmpty(this.AgentDataFile) == false)
+                {
+                    throw new NotImplementedException();
+                }
             }
             else
             {

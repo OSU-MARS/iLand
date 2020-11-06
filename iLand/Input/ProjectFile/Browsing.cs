@@ -25,6 +25,7 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("browsingPressure"))
             {
                 this.BrowsingPressure = reader.ReadElementContentAsDouble();
+                // no clear restriction on range of value
             }
             else if (reader.IsStartElement("enabled"))
             {

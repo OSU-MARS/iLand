@@ -36,14 +36,26 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("baseConcentration"))
             {
                 this.BaseConcentration = reader.ReadElementContentAsFloat();
+                if ((this.BaseConcentration < 0.0F) || (this.BaseConcentration > 1E6F))
+                {
+                    throw new XmlException("Base CO₂ concentration is negative or greater than 100%.");
+                }
             }
             else if (reader.IsStartElement("compensationPoint"))
             {
                 this.CompensationPoint = reader.ReadElementContentAsFloat();
+                if ((this.CompensationPoint < 0.0F) || (this.CompensationPoint > 1E6F))
+                {
+                    throw new XmlException("CO₂ compensation point is negative or greater than 100%.");
+                }
             }
             else if (reader.IsStartElement("beta0"))
             {
                 this.Beta0 = reader.ReadElementContentAsFloat();
+                if (this.Beta0 < 0.0F)
+                {
+                    throw new XmlException("Productivity increase when CO₂ concentration doubles (beta0) is negative.");
+                }
             }
             else
             {

@@ -109,42 +109,82 @@ namespace iLand.Input.ProjectFile
 			else if (reader.IsStartElement("epsilon"))
 			{
 				this.Epsilon = reader.ReadElementContentAsFloat();
+				if (this.Epsilon < 0.0F)
+                {
+					throw new XmlException("Epsilon is negative.");
+                }
 			}
 			else if (reader.IsStartElement("lightExtinctionCoefficient"))
 			{
 				this.LightExtinctionCoefficient = reader.ReadElementContentAsFloat();
+				if (this.LightExtinctionCoefficient < 0.0F)
+				{
+					throw new XmlException("Light extinction coefficient is negative.");
+				}
 			}
 			else if (reader.IsStartElement("lightExtinctionCoefficientOpacity"))
 			{
 				this.LightExtinctionCoefficientOpacity = reader.ReadElementContentAsFloat();
+				if (this.LightExtinctionCoefficientOpacity < 0.0F)
+				{
+					throw new XmlException("Light extinction opacity is negative.");
+				}
 			}
 			else if (reader.IsStartElement("temperatureTau"))
 			{
 				this.TemperatureTau = reader.ReadElementContentAsFloat();
+				if (this.TemperatureTau < 0.0F)
+				{
+					throw new XmlException("Temperature tau is negative.");
+				}
 			}
 			else if (reader.IsStartElement("airDensity"))
 			{
 				this.AirDensity = reader.ReadElementContentAsFloat();
+				if (this.AirDensity < 0.0F)
+				{
+					throw new XmlException("Air density is negative.");
+				}
 			}
 			else if (reader.IsStartElement("laiThresholdForClosedStands"))
 			{
 				this.LaiThresholdForClosedStands = reader.ReadElementContentAsFloat();
+				if (this.AirDensity < 0.0F)
+				{
+					throw new XmlException("Air density is negative.");
+				}
 			}
 			else if (reader.IsStartElement("boundaryLayerConductance"))
 			{
 				this.BoundaryLayerConductance = reader.ReadElementContentAsFloat();
+				if (this.BoundaryLayerConductance < 0.0F)
+				{
+					throw new XmlException("Boundary layer conductance is negative.");
+				}
 			}
 			else if (reader.IsStartElement("interceptionStorageNeedle"))
 			{
 				this.InterceptionStorageNeedle = reader.ReadElementContentAsFloat();
+				if (this.InterceptionStorageNeedle < 0.0F)
+				{
+					throw new XmlException("Needle interception storage is negative.");
+				}
 			}
 			else if (reader.IsStartElement("interceptionStorageBroadleaf"))
 			{
 				this.InterceptionStorageBroadleaf = reader.ReadElementContentAsFloat();
+				if (this.InterceptionStorageBroadleaf < 0.0F)
+				{
+					throw new XmlException("Broadleaf inteception storage is negative.");
+				}
 			}
 			else if (reader.IsStartElement("snowMeltTemperature"))
 			{
 				this.SnowMeltTemperature = reader.ReadElementContentAsFloat();
+				if (this.SnowMeltTemperature < -273.15F)
+				{
+					throw new XmlException("Snowmelt temperature is below absolute zero.");
+				}
 			}
 			else if (reader.IsStartElement("waterUseSoilSaturation"))
 			{

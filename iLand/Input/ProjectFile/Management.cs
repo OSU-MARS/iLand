@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -34,6 +35,10 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("file"))
             {
                 this.File = reader.ReadElementContentAsString().Trim();
+                if (String.IsNullOrEmpty(this.File) == false)
+                {
+                    throw new NotImplementedException("Management files are not currently read.");
+                }
             }
             else if (reader.IsStartElement("abeEnabled"))
             {

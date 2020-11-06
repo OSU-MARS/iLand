@@ -38,36 +38,68 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("swdC"))
             {
                 this.StandingWoodyDebrisCarbon = reader.ReadElementContentAsFloat();
+                if (this.StandingWoodyDebrisCarbon < 0.0F)
+                {
+                    throw new XmlException("Standing woody debris carbon is negative.");
+                }
             }
             else if (reader.IsStartElement("swdCN"))
             {
                 this.StandingWoodyDebrisCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+                if (this.StandingWoodyDebrisCarbonNitrogenRatio < 0.0F)
+                {
+                    throw new XmlException("Standing woody debris carbon:nitrogen ratio is negative.");
+                }
             }
             else if (reader.IsStartElement("swdCount"))
             {
                 this.SnagsPerResourceUnit = reader.ReadElementContentAsFloat();
+                if (this.SnagsPerResourceUnit < 0.0F)
+                {
+                    throw new XmlException("Negative numner of snags per resource unit.");
+                }
             }
             else if (reader.IsStartElement("otherC"))
             {
                 this.OtherCarbon = reader.ReadElementContentAsFloat();
+                if (this.OtherCarbon < 0.0F)
+                {
+                    throw new XmlException("Other carbon is negative.");
+                }
             }
             else if (reader.IsStartElement("otherCN"))
             {
                 this.OtherCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+                if (this.OtherCarbonNitrogenRatio < 0.0F)
+                {
+                    throw new XmlException("Other biomass carbon:nitrogen ratio is negative.");
+                }
             }
             else if (reader.IsStartElement("swdDecompRate"))
             {
                 this.StandingWoodyDebrisDecompositionRate = reader.ReadElementContentAsFloat();
+                if (this.StandingWoodyDebrisDecompositionRate < 0.0F)
+                {
+                    throw new XmlException("Standing woody debris decomposition rate is negative.");
+                }
             }
             else if (reader.IsStartElement("woodDecompRate"))
             {
                 this.WoodDecompositionRate = reader.ReadElementContentAsFloat();
+                if (this.WoodDecompositionRate < 0.0F)
+                {
+                    throw new XmlException("Wood decomposition rate is negative.");
+                }
             }
             else if (reader.IsStartElement("swdHalfLife"))
             {
                 this.StandingWoodyDebrisHalfLife = reader.ReadElementContentAsFloat();
+                if (this.StandingWoodyDebrisHalfLife < 0.0F)
+                {
+                    throw new XmlException("Half life of standing woody debris is negative.");
+                }
             }
-			else
+            else
 			{
                 throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
             }

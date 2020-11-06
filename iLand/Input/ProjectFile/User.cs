@@ -22,9 +22,13 @@ namespace iLand.Input.ProjectFile
             {
                 this.Code = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("windspeed_factor"))
+            else if (reader.IsStartElement("windspeedFactor"))
             {
                 this.WindspeedFactor = reader.ReadElementContentAsFloat();
+                if (this.WindspeedFactor < 0.0F)
+                {
+                    throw new XmlException("Windspeed factor is negative.");
+                }
             }
             else
             {

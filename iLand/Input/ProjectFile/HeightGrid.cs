@@ -37,6 +37,10 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("maxTries"))
             {
                 this.MaxTries = reader.ReadElementContentAsInt();
+                if (this.MaxTries < 1)
+                {
+                    throw new XmlException("Maximum height tries is zero or negative.");
+                }
             }
             else if (reader.IsStartElement("fitFormula"))
             {

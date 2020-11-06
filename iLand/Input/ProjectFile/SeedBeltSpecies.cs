@@ -19,6 +19,7 @@ namespace iLand.Input.ProjectFile
 
             this.X = Int32.Parse(reader.GetAttribute("x"));
             this.Y = Int32.Parse(reader.GetAttribute("y"));
+            // no restriction on range of x or y values
             this.IDs = reader.ReadElementContentAsString().Trim();
         }
     }

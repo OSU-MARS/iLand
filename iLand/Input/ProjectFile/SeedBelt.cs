@@ -53,14 +53,26 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("width"))
             {
                 this.Width = reader.ReadElementContentAsInt();
+                if (this.Width < 0)
+                {
+                    throw new XmlException("Seed belt width is negative.");
+                }
             }
             else if (reader.IsStartElement("sizeX"))
             {
                 this.SizeX = reader.ReadElementContentAsInt();
+                if (this.SizeX < 0)
+                {
+                    throw new XmlException("Seed belt size in x direction is negative.");
+                }
             }
             else if (reader.IsStartElement("sizeY"))
             {
                 this.SizeY = reader.ReadElementContentAsInt();
+                if (this.SizeY < 0)
+                {
+                    throw new XmlException("Seed belt size in y direction is negative.");
+                }
             }
             else
             {

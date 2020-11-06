@@ -33,6 +33,10 @@ namespace iLand.Input.ProjectFile
             else if (reader.IsStartElement("minDbh"))
             {
                 this.MinDbh = reader.ReadElementContentAsFloat();
+                if (this.MinDbh < 0.0F)
+                {
+                    throw new XmlException("Minimum DBH for sapling detail is negative.");
+                }
             }
             else
             {
