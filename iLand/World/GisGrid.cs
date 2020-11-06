@@ -72,8 +72,8 @@ namespace iLand.World
 
         public bool LoadFromFile(string fileName)
         {
-            MinValue = 1000000000;
-            MaxValue = -1000000000;
+            this.MinValue = Double.MaxValue;
+            this.MaxValue = Double.MinValue;
 
             // loads from a ESRI-Grid [RasterToFile] File.
             string[] lines = File.ReadAllLines(fileName);

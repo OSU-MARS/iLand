@@ -1,32 +1,17 @@
-﻿using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class Climate
+    public class Climate : XmlSerializable
     {
-        [XmlElement(ElementName = "co2concentration")]
-        public float CO2ConcentrationInPpm { get; set; }
-
-        [XmlElement(ElementName = "tableName")]
-        public string TableName { get; set; }
-
-        [XmlElement(ElementName = "batchYears")]
-        public int BatchYears { get; set; }
-
-        [XmlElement(ElementName = "temperatureShift")]
-        public float TemperatureShift { get; set; }
-
-        [XmlElement(ElementName = "precipitationShift")]
-        public float PrecipitationMultiplier { get; set; }
-
-        [XmlElement(ElementName = "randomSamplingEnabled")]
-        public bool RandomSamplingEnabled { get; set; }
-
-        [XmlElement(ElementName = "randomSamplingList")]
-        public string RandomSamplingList { get; set; }
-
-        [XmlElement(ElementName = "filter")]
-        public string Filter { get; set; }
+        public float CO2ConcentrationInPpm { get; private set; }
+        public string TableName { get; private set; }
+        public int BatchYears { get; private set; }
+        public float TemperatureShift { get; private set; }
+        public float PrecipitationMultiplier { get; private set; }
+        public bool RandomSamplingEnabled { get; private set; }
+        public string RandomSamplingList { get; private set; }
+        public string Filter { get; private set; }
 
         public Climate()
         {
@@ -39,6 +24,59 @@ namespace iLand.Input.ProjectFile
             this.RandomSamplingEnabled = false;
             this.RandomSamplingList = null;
             this.TemperatureShift = 0.0F;
+        }
+
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
+
+            if (reader.IsStartElement("climate"))
+            {
+                reader.Read();
+            }
+            else if (reader.IsStartElement("co2concentration"))
+            {
+                this.CO2ConcentrationInPpm = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("tableName"))
+            {
+                this.TableName = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("batchYears"))
+            {
+                this.BatchYears = reader.ReadElementContentAsInt();
+            }
+            else if (reader.IsStartElement("co2concentration"))
+            {
+                this.CO2ConcentrationInPpm = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("temperatureShift"))
+            {
+                this.TemperatureShift = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("precipitationShift"))
+            {
+                this.PrecipitationMultiplier = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("randomSamplingEnabled"))
+            {
+                this.RandomSamplingEnabled = reader.ReadElementContentAsBoolean();
+            }
+            else if (reader.IsStartElement("randomSamplingList"))
+            {
+                this.RandomSamplingList = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("filter"))
+            {
+                this.Filter = reader.ReadElementContentAsString().Trim();
+            }
+            else
+            {
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
         }
     }
 }

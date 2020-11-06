@@ -20,7 +20,7 @@ namespace iLand.Test
 
         protected Model LoadProject(string projectFilePath)
         {
-            Project projectFile = Input.ProjectFile.Project.Load(projectFilePath);
+            Project projectFile = new Project(projectFilePath);
             Landscape landscape = new Landscape(projectFile);
 
             Model model = new Model(projectFile, landscape);

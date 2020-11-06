@@ -1,21 +1,47 @@
-﻿using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class Database
+    public class Database : XmlSerializable
     {
-        [XmlElement(ElementName = "in")]
-        public string In { get; set; }
-
-        [XmlElement(ElementName = "out")]
-        public string Out { get; set; }
-
-        [XmlElement(ElementName = "climate")]
-        public string Climate { get; set; }
+        public string In { get; private set; }
+        public string Out { get; private set; }
+        public string Climate { get; private set; }
 
         public Database()
         {
+            this.Climate = null;
+            this.In = null;
             this.Out = null;
+        }
+
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
+
+            if (reader.IsStartElement("database"))
+            {
+                reader.Read();
+            }
+            else if (reader.IsStartElement("in"))
+            {
+                this.In = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("out"))
+            {
+                this.Out = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("climate"))
+            {
+                this.Climate = reader.ReadElementContentAsString().Trim();
+            }
+            else
+            {
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
         }
     }
 }

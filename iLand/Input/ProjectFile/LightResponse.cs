@@ -1,17 +1,12 @@
-﻿using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class LightResponse
+    public class LightResponse : XmlSerializable
     {
-        [XmlElement(ElementName = "shadeIntolerant")]
-        public string ShadeIntolerant { get; set; }
-
-        [XmlElement(ElementName = "shadeTolerant")]
-        public string ShadeTolerant { get; set; }
-
-        [XmlElement(ElementName = "LRImodifier")]
-        public string LriModifier { get; set; }
+        public string ShadeIntolerant { get; private set; }
+        public string ShadeTolerant { get; private set; }
+        public string LriModifier { get; private set; }
 
         public LightResponse()
         {
@@ -20,6 +15,35 @@ namespace iLand.Input.ProjectFile
             this.ShadeTolerant = null;
 
             this.LriModifier = "1";
+        }
+
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
+
+            if (reader.IsStartElement("lightResponse"))
+            {
+                reader.Read();
+            }
+            else if (reader.IsStartElement("shadeIntolerant"))
+            {
+                this.ShadeIntolerant = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("shadeTolerant"))
+            {
+                this.ShadeTolerant = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("LRImodifier"))
+            {
+                this.LriModifier = reader.ReadElementContentAsString().Trim();
+            }
+            else
+            {
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
         }
     }
 }

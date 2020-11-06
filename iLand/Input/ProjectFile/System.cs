@@ -1,24 +1,58 @@
-﻿using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class System
+    public class System : XmlSerializable
     {
-        [XmlElement(ElementName = "path")]
-        public Paths Path { get; set; }
-
-        [XmlElement(ElementName = "database")]
-        public Database Database { get; set; }
-
-        [XmlElement(ElementName = "logging")]
-        public Logging Logging { get; set; }
-
-        [XmlElement(ElementName = "settings")]
-        public SystemSettings Settings { get; set; }
+        public Paths Path { get; private set; }
+        public Database Database { get; private set; }
+        public Logging Logging { get; private set; }
+        public SystemSettings Settings { get; private set; }
 
         // not currently supported
-	    //<javascript>
-	    //	<fileName></fileName>
-	    //</javascript>
+        //<javascript>
+        //	<fileName></fileName>
+        //</javascript>
+
+        public System(string homePath)
+        {
+            this.Path = new Paths(homePath);
+            this.Database = new Database();
+            this.Logging = new Logging();
+            this.Settings = new SystemSettings();
+        }
+
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
+
+            if (reader.IsStartElement("system"))
+            {
+                reader.Read();
+            }
+            else if (reader.IsStartElement("path"))
+            {
+                this.Path.ReadXml(reader);
+            }
+            else if (reader.IsStartElement("database"))
+            {
+                this.Database.ReadXml(reader);
+            }
+            else if (reader.IsStartElement("logging"))
+            {
+                this.Logging.ReadXml(reader);
+            }
+            else if (reader.IsStartElement("settings"))
+            {
+                this.Settings.ReadXml(reader);
+            }
+            else
+            {
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
+        }
     }
 }

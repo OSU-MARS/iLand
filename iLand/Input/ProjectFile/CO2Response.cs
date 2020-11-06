@@ -1,20 +1,13 @@
-﻿using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class CO2Response
+    public class CO2Response : XmlSerializable
     {
-        [XmlElement(ElementName = "p0")]
-        public float P0 { get; set; }
-
-        [XmlElement(ElementName = "baseConcentration")]
-        public float BaseConcentration { get; set; }
-
-        [XmlElement(ElementName = "compensationPoint")]
-        public float CompensationPoint { get; set; }
-
-        [XmlElement(ElementName = "beta0")]
-        public float Beta0 { get; set; }
+        public float P0 { get; private set; }
+        public float BaseConcentration { get; private set; }
+        public float CompensationPoint { get; private set; }
+        public float Beta0 { get; private set; }
 
         public CO2Response()
         {
@@ -23,6 +16,39 @@ namespace iLand.Input.ProjectFile
             this.Beta0 = 0.0F;
             this.CompensationPoint = 0.0F;
             this.P0 = 0.0F;
+        }
+
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
+
+            if (reader.IsStartElement("CO2Response"))
+            {
+                reader.Read();
+            }
+            else if (reader.IsStartElement("p0"))
+            {
+                this.P0 = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("baseConcentration"))
+            {
+                this.BaseConcentration = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("compensationPoint"))
+            {
+                this.CompensationPoint = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("beta0"))
+            {
+                this.Beta0 = reader.ReadElementContentAsFloat();
+            }
+            else
+            {
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
         }
     }
 }

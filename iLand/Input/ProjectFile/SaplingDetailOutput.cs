@@ -1,15 +1,43 @@
-﻿using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class SaplingDetailOutput : ConditionOutput
     {
-        [XmlElement(ElementName = "minDbh")]
-        public double MinDbh { get; set; }
+        public float MinDbh { get; private set; }
 
         public SaplingDetailOutput()
         {
-            this.MinDbh = 0.0;
+            this.MinDbh = 0.0F;
+        }
+
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
+
+            if (reader.IsStartElement("saplingdetail"))
+            {
+                reader.Read();
+            }
+            else if (reader.IsStartElement("enabled"))
+            {
+                this.Enabled = reader.ReadElementContentAsBoolean();
+            }
+            else if (reader.IsStartElement("condition"))
+            {
+                this.Condition = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("minDbh"))
+            {
+                this.MinDbh = reader.ReadElementContentAsFloat();
+            }
+            else
+            {
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
         }
     }
 }

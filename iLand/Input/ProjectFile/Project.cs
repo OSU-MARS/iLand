@@ -1,36 +1,30 @@
-﻿using iLand.Tools;
-using System;
+﻿using System;
 using System.IO;
-using System.Xml.Serialization;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    [XmlRoot(ElementName = "project")]
-    public class Project
+    public class Project : XmlSerializable
     {
-        [XmlElement(ElementName = "system")]
-		public System System { get; set; }
+		public System System { get; private set; }
+        public Model Model { get; private set; }
+		public Outputs Output { get; private set; }
+		public Modules Modules { get; private set; }
+		public User User { get; private set; }
 
-		[XmlElement(ElementName = "model")]
-        public Model Model { get; set; }
-
-		[XmlElement(ElementName = "output")]
-		public Outputs Output { get; set; }
-
-		[XmlElement(ElementName = "modules")]
-		public Modules Modules { get; set; }
-
-		[XmlElement(ElementName = "user")]
-		public User User { get; set; }
-
-		public Project()
+		public Project(string xmlFilePath)
         {
 			this.Model = new Model();
 			this.Modules = new Modules();
 			this.Output = new Outputs();
-			this.System = new System();
+			this.System = new System(Path.GetDirectoryName(xmlFilePath)); // if home path is not specified, default it to the location of the project file
 			this.User = new User();
-        }
+
+			using FileStream stream = new FileStream(xmlFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+			using XmlReader reader = XmlReader.Create(stream);
+			reader.MoveToContent();
+			this.ReadXml(reader);
+		}
 
 		public string GetFilePath(ProjectDirectory directory, string fileName)
         {
@@ -53,19 +47,41 @@ namespace iLand.Input.ProjectFile
 			return Path.Combine(this.System.Path.Home, directoryName, fileName);
 		}
 
-		public static Project Load(string xmlFilePath)
+		protected override void ReadStartElement(XmlReader reader)
 		{
-			// parse project file
-			XmlConformingSerializer deserializer = new XmlConformingSerializer(typeof(Project));
-			using FileStream stream = new FileStream(xmlFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-			Project project = deserializer.Deserialize<Project>(stream);
+			if (reader.AttributeCount != 0)
+			{
+				throw new XmlException("Encountered unexpected attributes.");
+			}
 
-			// if home path is not specified, default it to the location of the project file
-			if (String.IsNullOrEmpty(project.System.Path.Home))
-            {
-				project.System.Path.Home = Path.GetDirectoryName(xmlFilePath);
-            }
-			return project;
+			if (reader.IsStartElement("project"))
+			{
+				reader.Read();
+			}
+			else if (reader.IsStartElement("system"))
+			{
+				this.System.ReadXml(reader);
+			}
+			else if (reader.IsStartElement("model"))
+			{
+				this.Model.ReadXml(reader);
+			}
+			else if (reader.IsStartElement("output"))
+			{
+				this.Output.ReadXml(reader);
+			}
+			else if (reader.IsStartElement("modules"))
+			{
+				this.Modules.ReadXml(reader);
+			}
+			else if (reader.IsStartElement("user"))
+			{
+				this.User.ReadXml(reader);
+			}
+			else
+			{
+				throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+			}
 		}
 	}
 }

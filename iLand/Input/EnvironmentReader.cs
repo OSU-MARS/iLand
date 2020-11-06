@@ -88,7 +88,7 @@ namespace iLand.Input
 
         public bool LoadFromProjectAndEnvironmentFile(Project projectFile, Landscape landscape)
         {
-            string environmentFilePath = projectFile.GetFilePath(ProjectDirectory.Home, projectFile.Model.World.EnvironmentFile); // TODO: stop requiring \gis prefix in project file
+            string environmentFilePath = projectFile.GetFilePath(ProjectDirectory.Home, projectFile.Model.World.EnvironmentFile); // TODO: stop requiring gis\ prefix in project file
 
             mInfile = new CsvFile();
             mInfile.LoadFile(environmentFilePath);

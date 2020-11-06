@@ -1,39 +1,19 @@
-﻿using System;
-using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class SeedDispersal
+    public class SeedDispersal : XmlSerializable
     {
-		[XmlElement(ElementName = "seedBelt")]
-		public SeedBelt SeedBelt { get; set; }
-
-		[XmlElement(ElementName = "dumpSeedMapsEnabled")]
-        public bool DumpSeedMapsEnabled { get; set; }
-
-		[XmlElement(ElementName = "dumpSeedMapsPath")]
-		public string DumpSeedMapsPath { get; set; }
-
-		[XmlElement(ElementName = "externalSeedBackgroundInput")]
-		public string ExternalSeedBackgroundInput { get; set; }
-
-		[XmlElement(ElementName = "externalSeedEnabled")]
-		public bool ExternalSeedEnabled { get; set; }
-
-		[XmlElement(ElementName = "externalSeedSource")]
-		public string ExternalSeedSource { get; set; }
-
-		[XmlElement(ElementName = "externalSeedSpecies")]
-		public string ExternalSeedSpecies { get; set; }
-
-		[XmlElement(ElementName = "externalSeedBuffer")]
-		public string ExternalSeedBuffer { get; set; }
-
-		[XmlElement(ElementName = "recruitmentDimensionVariation")]
-		public double RecruitmentDimensionVariation { get; set; }
-
-		[XmlElement(ElementName = "longDistanceDispersal")]
-		public LongDistanceDispersal LongDistanceDispersal { get; set; }
+		public SeedBelt SeedBelt { get; private set; }
+        public bool DumpSeedMapsEnabled { get; private set; }
+		public string DumpSeedMapsPath { get; private set; }
+		public string ExternalSeedBackgroundInput { get; private set; }
+		public bool ExternalSeedEnabled { get; private set; }
+		public string ExternalSeedSource { get; private set; }
+		public string ExternalSeedSpecies { get; private set; }
+		public string ExternalSeedBuffer { get; private set; }
+		public double RecruitmentDimensionVariation { get; private set; }
+		public LongDistanceDispersal LongDistanceDispersal { get; private set; }
 		
 		public SeedDispersal()
         {
@@ -48,5 +28,62 @@ namespace iLand.Input.ProjectFile
 			this.RecruitmentDimensionVariation = 0.1; // +/- 10%
 			this.SeedBelt = new SeedBelt();
         }
-    }
+
+		protected override void ReadStartElement(XmlReader reader)
+		{
+			if (reader.AttributeCount != 0)
+			{
+				throw new XmlException("Encountered unexpected attributes.");
+			}
+
+			if (reader.IsStartElement("seedDispersal"))
+			{
+				reader.Read();
+			}
+			else if (reader.IsStartElement("seedBelt"))
+			{
+				this.SeedBelt.ReadXml(reader);
+			}
+			else if (reader.IsStartElement("dumpSeedMapsEnabled"))
+			{
+				this.DumpSeedMapsEnabled = reader.ReadElementContentAsBoolean();
+			}
+			else if (reader.IsStartElement("dumpSeedMapsPath"))
+			{
+				this.DumpSeedMapsPath = reader.ReadElementContentAsString().Trim();
+			}
+			else if (reader.IsStartElement("externalSeedBackgroundInput"))
+			{
+				this.ExternalSeedBackgroundInput = reader.ReadElementContentAsString().Trim();
+			}
+			else if (reader.IsStartElement("externalSeedEnabled"))
+			{
+				this.ExternalSeedEnabled = reader.ReadElementContentAsBoolean();
+			}
+			else if (reader.IsStartElement("externalSeedSource"))
+			{
+				this.ExternalSeedSource = reader.ReadElementContentAsString().Trim();
+			}
+			else if (reader.IsStartElement("externalSeedSpecies"))
+			{
+				this.ExternalSeedSpecies = reader.ReadElementContentAsString().Trim();
+			}
+			else if (reader.IsStartElement("externalSeedBuffer"))
+			{
+				this.ExternalSeedBuffer = reader.ReadElementContentAsString().Trim();
+			}
+			else if (reader.IsStartElement("recruitmentDimensionVariation"))
+			{
+				this.RecruitmentDimensionVariation = reader.ReadElementContentAsDouble();
+			}
+			else if (reader.IsStartElement("longDistanceDispersal"))
+			{
+				this.LongDistanceDispersal.ReadXml(reader);
+			}
+			else
+			{
+				throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+			}
+		}
+	}
 }

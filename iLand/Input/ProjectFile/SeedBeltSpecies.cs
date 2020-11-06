@@ -1,17 +1,25 @@
-﻿using System.Xml.Serialization;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class SeedBeltSpecies
+    public class SeedBeltSpecies : XmlSerializable
     {
         // space separated list of four letter species codes
-        [XmlText]
-        public string IDs { get; set; }
+        public string IDs { get; private set; }
+        public int X { get; private set; }
+        public int Y { get; private set; }
 
-        [XmlAttribute(AttributeName = "x")]
-        public int X { get; set; }
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 2)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
 
-        [XmlAttribute(AttributeName = "y")]
-        public int Y { get; set; }
+            this.X = Int32.Parse(reader.GetAttribute("x"));
+            this.Y = Int32.Parse(reader.GetAttribute("y"));
+            this.IDs = reader.ReadElementContentAsString().Trim();
+        }
     }
 }

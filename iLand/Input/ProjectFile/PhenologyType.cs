@@ -1,29 +1,17 @@
-﻿using System.Xml.Serialization;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class PhenologyType
+    public class PhenologyType : XmlSerializable
     {
-        [XmlAttribute(AttributeName = "id")]
-        public int ID { get; set; }
-
-        [XmlElement(ElementName = "vpdMin")]
-        public float VpdMin { get; set; }
-
-        [XmlElement(ElementName = "vpdMax")]
-        public float VpdMax { get; set; }
-
-        [XmlElement(ElementName = "dayLengthMin")]
-        public float DayLengthMin { get; set; }
-
-        [XmlElement(ElementName = "dayLengthMax")]
-        public float DayLengthMax { get; set; }
-
-        [XmlElement(ElementName = "tempMin")]
-        public float TempMin { get; set; }
-
-        [XmlElement(ElementName = "tempMax")]
-        public float TempMax { get; set; }
+        public int ID { get; private set; }
+        public float VpdMin { get; private set; }
+        public float VpdMax { get; private set; }
+        public float DayLengthMin { get; private set; }
+        public float DayLengthMax { get; private set; }
+        public float TempMin { get; private set; }
+        public float TempMax { get; private set; }
 
         public PhenologyType()
         {
@@ -36,6 +24,55 @@ namespace iLand.Input.ProjectFile
             this.DayLengthMin = 10.0F;
             this.TempMax = 9.0F;
             this.TempMin = 2.0F;
+        }
+
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                if (reader.IsStartElement("type"))
+                {
+                    if (reader.AttributeCount != 1)
+                    {
+                        throw new XmlException("Encountered unexpected attributes.");
+                    }
+
+                    this.ID = Int32.Parse(reader.GetAttribute("id"));
+                    reader.ReadStartElement();
+                }
+                else
+                {
+                    throw new XmlException("Encountered unexpected attributes.");
+                }
+            }
+            else if (reader.IsStartElement("vpdMin"))
+            {
+                this.VpdMin = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("vpdMax"))
+            {
+                this.VpdMax = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("dayLengthMin"))
+            {
+                this.DayLengthMin = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("dayLengthMax"))
+            {
+                this.DayLengthMax = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("tempMin"))
+            {
+                this.TempMin = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("tempMax"))
+            {
+                this.TempMax = reader.ReadElementContentAsFloat();
+            }
+            else
+            {
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
         }
     }
 }

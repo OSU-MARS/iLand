@@ -1,32 +1,17 @@
-﻿using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class Snags
+    public class Snags : XmlSerializable
     {
-		[XmlElement(ElementName = "swdC")]
-		public float StandingWoodyDebrisCarbon { get; set; }
-
-		[XmlElement(ElementName = "swdCN")]
-		public float StandingWoodyDebrisCarbonNitrogenRatio { get; set; }
-
-		[XmlElement(ElementName = "swdCount")]
-		public float SnagsPerResourceUnit { get; set; }
-
-		[XmlElement(ElementName = "otherC")]
-		public float OtherCarbon { get; set; }
-
-		[XmlElement(ElementName = "otherCN")]
-		public float OtherCarbonNitrogenRatio { get; set; }
-
-		[XmlElement(ElementName = "swdDecompRate")]
-		public float StandingWoodyDebrisDecompositionRate { get; set; }
-
-		[XmlElement(ElementName = "woodDecompRate")]
-		public double WoodDecompositionRate { get; set; }
-
-		[XmlElement(ElementName = "swdHalfLife")]
-		public float StandingWoodyDebrisHalfLife { get; set; }
+		public float StandingWoodyDebrisCarbon { get; private set; }
+		public float StandingWoodyDebrisCarbonNitrogenRatio { get; private set; }
+		public float SnagsPerResourceUnit { get; private set; }
+		public float OtherCarbon { get; private set; }
+		public float OtherCarbonNitrogenRatio { get; private set; }
+		public float StandingWoodyDebrisDecompositionRate { get; private set; }
+		public double WoodDecompositionRate { get; private set; }
+		public float StandingWoodyDebrisHalfLife { get; private set; }
 
 		public Snags()
         {
@@ -37,6 +22,55 @@ namespace iLand.Input.ProjectFile
 			this.StandingWoodyDebrisCarbonNitrogenRatio = 50.0F;
 			this.StandingWoodyDebrisDecompositionRate = 0.0F;
 			this.StandingWoodyDebrisHalfLife = 0.0F;
+        }
+
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
+
+            if (reader.IsStartElement("snags"))
+            {
+                reader.Read();
+            }
+            else if (reader.IsStartElement("swdC"))
+            {
+                this.StandingWoodyDebrisCarbon = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("swdCN"))
+            {
+                this.StandingWoodyDebrisCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("swdCount"))
+            {
+                this.SnagsPerResourceUnit = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("otherC"))
+            {
+                this.OtherCarbon = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("otherCN"))
+            {
+                this.OtherCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("swdDecompRate"))
+            {
+                this.StandingWoodyDebrisDecompositionRate = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("woodDecompRate"))
+            {
+                this.WoodDecompositionRate = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("swdHalfLife"))
+            {
+                this.StandingWoodyDebrisHalfLife = reader.ReadElementContentAsFloat();
+            }
+			else
+			{
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
         }
     }
 }

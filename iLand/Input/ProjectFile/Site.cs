@@ -1,57 +1,105 @@
-﻿using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class Site
+    public class Site : XmlSerializable
 	{
-		[XmlElement(ElementName = "availableNitrogen")]
-		public double AvailableNitrogen { get; set; }
-
-		[XmlElement(ElementName = "soilDepth")]
-		public double SoilDepth { get; set; }
-
-		[XmlElement(ElementName = "pctSand")]
-		public double PercentSand { get; set; }
-
-		[XmlElement(ElementName = "pctSilt")]
-		public double PercentSilt { get; set; }
-
-		[XmlElement(ElementName = "pctClay")]
-		public double PercentClay { get; set; }
-
-		[XmlElement(ElementName = "youngLabileC")]
-		public double YoungLabileCarbon { get; set; }
-
-		[XmlElement(ElementName = "youngLabileN")]
-		public double YoungLabileNitrogen { get; set; }
-
-		[XmlElement(ElementName = "youngLabileDecompRate")]
-		public double YoungLabileDecompRate { get; set; }
-
-		[XmlElement(ElementName = "youngRefractoryC")]
-		public double YoungRefractoryCarbon { get; set; }
-
-		[XmlElement(ElementName = "youngRefractoryN")]
-		public double YoungRefractoryNitrogen { get; set; }
-
-		[XmlElement(ElementName = "youngRefractoryDecompRate")]
-		public float YoungRefractoryDecompositionRate { get; set; }
-
-		[XmlElement(ElementName = "somC")]
-		public double SoilOrganicMatterCarbon { get; set; }
-
-		[XmlElement(ElementName = "somN")]
-		public double SoilOrganicMatterNitrogen { get; set; }
-
-		[XmlElement(ElementName = "somDecompRate")]
-		public double SoilOrganicMatterDecompositionRate { get; set; }
-
-		[XmlElement(ElementName = "soilHumificationRate")]
-		public double SoilHumificationRate { get; set; }
+		public float AvailableNitrogen { get; private set; }
+		public float SoilDepth { get; private set; }
+		public float PercentSand { get; private set; }
+		public float PercentSilt { get; private set; }
+		public float PercentClay { get; private set; }
+		public float YoungLabileCarbon { get; private set; }
+		public float YoungLabileNitrogen { get; private set; }
+		public float YoungLabileDecompRate { get; private set; }
+		public float YoungRefractoryCarbon { get; private set; }
+		public float YoungRefractoryNitrogen { get; private set; }
+		public float YoungRefractoryDecompositionRate { get; private set; }
+		public float SoilOrganicMatterCarbon { get; private set; }
+		public float SoilOrganicMatterNitrogen { get; private set; }
+		public float SoilOrganicMatterDecompositionRate { get; private set; }
+		public float SoilHumificationRate { get; private set; }
 
 		public Site()
         {
 			this.YoungRefractoryDecompositionRate = -1.0F;
+        }
+
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
+
+            if (reader.IsStartElement("site"))
+            {
+                reader.Read();
+            }
+            else if (reader.IsStartElement("availableNitrogen"))
+            {
+                this.AvailableNitrogen = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("soilDepth"))
+            {
+                this.SoilDepth = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("pctSand"))
+            {
+                this.PercentSand = reader.ReadElementContentAsFloat();
+            }
+            else if (reader.IsStartElement("pctSilt"))
+            {
+                this.PercentSilt = reader.ReadElementContentAsFloat();
+            }
+			else if (reader.IsStartElement("pctClay"))
+			{
+				this.PercentClay = reader.ReadElementContentAsFloat();
+			}
+			else if (reader.IsStartElement("youngLabileC"))
+			{
+				this.YoungLabileCarbon = reader.ReadElementContentAsFloat();
+			}
+			else if (reader.IsStartElement("youngLabileN"))
+			{
+				this.YoungLabileNitrogen = reader.ReadElementContentAsFloat();
+			}
+			else if (reader.IsStartElement("youngLabileDecompRate"))
+			{
+				this.YoungLabileDecompRate = reader.ReadElementContentAsFloat();
+			}
+			else if (reader.IsStartElement("youngRefractoryC"))
+			{
+				this.YoungRefractoryCarbon = reader.ReadElementContentAsFloat();
+			}
+			else if (reader.IsStartElement("youngRefractoryN"))
+			{
+				this.YoungRefractoryNitrogen = reader.ReadElementContentAsFloat();
+			}
+			else if (reader.IsStartElement("youngRefractoryDecompRate"))
+			{
+				this.YoungRefractoryDecompositionRate = reader.ReadElementContentAsFloat();
+			}
+			else if (reader.IsStartElement("somC"))
+			{
+				this.SoilOrganicMatterCarbon = reader.ReadElementContentAsFloat();
+			}
+			else if (reader.IsStartElement("somN"))
+			{
+				this.SoilOrganicMatterNitrogen = reader.ReadElementContentAsFloat();
+			}
+			else if (reader.IsStartElement("somDecompRate"))
+			{
+				this.SoilOrganicMatterDecompositionRate = reader.ReadElementContentAsFloat();
+			}
+			else if (reader.IsStartElement("soilHumificationRate"))
+			{
+				this.SoilHumificationRate = reader.ReadElementContentAsFloat();
+			}
+			else
+			{
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
         }
     }
 }

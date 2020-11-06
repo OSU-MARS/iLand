@@ -1,29 +1,20 @@
 ﻿using System;
-using System.Xml.Serialization;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class SystemSettings
+    public class SystemSettings : XmlSerializable
     {
-        [XmlElement(ElementName = "multithreading")]
-        public bool Multithreading { get; set; }
-
-        [XmlElement(ElementName = "debugOutput")]
-        public bool DebugOutput { get; set; }
-
-        [XmlElement(ElementName = "debugOutputAutoSave")]
-        public bool DebugOutputAutoSave { get; set; }
-
-        [XmlElement(ElementName = "randomSeed")]
-        public Nullable<int> RandomSeed { get; set; }
+        public bool Multithreading { get; private set; }
+        public bool DebugOutput { get; private set; }
+        public bool DebugOutputAutoSave { get; private set; }
+        public Nullable<int> RandomSeed { get; private set; }
 
         // linearization of expressions: if true *and* linearize() is explicitely called, then
         // function results will be cached over a defined range of values.
-        [XmlElement(ElementName = "expressionLinearizationEnabled")]
-        public bool ExpressionLinearizationEnabled { get; set; }
+        public bool ExpressionLinearizationEnabled { get; private set; }
 
-        [XmlElement(ElementName = "logLevel")]
-        public string LogLevel { get; set; }
+        public string LogLevel { get; private set; } // TODO: change to enum
 
         public SystemSettings()
         {
@@ -31,6 +22,48 @@ namespace iLand.Input.ProjectFile
             this.LogLevel = "debug";
             this.Multithreading = false;
             this.RandomSeed = null;
+        }
+
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
+
+            if (reader.IsStartElement("settings"))
+            {
+                reader.Read();
+                return;
+            }
+            else if (reader.IsStartElement("multithreading"))
+            {
+                this.Multithreading = reader.ReadElementContentAsBoolean();
+            }
+            else if (reader.IsStartElement("debugOutput"))
+            {
+                this.DebugOutput = reader.ReadElementContentAsBoolean();
+            }
+            else if (reader.IsStartElement("debugOutputAutoSave"))
+            {
+                this.DebugOutputAutoSave = reader.ReadElementContentAsBoolean();
+            }
+            else if (reader.IsStartElement("randomSeed"))
+            {
+                this.RandomSeed = reader.ReadElementContentAsInt();
+            }
+            else if (reader.IsStartElement("expressionLinearizationEnabled"))
+            {
+                this.ExpressionLinearizationEnabled = reader.ReadElementContentAsBoolean();
+            }
+            else if (reader.IsStartElement("logLevel"))
+            {
+                this.LogLevel = reader.ReadElementContentAsString().Trim();
+            }
+            else
+            {
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
         }
     }
 }

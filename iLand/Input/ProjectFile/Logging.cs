@@ -1,16 +1,40 @@
-﻿using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class Logging
+    public class Logging : XmlSerializable
     {
-        [XmlElement(ElementName = "logTarget")]
-        public string LogTarget { get; set; }
+        public string LogTarget { get; private set; }
+        public string LogFile { get; private set; }
+        public bool Flush { get; private set; }
 
-        [XmlElement(ElementName = "logFile")]
-        public string LogFile { get; set; }
+		protected override void ReadStartElement(XmlReader reader)
+		{
+			if (reader.AttributeCount != 0)
+			{
+				throw new XmlException("Encountered unexpected attributes.");
+			}
 
-        [XmlElement(ElementName = "flush")]
-        public bool Flush { get; set; }
-    }
+			if (reader.IsStartElement("logging"))
+			{
+				reader.Read();
+			}
+			else if (reader.IsStartElement("logTarget"))
+			{
+				this.LogTarget = reader.ReadElementContentAsString().Trim();
+			}
+			else if (reader.IsStartElement("logFile"))
+			{
+				this.LogFile = reader.ReadElementContentAsString().Trim();
+			}
+			else if (reader.IsStartElement("flush"))
+			{
+				this.Flush = reader.ReadElementContentAsBoolean();
+			}
+			else
+			{
+				throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+			}
+		}
+	}
 }

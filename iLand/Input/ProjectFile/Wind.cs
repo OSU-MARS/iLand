@@ -1,70 +1,129 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Xml.Serialization;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class Wind : Enablable
     {
-        [XmlElement(ElementName = "speciesParameter")]
-        public string SpeciesParameter { get; set; }
+        public string SpeciesParameter { get; private set; }
+        public string SoilFreezeMode { get; private set; }
+        public bool TriggeredByTimeEvent { get; private set; }
+        public int DurationPerIteration { get; private set; }
+        public double GustModifier { get; private set; }
+        public double TopoModifier { get; private set; }
+        public double DirectionVariation { get; private set; }
+        public double Direction { get; private set; }
+        public int DayOfYear { get; private set; }
+        public double Speed { get; private set; }
+        public double Duration { get; private set; }
+        public string TopoGridFile { get; private set; }
+        public double FactorEdge { get; private set; }
+        public double EdgeDetectionThreshold { get; private set; }
+        public string TopexModifierType { get; private set; }
+        public string LriTransferFunction { get; private set; }
+        public string EdgeProbability { get; private set; }
+        public int EdgeAgeBaseValue { get; private set; }
+        public double EdgeBackgroundProbability { get; private set; }
+        public string OnAfterWind { get; private set; }
 
-        [XmlElement(ElementName = "soilFreezeMode")]
-        public string SoilFreezeMode { get; set; }
+        protected override void ReadStartElement(XmlReader reader)
+        {
+            if (reader.AttributeCount != 0)
+            {
+                throw new XmlException("Encountered unexpected attributes.");
+            }
 
-        [XmlElement(ElementName = "triggeredByTimeEvent")]
-        public bool TriggeredByTimeEvent { get; set; }
-
-        [XmlElement(ElementName = "durationPerIteration")]
-        public int DurationPerIteration { get; set; }
-
-        [XmlElement(ElementName = "gustModifier")]
-        public double GustModifier { get; set; }
-
-        [XmlElement(ElementName = "topoModifier")]
-        public double TopoModifier { get; set; }
-
-        [XmlElement(ElementName = "directionVariation")]
-        public double DirectionVariation { get; set; }
-
-        [XmlElement(ElementName = "direction")]
-        public double Direction { get; set; }
-
-        [XmlElement(ElementName = "dayOfYear")]
-        public int DayOfYear { get; set; }
-
-        [XmlElement(ElementName = "speed")]
-        public double Speed { get; set; }
-
-        [XmlElement(ElementName = "duration")]
-        public double Duration { get; set; }
-
-        [XmlElement(ElementName = "topoGridFile")]
-        public string TopoGridFile { get; set; }
-
-        [XmlElement(ElementName = "factorEdge")]
-        public double FactorEdge { get; set; }
-
-        [XmlElement(ElementName = "edgeDetectionThreshold")]
-        public double EdgeDetectionThreshold { get; set; }
-
-        [XmlElement(ElementName = "topexModifierType")]
-        public string TopexModifierType { get; set; }
-
-        [XmlElement(ElementName = "LRITransferFunction")]
-        public string LriTransferFunction { get; set; }
-
-        [XmlElement(ElementName = "edgeProbability")]
-        public string EdgeProbability { get; set; }
-
-        [XmlElement(ElementName = "edgeAgeBaseValue")]
-        public int EdgeAgeBaseValue { get; set; }
-
-        [XmlElement(ElementName = "edgeBackgroundProbability")]
-        public double EdgeBackgroundProbability { get; set; }
-
-        [XmlElement(ElementName = "onAfterWind")]
-        public string OnAfterWind { get; set; }
+            if (reader.IsStartElement("wind"))
+            {
+                reader.Read();
+            }
+            else if (reader.IsStartElement("enabled"))
+            {
+                this.Enabled = reader.ReadElementContentAsBoolean();
+            }
+            else if (reader.IsStartElement("speciesParameter"))
+            {
+                this.SpeciesParameter = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("soilFreezeMode"))
+            {
+                this.SoilFreezeMode = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("triggeredByTimeEvent"))
+            {
+                this.TriggeredByTimeEvent = reader.ReadElementContentAsBoolean();
+            }
+            else if (reader.IsStartElement("durationPerIteration"))
+            {
+                this.DurationPerIteration = reader.ReadElementContentAsInt();
+            }
+            else if (reader.IsStartElement("gustModifier"))
+            {
+                this.GustModifier = reader.ReadElementContentAsDouble();
+            }
+            else if (reader.IsStartElement("topoModifier"))
+            {
+                this.TopoModifier = reader.ReadElementContentAsDouble();
+            }
+            else if (reader.IsStartElement("directionVariation"))
+            {
+                this.DirectionVariation = reader.ReadElementContentAsDouble();
+            }
+            else if (reader.IsStartElement("direction"))
+            {
+                this.Direction = reader.ReadElementContentAsDouble();
+            }
+            else if (reader.IsStartElement("dayOfYear"))
+            {
+                this.DayOfYear = reader.ReadElementContentAsInt();
+            }
+            else if (reader.IsStartElement("speed"))
+            {
+                this.Speed = reader.ReadElementContentAsDouble();
+            }
+            else if (reader.IsStartElement("duration"))
+            {
+                this.Duration = reader.ReadElementContentAsDouble();
+            }
+            else if (reader.IsStartElement("topoGridFile"))
+            {
+                this.TopoGridFile = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("factorEdge"))
+            {
+                this.FactorEdge = reader.ReadElementContentAsDouble();
+            }
+            else if (reader.IsStartElement("edgeDetectionThreshold"))
+            {
+                this.EdgeDetectionThreshold = reader.ReadElementContentAsDouble();
+            }
+            else if (reader.IsStartElement("topexModifierType"))
+            {
+                this.TopexModifierType = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("LRITransferFunction"))
+            {
+                this.LriTransferFunction = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("edgeProbability"))
+            {
+                this.EdgeProbability = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("edgeAgeBaseValue"))
+            {
+                this.EdgeAgeBaseValue = reader.ReadElementContentAsInt();
+            }
+            else if (reader.IsStartElement("edgeBackgroundProbability"))
+            {
+                this.EdgeBackgroundProbability = reader.ReadElementContentAsDouble();
+            }
+            else if (reader.IsStartElement("onAfterWind"))
+            {
+                this.OnAfterWind = reader.ReadElementContentAsString().Trim();
+            }
+            else
+            {
+                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+            }
+        }
     }
 }
