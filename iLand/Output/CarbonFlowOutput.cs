@@ -83,7 +83,7 @@ namespace iLand.Output
                 }
                 if (ru.Snags == null || ru.Snags == null)
                 {
-                    Debug.WriteLine("exec: resource unit without soil or snags module - no output generated.");
+                    // Debug.WriteLine("Resource unit lacks soil or snag data, no output generated.");
                     continue;
                 }
 

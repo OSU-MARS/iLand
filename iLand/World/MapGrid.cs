@@ -243,12 +243,12 @@ namespace iLand.World
             {
                 rList.Capacity = estimatedTreeCount;
             }
-            Expression expression = null;
+            Expression treeFilterExpression = null;
             TreeWrapper treeWrapper = new TreeWrapper(model);
             if (String.IsNullOrEmpty(filter) == false)
             {
-                expression = new Expression(filter, treeWrapper);
-                expression.EnableIncrementalSum();
+                treeFilterExpression = new Expression(filter, treeWrapper);
+                treeFilterExpression.EnableIncrementalSum();
             }
             // lock the resource units: removed again, WR20140821
             // mapGridLock.lock(id, resource_units);
@@ -256,16 +256,17 @@ namespace iLand.World
             List<ResourceUnit> resourceUnitsInStand = GetResourceUnitsInStand(id);
             foreach (ResourceUnit ru in resourceUnitsInStand)
             {
-                foreach (Trees trees in ru.TreesBySpeciesID.Values)
+                foreach (Trees treesOfSpecies in ru.TreesBySpeciesID.Values)
                 {
-                    for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+                    treeWrapper.Trees = treesOfSpecies;
+                    for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                     {
-                        if ((this.GetStandIDFromLightCoordinate(trees.LightCellPosition[treeIndex]) == id) && (trees.IsDead(treeIndex) == false))
+                        if ((this.GetStandIDFromLightCoordinate(treesOfSpecies.LightCellPosition[treeIndex]) == id) && (treesOfSpecies.IsDead(treeIndex) == false))
                         {
-                            treeWrapper.Trees = trees;
-                            if (expression != null)
+                            if (treeFilterExpression != null)
                             {
-                                double value = expression.Evaluate(treeWrapper);
+                                treeWrapper.TreeIndex = treeIndex;
+                                double value = treeFilterExpression.Evaluate(treeWrapper);
                                 // keep if expression returns true (1)
                                 bool loadTree = value == 1.0;
                                 // if value is >0 (i.e. not "false"), then draw a random number
@@ -278,7 +279,7 @@ namespace iLand.World
                                     continue;
                                 }
                             }
-                            rList.Add(new MutableTuple<Tree.Trees, double>(trees, 0.0));
+                            rList.Add(new MutableTuple<Tree.Trees, double>(treesOfSpecies, 0.0));
                         }
                     }
                 }

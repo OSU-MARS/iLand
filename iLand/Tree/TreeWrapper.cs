@@ -16,12 +16,12 @@ namespace iLand.Tree
 
         static TreeWrapper()
         {
-            TreeWrapper.TreeVariableNames = new List<string>(BaseVariableNames)
+            TreeWrapper.TreeVariableNames = new List<string>(ExpressionWrapper.BaseVariableNames)
             {
-                "id", "dbh", "height", "ruindex" /* 0..3*/, "x", "y", "volume", "lri", "leafarea", "lightresponse", // 4-9
-                "woodymass", "rootmass", "foliagemass", "age", "opacity" /* 10-14 */, "dead", "stress", "deltad", //15-17
-                "afoliagemass", "species" /* 18, 19 */, "basalarea", "crownarea" /* 20, 21 */, "markharvest", "markcut", "markcrop", "markcompetitor"
-            }.AsReadOnly(); // 22-25
+                "id", "dbh", "height", "ruindex", "x", "y", "volume", "lri", "leafarea", "lightresponse", // fields 0-9
+                "woodymass", "rootmass", "foliagemass", "age", "opacity" /* 10-14 */, "dead", "stress", "deltad", // 15-17
+                "afoliagemass", "species", "basalarea", "crownarea" /* 20, 21 */, "markharvest", "markcut", "markcrop", "markcompetitor" // 18-25
+            }.AsReadOnly();
         }
 
         public TreeWrapper(Model model)
@@ -46,7 +46,7 @@ namespace iLand.Tree
         {
             Debug.Assert(this.Trees != null);
 
-            return (variableIndex - BaseVariableNames.Count) switch
+            return (variableIndex - ExpressionWrapper.BaseVariableNames.Count) switch
             {
                 0 => this.Trees.ID[this.TreeIndex],// id
                 1 => this.Trees.Dbh[this.TreeIndex],// dbh

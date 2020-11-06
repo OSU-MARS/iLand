@@ -145,7 +145,7 @@ namespace iLand.Tools
             }
 
             // captions
-            this.ColumnNames.AddRange(first.Replace("\"", "").Split(mSeparator, StringSplitOptions.None)); // drop \ characters
+            this.ColumnNames.AddRange(first.Replace("\"", String.Empty).Split(mSeparator, StringSplitOptions.None)); // drop \ characters
             return true;
         }
 

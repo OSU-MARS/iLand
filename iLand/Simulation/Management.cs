@@ -59,7 +59,7 @@ namespace iLand.Simulation
                 livingTrees.Add(new MutableTuple<Trees, int>(allTreeEnumerator.CurrentTrees, allTreeEnumerator.CurrentTreeIndex));
             }
             int treesToKill = livingTrees.Count - treesToRetain;
-            Debug.WriteLine(livingTrees + " standing, targetsize " + treesToRetain + ", hence " + treesToKill + " trees to remove");
+            // Debug.WriteLine(livingTrees + " standing, targetsize " + treesToRetain + ", hence " + treesToKill + " trees to remove");
             for (int treesKilled = 0; treesKilled < treesToKill; treesKilled++)
             {
                 // TODO: change from O(all trees in model) scaling to O(trees to kill) with data structure for more efficient removal?
@@ -252,6 +252,7 @@ namespace iLand.Simulation
                 for (int removalIndex = 0; removalIndex < treeIndices.Count; ++removalIndex)
                 {
                     int treeIndex = treeIndices[removalIndex];
+                    treeWrapper.TreeIndex = treeIndex;
                     if (selectionExpression.Evaluate(treeWrapper) != 0.0 && model.RandomGenerator.GetRandomDouble() <= removalProbabilityIfSelected)
                     {
                         if (management)
@@ -360,30 +361,42 @@ namespace iLand.Simulation
             TreeWrapper treeWrapper = new TreeWrapper(model);
             Expression filterExpression = new Expression(filter, treeWrapper);
             filterExpression.EnableIncrementalSum();
-            int totalTreesInStand = mTreesInMostRecentlyLoadedStand.Count;
-            for (int treeIndex = 0; treeIndex < mTreesInMostRecentlyLoadedStand.Count; ++treeIndex)
+
+            for (int treesOfSpeciesIndex = 0; treesOfSpeciesIndex < this.mTreesInMostRecentlyLoadedStand.Count; ++treesOfSpeciesIndex)
             {
-                treeWrapper.Trees = mTreesInMostRecentlyLoadedStand[treeIndex].Item1;
-                double value = filterExpression.Evaluate(treeWrapper);
-                // keep if expression returns true (1)
-                bool keep = value == 1.0;
-                // if value is >0 (i.e. not "false"), then draw a random number
-                if (!keep && value > 0.0)
+                treeWrapper.Trees = this.mTreesInMostRecentlyLoadedStand[treesOfSpeciesIndex].Item1;
+                List<int> standTreeIndices = this.mTreesInMostRecentlyLoadedStand[treesOfSpeciesIndex].Item2;
+                for (int standTreeIndex = 0; standTreeIndex < standTreeIndices.Count; ++standTreeIndex)
                 {
-                    keep = model.RandomGenerator.GetRandomDouble() < value;
+                    treeWrapper.TreeIndex = standTreeIndices[standTreeIndex];
+                    double value = filterExpression.Evaluate(treeWrapper);
+                    // keep if expression returns true (1)
+                    bool keep = value == 1.0;
+                    // if value is >0 (i.e. not "false"), then draw a random number
+                    if (!keep && value > 0.0)
+                    {
+                        keep = model.RandomGenerator.GetRandomDouble() < value;
+                    }
+                    if (keep == false)
+                    {
+                        standTreeIndices.RemoveAt(treesOfSpeciesIndex);
+                        --standTreeIndex;
+                    }
+                    else
+                    {
+                        ++standTreeIndex;
+                    }
                 }
-                if (keep == false)
+
+                if (standTreeIndices.Count == 0)
                 {
-                    this.mTreesInMostRecentlyLoadedStand.RemoveAt(treeIndex);
-                    --treeIndex;
-                }
-                else
-                {
-                    ++treeIndex;
+                    this.mTreesInMostRecentlyLoadedStand.RemoveAt(treesOfSpeciesIndex);
+                    --treesOfSpeciesIndex;
                 }
             }
 
-            Debug.WriteLine("filtering with " + filter + " N=" + totalTreesInStand + "/" + mTreesInMostRecentlyLoadedStand.Count + " trees (before/after filtering).");
+            // int totalTreesInStand = mTreesInMostRecentlyLoadedStand.Count;
+            // Debug.WriteLine("filtering with " + filter + " N=" + totalTreesInStand + "/" + mTreesInMostRecentlyLoadedStand.Count + " trees (before/after filtering).");
             return this.mTreesInMostRecentlyLoadedStand.Count;
         }
 

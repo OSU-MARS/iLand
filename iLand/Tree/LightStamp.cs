@@ -96,7 +96,7 @@ namespace iLand.Tree
             StringBuilder result = new StringBuilder();
             for (int y = 0; y < this.DataSize; ++y)
             {
-                string line = "";
+                string line = String.Empty;
                 for (int x = 0; x < this.DataSize; ++x)
                 {
                     line += this[x, y].ToString() + " ";

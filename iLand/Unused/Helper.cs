@@ -44,7 +44,7 @@ namespace iLand.Tools
         //public static string StripHtml(string source)
         //{
         //    string str = String.Join(' ', source.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries));
-        //    return Regex.Replace(str, "<[^>]+>", "");
+        //    return Regex.Replace(str, "<[^>]+>", String.Empty);
         //}
     }
 }

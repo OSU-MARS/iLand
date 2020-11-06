@@ -49,13 +49,13 @@ namespace iLand.Tree
                 SaplingCell saplingCell = null;
                 if (this.RU != null)
                 {
-                    saplingCell = RU.SaplingCell(standLightRunner.GetCellPosition());
+                    saplingCell = this.RU.SaplingCell(standLightRunner.GetCellPosition());
                 }
                 if (saplingCell != null)
                 {
                     return saplingCell;
                 }
-                Debug.WriteLine("MoveNext(): unexected missing SaplingCell.");
+                Debug.Fail("Unexected missing SaplingCell.");
                 return null; // TODO: is this correct?
             }
             return null;

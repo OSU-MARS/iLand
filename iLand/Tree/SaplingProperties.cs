@@ -106,11 +106,11 @@ namespace iLand.Tree
                         deadWood.AddBiomass(woodyBiomass * (nPreviousSaplings - nSaplings), species.CNRatioWood);
                         deadFine.AddBiomass(foliage * (nPreviousSaplings - nSaplings), species.CNRatioFoliage);
                         deadFine.AddBiomass(fineroot * (nPreviousSaplings - nSaplings), species.CNRatioFineRoot);
-                        Debug.WriteLineIf(Double.IsNaN(deadFine.C), "carbon NaN in calculate (self thinning).");
+                        Debug.Assert(Double.IsNaN(deadFine.C) == false, "Carbon NaN in self thinning calculation.");
                     }
                 }
             }
-            if (DeadSaplings != 0)
+            if (this.DeadSaplings != 0)
             {
                 float avg_dbh_dead = mSumDbhDied / this.DeadSaplings;
                 float n = this.DeadSaplings * species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(avg_dbh_dead);

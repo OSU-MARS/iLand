@@ -1,5 +1,6 @@
 ﻿using iLand.Input.ProjectFile;
 using iLand.Simulation;
+using System;
 using System.Diagnostics;
 
 namespace iLand.Tree
@@ -96,9 +97,9 @@ namespace iLand.Tree
             this.SiteEnvironmentSaplingHeightGrowthMultiplier = (float)(f_sum / (projectFile.Model.Settings.Epsilon * this.SpeciesResponse.RadiationForYear * siteEnvironmentHeightDivisor));
             if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.0F)
             {
-                if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.5F) // warning for large deviations
+                if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.5F) // error on large deviations TODO: why 1.5F instead of ~1.000001F?
                 {
-                    Trace.TraceWarning("fEnvYear > 1 for " + this.SpeciesResponse.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Settings.Epsilon + this.SpeciesResponse.RadiationForYear + siteEnvironmentHeightDivisor
+                    throw new NotSupportedException("fEnvYear > 1 for " + this.SpeciesResponse.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Settings.Epsilon + this.SpeciesResponse.RadiationForYear + siteEnvironmentHeightDivisor
                              + " check calibration of the sapReferenceRatio (fref) for this species!");
                 }
                 this.SiteEnvironmentSaplingHeightGrowthMultiplier = 1.0F;

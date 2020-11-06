@@ -172,7 +172,7 @@ namespace iLand.Simulation
         //    }
         //    using DebugTimer t = model.DebugTimers.Create("ModelController.FetchDynamicOutput()");
         //    List<string> var = new List<string>();
-        //    string lastVar = "";
+        //    string lastVar = String.Empty;
         //    List<double> data = new List<double>();
         //    AllTreeIterator at = new AllTreeIterator(Model);
         //    TreeWrapper tw = new TreeWrapper();

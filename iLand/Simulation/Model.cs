@@ -18,8 +18,6 @@ namespace iLand.Simulation
 
         public int CurrentYear { get; set; }
 
-        // TODO; move FileLocation APIs to project
-        public FileLocations Files { get; private set; }
         public Landscape Landscape { get; private set; }
         public Management Management { get; private set; }
         public ModelSettings ModelSettings { get; private set; }
@@ -37,26 +35,12 @@ namespace iLand.Simulation
             this.Project = projectFile;
             this.Landscape = landscape;
 
-            this.Files = new FileLocations();
             this.ModelSettings = new ModelSettings();
             this.Outputs = new Output.Outputs();
             this.RandomGenerator = new RandomGenerator();
 
             this.Management = null;
             this.ScheduledEvents = null;
-
-            // log level
-            // TODO: use System.Diagnostics.Tracing.EventLevel
-            string logLevelAsString = this.Project.System.Settings.LogLevel.ToLowerInvariant();
-            int logLevel = logLevelAsString switch
-            {
-                "debug" => 0,
-                "info" => 1,
-                "warning" => 2,
-                "error" => 3,
-                _ => throw new NotSupportedException("Unhandled log level '" + logLevelAsString + "'.")
-            };
-            this.Files.SetLogLevel(logLevel);
 
             // random seed: if stored value is <> 0, use this as the random seed (and produce hence always an equal sequence of random numbers)
             Nullable<int> seed = this.Project.System.Settings.RandomSeed;
@@ -138,7 +122,7 @@ namespace iLand.Simulation
             // initialize stands
             // TODO: consolidate this into Landscape?
             StandReader standReader = new StandReader();
-            standReader.Setup(this.Project, this.Files, this.Landscape, this.RandomGenerator);
+            standReader.Setup(this.Project, this.Landscape, this.RandomGenerator);
             standReader.SetupSaplings(this);
 
             this.ApplyAndReadLightPattern(); // TODO: is this needed?
@@ -448,11 +432,6 @@ namespace iLand.Simulation
                     }
                     ++borderHeightCellCount;
                 }
-            }
-
-            if (this.Files.LogDebug())
-            {
-                Debug.WriteLine("InitializeGrid(): " + borderHeightCellCount + " radiating height cells.");
             }
         }
 

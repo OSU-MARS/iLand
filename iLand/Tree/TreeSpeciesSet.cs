@@ -85,7 +85,7 @@ namespace iLand.Tree
                 Debug.WriteLine(ReaderStamps.Dump());
             }
 
-            string speciesDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.System.Database.In);
+            string speciesDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.System.Database.Species);
             using SqliteConnection speciesDatabase = landscape.GetDatabaseConnection(speciesDatabaseFilePath, true);
             using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", this.SqlTableName), speciesDatabase);
             // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");

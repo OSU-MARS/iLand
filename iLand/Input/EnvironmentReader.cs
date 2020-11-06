@@ -159,7 +159,6 @@ namespace iLand.Input
                     }
                     this.SpeciesSetsByTableName.Add(name, speciesSet);
                 }
-                Debug.WriteLine(this.SpeciesSetsByTableName.Count + " species sets created.");
             }
             else
             {

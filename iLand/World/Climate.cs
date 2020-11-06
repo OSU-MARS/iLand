@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -316,16 +317,16 @@ namespace iLand.World
                         throw new NotSupportedException(String.Format("Climate: load year with random sampling: the actual year {0} is invalid. Only {1} years are loaded from the climate database.", mCurrentDataYear, mYearsToLoad));
                     }
                 }
-                if (model.Files.LogInfo())
+                if (model.Project.System.Settings.LogLevel <= EventLevel.Informational)
                 {
-                    Debug.WriteLine("Climate: current year (randomized): " + mCurrentDataYear);
+                    Trace.TraceInformation("Climate: current year (randomized): " + mCurrentDataYear);
                 }
             }
 
             this.CarbonDioxidePpm = model.Project.Model.Climate.CO2ConcentrationInPpm;
-            if (model.Files.LogInfo())
+            if (model.Project.System.Settings.LogLevel <= EventLevel.Informational)
             {
-                Trace.WriteLine("CO2 concentration " + this.CarbonDioxidePpm + " ppm.");
+                Trace.TraceInformation("CO2 concentration " + this.CarbonDioxidePpm + " ppm.");
             }
             int currentJanuary1dayIndex = Constant.MonthsInYear * mCurrentDataYear;
             int nextJanuary1dayIndex = currentJanuary1dayIndex + Constant.MonthsInYear;

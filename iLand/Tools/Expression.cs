@@ -145,8 +145,8 @@ namespace iLand.Tools
 
             if (mParsePosition >= ExpressionString.Length)
             {
-                mState = ExpressionTokenType.Stop;
-                mToken = "";
+                this.mState = ExpressionTokenType.Stop;
+                this.mToken = String.Empty;
                 return ExpressionTokenType.Stop; // Ende der Vorstellung
             }
 
@@ -193,7 +193,7 @@ namespace iLand.Tools
             if ((ExpressionString[mParsePosition] >= 'a' && ExpressionString[mParsePosition] <= 'z') || (ExpressionString[mParsePosition] >= 'A' && ExpressionString[mParsePosition] <= 'Z'))
             {
                 // function ... find brace
-                mToken = "";
+                this.mToken = String.Empty;
                 // TODO: simplify to Char.IsLetterOrDigit()
                 while (mParsePosition < this.ExpressionString.Length && 
                        ((this.ExpressionString[mParsePosition] >= 'a' && this.ExpressionString[mParsePosition] <= 'z') || 
@@ -265,7 +265,7 @@ namespace iLand.Tools
             }
             isParsed = false;
             CatchExceptions = false;
-            LastError = "";
+            LastError = String.Empty;
 
             Wrapper = null;
             mExternalVariableValues = null;
@@ -653,7 +653,7 @@ namespace iLand.Tools
                 switch (exec.Type)
                 {
                     case ExpressionTokenType.Operator:
-                        stackDepth--;
+                        --stackDepth;
                         switch (exec.Index)
                         {
                             case '+': stack[stackDepth - 1] = stack[stackDepth - 1] + stack[stackDepth]; break;
@@ -686,7 +686,7 @@ namespace iLand.Tools
                         {
                             stack[stackDepth] = value;
                         }
-                        stackDepth++;
+                        ++stackDepth;
                         break;
                     case ExpressionTokenType.Number:
                         if (stack.Count <= stackDepth)
@@ -697,10 +697,10 @@ namespace iLand.Tools
                         {
                             stack[stackDepth] = exec.Value;
                         }
-                        stackDepth++;
+                        ++stackDepth;
                         break;
                     case ExpressionTokenType.Function:
-                        stackDepth--;
+                        --stackDepth;
                         switch (exec.Index)
                         {
                             case 0: stack[stackDepth] = Math.Sin(stack[stackDepth]); break;
@@ -765,11 +765,11 @@ namespace iLand.Tools
                             default:
                                 throw new NotSupportedException();
                         }
-                        stackDepth++;
+                        ++stackDepth;
                         break;
                     case ExpressionTokenType.Logical:
-                        stackDepth--;
-                        logicStackDepth--;
+                        --stackDepth;
+                        --logicStackDepth;
                         switch ((ExpressionOperation)exec.Index)
                         {
                             case ExpressionOperation.And:
@@ -791,17 +791,29 @@ namespace iLand.Tools
                     case ExpressionTokenType.Compare:
                         {
                             stackDepth--;
-                            bool LogicResult = false;
+                            bool logicResult = false;
                             switch ((ExpressionOperation)exec.Index)
                             {
-                                case ExpressionOperation.Equal: LogicResult = (stack[stackDepth - 1] == stack[stackDepth]); break;
-                                case ExpressionOperation.NotEqual: LogicResult = (stack[stackDepth - 1] != stack[stackDepth]); break;
-                                case ExpressionOperation.LessThan: LogicResult = (stack[stackDepth - 1] < stack[stackDepth]); break;
-                                case ExpressionOperation.GreaterThen: LogicResult = (stack[stackDepth - 1] > stack[stackDepth]); break;
-                                case ExpressionOperation.GreaterThanOrEqual: LogicResult = (stack[stackDepth - 1] >= stack[stackDepth]); break;
-                                case ExpressionOperation.LessThanOrEqual: LogicResult = (stack[stackDepth - 1] <= stack[stackDepth]); break;
+                                case ExpressionOperation.Equal: 
+                                    logicResult = stack[stackDepth - 1] == stack[stackDepth]; 
+                                    break;
+                                case ExpressionOperation.NotEqual: 
+                                    logicResult = stack[stackDepth - 1] != stack[stackDepth]; 
+                                    break;
+                                case ExpressionOperation.LessThan: 
+                                    logicResult = stack[stackDepth - 1] < stack[stackDepth]; 
+                                    break;
+                                case ExpressionOperation.GreaterThen: 
+                                    logicResult = stack[stackDepth - 1] > stack[stackDepth]; 
+                                    break;
+                                case ExpressionOperation.GreaterThanOrEqual: 
+                                    logicResult = stack[stackDepth - 1] >= stack[stackDepth]; 
+                                    break;
+                                case ExpressionOperation.LessThanOrEqual: 
+                                    logicResult = stack[stackDepth - 1] <= stack[stackDepth]; 
+                                    break;
                             }
-                            if (LogicResult)
+                            if (logicResult)
                             {
                                 stack[stackDepth - 1] = 1.0;   // 1 means true...
                             }
@@ -810,7 +822,14 @@ namespace iLand.Tools
                                 stack[stackDepth - 1] = 0.0;
                             }
 
-                            logicStack[stackDepth++] = LogicResult;
+                            if (logicStack.Count <= stackDepth)
+                            {
+                                logicStack.Add(logicResult);
+                            }
+                            else
+                            {
+                                logicStack[stackDepth] = logicResult;
+                            }
                             break;
                         }
                     case ExpressionTokenType.Stop:

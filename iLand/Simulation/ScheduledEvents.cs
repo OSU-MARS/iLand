@@ -71,7 +71,8 @@ namespace iLand.Simulation
                     // execute as javascript expression within the management script context...
                     if (String.IsNullOrEmpty(eventInYear.Item2.ToString()) == false)
                     {
-                        Debug.WriteLine("Executing JavaScript time event: " + eventInYear.Item2.ToString());
+                        throw new NotImplementedException();
+                        // Debug.WriteLine("Executing JavaScript time event: " + eventInYear.Item2.ToString());
                     }
                 }
                 else
@@ -83,10 +84,10 @@ namespace iLand.Simulation
                 ++valuesSet;
             }
 
-            if (valuesSet != 0)
-            {
-                Debug.WriteLine("TimeEvents: year " + currentYear + ": " + valuesSet + " values set.");
-            }
+            //if (valuesSet != 0)
+            //{
+            //    Debug.WriteLine("TimeEvents: year " + currentYear + ": " + valuesSet + " values set.");
+            //}
         }
 
         // read value for key 'key' and year 'year' from the list of items.

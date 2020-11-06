@@ -1,5 +1,4 @@
 ﻿using iLand.Simulation;
-using iLand.Tools;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -16,7 +15,7 @@ namespace iLand.Test
         [TestMethod]
         public void Kalkalpen()
         {
-            for (int reliabiliyIteration = 0; reliabiliyIteration < 1 /* 100 */; ++reliabiliyIteration)
+            for (int reliabilityIteration = 0; reliabilityIteration < 1 /* 100 */; ++reliabilityIteration)
             {
                 using Model kalkalpen = this.LoadProject(this.GetKalkalpenProjectPath(this.TestContext));
 
@@ -214,7 +213,7 @@ namespace iLand.Test
                 Assert.IsTrue(plot14.Landscape.ResourceUnits.Count == 1);
                 float gpp = 0.0F;
                 double npp = 0.0;
-                foreach (ResourceUnitSpecies  treeSpecies in plot14.Landscape.ResourceUnits[0].TreeSpecies)
+                foreach (ResourceUnitSpecies treeSpecies in plot14.Landscape.ResourceUnits[0].TreeSpecies)
                 {
                     gpp += treeSpecies.BiomassGrowth.AnnualGpp;
                     npp += treeSpecies.Statistics.Npp;

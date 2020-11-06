@@ -37,7 +37,7 @@ namespace iLand.World
         {
             Debug.Assert(this.ResourceUnit != null);
 
-            switch (variableIndex - BaseVariableNames.Count)
+            switch (variableIndex - ExpressionWrapper.BaseVariableNames.Count)
             {
                 case 0: return this.ResourceUnit.EnvironmentID; // id from grid
                 case 1: return this.ResourceUnit.EffectiveAreaPerWla;

@@ -12,67 +12,30 @@ namespace iLand.Output
       */
     public class Outputs : IDisposable
     {
+        private SqliteConnection database;
+        private readonly List<Output> enabledOutputs;
+        private int firstUncommittedYear;
         private bool isDisposed;
-        private readonly List<Output> outputs; // list of outputs in system
+        private readonly int logCommitIntervalInYears;
+        private SqliteTransaction loggingTransaction;
 
-        public SqliteConnection Database { get; private set; }
-
-        public CarbonFlowOutput CarbonFlow { get; private set; }
-        public CarbonOutput Carbon { get; private set; }
-        public DynamicStandOutput DynamicStand { get; private set; }
-        public LandscapeOutput Landscape { get; private set; }
         public LandscapeRemovedOutput LandscapeRemoved { get; private set; }
-        public ManagementOutput Management { get; private set; }
-        public ProductionOutput Production { get; private set; }
-        public SaplingOutput Sapling { get; private set; }
-        public SaplingDetailsOutput SaplingDetails { get; private set; }
-        public StandDeadOutput StandDead { get; private set; }
-        public StandOutput Stand { get; private set; }
-        public TreeOutput Tree { get; private set; }
         public TreeRemovedOutput TreeRemoved { get; private set; }
-        public WaterOutput Water { get; private set; }
 
         // on creation of the output manager
         // an instance of every iLand output
         // must be added to the list of outputs.
         public Outputs()
         {
-            this.Database = null; // initialized in Setup()
+            this.database = null; // initialized in Setup()
+            this.enabledOutputs = new List<Output>();
+            this.firstUncommittedYear = -1;
             this.isDisposed = false;
+            this.logCommitIntervalInYears = 10; // 
+            this.loggingTransaction = null; // managed in LogYear()
 
-            this.CarbonFlow = new CarbonFlowOutput();
-            this.Carbon = new CarbonOutput();
-            this.DynamicStand = new DynamicStandOutput();
-            this.Landscape = new LandscapeOutput();
-            this.LandscapeRemoved = new LandscapeRemovedOutput();
-            this.Production = new ProductionOutput();
-            this.Management = new ManagementOutput();
-            this.StandDead = new StandDeadOutput();
-            this.SaplingDetails = new SaplingDetailsOutput();
-            this.Sapling = new SaplingOutput();
-            this.Stand = new StandOutput();
-            this.Tree = new TreeOutput();
-            this.TreeRemoved = new TreeRemovedOutput();
-            this.Water = new WaterOutput();
-
-            // add all the outputs
-            this.outputs = new List<Output>() 
-            {
-                this.Tree,
-                this.TreeRemoved,
-                this.Stand,
-                this.Landscape,
-                this.LandscapeRemoved,
-                this.DynamicStand,
-                this.Production,
-                this.StandDead,
-                this.Management,
-                this.Sapling,
-                this.SaplingDetails,
-                this.Carbon,
-                this.CarbonFlow,
-                this.Water
-            };
+            this.LandscapeRemoved = null;
+            this.TreeRemoved = null;
         }
 
         public void Dispose()
@@ -87,9 +50,14 @@ namespace iLand.Output
             {
                 if (disposing)
                 {
-                    if (this.Database != null)
+                    if (this.loggingTransaction != null)
                     {
-                        this.Database.Dispose();
+                        this.loggingTransaction.Commit();
+                        this.loggingTransaction.Dispose();
+                    }
+                    if (this.database != null)
+                    {
+                        this.database.Dispose();
                     }
                 }
 
@@ -99,13 +67,77 @@ namespace iLand.Output
 
         public void Setup(Model model)
         {
+            if (model.Project.Output.Carbon.Enabled)
+            {
+                this.enabledOutputs.Add(new CarbonOutput());
+            }
+            if (model.Project.Output.CarbonFlow.Enabled)
+            {
+                this.enabledOutputs.Add(new CarbonFlowOutput());
+            }
+            if (model.Project.Output.DynamicStand.Enabled)
+            {
+                this.enabledOutputs.Add(new DynamicStandOutput());
+            }
+            if (model.Project.Output.Landscape.Enabled)
+            {
+                this.enabledOutputs.Add(new LandscapeOutput());
+            }
+            if (model.Project.Output.LandscapeRemoved.Enabled)
+            {
+                this.LandscapeRemoved = new LandscapeRemovedOutput();
+                this.enabledOutputs.Add(this.LandscapeRemoved);
+            }
+            if (model.Project.Output.ProductionMonth.Enabled)
+            {
+                this.enabledOutputs.Add(new ProductionOutput());
+            }
+            if (model.Project.Output.Management.Enabled)
+            {
+                this.enabledOutputs.Add(new ManagementOutput());
+            }
+            if (model.Project.Output.SaplingDetail.Enabled)
+            {
+                this.enabledOutputs.Add(new SaplingDetailsOutput());
+            }
+            if (model.Project.Output.Sapling.Enabled)
+            {
+                this.enabledOutputs.Add(new SaplingOutput());
+            }
+            if (model.Project.Output.Stand.Enabled)
+            {
+                this.enabledOutputs.Add(new StandOutput());
+            }
+            if (model.Project.Output.StandDead.Enabled)
+            {
+                this.enabledOutputs.Add(new StandDeadOutput());
+            }
+            if (model.Project.Output.Tree.Enabled)
+            {
+                this.enabledOutputs.Add(new TreeOutput());
+            }
+            if (model.Project.Output.TreeRemoved.Enabled)
+            {
+                this.TreeRemoved = new TreeRemovedOutput();
+                this.enabledOutputs.Add(this.TreeRemoved);
+            }
+            if (model.Project.Output.Water.Enabled)
+            {
+                this.enabledOutputs.Add(new WaterOutput());
+            }
+            
+            if (this.enabledOutputs.Count == 0)
+            {
+                return; // nothing to output so no reason to open output database
+            }
+
             // create run-metadata
             //int maxID = (int)(long)SqlHelper.QueryValue("select max(id) from runs", g.DatabaseInput);
             //maxID++;
             //SqlHelper.ExecuteSql(String.Format("insert into runs (id, timestamp) values ({0}, '{1}')", maxID, timestamp), g.DatabaseInput);
             // replace path information
             // setup final path
-            string outputDatabaseFile = model.Project.System.Database.Out;
+            string outputDatabaseFile = model.Project.System.Database.Output;
             if (String.IsNullOrWhiteSpace(outputDatabaseFile))
             {
                 throw new XmlException("The /project/system/database/out element is missing or does not specify an output database file name.");
@@ -114,32 +146,15 @@ namespace iLand.Output
             // dbPath.Replace("$id$", maxID.ToString(), StringComparison.Ordinal);
             string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_hhmmss");
             outputDatabasePath.Replace("$date$", timestamp, StringComparison.Ordinal);
-            this.Database = model.Landscape.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
+            this.database = model.Landscape.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
 
-            //Close();
-            this.CarbonFlow.IsEnabled = model.Project.Output.Carbon.Enabled;
-            this.Carbon.IsEnabled = model.Project.Output.Carbon.Enabled;
-            this.DynamicStand.IsEnabled = model.Project.Output.DynamicStand.Enabled;
-            this.Landscape.IsEnabled = model.Project.Output.Landscape.Enabled;
-            this.LandscapeRemoved.IsEnabled = model.Project.Output.LandscapeRemoved.Enabled;
-            this.Production.IsEnabled = model.Project.Output.ProductionMonth.Enabled;
-            this.Management.IsEnabled = model.Project.Output.Management.Enabled;
-            this.StandDead.IsEnabled = model.Project.Output.StandDead.Enabled;
-            this.SaplingDetails.IsEnabled = model.Project.Output.SaplingDetail.Enabled;
-            this.Sapling.IsEnabled = model.Project.Output.Sapling.Enabled;
-            this.Stand.IsEnabled = model.Project.Output.Stand.Enabled;
-            this.Tree.IsEnabled = model.Project.Output.Tree.Enabled;
-            this.TreeRemoved.IsEnabled = model.Project.Output.TreeRemoved.Enabled;
-            this.Water.IsEnabled = model.Project.Output.Water.Enabled;
-
-            foreach (Output output in outputs)
+            using SqliteTransaction outputTableCreationTransaction = this.database.BeginTransaction();
+            foreach (Output output in this.enabledOutputs)
             {
-                if (output.IsEnabled)
-                {
-                    output.Setup(model);
-                    output.Open(model);
-                }
+                output.Setup(model);
+                output.Open(outputTableCreationTransaction);
             }
+            outputTableCreationTransaction.Commit();
         }
 
         //public Output Find(string tableName)
@@ -156,16 +171,27 @@ namespace iLand.Output
 
         public void LogYear(Model model)
         {
-            //using DebugTimer timer = model.DebugTimers.Create("OutputManager.LogYear()");
-            using SqliteTransaction transaction = this.Database.BeginTransaction();
-            foreach (Output output in this.outputs)
+            if (this.enabledOutputs.Count == 0)
             {
-                if (output.IsEnabled && output.IsOpen)
-                {
-                    output.LogYear(model, transaction);
-                }
+                return; // nothing to do as no outputs are enabled
             }
-            transaction.Commit();
+
+            //using DebugTimer timer = model.DebugTimers.Create("OutputManager.LogYear()");
+            if (this.loggingTransaction == null)
+            {
+                this.loggingTransaction = this.database.BeginTransaction();
+                this.firstUncommittedYear = model.CurrentYear;
+            }
+            foreach (Output output in this.enabledOutputs)
+            {
+                output.LogYear(model, this.loggingTransaction);
+            }
+            if (model.CurrentYear - this.firstUncommittedYear > this.logCommitIntervalInYears)
+            {
+                this.loggingTransaction.Commit();
+                this.loggingTransaction.Dispose();
+                this.loggingTransaction = null;
+            }
         }
 
         //public string WikiFormat()

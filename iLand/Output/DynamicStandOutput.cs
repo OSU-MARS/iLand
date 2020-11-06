@@ -60,8 +60,8 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            string fieldList = model.Project.Output.Dynamic.Columns;
-            if (String.IsNullOrEmpty(fieldList))
+            string columnString = model.Project.Output.Dynamic.Columns;
+            if (String.IsNullOrEmpty(columnString))
             {
                 return;
             }
@@ -77,37 +77,37 @@ namespace iLand.Output
             // int pos = 0;
             TreeWrapper treeWrapper = new TreeWrapper(model);
             Regex regex = new Regex("([^\\.]+).(\\w+)[,\\s]*"); // two parts: before dot and after dot, and , + whitespace at the end
-            MatchCollection fields = regex.Matches(fieldList);
-            foreach (Match match in fields)
+            MatchCollection columns = regex.Matches(columnString);
+            foreach (Match column in columns)
             {
-                string field = match.Groups[1].Value; // field / expresssion
-                string aggregation = match.Groups[2].Value;
-                DynamicOutputField newField = new DynamicOutputField();
-                mFieldList.Add(newField);
+                string columnVariable = column.Groups[1].Value; // field / expresssion
+                string columnVariableAggregation = column.Groups[2].Value;
+                DynamicOutputField fieldForColumn = new DynamicOutputField();
                 // parse field
-                if (field.Length > 0 && !field.Contains('('))
+                if (columnVariable.Length > 0 && !columnVariable.Contains('('))
                 {
                     // simple expression
-                    newField.VariableIndex = treeWrapper.GetVariableIndex(field);
+                    fieldForColumn.VariableIndex = treeWrapper.GetVariableIndex(columnVariable);
                 }
                 else
                 {
                     // complex expression
-                    newField.VariableIndex = -1;
-                    newField.Expression = field;
+                    fieldForColumn.VariableIndex = -1;
+                    fieldForColumn.Expression = columnVariable;
                 }
 
-                newField.AggregationIndex = DynamicStandOutput.Aggregations.IndexOf(aggregation);
-                if (newField.AggregationIndex == -1)
+                fieldForColumn.AggregationIndex = DynamicStandOutput.Aggregations.IndexOf(columnVariableAggregation);
+                if (fieldForColumn.AggregationIndex == -1)
                 {
                     throw new NotSupportedException(String.Format("Invalid aggregate expression for dynamic output: {0}{2}allowed:{1}",
-                                                                  aggregation, String.Join(" ", Aggregations), System.Environment.NewLine));
+                                                                  columnVariableAggregation, String.Join(" ", Aggregations), System.Environment.NewLine));
                 }
+                mFieldList.Add(fieldForColumn);
 
-                string stripped_field = String.Format("{0}_{1}", field, aggregation);
-                stripped_field = Regex.Replace(stripped_field, "[\\[\\]\\,\\(\\)<>=!\\s]", "_");
-                stripped_field.Replace("__", "_");
-                this.Columns.Add(new SqlColumn(stripped_field, field, OutputDatatype.Double));
+                string sqlColumnName = String.Format("{0}_{1}", columnVariable, columnVariableAggregation);
+                sqlColumnName = Regex.Replace(sqlColumnName, "[\\[\\]\\,\\(\\)<>=!\\s]", "_");
+                sqlColumnName.Replace("__", "_");
+                this.Columns.Add(new SqlColumn(sqlColumnName, columnVariable, OutputDatatype.Double));
             }
         }
 
@@ -137,16 +137,15 @@ namespace iLand.Output
                 return;
             }
 
-            List<double> data = new List<double>(); //statistics data
-            TreeWrapper treeWrapper = new TreeWrapper(model);
-            Expression customExpression = new Expression();
-
-            SummaryStatistics stat = new SummaryStatistics(); // statistcs helper class
             // grouping
             if (model.Landscape.Environment.SpeciesSetsByTableName.Count != 1)
             {
                 throw new NotImplementedException("Generation of a unique list of species from multiple species sets is not currently supported.");
             }
+            List<double> fieldData = new List<double>(); //statistics data
+            TreeWrapper treeWrapper = new TreeWrapper(model);
+            Expression customExpression = new Expression();
+
             TreeSpeciesSet treeSpeciesSet = model.Landscape.Environment.SpeciesSetsByTableName.First().Value;
             List<Trees> liveTreesOfSpecies = new List<Trees>();
             for (int speciesSet = 0; speciesSet < treeSpeciesSet.ActiveSpecies.Count; ++speciesSet)
@@ -170,7 +169,8 @@ namespace iLand.Output
 
                 // dynamic calculations
                 int columnIndex = 0;
-                foreach (DynamicOutputField field in mFieldList)
+                SummaryStatistics fieldStatistics = new SummaryStatistics(); // statistcs helper class
+                foreach (DynamicOutputField field in this.mFieldList)
                 {
                     if (String.IsNullOrEmpty(field.Expression) == false)
                     {
@@ -180,21 +180,24 @@ namespace iLand.Output
                     }
 
                     // fetch data values from the trees
-                    data.Clear();
+                    fieldData.Clear();
                     foreach (Trees trees in liveTreesOfSpecies)
                     {
-                        // TODO: this loop sets the wrapper to the last trees in the list without doing anything?
                         treeWrapper.Trees = trees;
+                        for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+                        {
+                            treeWrapper.TreeIndex = treeIndex;
+                            if (field.VariableIndex >= 0)
+                            {
+                                fieldData.Add(treeWrapper.GetValue(field.VariableIndex));
+                            }
+                            else
+                            {
+                                fieldData.Add(customExpression.Execute());
+                            }
+                        }
                     }
 
-                    if (field.VariableIndex >= 0)
-                    {
-                        data.Add(treeWrapper.GetValue(field.VariableIndex));
-                    }
-                    else
-                    {
-                        data.Add(customExpression.Execute());
-                    }
                     // constant values (if not already present)
                     if (columnIndex == 0)
                     {
@@ -207,27 +210,27 @@ namespace iLand.Output
                         }
                         else
                         {
-                            insertRow.Parameters[3].Value = "";
+                            insertRow.Parameters[3].Value = String.Empty;
                         }
                         columnIndex = 3;
                     }
 
                     // calculate statistics
-                    stat.SetData(data);
+                    fieldStatistics.SetData(fieldData);
                     double value = field.AggregationIndex switch
                     {
-                        0 => stat.Mean,
-                        1 => stat.Sum,
-                        2 => stat.Min,
-                        3 => stat.Max,
-                        4 => stat.GetPercentile25(),
-                        5 => stat.GetMedian(),
-                        6 => stat.GetPercentile75(),
-                        7 => stat.GetPercentile(5),
-                        8 => stat.GetPercentile(10),
-                        9 => stat.GetPercentile(90),
-                        10 => stat.GetPercentile(95),
-                        11 => stat.GetStandardDeviation(),
+                        0 => fieldStatistics.Mean,
+                        1 => fieldStatistics.Sum,
+                        2 => fieldStatistics.Min,
+                        3 => fieldStatistics.Max,
+                        4 => fieldStatistics.GetPercentile25(),
+                        5 => fieldStatistics.GetMedian(),
+                        6 => fieldStatistics.GetPercentile75(),
+                        7 => fieldStatistics.GetPercentile(5),
+                        8 => fieldStatistics.GetPercentile(10),
+                        9 => fieldStatistics.GetPercentile(90),
+                        10 => fieldStatistics.GetPercentile(95),
+                        11 => fieldStatistics.GetStandardDeviation(),
                         _ => 0.0,
                     };
                     // add current value to output
@@ -248,13 +251,13 @@ namespace iLand.Output
 
         private void ExtractByResourceUnit(Model model, bool bySpecies, SqliteCommand insertRow)
         {
-            if (mFieldList.Count == 0)
+            if (this.mFieldList.Count == 0)
             {
-                return;
+                return; // nothing to do if no fields to log
             }
 
             List<double> data = new List<double>(); //statistics data
-            SummaryStatistics stat = new SummaryStatistics(); // statistcs helper class
+            SummaryStatistics fieldStatistics = new SummaryStatistics(); // statistcs helper class
             TreeWrapper treeWrapper = new TreeWrapper(model);
             ResourceUnitWrapper ruWrapper = new ResourceUnitWrapper(model);
             mRUfilter.Wrapper = ruWrapper;
@@ -268,10 +271,10 @@ namespace iLand.Output
                 }
 
                 // test filter
-                if (!mRUfilter.IsEmpty)
+                if (this.mRUfilter.IsEmpty == false)
                 {
                     ruWrapper.ResourceUnit = ru;
-                    if (mRUfilter.Execute() == 0.0)
+                    if (this.mRUfilter.Execute() == 0.0)
                     {
                         continue;
                     }
@@ -297,6 +300,7 @@ namespace iLand.Output
                         data.Clear();
                         bool hasTrees = false;
                         Trees treesOfSpecies = ru.TreesBySpeciesID[ruSpecies.Species.ID];
+                        treeWrapper.Trees = treesOfSpecies;
                         for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                         {
                             if (bySpecies && treesOfSpecies.Species.Index != ruSpecies.Species.Index)
@@ -307,7 +311,7 @@ namespace iLand.Output
                             {
                                 continue;
                             }
-                            treeWrapper.Trees = treesOfSpecies;
+                            treeWrapper.TreeIndex = treeIndex;
 
                             // apply treefilter
                             if (!mTreeFilter.IsEmpty)
@@ -347,27 +351,27 @@ namespace iLand.Output
                             }
                             else
                             {
-                                insertRow.Parameters[3].Value = "";
+                                insertRow.Parameters[3].Value = String.Empty;
                             }
                             columnIndex = 3;
                         }
 
                         // calculate statistics
-                        stat.SetData(data);
+                        fieldStatistics.SetData(data);
                         double value = field.AggregationIndex switch
                         {
-                            0 => stat.Mean,
-                            1 => stat.Sum,
-                            2 => stat.Min,
-                            3 => stat.Max,
-                            4 => stat.GetPercentile25(),
-                            5 => stat.GetMedian(),
-                            6 => stat.GetPercentile75(),
-                            7 => stat.GetPercentile(5),
-                            8 => stat.GetPercentile(10),
-                            9 => stat.GetPercentile(90),
-                            10 => stat.GetPercentile(95),
-                            11 => stat.GetStandardDeviation(),
+                            0 => fieldStatistics.Mean,
+                            1 => fieldStatistics.Sum,
+                            2 => fieldStatistics.Min,
+                            3 => fieldStatistics.Max,
+                            4 => fieldStatistics.GetPercentile25(),
+                            5 => fieldStatistics.GetMedian(),
+                            6 => fieldStatistics.GetPercentile75(),
+                            7 => fieldStatistics.GetPercentile(5),
+                            8 => fieldStatistics.GetPercentile(10),
+                            9 => fieldStatistics.GetPercentile(90),
+                            10 => fieldStatistics.GetPercentile(95),
+                            11 => fieldStatistics.GetStandardDeviation(),
                             _ => 0.0,
                         };
                         // add current value to output

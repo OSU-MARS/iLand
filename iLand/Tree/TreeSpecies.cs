@@ -4,6 +4,7 @@ using iLand.Tools;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using Model = iLand.Simulation.Model;
 
 namespace iLand.Tree
@@ -439,9 +440,9 @@ namespace iLand.Tree
                 // decide whether current year is a seed year
                 // TODO: link to weather conditions and time since last seed year/
                 this.IsSeedYear = (model.RandomGenerator.GetRandomDouble() < mSeedYearProbability);
-                if (this.IsSeedYear && model.Files.LogInfo())
+                if (this.IsSeedYear && (model.Project.System.Settings.LogLevel <= EventLevel.Informational))
                 {
-                    Debug.WriteLine("species " + ID + " has a seed year.");
+                    Trace.TraceInformation("Seed year for " + this.ID + ".");
                 }
                 // clear seed map
                 this.SeedDispersal.Clear(model);

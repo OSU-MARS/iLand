@@ -4,15 +4,15 @@ namespace iLand.Input.ProjectFile
 {
     public class Database : XmlSerializable
     {
-        public string In { get; private set; }
-        public string Out { get; private set; }
+        public string Output { get; private set; }
         public string Climate { get; private set; }
+        public string Species { get; private set; }
 
         public Database()
         {
             this.Climate = null;
-            this.In = null;
-            this.Out = null;
+            this.Output = null;
+            this.Species = null;
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -26,17 +26,17 @@ namespace iLand.Input.ProjectFile
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("in"))
-            {
-                this.In = reader.ReadElementContentAsString().Trim();
-            }
-            else if (reader.IsStartElement("out"))
-            {
-                this.Out = reader.ReadElementContentAsString().Trim();
-            }
             else if (reader.IsStartElement("climate"))
             {
                 this.Climate = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("output"))
+            {
+                this.Output = reader.ReadElementContentAsString().Trim();
+            }
+            else if (reader.IsStartElement("species"))
+            {
+                this.Species = reader.ReadElementContentAsString().Trim();
             }
             else
             {

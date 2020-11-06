@@ -1212,16 +1212,14 @@ namespace iLand.Tree
                 reason = MortalityCause.CutDown;
             }
             // create output for tree removals
-            TreeRemovedOutput treeRemovedOutput = model.Outputs.TreeRemoved;
-            if (treeRemovedOutput != null && treeRemovedOutput.IsEnabled)
+            if (model.Outputs.TreeRemoved != null)
             {
-                treeRemovedOutput.AddTree(model, this, treeIndex, reason);
+                model.Outputs.TreeRemoved.TryAddTree(model, this, treeIndex, reason);
             }
 
-            Output.LandscapeRemovedOutput landscapeRemovedOutput = model.Outputs.LandscapeRemoved;
-            if (landscapeRemovedOutput != null && landscapeRemovedOutput.IsEnabled)
+            if (model.Outputs.LandscapeRemoved != null)
             {
-                landscapeRemovedOutput.AddTree(this, treeIndex, reason);
+                model.Outputs.LandscapeRemoved.AddTree(this, treeIndex, reason);
             }
         }
     }

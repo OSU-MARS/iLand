@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.Tracing;
 using System.Xml;
 
 namespace iLand.Input.ProjectFile
@@ -14,12 +15,12 @@ namespace iLand.Input.ProjectFile
         // function results will be cached over a defined range of values.
         public bool ExpressionLinearizationEnabled { get; private set; }
 
-        public string LogLevel { get; private set; } // TODO: change to enum
+        public EventLevel LogLevel { get; private set; } // TODO: change to enum
 
         public SystemSettings()
         {
             this.ExpressionLinearizationEnabled = false;
-            this.LogLevel = "debug";
+            this.LogLevel = EventLevel.Informational;
             this.Multithreading = false;
             this.RandomSeed = null;
         }
@@ -58,7 +59,17 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("logLevel"))
             {
-                this.LogLevel = reader.ReadElementContentAsString().Trim();
+                string logLevelAsString = reader.ReadElementContentAsString().Trim();
+                this.LogLevel = logLevelAsString switch
+                {
+                    "critical" => EventLevel.Critical,
+                    "error" => EventLevel.Error,
+                    "informational" => EventLevel.Informational,
+                    "logAlways" => EventLevel.LogAlways,
+                    "verbose" => EventLevel.Verbose,
+                    "warning" => EventLevel.Warning,
+                    _ => throw new NotSupportedException("Unhandled log level '" + logLevelAsString + "'.")
+                };
             }
             else
             {

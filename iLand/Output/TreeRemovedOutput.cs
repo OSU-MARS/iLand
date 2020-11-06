@@ -44,17 +44,20 @@ namespace iLand.Output
             this.Columns.Add(new SqlColumn("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", OutputDatatype.Double));
         }
 
-        public void AddTree(Model model, Trees trees, int treeIndex, MortalityCause reason)
+        public bool TryAddTree(Model model, Trees trees, int treeIndex, MortalityCause reason)
         {
             if (filter.IsEmpty == false)
-            { 
+            {
                 // skip trees if filter is present
-                TreeWrapper treeWrapper = new TreeWrapper(model);
+                TreeWrapper treeWrapper = new TreeWrapper(model)
+                {
+                    Trees = trees,
+                    TreeIndex = treeIndex
+                };
                 filter.Wrapper = treeWrapper;
-                treeWrapper.Trees = trees;
                 if (filter.Execute() == 0.0)
                 {
-                    return;
+                    return false;
                 }
             }
 
@@ -73,6 +76,7 @@ namespace iLand.Output
 
             removedTreesOfSpecies.Item1.Add(trees, treeIndex);
             removedTreesOfSpecies.Item2.Add(reason);
+            return true;
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

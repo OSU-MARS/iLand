@@ -34,8 +34,8 @@ namespace iLand.Output
         // (2) optionally: some special settings (here: filter)
         void TreeOut::setup()
         {
-        string filter = settings().value(".filter","");
-        if (filter!="")
+        string filter = settings().value(".filter", String.Empty);
+        if (filter != String.Empty)
             mFilter = QSharedPointer<Expression>(new Expression(filter));
         }
 
@@ -63,9 +63,6 @@ namespace iLand.Output
     {
         private string insertRowSqlText;
 
-        public bool IsOpen { get; private set; } // returns true if output is open, i.e. has a open database connection
-        public bool IsEnabled { get; set; } // returns true if output is enabled, i.e. is "turned on"
-
         public List<SqlColumn> Columns { get; protected set; }
 
         public string Name { get; set; } // descriptive name of the ouptut
@@ -77,15 +74,24 @@ namespace iLand.Output
             this.insertRowSqlText = null;
 
             this.Columns = new List<SqlColumn>();
-            this.IsEnabled = false;
-            this.IsOpen = false;
         }
 
-        /** create the database table and opens up the output.
-          */
-        private void EnsureEmptySqlTable(SqliteConnection connection)
+        public void LogYear(Model model, SqliteTransaction transaction)
         {
-            // create the "create table" statement
+            SqliteCommand insertRow = new SqliteCommand(this.insertRowSqlText, transaction.Connection, transaction);
+            for (int columnIndex = 0; columnIndex < this.Columns.Count; ++columnIndex)
+            {
+                insertRow.Parameters.Add("@" + this.Columns[columnIndex].Name, this.Columns[columnIndex].Datatype);
+            }
+
+            this.LogYear(model, insertRow);
+        }
+
+        protected abstract void LogYear(Model model, SqliteCommand insertRow);
+
+        public void Open(SqliteTransaction transaction)
+        {
+            // ensure an empty table exists for this output to log to
             StringBuilder createTableCommand = new StringBuilder("create table " + this.TableName + "(");
             List<string> columnNames = new List<string>(this.Columns.Count);
             foreach (SqlColumn column in this.Columns)
@@ -106,40 +112,14 @@ namespace iLand.Output
                 }
                 columnNames.Add(column.Name);
             }
-
             createTableCommand[^1] = ')'; // replace last "," with )
 
-            SqliteCommand dropTable = new SqliteCommand(String.Format("drop table if exists {0}", this.TableName), connection);
+            SqliteCommand dropTable = new SqliteCommand(String.Format("drop table if exists {0}", this.TableName), transaction.Connection, transaction);
             dropTable.ExecuteNonQuery(); // drop table (if exists)
-            SqliteCommand createTable = new SqliteCommand(createTableCommand.ToString(), connection);
+            SqliteCommand createTable = new SqliteCommand(createTableCommand.ToString(), transaction.Connection, transaction);
             createTable.ExecuteNonQuery(); // (re-)create table
 
             this.insertRowSqlText = "insert into " + this.TableName + " (" + String.Join(", ", columnNames) + ") values (@" + String.Join(", @", columnNames) + ")";
-
-            this.IsOpen = true;
-        }
-
-        public void LogYear(Model model, SqliteTransaction transaction)
-        {
-            SqliteCommand insertRow = new SqliteCommand(this.insertRowSqlText, transaction.Connection, transaction);
-            for (int columnIndex = 0; columnIndex < this.Columns.Count; columnIndex++)
-            {
-                insertRow.Parameters.Add("@" + this.Columns[columnIndex].Name, this.Columns[columnIndex].Datatype);
-            }
-
-            this.LogYear(model, insertRow);
-        }
-
-        protected abstract void LogYear(Model model, SqliteCommand insertRow);
-
-        public void Open(Model model)
-        {
-            if (this.IsOpen)
-            {
-                return;
-            }
-
-            this.EnsureEmptySqlTable(model.Outputs.Database);
         }
 
         public virtual void Setup(Model model)

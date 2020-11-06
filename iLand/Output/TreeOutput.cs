@@ -54,15 +54,18 @@ namespace iLand.Output
             while (allTreeEnumerator.MoveNext())
             {
                 Trees treesOfSpecies = allTreeEnumerator.CurrentTrees;
+                int treeIndex = allTreeEnumerator.CurrentTreeIndex;
                 if (mFilter.IsEmpty == false)
-                { // skip fields
+                { 
+                    // nothing to log if tree is excluded by filter
                     treeWrapper.Trees = treesOfSpecies;
+                    treeWrapper.TreeIndex = treeIndex;
                     if (mFilter.Execute() == 0.0)
                     {
                         continue;
                     }
                 }
-                int treeIndex = allTreeEnumerator.CurrentTreeIndex;
+
                 insertRow.Parameters[0].Value = model.CurrentYear;
                 insertRow.Parameters[1].Value = treesOfSpecies.RU.GridIndex;
                 insertRow.Parameters[2].Value = treesOfSpecies.RU.EnvironmentID;
