@@ -131,8 +131,8 @@ namespace iLand.Simulation
             this.CalculateStockedArea();
             foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
             {
-                ru.AddTreeAgingForAllTrees();
-                ru.CreateStandStatistics(this);
+                ru.Trees.SetupStatistics();
+                ru.SetupSaplingStatistics();
             }
 
             // setup outputs
@@ -195,7 +195,7 @@ namespace iLand.Simulation
 
             // if trees are dead/removed because of management, the tree lists
             // need to be cleaned (and the statistics need to be recreated)
-            this.RemoveDeadTreesAndRecalculateStandStatistics(true); // recalculate statistics (LAIs per species needed later in production)
+            this.RemoveDeadTreesAndRecalculateStandStatistics(recalculateSpeciesStats: true); // recalculate statistics (LAIs per species needed later in production)
 
             // process a cycle of individual growth
             // create light influence patterns and readout light state of individual trees
@@ -216,10 +216,10 @@ namespace iLand.Simulation
                 // 3-PG production of biomass
                 ru.CalculateWaterAndBiomassGrowthForYear(this);
 
-                ru.BeforeTreeGrowth(); // reset statistics
+                ru.Trees.BeforeTreeGrowth(); // reset aging
                 // calculate light responses
                 // responses are based on *modified* values for LightResourceIndex
-                foreach (Trees treesOfSpecies in ru.TreesBySpeciesID.Values)
+                foreach (Trees treesOfSpecies in ru.Trees.TreesBySpeciesID.Values)
                 {
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                     {
@@ -227,15 +227,14 @@ namespace iLand.Simulation
                     }
                 }
 
-                ru.CalculateInterceptedArea();
+                ru.Trees.CalculatePhotosyntheticActivityRatio();
 
-                foreach (Trees treesOfSpecies in ru.TreesBySpeciesID.Values)
+                foreach (Trees treesOfSpecies in ru.Trees.TreesBySpeciesID.Values)
                 {
                     treesOfSpecies.CalculateAnnualGrowth(this); // actual growth of individual trees
                 }
 
-                ru.RemoveDeadTrees();
-                ru.AfterTreeGrowth();
+                ru.Trees.AfterTreeGrowth();
             });
 
             this.Landscape.GrassCover.UpdateCoverage(this.Landscape, this.RandomGenerator); // evaluate the grass / herb cover (and its effect on regeneration)
@@ -255,15 +254,15 @@ namespace iLand.Simulation
                 }
                 this.ruParallel.ForEach((ResourceUnit ru) =>
                 {
-                    this.Landscape.Saplings.EstablishSaplings(this, ru);
-                    this.Landscape.Saplings.GrowSaplings(this, ru);
+                    ru.EstablishSaplings(this);
+                    ru.GrowSaplings(this);
                 });
             }
 
             // external modules/disturbances
             this.Modules.RunYear();
             // cleanup of tree lists if external modules removed trees.
-            this.RemoveDeadTreesAndRecalculateStandStatistics(recalculateSpecies: false); // do not recalculate statistics - this is done in ResourceUnit.YearEnd()
+            this.RemoveDeadTreesAndRecalculateStandStatistics(recalculateSpeciesStats: false); // do not recalculate statistics - this is done in ResourceUnit.OnEndYear()
 
             // calculate soil / snag dynamics
             if (this.ModelSettings.CarbonCycleEnabled)
@@ -327,7 +326,7 @@ namespace iLand.Simulation
 
             this.ruParallel.ForEach((ResourceUnit ru) =>
             {
-                foreach (Trees treesOfSpecies in ru.TreesBySpeciesID.Values)
+                foreach (Trees treesOfSpecies in ru.Trees.TreesBySpeciesID.Values)
                 {
                     Action<int> calculateDominantHeightField = treesOfSpecies.CalculateDominantHeightField;
                     Action<int> applyLightIntensityPattern = treesOfSpecies.ApplyLightIntensityPattern;
@@ -359,14 +358,14 @@ namespace iLand.Simulation
         }
 
         /// clean the tree data structures (remove harvested trees) - call after management operations.
-        public void RemoveDeadTreesAndRecalculateStandStatistics(bool recalculateSpecies)
+        private void RemoveDeadTreesAndRecalculateStandStatistics(bool recalculateSpeciesStats)
         {
             foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
             {
-                if (ru.HasDeadTrees)
+                if (ru.Trees.HasDeadTrees)
                 {
-                    ru.RemoveDeadTrees();
-                    ru.RecreateStandStatistics(recalculateSpecies);
+                    ru.Trees.RemoveDeadTrees();
+                    ru.Trees.RecalculateStatistics(recalculateSpeciesStats);
                 }
             }
         }

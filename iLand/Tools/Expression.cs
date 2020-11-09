@@ -746,7 +746,7 @@ namespace iLand.Tools
                                 stack[stackDepth] = stack[stackDepth] % stack[stackDepth + 1];
                                 break;
                             case 12: // hilfsfunktion fr sigmoidie sachen.....
-                                stack[stackDepth - 3] = ExecuteUserDefinedSigmoid(stack[stackDepth - 3], stack[stackDepth - 2], stack[stackDepth - 1], stack[stackDepth]);
+                                stack[stackDepth - 3] = ExecuteUserDefinedSigmoid(stack[stackDepth - 3], (int)stack[stackDepth - 2], stack[stackDepth - 1], stack[stackDepth]);
                                 stackDepth -= 3; // drei argumente (4-1) wegwerfen...
                                 break;
                             case 13:
@@ -998,31 +998,21 @@ namespace iLand.Tools
         }
 
         // userdefined func sigmoid....
-        private double ExecuteUserDefinedSigmoid(double value, double sigmoidType, double p1, double p2)
+        private double ExecuteUserDefinedSigmoid(double value, int sigmoidType, double p1, double p2)
         {
             // sType: typ der Funktion:
             // 0: logistische f
             // 1: Hill-funktion
             // 2: 1 - logistisch (geht von 1 bis 0)
             // 3: 1- hill
-            double result;
-
             double x = Math.Max(Math.Min(value, 1.0), 0.0);  // limit auf [0..1]
-            int type = (int)sigmoidType;
-            switch (type)
+            double result = sigmoidType switch
             {
-                case 0:
-                case 2: // logistisch: f(x)=1 / (1 + p1 e^(-p2 * x))
-                    result = 1.0 / (1.0 + p1 * Math.Exp(-p2 * x));
-                    break;
-                case 1:
-                case 3:     // Hill-Funktion: f(x)=(x^p1)/(p2^p1+x^p1)
-                    result = Math.Pow(x, p1) / (Math.Pow(p2, p1) + Math.Pow(x, p1));
-                    break;
-                default:
-                    throw new NotSupportedException("sigmoid-funktion: ungltiger kurventyp. erlaubt: 0..3");
-            }
-            if (type == 2 || type == 3)
+                0 or 2 => 1.0 / (1.0 + p1 * Math.Exp(-p2 * x)),
+                1 or 3 => Math.Pow(x, p1) / (Math.Pow(p2, p1) + Math.Pow(x, p1)),
+                _ => throw new NotSupportedException("sigmoid-funktion: ungltiger kurventyp. erlaubt: 0..3")
+            };
+            if (sigmoidType == 2 || sigmoidType == 3)
             {
                 result = 1.0 - result;
             }

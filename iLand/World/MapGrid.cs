@@ -214,7 +214,7 @@ namespace iLand.World
             List<ResourceUnit> resourceUnitsInStand = this.GetResourceUnitsInStand(standID);
             foreach (ResourceUnit ru in resourceUnitsInStand)
             {
-                foreach (Trees trees in ru.TreesBySpeciesID.Values)
+                foreach (Trees trees in ru.Trees.TreesBySpeciesID.Values)
                 {
                     MutableTuple<Trees, List<int>> livingTreesInStand = new MutableTuple<Trees, List<int>>()
                     {
@@ -256,7 +256,7 @@ namespace iLand.World
             List<ResourceUnit> resourceUnitsInStand = GetResourceUnitsInStand(id);
             foreach (ResourceUnit ru in resourceUnitsInStand)
             {
-                foreach (Trees treesOfSpecies in ru.TreesBySpeciesID.Values)
+                foreach (Trees treesOfSpecies in ru.Trees.TreesBySpeciesID.Values)
                 {
                     treeWrapper.Trees = treesOfSpecies;
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)

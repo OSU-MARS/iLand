@@ -65,10 +65,10 @@ namespace iLand.Output
                 if (logResourceUnits)
                 {
                     insertRow.Parameters[0].Value = model.CurrentYear;
-                    insertRow.Parameters[1].Value = ru.GridIndex;
+                    insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
-                    insertRow.Parameters[3].Value = ru.StockedArea / Constant.RUArea;
-                    insertRow.Parameters[4].Value = ru.StockableArea / Constant.RUArea;
+                    insertRow.Parameters[3].Value = ru.AreaWithTrees / Constant.RUArea;
+                    insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.RUArea;
                     insertRow.Parameters[5].Value = ru.Climate.GetTotalPrecipitationInCurrentYear();
                     insertRow.Parameters[6].Value = wc.TotalEvapotranspiration;
                     insertRow.Parameters[7].Value = wc.TotalRunoff;
@@ -78,8 +78,8 @@ namespace iLand.Output
                     insertRow.ExecuteNonQuery();
                 }
                 ++resourceUnitCount;
-                stockable += ru.StockableArea; 
-                stocked += ru.StockedArea;
+                stockable += ru.AreaInLandscape; 
+                stocked += ru.AreaWithTrees;
                 precip += ru.Climate.GetTotalPrecipitationInCurrentYear();
                 evapotranspiration += wc.TotalEvapotranspiration; runoff += wc.TotalRunoff; 
                 snowDays += (int)wc.SnowDays;

@@ -10,7 +10,7 @@
       - add to "add(Tree)" and "calculate()"
       - add to "add(StandStatistics)" as well!
       */
-    public class ResourceUnitSpeciesStatistics
+    public class ResourceUnitTreeStatistics
     {
         private double mSumDbh;
         private double mSumHeight;
@@ -27,7 +27,7 @@
         public double Npp { get; private set; } // sum. of NPP (kg Biomass increment, above+belowground, trees >4m)/ha
         public double NppAbove { get; private set; } // above ground NPP (kg Biomass increment)/ha
         public double NppSaplings { get; private set; } // carbon gain of saplings (kg Biomass increment)/ha
-        public ResourceUnitSpecies ResourceUnitSpecies { get; set; }
+        public ResourceUnitTreeSpecies ResourceUnitSpecies { get; set; }
         // number of sapling (Reinekes Law)
         public int SaplingCount { get; private set; } // number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
         public double StemVolume { get; private set; } // sum of tree volume (m3/ha)
@@ -45,7 +45,7 @@
         public double StemC { get; private set; }
         public double StemN { get; private set; }
 
-        public ResourceUnitSpeciesStatistics() 
+        public ResourceUnitTreeStatistics() 
         { 
             this.ResourceUnitSpecies = null;
             this.Zero(); 
@@ -150,15 +150,15 @@
         }
 
         // note: mRUS = 0 for aggregated statistics
-        public void CalculateFromAccumulatedValues()
+        public void OnEndYear()
         {
             if (this.TreesPerHectare > 0.0)
             {
                 this.AverageDbh = mSumDbh / TreesPerHectare;
                 this.AverageHeight = mSumHeight / TreesPerHectare;
-                if (this.ResourceUnitSpecies != null && ResourceUnitSpecies.RU.StockableArea > 0.0)
+                if (this.ResourceUnitSpecies != null && ResourceUnitSpecies.RU.AreaInLandscape > 0.0)
                 {
-                    this.LeafAreaIndex /= ResourceUnitSpecies.RU.StockableArea; // convert from leafarea to LAI
+                    this.LeafAreaIndex /= ResourceUnitSpecies.RU.AreaInLandscape; // convert from leafarea to LAI
                 }
             }
             if (this.CohortCount != 0)
@@ -170,7 +170,7 @@
             // note: do this only on species-level (avoid double scaling)
             if (this.ResourceUnitSpecies != null)
             {
-                float areaFactor = Constant.RUArea / this.ResourceUnitSpecies.RU.StockableArea;
+                float areaFactor = Constant.RUArea / this.ResourceUnitSpecies.RU.AreaInLandscape;
                 if (areaFactor != 1.0F)
                 {
                     this.TreesPerHectare *= areaFactor;
@@ -203,7 +203,7 @@
             }
         }
 
-        public void Add(ResourceUnitSpeciesStatistics other)
+        public void Add(ResourceUnitTreeStatistics other)
         {
             this.TreesPerHectare += other.TreesPerHectare;
             this.BasalArea += other.BasalArea;
@@ -234,7 +234,7 @@
             this.RegenerationN += other.RegenerationN;
         }
 
-        public void AddWeighted(ResourceUnitSpeciesStatistics other, double weight)
+        public void AddWeighted(ResourceUnitTreeStatistics other, double weight)
         {
             // aggregates that are not scaled to hectares
             this.TreesPerHectare += other.TreesPerHectare * weight;

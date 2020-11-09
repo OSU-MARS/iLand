@@ -59,20 +59,20 @@ namespace iLand.Output
                         {
                             if (saplingCell.Saplings[index].IsOccupied())
                             {
-                                ResourceUnitSpecies rus = saplingCell.Saplings[index].GetResourceUnitSpecies(ru);
-                                TreeSpecies species = rus.Species;
-                                double dbh = saplingCell.Saplings[index].Height / species.SaplingGrowthParameters.HeightDiameterRatio * 100.0;
+                                ResourceUnitTreeSpecies ruSpecies = saplingCell.Saplings[index].GetResourceUnitSpecies(ru);
+                                TreeSpecies treeSpecies = ruSpecies.Species;
+                                double dbh = saplingCell.Saplings[index].Height / treeSpecies.SaplingGrowthParameters.HeightDiameterRatio * 100.0;
                                 // check minimum dbh
                                 if (dbh < mMinDbh)
                                 {
                                     continue;
                                 }
-                                double n_repr = species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].Height) / n_on_px;
+                                double n_repr = treeSpecies.SaplingGrowthParameters.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].Height) / n_on_px;
 
                                 insertRow.Parameters[0].Value = model.CurrentYear;
-                                insertRow.Parameters[1].Value = ru.GridIndex;
+                                insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                                 insertRow.Parameters[2].Value = ru.EnvironmentID;
-                                insertRow.Parameters[3].Value = rus.Species.ID;
+                                insertRow.Parameters[3].Value = ruSpecies.Species.ID;
                                 insertRow.Parameters[4].Value = n_repr;
                                 insertRow.Parameters[5].Value = dbh;
                                 insertRow.Parameters[6].Value = saplingCell.Saplings[index].Height;

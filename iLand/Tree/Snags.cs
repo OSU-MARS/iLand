@@ -1,5 +1,4 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Simulation;
 using iLand.World;
 using System;
 using System.Diagnostics;
@@ -8,9 +7,9 @@ namespace iLand.Tree
 {
     public class Snags
     {
-        private double mDbhLowerBreak = -1.0;
-        private double mDbhHigherBreak = 0.0; // thresholds used to classify to SWD-Pools
-        private readonly double[] mCarbonThresholdByClass = new double[] { 0.0, 0.0, 0.0 }; // carbon content thresholds that are used to decide if the SWD-pool should be emptied
+        private readonly double mDbhLowerBreak; // diameter thresholds used to classify to SWD-Pools
+        private readonly double mDbhHigherBreak;
+        private readonly double[] mCarbonThresholdByClass; // carbon content thresholds that are used to decide if the SWD-pool should be emptied
         private readonly float[] mCurrentDecayRateByClass; // swd decay rate (average for trees of the current year)
         private readonly CarbonNitrogenPool[] mToStandingWoodyByClass; // transfer pool; input of the year is collected here (for each size class)
         private readonly CarbonNitrogenTuple mTotalSnagInput; // total input to the snag state (i.e. mortality/harvest and litter)
@@ -38,9 +37,22 @@ namespace iLand.Tree
         public CarbonNitrogenTuple TotalStanding { get; private set; } // sum of C and N in SWD pools (stems) kg/ha
         public CarbonNitrogenTuple TotalBranchesAndRoots { get; private set; } // sum of C and N in other woody pools (branches + coarse roots) kg/ha
 
-        public Snags()
+        public Snags(Project projectFile)
         {
+            // class size of snag classes
+            // swdDBHClass12: class break between classes 1 and 2 for standing snags (DBH, cm)
+            // swdDBHClass23: class break between classes 2 and 3 for standing snags (DBH, cm)
+            float lowerDbhBreak = projectFile.Model.Settings.Soil.SwdDbhClass12;
+            float upperDbhBreak = projectFile.Model.Settings.Soil.SwdDdhClass23;
+            if ((lowerDbhBreak < 0.0F) || (lowerDbhBreak >= upperDbhBreak))
+            {
+                throw new ArgumentOutOfRangeException(nameof(projectFile.Model.Settings.Soil));
+            }
+
+            this.mCarbonThresholdByClass = new double[3];
             this.mCurrentDecayRateByClass = new float[3];
+            this.mDbhLowerBreak = lowerDbhBreak;
+            this.mDbhHigherBreak = upperDbhBreak;
             this.mStandingWoodyToSoil = new CarbonNitrogenTuple();
             this.mToStandingWoodyByClass = new CarbonNitrogenPool[3] { new CarbonNitrogenPool(), new CarbonNitrogenPool(), new CarbonNitrogenPool() };
             this.mTotalSnagInput = new CarbonNitrogenTuple();
@@ -63,6 +75,17 @@ namespace iLand.Tree
             this.RefractoryFlux = new CarbonNitrogenPool();
             this.TotalBranchesAndRoots = null;
             this.TotalStanding = null;
+
+            // threshold levels for emptying out the dbh-snag-classes
+            // derived from PSME woody allometry, converted to C, with a threshold level set to 10%
+            // values in kg!
+            this.mCarbonThresholdByClass[0] = lowerDbhBreak / 2.0;
+            this.mCarbonThresholdByClass[1] = lowerDbhBreak + (upperDbhBreak - lowerDbhBreak) / 2.0;
+            this.mCarbonThresholdByClass[2] = upperDbhBreak + (upperDbhBreak - lowerDbhBreak) / 2.0;
+            for (int diameterClass = 0; diameterClass < 3; ++diameterClass)
+            {
+                this.mCarbonThresholdByClass[diameterClass] = 0.10568 * Math.Pow(this.mCarbonThresholdByClass[diameterClass], 2.4247) * 0.5 * 0.1;
+            }
         }
 
         public bool HasNoCarbon()
@@ -93,30 +116,6 @@ namespace iLand.Tree
                 return 2;
             }
             return 1;
-        }
-
-        public void SetupThresholds(double lowerDbhBreak, double upperDbhBreak)
-        {
-            if ((lowerDbhBreak < 0.0) || (lowerDbhBreak >= upperDbhBreak))
-            {
-                throw new ArgumentOutOfRangeException();
-            }
-            if ((mDbhLowerBreak == lowerDbhBreak) && (mDbhHigherBreak == upperDbhBreak))
-            {
-                return;
-            }
-            mDbhLowerBreak = lowerDbhBreak;
-            mDbhHigherBreak = upperDbhBreak;
-            mCarbonThresholdByClass[0] = lowerDbhBreak / 2.0;
-            mCarbonThresholdByClass[1] = lowerDbhBreak + (upperDbhBreak - lowerDbhBreak) / 2.0;
-            mCarbonThresholdByClass[2] = upperDbhBreak + (upperDbhBreak - lowerDbhBreak) / 2.0;
-            //# threshold levels for emptying out the dbh-snag-classes
-            //# derived from Psme woody allometry, converted to C, with a threshold level set to 10%
-            //# values in kg!
-            for (int diameterClass = 0; diameterClass < 3; diameterClass++)
-            {
-                mCarbonThresholdByClass[diameterClass] = 0.10568 * Math.Pow(mCarbonThresholdByClass[diameterClass], 2.4247) * 0.5 * 0.1;
-            }
         }
 
         public void Setup(Project projectFile, ResourceUnit ru)
@@ -169,7 +168,7 @@ namespace iLand.Tree
 
         public void ScaleInitialState()
         {
-            float area_factor = this.RU.StockableArea / Constant.RUArea; // fraction stockable area
+            float area_factor = this.RU.AreaInLandscape / Constant.RUArea; // fraction stockable area
             // avoid huge snag pools on very small resource units (see also soil.cpp)
             // area_factor = std::max(area_factor, 0.1);
             this.StandingWoodyDebrisByClass[1] *= area_factor;

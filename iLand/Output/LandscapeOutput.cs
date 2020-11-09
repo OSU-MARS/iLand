@@ -11,12 +11,12 @@ namespace iLand.Output
     public class LandscapeOutput : Output
     {
         private readonly Expression filter;
-        private readonly Dictionary<string, ResourceUnitSpeciesStatistics> standStatisticsBySpecies;
+        private readonly Dictionary<string, ResourceUnitTreeStatistics> standStatisticsBySpecies;
 
         public LandscapeOutput()
         {
             this.filter = new Expression();
-            this.standStatisticsBySpecies = new Dictionary<string, ResourceUnitSpeciesStatistics>();
+            this.standStatisticsBySpecies = new Dictionary<string, ResourceUnitTreeStatistics>();
 
             this.Name = "Landscape aggregates per species";
             this.TableName = "landscape";
@@ -57,7 +57,7 @@ namespace iLand.Output
             }
 
             // clear landscape stats
-            foreach (KeyValuePair<string, ResourceUnitSpeciesStatistics> speciesStatistics in this.standStatisticsBySpecies)
+            foreach (KeyValuePair<string, ResourceUnitTreeStatistics> speciesStatistics in this.standStatisticsBySpecies)
             {
                 speciesStatistics.Value.Zero();
             }
@@ -66,7 +66,7 @@ namespace iLand.Output
             float totalStockableArea = 0.0F;
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                totalStockableArea += ru.StockableArea;
+                totalStockableArea += ru.AreaInLandscape;
             }
 
             if (totalStockableArea == 0.0F)
@@ -80,26 +80,26 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
-                foreach (ResourceUnitSpecies ruSpecies in ru.TreeSpecies)
+                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesPresentOnResourceUnit)
                 {
-                    ResourceUnitSpeciesStatistics ruSpeciesStats = ruSpecies.Statistics;
+                    ResourceUnitTreeStatistics ruSpeciesStats = ruSpecies.Statistics;
                     if (ruSpeciesStats.TreesPerHectare == 0.0 && ruSpeciesStats.CohortCount == 0 && ruSpeciesStats.TotalStemVolumeGrowth == 0.0)
                     {
                         continue;
                     }
-                    if (this.standStatisticsBySpecies.TryGetValue(ruSpecies.Species.ID, out ResourceUnitSpeciesStatistics statistics) == false)
+                    if (this.standStatisticsBySpecies.TryGetValue(ruSpecies.Species.ID, out ResourceUnitTreeStatistics statistics) == false)
                     {
-                        statistics = new ResourceUnitSpeciesStatistics();
+                        statistics = new ResourceUnitTreeStatistics();
                         this.standStatisticsBySpecies.Add(ruSpecies.Species.ID, statistics);
                     }
-                    statistics.AddWeighted(ruSpeciesStats, ru.StockableArea / totalStockableArea);
+                    statistics.AddWeighted(ruSpeciesStats, ru.AreaInLandscape / totalStockableArea);
                 }
             }
 
             // now add to output stream
-            foreach (KeyValuePair<string, ResourceUnitSpeciesStatistics> species in this.standStatisticsBySpecies)
+            foreach (KeyValuePair<string, ResourceUnitTreeStatistics> species in this.standStatisticsBySpecies)
             {
-                ResourceUnitSpeciesStatistics stat = species.Value;
+                ResourceUnitTreeStatistics stat = species.Value;
                 insertRow.Parameters[0].Value = model.CurrentYear;
                 insertRow.Parameters[1].Value = species.Key; // keys: year, species
                 insertRow.Parameters[2].Value = stat.TreesPerHectare;

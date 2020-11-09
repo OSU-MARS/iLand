@@ -1,8 +1,6 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Simulation;
 using iLand.World;
 using System;
-using System.Diagnostics;
 
 namespace iLand.Tree
 {
@@ -16,22 +14,22 @@ namespace iLand.Tree
         * Growth and Recruitment of Saplings
         * Snag dynamics
       */
-    public class ResourceUnitSpecies
+    public class ResourceUnitTreeSpecies
     {
-        public ResourceUnitSpeciesGrowth BiomassGrowth { get; private set; } // the 3pg production model of this species x resourceunit
+        public ResourceUnitTreeSpeciesGrowth BiomassGrowth { get; private set; } // the 3pg production model of this species x resourceunit
         public Establishment Establishment { get; private set; } // establishment submodel
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
         public float LaiFraction { get; private set; }
         public double RemovedStemVolume { get; private set; } // sum of volume with was remvoved because of death/management (m3/ha)
-        public ResourceUnitSpeciesResponse Response { get; private set; }
+        public ResourceUnitTreeSpeciesResponse Response { get; private set; }
         public ResourceUnit RU { get; private set; } // return pointer to resource unit
         public SaplingProperties SaplingStats { get; private set; } // statistics for the sapling sub module
         public TreeSpecies Species { get; private set; } // return pointer to species
-        public ResourceUnitSpeciesStatistics Statistics { get; private set; } // statistics of this species on the resource unit
-        public ResourceUnitSpeciesStatistics StatisticsDead { get; private set; } // statistics of trees that have died
-        public ResourceUnitSpeciesStatistics StatisticsManagement { get; private set; } // statistics of removed trees
+        public ResourceUnitTreeStatistics Statistics { get; private set; } // statistics of this species on the resource unit
+        public ResourceUnitTreeStatistics StatisticsDead { get; private set; } // statistics of trees that have died
+        public ResourceUnitTreeStatistics StatisticsManagement { get; private set; } // statistics of removed trees
         
-        public ResourceUnitSpecies(TreeSpecies treeSpecies, ResourceUnit ru)
+        public ResourceUnitTreeSpecies(TreeSpecies treeSpecies, ResourceUnit ru)
         {
             if ((treeSpecies.Index < 0) || (treeSpecies.Index > 1000))
             {
@@ -40,14 +38,14 @@ namespace iLand.Tree
             this.RU = ru;
             this.Species = treeSpecies;
 
-            this.BiomassGrowth = new ResourceUnitSpeciesGrowth();
+            this.BiomassGrowth = new ResourceUnitTreeSpeciesGrowth();
             this.Establishment = new Establishment(ru.Climate, this); // requires this.Species and this.RU be set
             this.RemovedStemVolume = 0.0;
-            this.Response = new ResourceUnitSpeciesResponse();
+            this.Response = new ResourceUnitTreeSpeciesResponse();
             this.SaplingStats = new SaplingProperties();
-            this.Statistics = new ResourceUnitSpeciesStatistics();
-            this.StatisticsDead = new ResourceUnitSpeciesStatistics();
-            this.StatisticsManagement = new ResourceUnitSpeciesStatistics();
+            this.Statistics = new ResourceUnitTreeStatistics();
+            this.StatisticsDead = new ResourceUnitTreeStatistics();
+            this.StatisticsManagement = new ResourceUnitTreeStatistics();
 
             this.BiomassGrowth.SpeciesResponse = this.Response;
             this.Response.Setup(this);

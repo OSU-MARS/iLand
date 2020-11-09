@@ -17,7 +17,7 @@ namespace iLand.Tree
     public class Establishment
     {
         private readonly World.Climate mClimate; // link to the current climate
-        private readonly ResourceUnitSpecies mRUspecies; // link to the resource unit species (links to production data and species respones)
+        private readonly ResourceUnitTreeSpecies mRUspecies; // link to the resource unit species (links to production data and species respones)
         // TACA switches
         private double mSumLifValue;
         private int mLifCount;
@@ -32,7 +32,7 @@ namespace iLand.Tree
         public int TacaFrostDaysAfterBudburst { get; private set; } // number of frost days after bud birst
         public double WaterLimitation { get; private set; } // scalar value between 0 and 1 (1: no limitation, 0: no establishment)
 
-        public Establishment(World.Climate climate, ResourceUnitSpecies ruSpecies)
+        public Establishment(World.Climate climate, ResourceUnitTreeSpecies ruSpecies)
         {
             if (ruSpecies == null || ruSpecies.Species == null || ruSpecies.RU == null)
             {

@@ -1,5 +1,4 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Simulation;
 using iLand.Tools;
 using iLand.Tree;
 using Microsoft.Data.Sqlite;
@@ -21,7 +20,6 @@ namespace iLand.World
         public Input.EnvironmentReader Environment { get; private set; }
         public GrassCover GrassCover { get; private set; }
         public List<ResourceUnit> ResourceUnits { get; private set; }
-        public Saplings Saplings { get; private set; }
 
         public Grid<float> LightGrid { get; private set; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
         public Grid<HeightCell> HeightGrid { get; private set; } // stores maximum heights of trees and some flags (currently 10x10m)
@@ -40,7 +38,6 @@ namespace iLand.World
             this.Dem = null;
             this.Environment = null;
             this.GrassCover = null;
-            this.Saplings = null;
 
             this.LightGrid = null;
             this.HeightGrid = null;
@@ -173,14 +170,12 @@ namespace iLand.World
                     // create resource units for valid positions only
                     RectangleF ruExtent = this.ResourceUnitGrid.GetCellExtent(ResourceUnitGrid.GetCellPosition(ruGridIndex));
                     this.Environment.SetPosition(projectFile, this, ruExtent.Center()); // if environment is 'disabled' default values from the project file are used.
-                    ResourceUnit newRU = new ResourceUnit(projectFile, ruGridIndex)
+                    ResourceUnit newRU = new ResourceUnit(projectFile, this.Environment.CurrentClimate, this.Environment.CurrentSpeciesSet, ruGridIndex)
                     {
                         BoundingBox = ruExtent,
-                        Climate = this.Environment.CurrentClimate,
                         EnvironmentID = this.Environment.CurrentResourceUnitID, // set id of resource unit in grid mode
                         TopLeftLightPosition = this.LightGrid.GetCellIndex(ruExtent.TopLeft())
                     };
-                    newRU.SetSpeciesSet(this.Environment.CurrentSpeciesSet);
                     newRU.Setup(projectFile, this.Environment);
                     this.ResourceUnits.Add(newRU);
                     this.ResourceUnitGrid[ruGridIndex] = newRU; // save in the RUmap grid
@@ -237,14 +232,26 @@ namespace iLand.World
             }
 
             // setup of saplings
-            if (this.Saplings != null)
-            {
-                this.Saplings = null;
-            }
             if (projectFile.Model.Settings.RegenerationEnabled)
             {
-                this.Saplings = new Saplings();
-                this.Saplings.Setup(this);
+                //mGrid.setup(GlobalSettings.instance().model().grid().metricRect(), GlobalSettings.instance().model().grid().cellsize());
+                // mask out out-of-project areas
+                GridWindowEnumerator<float> lightRunner = new GridWindowEnumerator<float>(this.LightGrid, this.ResourceUnitGrid.PhysicalExtent);
+                while (lightRunner.MoveNext())
+                {
+                    SaplingCell saplingCell = this.GetSaplingCell(this.LightGrid.GetCellPosition(lightRunner.CurrentIndex), false, out ResourceUnit _); // false: retrieve also invalid cells
+                    if (saplingCell != null)
+                    {
+                        if (!this.HeightGrid[this.LightGrid.Index5(lightRunner.CurrentIndex)].IsOnLandscape())
+                        {
+                            saplingCell.State = SaplingCellState.Invalid;
+                        }
+                        else
+                        {
+                            saplingCell.State = SaplingCellState.Free;
+                        }
+                    }
+                }
             }
 
             // setup of the grass cover
@@ -269,14 +276,14 @@ namespace iLand.World
                 //            continue;
                 //        }
                 GridWindowEnumerator<HeightCell> heightRunner = new GridWindowEnumerator<HeightCell>(this.HeightGrid, ru.BoundingBox);
-                int heightCellsInWorld = 0;
+                int heightCellsInLandscape = 0;
                 int heightCellsInRU = 0;
                 while (heightRunner.MoveNext())
                 {
                     HeightCell current = heightRunner.Current;
                     if (current != null && current.IsOnLandscape())
                     {
-                        ++heightCellsInWorld;
+                        ++heightCellsInLandscape;
                     }
                     ++heightCellsInRU;
                 }
@@ -287,22 +294,22 @@ namespace iLand.World
                     throw new NotSupportedException("No height cells found in resource unit.");
                 }
 
-                ru.StockableArea = Constant.HeightPixelArea * heightCellsInWorld; // in m2
+                ru.AreaInLandscape = Constant.HeightPixelArea * heightCellsInLandscape; // in m2
                 if (ru.Snags != null)
                 {
                     ru.Snags.ScaleInitialState();
                 }
-                this.TotalStockableHectares += Constant.HeightPixelArea * heightCellsInWorld / Constant.RUArea; // in ha
+                this.TotalStockableHectares += Constant.HeightPixelArea * heightCellsInLandscape / Constant.RUArea; // in ha
 
-                if (heightCellsInWorld == 0 && ru.EnvironmentID > -1)
+                if (heightCellsInLandscape == 0 && ru.EnvironmentID > -1)
                 {
                     // invalidate this resource unit
                     // ru.ID = -1;
                     throw new NotSupportedException("Valid resource unit has no height cells in world.");
                 }
-                if (heightCellsInWorld > 0 && ru.EnvironmentID == -1)
+                if (heightCellsInLandscape > 0 && ru.EnvironmentID == -1)
                 {
-                    throw new NotSupportedException("Invalid resource unit " + ru.GridIndex + " (" + ru.BoundingBox + ") has height cells in world.");
+                    throw new NotSupportedException("Invalid resource unit " + ru.ResourceUnitGridIndex + " (" + ru.BoundingBox + ") has height cells in world.");
                     //ru.ID = 0;
                     // test-code
                     //GridRunner<HeightGridValue> runner(*mHeightGrid, ru.boundingBox());
@@ -382,6 +389,20 @@ namespace iLand.World
                 return this.ResourceUnits[0]; // default RU if there is only one
             }
             return this.ResourceUnitGrid[ruPosition];
+        }
+
+        /// return the SaplingCell (i.e. container for the ind. saplings) for the given 2x2m coordinates
+        /// if 'only_valid' is true, then null is returned if no living saplings are on the cell
+        /// 'rRUPtr' is a pointer to a RU-ptr: if provided, a pointer to the resource unit is stored
+        public SaplingCell GetSaplingCell(Point lightCellPosition, bool onlyValid, out ResourceUnit ru)
+        {
+            ru = this.GetResourceUnit(this.LightGrid.GetCellCenterPosition(lightCellPosition));
+            SaplingCell saplingCell = ru.GetSaplingCell(lightCellPosition);
+            if ((saplingCell != null) && (!onlyValid || saplingCell.State != SaplingCellState.Invalid))
+            {
+                return saplingCell;
+            }
+            return null;
         }
     }
 }

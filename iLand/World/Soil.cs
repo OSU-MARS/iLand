@@ -97,12 +97,10 @@ namespace iLand.World
             // stockable area:
             // if the stockable area is < 1ha, then
             // scale the soil inputs to a full hectare
-            float area_ha = mRU != null ? mRU.StockableArea / Constant.RUArea : 1.0F;
-            if (area_ha == 0.0)
+            float area_ha = mRU != null ? mRU.AreaInLandscape / Constant.RUArea : 1.0F;
+            if (area_ha <= 0.0)
             {
-                Debug.WriteLine("setSoilInput: stockable area is 0!");
-                return;
-                //throw new NotSupportedException("setSoilInput: stockable area is 0!");
+                throw new NotSupportedException("Resource unit's stockable area is zero or negative.");
             }
             // for the carbon input flow from snags/trees we assume a minimum size of the "stand" of 0.1ha
             // this reduces rapid input pulses (e.g. if one large tree dies).
@@ -127,7 +125,7 @@ namespace iLand.World
             // checks
             if (this.ClimateDecompositionFactor == 0.0)
             {
-                throw new NotSupportedException("Climate decomposition factor is zero for resource unit " + mRU.GridIndex + ".");
+                throw new NotSupportedException("Climate decomposition factor is zero for resource unit " + mRU.ResourceUnitGridIndex + ".");
             }
 
             float timestep = Constant.TimeStepInYears; // 1 year (annual)

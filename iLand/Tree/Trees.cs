@@ -1,5 +1,4 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Output;
 using iLand.Tools;
 using iLand.World;
 using System;
@@ -32,7 +31,6 @@ namespace iLand.Tree
         public List<float> Dbh { get; private set; } // diameter at breast height in cm
         public List<float> DbhDelta { get; private set; } // diameter growth [cm]
         public List<float> Height { get; private set; } // tree height in m
-        public List<int> ID { get; private set; } // numerical unique ID of the tree
         public List<float> LeafArea { get; private set; } // leaf area (m2) of the tree
         public List<Point> LightCellPosition { get; private set; } // index of the trees position on the basic LIF grid
         public List<float> LightResourceIndex { get; private set; } // LRI of the tree (updated during readStamp())
@@ -42,6 +40,7 @@ namespace iLand.Tree
         public ResourceUnit RU { get; private set; } // pointer to the ressource unit the tree belongs to.
         public TreeSpecies Species { get; set; } // pointer to the tree species of the tree.
         public List<LightStamp> Stamp { get; private set; }
+        public List<int> Tag { get; private set; } // (usually) numerical unique ID of the tree
 
         // biomass properties
         public List<float> CoarseRootMass { get; private set; } // mass (kg) of coarse roots
@@ -63,7 +62,6 @@ namespace iLand.Tree
             this.FineRootMass = new List<float>(Constant.Simd128x4.Width);
             this.FoliageMass = new List<float>(Constant.Simd128x4.Width);
             this.Height = new List<float>(Constant.Simd128x4.Width);
-            this.ID = new List<int>(Constant.Simd128x4.Width);
             this.LeafArea = new List<float>(Constant.Simd128x4.Width);
             this.LightCellPosition = new List<Point>(Constant.Simd128x4.Width);
             this.LightResourceIndex = new List<float>(Constant.Simd128x4.Width);
@@ -75,6 +73,7 @@ namespace iLand.Tree
             this.Stamp = new List<Tree.LightStamp>(Constant.Simd128x4.Width);
             this.StemMass = new List<float>(Constant.Simd128x4.Width);
             this.StressIndex = new List<float>(Constant.Simd128x4.Width);
+            this.Tag = new List<int>(Constant.Simd128x4.Width);
 
             //Tree.TreesCreated++;
         }
@@ -98,7 +97,7 @@ namespace iLand.Tree
                 this.FineRootMass.Capacity = value;
                 this.FoliageMass.Capacity = value;
                 this.Height.Capacity = value;
-                this.ID.Capacity = value;
+                this.Tag.Capacity = value;
                 this.LeafArea.Capacity = value;
                 this.LightCellPosition.Capacity = value;
                 this.LightResourceIndex.Capacity = value;
@@ -182,7 +181,7 @@ namespace iLand.Tree
             this.FineRootMass.Add(0.0F);
             this.FoliageMass.Add(0.0F);
             this.Height.Add(0.0F);
-            this.ID.Add(0);
+            this.Tag.Add(0);
             this.LeafArea.Add(0.0F);
             this.LightCellPosition.Add(Point.Empty);
             this.LightResourceIndex.Add(0.0F);
@@ -205,7 +204,7 @@ namespace iLand.Tree
             this.FineRootMass.Add(other.FineRootMass[otherTreeIndex]);
             this.FoliageMass.Add(other.FoliageMass[otherTreeIndex]);
             this.Height.Add(other.Height[otherTreeIndex]);
-            this.ID.Add(other.ID[otherTreeIndex]);
+            this.Tag.Add(other.Tag[otherTreeIndex]);
             this.LeafArea.Add(other.LeafArea[otherTreeIndex]);
             this.LightCellPosition.Add(other.LightCellPosition[otherTreeIndex]);
             this.LightResourceIndex.Add(other.LightResourceIndex[otherTreeIndex]);
@@ -228,7 +227,7 @@ namespace iLand.Tree
             this.FineRootMass[destinationIndex] = this.FineRootMass[sourceIndex];
             this.FoliageMass[destinationIndex] = this.FoliageMass[sourceIndex];
             this.Height[destinationIndex] = this.Height[sourceIndex];
-            this.ID[destinationIndex] = this.ID[sourceIndex];
+            this.Tag[destinationIndex] = this.Tag[sourceIndex];
             this.LeafArea[destinationIndex] = this.LeafArea[sourceIndex];
             this.LightCellPosition[destinationIndex] = this.LightCellPosition[sourceIndex];
             this.LightResourceIndex[destinationIndex] = this.LightResourceIndex[sourceIndex];
@@ -491,10 +490,13 @@ namespace iLand.Tree
         public void Die(Model model, int treeIndex, TreeGrowthData growthData = null)
         {
             this.SetFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
-            this.RU.OnTreeDied();
-            ResourceUnitSpecies ruSpecies = this.RU.GetResourceUnitSpecies(this.Species);
+            this.RU.Trees.OnTreeDied();
+            
+            ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
             ruSpecies.StatisticsDead.Add(this, treeIndex, growthData); // add tree to statistics
-            this.NotifyTreeRemoved(model, treeIndex, MortalityCause.Stress);
+            
+            this.OnTreeRemoved(model, treeIndex, MortalityCause.Stress);
+            
             if (this.RU.Snags != null)
             {
                 this.RU.Snags.AddMortality(this, treeIndex);
@@ -502,14 +504,14 @@ namespace iLand.Tree
         }
 
         /// dumps some core variables of a tree to a string.
-        private string Dump(int treeIndex)
-        {
-            string result = String.Format("id {0} species {1} dbh {2} h {3} x/y {4}/{5} ru# {6} LRI {7}",
-                                          this.ID, this.Species.ID, this.Dbh, this.Height,
-                                          this.GetCellCenterPoint(treeIndex).X, this.GetCellCenterPoint(treeIndex).Y,
-                                          this.RU.GridIndex, this.LightResourceIndex);
-            return result;
-        }
+        //private string Dump(int treeIndex)
+        //{
+        //    string result = String.Format("id {0} species {1} dbh {2} h {3} x/y {4}/{5} ru# {6} LRI {7}",
+        //                                  this.Tag, this.Species.ID, this.Dbh, this.Height,
+        //                                  this.GetCellCenterPoint(treeIndex).X, this.GetCellCenterPoint(treeIndex).Y,
+        //                                  this.RU.ResourceUnitGridIndex, this.LightResourceIndex);
+        //    return result;
+        //}
 
         //private void DumpList(List<object> rTargetList)
         //{
@@ -587,7 +589,7 @@ namespace iLand.Tree
                 this.LightResourceIndex[treeIndex] = 1.0F;
             }
             // Finally, add LRI of this Tree to the ResourceUnit!
-            this.RU.AddWeightedLeafArea(this.LeafArea[treeIndex], this.LightResourceIndex[treeIndex]);
+            this.RU.Trees.AddWeightedLeafArea(this.LeafArea[treeIndex], this.LightResourceIndex[treeIndex]);
 
             //Debug.WriteLine("Tree #"<< id() + "value" + sum + "Impact" + mImpact;
         }
@@ -663,7 +665,7 @@ namespace iLand.Tree
             //Debug.WriteLine("Tree #"<< id() + "value" + sum + "Impact" + mImpact;
 
             // Finally, add LRI of this Tree to the ResourceUnit!
-            this.RU.AddWeightedLeafArea(this.LeafArea[treeIndex], this.LightResourceIndex[treeIndex]);
+            this.RU.Trees.AddWeightedLeafArea(this.LeafArea[treeIndex], this.LightResourceIndex[treeIndex]);
         }
 
         public void RemoveRange(int index, int count)
@@ -677,7 +679,7 @@ namespace iLand.Tree
             this.FineRootMass.RemoveRange(index, count);
             this.FoliageMass.RemoveRange(index, count);
             this.Height.RemoveRange(index, count);
-            this.ID.RemoveRange(index, count);
+            this.Tag.RemoveRange(index, count);
             this.LeafArea.RemoveRange(index, count);
             this.LightCellPosition.RemoveRange(index, count);
             this.LightResourceIndex.RemoveRange(index, count);
@@ -709,9 +711,9 @@ namespace iLand.Tree
         {
             // calculate a light response from lri:
             // http://iland.boku.ac.at/individual+tree+light+availability
-            float lri = Maths.Limit(this.LightResourceIndex[treeIndex] * this.RU.LriModifier, 0.0F, 1.0F); // Eq. (3)
+            float lri = Maths.Limit(this.LightResourceIndex[treeIndex] * this.RU.Trees.AverageLightRelativeIntensity, 0.0F, 1.0F); // Eq. (3)
             this.LightResponse[treeIndex] = this.Species.GetLightResponse(lri); // Eq. (4)
-            RU.AddLightResponse(this.LeafArea[treeIndex], this.LightResponse[treeIndex]);
+            this.RU.Trees.AddLightResponse(this.LeafArea[treeIndex], this.LightResponse[treeIndex]);
         }
 
         /// return the basal area in m2
@@ -744,7 +746,7 @@ namespace iLand.Tree
         public void CalculateAnnualGrowth(Model model)
         {
             // get the GPP for a "unit area" of the tree species
-            float gppPerUnitArea = (float)this.RU.GetResourceUnitSpecies(this.Species).BiomassGrowth.AnnualGpp;
+            float gppPerUnitArea = this.RU.Trees.GetResourceUnitSpecies(this.Species).BiomassGrowth.AnnualGpp;
             TreeGrowthData treeGrowthData = new TreeGrowthData();
 
             for (int treeIndex = 0; treeIndex < this.Count; ++treeIndex)
@@ -754,11 +756,11 @@ namespace iLand.Tree
 
                 // apply aging according to the state of the individal
                 float agingFactor = this.Species.GetAgingFactor(this.Height[treeIndex], this.Age[treeIndex]);
-                this.RU.AddTreeAging(this.LeafArea[treeIndex], agingFactor);
+                this.RU.Trees.AddAging(this.LeafArea[treeIndex], agingFactor);
 
                 // step 1: get "interception area" of the tree individual [m2]
                 // the sum of all area of all trees of a unit equal the total stocked area * interception_factor(Beer-Lambert)
-                float effectiveTreeArea = this.RU.GetInterceptedArea(this.LeafArea[treeIndex], this.LightResponse[treeIndex]); // light response in [0...1] depending on suppression
+                float effectiveTreeArea = this.RU.Trees.GetPhotosyntheticallyActiveArea(this.LeafArea[treeIndex], this.LightResponse[treeIndex]); // light response in [0...1] depending on suppression
 
                 // step 2: calculate GPP of the tree based
                 // (2) GPP (without aging-effect) in kg Biomass / year
@@ -797,11 +799,11 @@ namespace iLand.Tree
 
                 if (this.IsDead(treeIndex) == false)
                 {
-                    this.RU.GetResourceUnitSpecies(Species).Statistics.Add(this, treeIndex, treeGrowthData);
+                    this.RU.Trees.GetResourceUnitSpecies(this.Species).Statistics.Add(this, treeIndex, treeGrowthData);
                 }
 
                 // regeneration
-                this.Species.DisperseSeeds(model, this, treeIndex);
+                this.Species.DisperseSeeds(model.RandomGenerator, this, treeIndex);
             }
         }
 
@@ -816,7 +818,7 @@ namespace iLand.Tree
             float reserveSize = foliageBiomass * (1.0F + this.Species.FinerootFoliageRatio);
             float reserveAllocation = MathF.Min(reserveSize, (1.0F + this.Species.FinerootFoliageRatio) * this.FoliageMass[treeIndex]); // not always try to refill reserve 100%
 
-            ResourceUnitSpecies ruSpecies = RU.GetResourceUnitSpecies(Species);
+            ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(Species);
             float rootFraction = ruSpecies.BiomassGrowth.RootFraction;
             growthData.NppAboveground = growthData.NppTotal * (1.0F - rootFraction); // aboveground: total NPP - fraction to roots
             float woodFoliageRatio = Species.GetWoodFoliageRatio(); // ratio of allometric exponents (b_woody / b_foliage)
@@ -1006,10 +1008,13 @@ namespace iLand.Tree
             {
                 Debug.WriteLine("grow_diameter: d_inc < 0.0");
             }
-            Debug.WriteLineIf(dbhIncrementInM < 0.0 || dbhIncrementInM > 0.1, this.Dump(treeIndex) +
-                       String.Format("hdz {0} factor_diameter {1} stem_residual {2} delta_d_estimate {3} d_increment {4} final residual(kg) {5}",
-                       hdRatioNewGrowth, factorDiameter, stemResidual, deltaDbhEstimate, dbhIncrementInM, massFactor * (this.Dbh[treeIndex] + dbhIncrementInM) * (this.Dbh[treeIndex] + dbhIncrementInM) * (this.Height[treeIndex] + dbhIncrementInM * hdRatioNewGrowth) - ((stemMass + nppStem))),
-                       "grow_diameter increment out of range.");
+            Debug.Assert((dbhIncrementInM >= 0.0) && (dbhIncrementInM <= 0.1), String.Format("Diameter increment out of range: HD {0}, factor_diameter {1}, stem_residual {2}, delta_d_estimate {3}, d_increment {4}, final residual {5} kg.",
+                                                                                             hdRatioNewGrowth, 
+                                                                                             factorDiameter, 
+                                                                                             stemResidual, 
+                                                                                             deltaDbhEstimate, 
+                                                                                             dbhIncrementInM, 
+                                                                                             massFactor * (this.Dbh[treeIndex] + dbhIncrementInM) * (this.Dbh[treeIndex] + dbhIncrementInM) * (this.Height[treeIndex] + dbhIncrementInM * hdRatioNewGrowth) - stemMass + nppStem));
 
             //DBGMODE(
             // do not calculate res_final twice if already done
@@ -1043,13 +1048,12 @@ namespace iLand.Tree
         private float GetRelativeHeightGrowth(int treeIndex)
         {
             this.Species.GetHeightDiameterRatioLimits(this.Dbh[treeIndex], out float hdRatioLow, out float hdRatioHigh);
-
-            Debug.WriteLineIf(hdRatioLow > hdRatioHigh, this.Dump(treeIndex), "relative_height_growth: hd low higher than hd_high");
-            Debug.WriteLineIf(hdRatioLow < 10 || hdRatioHigh > 250, this.Dump(treeIndex) + String.Format(" hd-low: {0} hd-high: {1}", hdRatioLow, hdRatioHigh), "relative_height_growth: hd out of range ");
+            Debug.Assert(hdRatioLow < hdRatioHigh, "HD low higher than HD high.");
+            Debug.Assert((hdRatioLow > 10.0F) && (hdRatioHigh < 250.0F), "HD ratio out of range. Low: " + hdRatioLow + ", high: " + hdRatioHigh);
 
             // scale according to LRI: if receiving much light (LRI=1), the result is hd_low (for open grown trees)
             // use the corrected LRI (see tracker#11)
-            float lri = Maths.Limit(this.LightResourceIndex[treeIndex] * this.RU.LriModifier, 0.0F, 1.0F);
+            float lri = Maths.Limit(this.LightResourceIndex[treeIndex] * this.RU.Trees.AverageLightRelativeIntensity, 0.0F, 1.0F);
             float hdRatio = hdRatioHigh - (hdRatioHigh - hdRatioLow) * lri;
             return hdRatio;
         }
@@ -1069,7 +1073,7 @@ namespace iLand.Tree
             float dbh = this.Dbh[treeIndex];
             if (dbh <= 0.0F || this.Height[treeIndex] <= 0.0F)
             {
-                throw new NotSupportedException(String.Format("Invalid dimensions: dbh: {0} height: {1} id: {2} RU-index: {3}", dbh, this.Height[treeIndex], this.ID[treeIndex], this.RU.GridIndex));
+                throw new NotSupportedException(String.Format("Invalid dimensions: dbh: {0} height: {1} id: {2} RU-index: {3}", dbh, this.Height[treeIndex], this.Tag[treeIndex], this.RU.ResourceUnitGridIndex));
             }
             // check stamp
             Debug.Assert(this.Species != null, "Setup()", "species is NULL");
@@ -1096,15 +1100,12 @@ namespace iLand.Tree
         {
             this.SetFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
             this.SetDeathReasonHarvested(treeIndex);
-            this.RU.OnTreeDied();
-            ResourceUnitSpecies ruSpecies = this.RU.GetResourceUnitSpecies(Species);
+            this.RU.Trees.OnTreeDied();
+            ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(Species);
             ruSpecies.StatisticsManagement.Add(this, treeIndex, null);
-            this.NotifyTreeRemoved(model, treeIndex, this.IsCutDown(treeIndex) ?  MortalityCause.CutDown : MortalityCause.Harvest);
+            this.OnTreeRemoved(model, treeIndex, this.IsCutDown(treeIndex) ?  MortalityCause.CutDown : MortalityCause.Harvest);
 
-            if (model.Landscape.Saplings != null)
-            {
-                model.Landscape.Saplings.AddSprout(model, this, treeIndex);
-            }
+            this.RU.AddSprout(model, this, treeIndex);
             if (this.RU.Snags != null)
             {
                 this.RU.Snags.AddHarvest(this, treeIndex, removeStem, removeBranch, removeFoliage);
@@ -1117,31 +1118,28 @@ namespace iLand.Tree
         public void RemoveDisturbance(Model model, int treeIndex, float stemToSoilFraction, float stemToSnagFraction, float branchToSoilFraction, float branchToSnagFraction, float foliageToSoilFraction)
         {
             this.SetFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
-            this.RU.OnTreeDied();
-            ResourceUnitSpecies ruSpecies = this.RU.GetResourceUnitSpecies(this.Species);
+            this.RU.Trees.OnTreeDied();
+            ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
             ruSpecies.StatisticsDead.Add(this, treeIndex, null);
-            this.NotifyTreeRemoved(model, treeIndex, MortalityCause.Disturbance);
+            this.OnTreeRemoved(model, treeIndex, MortalityCause.Disturbance);
 
-            if (model.Landscape.Saplings != null)
-            {
-                model.Landscape.Saplings.AddSprout(model, this, treeIndex);
-            }
-            if (RU.Snags != null)
+            this.RU.AddSprout(model, this, treeIndex);
+            if (this.RU.Snags != null)
             {
                 if (this.IsHarvested(treeIndex))
                 { // if the tree is harvested, do the same as in normal tree harvest (but with default values)
-                    RU.Snags.AddHarvest(this, treeIndex, 1.0F, 0.0F, 0.0F);
+                    this.RU.Snags.AddHarvest(this, treeIndex, 1.0F, 0.0F, 0.0F);
                 }
                 else
                 {
-                    RU.Snags.AddDisturbance(this, treeIndex, stemToSnagFraction, stemToSoilFraction, branchToSnagFraction, branchToSoilFraction, foliageToSoilFraction);
+                    this.RU.Snags.AddDisturbance(this, treeIndex, stemToSnagFraction, stemToSoilFraction, branchToSnagFraction, branchToSoilFraction, foliageToSoilFraction);
                 }
             }
         }
 
         public void SetHeight(int treeIndex, float height)
         {
-            if (height <= 0.0 || height > 150.0)
+            if (height <= 0.0F || height > 150.0F)
             {
                 throw new ArgumentOutOfRangeException(nameof(height), "Attempt to set invalid height " + height + " m for tree on RU " + (this.RU != null ? this.RU.BoundingBox : new Rectangle()));
             }
@@ -1159,8 +1157,8 @@ namespace iLand.Tree
             double pFixed = this.Species.DeathProbabilityFixed;
             double pStress = this.Species.GetDeathProbabilityForStress(growthData.StressIndex);
             double pMortality = pFixed + pStress;
-            double p = model.RandomGenerator.GetRandomDouble(); // 0..1
-            if (p < pMortality)
+            double random = model.RandomGenerator.GetRandomDouble(); // 0..1
+            if (random < pMortality)
             {
                 // die...
                 this.Die(model, treeIndex);
@@ -1195,7 +1193,7 @@ namespace iLand.Tree
         //}
         //#endif
 
-        private void NotifyTreeRemoved(Model model, int treeIndex, MortalityCause reason)
+        private void OnTreeRemoved(Model model, int treeIndex, MortalityCause reason)
         {
             Debug.Assert(treeIndex < this.Count);
 

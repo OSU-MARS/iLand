@@ -28,14 +28,14 @@ namespace iLand.Output
             this.Columns.Add(new SqlColumn("GPP_kg_m2", "GPP (without Aging) in kg Biomass/m2", OutputDatatype.Double));
         }
 
-        private void LogYear(Model model, ResourceUnitSpecies ruSpecies, SqliteCommand insertRow)
+        private void LogYear(Model model, ResourceUnitTreeSpecies ruSpecies, SqliteCommand insertRow)
         {
-            ResourceUnitSpeciesGrowth growth = ruSpecies.BiomassGrowth;
-            ResourceUnitSpeciesResponse speciesResponse = growth.SpeciesResponse;
+            ResourceUnitTreeSpeciesGrowth growth = ruSpecies.BiomassGrowth;
+            ResourceUnitTreeSpeciesResponse speciesResponse = growth.SpeciesResponse;
             for (int month = 0; month < 12; month++)
             {
                 insertRow.Parameters[0].Value = model.CurrentYear;
-                insertRow.Parameters[1].Value = ruSpecies.RU.GridIndex;
+                insertRow.Parameters[1].Value = ruSpecies.RU.ResourceUnitGridIndex;
                 insertRow.Parameters[2].Value = ruSpecies.RU.EnvironmentID;
                 insertRow.Parameters[3].Value = ruSpecies.Species.ID;
                 insertRow.Parameters[4].Value = month + 1; // month
@@ -61,7 +61,7 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
-                foreach (ResourceUnitSpecies rus in ru.TreeSpecies)
+                foreach (ResourceUnitTreeSpecies rus in ru.Trees.SpeciesPresentOnResourceUnit)
                 {
                     this.LogYear(model, rus, insertRow);
                 }

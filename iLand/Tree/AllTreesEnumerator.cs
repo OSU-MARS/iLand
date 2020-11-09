@@ -43,7 +43,7 @@ namespace iLand.Tree
                 // move to first RU with trees
                 for (; this.resourceUnitIndex < this.landscape.ResourceUnits.Count; ++this.resourceUnitIndex)
                 {
-                    if (this.landscape.ResourceUnits[this.resourceUnitIndex].TreesBySpeciesID.Count > 0)
+                    if (this.landscape.ResourceUnits[this.resourceUnitIndex].Trees.TreesBySpeciesID.Count > 0)
                     {
                         // for now, assume if a tree species entry is present that at least one tree of the species is present
                         break;
@@ -56,7 +56,7 @@ namespace iLand.Tree
                 }
 
                 // positioned at first tree of first resource unit with trees
-                this.treeSpeciesEnumerator = this.landscape.ResourceUnits[resourceUnitIndex].TreesBySpeciesID.GetEnumerator();
+                this.treeSpeciesEnumerator = this.landscape.ResourceUnits[resourceUnitIndex].Trees.TreesBySpeciesID.GetEnumerator();
                 this.treeSpeciesEnumerator.MoveNext();
                 Debug.Assert(this.treeSpeciesEnumerator.Current.Value.Count > 0);
                 this.CurrentTreeIndex = 0;
@@ -67,7 +67,7 @@ namespace iLand.Tree
                 // move to next RU with trees
                 for (++this.resourceUnitIndex; this.resourceUnitIndex < landscape.ResourceUnits.Count; ++this.resourceUnitIndex)
                 {
-                    if (this.landscape.ResourceUnits[this.resourceUnitIndex].TreesBySpeciesID.Count > 0)
+                    if (this.landscape.ResourceUnits[this.resourceUnitIndex].Trees.TreesBySpeciesID.Count > 0)
                     {
                         // for now, assume if a tree species entry is present that at least one tree of the species is present
                         break;
@@ -81,7 +81,7 @@ namespace iLand.Tree
                 else
                 {
                     // first tree of next resource unit
-                    this.treeSpeciesEnumerator = this.landscape.ResourceUnits[this.resourceUnitIndex].TreesBySpeciesID.GetEnumerator();
+                    this.treeSpeciesEnumerator = this.landscape.ResourceUnits[this.resourceUnitIndex].Trees.TreesBySpeciesID.GetEnumerator();
                     this.treeSpeciesEnumerator.MoveNext();
                     Debug.Assert(this.treeSpeciesEnumerator.Current.Value.Count > 0);
                     this.CurrentTreeIndex = 0;

@@ -40,21 +40,21 @@ namespace iLand.World
             switch (variableIndex - ExpressionWrapper.BaseVariableNames.Count)
             {
                 case 0: return this.ResourceUnit.EnvironmentID; // id from grid
-                case 1: return this.ResourceUnit.EffectiveAreaPerWla;
+                case 1: return this.ResourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea;
                 case 2: return this.ResourceUnit.Soil.PlantAvailableNitrogen;
                 case 3: return this.ResourceUnit.WaterCycle.SoilDepth;
-                case 4: return this.ResourceUnit.StockedArea;
-                case 5: return this.ResourceUnit.StockableArea;
-                case 6: return this.ResourceUnit.Statistics.TreesPerHectare;
-                case 7: return this.ResourceUnit.Statistics.StemVolume;
-                case 8: return this.ResourceUnit.Statistics.AverageDbh;
-                case 9: return this.ResourceUnit.Statistics.AverageHeight;
-                case 10: return this.ResourceUnit.Statistics.BasalArea;
-                case 11: return this.ResourceUnit.Statistics.LeafAreaIndex;
-                case 12: return this.ResourceUnit.AverageAging;
-                case 13: return this.ResourceUnit.Statistics.CohortCount;
-                case 14: return this.ResourceUnit.Statistics.SaplingCount;
-                case 15: return this.ResourceUnit.Statistics.MeanSaplingAge;
+                case 4: return this.ResourceUnit.AreaWithTrees;
+                case 5: return this.ResourceUnit.AreaInLandscape;
+                case 6: return this.ResourceUnit.Trees.Statistics.TreesPerHectare;
+                case 7: return this.ResourceUnit.Trees.Statistics.StemVolume;
+                case 8: return this.ResourceUnit.Trees.Statistics.AverageDbh;
+                case 9: return this.ResourceUnit.Trees.Statistics.AverageHeight;
+                case 10: return this.ResourceUnit.Trees.Statistics.BasalArea;
+                case 11: return this.ResourceUnit.Trees.Statistics.LeafAreaIndex;
+                case 12: return this.ResourceUnit.Trees.AverageLeafAreaWeightedAgingFactor;
+                case 13: return this.ResourceUnit.Trees.Statistics.CohortCount;
+                case 14: return this.ResourceUnit.Trees.Statistics.SaplingCount;
+                case 15: return this.ResourceUnit.Trees.Statistics.MeanSaplingAge;
                 case 16: return this.ResourceUnit.WaterCycle.CanopyConductance;
                 // soil C + soil N
                 case 17:
@@ -85,7 +85,7 @@ namespace iLand.World
                     {
                         return 0.0;
                     }
-                case 20: return this.ResourceUnit.GridIndex; // numeric index
+                case 20: return this.ResourceUnit.ResourceUnitGridIndex; // numeric index
                 case 21: return this.ResourceUnit.Climate.MeanAnnualTemperature; // mean temperature
                 case 22:
                     {

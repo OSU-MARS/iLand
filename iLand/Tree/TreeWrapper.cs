@@ -48,10 +48,10 @@ namespace iLand.Tree
 
             return (variableIndex - ExpressionWrapper.BaseVariableNames.Count) switch
             {
-                0 => this.Trees.ID[this.TreeIndex],// id
+                0 => this.Trees.Tag[this.TreeIndex],// id
                 1 => this.Trees.Dbh[this.TreeIndex],// dbh
                 2 => this.Trees.Height[this.TreeIndex],// height
-                3 => this.Trees.RU.GridIndex,// ruindex
+                3 => this.Trees.RU.ResourceUnitGridIndex,// ruindex
                 4 => this.Trees.GetCellCenterPoint(this.TreeIndex).X,// x
                 5 => this.Trees.GetCellCenterPoint(this.TreeIndex).Y,// y
                 6 => this.Trees.GetStemVolume(this.TreeIndex),// volume

@@ -67,10 +67,10 @@ namespace iLand.Output
                 }
 
                 insertRow.Parameters[0].Value = model.CurrentYear;
-                insertRow.Parameters[1].Value = treesOfSpecies.RU.GridIndex;
+                insertRow.Parameters[1].Value = treesOfSpecies.RU.ResourceUnitGridIndex;
                 insertRow.Parameters[2].Value = treesOfSpecies.RU.EnvironmentID;
                 insertRow.Parameters[3].Value = treesOfSpecies.Species.ID;
-                insertRow.Parameters[4].Value = treesOfSpecies.ID[treeIndex];
+                insertRow.Parameters[4].Value = treesOfSpecies.Tag[treeIndex];
                 insertRow.Parameters[5].Value = treesOfSpecies.GetCellCenterPoint(treeIndex).X;
                 insertRow.Parameters[6].Value = treesOfSpecies.GetCellCenterPoint(treeIndex).Y;
                 insertRow.Parameters[7].Value = treesOfSpecies.Dbh[treeIndex];

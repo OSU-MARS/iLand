@@ -12,7 +12,7 @@ namespace iLand.Tree
         private float mSumDbhDied; // running sum of dbh of died trees (used to calculate detritus)
 
         public float AverageAge { get; set; } // average age of saplings (years)
-        public float AverageDeltaHPot { get; set; } // average height increment potential (m)
+        public float AverageDeltaHPotential { get; set; } // average height increment potential (m)
         public float AverageDeltaHRealized { get; set; } // average realized height increment
         public float AverageHeight { get; set; } // average height of saplings (m)
         public CarbonNitrogenTuple CarbonLiving { get; private set; } // kg Carbon (kg/ru) of saplings
@@ -26,9 +26,9 @@ namespace iLand.Tree
 
         public SaplingProperties()
         {
-            CarbonGain = new CarbonNitrogenTuple();
-            CarbonLiving = new CarbonNitrogenTuple();
-            ClearStatistics();
+            this.CarbonGain = new CarbonNitrogenTuple();
+            this.CarbonLiving = new CarbonNitrogenTuple();
+            this.ClearStatistics();
         }
 
         public void AddCarbonOfDeadSapling(float dbh)
@@ -39,26 +39,22 @@ namespace iLand.Tree
 
         public void ClearStatistics()
         {
-            RecruitedSaplings = DeadSaplings = LivingCohorts = 0;
-            LivingSaplings = 0.0F;
-            LivingSaplingsSmall = 0.0F;
-            mSumDbhDied = 0.0F;
-            AverageHeight = 0.0F;
-            AverageAge = 0.0F;
-            AverageDeltaHPot = 0.0F;
-            AverageDeltaHRealized = 0.0F;
-            NewSaplings = 0;
+            this.mSumDbhDied = 0.0F;
+            this.AverageAge = 0.0F;
+            this.AverageDeltaHPotential = 0.0F;
+            this.AverageDeltaHRealized = 0.0F;
+            this.AverageHeight = 0.0F;
+            this.LivingSaplings = 0.0F;
+            this.LivingSaplingsSmall = 0.0F;
+            this.NewSaplings = 0;
+            this.RecruitedSaplings = 0;
+            this.DeadSaplings = 0;
+            this.LivingCohorts = 0;
         }
 
-        public void Recalculate(Model model, ResourceUnit ru, TreeSpecies species)
+        public void AfterSaplingGrowth(Model model, ResourceUnit ru, TreeSpecies species)
         {
-            if (this.LivingCohorts != 0)
-            {
-                this.AverageHeight /= this.LivingCohorts;
-                this.AverageAge /= this.LivingCohorts;
-                this.AverageDeltaHPot /= this.LivingCohorts;
-                this.AverageDeltaHRealized /= this.LivingCohorts;
-            }
+            this.AverageAgeAndHeights();
             if (model.CurrentYear == 0)
             {
                 return; // no need for carbon flows in initial run
@@ -141,6 +137,17 @@ namespace iLand.Tree
 
             //globalSettings.SystemStatistics.SaplingCount += LivingCohorts;
             //globalSettings.SystemStatistics.NewSaplings += NewSaplings;
+        }
+
+        public void AverageAgeAndHeights()
+        {
+            if (this.LivingCohorts != 0)
+            {
+                this.AverageAge /= this.LivingCohorts;
+                this.AverageDeltaHPotential /= this.LivingCohorts;
+                this.AverageDeltaHRealized /= this.LivingCohorts;
+                this.AverageHeight /= this.LivingCohorts;
+            }
         }
 
         ///  returns the *represented* (Reineke's Law) number of trees (N/ha) and the mean dbh/height (cm/m)

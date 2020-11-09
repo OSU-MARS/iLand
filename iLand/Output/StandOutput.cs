@@ -64,18 +64,18 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
-                foreach (ResourceUnitSpecies ruSpecies in ru.TreeSpecies)
+                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesPresentOnResourceUnit)
                 {
-                    ResourceUnitSpeciesStatistics speciesStats = ruSpecies.Statistics;
+                    ResourceUnitTreeStatistics speciesStats = ruSpecies.Statistics;
                     if (speciesStats.TreesPerHectare == 0 && speciesStats.CohortCount == 0)
                     {
                         continue;
                     }
                     insertRow.Parameters[0].Value = model.CurrentYear;
-                    insertRow.Parameters[1].Value = ru.GridIndex;
+                    insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID;
-                    insertRow.Parameters[4].Value = ru.StockableArea / Constant.RUArea; // keys
+                    insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.RUArea; // keys
                     // insertRow.Parameters[4].Value = ru.boundingBox().center().x() << ru.boundingBox().center().y();  // temp
                     insertRow.Parameters[5].Value = speciesStats.TreesPerHectare;
                     insertRow.Parameters[6].Value = speciesStats.AverageDbh;

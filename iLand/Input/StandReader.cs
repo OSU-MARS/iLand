@@ -337,7 +337,7 @@ namespace iLand.Input
         private int LoadSingleTreeList(Project projectFile, Landscape landscape, ResourceUnit ru, string treeFileContent, string fileName)
         {
             PointF ruOffset = ru.BoundingBox.TopLeft();
-            TreeSpeciesSet speciesSet = ru.TreeSpeciesSet; // of default RU
+            TreeSpeciesSet speciesSet = ru.Trees.TreeSpeciesSet; // of default RU
 
             string trimmedList = treeFileContent;
             // cut out the <trees> </trees> part if present
@@ -359,12 +359,12 @@ namespace iLand.Input
             {
                 dbhColumn = infile.GetColumnIndex("dbh");
             }
-            double heightConversionFactor = 100.0; // cm to m
+            float heightConversionFactor = 0.01F; // cm to m
             int heightColumn = infile.GetColumnIndex("treeheight");
             if (heightColumn < 0)
             {
                 heightColumn = infile.GetColumnIndex("height");
-                heightConversionFactor = 1.0; // input is in meters
+                heightConversionFactor = 1.0F; // input is in meters
             }
             int speciesColumn = infile.GetColumnIndex("species");
             int ageColumnIndex = infile.GetColumnIndex("age");
@@ -376,7 +376,7 @@ namespace iLand.Input
             int treeCount = 0;
             for (int rowIndex = 1; rowIndex < infile.RowCount; rowIndex++)
             {
-                double dbh = Double.Parse(infile.GetValue(dbhColumn, rowIndex));
+                float dbh = Single.Parse(infile.GetValue(dbhColumn, rowIndex));
                 //if (dbh<5.)
                 //    continue;
                 PointF physicalPosition = new PointF();
@@ -394,12 +394,12 @@ namespace iLand.Input
                 string speciesID = infile.GetValue(speciesColumn, rowIndex);
                 if (Int32.TryParse(speciesID, out int picusID))
                 {
-                    int idx = PicusSpeciesIDs.IndexOf(picusID);
+                    int idx = StandReader.PicusSpeciesIDs.IndexOf(picusID);
                     if (idx == -1)
                     {
                         throw new NotSupportedException("Invalid Picus species id " + picusID);
                     }
-                    speciesID = iLandSpeciesIDs[idx];
+                    speciesID = StandReader.iLandSpeciesIDs[idx];
                 }
                 TreeSpecies species = speciesSet.GetSpecies(speciesID);
                 if (ru == null || species == null)
@@ -407,16 +407,18 @@ namespace iLand.Input
                     throw new NotSupportedException(String.Format("Loading init-file: either resource unit or species invalid. Species: {0}", speciesID));
                 }
 
-                int treeIndex = ru.AddTree(landscape, speciesID);
-                Trees treesOfSpecies = ru.TreesBySpeciesID[species.ID];
+                int treeIndex = ru.Trees.AddTree(landscape, speciesID);
+                Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[species.ID];
                 treesOfSpecies.SetLightCellIndex(treeIndex, physicalPosition);
                 if (idColumn >= 0)
                 {
-                    treesOfSpecies.ID[treeIndex] = Int32.Parse(infile.GetValue(idColumn, rowIndex));
+                    // override default of ID = count of trees currently on resource unit
+                    // So long as all trees are specified from a tree list and AddTree() isn't called later then IDs will remain unique.
+                    treesOfSpecies.Tag[treeIndex] = Int32.Parse(infile.GetValue(idColumn, rowIndex));
                 }
 
-                treesOfSpecies.Dbh[treeIndex] = (float)dbh;
-                treesOfSpecies.SetHeight(treeIndex, Single.Parse(infile.GetValue(heightColumn, rowIndex)) / (float)heightConversionFactor); // convert from Picus-cm to m if necessary
+                treesOfSpecies.Dbh[treeIndex] = dbh;
+                treesOfSpecies.SetHeight(treeIndex, heightConversionFactor * Single.Parse(infile.GetValue(heightColumn, rowIndex))); // convert from Picus-cm to m if necessary
 
                 int age = 0;
                 if (ageColumnIndex >= 0)
@@ -463,14 +465,14 @@ namespace iLand.Input
             {
                 // exeucte the initialization based on single resource units
                 this.InitializeResourceUnit(projectFile, landscape, randomGenerator, ru);
-                ru.RemoveDeadTrees(); // TODO: is this necessary?
+                ru.Trees.RemoveDeadTrees(); // TODO: is this necessary?
             }
             return treeCount;
         }
 
         public int ParseInitFile(string content, string fileName, ResourceUnit ru = null)
         {
-            TreeSpeciesSet speciesSet = ru.TreeSpeciesSet; // of default RU
+            TreeSpeciesSet speciesSet = ru.Trees.TreeSpeciesSet; // of default RU
             Debug.Assert(speciesSet != null);
 
             //DebugTimer t("loadiLandFile");
@@ -635,8 +637,8 @@ namespace iLand.Input
                 for (int item = 0; item < initItem.Count; ++item)
                 {
                     // create trees
-                    int treeIndex = ru.AddTree(landscape, initItem.Species.ID);
-                    Trees treesOfSpecies = ru.TreesBySpeciesID[initItem.Species.ID];
+                    int treeIndex = ru.Trees.AddTree(landscape, initItem.Species.ID);
+                    Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[initItem.Species.ID];
                     treesOfSpecies.Dbh[treeIndex] = (float)randomGenerator.GetRandomDouble(initItem.DbhFrom, initItem.DbhTo);
                     treesOfSpecies.SetHeight(treeIndex, 0.001F * treesOfSpecies.Dbh[treeIndex] * (float)initItem.HeightDiameterRatio); // dbh from cm->m, *hd-ratio -> meter height
                     treesOfSpecies.Species = initItem.Species;
@@ -668,7 +670,7 @@ namespace iLand.Input
                         treesInCell = new MutableTuple<Trees, List<int>>(treesOfSpecies, new List<int>());
                         treeIndexByHeightCellIndex.Add(randomHeightCellIndex, treesInCell);
                     }
-                    treesInCell.Item2.Add(treesOfSpecies.ID[treeIndex]); // store tree in map
+                    treesInCell.Item2.Add(treesOfSpecies.Tag[treeIndex]); // store tree in map
 
                     MutableTuple<int, double> resourceUnitBasalArea = resourceUnitBasalAreaByHeightCellIndex[randomHeightCellIndex];
                     resourceUnitBasalArea.Item2 += treesOfSpecies.GetBasalArea(treeIndex); // aggregate the basal area for each 10m pixel
@@ -732,7 +734,7 @@ namespace iLand.Input
                         Maths.SetBit(ref bits, index, true); // mark position as used
                     }
                     // get position from fixed lists (one for even, one for uneven resource units)
-                    int pos = ru.GridIndex % Constant.LightSize != 0 ? EvenList[index] : UnevenList[index];
+                    int pos = ru.ResourceUnitGridIndex % Constant.LightSize != 0 ? EvenList[index] : UnevenList[index];
                     // position of resource unit + position of 10x10m pixel + position within 10x10m pixel
                     Point lightCellIndex = new Point(offsetIdx.X + Constant.LightCellsPerHeightSize * (heightCellIndex / Constant.HeightSize) + pos / Constant.LightCellsPerHeightSize,
                                                      offsetIdx.Y + Constant.LightCellsPerHeightSize * (heightCellIndex % Constant.HeightSize) + pos % Constant.LightCellsPerHeightSize);
@@ -873,8 +875,8 @@ namespace iLand.Input
 
                     // create a tree
                     ResourceUnit ru = heightCells[key].ResourceUnit;
-                    Trees trees = ru.TreesBySpeciesID[item.Species.ID];
-                    int treeIndex = ru.AddTree(landscape, item.Species.ID);
+                    Trees trees = ru.Trees.TreesBySpeciesID[item.Species.ID];
+                    int treeIndex = ru.Trees.AddTree(landscape, item.Species.ID);
                     trees.Dbh[treeIndex] = (float)randomGenerator.GetRandomDouble(item.DbhFrom, item.DbhTo);
                     trees.SetHeight(treeIndex, trees.Dbh[treeIndex] / 100.0F * (float)item.HeightDiameterRatio); // dbh from cm->m, *hd-ratio -> meter height
                     trees.Species = item.Species;
@@ -941,7 +943,7 @@ namespace iLand.Input
                         Maths.SetBit(ref bits, index, true); // mark position as used
                     }
                     // get position from fixed lists (one for even, one for uneven resource units)
-                    int pos = heightCell.ResourceUnit.GridIndex % Constant.LightSize != 0 ? StandReader.EvenList[index] : StandReader.UnevenList[index];
+                    int pos = heightCell.ResourceUnit.ResourceUnitGridIndex % Constant.LightSize != 0 ? StandReader.EvenList[index] : StandReader.UnevenList[index];
                     Point lightCellIndex = new Point(heightCell.CellPosition.X * Constant.LightCellsPerHeightSize + pos / Constant.LightCellsPerHeightSize, // convert to LIF index
                                                      heightCell.CellPosition.Y * Constant.LightCellsPerHeightSize + pos % Constant.LightCellsPerHeightSize);
                     if (landscape.LightGrid.Contains(lightCellIndex) == false)
@@ -1152,10 +1154,10 @@ namespace iLand.Input
                         }
                     }
                     Point lightCellIndex = lightGrid.GetCellPosition(lightCellIndexAndValues[randomIndex].Key);
-                    SaplingCell saplingCell = model.Landscape.Saplings.GetCell(model.Landscape, lightCellIndex, true, out ResourceUnit ru);
+                    SaplingCell saplingCell = model.Landscape.GetSaplingCell(lightCellIndex, true, out ResourceUnit ru);
                     if (saplingCell != null)
                     {
-                        TreeSpecies species = ru.TreeSpeciesSet.GetSpecies(init.GetValue(speciesIndex, row));
+                        TreeSpecies species = ru.Trees.TreeSpeciesSet.GetSpecies(init.GetValue(speciesIndex, row));
                         Sapling sapling = saplingCell.AddSaplingIfSlotFree(height, age, species.Index);
                         if (sapling != null)
                         {

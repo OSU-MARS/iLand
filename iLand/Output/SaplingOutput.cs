@@ -53,9 +53,9 @@ namespace iLand.Output
                     }
                 }
 
-                foreach (ResourceUnitSpecies rus in ru.TreeSpecies)
+                foreach (ResourceUnitTreeSpecies rus in ru.Trees.SpeciesPresentOnResourceUnit)
                 {
-                    ResourceUnitSpeciesStatistics stat = rus.Statistics;
+                    ResourceUnitTreeStatistics stat = rus.Statistics;
                     SaplingProperties sap = rus.SaplingStats;
 
                     if (stat.SaplingCount == 0)
@@ -63,7 +63,7 @@ namespace iLand.Output
                         continue;
                     }
                     insertRow.Parameters[0].Value = model.CurrentYear;
-                    insertRow.Parameters[1].Value = ru.GridIndex;
+                    insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
                     insertRow.Parameters[3].Value = rus.Species.ID; // keys
 

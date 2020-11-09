@@ -30,12 +30,12 @@ namespace iLand.Test
                 {
                     initialDiameters.Clear();
                     initialHeights.Clear();
-                    foreach (Trees treesOfSpecies in kalkalpen.Landscape.ResourceUnits[0].TreesBySpeciesID.Values)
+                    foreach (Trees treesOfSpecies in kalkalpen.Landscape.ResourceUnits[0].Trees.TreesBySpeciesID.Values)
                     {
                         for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                         {
-                            initialDiameters.Add(treesOfSpecies.ID[treeIndex], treesOfSpecies.Dbh[treeIndex]);
-                            initialHeights.Add(treesOfSpecies.ID[treeIndex], treesOfSpecies.Height[treeIndex]);
+                            initialDiameters.Add(treesOfSpecies.Tag[treeIndex], treesOfSpecies.Dbh[treeIndex]);
+                            initialHeights.Add(treesOfSpecies.Tag[treeIndex], treesOfSpecies.Height[treeIndex]);
                         }
                     }
 
@@ -54,17 +54,17 @@ namespace iLand.Test
                         //ru.Trees;
                         //ru.Variables;
                         Assert.IsTrue(kalkalpen.Landscape.ResourceUnitGrid.PhysicalExtent.Contains(ru.BoundingBox));
-                        Assert.IsTrue((ru.AverageAging > 0.0) && (ru.AverageAging < 1.0));
                         Assert.IsTrue((ru.BoundingBox.Height == Constant.RUSize) && (ru.BoundingBox.Width == Constant.RUSize) &&
                                       (ru.BoundingBox.X == 0.0F) && (MathF.Abs(ru.BoundingBox.Y % 100.0F) < 0.001F));
-                        Assert.IsTrue((ru.EffectiveAreaPerWla > 0.0) && (ru.EffectiveAreaPerWla <= 1.0));
                         Assert.IsTrue(ru.EnvironmentID >= 0);
-                        Assert.IsTrue(ru.GridIndex >= 0);
-                        Assert.IsTrue((ru.LriModifier > 0.0) && (ru.LriModifier <= 1.0));
-                        Assert.IsTrue((ru.PhotosyntheticallyActiveArea > 0.0) && (ru.PhotosyntheticallyActiveArea <= Constant.RUArea));
-                        Assert.IsTrue(ru.StockableArea == Constant.RUArea);
-                        Assert.IsTrue((ru.StockedArea > 0.0) && (ru.StockedArea <= Constant.RUArea));
-                        Assert.IsTrue((ru.TotalLeafArea > 0.0) && (ru.TotalLeafArea < 20.0 * Constant.RUArea));
+                        Assert.IsTrue(ru.ResourceUnitGridIndex >= 0);
+                        Assert.IsTrue(ru.AreaInLandscape == Constant.RUArea);
+                        Assert.IsTrue((ru.AreaWithTrees > 0.0) && (ru.AreaWithTrees <= Constant.RUArea));
+                        Assert.IsTrue((ru.Trees.AverageLeafAreaWeightedAgingFactor > 0.0) && (ru.Trees.AverageLeafAreaWeightedAgingFactor < 1.0));
+                        Assert.IsTrue((ru.Trees.AverageLightRelativeIntensity > 0.0) && (ru.Trees.AverageLightRelativeIntensity <= 1.0));
+                        Assert.IsTrue((ru.Trees.PhotosyntheticallyActiveArea > 0.0) && (ru.Trees.PhotosyntheticallyActiveArea <= Constant.RUArea));
+                        Assert.IsTrue((ru.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea > 0.0) && (ru.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea <= 1.0));
+                        Assert.IsTrue((ru.Trees.TotalLeafArea > 0.0) && (ru.Trees.TotalLeafArea < 20.0F * Constant.RUArea));
                     }
 
                     Assert.IsTrue(kalkalpen.Landscape.ResourceUnits.Count == 2);
@@ -73,12 +73,12 @@ namespace iLand.Test
                     finalDiameters.Clear();
                     finalHeights.Clear();
 
-                    foreach (Trees treesOfSpecies in kalkalpen.Landscape.ResourceUnits[0].TreesBySpeciesID.Values)
+                    foreach (Trees treesOfSpecies in kalkalpen.Landscape.ResourceUnits[0].Trees.TreesBySpeciesID.Values)
                     {
                         for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                         {
-                            finalDiameters.Add(treesOfSpecies.ID[treeIndex], treesOfSpecies.Dbh[treeIndex]);
-                            finalHeights.Add(treesOfSpecies.ID[treeIndex], treesOfSpecies.Height[treeIndex]);
+                            finalDiameters.Add(treesOfSpecies.Tag[treeIndex], treesOfSpecies.Dbh[treeIndex]);
+                            finalHeights.Add(treesOfSpecies.Tag[treeIndex], treesOfSpecies.Height[treeIndex]);
 
                             Assert.IsTrue((treesOfSpecies.Age[treeIndex] > 0 + year) && (treesOfSpecies.Age[treeIndex] < 100 + year));
                             Assert.IsTrue(treesOfSpecies.GetBasalArea(treeIndex) > 0.0);
@@ -101,7 +101,7 @@ namespace iLand.Test
                             Assert.IsTrue(treesOfSpecies.IsMarkedForHarvest(treeIndex) == false);
                             Assert.IsTrue(treesOfSpecies.GetStemVolume(treeIndex) > 0.0F);
                             Assert.IsTrue((treesOfSpecies.Height[treeIndex] > 0.0F) && (treesOfSpecies.Height[treeIndex] < 100.0F));
-                            Assert.IsTrue((treesOfSpecies.ID[treeIndex] > 0) && (treesOfSpecies.ID[treeIndex] < 40));
+                            Assert.IsTrue((treesOfSpecies.Tag[treeIndex] > 0) && (treesOfSpecies.Tag[treeIndex] < 40));
                             Assert.IsTrue((treesOfSpecies.LeafArea[treeIndex] > 0.0F) && (treesOfSpecies.LeafArea[treeIndex] < 1000.0F));
                             // Assert.IsTrue((tree.LightCellPosition);
                             Assert.IsTrue((treesOfSpecies.LightResourceIndex[treeIndex] > 0.0F) && (treesOfSpecies.LightResourceIndex[treeIndex] <= 1.0F));
@@ -120,9 +120,9 @@ namespace iLand.Test
                     }
 
                     int minimumTreeCount = 30 - 2 * year - 3; // TODO: wide tolerance required due to stochastic mortality
-                    int resourceUnit0treeSpeciesCount = kalkalpen.Landscape.ResourceUnits[0].TreesBySpeciesID.Count;
+                    int resourceUnit0treeSpeciesCount = kalkalpen.Landscape.ResourceUnits[0].Trees.TreesBySpeciesID.Count;
                     Assert.IsTrue(resourceUnit0treeSpeciesCount >= minimumTreeCount);
-                    Assert.IsTrue(kalkalpen.Landscape.ResourceUnits[1].TreesBySpeciesID.Count >= minimumTreeCount);
+                    Assert.IsTrue(kalkalpen.Landscape.ResourceUnits[1].Trees.TreesBySpeciesID.Count >= minimumTreeCount);
                     Assert.IsTrue(initialDiameters.Count >= minimumTreeCount);
                     Assert.IsTrue(initialHeights.Count >= minimumTreeCount);
                     Assert.IsTrue(finalDiameters.Count >= minimumTreeCount);
@@ -213,7 +213,7 @@ namespace iLand.Test
                 Assert.IsTrue(plot14.Landscape.ResourceUnits.Count == 1);
                 float gpp = 0.0F;
                 double npp = 0.0;
-                foreach (ResourceUnitSpecies treeSpecies in plot14.Landscape.ResourceUnits[0].TreeSpecies)
+                foreach (ResourceUnitTreeSpecies treeSpecies in plot14.Landscape.ResourceUnits[0].Trees.SpeciesPresentOnResourceUnit)
                 {
                     gpp += treeSpecies.BiomassGrowth.AnnualGpp;
                     npp += treeSpecies.Statistics.Npp;
@@ -222,7 +222,7 @@ namespace iLand.Test
                 nppByYear.Add(npp);
 
                 double volume = 0.0;
-                foreach (Trees treesOfSpecies in plot14.Landscape.ResourceUnits[0].TreesBySpeciesID.Values)
+                foreach (Trees treesOfSpecies in plot14.Landscape.ResourceUnits[0].Trees.TreesBySpeciesID.Values)
                 {
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                     {
@@ -380,7 +380,7 @@ namespace iLand.Test
 
         private void VerifyMalcolmKnappDouglasFir(Model model)
         {
-            TreeSpecies douglasFir = model.Landscape.ResourceUnits[0].TreeSpeciesSet.GetSpecies(0);
+            TreeSpecies douglasFir = model.Landscape.ResourceUnits[0].Trees.TreeSpeciesSet.GetSpecies(0);
             Assert.IsTrue(douglasFir.Active);
             Assert.IsTrue(String.Equals(douglasFir.ID, "psme", StringComparison.Ordinal));
             // maximumAge  500
@@ -421,7 +421,7 @@ namespace iLand.Test
             Assert.IsTrue(douglasFir.IsConiferous == true);
             Assert.IsTrue(douglasFir.IsEvergreen == true);
             Assert.IsTrue(douglasFir.IsSeedYear == false);
-            Assert.IsTrue(douglasFir.IsTreeSerotinousRandom(model, 40) == false);
+            Assert.IsTrue(douglasFir.IsTreeSerotinousRandom(model.RandomGenerator, 40) == false);
             // lightResponseClass  2.78
             Assert.IsTrue(Math.Abs(douglasFir.MaxCanopyConductance - 0.017) < 0.001);
             Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menzisii", StringComparison.OrdinalIgnoreCase));
@@ -463,9 +463,9 @@ namespace iLand.Test
 
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                Assert.IsTrue(Object.ReferenceEquals(douglasFir.SpeciesSet, ru.TreeSpeciesSet));
-                Assert.IsTrue(ru.TreeSpeciesSet.SpeciesCount() == 1);
-                Assert.IsTrue(Object.ReferenceEquals(douglasFir, ru.TreeSpeciesSet.ActiveSpecies[0]));
+                Assert.IsTrue(Object.ReferenceEquals(douglasFir.SpeciesSet, ru.Trees.TreeSpeciesSet));
+                Assert.IsTrue(ru.Trees.TreeSpeciesSet.SpeciesCount() == 1);
+                Assert.IsTrue(Object.ReferenceEquals(douglasFir, ru.Trees.TreeSpeciesSet.ActiveSpecies[0]));
             }
         }
 
@@ -550,7 +550,7 @@ namespace iLand.Test
 
         private void VerifyNorwaySpruce(Model model)
         {
-            TreeSpecies species = model.Landscape.ResourceUnits[0].TreeSpeciesSet.GetSpecies("piab");
+            TreeSpecies species = model.Landscape.ResourceUnits[0].Trees.TreeSpeciesSet.GetSpecies("piab");
             Assert.IsTrue(species != null);
 
             // PIAB: 1/(1 + (x/0.55)^2)

@@ -19,7 +19,7 @@ namespace iLand.Tree
         - CO2: @sa SpeciesSet::co2Response() based on ambient CO2 level (climate data), nitrogen and soil water responses (yearly)
         - nitrogen: based on the amount of available nitrogen (yearly)
         */
-    public class ResourceUnitSpeciesResponse
+    public class ResourceUnitTreeSpeciesResponse
     {
         public ResourceUnit ResourceUnit { get; private set; }
         public TreeSpecies Species { get; private set; }
@@ -34,7 +34,7 @@ namespace iLand.Tree
         public float UtilizableRadiationForYear { get; private set; } // yearly sum of utilized radiation (MJ/m2)
         public float[] VpdResponseByMonth { get; private set; } // mean of vpd-response
 
-        public ResourceUnitSpeciesResponse()
+        public ResourceUnitTreeSpeciesResponse()
         {
             this.Species = null;
             this.ResourceUnit = null;
@@ -67,7 +67,7 @@ namespace iLand.Tree
             this.UtilizableRadiationForYear = 0.0F;
         }
 
-        public void Setup(ResourceUnitSpecies ruSpecies)
+        public void Setup(ResourceUnitTreeSpecies ruSpecies)
         {
             this.Species = ruSpecies.Species;
             this.ResourceUnit = ruSpecies.RU;
@@ -80,7 +80,7 @@ namespace iLand.Tree
         /// @param psi_kPa psi of the soil in kPa
         /// @param vpd vapor pressure deficit in kPa
         /// @return minimum of soil water and vpd response
-        public void GetLimitingSoilOrVpdResponse(float psiInKilopascals, float vpd, out float minResponse)
+        public void GetLimitingSoilWaterOrVpdResponse(float psiInKilopascals, float vpd, out float minResponse)
         {
             float waterResponse = this.Species.GetSoilWaterResponse(psiInKilopascals);
             float vpdResponse = this.Species.GetVpdResponse(vpd);

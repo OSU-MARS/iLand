@@ -96,7 +96,7 @@ namespace iLand.World
                 }
                 else
                 {
-                    double value = Double.Parse(line.Substring(line.IndexOf(' ')));
+                    double value = Double.Parse(line[line.IndexOf(' ')..]);
                     if (key == "ncols")
                     {
                         Columns = (int)value;

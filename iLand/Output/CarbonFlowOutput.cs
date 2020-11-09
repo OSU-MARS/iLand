@@ -88,9 +88,9 @@ namespace iLand.Output
                 }
 
 
-                double areaFactor = ru.StockableArea / Constant.RUArea; //conversion factor
-                double npp = ru.Statistics.Npp * Constant.BiomassCFraction; // kg C/ha
-                npp += ru.Statistics.NppSaplings * Constant.BiomassCFraction; // kgC/ha
+                double areaFactor = ru.AreaInLandscape / Constant.RUArea; //conversion factor
+                double npp = ru.Trees.Statistics.Npp * Constant.BiomassCFraction; // kg C/ha
+                npp += ru.Trees.Statistics.NppSaplings * Constant.BiomassCFraction; // kgC/ha
                 
                 // Snag pools are not scaled per ha (but refer to the stockable RU), soil pools and biomass statistics (NPP, ...) 
                 // are scaled.
@@ -107,7 +107,7 @@ namespace iLand.Output
                 if (logIndividualResourceUnits)
                 {
                     insertRow.Parameters[0].Value = model.CurrentYear;
-                    insertRow.Parameters[1].Value = ru.GridIndex;
+                    insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
                     insertRow.Parameters[3].Value = areaFactor;
                     insertRow.Parameters[4].Value = npp / Constant.AutotrophicRespiration; // GPP_act

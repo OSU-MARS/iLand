@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace iLand.Tree
 {
-    public class ResourceUnitSpeciesGrowth
+    public class ResourceUnitTreeSpeciesGrowth
     {
         //  GPP production (yearly) (kg Biomass) per m² (effective area)
         public float AnnualGpp { get; private set; }
@@ -17,11 +17,11 @@ namespace iLand.Tree
         /// fraction of biomass that should be distributed to roots
         public float RootFraction { get; private set; }
         // species specific responses
-        public ResourceUnitSpeciesResponse SpeciesResponse { get; set; }
+        public ResourceUnitTreeSpeciesResponse SpeciesResponse { get; set; }
         // utilizable radiation MJ/m² and month
         public float[] UtilizablePar { get; private set; }
 
-        public ResourceUnitSpeciesGrowth()
+        public ResourceUnitTreeSpeciesGrowth()
         {
             this.AnnualGpp = 0.0F;
             this.MonthlyGpp = new float[Constant.MonthsInYear];

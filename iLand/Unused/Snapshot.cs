@@ -85,7 +85,7 @@ namespace iLand.Output
                 ResourceUnit ru = ruGrid[index];
                 if (ru != null)
                 {
-                    ruIndexGrid[index] = ru.GridIndex;
+                    ruIndexGrid[index] = ru.ResourceUnitGridIndex;
                 }
                 else
                 {
@@ -137,7 +137,7 @@ namespace iLand.Output
                 for (int ruIndex = 0; ruIndex < ruGrid.Count; ++ruIndex)
                 {
                     ResourceUnit ru = ruGrid[ruIndex];
-                    if (ru != null && ru.GridIndex > -1)
+                    if (ru != null && ru.ResourceUnitGridIndex > -1)
                     {
                         int value = (int)grid.GetValue(ruGrid.GetCellCenterPosition(ruIndex));
                         if (value > -1)
@@ -167,7 +167,7 @@ namespace iLand.Output
             // refresh the stand statistics
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                ru.RecreateStandStatistics(true); // true: recalculate statistics
+                ru.Trees.RecalculateStatistics(true); // true: recalculate statistics
             }
 
             Debug.WriteLine("created stand statistics...");
@@ -239,7 +239,7 @@ namespace iLand.Output
                     foreach (int treeIndex in livingTreesInStand[speciesIndex].Item2)
                     {
                         insertTree.Parameters[0].Value = standID;
-                        insertTree.Parameters[1].Value = trees.ID[treeIndex];
+                        insertTree.Parameters[1].Value = trees.Tag[treeIndex];
                         insertTree.Parameters[2].Value = trees.GetCellCenterPoint(treeIndex).X + offset.X;
                         insertTree.Parameters[3].Value = trees.GetCellCenterPoint(treeIndex).Y + offset.Y;
                         insertTree.Parameters[4].Value = trees.Species.ID;
@@ -338,10 +338,10 @@ namespace iLand.Output
                     continue;
                 }
 
-                TreeSpecies species = ru.TreeSpeciesSet.GetSpecies(treeReader.GetInt32(4));
-                int treeIndex = ru.AddTree(model.Landscape, species.ID);
-                Trees treesOfSpecies = ru.TreesBySpeciesID[species.ID];
-                treesOfSpecies.ID[treeIndex] = treeReader.GetInt32(1);
+                TreeSpecies species = ru.Trees.TreeSpeciesSet.GetSpecies(treeReader.GetInt32(4));
+                int treeIndex = ru.Trees.AddTree(model.Landscape, species.ID);
+                Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[species.ID];
+                treesOfSpecies.Tag[treeIndex] = treeReader.GetInt32(1);
                 treesOfSpecies.SetLightCellIndex(treeIndex, treeLocation);
                 treesOfSpecies.Species = species ?? throw new NotSupportedException("loadTrees: Invalid species");
                 treesOfSpecies.Age[treeIndex] = treeReader.GetInt32(5);
@@ -368,7 +368,7 @@ namespace iLand.Output
                 for (SaplingCell saplingCell = saplingRunner.MoveNext(); saplingCell != null; saplingCell = saplingRunner.MoveNext())
                 {
                     existingSaplingsRemoved += saplingCell.GetOccupiedSlotCount();
-                    model.Landscape.Saplings.ClearSaplings(saplingRunner.RU, saplingCell, true);
+                    saplingRunner.RU.ClearSaplings(saplingCell, true);
                 }
 
                 // (2) load saplings from database
@@ -382,7 +382,7 @@ namespace iLand.Output
                     {
                         continue;
                     }
-                    SaplingCell saplingCell = model.Landscape.Saplings.GetCell(model.Landscape, model.Landscape.LightGrid.GetCellIndex(coord), true, out ResourceUnit _);
+                    SaplingCell saplingCell = model.Landscape.GetSaplingCell(model.Landscape.LightGrid.GetCellIndex(coord), true, out ResourceUnit _);
                     if (saplingCell == null)
                     {
                         continue;
@@ -399,7 +399,7 @@ namespace iLand.Output
             }
 
             // clean up
-            model.RemoveDeadTreesAndRecalculateStandStatistics(true);
+            // model.RemoveDeadTreesAndRecalculateStandStatistics(true); TODO: why was this present in C++; loading a snapshot shouldn't modify state?
             Debug.WriteLine("Load snapshot for stand " + standID + ": added " + treesAdded + " trees, saplings (removed/loaded): " + existingSaplingsRemoved + "/" + saplingsAdded);
             return true;
         }
@@ -431,8 +431,8 @@ namespace iLand.Output
             {
                 Trees trees = allTreeEnumerator.CurrentTrees;
                 int treeIndex = allTreeEnumerator.CurrentTreeIndex;
-                treeInsert.Parameters[0].Value = trees.ID[treeIndex];
-                treeInsert.Parameters[1].Value = trees.RU.GridIndex;
+                treeInsert.Parameters[0].Value = trees.Tag[treeIndex];
+                treeInsert.Parameters[1].Value = trees.RU.ResourceUnitGridIndex;
                 treeInsert.Parameters[2].Value = trees.LightCellPosition[treeIndex].X;
                 treeInsert.Parameters[3].Value = trees.LightCellPosition[treeIndex].Y;
                 treeInsert.Parameters[4].Value = trees.Species.ID;
@@ -457,7 +457,7 @@ namespace iLand.Output
             #if DEBUG
             foreach (ResourceUnit ruInList in model.Landscape.ResourceUnits)
             {
-                Debug.Assert(ruInList.TreesBySpeciesID.Count == 0);
+                Debug.Assert(ruInList.Trees.TreesBySpeciesID.Count == 0);
             }
             #endif
 
@@ -489,10 +489,10 @@ namespace iLand.Output
                 }
 
                 // add new tree to the tree list
-                TreeSpecies species = ru.TreeSpeciesSet.GetSpecies(treeReader.GetString(4));
-                int treeIndex = ru.AddTree(model.Landscape, species.ID);
-                Trees treesOfSpecies = ru.TreesBySpeciesID[species.ID];
-                treesOfSpecies.ID[treeIndex] = treeReader.GetInt32(0);
+                TreeSpecies species = ru.Trees.TreeSpeciesSet.GetSpecies(treeReader.GetString(4));
+                int treeIndex = ru.Trees.AddTree(model.Landscape, species.ID);
+                Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[species.ID];
+                treesOfSpecies.Tag[treeIndex] = treeReader.GetInt32(0);
                 treesOfSpecies.LightCellPosition[treeIndex] = new Point(offsetX + treeReader.GetInt32(2) % Constant.LightCellsPerRUsize, // TODO: why modulus?
                                                                         offsetY + treeReader.GetInt32(3) % Constant.LightCellsPerRUsize);
                 treesOfSpecies.Species = species ?? throw new NotSupportedException("Invalid species.");
@@ -549,7 +549,7 @@ namespace iLand.Output
                 World.Soil soil = ru.Soil;
                 if (soil != null)
                 {
-                    soilInsert.Parameters[0].Value = ru.GridIndex;
+                    soilInsert.Parameters[0].Value = ru.ResourceUnitGridIndex;
                     soilInsert.Parameters[1].Value = soil.Parameters.Kyl;
                     soilInsert.Parameters[2].Value = soil.Parameters.Kyr;
                     soilInsert.Parameters[3].Value = soil.InputLabile.C;
@@ -690,7 +690,7 @@ namespace iLand.Output
                 {
                     continue;
                 }
-                snagInsert.Parameters[0].Value = snags.RU.GridIndex;
+                snagInsert.Parameters[0].Value = snags.RU.ResourceUnitGridIndex;
                 snagInsert.Parameters[1].Value = snags.ClimateFactor;
                 snagInsert.Parameters[2].Value = snags.StandingWoodyDebrisByClass[0].C;
                 snagInsert.Parameters[3].Value = snags.StandingWoodyDebrisByClass[0].N;
@@ -864,7 +864,6 @@ namespace iLand.Output
             //    }
 
             //int n = 0, ntotal = 0;
-            Saplings saplings = model.Landscape.Saplings;
             SqliteDataReader saplingReader = saplingQuery.ExecuteReader();
             while (saplingReader.Read())
             {
@@ -875,7 +874,7 @@ namespace iLand.Output
                 {
                     continue;
                 }
-                TreeSpecies species = ru.TreeSpeciesSet.GetSpecies(saplingReader.GetString(columnIndex++));
+                TreeSpecies species = ru.Trees.TreeSpeciesSet.GetSpecies(saplingReader.GetString(columnIndex++));
                 if (species == null)
                 {
                     throw new NotSupportedException("loadSaplings: Invalid species");
@@ -886,19 +885,19 @@ namespace iLand.Output
                 int posX = offsetX + saplingReader.GetInt32(columnIndex++) % Constant.LightCellsPerRUsize;
                 int posY = offsetY + saplingReader.GetInt32(columnIndex++) % Constant.LightCellsPerRUsize;
 
-                SaplingCell saplingCell = saplings.GetCell(model.Landscape, new Point(posX, posY), true, out _);
+                SaplingCell saplingCell = model.Landscape.GetSaplingCell(new Point(posX, posY), true, out _);
                 if (saplingCell == null)
                 {
                     continue;
                 }
 
                 int age = saplingReader.GetInt32(columnIndex++);
-                Sapling st = saplingCell.AddSaplingIfSlotFree(saplingReader.GetFloat(columnIndex++), age, species.Index);
-                if (st == null)
+                Sapling sapling = saplingCell.AddSaplingIfSlotFree(saplingReader.GetFloat(columnIndex++), age, species.Index);
+                if (sapling == null)
                 {
                     continue;
                 }
-                st.StressYears = saplingReader.GetByte(columnIndex++);
+                sapling.StressYears = saplingReader.GetByte(columnIndex++);
                 //++ntotal;
 
                 //if (n < 10000000 && ++n % 10000 == 0)

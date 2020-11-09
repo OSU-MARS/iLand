@@ -281,7 +281,7 @@ namespace iLand.Output
                 }
 
                 int columnIndex = 0;
-                foreach (ResourceUnitSpecies ruSpecies in ru.TreeSpecies)
+                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesPresentOnResourceUnit)
                 {
                     if (bySpecies && ruSpecies.Statistics.TreesPerHectare == 0)
                     {
@@ -299,7 +299,7 @@ namespace iLand.Output
                         }
                         data.Clear();
                         bool hasTrees = false;
-                        Trees treesOfSpecies = ru.TreesBySpeciesID[ruSpecies.Species.ID];
+                        Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[ruSpecies.Species.ID];
                         treeWrapper.Trees = treesOfSpecies;
                         for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                         {
@@ -343,7 +343,7 @@ namespace iLand.Output
                         if (columnIndex == 0)
                         {
                             insertRow.Parameters[0].Value = model.CurrentYear;
-                            insertRow.Parameters[1].Value = ru.GridIndex;
+                            insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                             insertRow.Parameters[2].Value = ru.EnvironmentID;
                             if (bySpecies)
                             {

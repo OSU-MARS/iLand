@@ -35,15 +35,15 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
-                foreach (ResourceUnitSpecies rus in ru.TreeSpecies)
+                foreach (ResourceUnitTreeSpecies rus in ru.Trees.SpeciesPresentOnResourceUnit)
                 {
-                    ResourceUnitSpeciesStatistics stat = rus.StatisticsDead;
+                    ResourceUnitTreeStatistics stat = rus.StatisticsDead;
                     if (stat.TreesPerHectare == 0.0)
                     {
                         continue;
                     }
                     insertRow.Parameters[0].Value = model.CurrentYear;
-                    insertRow.Parameters[1].Value = ru.GridIndex;
+                    insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
                     insertRow.Parameters[3].Value = rus.Species.ID; // keys
                     insertRow.Parameters[4].Value = stat.TreesPerHectare;

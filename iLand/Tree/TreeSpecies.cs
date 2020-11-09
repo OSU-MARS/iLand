@@ -398,7 +398,7 @@ namespace iLand.Tree
            If seeds are produced, this information is stored in a "SeedMap"
           */
         /// check the maturity of the tree and flag the position as seed source appropriately
-        public void DisperseSeeds(Model model, Trees tree, int treeIndex)
+        public void DisperseSeeds(RandomGenerator randomGenerator, Trees tree, int treeIndex)
         {
             if (this.SeedDispersal == null)
             {
@@ -406,7 +406,7 @@ namespace iLand.Tree
             }
 
             // if the tree is considered as serotinous (i.e. seeds need external trigger such as fire)
-            if (this.IsTreeSerotinousRandom(model, tree.Age[treeIndex]))
+            if (this.IsTreeSerotinousRandom(randomGenerator, tree.Age[treeIndex]))
             {
                 return;
             }
@@ -419,7 +419,7 @@ namespace iLand.Tree
         }
 
         /// returns true of a tree with given age/height is serotinous (i.e. seed release after fire)
-        public bool IsTreeSerotinousRandom(Model model, int age)
+        public bool IsTreeSerotinousRandom(RandomGenerator randomGenerator, int age)
         {
             if (mSerotiny.IsEmpty)
             {
@@ -427,7 +427,7 @@ namespace iLand.Tree
             }
             // the function result (e.g. from a logistic regression model, e.g. Schoennagel 2013) is interpreted as probability
             double pSerotinous = mSerotiny.Evaluate(age);
-            return model.RandomGenerator.GetRandomDouble() < pSerotinous;
+            return randomGenerator.GetRandomDouble() < pSerotinous;
         }
 
         /** newYear is called by the SpeciesSet at the beginning of a year before any growth occurs.

@@ -12,7 +12,7 @@
     <Copyright>Copyright © 2020 Oregon State University</Copyright>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Platforms>x64</Platforms>
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>9.0</LangVersion>
     <Description>A C# port of the iLand 1.0 (2016) spatial growth and yield model created by Rupert Seidl and Werner Rammer.</Description>
     <AssemblyName>iLand</AssemblyName>
   </PropertyGroup>

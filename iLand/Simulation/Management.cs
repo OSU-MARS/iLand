@@ -337,7 +337,7 @@ namespace iLand.Simulation
                 List<int> treeIndicesInSpecies = null;
                 foreach (int treeID in treeIDlist)
                 {
-                    int treeIndex = trees.ID.IndexOf(treeID);
+                    int treeIndex = trees.Tag.IndexOf(treeID);
                     if (treeIndex > -1)
                     {
                         if (treeIndicesInSpecies == null)
@@ -465,10 +465,10 @@ namespace iLand.Simulation
             {
                 if (standGrid.GetStandIDFromLightCoordinate(runner.GetCellPosition()) == key)
                 {
-                    SaplingCell saplingCell = model.Landscape.Saplings.GetCell(model.Landscape, runner.GetCellPosition(), true, out ResourceUnit ru);
+                    SaplingCell saplingCell = model.Landscape.GetSaplingCell(runner.GetCellPosition(), true, out ResourceUnit ru);
                     if (saplingCell != null)
                     {
-                        model.Landscape.Saplings.ClearSaplings(ru, saplingCell, true);
+                        ru.ClearSaplings(saplingCell, true);
                     }
                 }
             }
