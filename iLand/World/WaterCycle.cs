@@ -1,9 +1,9 @@
-﻿using iLand.Input;
+﻿#nullable disable
+using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Tools;
 using iLand.Tree;
 using System;
-using System.Diagnostics;
 
 namespace iLand.World
 {
@@ -21,7 +21,7 @@ namespace iLand.World
         private float mPsi_koeff_b; // see psiFromHeight()
         private float mPsi_sat; // see psiFromHeight(), kPa
         private float mTheta_sat; // see psiFromHeight(), [-], m3/m3
-        private ResourceUnit mRU; // resource unit to which this watercycle is connected
+        private readonly ResourceUnit mRU; // resource unit to which this watercycle is connected
         private readonly SnowPack mSnowPack; // object representing the snow cover (aggregation, melting)
         private float mPermanentWiltingPoint; // bucket "height" of PWP (is fixed to -4MPa) (mm)
         private float mLaiNeedle;
@@ -40,8 +40,9 @@ namespace iLand.World
         public double TotalEvapotranspiration { get; set; } // annual sum of evapotranspiration (mm)
         public double TotalRunoff { get; set; } // annual sum of water loss due to lateral outflow/groundwater flow (mm)
 
-        public WaterCycle(Project projectFile)
+        public WaterCycle(Project projectFile, ResourceUnit ru)
         {
+            this.mRU = ru;
             this.mSnowPack = new SnowPack();
 
             this.Canopy = new Canopy(projectFile.Model.Settings.AirDensity);
@@ -57,9 +58,8 @@ namespace iLand.World
             this.mSnowPack.WaterEquivalent = snowWaterEquivalentInMM; 
         }
 
-        public void Setup(Project projectFile, EnvironmentReader environmentReader, ResourceUnit ru)
+        public void Setup(Project projectFile, EnvironmentReader environmentReader)
         {
-            this.mRU = ru;
             // get values...
             this.FieldCapacity = 0.0F; // on top
             this.SoilDepth = 10.0F * environmentReader.CurrentSoilDepth.Value; // convert from cm to mm TODO: zero is not a realistic default
@@ -148,7 +148,7 @@ namespace iLand.World
             this.mLaiBroadleaved = 0.0F;
             this.CanopyConductance = 0.0F;
             const float groundVegetationCC = 0.02F;
-            foreach (ResourceUnitTreeSpecies ruSpecies in mRU.Trees.SpeciesPresentOnResourceUnit) 
+            foreach (ResourceUnitTreeSpecies ruSpecies in this.mRU.Trees.SpeciesAvailableOnResourceUnit) 
             {
                 float lai = ruSpecies.Statistics.LeafAreaIndex;
                 if (ruSpecies.Species.IsConiferous)
@@ -187,7 +187,7 @@ namespace iLand.World
         /// calculate responses for ground vegetation, i.e. for "unstocked" areas.
         /// this duplicates calculations done in Species.
         /// @return Minimum of vpd and soilwater response for default
-        private float GetLimitingWaterVpdResponse(float psiInKilopascals, float vpdInKilopascals)
+        private static float GetLimitingWaterVpdResponse(float psiInKilopascals, float vpdInKilopascals)
         {
             // constant parameters used for ground vegetation:
             const float mPsiMin = 1.5F; // MPa
@@ -206,7 +206,7 @@ namespace iLand.World
         {
             float soilAtmosphereResponse = 0.0F; // LAI weighted minimum response for all speices on the RU
             float totalLaiFactor = 0.0F;
-            foreach (ResourceUnitTreeSpecies ruSpecies in mRU.Trees.SpeciesPresentOnResourceUnit)
+            foreach (ResourceUnitTreeSpecies ruSpecies in this.mRU.Trees.SpeciesAvailableOnResourceUnit)
             {
                 if (ruSpecies.LaiFraction > 0.0F)
                 {
@@ -220,7 +220,7 @@ namespace iLand.World
             if (totalLaiFactor < 1.0F)
             {
                 // the LAI is below 1: the rest is considered as "ground vegetation"
-                soilAtmosphereResponse += this.GetLimitingWaterVpdResponse(psiInKilopascals, vpdInKilopascals) * (1.0F - totalLaiFactor);
+                soilAtmosphereResponse += WaterCycle.GetLimitingWaterVpdResponse(psiInKilopascals, vpdInKilopascals) * (1.0F - totalLaiFactor);
             }
 
             // add an aging factor to the total response (averageAging: leaf area weighted mean aging value):

@@ -1,5 +1,5 @@
-﻿using iLand.Input;
-using iLand.Simulation;
+﻿#nullable disable
+using iLand.Input;
 using iLand.Tools;
 using System;
 using System.Diagnostics;
@@ -12,9 +12,8 @@ namespace iLand.World
         */
     public class Soil
     {
-        public ResourceUnit mRU; // link to containing resource unit
-
         public SoilParameters Parameters { get; private set; }
+        public ResourceUnit RU { get; private set; } // link to containing resource unit
 
         public float ClimateDecompositionFactor { get; set; } // set the climate decomposition factor for the current year
         public CarbonNitrogenTuple FluxToAtmosphere { get; private set; } // total flux due to heterotrophic respiration kg/ha
@@ -28,7 +27,7 @@ namespace iLand.World
 
         public Soil(EnvironmentReader environmentReader, ResourceUnit ru)
         {
-            this.mRU = ru;
+            this.RU = ru;
 
             // see Xenakis 2008 for parameter definitions
             // Xenakis G, Raya D, Maurizio M. 2008. Sensitivity and uncertainty analysis from a coupled 3-PG and soil organic matter 
@@ -55,8 +54,8 @@ namespace iLand.World
             this.ClimateDecompositionFactor = 0.0F;
             this.FluxToAtmosphere = new CarbonNitrogenTuple();
             this.FluxToDisturbance = new CarbonNitrogenTuple();
-            this.InputLabile = null;
-            this.InputRefractory = null;
+            this.InputLabile = new CarbonNitrogenPool();
+            this.InputRefractory = new CarbonNitrogenPool();
             // ICBM/2 "old" carbon pool: humified soil organic content
             this.OrganicMatter = new CarbonNitrogenTuple(0.001F * environmentReader.CurrentSoilOrganicC.Value, // environment values are in kg/ha, pool sizes are in t/ha
                                                          0.001F * environmentReader.CurrentSoilOrganicN.Value);
@@ -97,7 +96,7 @@ namespace iLand.World
             // stockable area:
             // if the stockable area is < 1ha, then
             // scale the soil inputs to a full hectare
-            float area_ha = mRU != null ? mRU.AreaInLandscape / Constant.RUArea : 1.0F;
+            float area_ha = RU != null ? RU.AreaInLandscape / Constant.RUArea : 1.0F;
             if (area_ha <= 0.0)
             {
                 throw new NotSupportedException("Resource unit's stockable area is zero or negative.");
@@ -125,7 +124,7 @@ namespace iLand.World
             // checks
             if (this.ClimateDecompositionFactor == 0.0)
             {
-                throw new NotSupportedException("Climate decomposition factor is zero for resource unit " + mRU.ResourceUnitGridIndex + ".");
+                throw new NotSupportedException("Climate decomposition factor is zero for resource unit " + RU.ResourceUnitGridIndex + ".");
             }
 
             float timestep = Constant.TimeStepInYears; // 1 year (annual)

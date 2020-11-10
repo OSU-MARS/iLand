@@ -5,13 +5,13 @@ namespace iLand.Input.ProjectFile
     public class Climate : XmlSerializable
     {
         public float CO2ConcentrationInPpm { get; private set; }
-        public string TableName { get; private set; }
+        public string? TableName { get; private set; }
         public int BatchYears { get; private set; }
         public float TemperatureShift { get; private set; }
         public float PrecipitationMultiplier { get; private set; }
         public bool RandomSamplingEnabled { get; private set; }
-        public string RandomSamplingList { get; private set; }
-        public string Filter { get; private set; }
+        public string? RandomSamplingList { get; private set; }
+        public string? Filter { get; private set; }
 
         public Climate()
         {

@@ -6,12 +6,12 @@ namespace iLand.Input.ProjectFile
     {
 		public SeedBelt SeedBelt { get; private set; }
         public bool DumpSeedMapsEnabled { get; private set; }
-		public string DumpSeedMapsPath { get; private set; }
-		public string ExternalSeedBackgroundInput { get; private set; }
+		public string? DumpSeedMapsPath { get; private set; }
+		public string? ExternalSeedBackgroundInput { get; private set; }
 		public bool ExternalSeedEnabled { get; private set; }
-		public string ExternalSeedSource { get; private set; }
-		public string ExternalSeedSpecies { get; private set; }
-		public string ExternalSeedBuffer { get; private set; }
+		public string? ExternalSeedSource { get; private set; }
+		public string? ExternalSeedSpecies { get; private set; }
+		public string? ExternalSeedBuffer { get; private set; }
 		public double RecruitmentDimensionVariation { get; private set; }
 		public LongDistanceDispersal LongDistanceDispersal { get; private set; }
 		

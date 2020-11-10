@@ -1,4 +1,5 @@
 ﻿using iLand.World;
+using System;
 using System.Diagnostics;
 using System.Drawing;
 
@@ -10,10 +11,15 @@ namespace iLand.Tree
         private readonly int standID;
         private readonly GridWindowEnumerator<float> standLightRunner;
 
-        public ResourceUnit RU { get; private set; }
+        public ResourceUnit? RU { get; private set; }
 
         public SaplingCellRunner(Landscape landscape, int standID)
         {
+            if (landscape.StandGrid == null)
+            {
+                throw new ArgumentException("Attempt to create a sapling runner on a landscape without stand information.", nameof(landscape));
+            }
+
             this.landscape = landscape;
             this.standID = standID;
             RectangleF standBoundingBox = landscape.StandGrid.GetBoundingBox(standID);
@@ -28,35 +34,22 @@ namespace iLand.Tree
         }
 
         // TODO: change to bool MoveNext()
-        public SaplingCell MoveNext()
+        public SaplingCell? MoveNext()
         {
-            if (standLightRunner == null)
+            Debug.Assert(this.landscape.StandGrid != null);
+            while (this.standLightRunner.MoveNext())
             {
-                return null;
-            }
-            while (standLightRunner.MoveNext())
-            {
-                float n = standLightRunner.Current;
-                if (n == 0.0F)
+                float lightLevel = this.standLightRunner.Current;
+                if (lightLevel == 0.0F)
                 {
                     return null; // end of the bounding box
                 }
-                if (landscape.StandGrid.GetStandIDFromLightCoordinate(standLightRunner.GetCellPosition()) != standID)
+                if (this.landscape.StandGrid.GetStandIDFromLightCoordinate(standLightRunner.GetCellPosition()) != standID)
                 {
                     continue; // pixel does not belong to the target stand
                 }
                 this.RU = landscape.GetResourceUnit(standLightRunner.GetPhysicalPosition());
-                SaplingCell saplingCell = null;
-                if (this.RU != null)
-                {
-                    saplingCell = this.RU.GetSaplingCell(standLightRunner.GetCellPosition());
-                }
-                if (saplingCell != null)
-                {
-                    return saplingCell;
-                }
-                Debug.Fail("Unexected missing SaplingCell.");
-                return null; // TODO: is this correct?
+                return this.RU.GetSaplingCell(standLightRunner.GetCellPosition());
             }
             return null;
         }

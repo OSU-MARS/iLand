@@ -37,7 +37,7 @@ namespace iLand.Tree
         public CarbonNitrogenTuple TotalStanding { get; private set; } // sum of C and N in SWD pools (stems) kg/ha
         public CarbonNitrogenTuple TotalBranchesAndRoots { get; private set; } // sum of C and N in other woody pools (branches + coarse roots) kg/ha
 
-        public Snags(Project projectFile)
+        public Snags(Project projectFile, ResourceUnit ru)
         {
             // class size of snag classes
             // swdDBHClass12: class break between classes 1 and 2 for standing snags (DBH, cm)
@@ -46,7 +46,7 @@ namespace iLand.Tree
             float upperDbhBreak = projectFile.Model.Settings.Soil.SwdDdhClass23;
             if ((lowerDbhBreak < 0.0F) || (lowerDbhBreak >= upperDbhBreak))
             {
-                throw new ArgumentOutOfRangeException(nameof(projectFile.Model.Settings.Soil));
+                throw new ArgumentOutOfRangeException(nameof(projectFile), "Lower diameter class break in ProjectFile.Model.Settings.Soil is either negative or above the upper diameter class break.");
             }
 
             this.mCarbonThresholdByClass = new double[3];
@@ -65,7 +65,7 @@ namespace iLand.Tree
             this.LabileFlux = new CarbonNitrogenPool();
             this.NumberOfSnagsByClass = new float[3];
             this.BranchesAndCoarseRootsByYear = new CarbonNitrogenPool[5];
-            this.RU = null;
+            this.RU = ru;
             this.StandingWoodyDebrisByClass = new CarbonNitrogenPool[] { new CarbonNitrogenPool(), new CarbonNitrogenPool(), new CarbonNitrogenPool() };
             this.TimeSinceDeathByClass = new double[3];
 
@@ -73,8 +73,8 @@ namespace iLand.Tree
             this.FluxToDisturbance = new CarbonNitrogenTuple();
             this.FluxToExtern = new CarbonNitrogenTuple();
             this.RefractoryFlux = new CarbonNitrogenPool();
-            this.TotalBranchesAndRoots = null;
-            this.TotalStanding = null;
+            this.TotalBranchesAndRoots = new CarbonNitrogenTuple();
+            this.TotalStanding = new CarbonNitrogenTuple();
 
             // threshold levels for emptying out the dbh-snag-classes
             // derived from PSME woody allometry, converted to C, with a threshold level set to 10%
@@ -86,40 +86,7 @@ namespace iLand.Tree
             {
                 this.mCarbonThresholdByClass[diameterClass] = 0.10568 * Math.Pow(this.mCarbonThresholdByClass[diameterClass], 2.4247) * 0.5 * 0.1;
             }
-        }
 
-        public bool HasNoCarbon()
-        {
-            return this.LabileFlux.HasNoCarbon() && this.RefractoryFlux.HasNoCarbon() && (this.StandingAndDebrisCarbon == 0.0);
-        }
-
-        /// a tree dies and the biomass of the tree is split between snags/soils/removals
-        /// @param tree the tree to process
-        /// @param stem_to_snag fraction (0..1) of the stem biomass that should be moved to a standing snag
-        /// @param stem_to_soil fraction (0..1) of the stem biomass that should go directly to the soil
-        /// @param branch_to_snag fraction (0..1) of the branch biomass that should be moved to a standing snag
-        /// @param branch_to_soil fraction (0..1) of the branch biomass that should go directly to the soil
-        /// @param foliage_to_soil fraction (0..1) of the foliage biomass that should go directly to the soil
-        public void AddDisturbance(Trees tree, int treeIndex, float stemToSnag, float stemToSoil, float branchToSnag, float branchToSoil, float foliageToSoil) 
-        {
-            AddBiomassPools(tree, treeIndex, stemToSnag, stemToSoil, branchToSnag, branchToSoil, foliageToSoil);
-        }
-
-        private int GetDiameterClassIndex(float dbh)
-        {
-            if (dbh < mDbhLowerBreak)
-            {
-                return 0;
-            }
-            if (dbh > mDbhHigherBreak)
-            {
-                return 2;
-            }
-            return 1;
-        }
-
-        public void Setup(Project projectFile, ResourceUnit ru)
-        {
             this.RU = ru;
             this.ClimateFactor = 0.0F;
             // branches
@@ -164,6 +131,36 @@ namespace iLand.Tree
             {
                 this.BranchesAndCoarseRootsByYear[diameterClass] = other;
             }
+        }
+
+        public bool HasNoCarbon()
+        {
+            return this.LabileFlux.HasNoCarbon() && this.RefractoryFlux.HasNoCarbon() && (this.StandingAndDebrisCarbon == 0.0);
+        }
+
+        /// a tree dies and the biomass of the tree is split between snags/soils/removals
+        /// @param tree the tree to process
+        /// @param stem_to_snag fraction (0..1) of the stem biomass that should be moved to a standing snag
+        /// @param stem_to_soil fraction (0..1) of the stem biomass that should go directly to the soil
+        /// @param branch_to_snag fraction (0..1) of the branch biomass that should be moved to a standing snag
+        /// @param branch_to_soil fraction (0..1) of the branch biomass that should go directly to the soil
+        /// @param foliage_to_soil fraction (0..1) of the foliage biomass that should go directly to the soil
+        public void AddDisturbance(Trees tree, int treeIndex, float stemToSnag, float stemToSoil, float branchToSnag, float branchToSoil, float foliageToSoil) 
+        {
+            AddBiomassPools(tree, treeIndex, stemToSnag, stemToSoil, branchToSnag, branchToSoil, foliageToSoil);
+        }
+
+        private int GetDiameterClassIndex(float dbh)
+        {
+            if (dbh < mDbhLowerBreak)
+            {
+                return 0;
+            }
+            if (dbh > mDbhHigherBreak)
+            {
+                return 2;
+            }
+            return 1;
         }
 
         public void ScaleInitialState()

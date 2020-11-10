@@ -60,7 +60,7 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            string columnString = model.Project.Output.Dynamic.Columns;
+            string? columnString = model.Project.Output.Dynamic.Columns;
             if (String.IsNullOrEmpty(columnString))
             {
                 return;
@@ -106,7 +106,7 @@ namespace iLand.Output
 
                 string sqlColumnName = String.Format("{0}_{1}", columnVariable, columnVariableAggregation);
                 sqlColumnName = Regex.Replace(sqlColumnName, "[\\[\\]\\,\\(\\)<>=!\\s]", "_");
-                sqlColumnName.Replace("__", "_");
+                sqlColumnName = sqlColumnName.Replace("__", "_");
                 this.Columns.Add(new SqlColumn(sqlColumnName, columnVariable, OutputDatatype.Double));
             }
         }
@@ -281,7 +281,7 @@ namespace iLand.Output
                 }
 
                 int columnIndex = 0;
-                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesPresentOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     if (bySpecies && ruSpecies.Statistics.TreesPerHectare == 0)
                     {

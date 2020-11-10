@@ -80,23 +80,23 @@ namespace iLand.World
         /// get pointers the the 4-neighborhood
         /// north, east, west, south
         /// 0-pointers are returned for edge pixels.
-        public void GetNeighbors4(T[] neighborIndicies)
+        public void GetNeighbors4(T?[] neighborIndicies)
         {
             // north:
-            neighborIndicies[0] = CurrentIndex + columnsInWindow + columnsNotInWindow > lastIndex ? default : grid[CurrentIndex + columnsInWindow + columnsNotInWindow];
+            neighborIndicies[0] = this.CurrentIndex + columnsInWindow + columnsNotInWindow > lastIndex ? default : this.grid[CurrentIndex + columnsInWindow + columnsNotInWindow];
             // south:
-            neighborIndicies[3] = CurrentIndex - (columnsInWindow + columnsNotInWindow) < firstIndex ? default : grid[CurrentIndex - (columnsInWindow + columnsNotInWindow)];
+            neighborIndicies[3] = this.CurrentIndex - (columnsInWindow + columnsNotInWindow) < firstIndex ? default : this.grid[CurrentIndex - (columnsInWindow + columnsNotInWindow)];
             // east / west
-            neighborIndicies[1] = currentColumnInWindow + 1 < columnsInWindow ? grid[CurrentIndex + 1] : default;
-            neighborIndicies[2] = currentColumnInWindow > 0 ? grid[CurrentIndex - 1] : default;
+            neighborIndicies[1] = this.currentColumnInWindow + 1 < columnsInWindow ? grid[this.CurrentIndex + 1] : default;
+            neighborIndicies[2] = this.currentColumnInWindow > 0 ? grid[this.CurrentIndex - 1] : default;
         }
 
         /// get pointers to the 8-neighbor-hood
         /// north/east/west/south/NE/NW/SE/SW
         /// 0-pointers are returned for edge pixels.
-        public void GetNeighbors8(T[] neighborIndices)
+        public void GetNeighbors8(T?[] neighborIndices)
         {
-            GetNeighbors4(neighborIndices);
+            this.GetNeighbors4(neighborIndices);
             // north-east
             int northeastIndex = CurrentIndex + columnsInWindow + columnsNotInWindow + 1;
             neighborIndices[4] = grid.Count > northeastIndex ? grid[northeastIndex] : default;

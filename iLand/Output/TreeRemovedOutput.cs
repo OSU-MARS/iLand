@@ -61,16 +61,10 @@ namespace iLand.Output
                 }
             }
 
-            if (this.removedTreesByResourceUnit.TryGetValue(trees.RU, out MutableTuple<Trees, List<MortalityCause>> removedTreesOfSpecies) == false)
+            if (this.removedTreesByResourceUnit.TryGetValue(trees.RU, out MutableTuple<Trees, List<MortalityCause>>? removedTreesOfSpecies) == false)
             {
-                removedTreesOfSpecies = new MutableTuple<Trees, List<MortalityCause>>
-                {
-                    Item1 = new Trees(model.Landscape, trees.RU)
-                    {
-                        Species = trees.Species
-                    },
-                    Item2 = new List<MortalityCause>()
-                };
+                removedTreesOfSpecies = new MutableTuple<Trees, List<MortalityCause>>(new Trees(model.Landscape, trees.RU, trees.Species),
+                                                                                      new List<MortalityCause>());
                 this.removedTreesByResourceUnit.Add(trees.RU, removedTreesOfSpecies);
             }
 

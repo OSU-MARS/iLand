@@ -4,7 +4,7 @@ namespace iLand.Input.ProjectFile
 {
     public class AreaMask : Enablable
     {
-        public string ImageFile { get; private set; }
+        public string? ImageFile { get; private set; }
 
         public AreaMask()
         {

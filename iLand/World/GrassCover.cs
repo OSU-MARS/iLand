@@ -86,7 +86,7 @@ namespace iLand.World
             if (this.mType == GrassAlgorithmType.Pixel)
             {
                 // setup of pixel based / discrete approach
-                string formula = projectFile.Model.Settings.Grass.GrassDuration;
+                string? formula = projectFile.Model.Settings.Grass.GrassDuration;
                 if (String.IsNullOrEmpty(formula))
                 {
                     throw new NotSupportedException("setup(): missing equation for 'grassDuration'.");
@@ -105,7 +105,7 @@ namespace iLand.World
             else
             {
                 // setup of continuous grass concept
-                string grassPotential = projectFile.Model.Settings.Grass.GrassPotential;
+                string? grassPotential = projectFile.Model.Settings.Grass.GrassPotential;
                 if (String.IsNullOrEmpty(grassPotential))
                 {
                     throw new NotSupportedException("Required expression 'grassPotential' is missing.");
@@ -113,7 +113,7 @@ namespace iLand.World
                 this.mGrassPotential.SetExpression(grassPotential);
                 this.mGrassPotential.Linearize(0.0, 1.0, Math.Min(GrassCover.Steps, 1000));
 
-                string grassEffect = projectFile.Model.Settings.Grass.GrassEffect;
+                string? grassEffect = projectFile.Model.Settings.Grass.GrassEffect;
                 if (String.IsNullOrEmpty(grassEffect))
                 {
                     throw new NotSupportedException("Required expression 'grassEffect' is missing.");

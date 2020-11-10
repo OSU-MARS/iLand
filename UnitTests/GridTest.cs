@@ -1,17 +1,14 @@
-﻿using iLand.Simulation;
-using iLand.Tools;
-using iLand.World;
+﻿using iLand.World;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
 
 namespace iLand.Test
 {
     [TestClass]
     public class GridTest : LandTest
     {
-        public TestContext TestContext { get; set; }
+        public TestContext? TestContext { get; set; }
 
-        private Grid<float> CreateAveragedGrid(int cellSize)
+        private static Grid<float> CreateAveragedGrid(int cellSize)
         {
             Grid<float> grid = new Grid<float>();
             grid.Setup(Constant.RUSize / cellSize, Constant.RUSize / cellSize, cellSize);
@@ -37,7 +34,7 @@ namespace iLand.Test
         [TestMethod]
         public void AveragedGrid()
         {
-            Grid<float> averaged = this.CreateAveragedGrid(10);
+            Grid<float> averaged = GridTest.CreateAveragedGrid(10);
             int count = 0;
             for (int index = 0; index < averaged.Count; ++index)
             {

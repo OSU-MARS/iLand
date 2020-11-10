@@ -85,21 +85,16 @@ namespace iLand.World
 
         public static Grid<double> ToDouble(this Grid<int> grid)
         {
-            Grid<double> g = new Grid<double>();
-            g.Setup(grid.PhysicalExtent, grid.CellSize);
-            if (g.IsEmpty())
-            {
-                return g;
-            }
-
+            Grid<double> doubleGrid = new Grid<double>();
+            doubleGrid.Setup(grid.PhysicalExtent, grid.CellSize);
             for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
                 for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
-                    g[xIndex, yIndex] = grid[xIndex, yIndex];
+                    doubleGrid[xIndex, yIndex] = grid[xIndex, yIndex];
                 }
             }
-            return g;
+            return doubleGrid;
         }
     }
 }

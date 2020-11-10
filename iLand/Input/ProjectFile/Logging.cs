@@ -7,8 +7,8 @@ namespace iLand.Input.ProjectFile
     public class Logging : XmlSerializable
     {
 		public bool Flush { get; private set; }
-		public string LogFile { get; private set; }
-		public string LogTarget { get; private set; } // "console" or "file"
+		public string? LogFile { get; private set; }
+		public string? LogTarget { get; private set; } // "console" or "file"
 
 		public Logging()
         {

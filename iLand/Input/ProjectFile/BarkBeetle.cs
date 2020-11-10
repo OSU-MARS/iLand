@@ -8,20 +8,20 @@ namespace iLand.Input.ProjectFile
 		public double BackgroundInfestationProbability { get; private set; }
 		public double StormInfestationProbability { get; private set; }
 		public double BaseWinterMortality { get; private set; }
-		public string WinterMortalityFormula { get; private set; }
-		public string SpreadKernelFormula { get; private set; }
+		public string? WinterMortalityFormula { get; private set; }
+		public string? SpreadKernelFormula { get; private set; }
 		public double SpreadKernelMaxDistance { get; private set; }
 		public int CohortsPerGeneration { get; private set; }
 		public int CohortsPerSisterbrood { get; private set; }
-		public string ColonizeProbabilityFormula { get; private set; }
+		public string? ColonizeProbabilityFormula { get; private set; }
 		public double DeadTreeSelectivity { get; private set; }
-		public string OutbreakClimateSensitivityFormula { get; private set; }
+		public string? OutbreakClimateSensitivityFormula { get; private set; }
 		public int OutbreakDurationMin { get; private set; }
 		public int OutbreakDurationMax { get; private set; }
-		public string OutbreakDurationMortalityFormula { get; private set; }
+		public string? OutbreakDurationMortalityFormula { get; private set; }
 		public double InitialInfestationProbability { get; private set; }
 		public BarkBeetleReferenceClimate ReferenceClimate { get; private set; }
-		public string OnAfterBarkbeetle { get; private set; }
+		public string? OnAfterBarkbeetle { get; private set; }
 
 		public BarkBeetle()
         {

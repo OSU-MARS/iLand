@@ -17,11 +17,9 @@ namespace iLand.Tools
      */
     internal class SpatialAnalysis
     {
-        private RumpleIndex mRumple;
+        private RumpleIndex? mRumple;
         private readonly Grid<float> mCrownCoverGrid;
         private readonly Grid<int> mClumpGrid;
-
-        public List<int> PatchSizes { get; private set; }
 
         public SpatialAnalysis()
         {
@@ -36,7 +34,7 @@ namespace iLand.Tools
             {
                 mRumple = new RumpleIndex();
             }
-            double rum = mRumple.Value(model);
+            double rum = mRumple.GetIndex(model);
             return rum;
         }
 
@@ -141,7 +139,7 @@ namespace iLand.Tools
             {
                 mRumple = new RumpleIndex();
             }
-            File.WriteAllText(model.Project.GetFilePath(ProjectDirectory.Home, fileName), Grid.ToEsriRaster(model.Landscape, mRumple.RumpleGrid(model)));
+            File.WriteAllText(model.Project.GetFilePath(ProjectDirectory.Home, fileName), Grid.ToEsriRaster(model.Landscape, mRumple.GetRumpleGrid(model)));
         }
 
         public void SaveCrownCoverGrid(Model model, string fileName)
@@ -156,33 +154,33 @@ namespace iLand.Tools
 
             // calculate the crown cover per resource unit. We use the "reader"-stamps of the individual trees
             // as they represent the crown (size). We also simply hijack the LIF grid for our calculations.
-            Grid<float> grid = model.Landscape.LightGrid;
-            grid.Fill(0.0F);
+            Grid<float> crownCoverGrid = new Grid<float>(model.Landscape.LightGrid);
+            crownCoverGrid.Fill(0.0F);
             // we simply iterate over all trees of all resource units (not bothering about multithreading here)
             AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model.Landscape);
             while (allTreeEnumerator.MoveNextLiving())
             {
                 // apply the reader-stamp
                 Trees trees = allTreeEnumerator.CurrentTrees;
-                LightStamp reader = trees.Stamp[0].Reader;
-                Point pos_reader = trees.LightCellPosition[0]; // tree position
-                pos_reader.X -= reader.CenterCellPosition;
-                pos_reader.Y -= reader.CenterCellPosition;
-                int reader_size = reader.Size();
-                int rx = pos_reader.X;
-                int ry = pos_reader.Y;
+                LightStamp reader = trees.Stamp[allTreeEnumerator.CurrentTreeIndex]!.Reader!;
+                Point readerOrigin = trees.LightCellPosition[allTreeEnumerator.CurrentTreeIndex]; // tree position
+                readerOrigin.X -= reader.CenterCellPosition;
+                readerOrigin.Y -= reader.CenterCellPosition;
+                int readerSize = reader.Size();
+                int readerOriginX = readerOrigin.X;
+                int readerOriginY = readerOrigin.Y;
                 // the reader stamps are stored such as to have a sum of 1.0 over all pixels
                 // (i.e.: they express the percentage for each cell contributing to the full crown).
                 // we thus calculate a the factor to "blow up" cell values; a fully covered cell has then a value of 1,
                 // and values between 0-1 are cells that are partially covered by the crown.
-                double crown_factor = reader.CrownArea / (double)(Constant.LightSize * Constant.LightSize);
+                float crownAreaInLightCells = reader.CrownArea / (Constant.LightSize * Constant.LightSize);
 
                 // add the reader-stamp values: multiple (partial) crowns can add up to being fully covered
-                for (int y = 0; y < reader_size; ++y)
+                for (int y = 0; y < readerSize; ++y)
                 {
-                    for (int x = 0; x < reader_size; ++x)
+                    for (int x = 0; x < readerSize; ++x)
                     {
-                        grid[rx + x, ry + y] += (float)(reader[x, y] * crown_factor);
+                        crownCoverGrid[readerOriginX + x, readerOriginY + y] += reader[x, y] * crownAreaInLightCells;
                     }
                 }
             }
@@ -196,7 +194,7 @@ namespace iLand.Tools
                     continue;
                 }
                 int cellsWithCrownCoverage = 0;
-                GridWindowEnumerator<float> coverRunner = new GridWindowEnumerator<float>(grid, mCrownCoverGrid.GetCellExtent(mCrownCoverGrid.GetCellPosition(crownIndex)));
+                GridWindowEnumerator<float> coverRunner = new GridWindowEnumerator<float>(crownCoverGrid, mCrownCoverGrid.GetCellExtent(mCrownCoverGrid.GetCellPosition(crownIndex)));
                 while (coverRunner.MoveNext())
                 {
                     float canopyCover = coverRunner.Current;

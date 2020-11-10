@@ -9,7 +9,7 @@ namespace iLand.Input.ProjectFile
         public bool Multithreading { get; private set; }
         public bool DebugOutput { get; private set; }
         public bool DebugOutputAutoSave { get; private set; }
-        public Nullable<int> RandomSeed { get; private set; }
+        public int? RandomSeed { get; private set; }
 
         // linearization of expressions: if true *and* linearize() is explicitely called, then
         // function results will be cached over a defined range of values.

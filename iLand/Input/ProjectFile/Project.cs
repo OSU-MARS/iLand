@@ -26,8 +26,13 @@ namespace iLand.Input.ProjectFile
 			this.ReadXml(reader);
 		}
 
-		public string GetFilePath(ProjectDirectory directory, string fileName)
+		public string GetFilePath(ProjectDirectory directory, string? fileName)
         {
+			if (String.IsNullOrEmpty(fileName))
+            {
+				throw new ArgumentNullException(nameof(fileName));
+            }
+
 			if (directory == ProjectDirectory.Home)
             {
 				return Path.Combine(this.System.Path.Home, fileName);

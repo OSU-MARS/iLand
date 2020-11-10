@@ -37,7 +37,12 @@ namespace iLand.Input.ProjectFile
                         throw new XmlException("Encountered unexpected attributes.");
                     }
 
-                    this.ID = Int32.Parse(reader.GetAttribute("id"));
+                    string? idAsString = reader.GetAttribute("id");
+                    if (String.IsNullOrWhiteSpace(idAsString))
+                    {
+                        throw new XmlException("id attribute of phenology type is empty.");
+                    }
+                    this.ID = Int32.Parse(idAsString);
                     reader.ReadStartElement();
                 }
                 else

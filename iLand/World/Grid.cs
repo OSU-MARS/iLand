@@ -1,5 +1,4 @@
-﻿using iLand.Simulation;
-using iLand.Tools;
+﻿using iLand.Tools;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -25,7 +24,7 @@ namespace iLand.World
         //    return result + line;
         //}
 
-        public static string ToEsriRaster<T>(Landscape landscape, Grid<T> grid)
+        public static string ToEsriRaster<T>(Landscape landscape, Grid<T> grid) where T : notnull
         {
             Vector3D local = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
             landscape.Environment.GisGrid.ModelToWorld(local, out Vector3D world);
@@ -83,7 +82,7 @@ namespace iLand.World
         */
     public class Grid<T>
     {
-        private T[] data;
+        private T[]? data;
 
         /// get the length of one pixel of the grid
         public float CellSize { get; private set; }
@@ -106,49 +105,46 @@ namespace iLand.World
 
         public Grid(int sizeX, int sizeY, float cellSize)
         {
-            data = null;
-            Setup(sizeX, sizeY, cellSize);
+            this.data = null;
+            this.Setup(sizeX, sizeY, cellSize);
         }
 
         public Grid(RectangleF extent, float cellSize)
         {
-            data = null;
-            Setup(extent, cellSize);
+            this.Setup(extent, cellSize);
         }
 
-        public Grid(Grid<T> toCopy)
+        public Grid(Grid<T> other)
         {
-            data = null;
-            PhysicalExtent = toCopy.PhysicalExtent;
-            Setup(toCopy.PhysicalExtent, toCopy.CellSize);
+            this.Setup(other.PhysicalExtent, other.CellSize);
             //setup(toCopy.cellsize(), toCopy.sizeX(), toCopy.sizeY());
-            Array.Copy(toCopy.data, 0, this.data, 0, toCopy.data.Length);
+            Array.Copy(other.data!, 0, this.data!, 0, other.data!.Length);
         }
 
         /// use the square brackets to access by index
-        public T this[int idx]
+        public T this[int index]
         {
-            get { return data[idx]; }
-            set { data[idx] = value; }
+            get { return this.data![index]; }
+            set { this.data![index] = value; }
         }
         /// access (const) with index variables. use int.
-        public T this[int ix, int iy]
+        public T this[int indexX, int indexY]
         {
-            get { return this.data[iy * this.CellsX + ix]; }
-            set { this.data[iy * this.CellsX + ix] = value; }
+            get { return this.data![indexY * this.CellsX + indexX]; }
+            set { this.data![indexY * this.CellsX + indexX] = value; }
         }
 
-        public T this[int ix, int iy, int divisor]
+        public T this[int indexX, int indexY, int divisor]
         {
             get 
             {
-                Debug.Assert(ix >= 0 && iy >= 0 && divisor > 0);
-                return this[ix / divisor, iy / divisor];
+                Debug.Assert(indexX >= 0 && indexY >= 0 && divisor > 0);
+                return this[indexX / divisor, indexY / divisor];
             }
             set
             {
-                Debug.Assert(ix >= 0 && iy >= 0 && divisor > 0);
-                this[ix / divisor, iy / divisor] = value;
+                Debug.Assert(indexX >= 0 && indexY >= 0 && divisor > 0);
+                this[indexX / divisor, indexY / divisor] = value;
             }
         }
 
@@ -232,8 +228,7 @@ namespace iLand.World
             return new Point(index % CellsX, index / CellsX);
         }
 
-        // returns false if the grid was not setup
-        public bool IsEmpty() { return data == null; }
+        public bool IsNotSetup() { return this.data == null; }
         
         /// returns the index of an aligned grid (with the same size and matching origin) with the double cell size (e.g. to scale from a 10m grid to a 20m grid)
         // public int index2(int idx) { return ((idx / mSizeX) / 2) * (mSizeX / 2) + (idx % mSizeX) / 2; }
@@ -263,17 +258,25 @@ namespace iLand.World
 
         public void CopyFrom(Grid<T> source)
         {
-            if (this.CellSize != source.CellSize || this.CellsX != source.CellsX || this.CellsY != source.CellsY || source.Count != this.Count)
+            if ((this.IsNotSetup() == false) || (source.IsNotSetup() == false))
+            {
+                throw new NotSupportedException("Either target or destination grid is not setup.");
+            }
+            if ((this.CellSize != source.CellSize) || (this.CellsX != source.CellsX) || (this.CellsY != source.CellsY) || (source.Count != this.Count))
             {
                 throw new ArgumentOutOfRangeException(nameof(source));
             }
-            // BUGBUG: what about physical extent?
-            Array.Copy(source.data, 0, this.data, 0, source.data.Length);
+            this.PhysicalExtent = source.PhysicalExtent;
+            Array.Copy(source.data!, 0, this.data!, 0, source.data!.Length);
         }
 
-        public void Fill(T value)
+        public void Fill(T? value)
         {
-            Array.Fill(this.data, value);
+            if (this.IsNotSetup())
+            {
+                throw new NotSupportedException();
+            }
+            Array.Fill(this.data!, value);
         }
 
         public bool Setup(Grid<T> source)
@@ -321,22 +324,22 @@ namespace iLand.World
             }
 
             this.PhysicalExtent = extent;
-            int dx = (int)(extent.Width / cellSize);
-            if (this.PhysicalExtent.Left + cellSize * dx < extent.Right)
+            int cellsX = (int)(extent.Width / cellSize);
+            if (this.PhysicalExtent.Left + cellSize * cellsX < extent.Right)
             {
-                ++dx;
+                ++cellsX;
             }
-            int dy = (int)(extent.Height / cellSize);
-            if (this.PhysicalExtent.Top + cellSize * dy < extent.Bottom)
+            int cellsY = (int)(extent.Height / cellSize);
+            if (this.PhysicalExtent.Top + cellSize * cellsY < extent.Bottom)
             {
-                ++dy;
+                ++cellsY;
             }
-            return this.Setup(dx, dy, cellSize);
+            return this.Setup(cellsX, cellsY, cellSize);
         }
 
         public void FillDefault()
         {
-            Fill(default);
+            this.Fill(default);
         }
 
         public float GetCenterToCenterCellDistance(Point p1, Point p2)
@@ -351,17 +354,17 @@ namespace iLand.World
         /// rows will be y-lines, columns x-values. (see grid.cpp)
         public string ToCsv()
         {
-            StringBuilder res = new StringBuilder();
-            res.AppendLine("x_m,y_m,value"); // wrong if value overrides ToString() and returns multiple values
+            StringBuilder csvBuilder = new StringBuilder();
+            csvBuilder.AppendLine("x_m,y_m,value"); // wrong if value overrides ToString() and returns multiple values but OK for now
             for (int xIndex = 0; xIndex < this.CellsX; ++xIndex)
             {
                 for (int yIndex = 0; yIndex < this.CellsY; ++yIndex)
                 {
                     PointF cellCenter = this.GetCellCenterPosition(new Point(xIndex, yIndex));
-                    res.AppendLine(cellCenter.X + "," + cellCenter.Y + "," + this[xIndex, yIndex].ToString());
+                    csvBuilder.AppendLine(cellCenter.X + "," + cellCenter.Y + "," + this[xIndex, yIndex]!.ToString());
                 }
             }
-            return res.ToString();
+            return csvBuilder.ToString();
         }
     }
 }

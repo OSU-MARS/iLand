@@ -1,5 +1,4 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Simulation;
 using System;
 using System.Diagnostics;
 
@@ -21,12 +20,12 @@ namespace iLand.Tree
         // utilizable radiation MJ/m² and month
         public float[] UtilizablePar { get; private set; }
 
-        public ResourceUnitTreeSpeciesGrowth()
+        public ResourceUnitTreeSpeciesGrowth(ResourceUnitTreeSpeciesResponse speciesResponse)
         {
             this.AnnualGpp = 0.0F;
             this.MonthlyGpp = new float[Constant.MonthsInYear];
             this.RootFraction = 0.0F;
-            this.SpeciesResponse = null;
+            this.SpeciesResponse = speciesResponse;
             this.SiteEnvironmentSaplingHeightGrowthMultiplier = 0.0F;
             this.UtilizablePar = new float[Constant.MonthsInYear];
         }

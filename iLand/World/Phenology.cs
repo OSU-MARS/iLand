@@ -114,9 +114,9 @@ namespace iLand.World
                 {
                     continue;
                 }
-                float vpdFactor = 1.0F - this.GetRelativePositionInRange(day.Vpd, mMinVpd, mMaxVpd); // high value for low vpd
-                float tempFactor = this.GetRelativePositionInRange(day.MinTemperature, mMinTemp, mMaxTemp);
-                float dayLengthFactor = this.GetRelativePositionInRange(mClimate.Sun.GetDayLengthInHours(dayOfYear), mMinDayLength, mMaxDayLength);
+                float vpdFactor = 1.0F - Phenology.GetRelativePositionInRange(day.Vpd, mMinVpd, mMaxVpd); // high value for low vpd
+                float tempFactor = Phenology.GetRelativePositionInRange(day.MinTemperature, mMinTemp, mMaxTemp);
+                float dayLengthFactor = Phenology.GetRelativePositionInRange(mClimate.Sun.GetDayLengthInHours(dayOfYear), mMinDayLength, mMaxDayLength);
                 float gsi = vpdFactor * tempFactor * dayLengthFactor; // combined factor of effect of vpd, temperature and day length
                 if (!inside_period && gsi > 0.5)
                 {
@@ -187,7 +187,7 @@ namespace iLand.World
             this.CalculateChillDays();
         }
 
-        private float GetRelativePositionInRange(float value, float minValue, float maxValue)
+        private static float GetRelativePositionInRange(float value, float minValue, float maxValue)
         {
             if (value < minValue)
             {

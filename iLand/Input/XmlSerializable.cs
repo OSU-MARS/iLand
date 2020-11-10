@@ -7,7 +7,7 @@ namespace iLand.Input
 {
     public abstract class XmlSerializable : IXmlSerializable
     {
-        XmlSchema IXmlSerializable.GetSchema()
+        XmlSchema? IXmlSerializable.GetSchema()
         {
             return null;
         }

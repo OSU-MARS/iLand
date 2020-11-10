@@ -18,7 +18,7 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("saplingdetail"))
+            if (reader.IsStartElement("saplingDetail"))
             {
                 reader.Read();
             }

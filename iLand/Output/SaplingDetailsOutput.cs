@@ -16,7 +16,7 @@ namespace iLand.Output
             this.mFilter = new Expression();
 
             this.Name = "Sapling Details Output";
-            this.TableName = "saplingdetail";
+            this.TableName = "saplingDetail";
             this.Description = "Detailed output on indidvidual sapling cohorts." + System.Environment.NewLine +
                                "For each occupied and living 2x2m pixel, a row is generated, unless" +
                                "the tree diameter is below the 'minDbh' threshold (cm). " +
@@ -48,36 +48,40 @@ namespace iLand.Output
                         continue;
                     }
                 }
-                SaplingCell[] saplingCells = ru.SaplingCells;
-                for (int px = 0; px < Constant.LightCellsPerHectare; ++px)
-                {
-                    SaplingCell saplingCell = saplingCells[px];
-                    int n_on_px = saplingCell.GetOccupiedSlotCount();
-                    if (n_on_px > 0)
-                    {
-                        for (int index = 0; index < saplingCell.Saplings.Length; ++index)
-                        {
-                            if (saplingCell.Saplings[index].IsOccupied())
-                            {
-                                ResourceUnitTreeSpecies ruSpecies = saplingCell.Saplings[index].GetResourceUnitSpecies(ru);
-                                TreeSpecies treeSpecies = ruSpecies.Species;
-                                double dbh = saplingCell.Saplings[index].Height / treeSpecies.SaplingGrowthParameters.HeightDiameterRatio * 100.0;
-                                // check minimum dbh
-                                if (dbh < mMinDbh)
-                                {
-                                    continue;
-                                }
-                                double n_repr = treeSpecies.SaplingGrowthParameters.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].Height) / n_on_px;
 
-                                insertRow.Parameters[0].Value = model.CurrentYear;
-                                insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
-                                insertRow.Parameters[2].Value = ru.EnvironmentID;
-                                insertRow.Parameters[3].Value = ruSpecies.Species.ID;
-                                insertRow.Parameters[4].Value = n_repr;
-                                insertRow.Parameters[5].Value = dbh;
-                                insertRow.Parameters[6].Value = saplingCell.Saplings[index].Height;
-                                insertRow.Parameters[7].Value = saplingCell.Saplings[index].Age;
-                                insertRow.ExecuteNonQuery();
+                SaplingCell[]? saplingCells = ru.SaplingCells;
+                if (saplingCells != null)
+                {
+                    for (int lightCellIndex = 0; lightCellIndex < saplingCells.Length; ++lightCellIndex)
+                    {
+                        SaplingCell saplingCell = saplingCells[lightCellIndex];
+                        int n_on_px = saplingCell.GetOccupiedSlotCount();
+                        if (n_on_px > 0)
+                        {
+                            for (int index = 0; index < saplingCell.Saplings.Length; ++index)
+                            {
+                                if (saplingCell.Saplings[index].IsOccupied())
+                                {
+                                    ResourceUnitTreeSpecies ruSpecies = saplingCell.Saplings[index].GetResourceUnitSpecies(ru);
+                                    TreeSpecies treeSpecies = ruSpecies.Species;
+                                    double dbh = saplingCell.Saplings[index].Height / treeSpecies.SaplingGrowthParameters.HeightDiameterRatio * 100.0;
+                                    // check minimum dbh
+                                    if (dbh < mMinDbh)
+                                    {
+                                        continue;
+                                    }
+                                    double n_repr = treeSpecies.SaplingGrowthParameters.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].Height) / n_on_px;
+
+                                    insertRow.Parameters[0].Value = model.CurrentYear;
+                                    insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
+                                    insertRow.Parameters[2].Value = ru.EnvironmentID;
+                                    insertRow.Parameters[3].Value = ruSpecies.Species.ID;
+                                    insertRow.Parameters[4].Value = n_repr;
+                                    insertRow.Parameters[5].Value = dbh;
+                                    insertRow.Parameters[6].Value = saplingCell.Saplings[index].Height;
+                                    insertRow.Parameters[7].Value = saplingCell.Saplings[index].Age;
+                                    insertRow.ExecuteNonQuery();
+                                }
                             }
                         }
                     }

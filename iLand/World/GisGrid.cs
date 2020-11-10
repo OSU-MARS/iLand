@@ -18,7 +18,7 @@ namespace iLand.World
         private readonly CoordinateTransform gisCoordTrans;
 
         private PointF origin;
-        private double[] data;
+        private double[]? data;
 
         // access
         public int DataSize { get; private set; }   // number of data items (rows*cols)
@@ -35,11 +35,20 @@ namespace iLand.World
         // coordinates of the lower left corner of the grid
         public PointF Origin { get { return origin; } }
 
-        // setup of global GIS transformation
-        // not a good place to put that code here.... please relocate!
-        public void SetupTransformation(double offsetx, double offsety, double offsetz, double angle_degree)
+        public GisGrid()
         {
-            gisCoordTrans.SetupTransformation(offsetx, offsety, offsetz, angle_degree);
+            this.data = null;
+            this.gisCoordTrans = new CoordinateTransform();
+
+            this.CellSize = 1; // default value (for line mode)
+            this.Columns = 0;
+            this.Rows = 0;
+        }
+
+        // setup of global GIS transformation
+        public void SetupTransformation(double offsetX, double offsetY, double offsetZ, double angleInDegrees)
+        {
+            this.gisCoordTrans.SetupTransformation(offsetX, offsetY, offsetZ, angleInDegrees);
         }
 
         public void WorldToModel(Vector3D world, out Vector3D model)
@@ -60,23 +69,18 @@ namespace iLand.World
                                  model.Z + gisCoordTrans.OffsetZ);
         }
 
-        public GisGrid()
+        public bool LoadFromFile(string? fileName)
         {
-            this.data = null;
-            this.gisCoordTrans = new CoordinateTransform();
-
-            this.CellSize = 1; // default value (for line mode)
-            this.Columns = 0;
-            this.Rows = 0;
-        }
-
-        public bool LoadFromFile(string fileName)
-        {
-            this.MinValue = Double.MaxValue;
-            this.MaxValue = Double.MinValue;
+            if (fileName == null)
+            {
+                throw new ArgumentNullException(nameof(fileName));
+            }
 
             // loads from a ESRI-Grid [RasterToFile] File.
             string[] lines = File.ReadAllLines(fileName);
+
+            this.MinValue = Double.MaxValue;
+            this.MaxValue = Double.MinValue;
 
             // processing of header-data
             bool header = true;
@@ -205,21 +209,21 @@ namespace iLand.World
         }*/
 
         /// get value of grid at index positions
-        public double GetValue(int indexx, int indexy)
+        public double GetValue(int indexX, int indexY)
         {
-            if (indexx >= 0 && indexx < Columns && indexy >= 0 && indexy < Rows)
+            if (indexX >= 0 && indexX < Columns && indexY >= 0 && indexY < Rows)
             {
-                return data[indexy * Columns + indexx];
+                return this.data![indexY * Columns + indexX];
             }
             return -1.0;  // out of scope
         }
 
         /// get value of grid at index positions
-        public double GetValue(int Index)
+        public double GetValue(int index)
         {
-            if (Index >= 0 && Index < DataSize)
+            if (index >= 0 && index < DataSize)
             {
-                return data[Index];
+                return this.data![index];
             }
             return -1.0;  // out of scope
         }
@@ -229,8 +233,8 @@ namespace iLand.World
             Vector3D model = new Vector3D(x, y, 0.0);
             ModelToWorld(model, out Vector3D world);
 
-            world.X -= Origin.X;
-            world.Y -= Origin.Y;
+            world.X -= this.Origin.X;
+            world.Y -= this.Origin.Y;
 
             // get value out of grid.
             // double rx = Origin.x + X * xAxis.x + Y * yAxis.x;
@@ -239,12 +243,12 @@ namespace iLand.World
             {
                 return -1.0;
             }
-            int ix = (int)(world.X / CellSize);
-            int iy = (int)(world.Y / CellSize);
-            if (ix >= 0 && ix < Columns && iy >= 0 && iy < Rows)
+            int indexX = (int)(world.X / CellSize);
+            int indexY = (int)(world.Y / CellSize);
+            if (indexX >= 0 && indexX < Columns && indexY >= 0 && indexY < Rows)
             {
-                double value = data[iy * Columns + ix];
-                if (value != NoDataValue)
+                double value = this.data![indexY * this.Columns + indexX];
+                if (value != this.NoDataValue)
                 {
                     return value;
                 }
@@ -381,7 +385,7 @@ namespace iLand.World
                     Vector3D akoord = GetCoordinate(indexY * Columns + indexX);
                     if (!box.Contains((float)akoord.X, (float)akoord.Y))
                     {
-                        data[indexY * Columns + indexX] = -1.0;
+                        this.data![indexY * Columns + indexX] = -1.0;
                     }
                 }
             }

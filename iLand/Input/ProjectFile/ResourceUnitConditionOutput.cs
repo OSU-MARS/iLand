@@ -4,7 +4,7 @@ namespace iLand.Input.ProjectFile
 {
     public class ResourceUnitConditionOutput : ConditionOutput
     {
-        public string ConditionRU { get; private set; }
+        public string? ConditionRU { get; private set; }
 
         public ResourceUnitConditionOutput()
         {
@@ -19,7 +19,7 @@ namespace iLand.Input.ProjectFile
             }
 
             if (reader.IsStartElement("carbon") ||
-                reader.IsStartElement("carbonflow") ||
+                reader.IsStartElement("carbonFlow") ||
                 reader.IsStartElement("water"))
             {
                 reader.Read();

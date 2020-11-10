@@ -4,7 +4,7 @@ namespace iLand.Input.ProjectFile
 {
     public class StandGrid : Enablable
     {
-        public string FileName { get; private set; }
+        public string? FileName { get; private set; }
 
         public StandGrid()
         {

@@ -26,7 +26,7 @@ namespace iLand.World
 
         public Grid<int> Grid { get; private set; }
         // file name of the grid
-        public string Name { get; private set; }
+        public string? Name { get; private set; }
 
         //static MapGrid()
         //{
@@ -43,18 +43,20 @@ namespace iLand.World
         }
 
         public MapGrid(Landscape landscape, GisGrid sourceGrid)
+            : this()
         {
             this.LoadFromGrid(landscape, sourceGrid);
         }
 
-        public MapGrid(Landscape landscape, string fileName)
+        public MapGrid(Landscape landscape, string? fileName)
+            : this()
         {
             this.LoadFromFile(landscape, fileName);
         }
 
         public double GetArea(int standID) { return this.IsValid(standID) ? mBoundingBoxByStandID[standID].Item2 : 0.0; } // return the area (m2) covered by the polygon
         public RectangleF GetBoundingBox(int id) { return this.IsValid(id) ? mBoundingBoxByStandID[id].Item1 : new RectangleF(); } // returns the bounding box of a polygon
-        public bool IsValid() { return !this.Grid.IsEmpty(); }
+        public bool IsValid() { return !this.Grid.IsNotSetup(); }
         /// returns true, if 'id' is a valid id in the grid, false otherwise.
         public bool IsValid(int standID) { return mBoundingBoxByStandID.ContainsKey(standID); }
 
@@ -73,7 +75,7 @@ namespace iLand.World
         // load from an already present GisGrid
         public bool LoadFromGrid(Landscape landscape, GisGrid sourceGrid, bool createIndex = true)
         {
-            if ((landscape == null) || (landscape.HeightGrid == null) || landscape.HeightGrid.IsEmpty())
+            if ((landscape == null) || (landscape.HeightGrid == null) || landscape.HeightGrid.IsNotSetup())
             {
                 throw new ArgumentNullException(nameof(landscape), "No height grid available.");
             }
@@ -111,7 +113,7 @@ namespace iLand.World
         public void CreateEmptyGrid(Landscape landscape)
         {
             Grid<HeightCell> heightGrid = landscape.HeightGrid;
-            if (heightGrid == null || heightGrid.IsEmpty())
+            if (heightGrid == null || heightGrid.IsNotSetup())
             {
                 throw new NotSupportedException("No valid height grid from which to copy grid size.");
             }
@@ -173,7 +175,7 @@ namespace iLand.World
         }
 
         // load ESRI style text file
-        public bool LoadFromFile(Landscape landscape, string fileName)
+        public bool LoadFromFile(Landscape landscape, string? fileName)
         {
             GisGrid gisGrid = new GisGrid();
             if (gisGrid.LoadFromFile(fileName))
@@ -216,11 +218,7 @@ namespace iLand.World
             {
                 foreach (Trees trees in ru.Trees.TreesBySpeciesID.Values)
                 {
-                    MutableTuple<Trees, List<int>> livingTreesInStand = new MutableTuple<Trees, List<int>>()
-                    {
-                        Item1 = trees,
-                        Item2 = new List<int>()
-                    };
+                    MutableTuple<Trees, List<int>> livingTreesInStand = new MutableTuple<Trees, List<int>>(trees, new List<int>());
                     for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                     {
                         if ((this.GetStandIDFromLightCoordinate(trees.LightCellPosition[treeIndex]) == standID) && (trees.IsDead(treeIndex) == false))
@@ -243,7 +241,7 @@ namespace iLand.World
             {
                 rList.Capacity = estimatedTreeCount;
             }
-            Expression treeFilterExpression = null;
+            Expression? treeFilterExpression = null;
             TreeWrapper treeWrapper = new TreeWrapper(model);
             if (String.IsNullOrEmpty(filter) == false)
             {

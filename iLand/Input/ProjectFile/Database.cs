@@ -1,13 +1,12 @@
-﻿using System.IO;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class Database : XmlSerializable
     {
-        public string Output { get; private set; }
-        public string Climate { get; private set; }
-        public string Species { get; private set; }
+        public string? Output { get; private set; }
+        public string? Climate { get; private set; }
+        public string? Species { get; private set; }
 
         public Database()
         {

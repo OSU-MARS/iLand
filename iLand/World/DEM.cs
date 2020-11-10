@@ -73,7 +73,7 @@ namespace iLand.World
         /// internally, the DEM has always a resolution of 10m
         private bool LoadFromFile(Landscape landscape, string demFilePath)
         {
-            if ((landscape == null) || (landscape.HeightGrid == null) || (landscape.HeightGrid.IsEmpty()))
+            if ((landscape == null) || (landscape.HeightGrid == null) || (landscape.HeightGrid.IsNotSetup()))
             {
                 throw new ArgumentNullException(nameof(landscape), "No height grid available.");
             }
@@ -144,7 +144,7 @@ namespace iLand.World
                         {
                             for (int mx = 0; mx < sizeFactor; ++mx)
                             {
-                                this[x + mx, y + my] = this.InterpolateBilinear(mx / (float)sizeFactor, my / (float)sizeFactor, c00, c10, c01, c11);
+                                this[x + mx, y + my] = DEM.InterpolateBilinear(mx / (float)sizeFactor, my / (float)sizeFactor, c00, c10, c01, c11);
                             }
                         }
                     }
@@ -204,7 +204,7 @@ namespace iLand.World
 
         public void CreateGrids()
         {
-            if (slopeGrid.IsEmpty())
+            if (slopeGrid.IsNotSetup())
             {
                 // setup custom grids with the same size as this DEM
                 slopeGrid.Setup(this);
@@ -249,7 +249,7 @@ namespace iLand.World
         }
 
         // from here: http://www.scratchapixel.com/lessons/3d-advanced-lessons/interpolation/bilinear-interpolation/
-        private float InterpolateBilinear(float tx, float ty, float c00, float c10, float c01, float c11)
+        private static float InterpolateBilinear(float tx, float ty, float c00, float c10, float c01, float c11)
         {
             float a = c00 * (1.0F - tx) + c10 * tx;
             float b = c01 * (1.0F - tx) + c11 * tx;

@@ -61,13 +61,13 @@ namespace iLand.Output
         */
     public abstract class Output
     {
-        private string insertRowSqlText;
+        private string? insertRowSqlText;
 
         public List<SqlColumn> Columns { get; protected set; }
 
-        public string Name { get; set; } // descriptive name of the ouptut
-        public string Description { get; protected set; } // description of output
-        public string TableName { get; protected set; } // internal output name (no spaces allowed)
+        public string? Name { get; set; } // descriptive name of the ouptut
+        public string? Description { get; protected set; } // description of output
+        public string? TableName { get; protected set; } // internal output name (no spaces allowed)
 
         public Output()
         {

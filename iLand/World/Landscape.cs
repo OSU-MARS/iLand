@@ -16,7 +16,7 @@ namespace iLand.World
         public RectangleF Extent { get; private set; } // extent of the model, not including surrounding light buffer cells
         public double TotalStockableHectares { get; private set; } // total stockable area of the landscape (ha)
 
-        public DEM Dem { get; private set; }
+        public DEM? Dem { get; private set; }
         public Input.EnvironmentReader Environment { get; private set; }
         public GrassCover GrassCover { get; private set; }
         public List<ResourceUnit> ResourceUnits { get; private set; }
@@ -24,7 +24,7 @@ namespace iLand.World
         public Grid<float> LightGrid { get; private set; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
         public Grid<HeightCell> HeightGrid { get; private set; } // stores maximum heights of trees and some flags (currently 10x10m)
         public Grid<ResourceUnit> ResourceUnitGrid { get; private set; }
-        public MapGrid StandGrid { get; private set; } // retrieve the spatial grid that defines the stands (10m resolution)
+        public MapGrid? StandGrid { get; private set; } // retrieve the spatial grid that defines the stands (10m resolution)
 
         public Landscape(Project projectFile)
         {
@@ -34,13 +34,9 @@ namespace iLand.World
                 throw new NotImplementedException("For now, /project/world/resourceUnitsAsGrid must be set to true.");
             }
 
-            this.ResourceUnits = new List<ResourceUnit>();
             this.Dem = null;
-            this.Environment = null;
-            this.GrassCover = null;
-
-            this.LightGrid = null;
-            this.HeightGrid = null;
+            this.GrassCover = new GrassCover();
+            this.ResourceUnits = new List<ResourceUnit>();
             this.ResourceUnitGrid = new Grid<ResourceUnit>();
             this.StandGrid = null;
 
@@ -49,10 +45,10 @@ namespace iLand.World
             float worldHeight = projectFile.Model.World.Height;
             float worldBuffer = projectFile.Model.World.Buffer;
             this.Extent = new RectangleF(0.0F, 0.0F, worldWidth, worldHeight);
-            Debug.WriteLine(String.Format("Setup of the world: {0}x{1} m with {2} m light cell size and {3} m buffer", worldWidth, worldHeight, lightCellSize, worldBuffer));
+            // Debug.WriteLine(String.Format("Setup of the world: {0}x{1} m with {2} m light cell size and {3} m buffer", worldWidth, worldHeight, lightCellSize, worldBuffer));
 
             RectangleF worldExtentBuffered = new RectangleF(-worldBuffer, -worldBuffer, worldWidth + 2 * worldBuffer, worldHeight + 2 * worldBuffer);
-            Debug.WriteLine("Setup grid rectangle: " + worldExtentBuffered);
+            // Debug.WriteLine("Setup grid rectangle: " + worldExtentBuffered);
 
             this.LightGrid = new Grid<float>(worldExtentBuffered, lightCellSize);
             this.LightGrid.Fill(1.0F);
@@ -67,7 +63,7 @@ namespace iLand.World
 
             // setup of the digital elevation map if present
             // Performs bounds tests against height grid, so DEM must be created after grids.
-            string demFileName = projectFile.Model.World.DemFile;
+            string? demFileName = projectFile.Model.World.DemFile;
             if (String.IsNullOrEmpty(demFileName) == false)
             {
                 this.Dem = new DEM(this, projectFile.GetFilePath(ProjectDirectory.Home, demFileName)); // TODO: stop requiring gis\ prefix in project file
@@ -97,7 +93,7 @@ namespace iLand.World
                 bool isGridEnvironment = String.Equals(projectFile.Model.World.EnvironmentMode, "grid", StringComparison.Ordinal);
                 if (isGridEnvironment)
                 {
-                    string gridFileName = projectFile.Model.World.EnvironmentGridFile;
+                    string? gridFileName = projectFile.Model.World.EnvironmentGridFile;
                     if (String.IsNullOrEmpty(gridFileName))
                     {
                         throw new XmlException("/projectFile/model/world/environmentGrid not found.");
@@ -113,10 +109,7 @@ namespace iLand.World
                     }
                 }
 
-                if (this.Environment.LoadFromProjectAndEnvironmentFile(projectFile, this) == false)
-                {
-                    return; // TODO: why is this here?
-                }
+                this.Environment.LoadFromProjectAndEnvironmentFile(projectFile);
             }
             else
             {
@@ -132,7 +125,7 @@ namespace iLand.World
             bool hasStandGrid = false;
             if (projectFile.Model.World.StandGrid.Enabled)
             {
-                string fileName = projectFile.Model.World.StandGrid.FileName;
+                string? fileName = projectFile.Model.World.StandGrid.FileName;
                 this.StandGrid = new MapGrid(this, fileName); // create stand grid index later
                 if (this.StandGrid.IsValid() == false)
                 {
@@ -168,8 +161,12 @@ namespace iLand.World
                 for (int ruGridIndex = 0; ruGridIndex < this.ResourceUnitGrid.Count; ++ruGridIndex)
                 {
                     // create resource units for valid positions only
-                    RectangleF ruExtent = this.ResourceUnitGrid.GetCellExtent(ResourceUnitGrid.GetCellPosition(ruGridIndex));
-                    this.Environment.SetPosition(projectFile, this, ruExtent.Center()); // if environment is 'disabled' default values from the project file are used.
+                    RectangleF ruExtent = this.ResourceUnitGrid.GetCellExtent(this.ResourceUnitGrid.GetCellPosition(ruGridIndex));
+                    this.Environment.SetPosition(projectFile, ruExtent.Center()); // if environment is 'disabled' default values from the project file are used.
+                    if ((this.Environment.CurrentClimate == null) || (this.Environment.CurrentSpeciesSet == null))
+                    {
+                        throw new NotSupportedException("Climate or species parameterizations not found for resource unit " + ruGridIndex + ".");
+                    }
                     ResourceUnit newRU = new ResourceUnit(projectFile, this.Environment.CurrentClimate, this.Environment.CurrentSpeciesSet, ruGridIndex)
                     {
                         BoundingBox = ruExtent,
@@ -239,7 +236,7 @@ namespace iLand.World
                 GridWindowEnumerator<float> lightRunner = new GridWindowEnumerator<float>(this.LightGrid, this.ResourceUnitGrid.PhysicalExtent);
                 while (lightRunner.MoveNext())
                 {
-                    SaplingCell saplingCell = this.GetSaplingCell(this.LightGrid.GetCellPosition(lightRunner.CurrentIndex), false, out ResourceUnit _); // false: retrieve also invalid cells
+                    SaplingCell? saplingCell = this.GetSaplingCell(this.LightGrid.GetCellPosition(lightRunner.CurrentIndex), false, out ResourceUnit _); // false: retrieve also invalid cells
                     if (saplingCell != null)
                     {
                         if (!this.HeightGrid[this.LightGrid.Index5(lightRunner.CurrentIndex)].IsOnLandscape())
@@ -255,10 +252,6 @@ namespace iLand.World
             }
 
             // setup of the grass cover
-            if (this.GrassCover == null)
-            {
-                this.GrassCover = new GrassCover();
-            }
             this.GrassCover.Setup(projectFile, this);
         }
 
@@ -341,7 +334,7 @@ namespace iLand.World
             }
         }
 
-        public SqliteConnection GetDatabaseConnection(string databaseFilePath, bool openReadOnly)
+        public static SqliteConnection GetDatabaseConnection(string databaseFilePath, bool openReadOnly)
         {
             if (openReadOnly)
             {
@@ -383,7 +376,7 @@ namespace iLand.World
 
         public ResourceUnit GetResourceUnit(PointF ruPosition) // resource unit at given coordinates
         {
-            if (this.ResourceUnitGrid.IsEmpty())
+            if (this.ResourceUnitGrid.IsNotSetup())
             {
                 // TODO: why not just populate grid with the default resource unit?
                 return this.ResourceUnits[0]; // default RU if there is only one
@@ -394,7 +387,7 @@ namespace iLand.World
         /// return the SaplingCell (i.e. container for the ind. saplings) for the given 2x2m coordinates
         /// if 'only_valid' is true, then null is returned if no living saplings are on the cell
         /// 'rRUPtr' is a pointer to a RU-ptr: if provided, a pointer to the resource unit is stored
-        public SaplingCell GetSaplingCell(Point lightCellPosition, bool onlyValid, out ResourceUnit ru)
+        public SaplingCell? GetSaplingCell(Point lightCellPosition, bool onlyValid, out ResourceUnit ru)
         {
             ru = this.GetResourceUnit(this.LightGrid.GetCellCenterPosition(lightCellPosition));
             SaplingCell saplingCell = ru.GetSaplingCell(lightCellPosition);

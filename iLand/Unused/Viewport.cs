@@ -39,13 +39,13 @@ namespace iLand.Tools
             m_world = worldrect;
         }
 
-        private Point Center(Rectangle rectangle)
+        private static Point Center(Rectangle rectangle)
         {
             return new Point(rectangle.Left + (rectangle.Right - rectangle.Left) / 2,
                              rectangle.Bottom + (rectangle.Top - rectangle.Bottom) / 2);
         }
 
-        private PointF Center(RectangleF rectangle)
+        private static PointF Center(RectangleF rectangle)
         {
             return new PointF(rectangle.Left + 0.5F * (rectangle.Right - rectangle.Left),
                               rectangle.Bottom + 0.5F * (rectangle.Top - rectangle.Bottom));

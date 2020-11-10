@@ -28,30 +28,6 @@ namespace iLand.Output
             this.Columns.Add(new SqlColumn("GPP_kg_m2", "GPP (without Aging) in kg Biomass/m2", OutputDatatype.Double));
         }
 
-        private void LogYear(Model model, ResourceUnitTreeSpecies ruSpecies, SqliteCommand insertRow)
-        {
-            ResourceUnitTreeSpeciesGrowth growth = ruSpecies.BiomassGrowth;
-            ResourceUnitTreeSpeciesResponse speciesResponse = growth.SpeciesResponse;
-            for (int month = 0; month < 12; month++)
-            {
-                insertRow.Parameters[0].Value = model.CurrentYear;
-                insertRow.Parameters[1].Value = ruSpecies.RU.ResourceUnitGridIndex;
-                insertRow.Parameters[2].Value = ruSpecies.RU.EnvironmentID;
-                insertRow.Parameters[3].Value = ruSpecies.Species.ID;
-                insertRow.Parameters[4].Value = month + 1; // month
-                // responses
-                insertRow.Parameters[5].Value = speciesResponse.TempResponseByMonth[month];
-                insertRow.Parameters[6].Value = speciesResponse.SoilWaterResponseByMonth[month];
-                insertRow.Parameters[7].Value = speciesResponse.VpdResponseByMonth[month];
-                insertRow.Parameters[8].Value = speciesResponse.CO2ResponseByMonth[month];
-                insertRow.Parameters[9].Value = speciesResponse.NitrogenResponseForYear;
-                insertRow.Parameters[10].Value = speciesResponse.GlobalRadiationByMonth[month];
-                insertRow.Parameters[11].Value = growth.UtilizablePar[month];
-                insertRow.Parameters[12].Value = growth.MonthlyGpp[month];
-                insertRow.ExecuteNonQuery();
-            }
-        }
-
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             //using DebugTimer t = model.DebugTimers.Create("ProductionOutput.LogYear()");
@@ -61,9 +37,28 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
-                foreach (ResourceUnitTreeSpecies rus in ru.Trees.SpeciesPresentOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    this.LogYear(model, rus, insertRow);
+                    ResourceUnitTreeSpeciesGrowth growth = ruSpecies.BiomassGrowth;
+                    ResourceUnitTreeSpeciesResponse speciesResponse = growth.SpeciesResponse;
+                    for (int month = 0; month < Constant.MonthsInYear; ++month)
+                    {
+                        insertRow.Parameters[0].Value = model.CurrentYear;
+                        insertRow.Parameters[1].Value = ruSpecies.RU.ResourceUnitGridIndex;
+                        insertRow.Parameters[2].Value = ruSpecies.RU.EnvironmentID;
+                        insertRow.Parameters[3].Value = ruSpecies.Species.ID;
+                        insertRow.Parameters[4].Value = month + 1; // month
+                                                                   // responses
+                        insertRow.Parameters[5].Value = speciesResponse.TempResponseByMonth[month];
+                        insertRow.Parameters[6].Value = speciesResponse.SoilWaterResponseByMonth[month];
+                        insertRow.Parameters[7].Value = speciesResponse.VpdResponseByMonth[month];
+                        insertRow.Parameters[8].Value = speciesResponse.CO2ResponseByMonth[month];
+                        insertRow.Parameters[9].Value = speciesResponse.NitrogenResponseForYear;
+                        insertRow.Parameters[10].Value = speciesResponse.GlobalRadiationByMonth[month];
+                        insertRow.Parameters[11].Value = growth.UtilizablePar[month];
+                        insertRow.Parameters[12].Value = growth.MonthlyGpp[month];
+                        insertRow.ExecuteNonQuery();
+                    }
                 }
             }
         }

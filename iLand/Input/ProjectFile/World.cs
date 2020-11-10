@@ -15,15 +15,15 @@ namespace iLand.Input.ProjectFile
 		
 		public bool ResourceUnitsAsGrid { get; private set; }
 		public bool EnvironmentEnabled { get; private set; }
-		public string EnvironmentMode { get; private set; } // TODO: change to enum
-		public string EnvironmentGridFile { get; private set; }
-		public string EnvironmentFile { get; private set; }
+		public string? EnvironmentMode { get; private set; } // TODO: change to enum
+		public string? EnvironmentGridFile { get; private set; }
+		public string? EnvironmentFile { get; private set; }
 		public AreaMask AreaMask { get; private set; }
 		public bool TimeEventsEnabled { get; private set; }
-		public string TimeEventsFile { get; private set; }
-		public Location Location { get; private set; }
+		public string? TimeEventsFile { get; private set; }
+		public Location? Location { get; private set; }
 		public StandGrid StandGrid { get; private set; }
-		public string DemFile { get; private set; }
+		public string? DemFile { get; private set; }
 
 		public World()
         {

@@ -39,7 +39,7 @@ namespace iLand.Tree
                 throw new ArgumentException("Species or resource unit is null");
             }
 
-            this.mClimate = climate ?? throw new ArgumentNullException("No valid climate for a resource unit.");
+            this.mClimate = climate ?? throw new ArgumentNullException(nameof(climate), "No valid climate for a resource unit.");
             this.mRUspecies = ruSpecies;
             this.AbioticEnvironment = 0.0;
             this.MeanSeedDensity = 0.0;

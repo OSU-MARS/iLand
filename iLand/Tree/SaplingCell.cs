@@ -70,7 +70,7 @@ namespace iLand.Tree
         }
 
         /// add a sapling to this cell, return a pointer to the tree on success, or 0 otherwise
-        public Sapling AddSaplingIfSlotFree(float heightInM, int ageInYears, int speciesIndex)
+        public Sapling? AddSaplingIfSlotFree(float heightInM, int ageInYears, int speciesIndex)
         {
             int freeIndex = this.GetFreeIndex();
             if (freeIndex == -1)
@@ -113,7 +113,7 @@ namespace iLand.Tree
         }
 
         /// return the sapling tree of the requested species, or 0
-        public Sapling FirstOrDefault(int speciesIndex)
+        public Sapling? FirstOrDefault(int speciesIndex)
         {
             if (this.State == SaplingCellState.Invalid)
             {

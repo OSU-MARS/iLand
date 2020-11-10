@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿#nullable disable
+using iLand.Input.ProjectFile;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
@@ -25,9 +26,9 @@ namespace iLand.Output
             throw new NotImplementedException();
         }
 
-        private SqliteConnection OpenDatabase(Landscape landscape, string fileName, bool openReadOnly)
+        private static SqliteConnection OpenDatabase(string fileName, bool openReadOnly)
         {
-            SqliteConnection snapshotDatabase = landscape.GetDatabaseConnection(fileName, openReadOnly);
+            SqliteConnection snapshotDatabase = Landscape.GetDatabaseConnection(fileName, openReadOnly);
             if (openReadOnly == false)
             {
                 using SqliteTransaction transaction = snapshotDatabase.BeginTransaction();
@@ -61,17 +62,17 @@ namespace iLand.Output
             return snapshotDatabase;
         }
 
-        public bool CreateSnapshot(Model model, string snapshotDatabaseFileName)
+        public static bool CreateSnapshot(Model model, string snapshotDatabaseFileName)
         {
-            using SqliteConnection snapshotDatabase = this.OpenDatabase(model.Landscape, snapshotDatabaseFileName, false);
+            using SqliteConnection snapshotDatabase = Snapshot.OpenDatabase(snapshotDatabaseFileName, false);
             // save the trees
-            this.SaveTrees(model, snapshotDatabase);
+            Snapshot.SaveTrees(model, snapshotDatabase);
             // save soil pools
-            this.SaveSoil(model, snapshotDatabase);
+            Snapshot.SaveSoil(model, snapshotDatabase);
             // save snags / deadwood pools
-            this.SaveSnags(model, snapshotDatabase);
+            Snapshot.SaveSnags(model, snapshotDatabase);
             // save saplings
-            this.SaveSaplings(snapshotDatabase);
+            Snapshot.SaveSaplings(snapshotDatabase);
 
             // save a grid of the indices
             FileInfo fi = new FileInfo(snapshotDatabaseFileName);
@@ -148,10 +149,10 @@ namespace iLand.Output
                 }
             }
 
-            using SqliteConnection snapshotDatabase = this.OpenDatabase(model.Landscape, snapshotDatabaseFilePath, openReadOnly: true);
-            LoadTrees(model, snapshotDatabase);
-            LoadSoil(snapshotDatabase);
-            LoadSnags(snapshotDatabase);
+            using SqliteConnection snapshotDatabase = Snapshot.OpenDatabase(snapshotDatabaseFilePath, openReadOnly: true);
+            this.LoadTrees(model, snapshotDatabase);
+            this.LoadSoil(snapshotDatabase);
+            this.LoadSnags(snapshotDatabase);
             // load saplings only when regeneration is enabled (this can save a lot of time)
             if (model.ModelSettings.RegenerationEnabled)
             {
@@ -175,10 +176,10 @@ namespace iLand.Output
             return true;
         }
 
-        public bool SaveStandSnapshot(Model model, int standID, string fileName)
+        public static bool SaveStandSnapshot(Model model, int standID, string fileName)
         {
             // Check database
-            using SqliteConnection standSnapshotDatabase = model.Landscape.GetDatabaseConnection(model.Project.GetFilePath(ProjectDirectory.Home, fileName), openReadOnly: false);
+            using SqliteConnection standSnapshotDatabase = Landscape.GetDatabaseConnection(model.Project.GetFilePath(ProjectDirectory.Home, fileName), openReadOnly: false);
 
             List<string> tableNames = new List<string>();
             SqliteCommand selectTableNames = new SqliteCommand("SELECT name FROM sqlite_schema WHERE type='table'", standSnapshotDatabase);
@@ -307,9 +308,9 @@ namespace iLand.Output
             return true;
         }
 
-        public bool LoadStandSnapshot(Model model, int standID, MapGrid standGrid, string fileName)
+        public static bool LoadStandSnapshot(Model model, int standID, MapGrid standGrid, string fileName)
         {
-            using SqliteConnection db = model.Landscape.GetDatabaseConnection(model.Project.GetFilePath(ProjectDirectory.Home, fileName), openReadOnly: false);
+            using SqliteConnection db = Landscape.GetDatabaseConnection(model.Project.GetFilePath(ProjectDirectory.Home, fileName), openReadOnly: false);
 
             // load trees
             // kill all living trees on the stand
@@ -338,7 +339,7 @@ namespace iLand.Output
                     continue;
                 }
 
-                TreeSpecies species = ru.Trees.TreeSpeciesSet.GetSpecies(treeReader.GetInt32(4));
+                TreeSpecies species = ru.Trees.TreeSpeciesSet[treeReader.GetInt32(4)];
                 int treeIndex = ru.Trees.AddTree(model.Landscape, species.ID);
                 Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[species.ID];
                 treesOfSpecies.Tag[treeIndex] = treeReader.GetInt32(1);
@@ -404,7 +405,7 @@ namespace iLand.Output
             return true;
         }
 
-        private void SaveTrees(Model model, SqliteConnection db)
+        private static void SaveTrees(Model model, SqliteConnection db)
         {
             using SqliteTransaction treeTransaction = db.BeginTransaction();
             SqliteCommand treeInsert = new SqliteCommand(String.Format("insert into trees (ID, RUindex, posX, posY, species,  age, height, dbh, leafArea, opacity, foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex) " +
@@ -489,7 +490,7 @@ namespace iLand.Output
                 }
 
                 // add new tree to the tree list
-                TreeSpecies species = ru.Trees.TreeSpeciesSet.GetSpecies(treeReader.GetString(4));
+                TreeSpecies species = ru.Trees.TreeSpeciesSet[treeReader.GetString(4)];
                 int treeIndex = ru.Trees.AddTree(model.Landscape, species.ID);
                 Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[species.ID];
                 treesOfSpecies.Tag[treeIndex] = treeReader.GetInt32(0);
@@ -518,7 +519,7 @@ namespace iLand.Output
             Debug.WriteLine("Snapshot: finished trees. N=" + n + " from trees in snapshot: " + ntotal);
         }
 
-        private void SaveSoil(Model model, SqliteConnection db)
+        private static void SaveSoil(Model model, SqliteConnection db)
         {
             using SqliteTransaction soilTransaction = db.BeginTransaction();
             using SqliteCommand soilInsert = new SqliteCommand(String.Format("insert into soil (RUindex, kyl, kyr, inLabC, inLabN, inLabP, inRefC, inRefN, inRefP, YLC, YLN, YLP, YRC, YRN, YRP, SOMC, SOMN, WaterContent, SnowPack) " +
@@ -628,7 +629,7 @@ namespace iLand.Output
             //Debug.WriteLine("Snapshot: finished soil. N=" + n);
         }
 
-        private void SaveSnags(Model model, SqliteConnection db)
+        private static void SaveSnags(Model model, SqliteConnection db)
         {
             using SqliteTransaction snagTransaction = db.BeginTransaction();
             SqliteCommand snagInsert = new SqliteCommand(String.Format("insert into snag(RUIndex, climateFactor, SWD1C, SWD1N, SWD2C, SWD2N, SWD3C, SWD3N, " +
@@ -816,10 +817,9 @@ namespace iLand.Output
             //Debug.WriteLine("Snapshot: finished snags. N=" + n);
         }
 
-        private void SaveSaplings(SqliteConnection db)
+        private static void SaveSaplings(SqliteConnection db)
         {
-            using SqliteCommand q = new SqliteCommand("insert into saplings (RUindex, species, posx, posy, age, height, stress_years) " +
-                                   "values (?,?,?,?,?,?,?)", db);
+            using SqliteCommand q = new SqliteCommand("insert into saplings (RUindex, species, posx, posy, age, height, stress_years) values (?,?,?,?,?,?,?)", db);
             // int n = 0;
             throw new NotSupportedException("saveSaplings() not implemented");
             //    foreach (ResourceUnit *ru, globalSettings().model().ruList()) {
@@ -869,23 +869,23 @@ namespace iLand.Output
             {
                 int columnIndex = 0;
                 int ruIndex = saplingReader.GetInt32(columnIndex++);
-                ResourceUnit ru = mResourceUnits[ruIndex];
+                ResourceUnit ru = this.mResourceUnits[ruIndex];
                 if (ru == null)
                 {
-                    continue;
+                    throw new NotSupportedException("Resource unit grid index invalid.");
                 }
-                TreeSpecies species = ru.Trees.TreeSpeciesSet.GetSpecies(saplingReader.GetString(columnIndex++));
+                TreeSpecies species = ru.Trees.TreeSpeciesSet[saplingReader.GetString(columnIndex++)];
                 if (species == null)
                 {
-                    throw new NotSupportedException("loadSaplings: Invalid species");
+                    throw new NotSupportedException("Species ID not found.");
                 }
 
-                int offsetX = ru.TopLeftLightPosition.X;
-                int offsetY = ru.TopLeftLightPosition.Y;
-                int posX = offsetX + saplingReader.GetInt32(columnIndex++) % Constant.LightCellsPerRUsize;
-                int posY = offsetY + saplingReader.GetInt32(columnIndex++) % Constant.LightCellsPerRUsize;
+                int ruOriginX = ru.TopLeftLightPosition.X;
+                int ruOriginY = ru.TopLeftLightPosition.Y;
+                int lightIndexX = ruOriginX + saplingReader.GetInt32(columnIndex++) % Constant.LightCellsPerRUsize;
+                int lightIndexY = ruOriginY + saplingReader.GetInt32(columnIndex++) % Constant.LightCellsPerRUsize;
 
-                SaplingCell saplingCell = model.Landscape.GetSaplingCell(new Point(posX, posY), true, out _);
+                SaplingCell saplingCell = model.Landscape.GetSaplingCell(new Point(lightIndexX, lightIndexY), true, out _);
                 if (saplingCell == null)
                 {
                     continue;

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <RootNamespace>iLand</RootNamespace>
     <Version>1.0.0</Version>
     <Company>Oregon State University</Company>
@@ -15,6 +15,7 @@
     <LangVersion>9.0</LangVersion>
     <Description>A C# port of the iLand 1.0 (2016) spatial growth and yield model created by Rupert Seidl and Werner Rammer.</Description>
     <AssemblyName>iLand</AssemblyName>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -98,8 +99,8 @@
 
   <ItemGroup>
     <PackageReference Include="MersenneTwister" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.9" />
-    <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.0.3" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="5.0.0" />
+    <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.1.0" />
   </ItemGroup>
   
 </Project>

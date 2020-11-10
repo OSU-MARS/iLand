@@ -38,20 +38,15 @@ namespace iLand.Tree
             this.RU = ru;
             this.Species = treeSpecies;
 
-            this.BiomassGrowth = new ResourceUnitTreeSpeciesGrowth();
+            ResourceUnitTreeSpeciesResponse speciesResponse = new ResourceUnitTreeSpeciesResponse(ru, this); // requires this.Species be set
+            this.BiomassGrowth = new ResourceUnitTreeSpeciesGrowth(speciesResponse);
             this.Establishment = new Establishment(ru.Climate, this); // requires this.Species and this.RU be set
             this.RemovedStemVolume = 0.0;
-            this.Response = new ResourceUnitTreeSpeciesResponse();
+            this.Response = speciesResponse;
             this.SaplingStats = new SaplingProperties();
-            this.Statistics = new ResourceUnitTreeStatistics();
-            this.StatisticsDead = new ResourceUnitTreeStatistics();
-            this.StatisticsManagement = new ResourceUnitTreeStatistics();
-
-            this.BiomassGrowth.SpeciesResponse = this.Response;
-            this.Response.Setup(this);
-            this.Statistics.ResourceUnitSpecies = this;
-            this.StatisticsDead.ResourceUnitSpecies = this;
-            this.StatisticsManagement.ResourceUnitSpecies = this;
+            this.Statistics = new ResourceUnitTreeStatistics(this);
+            this.StatisticsDead = new ResourceUnitTreeStatistics(this);
+            this.StatisticsManagement = new ResourceUnitTreeStatistics(this);
         }
 
         public void SetRULaiFraction(float laiFraction)

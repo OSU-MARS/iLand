@@ -157,19 +157,19 @@ namespace iLand.Tools
         }
 
         // TODO: remove and convert callers to GetRow()
-        public string GetValue(int col, int row)
+        public string GetValue(int column, int row)
         {
-            if (row < 0 || row >= this.RowCount || col < 0 || col >= this.ColumnCount)
+            if (column < 0 || column >= this.ColumnCount)
             {
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException(nameof(column));
+            }
+            if (row < 0 || row >= this.RowCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(row));
             }
 
             string[] line = mRows[row].Split(mSeparator);
-            if (col < line.Length)
-            {
-                return line[col];
-            }
-            return null;
+            return line[column];
         }
 
         //public string Row(int row)
@@ -180,7 +180,7 @@ namespace iLand.Tools
         public List<string> GetColumnValues(int columnIndex)
         {
             List<string> result = new List<string>(this.RowCount);
-            for (int row = 0; row < this.RowCount; row++)
+            for (int row = 0; row < this.RowCount; ++row)
             {
                 result.Add(this.GetValue(columnIndex, row));
             }

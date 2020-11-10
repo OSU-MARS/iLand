@@ -6,7 +6,7 @@ namespace iLand.Input.ProjectFile
     public class SeedBeltSpecies : XmlSerializable
     {
         // space separated list of four letter species codes
-        public string IDs { get; private set; }
+        public string? IDs { get; private set; }
         public int X { get; private set; }
         public int Y { get; private set; }
 
@@ -17,8 +17,19 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            this.X = Int32.Parse(reader.GetAttribute("x"));
-            this.Y = Int32.Parse(reader.GetAttribute("y"));
+            string? xAsString = reader.GetAttribute("x");
+            if (String.IsNullOrWhiteSpace(xAsString))
+            {
+                throw new XmlException("x attribute of seed belt species is empty.");
+            }
+            string? yAsString = reader.GetAttribute("y");
+            if (String.IsNullOrWhiteSpace(yAsString))
+            {
+                throw new XmlException("y attribute of seed belt species is empty.");
+            }
+
+            this.X = Int32.Parse(xAsString);
+            this.Y = Int32.Parse(yAsString);
             // no restriction on range of x or y values
             this.IDs = reader.ReadElementContentAsString().Trim();
         }

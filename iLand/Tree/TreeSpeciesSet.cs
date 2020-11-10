@@ -48,45 +48,45 @@ namespace iLand.Tree
             this.mSpeciesByID = new Dictionary<string, TreeSpecies>();
 
             this.ActiveSpecies = new List<TreeSpecies>();
-            this.RandomSpeciesOrder = null; // lazy initialization
+            this.RandomSpeciesOrder = new List<int>(); // lazy initialization
             this.ReaderStamps = new TreeSpeciesStamps();
             this.SqlTableName = sqlTableName;
         }
 
-        public TreeSpecies GetSpecies(string speciesID) { return mSpeciesByID[speciesID]; }
-        public int SpeciesCount() { return mSpeciesByID.Count; }
-
-        public float GetLriCorrection(float lightResourceIndex, float relativeHeight) 
-        { 
-            return (float)mLriCorrection.Evaluate(lightResourceIndex, relativeHeight); 
+        public TreeSpecies this[string speciesID]
+        {
+            get { return this.mSpeciesByID[speciesID]; }
         }
 
-        public TreeSpecies GetSpecies(int index)
+        public TreeSpecies this[int speciesIndex]
         {
-            foreach (TreeSpecies species in mSpeciesByID.Values)
-            {
-                if (species.Index == index)
-                {
-                    return species;
-                }
-            }
-            return null;
+            get { return this.ActiveSpecies[speciesIndex]; }
+        }
+
+        public int Count
+        {
+            get { return this.mSpeciesByID.Count; }
+        }
+
+        public float GetLriCorrection(float lightResourceIndex, float relativeHeight)
+        {
+            return (float)this.mLriCorrection.Evaluate(lightResourceIndex, relativeHeight);
         }
 
         /** loads active species from a database table and creates/setups the species.
             The function uses the global database-connection.
           */
-        public int Setup(Project projectFile, Landscape landscape)
+        public int Setup(Project projectFile)
         {
             string readerStampFile = projectFile.GetFilePath(ProjectDirectory.LightIntensityProfile, projectFile.Model.Species.ReaderStampFile);
             this.ReaderStamps.Load(readerStampFile);
             if (projectFile.Model.Parameter.DebugDumpStamps)
             {
-                Debug.WriteLine(ReaderStamps.Dump());
+                Debug.WriteLine(this.ReaderStamps.Dump());
             }
 
             string speciesDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.System.Database.Species);
-            using SqliteConnection speciesDatabase = landscape.GetDatabaseConnection(speciesDatabaseFilePath, true);
+            using SqliteConnection speciesDatabase = Landscape.GetDatabaseConnection(speciesDatabaseFilePath, true);
             using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", this.SqlTableName), speciesDatabase);
             // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");
             using SpeciesReader speciesReader = new SpeciesReader(speciesSelect.ExecuteReader());
@@ -98,15 +98,12 @@ namespace iLand.Tree
                     continue;
                 }
                 TreeSpecies species = Tree.TreeSpecies.Load(projectFile, speciesReader, this);
-                mSpeciesByID.Add(species.ID, species);
-                if (species.Active)
-                {
-                    this.ActiveSpecies.Add(species);
-                }
-                // Expression.AddSpecies(species.ID, species.Index);
+                Debug.Assert(species.Active);
+                this.ActiveSpecies.Add(species);
+                this.mSpeciesByID.Add(species.ID, species);
             }
 
-            Debug.WriteLine("Loaded " + mSpeciesByID.Count + " active species.");
+            //Debug.WriteLine("Loaded " + mSpeciesByID.Count + " active species.");
             //Debug.WriteLine("index, id, name");
             //foreach (Species s in this.ActiveSpecies)
             //{
@@ -234,31 +231,31 @@ namespace iLand.Tree
             {
                 if (responseClass == 3.0F)
                 {
-                    return this.GetNitrogenResponse(availableNitrogen, mNitrogen3A, mNitrogen3B);
+                    return TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, mNitrogen3A, mNitrogen3B);
                 }
                 else
                 {
                     // interpolate between 2 and 3
-                    float value4 = this.GetNitrogenResponse(availableNitrogen, mNitrogen2A, mNitrogen2B);
-                    float value3 = this.GetNitrogenResponse(availableNitrogen, mNitrogen3A, mNitrogen3B);
+                    float value4 = TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, mNitrogen2A, mNitrogen2B);
+                    float value3 = TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, mNitrogen3A, mNitrogen3B);
                     return value4 + (responseClass - 2.0F) * (value3 - value4);
                 }
             }
             if (responseClass == 2.0F)
             {
-                return this.GetNitrogenResponse(availableNitrogen, mNitrogen2A, mNitrogen2B);
+                return TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, mNitrogen2A, mNitrogen2B);
             }
             if (responseClass == 1.0F)
             {
-                return this.GetNitrogenResponse(availableNitrogen, mNitrogen1A, mNitrogen1B);
+                return TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, mNitrogen1A, mNitrogen1B);
             }
             // last ressort: interpolate between 1 and 2
-            float value1 = this.GetNitrogenResponse(availableNitrogen, mNitrogen1A, mNitrogen1B);
-            float value2 = this.GetNitrogenResponse(availableNitrogen, mNitrogen2A, mNitrogen2B);
+            float value1 = TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, mNitrogen1A, mNitrogen1B);
+            float value2 = TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, mNitrogen2A, mNitrogen2B);
             return value1 + (responseClass - 1.0F) * (value2 - value1);
         }
 
-        private float GetNitrogenResponse(float availableNitrogen, float nitrogenK, float minimumNitrogen)
+        private static float GetNitrogenResponse(float availableNitrogen, float nitrogenK, float minimumNitrogen)
         {
             if (availableNitrogen <= minimumNitrogen)
             {

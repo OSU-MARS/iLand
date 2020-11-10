@@ -5,8 +5,8 @@ namespace iLand.Input.ProjectFile
 {
     public class AgentBasedEngine : XmlSerializable
     {
-        public string File { get; private set; }
-        public string AgentDataFile { get; private set; }
+        public string? File { get; private set; }
+        public string? AgentDataFile { get; private set; }
 
         protected override void ReadStartElement(XmlReader reader)
         {

@@ -19,13 +19,12 @@ namespace iLand.Output
         {
             public double BasalArea { get; set; }
             public double Count { get; set; }
-            public TreeSpecies Species { get; set; }
+            public TreeSpecies TreeSpecies { get; init; }
             public double Volume { get; set; }
 
-            public LandscapeRemovalData()
+            public LandscapeRemovalData(TreeSpecies treeSpecies)
             {
-                this.Species = null;
-
+                this.TreeSpecies = treeSpecies;
                 this.Zero();
             }
 
@@ -73,12 +72,9 @@ namespace iLand.Output
 
             Debug.Assert(trees.Species.Index < LandscapeRemovedOutput.KeyRemovalTypeMultiplier);
             int key = LandscapeRemovedOutput.KeyRemovalTypeMultiplier * (int)removalType + trees.Species.Index;
-            if (this.removalsByTypeAndSpeciesIndex.TryGetValue(key, out LandscapeRemovalData removalData) == false)
+            if (this.removalsByTypeAndSpeciesIndex.TryGetValue(key, out LandscapeRemovalData? removalData) == false)
             {
-                removalData = new LandscapeRemovalData()
-                {
-                    Species = trees.Species
-                };
+                removalData = new LandscapeRemovalData(trees.Species);
                 this.removalsByTypeAndSpeciesIndex.Add(key, removalData);
             }
             removalData.BasalArea += trees.GetBasalArea(treeIndex);
@@ -95,7 +91,7 @@ namespace iLand.Output
                     MortalityCause removalType = (MortalityCause)(removal.Key / LandscapeRemovedOutput.KeyRemovalTypeMultiplier);
                     int speciesIndex = removal.Key % LandscapeRemovedOutput.KeyRemovalTypeMultiplier;
                     insertRow.Parameters[0].Value = model.CurrentYear;
-                    insertRow.Parameters[1].Value = removal.Value.Species.ID;
+                    insertRow.Parameters[1].Value = removal.Value.TreeSpecies.ID;
                     insertRow.Parameters[2].Value = removalType switch
                     {
                         MortalityCause.CutDown => "C",

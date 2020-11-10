@@ -4,7 +4,7 @@ namespace iLand.Input.ProjectFile
 {
     public class FilterOutput : Enablable
     {
-        public string Filter { get; private set; }
+        public string? Filter { get; private set; }
 
         public FilterOutput()
         {

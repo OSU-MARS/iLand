@@ -3,6 +3,8 @@ using iLand.Tools;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
+using System;
+using System.Diagnostics;
 
 namespace iLand.Output
 {
@@ -83,7 +85,8 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
-
+                Debug.Assert(ru.Snags != null, "Resource unit has null soil when its snags are non-null.");
+                
                 ResourceUnitTreeStatistics ruStatistics = ru.Trees.Statistics;
                 double areaFactor = ru.AreaInLandscape / Constant.RUArea; // conversion factor from real area to per ha values
                 if (isRUlevel)
@@ -131,7 +134,7 @@ namespace iLand.Output
                     }
 
                     // biomass from soil (convert from t/ha . kg/ha)
-                    insertRow.Parameters[20].Value = ru.Soil.YoungRefractory.C * 1000.0; // wood
+                    insertRow.Parameters[20].Value = ru.Soil!.YoungRefractory.C * 1000.0; // wood, 16.8.0 nullable analysis misses RU consistency check above
                     insertRow.Parameters[21].Value = ru.Soil.YoungRefractory.N * 1000.0;
                     insertRow.Parameters[22].Value = ru.Soil.YoungLabile.C * 1000.0; // litter
                     insertRow.Parameters[23].Value = ru.Soil.YoungLabile.N * 1000.0;
@@ -169,7 +172,7 @@ namespace iLand.Output
                     accumulatedValues[16] += ru.Snags.TotalBranchesAndRoots.N;
                 }
                 // biomass from soil (converstion to kg/ha), and scale with fraction of stockable area
-                accumulatedValues[17] += ru.Soil.YoungRefractory.C * areaFactor * 1000.0;
+                accumulatedValues[17] += ru.Soil!.YoungRefractory.C * areaFactor * 1000.0; // 16.8.0 nullable analysis misses RU consistency check above
                 accumulatedValues[18] += ru.Soil.YoungRefractory.N * areaFactor * 1000.0;
                 accumulatedValues[19] += ru.Soil.YoungLabile.C * areaFactor * 1000.0;
                 accumulatedValues[20] += ru.Soil.YoungLabile.N * areaFactor * 1000.0;

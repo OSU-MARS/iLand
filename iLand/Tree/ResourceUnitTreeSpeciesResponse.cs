@@ -1,5 +1,4 @@
-﻿using iLand.Simulation;
-using iLand.World;
+﻿using iLand.World;
 using System;
 using System.Diagnostics;
 
@@ -34,10 +33,10 @@ namespace iLand.Tree
         public float UtilizableRadiationForYear { get; private set; } // yearly sum of utilized radiation (MJ/m2)
         public float[] VpdResponseByMonth { get; private set; } // mean of vpd-response
 
-        public ResourceUnitTreeSpeciesResponse()
+        public ResourceUnitTreeSpeciesResponse(ResourceUnit ru, ResourceUnitTreeSpecies ruSpecies)
         {
-            this.Species = null;
-            this.ResourceUnit = null;
+            this.Species = ruSpecies.Species;
+            this.ResourceUnit = ru;
 
             this.CO2ResponseByMonth = new float[Constant.MonthsInYear];
             this.GlobalRadiationByMonth = new float[Constant.MonthsInYear];
@@ -48,6 +47,8 @@ namespace iLand.Tree
             this.UtilizableRadiationByMonth = new float[Constant.MonthsInYear];
             this.UtilizableRadiationForYear = 0.0F;
             this.VpdResponseByMonth = new float[Constant.MonthsInYear];
+
+            // this.Zero();
         }
 
         public void Zero()
@@ -65,13 +66,6 @@ namespace iLand.Tree
             this.NitrogenResponseForYear = 0.0F;
             this.RadiationForYear = 0.0F;
             this.UtilizableRadiationForYear = 0.0F;
-        }
-
-        public void Setup(ResourceUnitTreeSpecies ruSpecies)
-        {
-            this.Species = ruSpecies.Species;
-            this.ResourceUnit = ruSpecies.RU;
-            this.Zero();
         }
 
         /// response calculation called during water cycle
@@ -100,8 +94,15 @@ namespace iLand.Tree
             int leafOffIndex = phenonology.LeafOnEnd;
 
             // nitrogen response: a yearly value based on available nitrogen
-            this.NitrogenResponseForYear = this.Species.GetNitrogenResponse(this.ResourceUnit.Soil.PlantAvailableNitrogen);
-            Debug.Assert(this.NitrogenResponseForYear >= 0.0);
+            if (this.ResourceUnit.Soil == null)
+            {
+                this.NitrogenResponseForYear = 1.0F; // available nitrogen calculations are disabled, so default to making nitrogen non-limiting
+            }
+            else
+            {
+                this.NitrogenResponseForYear = this.Species.GetNitrogenResponse(this.ResourceUnit.Soil.PlantAvailableNitrogen);
+                Debug.Assert(this.NitrogenResponseForYear >= 0.0);
+            }
 
             int dayOfYear = 0;
             for (int dayIndex = this.ResourceUnit.Climate.CurrentJanuary1; dayIndex < this.ResourceUnit.Climate.NextJanuary1; ++dayIndex, ++dayOfYear)

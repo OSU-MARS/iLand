@@ -4,8 +4,8 @@ namespace iLand.Input.ProjectFile
 {
     public class Wind : Enablable
     {
-        public string SpeciesParameter { get; private set; }
-        public string SoilFreezeMode { get; private set; }
+        public string? SpeciesParameter { get; private set; }
+        public string? SoilFreezeMode { get; private set; }
         public bool TriggeredByTimeEvent { get; private set; }
         public int DurationPerIteration { get; private set; }
         public double GustModifier { get; private set; }
@@ -15,15 +15,15 @@ namespace iLand.Input.ProjectFile
         public int DayOfYear { get; private set; }
         public double Speed { get; private set; }
         public double Duration { get; private set; }
-        public string TopoGridFile { get; private set; }
+        public string? TopoGridFile { get; private set; }
         public double FactorEdge { get; private set; }
         public double EdgeDetectionThreshold { get; private set; }
-        public string TopexModifierType { get; private set; }
-        public string LriTransferFunction { get; private set; }
-        public string EdgeProbability { get; private set; }
+        public string? TopexModifierType { get; private set; }
+        public string? LriTransferFunction { get; private set; }
+        public string? EdgeProbability { get; private set; }
         public int EdgeAgeBaseValue { get; private set; }
         public double EdgeBackgroundProbability { get; private set; }
-        public string OnAfterWind { get; private set; }
+        public string? OnAfterWind { get; private set; }
 
         protected override void ReadStartElement(XmlReader reader)
         {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace iLand.Tools
 {
@@ -10,13 +11,13 @@ namespace iLand.Tools
     internal class RandomCustomPdf
     {
         private readonly RandomWeighted mRandomIndex;
-        private Expression mExpression;
+        private Expression? mExpression;
         private int mSteps;
         private double mLowerBound, mUpperBound;
         private double mDeltaX;
         private bool mSumFunction;
 
-        public string DensityFunction { get; private set; }
+        public string? DensityFunction { get; private set; }
 
         public RandomCustomPdf()
         {
@@ -39,40 +40,40 @@ namespace iLand.Tools
          */
         public void Setup(string funcExpr, double lowerBound = 0, double upperBound = 1, bool isSumFunc = false, int stepCount = 100)
         {
-            DensityFunction = funcExpr;
-            mSteps = stepCount;
-            mSumFunction = isSumFunc;
-            mExpression = new Expression(funcExpr);
+            this.DensityFunction = funcExpr;
+            this.mSteps = stepCount;
+            this.mSumFunction = isSumFunc;
+            this.mExpression = new Expression(funcExpr);
 
-            mRandomIndex.Setup(mSteps);
-            mLowerBound = lowerBound;
-            mUpperBound = upperBound;
-            mDeltaX = (mUpperBound - mLowerBound) / mSteps;
-            double step_width = 1.0 / mSteps;
+            this.mRandomIndex.Setup(mSteps);
+            this.mLowerBound = lowerBound;
+            this.mUpperBound = upperBound;
+            this.mDeltaX = (mUpperBound - mLowerBound) / mSteps;
+            double stepWidth = 1.0 / mSteps;
             for (int step = 0; step < mSteps; ++step)
             {
-                double x1 = mLowerBound + step * mDeltaX;
-                double x2 = x1 + mDeltaX;
+                double x1 = this.mLowerBound + step * this.mDeltaX;
+                double x2 = x1 + this.mDeltaX;
                 // p1, p2: werte der pdf bei unterer und oberer grenze des aktuellen schrittes
-                double p1 = mExpression.Evaluate(x1);
-                double p2 = mExpression.Evaluate(x2);
+                double p1 = this.mExpression.Evaluate(x1);
+                double p2 = this.mExpression.Evaluate(x2);
                 // areaval: numerische integration zwischen x1 und x2
-                double areaval = (p1 + p2) / 2 * step_width;
+                double stepProbability = 0.5 * (p1 + p2) * stepWidth;
                 if (isSumFunc)
                 {
-                    areaval -= p1 * step_width; // summenwahrscheinlichkeit: nur das Delta zaehlt.
-                                                // tsetWeightghted operiert mit integers . umrechnung: * huge_val
+                    stepProbability -= p1 * stepWidth; // summenwahrscheinlichkeit: nur das Delta zaehlt.
+                                                // set weighted operiert mit integers . umrechnung: * huge_val
                 }
-                mRandomIndex.SetCellWeight(step, (int)(areaval * 100000000));
+                this.mRandomIndex.SetCellWeight(step, (int)(stepProbability * 100000000));
             }
         }
 
         public double GetRandomValue(RandomGenerator randomGenerator)
         {
             // zufallszahl ziehen.
-            if (mExpression == null)
+            if (this.mExpression == null)
             {
-                throw new NotSupportedException("TRandomCustomPDF: get() without setup()!"); // not set up properly                                                             
+                throw new NotSupportedException("GetRandomValue() called before Setup()."); // not set up properly                                                             
             }
 
             // (1) select slot randomly:
@@ -86,12 +87,17 @@ namespace iLand.Tools
 
         public double GetProbabilityOfRange(double lowerBound, double upperBound)
         {
-            if (mSumFunction)
+            if (this.mSumFunction)
             {
-                double p1, p2;
-                p1 = mExpression.Evaluate(lowerBound);
-                p2 = mExpression.Evaluate(upperBound);
-                return p2 - p1;
+                if (this.mExpression == null)
+                {
+                    throw new NotSupportedException("GetProbabilityOfRange() called before Setup()."); // not set up properly                                                             
+                }
+                double p1 = this.mExpression.Evaluate(lowerBound);
+                double p2 = this.mExpression.Evaluate(upperBound);
+                double probabilityOfRange = p2 - p1;
+                Debug.Assert(probabilityOfRange >= 0.0);
+                return probabilityOfRange;
             }
 
             // Wahrscheinlichkeit, dass wert zwischen lower- und upper-bound liegt.

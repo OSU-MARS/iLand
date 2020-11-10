@@ -1,4 +1,4 @@
-﻿using iLand.Simulation;
+﻿#nullable disable
 using iLand.World;
 using System;
 using System.Collections.Generic;
@@ -165,7 +165,7 @@ namespace iLand.Tools
             SetPalette(GridViewType.Terrain, 0, 4);
         }
 
-        public Color ColorFromPalette(int value, GridViewType view_type)
+        public static Color ColorFromPalette(int value, GridViewType view_type)
         {
             if (value < 0)
             {
@@ -211,7 +211,7 @@ namespace iLand.Tools
             return col.Lighter(200);
         }
 
-        public Color ShadeColor(Color col, PointF coordinates, DEM dem)
+        public static Color ShadeColor(Color col, PointF coordinates, DEM dem)
         {
             if (dem != null)
             {
@@ -226,7 +226,7 @@ namespace iLand.Tools
         }
 
         // colors
-        public Color ColorFromValue(float value, float min_value, float max_value, bool reverse, bool black_white)
+        public static Color ColorFromValue(float value, float min_value, float max_value, bool reverse, bool black_white)
         {
             float rval = value;
             rval = Math.Max(min_value, rval);
@@ -258,7 +258,7 @@ namespace iLand.Tools
             return col;
         }
 
-        public Color ColorFromValue(float value, GridViewType view_type, float min_value, float max_value)
+        public static Color ColorFromValue(float value, GridViewType view_type, float min_value, float max_value)
         {
             if (view_type == GridViewType.Grey || view_type == GridViewType.GreyReverse)
             {

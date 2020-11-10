@@ -5,7 +5,7 @@ namespace iLand.Input.ProjectFile
 {
     public class Management : Enablable
     {
-        public string File { get; private set; }
+        public string? File { get; private set; }
         public bool AbeEnabled { get; private set; }
         public AgentBasedEngine Abe { get; private set; }
 

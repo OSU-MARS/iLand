@@ -19,18 +19,17 @@ namespace iLand.Simulation
         public int CurrentYear { get; set; }
 
         public Landscape Landscape { get; private set; }
-        public Management Management { get; private set; }
+        public Management? Management { get; private set; }
         public ModelSettings ModelSettings { get; private set; }
         public Plugin.Modules Modules { get; private set; }
         public Output.Outputs Outputs { get; private set; }
         public Project Project { get; private set; }
         public RandomGenerator RandomGenerator { get; private set; }
-        public ScheduledEvents ScheduledEvents { get; private set; }
+        public ScheduledEvents? ScheduledEvents { get; private set; }
 
         public Model(Project projectFile, Landscape landscape)
         {
             this.isDisposed = false;
-            this.ruParallel = null;
 
             this.Project = projectFile;
             this.Landscape = landscape;
@@ -43,7 +42,7 @@ namespace iLand.Simulation
             this.ScheduledEvents = null;
 
             // random seed: if stored value is <> 0, use this as the random seed (and produce hence always an equal sequence of random numbers)
-            Nullable<int> seed = this.Project.System.Settings.RandomSeed;
+            int? seed = this.Project.System.Settings.RandomSeed;
             this.RandomGenerator.Setup(RandomGenerator.RandomGeneratorType.MersenneTwister, seed); // use the MersenneTwister as default
 
             // setup of modules
@@ -51,15 +50,15 @@ namespace iLand.Simulation
 
             // setup the helper that does the multithreading
             // list of "valid" resource units
-            List<ResourceUnit> validRUs = new List<ResourceUnit>();
+            List<ResourceUnit> validResourceUnits = new List<ResourceUnit>();
             foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
             {
                 if (ru.EnvironmentID != -1)
                 {
-                    validRUs.Add(ru);
+                    validResourceUnits.Add(ru);
                 }
             }
-            this.ruParallel = new MaybeParallel<ResourceUnit>(validRUs)
+            this.ruParallel = new MaybeParallel<ResourceUnit>(validResourceUnits)
             {
                 IsMultithreaded = this.Project.System.Settings.Multithreading
             };
@@ -75,7 +74,7 @@ namespace iLand.Simulation
                     if (ru != null)
                     {
                         RectangleF ruPosition = this.Landscape.ResourceUnitGrid.GetCellExtent(this.Landscape.ResourceUnitGrid.CellIndexOf(ru));
-                        this.Landscape.Environment.SetPosition(this.Project, this.Landscape, ruPosition.Center()); // if environment is 'disabled' default values from the project file are used.
+                        this.Landscape.Environment.SetPosition(this.Project, ruPosition.Center()); // if environment is 'disabled' default values from the project file are used.
                         this.Modules.SetupResourceUnit(ru);
                     }
                 }
@@ -102,7 +101,7 @@ namespace iLand.Simulation
             if (this.Project.Model.World.TimeEventsEnabled)
             {
                 this.ScheduledEvents = new ScheduledEvents();
-                string timeEventsFileName = this.Project.Model.World.TimeEventsFile;
+                string? timeEventsFileName = this.Project.Model.World.TimeEventsFile;
                 if (String.IsNullOrEmpty(timeEventsFileName))
                 {
                     throw new XmlException("/project/model/world/timeEventsFile not found");
@@ -249,6 +248,7 @@ namespace iLand.Simulation
                     MaybeParallel<TreeSpecies> speciesParallel = new MaybeParallel<TreeSpecies>(speciesSet.ActiveSpecies); // initialize a thread runner object with all active species
                     speciesParallel.ForEach((TreeSpecies species) =>
                     {
+                        Debug.Assert(species.SeedDispersal != null, "Attempt to disperse seeds from a tree species not configured for seed dispersal.");
                         species.SeedDispersal.DisperseSeeds(this);
                     });
                 }

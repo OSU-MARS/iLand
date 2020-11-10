@@ -22,14 +22,14 @@ namespace iLand.Tools
     {
         protected static readonly ReadOnlyCollection<string> BaseVariableNames;
 
-        public Model Model { get; private set; }
+        public Model? Model { get; private set; }
 
         static ExpressionWrapper()
         {
             ExpressionWrapper.BaseVariableNames = new List<string>() { "year" }.AsReadOnly();
         }
 
-        protected ExpressionWrapper(Model model)
+        protected ExpressionWrapper(Model? model)
         {
             this.Model = model;
         }
@@ -39,12 +39,16 @@ namespace iLand.Tools
         // must be overloaded!
         public virtual double GetValue(int variableIndex)
         {
-            return variableIndex switch
+            if (variableIndex == 0)
             {
-                // year
-                0 => this.Model.CurrentYear,
-                _ => throw new NotSupportedException(string.Format("expression wrapper reached base with invalid index index {0}", variableIndex)),
-            };
+                if (this.Model == null)
+                {
+                    throw new NotSupportedException("Attempt to obtain current year from wrapper but Model was not specified.");
+                }
+                return this.Model.CurrentYear;
+            }
+
+            throw new NotSupportedException("Unhandled variable index " + variableIndex + ".");
         }
 
         public int GetVariableIndex(string variableName)

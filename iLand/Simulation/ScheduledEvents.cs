@@ -2,8 +2,6 @@
 using iLand.Tools;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 
 namespace iLand.Simulation
 {
@@ -33,14 +31,14 @@ namespace iLand.Simulation
             // TODO: validate header
             for (int row = 1; row < eventFile.RowCount; ++row)
             {
-                int year = Int32.Parse(eventFile.GetValue(yearIndex, row));
-                if (this.eventsByYear.TryGetValue(year, out List<MutableTuple<string, string>> eventsOfYear) == false)
+                List<string> line = eventFile.GetRow(row);
+                int year = Int32.Parse(line[yearIndex]);
+                if (this.eventsByYear.TryGetValue(year, out List<MutableTuple<string, string>>? eventsOfYear) == false)
                 {
                     eventsOfYear = new List<MutableTuple<string, string>>();
                     this.eventsByYear.Add(year, eventsOfYear);
                 }
 
-                List<string> line = eventFile.GetRow(row);
                 for (int column = 0; column < line.Count; column++)
                 {
                     if (column != yearIndex)
@@ -56,7 +54,7 @@ namespace iLand.Simulation
         public void RunYear(Model model)
         {
             int currentYear = model.CurrentYear;
-            if (eventsByYear.TryGetValue(currentYear, out List<MutableTuple<string, string>> eventsOfYear) == false)
+            if (eventsByYear.TryGetValue(currentYear, out List<MutableTuple<string, string>>? eventsOfYear) == false)
             {
                 return;
             }
@@ -92,9 +90,9 @@ namespace iLand.Simulation
 
         // read value for key 'key' and year 'year' from the list of items.
         // return a empty object if for 'year' no value is set
-        public string GetEvent(int year, string eventKey)
+        public string? GetEvent(int year, string eventKey)
         {
-            if (eventsByYear.TryGetValue(year, out List<MutableTuple<string, string>> eventsOfYear) == false)
+            if (eventsByYear.TryGetValue(year, out List<MutableTuple<string, string>>? eventsOfYear) == false)
             {
                 return null;
             }

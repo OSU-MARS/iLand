@@ -185,57 +185,57 @@ namespace iLand.Tools
           Example: in: {5, 2, 7, 5}
                    out: {2, 1, 4, 2}
           */
-        public List<int> CalculateRanks(List<double> data, bool descending)
-        {
-            // simple ranking algorithm.
-            // we have "N" data-values.
-            // rank := N - (N smaller or equal)
-            List<int> ranks = new List<int>(data.Count);
-            int n = data.Count;
-            for (int i = 0; i < n; i++)
-            {
-                int smaller = 0;
-                for (int j = 0; j < n; j++)
-                {
-                    if (i == j)
-                    {
-                        continue;
-                    }
-                    if (data[j] <= data[i])
-                    {
-                        smaller++;
-                    }
-                }
-                if (descending) // better rank if lower value...
-                {
-                    ranks.Add(smaller + 1);
-                }
-                else
-                {
-                    ranks.Add(n - smaller);  // better rank if value is higher...
-                }
-            }
-            return ranks;
-        }
+        //private static List<int> CalculateRanks(List<double> data, bool descending)
+        //{
+        //    // simple ranking algorithm.
+        //    // we have "N" data-values.
+        //    // rank := N - (N smaller or equal)
+        //    List<int> ranks = new List<int>(data.Count);
+        //    int n = data.Count;
+        //    for (int i = 0; i < n; i++)
+        //    {
+        //        int smaller = 0;
+        //        for (int j = 0; j < n; j++)
+        //        {
+        //            if (i == j)
+        //            {
+        //                continue;
+        //            }
+        //            if (data[j] <= data[i])
+        //            {
+        //                smaller++;
+        //            }
+        //        }
+        //        if (descending) // better rank if lower value...
+        //        {
+        //            ranks.Add(smaller + 1);
+        //        }
+        //        else
+        //        {
+        //            ranks.Add(n - smaller);  // better rank if value is higher...
+        //        }
+        //    }
+        //    return ranks;
+        //}
 
         /** scale the data in such a way that the sum of all data items is "targetSum"
           */
-        public void Normalize(List<double> data, double targetSum)
-        {
-            double sum = 0.0;
-            foreach (double value in data)
-            {
-                sum += value;
-            }
+        //private static void Normalize(List<double> data, double targetSum)
+        //{
+        //    double sum = 0.0;
+        //    foreach (double value in data)
+        //    {
+        //        sum += value;
+        //    }
 
-            if (sum != 0)
-            {
-                double m = targetSum / sum;
-                for (int index = 0; index < data.Count; ++index)
-                {
-                    data[index] *= m;
-                }
-            }
-        }
+        //    if (sum != 0)
+        //    {
+        //        double m = targetSum / sum;
+        //        for (int index = 0; index < data.Count; ++index)
+        //        {
+        //            data[index] *= m;
+        //        }
+        //    }
+        //}
     }
 }

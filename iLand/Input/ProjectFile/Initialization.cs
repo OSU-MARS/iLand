@@ -4,12 +4,12 @@ namespace iLand.Input.ProjectFile
 {
     public class Initialization : XmlSerializable
     {
-		public string MapFileName { get; private set; }
-		public string Mode { get; private set; }
-		public string Type { get; private set; }
-		public string RandomFunction { get; private set; }
-		public string File { get; private set; }
-		public string SaplingFile { get; private set; }
+		public string? MapFileName { get; private set; }
+		public string? Mode { get; private set; }
+		public string? Type { get; private set; }
+		public string? RandomFunction { get; private set; }
+		public string? File { get; private set; }
+		public string? SaplingFile { get; private set; }
 		public Snags Snags { get; private set; }
 		public HeightGrid HeightGrid { get; private set; }
 

@@ -16,7 +16,7 @@ namespace iLand.World
     // http://iland.boku.ac.at/ClimateData
     public class Climate
     {
-        private string climateTableQueryFilter;
+        private string? climateTableQueryFilter;
         private int mCurrentDataYear; // current year in climate data cached in memory (relative); one less than GlobalSettings.CurrentYear
         private int mNextYearToLoad; // start year of climate data cached in memory
         private float mDefaultTemperatureAddition; // add this to daily temp
@@ -117,9 +117,9 @@ namespace iLand.World
         }
 
         // load mLoadYears years from database
-        private void LoadYear(Project projectFile, Landscape landscape)
+        private void LoadYear(Project projectFile)
         {
-            string climateTableQueryFilter = null;
+            string? climateTableQueryFilter = null;
             if (String.IsNullOrEmpty(this.climateTableQueryFilter) == false)
             {
                 climateTableQueryFilter = "where " + this.climateTableQueryFilter;
@@ -137,7 +137,7 @@ namespace iLand.World
             string query = String.Format("select year,month,day,min_temp,max_temp,prec,rad,vpd from {0} {1} order by year, month, day", Name, climateTableQueryFilter);
 
             string climateDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.System.Database.Climate);
-            using SqliteConnection climateDatabase = landscape.GetDatabaseConnection(climateDatabaseFilePath, true);
+            using SqliteConnection climateDatabase = Landscape.GetDatabaseConnection(climateDatabaseFilePath, true);
             using SqliteCommand queryCommand = new SqliteCommand(query, climateDatabase);
             using SqliteDataReader climateReader = queryCommand.ExecuteReader();
 
@@ -279,7 +279,7 @@ namespace iLand.World
                 // default behaviour: simply advance to next year, call load() if end reached
                 if (mCurrentDataYear >= mYearsToLoad - 1) // need to load more data
                 {
-                    this.LoadYear(model.Project, model.Landscape);
+                    this.LoadYear(model.Project);
                 }
                 else
                 {
@@ -394,26 +394,26 @@ namespace iLand.World
         }
 
         // setup routine that opens database connection
-        public void Setup(Project projectFile, Landscape landscape)
+        public void Setup(Project projectFile)
         {
             this.climateTableQueryFilter = projectFile.Model.Climate.Filter;
 
-            mYearsToLoad = projectFile.Model.Climate.BatchYears;
-            mDoRandomSampling = projectFile.Model.Climate.RandomSamplingEnabled;
-            mRandomYearList.Clear();
-            mRandomListIndex = -1;
-            if (mDoRandomSampling)
+            this.mYearsToLoad = projectFile.Model.Climate.BatchYears;
+            this.mDoRandomSampling = projectFile.Model.Climate.RandomSamplingEnabled;
+            this.mRandomYearList.Clear();
+            this.mRandomListIndex = -1;
+            if (this.mDoRandomSampling)
             {
-                string list = projectFile.Model.Climate.RandomSamplingList;
+                string? list = projectFile.Model.Climate.RandomSamplingList;
                 if (String.IsNullOrEmpty(list) == false)
                 {
                     List<string> strlist = Regex.Split(list, "\\W+").ToList();
                     foreach (string s in strlist)
                     {
-                        mRandomYearList.Add(Int32.Parse(s));
+                        this.mRandomYearList.Add(Int32.Parse(s));
                     }
                     // check for validity
-                    foreach (int year in mRandomYearList)
+                    foreach (int year in this.mRandomYearList)
                     {
                         if (year < 0 || year >= mYearsToLoad)
                         {
@@ -443,7 +443,7 @@ namespace iLand.World
 
             // setup query
             // load first chunk...
-            this.LoadYear(projectFile, landscape);
+            this.LoadYear(projectFile);
             this.SetupPhenology(projectFile);
             this.Sun.Setup(Maths.ToRadians(projectFile.Model.World.Latitude));
             this.mCurrentDataYear = -1; // go to "-1" -> the first call to next year will go to year 0.

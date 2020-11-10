@@ -6,11 +6,11 @@ namespace iLand.Input.ProjectFile
     public class Grass : Enablable
     {
 		public GrassAlgorithmType Type { get; private set; }
-		public string GrassDuration { get; private set; }
+		public string? GrassDuration { get; private set; }
 		public float LifThreshold { get; private set; }
-		public string GrassPotential { get; private set; }
+		public string? GrassPotential { get; private set; }
 		public int MaxTimeLag { get; private set; }
-		public string GrassEffect { get; private set; }
+		public string? GrassEffect { get; private set; }
 
 		public Grass()
         {

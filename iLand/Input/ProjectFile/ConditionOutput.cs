@@ -4,7 +4,7 @@ namespace iLand.Input.ProjectFile
 {
     public class ConditionOutput : Enablable
     {
-        public string Condition { get; protected set; }
+        public string? Condition { get; protected set; }
 
         public ConditionOutput()
         {

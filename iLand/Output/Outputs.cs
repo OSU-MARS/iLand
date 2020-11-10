@@ -1,4 +1,5 @@
 ﻿using iLand.Input.ProjectFile;
+using iLand.World;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
@@ -12,15 +13,15 @@ namespace iLand.Output
       */
     public class Outputs : IDisposable
     {
-        private SqliteConnection database;
+        private SqliteConnection? database;
         private readonly List<Output> enabledOutputs;
         private int firstUncommittedYear;
         private bool isDisposed;
         private readonly int logCommitIntervalInYears;
-        private SqliteTransaction loggingTransaction;
+        private SqliteTransaction? loggingTransaction;
 
-        public LandscapeRemovedOutput LandscapeRemoved { get; private set; }
-        public TreeRemovedOutput TreeRemoved { get; private set; }
+        public LandscapeRemovedOutput? LandscapeRemoved { get; private set; }
+        public TreeRemovedOutput? TreeRemoved { get; private set; }
 
         // on creation of the output manager
         // an instance of every iLand output
@@ -137,16 +138,15 @@ namespace iLand.Output
             //SqlHelper.ExecuteSql(String.Format("insert into runs (id, timestamp) values ({0}, '{1}')", maxID, timestamp), g.DatabaseInput);
             // replace path information
             // setup final path
-            string outputDatabaseFile = model.Project.System.Database.Output;
+            string? outputDatabaseFile = model.Project.System.Database.Output;
             if (String.IsNullOrWhiteSpace(outputDatabaseFile))
             {
                 throw new XmlException("The /project/system/database/out element is missing or does not specify an output database file name.");
             }
             string outputDatabasePath = model.Project.GetFilePath(ProjectDirectory.Output, outputDatabaseFile);
             // dbPath.Replace("$id$", maxID.ToString(), StringComparison.Ordinal);
-            string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_hhmmss");
-            outputDatabasePath.Replace("$date$", timestamp, StringComparison.Ordinal);
-            this.database = model.Landscape.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
+            outputDatabasePath = outputDatabasePath.Replace("$date$", DateTime.Now.ToString("yyyyMMdd_hhmmss"), StringComparison.Ordinal);
+            this.database = Landscape.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
 
             using SqliteTransaction outputTableCreationTransaction = this.database.BeginTransaction();
             foreach (Output output in this.enabledOutputs)
@@ -179,6 +179,10 @@ namespace iLand.Output
             //using DebugTimer timer = model.DebugTimers.Create("OutputManager.LogYear()");
             if (this.loggingTransaction == null)
             {
+                if (this.database == null)
+                {
+                    throw new NotSupportedException("Attempt to call LogYear() without first calling Setup().");
+                }
                 this.loggingTransaction = this.database.BeginTransaction();
                 this.firstUncommittedYear = model.CurrentYear;
             }

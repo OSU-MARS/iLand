@@ -10,7 +10,7 @@ namespace iLand.Cmdlets
     {
         [Parameter(Mandatory = true)]
         [ValidateNotNullOrEmpty]
-        public string Project { get; set; }
+        public string? Project { get; set; }
 
         [Parameter]
         [ValidateRange(ValidateRangeKind.Positive)]
@@ -23,7 +23,7 @@ namespace iLand.Cmdlets
 
         protected override void ProcessRecord()
         {
-            Project projectFile = new Project(this.Project);
+            Project projectFile = new Project(this.Project!);
             Landscape landscape = new Landscape(projectFile);
 
             using Model model = new Model(projectFile, landscape);

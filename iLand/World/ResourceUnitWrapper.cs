@@ -10,7 +10,7 @@ namespace iLand.World
     {
         private static readonly ReadOnlyCollection<string> VariableNames;
 
-        public ResourceUnit ResourceUnit { get; set; }
+        public ResourceUnit? ResourceUnit { get; set; }
 
         static ResourceUnitWrapper()
         {
@@ -41,7 +41,12 @@ namespace iLand.World
             {
                 case 0: return this.ResourceUnit.EnvironmentID; // id from grid
                 case 1: return this.ResourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea;
-                case 2: return this.ResourceUnit.Soil.PlantAvailableNitrogen;
+                case 2:
+                    if (this.ResourceUnit.Soil != null)
+                    {
+                        return this.ResourceUnit.Soil.PlantAvailableNitrogen;
+                    }
+                    return -1.0;
                 case 3: return this.ResourceUnit.WaterCycle.SoilDepth;
                 case 4: return this.ResourceUnit.AreaWithTrees;
                 case 5: return this.ResourceUnit.AreaInLandscape;
@@ -62,29 +67,20 @@ namespace iLand.World
                     {
                         return this.ResourceUnit.Soil.YoungLabile.C + this.ResourceUnit.Soil.YoungRefractory.C + this.ResourceUnit.Soil.OrganicMatter.C;
                     }
-                    else
-                    {
-                        return 0.0;
-                    }
+                    return 0.0;
                 case 18:
                     if (this.ResourceUnit.Soil != null)
                     {
                         return this.ResourceUnit.Soil.YoungLabile.N + this.ResourceUnit.Soil.YoungRefractory.N + this.ResourceUnit.Soil.OrganicMatter.N;
                     }
-                    else
-                    {
-                        return 0.0;
-                    }
+                    return 0.0;
                 // snags
                 case 19:
                     if (this.ResourceUnit.Snags != null)
                     {
                         return this.ResourceUnit.Snags.StandingAndDebrisCarbon;
                     }
-                    else
-                    {
-                        return 0.0;
-                    }
+                    return 0.0;
                 case 20: return this.ResourceUnit.ResourceUnitGridIndex; // numeric index
                 case 21: return this.ResourceUnit.Climate.MeanAnnualTemperature; // mean temperature
                 case 22:

@@ -27,7 +27,7 @@
         public double Npp { get; private set; } // sum. of NPP (kg Biomass increment, above+belowground, trees >4m)/ha
         public double NppAbove { get; private set; } // above ground NPP (kg Biomass increment)/ha
         public double NppSaplings { get; private set; } // carbon gain of saplings (kg Biomass increment)/ha
-        public ResourceUnitTreeSpecies ResourceUnitSpecies { get; set; }
+        public ResourceUnitTreeSpecies? ResourceUnitSpecies { get; init; }
         // number of sapling (Reinekes Law)
         public int SaplingCount { get; private set; } // number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
         public double StemVolume { get; private set; } // sum of tree volume (m3/ha)
@@ -45,10 +45,9 @@
         public double StemC { get; private set; }
         public double StemN { get; private set; }
 
-        public ResourceUnitTreeStatistics() 
-        { 
-            this.ResourceUnitSpecies = null;
-            this.Zero(); 
+        public ResourceUnitTreeStatistics(ResourceUnitTreeSpecies? ruSpecies)
+        {
+            this.ResourceUnitSpecies = ruSpecies;
         }
 
         /// total carbon stock: sum of carbon of all living trees + regeneration layer
@@ -118,7 +117,7 @@
             this.NppSaplings += sapling.CarbonGain.C / Constant.BiomassCFraction;
         }
 
-        public void Add(Trees trees, int treeIndex, TreeGrowthData treeGrowth, bool skipDead = false)
+        public void Add(Trees trees, int treeIndex, TreeGrowthData? treeGrowth, bool skipDead = false)
         {
             if (skipDead && trees.IsDead(treeIndex))
             {
@@ -154,11 +153,11 @@
         {
             if (this.TreesPerHectare > 0.0)
             {
-                this.AverageDbh = mSumDbh / TreesPerHectare;
-                this.AverageHeight = mSumHeight / TreesPerHectare;
-                if (this.ResourceUnitSpecies != null && ResourceUnitSpecies.RU.AreaInLandscape > 0.0)
+                this.AverageDbh = mSumDbh / this.TreesPerHectare;
+                this.AverageHeight = mSumHeight / this.TreesPerHectare;
+                if (this.ResourceUnitSpecies != null && this.ResourceUnitSpecies.RU.AreaInLandscape > 0.0)
                 {
-                    this.LeafAreaIndex /= ResourceUnitSpecies.RU.AreaInLandscape; // convert from leafarea to LAI
+                    this.LeafAreaIndex /= this.ResourceUnitSpecies.RU.AreaInLandscape; // convert from leafarea to LAI
                 }
             }
             if (this.CohortCount != 0)

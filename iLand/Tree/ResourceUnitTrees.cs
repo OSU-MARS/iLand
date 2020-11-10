@@ -16,7 +16,7 @@ namespace iLand.Tree
         public bool HasDeadTrees { get; private set; } // if true, the resource unit has dead trees and needs maybe some cleanup
         public float PhotosyntheticallyActiveArea { get; set; } // TotalArea - Unstocked Area - loss due to BeerLambert (m2)
         public float PhotosyntheticallyActiveAreaPerLightWeightedLeafArea { get; private set; } ///<
-        public List<ResourceUnitTreeSpecies> SpeciesPresentOnResourceUnit { get; private set; }
+        public List<ResourceUnitTreeSpecies> SpeciesAvailableOnResourceUnit { get; private set; }
         public ResourceUnitTreeStatistics Statistics { get; private set; }
         public float TotalLeafArea { get; private set; } // total leaf area of resource unit (m2)
         public float TotalLightWeightedLeafArea { get; private set; } // sum of lightResponse * LeafArea for all trees
@@ -34,29 +34,20 @@ namespace iLand.Tree
             this.HasDeadTrees = false;
             this.PhotosyntheticallyActiveArea = 0.0F;
             this.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea = 0.0F;
-            this.SpeciesPresentOnResourceUnit = new List<ResourceUnitTreeSpecies>();
-            this.Statistics = new ResourceUnitTreeStatistics();
+            this.SpeciesAvailableOnResourceUnit = new List<ResourceUnitTreeSpecies>(treeSpeciesSet.Count);
+            this.Statistics = new ResourceUnitTreeStatistics(ruSpecies: null);
             this.TotalLeafArea = 0.0F;
             this.TotalLightWeightedLeafArea = 0.0F;
             this.TreesBySpeciesID = new Dictionary<string, Trees>();
             this.TreeSpeciesSet = treeSpeciesSet;
 
-            //mRUSpecies.Capacity = set.count(); // ensure that the vector space is not relocated
-            for (int index = 0; index < treeSpeciesSet.SpeciesCount(); ++index)
+            for (int index = 0; index < treeSpeciesSet.Count; ++index)
             {
-                // TODO: this is an unnecessarily complex way of enumerating over all species in the species set
-                TreeSpecies species = treeSpeciesSet.GetSpecies(index);
-                if (species == null)
-                {
-                    throw new NotSupportedException("Species index " + index + " not found.");
-                }
+                TreeSpecies species = treeSpeciesSet[index];
+                Debug.Assert(species.Index == index);
 
                 ResourceUnitTreeSpecies ruSpecies = new ResourceUnitTreeSpecies(species, ru);
-                this.SpeciesPresentOnResourceUnit.Add(ruSpecies);
-                /* be careful: setup() is called with a pointer somewhere to the content of the mRUSpecies container.
-                   If the container memory is relocated (List), the pointer gets invalid!!!
-                   Therefore, a resize() is called before the loop (no resize()-operations during the loop)! */
-                //mRUSpecies[i].setup(s,this); // setup this element
+                this.SpeciesAvailableOnResourceUnit.Add(ruSpecies);
             }
         }
 
@@ -74,10 +65,10 @@ namespace iLand.Tree
 
         public int AddTree(Landscape landscape, string speciesID)
         {
-            if (this.TreesBySpeciesID.TryGetValue(speciesID, out Trees treesOfSpecies) == false)
+            if (this.TreesBySpeciesID.TryGetValue(speciesID, out Trees? treesOfSpecies) == false)
             {
                 int speciesIndex = -1;
-                foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesPresentOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
                 {
                     if (String.Equals(speciesID, ruSpecies.Species.ID))
                     {
@@ -90,12 +81,10 @@ namespace iLand.Tree
                     throw new ArgumentOutOfRangeException(nameof(speciesID));
                 }
 
-                treesOfSpecies = new Trees(landscape, this.ru)
-                {
-                    Species = this.SpeciesPresentOnResourceUnit[speciesIndex].Species
-                };
+                treesOfSpecies = new Trees(landscape, this.ru, this.SpeciesAvailableOnResourceUnit[speciesIndex].Species);
                 this.TreesBySpeciesID.Add(speciesID, treesOfSpecies);
             }
+            Debug.Assert(String.Equals(treesOfSpecies.Species.ID, speciesID, StringComparison.OrdinalIgnoreCase));
 
             int treeIndex = treesOfSpecies.Count;
             treesOfSpecies.Add();
@@ -164,12 +153,12 @@ namespace iLand.Tree
 
         public ResourceUnitTreeSpecies GetResourceUnitSpecies(TreeSpecies species)
         {
-            return this.SpeciesPresentOnResourceUnit[species.Index];
+            return this.SpeciesAvailableOnResourceUnit[species.Index];
         }
 
         public void OnEndYear()
         {
-            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesPresentOnResourceUnit)
+            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
             {
                 ruSpecies.StatisticsDead.OnEndYear(); // calculate the dead trees
                 ruSpecies.StatisticsManagement.OnEndYear(); // stats of removed trees
@@ -189,7 +178,7 @@ namespace iLand.Tree
 
             // clear statistics global and per species...
             this.Statistics.Zero();
-            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesPresentOnResourceUnit)
+            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
             {
                 ruSpecies.StatisticsDead.Zero();
                 ruSpecies.StatisticsManagement.Zero();
@@ -212,15 +201,15 @@ namespace iLand.Tree
             // and then re-add all trees (since TreeGrowthData is NULL no NPP is available).
             // The statistics are not summarised here, because this happens for all resource units
             // in the yearEnd function of RU.
-            for (int species = 0; species < this.SpeciesPresentOnResourceUnit.Count; ++species)
+            for (int species = 0; species < this.SpeciesAvailableOnResourceUnit.Count; ++species)
             {
                 if (recalculateSpecies)
                 {
-                    this.SpeciesPresentOnResourceUnit[species].Statistics.Zero();
+                    this.SpeciesAvailableOnResourceUnit[species].Statistics.Zero();
                 }
                 else
                 {
-                    this.SpeciesPresentOnResourceUnit[species].Statistics.ZeroTreeStatistics();
+                    this.SpeciesAvailableOnResourceUnit[species].Statistics.ZeroTreeStatistics();
                 }
             }
 
@@ -235,9 +224,9 @@ namespace iLand.Tree
 
             if (recalculateSpecies)
             {
-                for (int species = 0; species < this.SpeciesPresentOnResourceUnit.Count; species++)
+                for (int species = 0; species < this.SpeciesAvailableOnResourceUnit.Count; species++)
                 {
-                    this.SpeciesPresentOnResourceUnit[species].Statistics.OnEndYear();
+                    this.SpeciesAvailableOnResourceUnit[species].Statistics.OnEndYear();
                 }
             }
         }
@@ -322,7 +311,7 @@ namespace iLand.Tree
 
             // clear statistics (ru-level and ru-species level)
             this.Statistics.Zero();
-            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesPresentOnResourceUnit)
+            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
             {
                 ruSpecies.Statistics.Zero();
                 ruSpecies.StatisticsDead.Zero();
@@ -341,7 +330,7 @@ namespace iLand.Tree
             }
 
             // summarize statistics for the whole resource unit
-            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesPresentOnResourceUnit)
+            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
             {
                 ruSpecies.SaplingStats.AverageAgeAndHeights();
                 ruSpecies.Statistics.Add(ruSpecies.SaplingStats);

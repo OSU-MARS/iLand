@@ -7,7 +7,7 @@ namespace iLand.Input.ProjectFile
         // TODO: move to world
         // special mode that treats each resource unit as a "torus" (light calculation, seed distribution)
         public bool Torus { get; private set; }
-        public string DebugTree { get; private set; }
+        public string? DebugTree { get; private set; }
         public bool DebugClear { get; private set; }
         public float GppPerYear { get; private set; }
         public bool DebugDumpStamps { get; private set; }

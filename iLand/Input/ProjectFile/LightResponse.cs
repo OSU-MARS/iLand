@@ -4,9 +4,9 @@ namespace iLand.Input.ProjectFile
 {
     public class LightResponse : XmlSerializable
     {
-        public string ShadeIntolerant { get; private set; }
-        public string ShadeTolerant { get; private set; }
-        public string LriModifier { get; private set; }
+        public string? ShadeIntolerant { get; private set; }
+        public string? ShadeTolerant { get; private set; }
+        public string? LriModifier { get; private set; }
 
         public LightResponse()
         {

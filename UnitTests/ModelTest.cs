@@ -2,25 +2,27 @@
 using iLand.Tree;
 using iLand.World;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NuGet.Frameworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace iLand.Test
 {
     [TestClass]
     public class ModelTest : LandTest
     {
-        public TestContext TestContext { get; set; }
+        public TestContext? TestContext { get; set; }
 
         [TestMethod]
         public void Kalkalpen()
         {
             for (int reliabilityIteration = 0; reliabilityIteration < 1 /* 100 */; ++reliabilityIteration)
             {
-                using Model kalkalpen = this.LoadProject(this.GetKalkalpenProjectPath(this.TestContext));
+                using Model kalkalpen = LandTest.LoadProject(LandTest.GetKalkalpenProjectPath(this.TestContext!));
 
-                this.VerifyKalkalpenModel(kalkalpen);
-                this.VerifyNorwaySpruce(kalkalpen);
+                ModelTest.VerifyKalkalpenModel(kalkalpen);
+                ModelTest.VerifyNorwaySpruce(kalkalpen);
 
                 Dictionary<int, float> initialDiameters = new Dictionary<int, float>();
                 Dictionary<int, float> initialHeights = new Dictionary<int, float>();
@@ -198,10 +200,10 @@ namespace iLand.Test
         public void MalcolmKnapp14()
         {
             // spacing trials
-            using Model plot14 = this.LoadProject(this.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Plot14));
+            using Model plot14 = LandTest.LoadProject(LandTest.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Plot14));
 
             // check soil properties at initial load
-            this.VerifyMalcolmKnappResourceUnit(plot14);
+            ModelTest.VerifyMalcolmKnappResourceUnit(plot14);
 
             List<float> gppByYear = new List<float>();
             List<double> nppByYear = new List<double>();
@@ -213,7 +215,7 @@ namespace iLand.Test
                 Assert.IsTrue(plot14.Landscape.ResourceUnits.Count == 1);
                 float gpp = 0.0F;
                 double npp = 0.0;
-                foreach (ResourceUnitTreeSpecies treeSpecies in plot14.Landscape.ResourceUnits[0].Trees.SpeciesPresentOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies treeSpecies in plot14.Landscape.ResourceUnits[0].Trees.SpeciesAvailableOnResourceUnit)
                 {
                     gpp += treeSpecies.BiomassGrowth.AnnualGpp;
                     npp += treeSpecies.Statistics.Npp;
@@ -232,9 +234,9 @@ namespace iLand.Test
                 volumeByYear.Add(volume);
             }
 
-            this.VerifyMalcolmKnappClimate(plot14);
-            this.VerifyMalcolmKnappModel(plot14);
-            this.VerifyMalcolmKnappDouglasFir(plot14);
+            ModelTest.VerifyMalcolmKnappClimate(plot14);
+            ModelTest.VerifyMalcolmKnappModel(plot14);
+            ModelTest.VerifyMalcolmKnappDouglasFir(plot14);
 
             List<float> nominalGppByYear = new List<float>()
             {
@@ -286,10 +288,10 @@ namespace iLand.Test
         [TestMethod]
         public void MalcolmKnapp16()
         {
-            using Model plot16 = this.LoadProject(this.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Plot16));
+            using Model plot16 = LandTest.LoadProject(LandTest.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Plot16));
 
             // check soil properties at initial load
-            this.VerifyMalcolmKnappResourceUnit(plot16);
+            ModelTest.VerifyMalcolmKnappResourceUnit(plot16);
 
             // 2019 - 1985 + 1 = 35 years of data available
             for (int year = 0; year < 35; ++year)
@@ -297,27 +299,27 @@ namespace iLand.Test
                 plot16.RunYear();
             }
 
-            this.VerifyMalcolmKnappClimate(plot16);
-            this.VerifyMalcolmKnappModel(plot16);
-            this.VerifyMalcolmKnappDouglasFir(plot16);
+            ModelTest.VerifyMalcolmKnappClimate(plot16);
+            ModelTest.VerifyMalcolmKnappModel(plot16);
+            ModelTest.VerifyMalcolmKnappDouglasFir(plot16);
         }
 
         [TestMethod]
         public void MalcolmKnappNelder()
         {
-            using Model nelder1 = this.LoadProject(this.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Nelder1));
-            this.VerifyMalcolmKnappResourceUnit(nelder1);
+            using Model nelder1 = LandTest.LoadProject(LandTest.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Nelder1));
+            ModelTest.VerifyMalcolmKnappResourceUnit(nelder1);
             for (int year = 0; year < 26; ++year) // age 25 to 51
             {
                 nelder1.RunYear();
             }
 
-            this.VerifyMalcolmKnappClimate(nelder1);
-            this.VerifyMalcolmKnappModel(nelder1);
-            this.VerifyMalcolmKnappDouglasFir(nelder1);
+            ModelTest.VerifyMalcolmKnappClimate(nelder1);
+            ModelTest.VerifyMalcolmKnappModel(nelder1);
+            ModelTest.VerifyMalcolmKnappDouglasFir(nelder1);
         }
 
-        private void VerifyKalkalpenModel(Model model)
+        private static void VerifyKalkalpenModel(Model model)
         {
             Assert.IsTrue(model.Landscape.Environment.ClimatesByName.Count == 1);
             Assert.IsTrue(model.Landscape.Dem == null);
@@ -344,7 +346,7 @@ namespace iLand.Test
             Assert.IsTrue(model.Project.System.Settings.Multithreading == false);
         }
 
-        private void VerifyMalcolmKnappClimate(Model model)
+        private static void VerifyMalcolmKnappClimate(Model model)
         {
             Assert.IsTrue(model.Landscape.Environment.ClimatesByName.Count == 1);
             foreach (Climate climate in model.Landscape.Environment.ClimatesByName.Values)
@@ -378,9 +380,9 @@ namespace iLand.Test
             }
         }
 
-        private void VerifyMalcolmKnappDouglasFir(Model model)
+        private static void VerifyMalcolmKnappDouglasFir(Model model)
         {
-            TreeSpecies douglasFir = model.Landscape.ResourceUnits[0].Trees.TreeSpeciesSet.GetSpecies(0);
+            TreeSpecies douglasFir = model.Landscape.ResourceUnits[0].Trees.TreeSpeciesSet[0];
             Assert.IsTrue(douglasFir.Active);
             Assert.IsTrue(String.Equals(douglasFir.ID, "psme", StringComparison.Ordinal));
             // maximumAge  500
@@ -464,12 +466,12 @@ namespace iLand.Test
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 Assert.IsTrue(Object.ReferenceEquals(douglasFir.SpeciesSet, ru.Trees.TreeSpeciesSet));
-                Assert.IsTrue(ru.Trees.TreeSpeciesSet.SpeciesCount() == 1);
+                Assert.IsTrue(ru.Trees.TreeSpeciesSet.Count == 1);
                 Assert.IsTrue(Object.ReferenceEquals(douglasFir, ru.Trees.TreeSpeciesSet.ActiveSpecies[0]));
             }
         }
 
-        private void VerifyMalcolmKnappModel(Model model)
+        private static void VerifyMalcolmKnappModel(Model model)
         {
             Assert.IsTrue(model.Landscape.Environment.UseDynamicAvailableNitrogen == false);
 
@@ -489,7 +491,7 @@ namespace iLand.Test
             Assert.IsTrue(Math.Abs(model.Project.Model.World.Latitude - 49.261F) < 0.003);
         }
 
-        private void VerifyMalcolmKnappResourceUnit(Model model)
+        private static void VerifyMalcolmKnappResourceUnit(Model model)
         {
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
@@ -514,6 +516,7 @@ namespace iLand.Test
                 //ru.Soil.FluxToDisturbance;
                 //ru.Soil.InputLabile;
                 //ru.Soil.InputRefractory;
+                AssertNullable.IsNotNull(ru.Soil);
                 Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.C - 161.086F) < 0.001F);
                 Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.N - 17.73954F) < 0.00001F);
                 Assert.IsTrue(MathF.Abs(ru.Soil.PlantAvailableNitrogen - 56.186F) < 0.001F);
@@ -548,10 +551,10 @@ namespace iLand.Test
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.Count == 1);
         }
 
-        private void VerifyNorwaySpruce(Model model)
+        private static void VerifyNorwaySpruce(Model model)
         {
-            TreeSpecies species = model.Landscape.ResourceUnits[0].Trees.TreeSpeciesSet.GetSpecies("piab");
-            Assert.IsTrue(species != null);
+            TreeSpecies species = model.Landscape.ResourceUnits[0].Trees.TreeSpeciesSet["piab"];
+            AssertNullable.IsNotNull(species);
 
             // PIAB: 1/(1 + (x/0.55)^2)
             double youngAgingFactor = species.GetAgingFactor(10.0F, 10);

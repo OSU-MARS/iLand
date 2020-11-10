@@ -59,7 +59,7 @@ namespace iLand.Tree
         public string ID { get; private set; }
         /// the full name (e.g. Picea abies) of the species
         public string Name { get; private set; }
-        public int Index { get; private set; } // unique index of species within current set
+        public int Index { get; private set; } // unique index of species within current species set
         public int PhenologyClass { get; private set; } // phenology class defined in project file. class 0 = evergreen
         public bool IsConiferous { get; private set; }
         public bool IsEvergreen { get; private set; }
@@ -94,26 +94,29 @@ namespace iLand.Tree
         public float FinerootFoliageRatio { get; private set; } // ratio of fineroot mass (kg) to foliage mass (kg)
         public EstablishmentParameters EstablishmentParameters { get; private set; }
         public SaplingGrowthParameters SaplingGrowthParameters { get; private set; }
-        public SeedDispersal SeedDispersal { get; set; }
+        public SeedDispersal? SeedDispersal { get; set; }
         public TreeSpeciesSet SpeciesSet { get; private set; }
 
-        public TreeSpecies(TreeSpeciesSet set)
+        public TreeSpecies(TreeSpeciesSet speciesSet, string id, string name)
         {
-            if (set == null)
+            if (speciesSet == null)
             {
-                throw new ArgumentNullException(nameof(set));
+                throw new ArgumentNullException(nameof(speciesSet));
             }
 
             this.mAging = new Expression();
-            this.EstablishmentParameters = new EstablishmentParameters();
-            this.Index = set.SpeciesCount();
             this.mLightIntensityProfiles = new TreeSpeciesStamps();
             this.mHDhigh = new Expression();
             this.mHDlow = new Expression();
+            this.mSerotiny = new Expression();
+
+            this.EstablishmentParameters = new EstablishmentParameters();
+            this.ID = id;
+            this.Index = speciesSet.Count;
+            this.Name = name;
             this.SaplingGrowthParameters = new SaplingGrowthParameters();
             this.SeedDispersal = null;
-            this.mSerotiny = new Expression();
-            this.SpeciesSet = set;
+            this.SpeciesSet = speciesSet;
         }
 
         public bool Active { get; private set; }
@@ -152,11 +155,9 @@ namespace iLand.Tree
             */
         public static TreeSpecies Load(Project projectFile, SpeciesReader reader, TreeSpeciesSet speciesSet)
         {
-            TreeSpecies species = new TreeSpecies(speciesSet)
+            TreeSpecies species = new TreeSpecies(speciesSet, reader.ID(), reader.Name())
             {
                 Active = reader.Active(),
-                ID = reader.ID(),
-                Name = reader.Name()
             };
             string stampFile = reader.LipFile();
             // load stamps
@@ -421,12 +422,12 @@ namespace iLand.Tree
         /// returns true of a tree with given age/height is serotinous (i.e. seed release after fire)
         public bool IsTreeSerotinousRandom(RandomGenerator randomGenerator, int age)
         {
-            if (mSerotiny.IsEmpty)
+            if (this.mSerotiny.IsEmpty)
             {
                 return false;
             }
             // the function result (e.g. from a logistic regression model, e.g. Schoennagel 2013) is interpreted as probability
-            double pSerotinous = mSerotiny.Evaluate(age);
+            double pSerotinous = this.mSerotiny.Evaluate(age);
             return randomGenerator.GetRandomDouble() < pSerotinous;
         }
 

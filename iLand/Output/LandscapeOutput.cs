@@ -80,16 +80,16 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
-                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesPresentOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics ruSpeciesStats = ruSpecies.Statistics;
                     if (ruSpeciesStats.TreesPerHectare == 0.0 && ruSpeciesStats.CohortCount == 0 && ruSpeciesStats.TotalStemVolumeGrowth == 0.0)
                     {
                         continue;
                     }
-                    if (this.standStatisticsBySpecies.TryGetValue(ruSpecies.Species.ID, out ResourceUnitTreeStatistics statistics) == false)
+                    if (this.standStatisticsBySpecies.TryGetValue(ruSpecies.Species.ID, out ResourceUnitTreeStatistics? statistics) == false)
                     {
-                        statistics = new ResourceUnitTreeStatistics();
+                        statistics = new ResourceUnitTreeStatistics(ruSpecies);
                         this.standStatisticsBySpecies.Add(ruSpecies.Species.ID, statistics);
                     }
                     statistics.AddWeighted(ruSpeciesStats, ru.AreaInLandscape / totalStockableArea);

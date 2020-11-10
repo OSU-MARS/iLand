@@ -4,9 +4,9 @@ namespace iLand.Input.ProjectFile
 {
     public class DynamicOutput : ConditionOutput
     {
-        public string Columns { get; protected set; }
-        public string ResourceUnitFilter { get; protected set; }
-        public string TreeFilter { get; protected set; }
+        public string? Columns { get; protected set; }
+        public string? ResourceUnitFilter { get; protected set; }
+        public string? TreeFilter { get; protected set; }
 
         public DynamicOutput()
         {

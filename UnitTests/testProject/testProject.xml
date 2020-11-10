@@ -187,9 +187,9 @@
     <stand>
       <enabled>true</enabled>
     </stand>
-    <standdead>
+    <standDead>
       <enabled>true</enabled>
-    </standdead>
+    </standDead>
     <productionMonth>
       <enabled>true</enabled>
     </productionMonth>
@@ -199,15 +199,15 @@
     <sapling>
       <enabled>true</enabled>
     </sapling>
-    <saplingdetail>
+    <saplingDetail>
       <enabled>true</enabled>
-    </saplingdetail>
+    </saplingDetail>
     <carbon>
       <enabled>true</enabled>
     </carbon>
-    <carbonflow>
+    <carbonFlow>
       <enabled>true</enabled>
-    </carbonflow>
+    </carbonFlow>
     <water>
       <enabled>true</enabled>
     </water>

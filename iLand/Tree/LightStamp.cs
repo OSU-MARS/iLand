@@ -17,7 +17,7 @@ namespace iLand.Tree
         public float CrownRadius { get; private set; }
         public float[] Data { get; private set; }
         public int DataSize { get; private set; } // internal size of the stamp; e.g. 4 -> 4x4 stamp with 16 pixels.
-        public LightStamp Reader { get; private set; } // pointer to the appropriate reader stamp (if available)
+        public LightStamp? Reader { get; private set; } // pointer to the appropriate reader stamp (if available)
 
         public LightStamp(int dataSize)
         {
@@ -143,7 +143,7 @@ namespace iLand.Tree
             }
         }
 
-        public void Save(BinaryWriter output)
+        public void Write(BinaryWriter output)
         {
             // see StampContainer doc for file stamp binary format
             output.Write(this.CenterCellPosition);

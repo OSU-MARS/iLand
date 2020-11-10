@@ -10,7 +10,7 @@ namespace iLand.Output
         public StandDeadOutput()
         {
             this.Name = "Dead trees by species/RU";
-            this.TableName = "standdead";
+            this.TableName = "standDead";
             this.Description = "Died trees in current year on the level of RU x species. The output is created after the growth of the year, " +
                                "i.e. the growth of year trees are dying in is included! NPP and NPP_kg are not recorded for trees that " +
                                "are removed during management.";
@@ -35,7 +35,7 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
-                foreach (ResourceUnitTreeSpecies rus in ru.Trees.SpeciesPresentOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies rus in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics stat = rus.StatisticsDead;
                     if (stat.TreesPerHectare == 0.0)

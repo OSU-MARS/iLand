@@ -39,8 +39,8 @@ namespace iLand.Plugin
             }
 
             // fix the order of modules: make sure that "barkbeetle" is after "wind"
-            IDisturbanceInterface wind = GetModule("wind");
-            IDisturbanceInterface beetles = GetModule("barkbeetle");
+            IDisturbanceInterface? wind = this.GetModule("wind");
+            IDisturbanceInterface? beetles = this.GetModule("barkbeetle");
             if (wind != null && beetles != null)
             {
                 int windIndex = mModules.IndexOf(wind);
@@ -57,7 +57,7 @@ namespace iLand.Plugin
 
         public bool HasSetupResourceUnits() { return mSetupRUs.Count != 0; }
 
-        public IDisturbanceInterface GetModule(string moduleName)
+        public IDisturbanceInterface? GetModule(string moduleName)
         {
             foreach (IDisturbanceInterface module in mModules)
             {

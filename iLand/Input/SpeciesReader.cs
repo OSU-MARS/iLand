@@ -205,7 +205,7 @@ namespace iLand.Input
         public float FecundityM2() { return reader.GetFloat(this.fecundityM2); }
         public float NonSeedYearFraction() { return reader.GetFloat(this.nonSeedYearFraction); }
 
-        public string SerotinyFormula() 
+        public string? SerotinyFormula() 
         { 
             return reader.IsDBNull(this.serotinyFormula) ? null : reader.GetString(this.serotinyFormula); 
         }

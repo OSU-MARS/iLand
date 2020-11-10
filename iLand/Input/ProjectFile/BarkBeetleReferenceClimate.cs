@@ -4,9 +4,9 @@ namespace iLand.Input.ProjectFile
 {
     public class BarkBeetleReferenceClimate : XmlSerializable
     {
-		public string TableName { get; private set; }
-		public string SeasonalPrecipSum { get; private set; }
-		public string SeasonalTemperatureAverage { get; private set; }
+		public string? TableName { get; private set; }
+		public string? SeasonalPrecipSum { get; private set; }
+		public string? SeasonalTemperatureAverage { get; private set; }
 
 		protected override void ReadStartElement(XmlReader reader)
 		{

@@ -72,7 +72,7 @@ namespace iLand.Input.ProjectFile
 			{
 				this.Stand.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("standdead"))
+			else if (reader.IsStartElement("standDead"))
 			{
 				this.StandDead.ReadXml(reader);
 			}
@@ -88,7 +88,7 @@ namespace iLand.Input.ProjectFile
 			{
 				this.Sapling.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("saplingdetail"))
+			else if (reader.IsStartElement("saplingDetail"))
 			{
 				this.SaplingDetail.ReadXml(reader);
 			}
@@ -96,7 +96,7 @@ namespace iLand.Input.ProjectFile
 			{
 				this.Carbon.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("carbonflow"))
+			else if (reader.IsStartElement("carbonFlow"))
 			{
 				this.CarbonFlow.ReadXml(reader);
 			}

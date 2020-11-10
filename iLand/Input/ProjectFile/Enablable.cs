@@ -23,7 +23,7 @@ namespace iLand.Input.ProjectFile
                 reader.IsStartElement("barkbeetle") ||
                 reader.IsStartElement("wind") ||
                 reader.IsStartElement("fire") ||
-                reader.IsStartElement("standdead"))
+                reader.IsStartElement("standDead"))
             {
                 reader.Read();
             }

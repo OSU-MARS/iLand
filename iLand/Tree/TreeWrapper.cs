@@ -12,7 +12,7 @@ namespace iLand.Tree
         private static readonly ReadOnlyCollection<string> TreeVariableNames;
 
         public int TreeIndex { get; set; }
-        public Trees Trees { get; set; }
+        public Trees? Trees { get; set; }
 
         static TreeWrapper()
         {
@@ -24,7 +24,7 @@ namespace iLand.Tree
             }.AsReadOnly();
         }
 
-        public TreeWrapper(Model model)
+        public TreeWrapper(Model? model)
             : base(model)
         {
             this.Trees = null;

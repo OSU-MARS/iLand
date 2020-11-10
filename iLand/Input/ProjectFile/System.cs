@@ -14,9 +14,9 @@ namespace iLand.Input.ProjectFile
         //	<fileName></fileName>
         //</javascript>
 
-        public System(string homePath)
+        public System(string? defaultHomePath)
         {
-            this.Path = new Paths(homePath);
+            this.Path = new Paths(defaultHomePath);
             this.Database = new Database();
             this.Logging = new Logging();
             this.Settings = new SystemSettings();

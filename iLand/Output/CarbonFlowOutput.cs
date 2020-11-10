@@ -2,7 +2,6 @@
 using iLand.Tools;
 using iLand.World;
 using Microsoft.Data.Sqlite;
-using System.Diagnostics;
 
 namespace iLand.Output
 {
@@ -17,7 +16,7 @@ namespace iLand.Output
             this.mResourceUnitFilter = new Expression();
 
             this.Name = "Carbon fluxes per RU or landscape/yr";
-            this.TableName = "carbonflow";
+            this.TableName = "carbonFlow";
             this.Description = "Carbon fluxes per resource unit and year and/or aggregated for the full landscape. All values are reported on a per hectare basis (use the area provided in carbon or stand outputs to scale to realized values on the respective resource unit)." + 
                                "For results limited to the project area, the data values need to be scaled to the stockable area." + System.Environment.NewLine +
                                "For landsacpe level outputs, data is always given per ha of (stockable) project area (i.e. scaling with stockable area is already included)." + System.Environment.NewLine +

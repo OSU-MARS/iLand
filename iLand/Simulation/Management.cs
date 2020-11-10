@@ -3,7 +3,6 @@ using iLand.Tree;
 using iLand.World;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 
@@ -34,11 +33,11 @@ namespace iLand.Simulation
             this.mRemoveFoliage = 0.0F;
             this.mRemoveBranch = 0.0F;
             this.mRemoveStem = 1.0F;
-            this.mTreesInMostRecentlyLoadedStand = null;
+            this.mTreesInMostRecentlyLoadedStand = new List<MutableTuple<Trees, List<int>>>();
         }
 
         // return number of trees currently in list
-        public int Count() { return mTreesInMostRecentlyLoadedStand.Count; }
+        public int Count() { return this.mTreesInMostRecentlyLoadedStand.Count; }
         /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
         // public double Mean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
         /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
@@ -50,7 +49,7 @@ namespace iLand.Simulation
         //    return Load(null);
         //}
 
-        public int KillTreesAboveRetentionThreshold(Model model, int treesToRetain)
+        public static int KillTreesAboveRetentionThreshold(Model model, int treesToRetain)
         {
             AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model.Landscape);
             List<MutableTuple<Trees, int>> livingTrees = new List<MutableTuple<Trees, int>>();
@@ -72,7 +71,7 @@ namespace iLand.Simulation
 
         public int KillAllInCurrentStand(Model model, bool removeBiomassFractions)
         {
-            int initialTreeCount = mTreesInMostRecentlyLoadedStand.Count;
+            int initialTreeCount = this.mTreesInMostRecentlyLoadedStand.Count;
             foreach (MutableTuple<Trees, List<int>> treesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
             {
                 // TODO: doesn't check IsCutDown() flag?
@@ -334,7 +333,7 @@ namespace iLand.Simulation
             foreach (MutableTuple<Trees, List<int>> treesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
             {
                 Trees trees = treesOfSpecies.Item1;
-                List<int> treeIndicesInSpecies = null;
+                List<int>? treeIndicesInSpecies = null;
                 foreach (int treeID in treeIDlist)
                 {
                     int treeIndex = trees.Tag.IndexOf(treeID);
@@ -451,7 +450,7 @@ namespace iLand.Simulation
         //    return mTrees.Count;
         //}
 
-        public void KillSaplings(MapGrid standGrid, Model model, int key)
+        public static void KillSaplings(MapGrid standGrid, Model model, int key)
         {
             //MapGridWrapper *wrap = qobject_cast<MapGridWrapper*>(map_grid_object.toQObject());
             //if (!wrap) {
@@ -465,7 +464,7 @@ namespace iLand.Simulation
             {
                 if (standGrid.GetStandIDFromLightCoordinate(runner.GetCellPosition()) == key)
                 {
-                    SaplingCell saplingCell = model.Landscape.GetSaplingCell(runner.GetCellPosition(), true, out ResourceUnit ru);
+                    SaplingCell? saplingCell = model.Landscape.GetSaplingCell(runner.GetCellPosition(), true, out ResourceUnit ru);
                     if (saplingCell != null)
                     {
                         ru.ClearSaplings(saplingCell, true);
@@ -479,25 +478,34 @@ namespace iLand.Simulation
         /// @param DWDfrac 0: no change, 1: remove all of downled woody debris
         /// @param litterFrac 0: no change, 1: remove all of soil litter
         /// @param soilFrac 0: no change, 1: remove all of soil organic matter
-        public void RemoveSoilCarbon(MapGrid standGrid, int key, float standingWoodyFraction, float downWoodFraction, float litterFraction, float soilFraction)
+        public static void RemoveCarbon(MapGrid standGrid, int key, float standingWoodyFraction, float downWoodFraction, float litterFraction, float soilFraction)
         {
             if ((standingWoodyFraction < 0.0F) || (standingWoodyFraction > 1.0F) || 
                 (downWoodFraction < 0.0F) || (downWoodFraction > 1.0F) || 
                 (soilFraction < 0.0F) || (soilFraction > 1.0F) || 
                 (litterFraction > 0.0F && litterFraction > 1.0F))
             {
-                throw new ArgumentOutOfRangeException("removeSoilCarbon called with one or more invalid parameters.");
+                throw new ArgumentException("removeSoilCarbon called with one or more invalid parameters.");
             }
             IList<MutableTuple<ResourceUnit, float>> ruAreas = standGrid.GetResourceUnitAreaFractions(key);
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
                 ResourceUnit ru = ruAreas[areaIndex].Item1;
+                if (ru.Soil == null)
+                {
+                    throw new NotSupportedException("Soil is not enabled on resource unit. Down wood, litter, and soil carbon cannot be removed.");
+                }
+
                 float areaFactor = ruAreas[areaIndex].Item2; // 0..1
                 //totalArea += areaFactor;
                 // swd
                 if (standingWoodyFraction > 0.0F)
                 {
+                    if (ru.Snags == null)
+                    {
+                        throw new NotSupportedException("Snags are not enabled on resource unit. Standing woody carbon cannot be removed.");
+                    }
                     ru.Snags.RemoveCarbon(standingWoodyFraction * areaFactor);
                 }
                 // soil pools
@@ -513,20 +521,25 @@ namespace iLand.Simulation
           @param key ID of the polygon.
           @param slash_fraction 0: no change, 1: 100%
            */
-        public void SlashSnags(MapGrid standGrid, int key, float slash_fraction)
+        public static void SlashSnags(MapGrid standGrid, int key, float slashFraction)
         {
-            if (slash_fraction < 0.0F || slash_fraction > 1.0F)
+            if (slashFraction < 0.0F || slashFraction > 1.0F)
             {
-                throw new ArgumentOutOfRangeException(nameof(slash_fraction));
+                throw new ArgumentOutOfRangeException(nameof(slashFraction));
             }
             List<MutableTuple<ResourceUnit, float>> ruAreas = standGrid.GetResourceUnitAreaFractions(key).ToList();
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
                 ResourceUnit ru = ruAreas[areaIndex].Item1;
+                if (ru.Snags == null)
+                {
+                    throw new NotSupportedException("Snags are not enabled on resource unit so snag to slash conversion is not possible.");
+                }
+
                 float area_factor = ruAreas[areaIndex].Item2; // 0..1
                 //totalArea += area_factor;
-                ru.Snags.TransferStandingWoodToSoil(slash_fraction * area_factor);
+                ru.Snags.TransferStandingWoodToSoil(slashFraction * area_factor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
             //Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));

@@ -15,9 +15,14 @@ namespace iLand.Input.ProjectFile
         public string Init { get; private set; }
         public string Output { get; private set; }
 
-        public Paths(string homePath)
+        public Paths(string? defaultHomePath)
         {
-            this.Home = homePath;
+            if (String.IsNullOrWhiteSpace(defaultHomePath))
+            {
+                throw new ArgumentOutOfRangeException(nameof(defaultHomePath));
+            }
+
+            this.Home = defaultHomePath;
 
             this.Database = "database";
             this.Gis = "gis";

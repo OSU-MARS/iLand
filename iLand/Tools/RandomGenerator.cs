@@ -103,7 +103,7 @@ namespace iLand.Tools
             }
         }
 
-        public void Setup(RandomGeneratorType gen, Nullable<int> oneSeed)
+        public void Setup(RandomGeneratorType gen, int? oneSeed)
         {
             this.mGeneratorType = gen;
             this.mRotationCount = 1;

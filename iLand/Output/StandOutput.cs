@@ -64,7 +64,7 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
-                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesPresentOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics speciesStats = ruSpecies.Statistics;
                     if (speciesStats.TreesPerHectare == 0 && speciesStats.CohortCount == 0)

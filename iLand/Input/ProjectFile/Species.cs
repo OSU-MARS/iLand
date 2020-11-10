@@ -5,7 +5,7 @@ namespace iLand.Input.ProjectFile
 {
     public class Species : XmlSerializable
     {
-        public string Source { get; private set; }
+        public string? Source { get; private set; }
         public string ReaderStampFile { get; private set; }
         public NitrogenResponseClasses NitrogenResponseClasses { get; private set; }
         public CO2Response CO2Response { get; private set; }
@@ -18,7 +18,7 @@ namespace iLand.Input.ProjectFile
             this.LightResponse = new LightResponse();
             this.NitrogenResponseClasses = new NitrogenResponseClasses();
             this.ReaderStampFile = "readerstamp.bin";
-            // this.Source;
+            this.Source = null;
 
             this.Phenology = new List<PhenologyType>();
         }
