@@ -47,7 +47,7 @@
           <enabled>false</enabled>
         </seedBelt>
       </seedDispersal>
-      <soil>
+      <defaultSoil>
         <swdDBHClass12>20</swdDBHClass12>
         <swdDBHClass23>100</swdDBHClass23>
         <useDynamicAvailableNitrogen>true</useDynamicAvailableNitrogen>
@@ -57,7 +57,7 @@
         <leaching>0.47</leaching>
         <nitrogenDeposition>21.8</nitrogenDeposition>
         <qb>5</qb>
-      </soil>
+      </defaultSoil>
       <grass>
         <enabled>true</enabled>
         <type>pixel</type>

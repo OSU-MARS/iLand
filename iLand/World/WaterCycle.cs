@@ -1,5 +1,4 @@
-﻿#nullable disable
-using iLand.Input;
+﻿using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Tools;
 using iLand.Tree;
@@ -62,10 +61,10 @@ namespace iLand.World
         {
             // get values...
             this.FieldCapacity = 0.0F; // on top
-            this.SoilDepth = 10.0F * environmentReader.CurrentSoilDepth.Value; // convert from cm to mm TODO: zero is not a realistic default
-            float percentSand = environmentReader.CurrentSoilSand.Value;
-            float percentSilt = environmentReader.CurrentSoilSilt.Value;
-            float percentClay = environmentReader.CurrentSoilClay.Value;
+            this.SoilDepth = 10.0F * environmentReader.CurrentSoilDepth; // convert from cm to mm TODO: zero is not a realistic default
+            float percentSand = environmentReader.CurrentSoilSand;
+            float percentSilt = environmentReader.CurrentSoilSilt;
+            float percentClay = environmentReader.CurrentSoilClay;
             if (Math.Abs(100.0 - (percentSand + percentSilt + percentClay)) > 0.01)
             {
                 throw new NotSupportedException(String.Format("Setup WaterCycle: soil textures do not sum to 100% within 0.01%. Sand: {0}%, silt: {1}%, clay: {2}%. Are these values specified in /project/model/site?", percentSand, percentSilt, percentClay));

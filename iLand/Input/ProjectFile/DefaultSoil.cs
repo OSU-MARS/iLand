@@ -2,7 +2,7 @@
 
 namespace iLand.Input.ProjectFile
 {
-    public class Soil : XmlSerializable
+    public class DefaultSoil : XmlSerializable
     {
         public float El { get; private set; }
         public float Er { get; private set; }
@@ -14,7 +14,7 @@ namespace iLand.Input.ProjectFile
         public float Leaching { get; private set; }
         public float NitrogenDeposition { get; private set; }
 
-        public Soil()
+        public DefaultSoil()
         {
             this.Leaching = 0.15F;
             this.NitrogenDeposition = 0.0F;
@@ -29,7 +29,7 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("soil"))
+            if (reader.IsStartElement("defaultSoil"))
             {
                 reader.Read();
             }

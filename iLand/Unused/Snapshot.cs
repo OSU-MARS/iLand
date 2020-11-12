@@ -547,7 +547,7 @@ namespace iLand.Output
             //int n = 0;
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                World.Soil soil = ru.Soil;
+                World.ResourceUnitSoil soil = ru.Soil;
                 if (soil != null)
                 {
                     soilInsert.Parameters[0].Value = ru.ResourceUnitGridIndex;
@@ -597,7 +597,7 @@ namespace iLand.Output
                 {
                     continue;
                 }
-                World.Soil soil = ru.Soil;
+                World.ResourceUnitSoil soil = ru.Soil;
                 if (soil == null)
                 {
                     throw new NotSupportedException("loadSoil: trying to load soil data but soil module is disabled.");

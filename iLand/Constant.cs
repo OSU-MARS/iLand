@@ -54,11 +54,11 @@ namespace iLand
             {
                 public const string OtherC = "model.initialization.snags.otherC";
                 public const string OtherCN = "model.initialization.snags.otherCN";
-                public const string SwdC = "model.initialization.snags.swdC";
-                public const string SwdCN = "model.initialization.snags.swdCN";
-                public const string SwdDecompositionRate = "model.initialization.snags.swdDecompRate";
-                public const string SwdHalfLife = "model.initialization.snags.swdHalfLife";
-                public const string SwdN = "model.initialization.snags.swdCount";
+                public const string StandingWoodyCarbon = "model.initialization.snags.swdC";
+                public const string StandingWoodyCNRatio = "model.initialization.snags.swdCN";
+                public const string StandingWoodyCount = "model.initialization.snags.swdCount";
+                public const string StandingWoodyDecompositionRate = "model.initialization.snags.swdDecompRate";
+                public const string StandingWoodyHalfLife = "model.initialization.snags.swdHalfLife";
             }
 
             public static class Soil

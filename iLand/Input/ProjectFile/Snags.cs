@@ -4,24 +4,24 @@ namespace iLand.Input.ProjectFile
 {
     public class Snags : XmlSerializable
     {
-		public float StandingWoodyDebrisCarbon { get; private set; }
-		public float StandingWoodyDebrisCarbonNitrogenRatio { get; private set; }
+		public float StandingCarbon { get; private set; }
+		public float StandingCarbonNitrogenRatio { get; private set; }
 		public float SnagsPerResourceUnit { get; private set; }
 		public float OtherCarbon { get; private set; }
 		public float OtherCarbonNitrogenRatio { get; private set; }
-		public float StandingWoodyDebrisDecompositionRate { get; private set; }
-		public double WoodDecompositionRate { get; private set; }
-		public float StandingWoodyDebrisHalfLife { get; private set; }
+		public float StandingDecompositionRate { get; private set; }
+		public float WoodDecompositionRate { get; private set; }
+		public float SnagHalfLife { get; private set; }
 
 		public Snags()
         {
 			this.OtherCarbon = 0.0F;
 			this.OtherCarbonNitrogenRatio = 50.0F;
-			this.SnagsPerResourceUnit = 0;
-			this.StandingWoodyDebrisCarbon = 0.0F;
-			this.StandingWoodyDebrisCarbonNitrogenRatio = 50.0F;
-			this.StandingWoodyDebrisDecompositionRate = 0.0F;
-			this.StandingWoodyDebrisHalfLife = 0.0F;
+            this.SnagHalfLife = 0.0F;
+            this.SnagsPerResourceUnit = 0;
+			this.StandingCarbon = 0.0F;
+			this.StandingCarbonNitrogenRatio = 50.0F;
+			this.StandingDecompositionRate = 0.0F;
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -37,16 +37,16 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("swdC"))
             {
-                this.StandingWoodyDebrisCarbon = reader.ReadElementContentAsFloat();
-                if (this.StandingWoodyDebrisCarbon < 0.0F)
+                this.StandingCarbon = reader.ReadElementContentAsFloat();
+                if (this.StandingCarbon < 0.0F)
                 {
                     throw new XmlException("Standing woody debris carbon is negative.");
                 }
             }
             else if (reader.IsStartElement("swdCN"))
             {
-                this.StandingWoodyDebrisCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
-                if (this.StandingWoodyDebrisCarbonNitrogenRatio < 0.0F)
+                this.StandingCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+                if (this.StandingCarbonNitrogenRatio < 0.0F)
                 {
                     throw new XmlException("Standing woody debris carbon:nitrogen ratio is negative.");
                 }
@@ -77,8 +77,8 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("swdDecompRate"))
             {
-                this.StandingWoodyDebrisDecompositionRate = reader.ReadElementContentAsFloat();
-                if (this.StandingWoodyDebrisDecompositionRate < 0.0F)
+                this.StandingDecompositionRate = reader.ReadElementContentAsFloat();
+                if (this.StandingDecompositionRate < 0.0F)
                 {
                     throw new XmlException("Standing woody debris decomposition rate is negative.");
                 }
@@ -93,8 +93,8 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("swdHalfLife"))
             {
-                this.StandingWoodyDebrisHalfLife = reader.ReadElementContentAsFloat();
-                if (this.StandingWoodyDebrisHalfLife < 0.0F)
+                this.SnagHalfLife = reader.ReadElementContentAsFloat();
+                if (this.SnagHalfLife < 0.0F)
                 {
                     throw new XmlException("Half life of standing woody debris is negative.");
                 }

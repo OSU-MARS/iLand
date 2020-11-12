@@ -11,7 +11,7 @@ namespace iLand.Input.ProjectFile
 		public float PercentClay { get; private set; }
 		public float YoungLabileCarbon { get; private set; }
 		public float YoungLabileNitrogen { get; private set; }
-		public float YoungLabileDecompRate { get; private set; }
+		public float YoungLabileDecompositionRate { get; private set; }
 		public float YoungRefractoryCarbon { get; private set; }
 		public float YoungRefractoryNitrogen { get; private set; }
 		public float YoungRefractoryDecompositionRate { get; private set; }
@@ -94,8 +94,8 @@ namespace iLand.Input.ProjectFile
 			}
 			else if (reader.IsStartElement("youngLabileDecompRate"))
 			{
-				this.YoungLabileDecompRate = reader.ReadElementContentAsFloat();
-				if (this.YoungLabileDecompRate < 0.0F)
+				this.YoungLabileDecompositionRate = reader.ReadElementContentAsFloat();
+				if (this.YoungLabileDecompositionRate < 0.0F)
 				{
 					throw new XmlException("Young labile decomposition rate is negative.");
 				}

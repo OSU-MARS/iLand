@@ -31,7 +31,7 @@ namespace iLand.World
         public int EnvironmentID { get; set; }
         public int ResourceUnitGridIndex { get; private set; }
         public Snags? Snags { get; private set; } // access the snag object
-        public Soil? Soil { get; private set; } // access the soil model
+        public ResourceUnitSoil? Soil { get; private set; } // access the soil model
         public SaplingCell[]? SaplingCells { get; private set; } // access the array of sapling-cells
         public ResourceUnitTrees Trees { get; private set; }
         public WaterCycle WaterCycle { get; private set; } // water model of the unit
@@ -64,8 +64,8 @@ namespace iLand.World
 
             if (projectFile.Model.Settings.CarbonCycleEnabled)
             {
-                this.Soil = new Soil(environmentReader, this);
-                this.Snags = new Snags(projectFile, this);
+                this.Soil = new ResourceUnitSoil(environmentReader, this);
+                this.Snags = new Snags(projectFile, environmentReader, this);
             }
 
             if (projectFile.Model.Settings.RegenerationEnabled)

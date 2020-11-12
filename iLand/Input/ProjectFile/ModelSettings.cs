@@ -46,7 +46,7 @@ namespace iLand.Input.ProjectFile
 		public bool UseParFractionBelowGroundAllocation { get; private set; }
 
 		public SeedDispersal SeedDispersal { get; private set; }
-		public Soil Soil { get; private set; }
+		public DefaultSoil DefaultSoil { get; private set; }
 		public Grass Grass { get; private set; }
 		public Browsing Browsing { get; private set; }
 
@@ -72,7 +72,7 @@ namespace iLand.Input.ProjectFile
 			this.Browsing = new Browsing();
 			this.Grass = new Grass();
 			this.SeedDispersal = new SeedDispersal();
-			this.Soil = new Soil();
+			this.DefaultSoil = new DefaultSoil();
         }
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -198,9 +198,9 @@ namespace iLand.Input.ProjectFile
 			{
 				this.SeedDispersal.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("soil"))
+			else if (reader.IsStartElement("defaultSoil"))
 			{
-				this.Soil.ReadXml(reader);
+				this.DefaultSoil.ReadXml(reader);
 			}
 			else if (reader.IsStartElement("grass"))
 			{

@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿using iLand.Input;
+using iLand.Input.ProjectFile;
 using iLand.World;
 using System;
 using System.Diagnostics;
@@ -37,13 +38,13 @@ namespace iLand.Tree
         public CarbonNitrogenTuple TotalStanding { get; private set; } // sum of C and N in SWD pools (stems) kg/ha
         public CarbonNitrogenTuple TotalBranchesAndRoots { get; private set; } // sum of C and N in other woody pools (branches + coarse roots) kg/ha
 
-        public Snags(Project projectFile, ResourceUnit ru)
+        public Snags(Project projectFile, EnvironmentReader environmentReader, ResourceUnit ru)
         {
             // class size of snag classes
             // swdDBHClass12: class break between classes 1 and 2 for standing snags (DBH, cm)
             // swdDBHClass23: class break between classes 2 and 3 for standing snags (DBH, cm)
-            float lowerDbhBreak = projectFile.Model.Settings.Soil.SwdDbhClass12;
-            float upperDbhBreak = projectFile.Model.Settings.Soil.SwdDdhClass23;
+            float lowerDbhBreak = projectFile.Model.Settings.DefaultSoil.SwdDbhClass12;
+            float upperDbhBreak = projectFile.Model.Settings.DefaultSoil.SwdDdhClass23;
             if ((lowerDbhBreak < 0.0F) || (lowerDbhBreak >= upperDbhBreak))
             {
                 throw new ArgumentOutOfRangeException(nameof(projectFile), "Lower diameter class break in ProjectFile.Model.Settings.Soil is either negative or above the upper diameter class break.");
@@ -111,17 +112,17 @@ namespace iLand.Tree
             }
 
             // Inital values from XML file
-            float kyr = projectFile.Model.Site.YoungRefractoryDecompositionRate; // TODO: why does the standing woody pool decay at the soil rate rather than the snag decomposition rate?
+            float kyr = environmentReader.CurrentSnagDecompositionRate;
             // put carbon of snags to the middle size class
-            this.StandingWoodyDebrisByClass[1].C = projectFile.Model.Initialization.Snags.StandingWoodyDebrisCarbon;
-            this.StandingWoodyDebrisByClass[1].N = this.StandingWoodyDebrisByClass[1].C / projectFile.Model.Initialization.Snags.StandingWoodyDebrisCarbonNitrogenRatio;
+            this.StandingWoodyDebrisByClass[1].C = environmentReader.CurrentSnagCarbon;
+            this.StandingWoodyDebrisByClass[1].N = this.StandingWoodyDebrisByClass[1].C / environmentReader.CurrentSnagCNRatio;
             this.StandingWoodyDebrisByClass[1].DecompositionRate = kyr;
-            this.DecompositionRateByClass[1] = projectFile.Model.Initialization.Snags.StandingWoodyDebrisDecompositionRate;
-            this.NumberOfSnagsByClass[1] = projectFile.Model.Initialization.Snags.SnagsPerResourceUnit;
-            this.HalfLifeByClass[1] = projectFile.Model.Initialization.Snags.StandingWoodyDebrisHalfLife;
+            this.DecompositionRateByClass[1] = kyr;
+            this.NumberOfSnagsByClass[1] = environmentReader.CurrentSnagsPerResourceUnit;
+            this.HalfLifeByClass[1] = environmentReader.CurrentSnagHalfLife;
             // and for the Branch/coarse root pools: split the init value into five chunks
-            CarbonNitrogenPool other = new CarbonNitrogenPool(projectFile.Model.Initialization.Snags.OtherCarbon,
-                                                              projectFile.Model.Initialization.Snags.OtherCarbon / projectFile.Model.Initialization.Snags.OtherCarbonNitrogenRatio,
+            CarbonNitrogenPool other = new CarbonNitrogenPool(environmentReader.CurrentSnagOtherCarbon,
+                                                              environmentReader.CurrentSnagOtherCarbon / environmentReader.CurrentSnagOtherCNRatio,
                                                               kyr);
 
             StandingAndDebrisCarbon = other.C + StandingWoodyDebrisByClass[1].C;
