@@ -20,17 +20,17 @@ namespace iLand.Tree
         private readonly List<SaplingTreeOld> mSaplingTrees;
         private float mSumDbhDied; // running sum of dbh of died trees (used to calculate detritus)
 
-        public double AverageAge { get; private set; } // average age of saplings (years)
-        public double AverageDeltaHPot { get; private set; } // average height increment potential (m)
-        public float AverageDeltaHRealized { get; private set; } // average realized height increment
-        public float AverageHeight { get; private set; } // average height of saplings (m)
-        public CarbonNitrogenTuple CarbonGain { get; private set; }  // net growth (kg / ru) of saplings
-        public CarbonNitrogenTuple CarbonLiving { get; private set; } // state of the living
-        public int DeadSaplings { get; private set; } // number of trees died
-        public int LivingSaplings { get; private set; } // number of trees (cohorts!!!) currently in the regeneration layer
-        public int NewSaplings { get; private set; } // number of trees added
-        public BitArray PresentPositions { get; private set; }
-        public int RecruitedSaplings { get; private set; } // number recruited (i.e. grown out of regeneration layer)
+        public double AverageAge { get; init; } // average age of saplings (years)
+        public double AverageDeltaHPot { get; init; } // average height increment potential (m)
+        public float AverageDeltaHRealized { get; init; } // average realized height increment
+        public float AverageHeight { get; init; } // average height of saplings (m)
+        public CarbonNitrogenTuple CarbonGain { get; init; }  // net growth (kg / ru) of saplings
+        public CarbonNitrogenTuple CarbonLiving { get; init; } // state of the living
+        public int DeadSaplings { get; init; } // number of trees died
+        public int LivingSaplings { get; init; } // number of trees (cohorts!!!) currently in the regeneration layer
+        public int NewSaplings { get; init; } // number of trees added
+        public BitArray PresentPositions { get; init; }
+        public int RecruitedSaplings { get; init; } // number recruited (i.e. grown out of regeneration layer)
 
         public Sapling()
         {
@@ -237,7 +237,7 @@ namespace iLand.Tree
             //GlobalSettings.instance().model().heightGrid()[Grid::index5(tree.pixel-GlobalSettings.instance().model().grid().begin())];
 
             // (1) calculate height growth potential for the tree (uses linerization of expressions...)
-            float h_pot = (float)species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(model, sapling.Height); // TODO check if this can be source of crashes (race condition)
+            float h_pot = species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(model, sapling.Height); // TODO check if this can be source of crashes (race condition)
             float delta_h_pot = h_pot - sapling.Height;
 
             // (2) reduce height growth potential with species growth response f_env_yr and with light state (i.e. LIF-value) of home-pixel.

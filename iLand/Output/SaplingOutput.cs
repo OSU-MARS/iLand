@@ -68,7 +68,7 @@ namespace iLand.Output
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID; // keys
 
                     // calculate statistics based on the number of represented trees per cohort
-                    // double n = sap.livingStemNumber(rus.species(), out double avg_dbh, out double avg_height, out double avg_age;
+                    // float n = sap.livingStemNumber(rus.species(), out float avg_dbh, out float avg_height, out float avg_age;
                     insertRow.Parameters[4].Value = sap.LivingSaplings;
                     insertRow.Parameters[5].Value = sap.LivingSaplingsSmall;
                     insertRow.Parameters[6].Value = sap.LivingCohorts;

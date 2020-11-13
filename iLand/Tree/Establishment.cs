@@ -19,18 +19,18 @@ namespace iLand.Tree
         private readonly World.Climate mClimate; // link to the current climate
         private readonly ResourceUnitTreeSpecies mRUspecies; // link to the resource unit species (links to production data and species respones)
         // TACA switches
-        private double mSumLifValue;
+        private float mSumLifValue;
         private int mLifCount;
 
-        public double MeanSeedDensity { get; private set; } // average seed density on the RU
-        public double AbioticEnvironment { get; private set; } // integrated value of abiotic environment (i.e.: TACA-climate + total iLand environment)
+        public float MeanSeedDensity { get; private set; } // average seed density on the RU
+        public float AbioticEnvironment { get; private set; } // integrated value of abiotic environment (i.e.: TACA-climate + total iLand environment)
         public int NumberEstablished { get; private set; } // return number of newly established trees in the current year
         public bool TacaMinTemp { get; private set; } // TACA flag for minimum temperature
         public bool TacaChill { get; private set; } // TACA flag chilling requirement
         public bool TacaGdd { get; private set; } // TACA flag for growing degree days
         public bool TacaFrostFree { get; private set; } // TACA flag for number of frost free days
         public int TacaFrostDaysAfterBudburst { get; private set; } // number of frost days after bud birst
-        public double WaterLimitation { get; private set; } // scalar value between 0 and 1 (1: no limitation, 0: no establishment)
+        public float WaterLimitation { get; private set; } // scalar value between 0 and 1 (1: no limitation, 0: no establishment)
 
         public Establishment(World.Climate climate, ResourceUnitTreeSpecies ruSpecies)
         {
@@ -41,46 +41,50 @@ namespace iLand.Tree
 
             this.mClimate = climate ?? throw new ArgumentNullException(nameof(climate), "No valid climate for a resource unit.");
             this.mRUspecies = ruSpecies;
-            this.AbioticEnvironment = 0.0;
-            this.MeanSeedDensity = 0.0;
+            this.AbioticEnvironment = 0.0F;
+            this.MeanSeedDensity = 0.0F;
             this.NumberEstablished = 0;
         }
 
-        public double GetMeanLifValue() { return this.mLifCount > 0 ? this.mSumLifValue / this.mLifCount : 0.0; } // average LIF value of LIF pixels where establishment is tested
+        // average LIF value of LIF pixels where establishment is tested
+        public float GetMeanLifValue() 
+        { 
+            return this.mLifCount > 0 ? this.mSumLifValue / this.mLifCount : 0.0F; 
+        }
 
         public void Clear()
         {
             this.mLifCount = 0;
-            this.mSumLifValue = 0.0;
+            this.mSumLifValue = 0.0F;
 
-            this.AbioticEnvironment = 0.0;
+            this.AbioticEnvironment = 0.0F;
             this.NumberEstablished = 0;
-            this.MeanSeedDensity = 0.0;
+            this.MeanSeedDensity = 0.0F;
             this.TacaMinTemp = false;
             this.TacaChill = false;
             this.TacaGdd = false;
             this.TacaFrostFree = false;
             this.TacaFrostDaysAfterBudburst = 0;
-            this.WaterLimitation = 0.0;
+            this.WaterLimitation = 0.0F;
         }
 
-        private double CalculateWaterLimitation(int leafOnStart, int leafOnEnd)
+        private float CalculateWaterLimitation(int leafOnStart, int leafOnEnd)
         {
             // return 1 if effect is disabled
-            if (mRUspecies.Species.EstablishmentParameters.PsiMin >= 0.0)
+            if (mRUspecies.Species.EstablishmentParameters.PsiMin >= 0.0F)
             {
-                return 1.0;
+                return 1.0F;
             }
 
-            double psi_min = mRUspecies.Species.EstablishmentParameters.PsiMin;
+            float psi_min = mRUspecies.Species.EstablishmentParameters.PsiMin;
             WaterCycle water = mRUspecies.RU.WaterCycle;
 
             // two week (14 days) running average of actual psi-values on the resource unit
             const int valuesToAverage = 14;
-            double[] valuesInAverage = new double[valuesToAverage];
-            double current_sum = 0.0;
+            float[] valuesInAverage = new float[valuesToAverage];
+            float current_sum = 0.0F;
             
-            double min_average = 9999999.0;
+            float min_average = Single.MaxValue;
             int daysInYear = mRUspecies.RU.Climate.GetDaysInYear();
             for (int dayOfYear = 0, averageIndex = 0; dayOfYear < daysInYear; ++dayOfYear)
             {
@@ -91,8 +95,8 @@ namespace iLand.Tree
 
                 if (dayOfYear >= leafOnStart && dayOfYear <= leafOnEnd)
                 {
-                    double current_avg = dayOfYear > 0 ? current_sum / Math.Min(dayOfYear, valuesToAverage) : current_sum;
-                    min_average = Math.Min(min_average, current_avg);
+                    float current_avg = dayOfYear > 0 ? current_sum / MathF.Min(dayOfYear, valuesToAverage) : current_sum;
+                    min_average = MathF.Min(min_average, current_avg);
                 }
 
                 // move to next value in the buffer
@@ -101,12 +105,12 @@ namespace iLand.Tree
 
             if (min_average > 1000.0)
             {
-                return 1.0; // invalid vegetation period?
+                return 1.0F; // invalid vegetation period?
             }
 
             // calculate the response of the species to this value of psi (see also Species::soilwaterResponse())
-            double psi_mpa = min_average / 1000.0; // convert to MPa
-            double result = Maths.Limit((psi_mpa - psi_min) / (-0.015 - psi_min), 0.0, 1.0);
+            float psi_mpa = 0.001F * min_average; // convert to MPa
+            float result = Maths.Limit((psi_mpa - psi_min) / (-0.015F - psi_min), 0.0F, 1.0F);
 
             return result;
         }
@@ -132,8 +136,8 @@ namespace iLand.Tree
             TacaFrostDaysAfterBudburst = 0; // frost days after bud birst
 
             int doy = 0;
-            double GDD = 0.0;
-            double GDD_BudBirst = 0.0;
+            float GDD = 0.0F;
+            float GDD_BudBirst = 0.0F;
             int chill_days = pheno.ChillingDaysAfterLeafOffInPreviousYear; // chilling days of the last autumn
             int frost_free = 0;
             TacaFrostDaysAfterBudburst = 0;
@@ -179,7 +183,7 @@ namespace iLand.Tree
                     // if day-frost occurs, the GDD counter for bud birst is reset
                     if (day.MeanDaytimeTemperature <= 0.0)
                     {
-                        GDD_BudBirst = 0.0;
+                        GDD_BudBirst = 0.0F;
                     }
                     if (GDD_BudBirst > establishment.GddBudBurst)
                     {
@@ -210,22 +214,22 @@ namespace iLand.Tree
             }
 
             // if all requirements are met:
-            if (TacaChill && TacaMinTemp && TacaGdd && TacaFrostFree)
+            if (this.TacaChill && this.TacaMinTemp && this.TacaGdd && this.TacaFrostFree)
             {
                 // negative effect of frost events after bud birst
-                double frost_effect = 1.0;
-                if (TacaFrostDaysAfterBudburst > 0)
+                float frost_effect = 1.0F;
+                if (this.TacaFrostDaysAfterBudburst > 0)
                 {
-                    frost_effect = Math.Pow(establishment.FrostTolerance, Math.Sqrt(TacaFrostDaysAfterBudburst));
+                    frost_effect = MathF.Pow(establishment.FrostTolerance, MathF.Sqrt(this.TacaFrostDaysAfterBudburst));
                 }
                 // negative effect due to water limitation on establishment [1: no effect]
-                WaterLimitation = CalculateWaterLimitation(pheno.LeafOnStart, pheno.GetLeafOnDurationInDays());
+                this.WaterLimitation = this.CalculateWaterLimitation(pheno.LeafOnStart, pheno.GetLeafOnDurationInDays());
                 // combine drought and frost effect multiplicatively
-                AbioticEnvironment = frost_effect * WaterLimitation;
+                this.AbioticEnvironment = frost_effect * WaterLimitation;
             }
             else
             {
-                AbioticEnvironment = 0.0; // if any of the requirements is not met
+                this.AbioticEnvironment = 0.0F; // if any of the requirements is not met
             }
         }
 

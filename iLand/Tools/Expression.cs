@@ -742,7 +742,7 @@ namespace iLand.Tools
                             case 14: // rnd(from, to) bzw. rndg(mean, stddev)
                                 stackDepth--;
                                 // index-13: 1 bei rnd, 0 bei rndg
-                                stack[stackDepth] = this.ExecuteUserDefinedRandom(exec.Index - 13, stack[stackDepth], stack[stackDepth + 1]);
+                                stack[stackDepth] = this.ExecuteUserDefinedRandom(exec.Index - 13, (float)stack[stackDepth], (float)stack[stackDepth + 1]);
                                 break;
                             case 15: // in-list in() operator
                                 stack[stackDepth - (int)(exec.Value - 1)] = ExecuteUserDefinedFunctionInList(stack[stackDepth - (int)(exec.Value - 1)], stack, stackDepth, (int)exec.Value);
@@ -1026,7 +1026,7 @@ namespace iLand.Tools
             mExecListSize = NewSize;
         }
 
-        private double ExecuteUserDefinedRandom(int type, double p1, double p2)
+        private double ExecuteUserDefinedRandom(int type, float p1, float p2)
         {
             if ((this.Wrapper == null) || (this.Wrapper.Model == null))
             {
@@ -1036,7 +1036,7 @@ namespace iLand.Tools
             // random / gleichverteilt - normalverteilt
             if (type == 0)
             {
-                return this.Wrapper.Model.RandomGenerator.GetRandomDouble(p1, p2);
+                return this.Wrapper.Model.RandomGenerator.GetRandomFloat(p1, p2);
             }
             else    // gaussverteilt
             {

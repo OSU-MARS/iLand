@@ -181,7 +181,7 @@ namespace iLand.Output
             }
 
             // write landscape sums
-            double totalStockableArea = accumulatedValues[0]; // convert to ha of stockable area
+            float totalStockableArea = accumulatedValues[0]; // convert to ha of stockable area
             insertRow.Parameters[0].Value = model.CurrentYear;
             insertRow.Parameters[1].Value = -1;
             insertRow.Parameters[2].Value = -1; // keys

@@ -16,12 +16,12 @@ namespace iLand.Tree
         public bool HasDeadTrees { get; private set; } // if true, the resource unit has dead trees and needs maybe some cleanup
         public float PhotosyntheticallyActiveArea { get; set; } // TotalArea - Unstocked Area - loss due to BeerLambert (m2)
         public float PhotosyntheticallyActiveAreaPerLightWeightedLeafArea { get; private set; } ///<
-        public List<ResourceUnitTreeSpecies> SpeciesAvailableOnResourceUnit { get; private set; }
-        public ResourceUnitTreeStatistics Statistics { get; private set; }
+        public List<ResourceUnitTreeSpecies> SpeciesAvailableOnResourceUnit { get; init; }
+        public ResourceUnitTreeStatistics Statistics { get; init; }
         public float TotalLeafArea { get; private set; } // total leaf area of resource unit (m2)
         public float TotalLightWeightedLeafArea { get; private set; } // sum of lightResponse * LeafArea for all trees
-        public Dictionary<string, Trees> TreesBySpeciesID { get; private set; } // reference to the tree list.
-        public TreeSpeciesSet TreeSpeciesSet { get; private set; } // get SpeciesSet this RU links to.
+        public Dictionary<string, Trees> TreesBySpeciesID { get; init; } // reference to the tree list.
+        public TreeSpeciesSet TreeSpeciesSet { get; init; } // get SpeciesSet this RU links to.
 
         public ResourceUnitTrees(ResourceUnit ru, TreeSpeciesSet treeSpeciesSet)
         {
@@ -277,7 +277,7 @@ namespace iLand.Tree
                     }
                     else if (treesOfSpecies.Capacity > 100)
                     {
-                        if (((double)treesOfSpecies.Count / (double)treesOfSpecies.Capacity) < 0.2)
+                        if (((float)treesOfSpecies.Count / (float)treesOfSpecies.Capacity) < 0.2F)
                         {
                             //int target_size = mTrees.Count*2;
                             //Debug.WriteLine("reduce size from "+mTrees.Capacity + "to" + target_size;

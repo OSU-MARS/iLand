@@ -8,17 +8,17 @@ namespace iLand.Tree
     {
         //  GPP production (yearly) (kg Biomass) per m² (effective area)
         public float AnnualGpp { get; private set; }
+        // monthly Gross Primary Production [kg Biomass / m²]
+        public float[] MonthlyGpp { get; init; }
+        /// fraction of biomass that should be distributed to roots
+        public float RootFraction { get; private set; }
         // f_env,yr: aggregate environmental factor [0..1}
         // f_env,yr: factor that aggregates the environment for the species over the year (weighted with the radiation pattern)
         public float SiteEnvironmentSaplingHeightGrowthMultiplier { get; private set; }
-        // monthly Gross Primary Production [kg Biomass / m²]
-        public float[] MonthlyGpp { get; private set; }
-        /// fraction of biomass that should be distributed to roots
-        public float RootFraction { get; private set; }
         // species specific responses
         public ResourceUnitTreeSpeciesResponse SpeciesResponse { get; set; }
         // utilizable radiation MJ/m² and month
-        public float[] UtilizablePar { get; private set; }
+        public float[] UtilizablePar { get; init; }
 
         public ResourceUnitTreeSpeciesGrowth(ResourceUnitTreeSpeciesResponse speciesResponse)
         {
@@ -63,12 +63,12 @@ namespace iLand.Tree
                 // calculate the available radiation. This is done at SpeciesResponse-Level (SpeciesResponse::calculate())
                 // see Equation (3)
                 // multiplicative approach: responses are averaged one by one and multiplied on a monthly basis
-                //    double response = mResponse.absorbedRadiation()[month] *
+                //    float response = mResponse.absorbedRadiation()[month] *
                 //                      mResponse.vpdResponse()[month] *
                 //                      mResponse.soilWaterResponse()[month] *
                 //                      mResponse.tempResponse()[month];
                 // minimum approach: for each day the minimum aof vpd, temp, soilwater is calculated, then averaged for each month
-                //double response = mResponse.absorbedRadiation()[month] *
+                //float response = mResponse.absorbedRadiation()[month] *
                 //                  mResponse.minimumResponses()[month];
                 float utilizableRadiation = this.SpeciesResponse.UtilizableRadiationByMonth[month]; // utilizable radiation of the month ... (MJ/m2)
                 // calculate the alphac (=photosynthetic efficiency) for the given month, gC/MJ radiation
@@ -84,16 +84,16 @@ namespace iLand.Tree
             }
 
             // calculate f_env,yr: see http://iland.boku.ac.at/sapling+growth+and+competition
-            double f_sum = 0.0F;
+            float f_sum = 0.0F;
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
                 f_sum += this.MonthlyGpp[month] / gramsCarbonToKilogramsBiomass; // == uAPar * epsilon_eff
             }
 
             // the factor f_ref: parameter that scales response values to the range 0..1 (1 for best growth conditions) (species parameter)
-            double siteEnvironmentHeightDivisor = this.SpeciesResponse.Species.SaplingGrowthParameters.ReferenceRatio;
+            float siteEnvironmentHeightDivisor = this.SpeciesResponse.Species.SaplingGrowthParameters.ReferenceRatio;
             // f_env,yr=(uapar*epsilon_eff) / (APAR * epsilon_0 * fref)
-            this.SiteEnvironmentSaplingHeightGrowthMultiplier = (float)(f_sum / (projectFile.Model.Settings.Epsilon * this.SpeciesResponse.RadiationForYear * siteEnvironmentHeightDivisor));
+            this.SiteEnvironmentSaplingHeightGrowthMultiplier = f_sum / (projectFile.Model.Settings.Epsilon * this.SpeciesResponse.RadiationForYear * siteEnvironmentHeightDivisor);
             if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.0F)
             {
                 if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.5F) // error on large deviations TODO: why 1.5F instead of ~1.000001F?

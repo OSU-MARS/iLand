@@ -25,7 +25,7 @@ namespace iLand.Tools
         private char mSeparator;
 
         // properties
-        public List<string> ColumnNames { get; private set; } // retrieve (a copy) of column headers
+        public List<string> ColumnNames { get; init; } // retrieve (a copy) of column headers
 
         // ctor, load @p fileName.
         public CsvFile(string fileName)

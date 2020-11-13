@@ -26,8 +26,7 @@ namespace iLand
         public const float Ln2 = 0.693147180559945F;
         public const int MonthsInYear = 12;
         public const float QuarterPi = 0.25F * MathF.PI;
-        public const double Sqrt2 = 1.4142135623731;
-        public const double TwoPi = 2.0 * Math.PI;
+        public const float Sqrt2 = 1.4142135623731F;
 
         public static class Sapling
         {

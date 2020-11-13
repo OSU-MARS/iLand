@@ -13,18 +13,18 @@ namespace iLand.World
 {
     public class Landscape
     {
-        public RectangleF Extent { get; private set; } // extent of the model, not including surrounding light buffer cells
-        public double TotalStockableHectares { get; private set; } // total stockable area of the landscape (ha)
+        public RectangleF Extent { get; init; } // extent of the model, not including surrounding light buffer cells
+        public float TotalStockableHectares { get; private set; } // total stockable area of the landscape (ha)
 
-        public DEM? Dem { get; private set; }
-        public Input.EnvironmentReader Environment { get; private set; }
-        public GrassCover GrassCover { get; private set; }
-        public List<ResourceUnit> ResourceUnits { get; private set; }
+        public DEM? Dem { get; init; }
+        public Input.EnvironmentReader Environment { get; init; }
+        public GrassCover GrassCover { get; init; }
+        public List<ResourceUnit> ResourceUnits { get; init; }
 
-        public Grid<float> LightGrid { get; private set; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
-        public Grid<HeightCell> HeightGrid { get; private set; } // stores maximum heights of trees and some flags (currently 10x10m)
-        public Grid<ResourceUnit> ResourceUnitGrid { get; private set; }
-        public MapGrid? StandGrid { get; private set; } // retrieve the spatial grid that defines the stands (10m resolution)
+        public Grid<float> LightGrid { get; init; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
+        public Grid<HeightCell> HeightGrid { get; init; } // stores maximum heights of trees and some flags (currently 10x10m)
+        public Grid<ResourceUnit> ResourceUnitGrid { get; init; }
+        public MapGrid? StandGrid { get; init; } // retrieve the spatial grid that defines the stands (10m resolution)
 
         public Landscape(Project projectFile)
         {
@@ -76,16 +76,16 @@ namespace iLand.World
             if (projectFile.Model.World.Location != null)
             {
                 // setup of spatial location
-                double worldOriginX = projectFile.Model.World.Location.X;
-                double worldOriginY = projectFile.Model.World.Location.Y;
-                double worldOriginZ = projectFile.Model.World.Location.Z;
-                double worldRotation = projectFile.Model.World.Location.Rotation;
+                float worldOriginX = projectFile.Model.World.Location.X;
+                float worldOriginY = projectFile.Model.World.Location.Y;
+                float worldOriginZ = projectFile.Model.World.Location.Z;
+                float worldRotation = projectFile.Model.World.Location.Rotation;
                 this.Environment.GisGrid.SetupTransformation(worldOriginX, worldOriginY, worldOriginZ, worldRotation);
                 // Debug.WriteLine("Setup of spatial location: " + worldOriginX + "," + worldOriginY + "," + worldOriginZ + " rotation " + worldRotation);
             }
             else
             {
-                this.Environment.GisGrid.SetupTransformation(0.0, 0.0, 0.0, 0.0);
+                this.Environment.GisGrid.SetupTransformation(0.0F, 0.0F, 0.0F, 0.0F);
             }
 
             if (projectFile.Model.World.EnvironmentEnabled)
@@ -261,7 +261,7 @@ namespace iLand.World
           */
         private void CalculateStockableArea() // calculate the stockable area for each RU (i.e.: with stand grid values <> -1)
         {
-            this.TotalStockableHectares = 0.0;
+            this.TotalStockableHectares = 0.0F;
             foreach (ResourceUnit ru in this.ResourceUnits)
             {
                 //        if (ru.id()==-1) {

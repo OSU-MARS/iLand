@@ -16,18 +16,18 @@ namespace iLand.Tree
       */
     public class ResourceUnitTreeSpecies
     {
-        public ResourceUnitTreeSpeciesGrowth BiomassGrowth { get; private set; } // the 3pg production model of this species x resourceunit
-        public Establishment Establishment { get; private set; } // establishment submodel
+        public ResourceUnitTreeSpeciesGrowth BiomassGrowth { get; init; } // the 3pg production model of this species x resourceunit
+        public Establishment Establishment { get; init; } // establishment submodel
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
         public float LaiFraction { get; private set; }
         public float RemovedStemVolume { get; private set; } // sum of volume with was remvoved because of death/management (m3/ha)
-        public ResourceUnitTreeSpeciesResponse Response { get; private set; }
-        public ResourceUnit RU { get; private set; } // return pointer to resource unit
-        public SaplingProperties SaplingStats { get; private set; } // statistics for the sapling sub module
-        public TreeSpecies Species { get; private set; } // return pointer to species
-        public ResourceUnitTreeStatistics Statistics { get; private set; } // statistics of this species on the resource unit
-        public ResourceUnitTreeStatistics StatisticsDead { get; private set; } // statistics of trees that have died
-        public ResourceUnitTreeStatistics StatisticsManagement { get; private set; } // statistics of removed trees
+        public ResourceUnitTreeSpeciesResponse Response { get; init; }
+        public ResourceUnit RU { get; init; } // return pointer to resource unit
+        public SaplingProperties SaplingStats { get; init; } // statistics for the sapling sub module
+        public TreeSpecies Species { get; init; } // return pointer to species
+        public ResourceUnitTreeStatistics Statistics { get; init; } // statistics of this species on the resource unit
+        public ResourceUnitTreeStatistics StatisticsDead { get; init; } // statistics of trees that have died
+        public ResourceUnitTreeStatistics StatisticsManagement { get; init; } // statistics of removed trees
         
         public ResourceUnitTreeSpecies(TreeSpecies treeSpecies, ResourceUnit ru)
         {
@@ -81,7 +81,7 @@ namespace iLand.Tree
             }
         }
 
-        public double LeafArea()
+        public float LeafArea()
         {
             // Leaf area of the species:
             // total leaf area on the RU * fraction of leafarea

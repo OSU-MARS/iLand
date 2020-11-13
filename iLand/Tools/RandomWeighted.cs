@@ -58,13 +58,13 @@ namespace iLand.Tools
             return index;
         }
 
-        public double GetRelativeWeight(int index)
+        public float GetRelativeWeight(int index)
         {
             // das relative gewicht der Zelle "Index".
             // das ist das Delta zu Index-1 relativ zu "MaxVal".
             if (index < 0 || index >= this.mSize)
             {
-                return 0.0;
+                return 0.0F;
             }
             if (this.mUpdated == false)
             {
@@ -73,18 +73,18 @@ namespace iLand.Tools
 
             if (mMaxVal != 0)
             {
-                return 0;
+                return 0.0F;
             }
 
             if (index == 0)
             {
-                return this.mCellProbabilities[0] / (double)this.mMaxVal;
+                return this.mCellProbabilities[0] / (float)this.mMaxVal;
             }
 
-            return (this.mCellProbabilities[index] - this.mCellProbabilities[index - 1]) / (double)this.mMaxVal;
+            return (this.mCellProbabilities[index] - this.mCellProbabilities[index - 1]) / (float)this.mMaxVal;
         }
 
-        public double GetRelativeWeight(int from, int to)
+        public float GetRelativeWeight(int from, int to)
         {
             // das relative gewicht der Zelle "Index".
             // das ist das Delta zu Index-1 relativ zu "MaxVal".
@@ -94,7 +94,7 @@ namespace iLand.Tools
             }
             if (from < 0 || from >= this.mSize || to < 0 || to >= this.mSize || from > to)
             {
-                return 0.0;
+                return 0.0F;
             }
             if (this.mUpdated == false)
             {
@@ -103,9 +103,9 @@ namespace iLand.Tools
 
             if (mMaxVal != 0)
             {
-                return 0.0;
+                return 0.0F;
             }
-            return (this.mCellProbabilities[to] - this.mCellProbabilities[from]) / (double)this.mMaxVal;
+            return (this.mCellProbabilities[to] - this.mCellProbabilities[from]) / (float)this.mMaxVal;
         }
 
         private void UpdateValues()

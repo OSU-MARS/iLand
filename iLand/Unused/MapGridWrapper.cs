@@ -6,7 +6,7 @@ namespace iLand.World
     {
         //private bool mCreated;
 
-        public MapGrid StandGrid { get; private set; }
+        public MapGrid StandGrid { get; init; }
 
         public MapGridWrapper(Model model)
         {
@@ -128,14 +128,14 @@ namespace iLand.World
         //    Grid<int> dest = this.StandGrid.Grid;
         //    Rectangle destRectangle = dest.GetCellExtent();
         //    Rectangle r = new Rectangle(destRectangle.X, destRectangle.Y, destRectangle.Width, destRectangle.Height);
-        //    Point rsize = dest.GetCellIndex(new PointF((float)(destx + (x2 - x1)), (float)(desty + (y2 - y1))));
-        //    Point destination = dest.GetCellIndex((float)destx, (float)desty);
+        //    Point rsize = dest.GetCellIndex(new PointF((destx + (x2 - x1)), (desty + (y2 - y1))));
+        //    Point destination = dest.GetCellIndex(destx, desty);
         //    r.Intersect(new Rectangle(destination.X, destination.Y, rsize.X, rsize.Y));
-        //    Point dest_coord = dest.GetCellIndex(new PointF((float)destx, (float)desty));
-        //    Point offset = dest.GetCellIndex(new PointF((float)x1, (float)y1));
+        //    Point dest_coord = dest.GetCellIndex(new PointF(destx, desty));
+        //    Point offset = dest.GetCellIndex(new PointF(x1, y1));
         //    offset.X -= dest_coord.X;
         //    offset.Y -= dest_coord.Y;
-        //    Debug.WriteLine("Rectangle " + r + " offset " + offset + " from " + new PointF((float)x1, (float)y1) + " to " + new PointF((float)destx, (float)desty));
+        //    Debug.WriteLine("Rectangle " + r + " offset " + offset + " from " + new PointF(x1, y1) + " to " + new PointF(destx, desty));
         //    if (r == null)
         //    {
         //        return 0.0;

@@ -495,10 +495,10 @@ namespace iLand.Input
             {
                 StandInitializationFileRow standRow = new StandInitializationFileRow(speciesSet[standFile.GetValue(speciesIndex, rowIndex)])
                 {
-                    Count = Double.Parse(standFile.GetValue(countIndex, rowIndex)),
-                    DbhFrom = Double.Parse(standFile.GetValue(dbhFromIndex, rowIndex)),
-                    DbhTo = Double.Parse(standFile.GetValue(dbhToIndex, rowIndex)),
-                    HeightDiameterRatio = Double.Parse(standFile.GetValue(hdIndex, rowIndex))
+                    Count = Single.Parse(standFile.GetValue(countIndex, rowIndex)),
+                    DbhFrom = Single.Parse(standFile.GetValue(dbhFromIndex, rowIndex)),
+                    DbhTo = Single.Parse(standFile.GetValue(dbhToIndex, rowIndex)),
+                    HeightDiameterRatio = Single.Parse(standFile.GetValue(hdIndex, rowIndex))
                 };
                 if (standRow.HeightDiameterRatio == 0.0 || standRow.DbhFrom / 100.0 * standRow.HeightDiameterRatio < Constant.Sapling.MaximumHeight)
                 {
@@ -521,11 +521,11 @@ namespace iLand.Input
 
                 if (densityIndex >= 0)
                 {
-                    standRow.Density = Double.Parse(standFile.GetValue(densityIndex, rowIndex));
+                    standRow.Density = Single.Parse(standFile.GetValue(densityIndex, rowIndex));
                 }
                 else
                 {
-                    standRow.Density = 0.0;
+                    standRow.Density = 0.0F;
                 }
                 if (standRow.Density < -1)
                 {
@@ -556,7 +556,7 @@ namespace iLand.Input
         }
 
         // sort function
-        public int SortPairLessThan(MutableTuple<int, double> s1, MutableTuple<int, double> s2)
+        private static int SortPairLessThan(MutableTuple<int, float> s1, MutableTuple<int, float> s2)
         {
             if (s1.Item2 < s2.Item2)
             {
@@ -571,17 +571,17 @@ namespace iLand.Input
 
         public class HeightInitCell
         {
-            public double BasalArea { get; set; } // accumulated basal area
+            public float BasalArea { get; set; } // accumulated basal area
             public Point GridCellIndex { get; set; } // location of the pixel
-            public double MaxHeight { get; set; } // predefined maximum height at given pixel (if available from LIDAR or so)
+            public float MaxHeight { get; set; } // predefined maximum height at given pixel (if available from LIDAR or so)
             public ResourceUnit ResourceUnit { get; set; } // pointer to the resource unit the pixel belongs to
             public bool IsSingleSpecies { get; set; } // pixel is dedicated to a single species
 
             public HeightInitCell(ResourceUnit ru)
             {
-                this.BasalArea = 0.0;
+                this.BasalArea = 0.0F;
                 this.IsSingleSpecies = false;
-                this.MaxHeight = -1.0;
+                this.MaxHeight = -1.0F;
                 this.ResourceUnit = ru;
             }
         };
@@ -612,10 +612,10 @@ namespace iLand.Input
         {
             Debug.Assert(this.mProbabilityDistribution != null);
 
-            List<MutableTuple<int, double>> resourceUnitBasalAreaByHeightCellIndex = new List<MutableTuple<int, double>>();
+            List<MutableTuple<int, float>> resourceUnitBasalAreaByHeightCellIndex = new List<MutableTuple<int, float>>();
             for (int heightCellIndex = 0; heightCellIndex < Constant.HeightSizePerRU * Constant.HeightSizePerRU; ++heightCellIndex)
             {
-                resourceUnitBasalAreaByHeightCellIndex.Add(new MutableTuple<int, double>(heightCellIndex, 0.0));
+                resourceUnitBasalAreaByHeightCellIndex.Add(new MutableTuple<int, float>(heightCellIndex, 0.0F));
             }
 
             // a multimap holds a list for all trees.
@@ -624,13 +624,13 @@ namespace iLand.Input
             int totalTreeCount = 0;
             foreach (StandInitializationFileRow standRow in this.mTreeRowsForDefaultStand)
             {
-                double randFraction = standRow.Density;
+                float randFraction = standRow.Density;
                 for (int index = 0; index < standRow.Count; ++index)
                 {
                     // create trees
                     int treeIndex = ru.Trees.AddTree(landscape, standRow.TreeSpecies.ID);
                     Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[standRow.TreeSpecies.ID];
-                    treesOfSpecies.Dbh[treeIndex] = (float)randomGenerator.GetRandomDouble(standRow.DbhFrom, standRow.DbhTo);
+                    treesOfSpecies.Dbh[treeIndex] = (float)randomGenerator.GetRandomFloat(standRow.DbhFrom, standRow.DbhTo);
                     treesOfSpecies.SetHeight(treeIndex, 0.001F * treesOfSpecies.Dbh[treeIndex] * (float)standRow.HeightDiameterRatio); // dbh from cm->m, *hd-ratio -> meter height
                     treesOfSpecies.Species = standRow.TreeSpecies;
                     if (standRow.Age < 1)
@@ -645,12 +645,12 @@ namespace iLand.Input
                     ++totalTreeCount;
 
                     // calculate random value. "density" is from 1..-1.
-                    double randomValue = this.mProbabilityDistribution.GetRandomValue(randomGenerator);
-                    if (standRow.Density < 0)
+                    float randomValue = (float)this.mProbabilityDistribution.GetRandomValue(randomGenerator);
+                    if (standRow.Density < 0.0F)
                     {
-                        randomValue = 1.0 - randomValue;
+                        randomValue = 1.0F - randomValue;
                     }
-                    randomValue = randomValue * randFraction + randomGenerator.GetRandomDouble() * (1.0 - randFraction);
+                    randomValue = randomValue * randFraction + randomGenerator.GetRandomFloat() * (1.0F - randFraction);
 
                     // key: rank of target pixel
                     // item1: index of target pixel
@@ -663,16 +663,16 @@ namespace iLand.Input
                     }
                     treesInCell.Item2.Add(treesOfSpecies.Tag[treeIndex]); // store tree in map
 
-                    MutableTuple<int, double> resourceUnitBasalArea = resourceUnitBasalAreaByHeightCellIndex[randomHeightCellIndex];
+                    MutableTuple<int, float> resourceUnitBasalArea = resourceUnitBasalAreaByHeightCellIndex[randomHeightCellIndex];
                     resourceUnitBasalArea.Item2 += treesOfSpecies.GetBasalArea(treeIndex); // aggregate the basal area for each 10m pixel
                     if ((totalTreeCount < 20 && index % 2 == 0) ||
                         (totalTreeCount < 100 && index % 10 == 0) ||
                         (index % 30 == 0))
                     {
-                        resourceUnitBasalAreaByHeightCellIndex.Sort(SortPairLessThan);
+                        resourceUnitBasalAreaByHeightCellIndex.Sort(StandReader.SortPairLessThan);
                     }
                 }
-                resourceUnitBasalAreaByHeightCellIndex.Sort(SortPairLessThan);
+                resourceUnitBasalAreaByHeightCellIndex.Sort(StandReader.SortPairLessThan);
             }
 
             for (int heightCellIndex = 0; heightCellIndex < Constant.HeightSizePerRU * Constant.HeightSizePerRU; ++heightCellIndex)
@@ -713,7 +713,7 @@ namespace iLand.Input
                             //index = (index + 1)%25; // increase and roll over
 
                             // search a random position
-                            double r = randomGenerator.GetRandomDouble();
+                            float r = randomGenerator.GetRandomFloat();
                             index = Maths.Limit((int)(25 * r * r), 0, 24); // use rnd()^2 to search for locations -> higher number of low indices (i.e. 50% of lookups in first 25% of locations)
                         }
                         while (Maths.IsBitSet(bits, index) == true && stop-- != 0);
@@ -773,7 +773,7 @@ namespace iLand.Input
                 }
                 heightCells.Add(heightCell);
             }
-            double standAreaInResourceUnits = standGrid.GetArea(standID) / Constant.RUArea;
+            float standAreaInResourceUnits = standGrid.GetArea(standID) / Constant.RUArea;
 
             if (this.initHeightGrid.IsValid() && (this.mHeightGridResponse == null))
             {
@@ -797,13 +797,13 @@ namespace iLand.Input
                         // randomize the pixels
                         for (int heightIndex = 0; heightIndex < heightCells.Count; ++heightIndex)
                         {
-                            heightCells[heightIndex].BasalArea = randomGenerator.GetRandomDouble();
+                            heightCells[heightIndex].BasalArea = randomGenerator.GetRandomFloat();
                         }
                         heightCells.Sort(this.CompareHeightInitCells);
 
                         for (int heightIndex = 0; heightIndex < heightCells.Count; ++heightIndex)
                         {
-                            heightCells[heightIndex].BasalArea = 0.0;
+                            heightCells[heightIndex].BasalArea = 0.0F;
                         }
                     }
 
@@ -837,12 +837,12 @@ namespace iLand.Input
                             {
                                 randomValue = 1.0 - randomValue;
                             }
-                            randomValue = randomValue * rand_fraction + randomGenerator.GetRandomDouble() * (1.0 - rand_fraction);
+                            randomValue = randomValue * rand_fraction + randomGenerator.GetRandomFloat() * (1.0 - rand_fraction);
                         }
                         else
                         {
                             // limited area: limit potential area using the "density" input parameter
-                            randomValue = randomGenerator.GetRandomDouble() * Math.Min(standRow.Density / 100.0, 1.0);
+                            randomValue = randomGenerator.GetRandomFloat() * Math.Min(standRow.Density / 100.0, 1.0);
                         }
                         ++totalTries;
 
@@ -853,7 +853,7 @@ namespace iLand.Input
                         {
                             // calculate how good the selected pixel fits w.r.t. the predefined height
                             double p_value = heightCells[key].MaxHeight > 0.0 ? this.mHeightGridResponse.Evaluate(init_max_height / heightCells[key].MaxHeight) : 0.0;
-                            if (randomGenerator.GetRandomDouble() < p_value)
+                            if (randomGenerator.GetRandomFloat() < p_value)
                             {
                                 found = true;
                             }
@@ -876,8 +876,8 @@ namespace iLand.Input
                     ResourceUnit ru = heightCells[key].ResourceUnit;
                     Trees trees = ru.Trees.TreesBySpeciesID[standRow.TreeSpecies.ID];
                     int treeIndex = ru.Trees.AddTree(landscape, standRow.TreeSpecies.ID);
-                    trees.Dbh[treeIndex] = (float)randomGenerator.GetRandomDouble(standRow.DbhFrom, standRow.DbhTo);
-                    trees.SetHeight(treeIndex, trees.Dbh[treeIndex] / 100.0F * (float)standRow.HeightDiameterRatio); // dbh from cm->m, *hd-ratio -> meter height
+                    trees.Dbh[treeIndex] = (float)randomGenerator.GetRandomFloat(standRow.DbhFrom, standRow.DbhTo);
+                    trees.SetHeight(treeIndex, trees.Dbh[treeIndex] / 100.0F * standRow.HeightDiameterRatio); // dbh from cm->m, *hd-ratio -> meter height
                     trees.Species = standRow.TreeSpecies;
                     if (standRow.Age <= 0)
                     {
@@ -930,7 +930,7 @@ namespace iLand.Input
                         do
                         {
                             // search a random position
-                            double random = randomGenerator.GetRandomDouble();
+                            float random = randomGenerator.GetRandomFloat();
                             index = Maths.Limit((int)(25 * random * random), 0, 24); // use rnd()^2 to search for locations -> higher number of low indices (i.e. 50% of lookups in first 25% of locations)
                         }
                         while (Maths.IsBitSet(bits, index) == true && stop-- != 0);
@@ -1019,7 +1019,7 @@ namespace iLand.Input
         //                ++hits;
         //                if (sc != null)
         //                {
-        //                    sc.AddSaplingIfSlotFree((float)height, (int)age, species.Index);
+        //                    sc.AddSaplingIfSlotFree(height, (int)age, species.Index);
         //                }
         //                //ru.resourceUnitSpecies(species).changeSapling().addSapling(offset, height, age);
         //            }
@@ -1089,7 +1089,7 @@ namespace iLand.Input
             // sort based on LIF-Value
             lightCellIndexAndValues.Sort(CompareLifValue); // higher: highest values first
 
-            double standAreaInHa = standGrid.GetArea(standID) / Constant.RUArea; // multiplier for grid (e.g. 2 if stand has area of 2 hectare)
+            float standAreaInHa = standGrid.GetArea(standID) / Constant.RUArea; // multiplier for grid (e.g. 2 if stand has area of 2 hectare)
 
             // parse the content of the init-file
             // species
@@ -1118,9 +1118,9 @@ namespace iLand.Input
                 float height = heightIndex == -1 ? Constant.Sapling.MinimumHeight : Single.Parse(init.GetValue(heightIndex, row));
                 int age = ageIndex == -1 ? 1 : Int32.Parse(init.GetValue(ageIndex, row));
                 float age4m = topAgeIndex == -1 ? 10.0F : Single.Parse(init.GetValue(topAgeIndex, row));
-                double minHeight = heightFromIndex == -1 ? -1.0 : Double.Parse(init.GetValue(heightFromIndex, row));
-                double maxHeight = heightToIndex == -1 ? -1.0 : Double.Parse(init.GetValue(heightToIndex, row));
-                double minLightIntensity = minLifIndex == -1 ? 1.0 : Double.Parse(init.GetValue(minLifIndex, row));
+                float minHeight = heightFromIndex == -1 ? -1.0F : Single.Parse(init.GetValue(heightFromIndex, row));
+                float maxHeight = heightToIndex == -1 ? -1.0F : Single.Parse(init.GetValue(heightToIndex, row));
+                float minLightIntensity = minLifIndex == -1 ? 1.0F : Single.Parse(init.GetValue(minLifIndex, row));
                 // find LIF-level in the pixels
                 int minLightIndex = 0;
                 if (minLightIntensity < 1.0)
@@ -1144,13 +1144,13 @@ namespace iLand.Input
                     minLightIndex = lightCellIndexAndValues.Count;
                 }
 
-                double hits = 0.0;
-                while (hits < cellsWithSaplings)
+                float fractionallyOccupiedCellCount = 0.0F;
+                while (fractionallyOccupiedCellCount < cellsWithSaplings)
                 {
                     int randomIndex = model.RandomGenerator.GetRandomInteger(0, minLightIndex);
                     if (heightFromIndex != -1)
                     {
-                        height = (float)model.RandomGenerator.GetRandomDouble(minHeight, maxHeight);
+                        height = (float)model.RandomGenerator.GetRandomFloat(minHeight, maxHeight);
                         if (age <= 1)
                         {
                             age = Math.Max((int)MathF.Round(height / Constant.Sapling.MaximumHeight * age4m), 1); // assume a linear relationship between height and age
@@ -1164,16 +1164,16 @@ namespace iLand.Input
                         Sapling? sapling = saplingCell.AddSaplingIfSlotFree(height, age, species.Index);
                         if (sapling != null)
                         {
-                            hits += Math.Max(1.0, species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(sapling.Height));
+                            fractionallyOccupiedCellCount += Math.Max(1.0F, species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(sapling.Height));
                         }
                         else
                         {
-                            ++hits;
+                            ++fractionallyOccupiedCellCount;
                         }
                     }
                     else
                     {
-                        ++hits; // avoid an infinite loop
+                        ++fractionallyOccupiedCellCount; // avoid an infinite loop
                     }
                 }
 
@@ -1197,11 +1197,11 @@ namespace iLand.Input
         private class StandInitializationFileRow
         {
             public int Age { get; set; }
-            public double Count { get; set; }
-            public double Density { get; set; }
-            public double DbhFrom { get; set; }
-            public double DbhTo { get; set; }
-            public double HeightDiameterRatio { get; set; }
+            public float Count { get; set; }
+            public float Density { get; set; }
+            public float DbhFrom { get; set; }
+            public float DbhTo { get; set; }
+            public float HeightDiameterRatio { get; set; }
             public TreeSpecies TreeSpecies { get; set; }
 
             public StandInitializationFileRow(TreeSpecies treeSpecies)

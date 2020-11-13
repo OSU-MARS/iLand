@@ -27,27 +27,27 @@ namespace iLand.Tree
         // various flags
         private readonly List<TreeFlags> flags;
 
-        public List<int> Age { get; private set; } // the tree age (years)
-        public List<float> Dbh { get; private set; } // diameter at breast height in cm
-        public List<float> DbhDelta { get; private set; } // diameter growth [cm]
-        public List<float> Height { get; private set; } // tree height in m
-        public List<float> LeafArea { get; private set; } // leaf area (m2) of the tree
-        public List<Point> LightCellPosition { get; private set; } // index of the trees position on the basic LIF grid
-        public List<float> LightResourceIndex { get; private set; } // LRI of the tree (updated during readStamp())
-        public List<float> LightResponse { get; private set; } // light response used for distribution of biomass on RU level
-        public List<float> NppReserve { get; private set; } // NPP reserve pool [kg] - stores a part of assimilates for use in less favorable years
-        public List<float> Opacity { get; private set; } // multiplier on LIP weights, depending on leaf area status (opacity of the crown)
-        public ResourceUnit RU { get; private set; } // pointer to the ressource unit the tree belongs to.
+        public List<int> Age { get; init; } // the tree age (years)
+        public List<float> Dbh { get; init; } // diameter at breast height in cm
+        public List<float> DbhDelta { get; init; } // diameter growth [cm]
+        public List<float> Height { get; init; } // tree height in m
+        public List<float> LeafArea { get; init; } // leaf area (m2) of the tree
+        public List<Point> LightCellPosition { get; init; } // index of the trees position on the basic LIF grid
+        public List<float> LightResourceIndex { get; init; } // LRI of the tree (updated during readStamp())
+        public List<float> LightResponse { get; init; } // light response used for distribution of biomass on RU level
+        public List<float> NppReserve { get; init; } // NPP reserve pool [kg] - stores a part of assimilates for use in less favorable years
+        public List<float> Opacity { get; init; } // multiplier on LIP weights, depending on leaf area status (opacity of the crown)
+        public ResourceUnit RU { get; init; } // pointer to the ressource unit the tree belongs to.
         public TreeSpecies Species { get; set; } // pointer to the tree species of the tree.
-        public List<LightStamp?> Stamp { get; private set; }
-        public List<int> Tag { get; private set; } // (usually) numerical unique ID of the tree
+        public List<LightStamp?> Stamp { get; init; }
+        public List<int> Tag { get; init; } // (usually) numerical unique ID of the tree
 
         // biomass properties
-        public List<float> CoarseRootMass { get; private set; } // mass (kg) of coarse roots
-        public List<float> FineRootMass { get; private set; } // mass (kg) of fine roots
-        public List<float> FoliageMass { get; private set; } // mass (kg) of foliage
-        public List<float> StemMass { get; private set; } // mass (kg) of stem
-        public List<float> StressIndex { get; private set; } // the scalar stress rating (0..1), used for mortality
+        public List<float> CoarseRootMass { get; init; } // mass (kg) of coarse roots
+        public List<float> FineRootMass { get; init; } // mass (kg) of fine roots
+        public List<float> FoliageMass { get; init; } // mass (kg) of foliage
+        public List<float> StemMass { get; init; } // mass (kg) of stem
+        public List<float> StressIndex { get; init; } // the scalar stress rating (0..1), used for mortality
 
         public Trees(Landscape landscape, ResourceUnit resourceUnit, TreeSpecies species)
         {
@@ -550,7 +550,7 @@ namespace iLand.Tree
             lightCellPosition.X -= readerOffset;
             lightCellPosition.Y -= readerOffset;
 
-            double sum = 0.0;
+            float sum = 0.0F;
             int readerSize = reader.Size();
             int rx = lightCellPosition.X;
             int ry = lightCellPosition.Y;
@@ -577,7 +577,7 @@ namespace iLand.Tree
                     sum += value * reader[x, y];
                 }
             }
-            this.LightResourceIndex[treeIndex] = (float)sum;
+            this.LightResourceIndex[treeIndex] = sum;
             // LRI correction...
             float relativeHeight = this.Height[treeIndex] / this.heightGrid[this.LightCellPosition[treeIndex].X, this.LightCellPosition[treeIndex].Y, Constant.LightCellsPerHeightSize].Height;
             if (relativeHeight < 1.0F)
@@ -647,7 +647,7 @@ namespace iLand.Tree
             float hrel = this.Height[treeIndex] / this.heightGrid[this.LightCellPosition[treeIndex].X, this.LightCellPosition[treeIndex].Y, Constant.LightCellsPerHeightSize].Height;
             if (hrel < 1.0F)
             {
-                this.LightResourceIndex[treeIndex] = (float)this.Species.SpeciesSet.GetLriCorrection(this.LightResourceIndex[treeIndex], hrel);
+                this.LightResourceIndex[treeIndex] = this.Species.SpeciesSet.GetLriCorrection(this.LightResourceIndex[treeIndex], hrel);
             }
 
             if (Double.IsNaN(this.LightResourceIndex[treeIndex]))
@@ -814,7 +814,7 @@ namespace iLand.Tree
         private void PartitionBiomass(TreeGrowthData growthData, Model model, int treeIndex)
         {
             // available resources
-            float nppAvailable = (float)growthData.NppTotal + this.NppReserve[treeIndex];
+            float nppAvailable = growthData.NppTotal + this.NppReserve[treeIndex];
             float foliageBiomass = this.Species.GetBiomassFoliage(this.Dbh[treeIndex]);
             float reserveSize = foliageBiomass * (1.0F + this.Species.FinerootFoliageRatio);
             float reserveAllocation = MathF.Min(reserveSize, (1.0F + this.Species.FinerootFoliageRatio) * this.FoliageMass[treeIndex]); // not always try to refill reserve 100%
@@ -1157,10 +1157,10 @@ namespace iLand.Tree
                 this.Die(model, treeIndex);
             }
 
-            double pFixed = this.Species.DeathProbabilityFixed;
-            double pStress = this.Species.GetDeathProbabilityForStress(growthData.StressIndex);
-            double pMortality = pFixed + pStress;
-            double random = model.RandomGenerator.GetRandomDouble(); // 0..1
+            float pFixed = this.Species.DeathProbabilityFixed;
+            float pStress = this.Species.GetDeathProbabilityForStress(growthData.StressIndex);
+            float pMortality = pFixed + pStress;
+            float random = model.RandomGenerator.GetRandomFloat(); // 0..1
             if (random < pMortality)
             {
                 // die...
@@ -1175,7 +1175,7 @@ namespace iLand.Tree
         //    if (mFoliageMass < 0.00001)
         //        die();
 
-        //    double p_intrinsic, p_stress = 0.;
+        //    float p_intrinsic, p_stress = 0.;
         //    p_intrinsic = species().deathProb_intrinsic();
 
         //    if (mDbhDelta < _stress_threshold)
@@ -1187,7 +1187,7 @@ namespace iLand.Tree
         //    else
         //        mStressIndex = 0;
 
-        //    double p = drandom(); //0..1
+        //    float p = drandom(); //0..1
         //    if (p < p_intrinsic + p_stress)
         //    {
         //        // die...

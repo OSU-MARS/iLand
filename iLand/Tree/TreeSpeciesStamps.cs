@@ -206,8 +206,8 @@ namespace iLand.Tree
 
         public void AddReaderStamp(LightStamp stamp, float crownRadiusInMeters)
         {
-            double rest = (crownRadiusInMeters % 1.0F) + 0.0001;
-            int hdClass = (int)(rest * 10); // 0 .. 9.99999999
+            float rest = (crownRadiusInMeters % 1.0F) + 0.0001F;
+            int hdClass = (int)(10.0F * rest); // 0 .. 9.99999999
             if (hdClass >= Constant.Stamp.HeightDiameterClassCount)
             {
                 hdClass = Constant.Stamp.HeightDiameterClassCount - 1;

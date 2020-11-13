@@ -23,22 +23,22 @@ namespace iLand.Tree
         public float NeedleStorageFactor { get; set; } // factor for calculating water storage capacity for intercepted water for conifers
         public float DecidousStorageFactor { get; set; } // the same for broadleaved
 
-        public double EvaporationFromCanopy { get; private set; } // evaporation from canopy (mm)
+        public float EvaporationFromCanopy { get; private set; } // evaporation from canopy (mm)
         public float Interception { get; private set; } // mm water that is intercepted by the crown
-        public double[] ReferenceEvapotranspirationByMonth { get; private set; } // monthly reference ET (see Adair et al 2008)
+        public float[] ReferenceEvapotranspirationByMonth { get; init; } // monthly reference ET (see Adair et al 2008)
 
         public Canopy(float airDensity)
         {
             this.mAirDensity = airDensity; // kg / m3
 
-            this.ReferenceEvapotranspirationByMonth = new double[Constant.MonthsInYear];
+            this.ReferenceEvapotranspirationByMonth = new float[Constant.MonthsInYear];
         }
 
         public float Flow(float preciptitationInMM)
         {
             // sanity checks
             this.Interception = 0.0F;
-            this.EvaporationFromCanopy = 0.0;
+            this.EvaporationFromCanopy = 0.0F;
             if (preciptitationInMM == 0.0F)
             {
                 return 0.0F;
@@ -91,7 +91,7 @@ namespace iLand.Tree
 
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
-                this.ReferenceEvapotranspirationByMonth[month] = 0.0;
+                this.ReferenceEvapotranspirationByMonth[month] = 0.0F;
             }
         }
 
@@ -108,7 +108,7 @@ namespace iLand.Tree
             const float qb = 0.8F;
             float net_rad = qa + qb * rad;
 
-            // Landsberg original: double e20 = 2.2;  //rate of change of saturated VP with T at 20C
+            // Landsberg original: float e20 = 2.2;  //rate of change of saturated VP with T at 20C
             const float vpdToSaturationDeficit = 0.000622F; //convert VPD to saturation deficit = 18/29/1000 = molecular weight of H2O/molecular weight of air
             const float latentHeatOfVaporization = 2460000.0F; // Latent heat of vaporization. Energy required per unit mass of water vaporized [J kg-1]
 
@@ -124,7 +124,7 @@ namespace iLand.Tree
             //  with temperature-dependent  slope of  vapor pressure saturation curve
             // (following  Allen et al. (1998),  http://www.fao.org/docrep/x0490e/x0490e07.htm#atmospheric%20parameters)
             // svp_slope in mbar.
-            //double svp_slope = 4098. * (6.1078 * exp(17.269 * temperature / (temperature + 237.3))) / ((237.3+temperature)*(237.3+temperature));
+            //float svp_slope = 4098. * (6.1078 * exp(17.269 * temperature / (temperature + 237.3))) / ((237.3+temperature)*(237.3+temperature));
 
             // alternatively: very simple variant (following here the original 3PG code). This
             // keeps yields +- same results for summer, but slightly lower values in winter (2011/03/16)
@@ -136,11 +136,11 @@ namespace iLand.Tree
 
             // calculate reference evapotranspiration
             // see Adair et al 2008
-            const double psychrometricConstant = 0.0672718682328237; // kPa/degC
-            const double windspeed = 2.0; // m/s
-            double net_rad_mj_day = net_rad * dayLengthInSeconds / 1000000.0; // convert W/m2 again to MJ/m2*day
-            double et0_day = 0.408 * svp_slope * net_rad_mj_day + psychrometricConstant * 900.0 / (meanDaytimeTemperature + 273.15) * windspeed * day.Vpd;
-            double et0_div = svp_slope + psychrometricConstant * (1.0 + 0.34 * windspeed);
+            const float psychrometricConstant = 0.0672718682328237F; // kPa/degC
+            const float windspeed = 2.0F; // m/s
+            float net_rad_mj_day = net_rad * dayLengthInSeconds / 1000000.0F; // convert W/m2 again to MJ/m2*day
+            float et0_day = 0.408F * svp_slope * net_rad_mj_day + psychrometricConstant * 900.0F / (meanDaytimeTemperature + 273.15F) * windspeed * day.Vpd;
+            float et0_div = svp_slope + psychrometricConstant * (1.0F + 0.34F * windspeed);
             et0_day /= et0_div;
             this.ReferenceEvapotranspirationByMonth[day.Month - 1] += et0_day;
 

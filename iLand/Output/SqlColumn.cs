@@ -5,9 +5,9 @@ namespace iLand.Output
 {
     public class SqlColumn
     {
-        public SqliteType Datatype { get; private set; }
-        public string Description { get; private set; }
-        public string Name { get; private set; }
+        public SqliteType Datatype { get; init; }
+        public string Description { get; init; }
+        public string Name { get; init; }
 
         public SqlColumn(string name, string description, OutputDatatype datatype)
         {

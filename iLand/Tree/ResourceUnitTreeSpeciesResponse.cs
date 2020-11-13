@@ -20,18 +20,18 @@ namespace iLand.Tree
         */
     public class ResourceUnitTreeSpeciesResponse
     {
-        public ResourceUnit ResourceUnit { get; private set; }
-        public TreeSpecies Species { get; private set; }
+        public ResourceUnit ResourceUnit { get; init; }
+        public TreeSpecies Species { get; init; }
 
-        public float[] CO2ResponseByMonth { get; private set; }
-        public float[] GlobalRadiationByMonth { get; private set; } // radiation sum in MJ/m2
-        public float[] SoilWaterResponseByMonth { get; private set; } // average of soilwater response
+        public float[] CO2ResponseByMonth { get; init; }
+        public float[] GlobalRadiationByMonth { get; init; } // radiation sum in MJ/m2
+        public float[] SoilWaterResponseByMonth { get; init; } // average of soilwater response
         public float NitrogenResponseForYear { get; private set; }
         public float RadiationForYear { get; private set; } // total radiation of the year (MJ/m2)
-        public float[] TempResponseByMonth { get; private set; } // average of temperature response
-        public float[] UtilizableRadiationByMonth { get; private set; } // sum of daily radiation*minResponse (MJ/m2)
+        public float[] TempResponseByMonth { get; init; } // average of temperature response
+        public float[] UtilizableRadiationByMonth { get; init; } // sum of daily radiation*minResponse (MJ/m2)
         public float UtilizableRadiationForYear { get; private set; } // yearly sum of utilized radiation (MJ/m2)
-        public float[] VpdResponseByMonth { get; private set; } // mean of vpd-response
+        public float[] VpdResponseByMonth { get; init; } // mean of vpd-response
 
         public ResourceUnitTreeSpeciesResponse(ResourceUnit ru, ResourceUnitTreeSpecies ruSpecies)
         {

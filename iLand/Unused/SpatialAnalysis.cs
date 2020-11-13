@@ -207,10 +207,10 @@ namespace iLand.Tools
                         }
                     }
                 }
-                if (ru.AreaInLandscape > 0.0)
+                if (ru.AreaInLandscape > 0.0F)
                 {
-                    double value = Constant.LightSize * Constant.LightSize * cellsWithCrownCoverage / ru.AreaInLandscape;
-                    mCrownCoverGrid[crownIndex] = (float)Maths.Limit(value, 0.0, 1.0);
+                    float value = Constant.LightSize * Constant.LightSize * cellsWithCrownCoverage / ru.AreaInLandscape;
+                    mCrownCoverGrid[crownIndex] = Maths.Limit(value, 0.0F, 1.0F);
                 }
             }
         }

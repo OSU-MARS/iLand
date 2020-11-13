@@ -24,7 +24,7 @@ namespace iLand.World
         private readonly Dictionary<int, List<MutableTuple<ResourceUnit, float>>> mResourceUnitsByStandID; // holds a list of resource units + areas per map-id
         private readonly Dictionary<int, List<int>> mNeighborListByStandID; // a list of neighboring polygons; for each ID all neighboring IDs are stored.
 
-        public Grid<int> Grid { get; private set; }
+        public Grid<int> Grid { get; init; }
         // file name of the grid
         public string? Name { get; private set; }
 
@@ -54,7 +54,7 @@ namespace iLand.World
             this.LoadFromFile(landscape, fileName);
         }
 
-        public double GetArea(int standID) { return this.IsValid(standID) ? mBoundingBoxByStandID[standID].Item2 : 0.0; } // return the area (m2) covered by the polygon
+        public float GetArea(int standID) { return this.IsValid(standID) ? mBoundingBoxByStandID[standID].Item2 : 0.0F; } // return the area (m2) covered by the polygon
         public RectangleF GetBoundingBox(int id) { return this.IsValid(id) ? mBoundingBoxByStandID[id].Item1 : new RectangleF(); } // returns the bounding box of a polygon
         public bool IsValid() { return !this.Grid.IsNotSetup(); }
         /// returns true, if 'id' is a valid id in the grid, false otherwise.
@@ -234,7 +234,7 @@ namespace iLand.World
             return livingTrees;
         }
 
-        public int LoadTrees(Model model, int id, List<MutableTuple<Tree.Trees, double>> rList, string filter, int estimatedTreeCount)
+        public int LoadTrees(Model model, int id, List<MutableTuple<Tree.Trees, float>> rList, string filter, int estimatedTreeCount)
         {
             rList.Clear();
             if (estimatedTreeCount > 0)
@@ -270,14 +270,14 @@ namespace iLand.World
                                 // if value is >0 (i.e. not "false"), then draw a random number
                                 if ((loadTree == false) && (value > 0.0))
                                 {
-                                    loadTree = model.RandomGenerator.GetRandomDouble() < value;
+                                    loadTree = model.RandomGenerator.GetRandomFloat() < value;
                                 }
                                 if (loadTree == false)
                                 {
                                     continue;
                                 }
                             }
-                            rList.Add(new MutableTuple<Tree.Trees, double>(treesOfSpecies, 0.0));
+                            rList.Add(new MutableTuple<Tree.Trees, float>(treesOfSpecies, 0.0F));
                         }
                     }
                 }

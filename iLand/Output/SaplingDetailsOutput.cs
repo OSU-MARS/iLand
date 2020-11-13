@@ -9,7 +9,7 @@ namespace iLand.Output
     public class SaplingDetailsOutput : Output
     {
         private readonly Expression mFilter;
-        private double mMinDbh;
+        private float mMinDbh;
 
         public SaplingDetailsOutput()
         {
@@ -64,13 +64,13 @@ namespace iLand.Output
                                 {
                                     ResourceUnitTreeSpecies ruSpecies = saplingCell.Saplings[index].GetResourceUnitSpecies(ru);
                                     TreeSpecies treeSpecies = ruSpecies.Species;
-                                    double dbh = saplingCell.Saplings[index].Height / treeSpecies.SaplingGrowthParameters.HeightDiameterRatio * 100.0;
+                                    float dbh = 100.0F * saplingCell.Saplings[index].Height / treeSpecies.SaplingGrowthParameters.HeightDiameterRatio;
                                     // check minimum dbh
-                                    if (dbh < mMinDbh)
+                                    if (dbh < this.mMinDbh)
                                     {
                                         continue;
                                     }
-                                    double n_repr = treeSpecies.SaplingGrowthParameters.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].Height) / n_on_px;
+                                    float n_repr = treeSpecies.SaplingGrowthParameters.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].Height) / n_on_px;
 
                                     insertRow.Parameters[0].Value = model.CurrentYear;
                                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
@@ -91,7 +91,7 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            mFilter.SetExpression(model.Project.Output.SaplingDetail.Condition);
+            this.mFilter.SetExpression(model.Project.Output.SaplingDetail.Condition);
             mMinDbh = model.Project.Output.SaplingDetail.MinDbh;
         }
     }

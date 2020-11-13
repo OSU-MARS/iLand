@@ -39,9 +39,9 @@ namespace iLand.Simulation
         // return number of trees currently in list
         public int Count() { return this.mTreesInMostRecentlyLoadedStand.Count; }
         /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
-        // public double Mean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
+        // public float Mean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
         /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
-        // public double Sum(string expression, string filter = null) { return AggregateFunction(expression, filter, "sum"); }
+        // public float Sum(string expression, string filter = null) { return AggregateFunction(expression, filter, "sum"); }
 
         // load all trees, return number of trees
         //public int LoadAll()
@@ -109,12 +109,12 @@ namespace iLand.Simulation
             return treeCount;
         }
 
-        public int Kill(Model model, string filter, double fraction)
+        public int Kill(Model model, string filter, float fraction)
         {
             return this.RemoveTrees(model, filter, fraction, false);
         }
 
-        public int Manage(Model model, string filter, double fraction)
+        public int Manage(Model model, string filter, float fraction)
         {
             return this.RemoveTrees(model, filter, fraction, true);
         }
@@ -236,7 +236,7 @@ namespace iLand.Simulation
 
         /** remove trees from a list and reduce the list.
           */
-        private int RemoveTrees(Model model, string treeSelectionExpressionString, double removalProbabilityIfSelected, bool management)
+        private int RemoveTrees(Model model, string treeSelectionExpressionString, float removalProbabilityIfSelected, bool management)
         {
             TreeWrapper treeWrapper = new TreeWrapper(model);
             Expression selectionExpression = new Expression(treeSelectionExpressionString, treeWrapper);
@@ -252,7 +252,7 @@ namespace iLand.Simulation
                 {
                     int treeIndex = treeIndices[removalIndex];
                     treeWrapper.TreeIndex = treeIndex;
-                    if (selectionExpression.Evaluate(treeWrapper) != 0.0 && model.RandomGenerator.GetRandomDouble() <= removalProbabilityIfSelected)
+                    if (selectionExpression.Evaluate(treeWrapper) != 0.0 && model.RandomGenerator.GetRandomFloat() <= removalProbabilityIfSelected)
                     {
                         if (management)
                         {
@@ -276,12 +276,12 @@ namespace iLand.Simulation
         }
 
         // calculate aggregates for all trees in the internal list
-        //private double AggregateFunction(GlobalSettings globalSettings, string expression, string filter, string type)
+        //private float AggregateFunction(GlobalSettings globalSettings, string expression, string filter, string type)
         //{
         //    TreeWrapper tw = new TreeWrapper();
         //    Expression expr = new Expression(expression, tw);
 
-        //    double sum = 0.0;
+        //    float sum = 0.0;
         //    int n = 0;
         //    if (String.IsNullOrEmpty(filter))
         //    {
@@ -316,7 +316,7 @@ namespace iLand.Simulation
         //    }
         //    if (type == "mean")
         //    {
-        //        return n > 0 ? sum / (double)n : 0.0;
+        //        return n > 0 ? sum / (float)n : 0.0;
         //    }
         //    return 0.0;
         //}
@@ -374,7 +374,7 @@ namespace iLand.Simulation
                     // if value is >0 (i.e. not "false"), then draw a random number
                     if (!keep && value > 0.0)
                     {
-                        keep = model.RandomGenerator.GetRandomDouble() < value;
+                        keep = model.RandomGenerator.GetRandomFloat() < value;
                     }
                     if (keep == false)
                     {
@@ -412,7 +412,7 @@ namespace iLand.Simulation
         //    {
         //        if (!ru.Tree(i).IsDead())
         //        {
-        //            mTrees.Add(new MutableTuple<Tree, double>(ru.Tree(i), 0.0));
+        //            mTrees.Add(new MutableTuple<Tree, float>(ru.Tree(i), 0.0));
         //        }
         //    }
         //    return mTrees.Count;
@@ -429,7 +429,7 @@ namespace iLand.Simulation
         //        {
         //            if (!t.IsDead())
         //            {
-        //                mTrees.Add(new MutableTuple<Tree, double>(t, 0.0));
+        //                mTrees.Add(new MutableTuple<Tree, float>(t, 0.0));
         //            }
         //        }
         //    }
@@ -443,7 +443,7 @@ namespace iLand.Simulation
         //            tw.Tree = t;
         //            if (!t.IsDead() && expr.Execute(model.GlobalSettings) == 0.0)
         //            {
-        //                mTrees.Add(new MutableTuple<Tree, double>(t, 0.0));
+        //                mTrees.Add(new MutableTuple<Tree, float>(t, 0.0));
         //            }
         //        }
         //    }
@@ -586,13 +586,13 @@ namespace iLand.Simulation
         //    {
         //        treeWrapper.Trees = mTreesInMostRecentlyLoadedStand[i].Item1;
         //        MutableTuple<Trees, List<int>> tree = mTreesInMostRecentlyLoadedStand[i];
-        //        double sortingValue = sorter.Execute(model);
+        //        float sortingValue = sorter.Execute(model);
         //    }
         //    // now sort the list....
         //    mTreesInMostRecentlyLoadedStand.Sort(TreePairValue);
         //}
 
-        //public double Percentile(int pct)
+        //public float Percentile(int pct)
         //{
         //    if (mTreesInMostRecentlyLoadedStand.Count == 0)
         //    {
@@ -615,7 +615,7 @@ namespace iLand.Simulation
         //    // fill the "value" part of the tree storage with a random value for each tree
         //    for (int i = 0; i < mTreesInMostRecentlyLoadedStand.Count; ++i)
         //    {
-        //        MutableTuple<Trees, double> tree = mTreesInMostRecentlyLoadedStand[i];
+        //        MutableTuple<Trees, float> tree = mTreesInMostRecentlyLoadedStand[i];
         //        tree.Item2 = model.RandomGenerator.Random();
         //    }
         //    // now sort the list....

@@ -11,8 +11,8 @@ namespace iLand.World
         */
     public class ResourceUnitSoil
     {
-        public SoilParameters Parameters { get; private set; }
-        public ResourceUnit RU { get; private set; } // link to containing resource unit
+        public SoilParameters Parameters { get; init; }
+        public ResourceUnit RU { get; init; } // link to containing resource unit
 
         public float ClimateDecompositionFactor { get; set; } // set the climate decomposition factor for the current year
         public CarbonNitrogenTuple FluxToAtmosphere { get; private set; } // total flux due to heterotrophic respiration kg/ha

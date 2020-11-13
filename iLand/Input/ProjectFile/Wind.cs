@@ -8,21 +8,21 @@ namespace iLand.Input.ProjectFile
         public string? SoilFreezeMode { get; private set; }
         public bool TriggeredByTimeEvent { get; private set; }
         public int DurationPerIteration { get; private set; }
-        public double GustModifier { get; private set; }
-        public double TopoModifier { get; private set; }
-        public double DirectionVariation { get; private set; }
-        public double Direction { get; private set; }
+        public float GustModifier { get; private set; }
+        public float TopoModifier { get; private set; }
+        public float DirectionVariation { get; private set; }
+        public float Direction { get; private set; }
         public int DayOfYear { get; private set; }
-        public double Speed { get; private set; }
-        public double Duration { get; private set; }
+        public float Speed { get; private set; }
+        public float Duration { get; private set; }
         public string? TopoGridFile { get; private set; }
-        public double FactorEdge { get; private set; }
-        public double EdgeDetectionThreshold { get; private set; }
+        public float FactorEdge { get; private set; }
+        public float EdgeDetectionThreshold { get; private set; }
         public string? TopexModifierType { get; private set; }
         public string? LriTransferFunction { get; private set; }
         public string? EdgeProbability { get; private set; }
         public int EdgeAgeBaseValue { get; private set; }
-        public double EdgeBackgroundProbability { get; private set; }
+        public float EdgeBackgroundProbability { get; private set; }
         public string? OnAfterWind { get; private set; }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -62,7 +62,7 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("gustModifier"))
             {
-                this.GustModifier = reader.ReadElementContentAsDouble();
+                this.GustModifier = reader.ReadElementContentAsFloat();
                 if (this.GustModifier < 0)
                 {
                     throw new XmlException("Gust multiplier is negative.");
@@ -70,7 +70,7 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("topoModifier"))
             {
-                this.TopoModifier = reader.ReadElementContentAsDouble();
+                this.TopoModifier = reader.ReadElementContentAsFloat();
                 if (this.TopoModifier < 0)
                 {
                     throw new XmlException("Topographic windspeed multiplier is negative.");
@@ -78,12 +78,12 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("directionVariation"))
             {
-                this.DirectionVariation = reader.ReadElementContentAsDouble();
+                this.DirectionVariation = reader.ReadElementContentAsFloat();
                 // no clear range of values from iLand documentation
             }
             else if (reader.IsStartElement("direction"))
             {
-                this.Direction = reader.ReadElementContentAsDouble();
+                this.Direction = reader.ReadElementContentAsFloat();
                 // no meaningful restriction from iLand documentation
             }
             else if (reader.IsStartElement("dayOfYear"))
@@ -96,16 +96,16 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("speed"))
             {
-                this.Speed = reader.ReadElementContentAsDouble();
-                if (this.Speed < 0.0)
+                this.Speed = reader.ReadElementContentAsFloat();
+                if (this.Speed < 0.0F)
                 {
                     throw new XmlException("Storm windspeed is negative.");
                 }
             }
             else if (reader.IsStartElement("duration"))
             {
-                this.Duration = reader.ReadElementContentAsDouble();
-                if (this.Duration < 0.0)
+                this.Duration = reader.ReadElementContentAsFloat();
+                if (this.Duration < 0.0F)
                 {
                     throw new XmlException("Storm duration is negative.");
                 }
@@ -116,16 +116,16 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("factorEdge"))
             {
-                this.FactorEdge = reader.ReadElementContentAsDouble();
-                if (this.FactorEdge < 0.0)
+                this.FactorEdge = reader.ReadElementContentAsFloat();
+                if (this.FactorEdge < 0.0F)
                 {
                     throw new XmlException("Edge widspeed factor is negative.");
                 }
             }
             else if (reader.IsStartElement("edgeDetectionThreshold"))
             {
-                this.EdgeDetectionThreshold = reader.ReadElementContentAsDouble();
-                if (this.EdgeDetectionThreshold < 0.0)
+                this.EdgeDetectionThreshold = reader.ReadElementContentAsFloat();
+                if (this.EdgeDetectionThreshold < 0.0F)
                 {
                     throw new XmlException("Height difference threshold for wind edge effects is negative.");
                 }
@@ -152,8 +152,8 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("edgeBackgroundProbability"))
             {
-                this.EdgeBackgroundProbability = reader.ReadElementContentAsDouble();
-                if ((this.EdgeBackgroundProbability < 0.0) || (this.EdgeBackgroundProbability > 1.0))
+                this.EdgeBackgroundProbability = reader.ReadElementContentAsFloat();
+                if ((this.EdgeBackgroundProbability < 0.0F) || (this.EdgeBackgroundProbability > 1.0F))
                 {
                     throw new XmlException("Edge background probability is negative or greater than 1.0.");
                 }

@@ -18,14 +18,14 @@ namespace iLand.Simulation
 
         public int CurrentYear { get; set; }
 
-        public Landscape Landscape { get; private set; }
-        public Management? Management { get; private set; }
-        public ModelSettings ModelSettings { get; private set; }
-        public Plugin.Modules Modules { get; private set; }
-        public Output.Outputs Outputs { get; private set; }
-        public Project Project { get; private set; }
-        public RandomGenerator RandomGenerator { get; private set; }
-        public ScheduledEvents? ScheduledEvents { get; private set; }
+        public Landscape Landscape { get; init; }
+        public Management? Management { get; init; }
+        public ModelSettings ModelSettings { get; init; }
+        public Plugin.Modules Modules { get; init; }
+        public Output.Outputs Outputs { get; init; }
+        public Project Project { get; init; }
+        public RandomGenerator RandomGenerator { get; init; }
+        public ScheduledEvents? ScheduledEvents { get; init; }
 
         public Model(Project projectFile, Landscape landscape)
         {
@@ -399,7 +399,7 @@ namespace iLand.Simulation
             // radiate into the main LIF grid.
             int lightOffset = Constant.LightCellsPerHeightSize / 2; // for 5 px per height grid cell, the offset is 2
             int maxRadiationDistanceInHeightCells = 7;
-            float stepWidth = 1.0F / (float)maxRadiationDistanceInHeightCells;
+            float stepWidth = 1.0F / maxRadiationDistanceInHeightCells;
             int borderHeightCellCount = 0;
             for (int index = 0; index < this.Landscape.HeightGrid.Count; ++index)
             {

@@ -4,9 +4,7 @@ using System.Collections.Generic;
 namespace iLand.Tools
 {
     /** StatData.
-    * Helper class for statistics. This class calculates
-    * from a double-vector relevant information used
-    * for BoxPlots. */
+      * Helper class for statistics. This class calculates from a double-vector relevant information used for box plots. */
     internal class SummaryStatistics
     {
         private List<double> mData; // to allow late calculation of percentiles (e.g. a call to "median()".)

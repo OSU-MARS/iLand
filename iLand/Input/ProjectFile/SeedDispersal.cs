@@ -12,7 +12,7 @@ namespace iLand.Input.ProjectFile
 		public string? ExternalSeedSource { get; private set; }
 		public string? ExternalSeedSpecies { get; private set; }
 		public string? ExternalSeedBuffer { get; private set; }
-		public double RecruitmentDimensionVariation { get; private set; }
+		public float RecruitmentDimensionVariation { get; private set; }
 		public LongDistanceDispersal LongDistanceDispersal { get; private set; }
 		
 		public SeedDispersal()
@@ -25,7 +25,7 @@ namespace iLand.Input.ProjectFile
 			this.ExternalSeedSource = null;
 			this.ExternalSeedSpecies = null;
 			this.LongDistanceDispersal = new LongDistanceDispersal();
-			this.RecruitmentDimensionVariation = 0.1; // +/- 10%
+			this.RecruitmentDimensionVariation = 0.1F; // +/- 10%
 			this.SeedBelt = new SeedBelt();
         }
 
@@ -74,7 +74,7 @@ namespace iLand.Input.ProjectFile
 			}
 			else if (reader.IsStartElement("recruitmentDimensionVariation"))
 			{
-				this.RecruitmentDimensionVariation = reader.ReadElementContentAsDouble();
+				this.RecruitmentDimensionVariation = reader.ReadElementContentAsFloat();
 				if (this.RecruitmentDimensionVariation < 0.0)
                 {
 					throw new XmlException("Variation in sapling recruitment dimensions is negative.");

@@ -14,11 +14,11 @@ namespace iLand.World
         private readonly Expression mGrassPotential; // function defining max. grass cover [0..1] as function of the LIF pixel value
         private readonly Expression mGrassEffect; // equation giving probability of *prohibiting* regeneration as a function of grass level [0..1]
         private int mMaxTimeLag; // maximum duration (years) from 0 to full cover
-        private readonly double[] mEffect; // effect lookup table
+        private readonly float[] mEffect; // effect lookup table
         private int mGrowthRate; // max. annual growth rate of herbs and grasses (in 1/256th)
         private Int16 mMaxState; // potential at lif=1
 
-        private readonly RandomCustomPdf mPDF; // probability density function defining the life time of grass-pixels
+        private readonly RandomCustomPdf mProbabilityDensityFunction; // probability density function defining the life time of grass-pixels
         private float mGrassLifThreshold; // if LIF>threshold, then the grass is considered as occupatied by grass
         //private readonly GrassCoverLayers mLayers; // visualization
 
@@ -26,19 +26,19 @@ namespace iLand.World
         /// returns 'true' if the module is enabled
         public bool IsEnabled { get; private set; }
         ///
-        public double Effect(Int16 level) { return mEffect[level]; }
-        public double Cover(Int16 data) { return mType == GrassAlgorithmType.Pixel ? data : data / (double)(Steps - 1); }
+        public float Effect(Int16 level) { return mEffect[level]; }
+        public float Cover(Int16 data) { return mType == GrassAlgorithmType.Pixel ? data : data / (float)(Steps - 1); }
 
         /// retrieve the grid of current grass cover
-        public Grid<Int16> Grid { get; private set; }
+        public Grid<Int16> Grid { get; init; }
 
         public GrassCover()
         {
-            this.mEffect = new double[GrassCover.Steps];
+            this.mEffect = new float[GrassCover.Steps];
             this.mGrassEffect = new Expression();
             this.mGrassPotential = new Expression();
             //this.mLayers = new GrassCoverLayers();
-            this.mPDF = new RandomCustomPdf();
+            this.mProbabilityDensityFunction = new RandomCustomPdf();
             this.mType = GrassAlgorithmType.Invalid;
 
             this.Grid = new Grid<short>();
@@ -48,7 +48,7 @@ namespace iLand.World
         }
 
         // TODO: should be connected to seedling establishment
-        //public double GetRegenerationInhibition(Point lightCellIndex)
+        //public float GetRegenerationInhibition(Point lightCellIndex)
         //{
         //    if (mType == GrassAlgorithmType.Pixel)
         //    {
@@ -91,7 +91,7 @@ namespace iLand.World
                 {
                     throw new NotSupportedException("setup(): missing equation for 'grassDuration'.");
                 }
-                this.mPDF.Setup(formula, 0.0, 100.0);
+                this.mProbabilityDensityFunction.Setup(formula, 0.0F, 100.0F);
                 //mGrassEffect.setExpression(formula);
 
                 this.mGrassLifThreshold = projectFile.Model.Settings.Grass.LifThreshold;
@@ -99,7 +99,7 @@ namespace iLand.World
                 // clear array
                 for (int stepIndex = 0; stepIndex < Steps; ++stepIndex)
                 {
-                    this.mEffect[stepIndex] = 0.0;
+                    this.mEffect[stepIndex] = 0.0F;
                 }
             }
             else
@@ -130,8 +130,8 @@ namespace iLand.World
                 // set up the effect on regeneration in NSTEPS steps
                 for (int stepIndex = 0; stepIndex < GrassCover.Steps; ++stepIndex)
                 {
-                    double effect = mGrassEffect.Evaluate(stepIndex / (double)(GrassCover.Steps - 1));
-                    this.mEffect[stepIndex] = Maths.Limit(effect, 0.0, 1.0);
+                    float effect = (float)mGrassEffect.Evaluate(stepIndex / (float)(GrassCover.Steps - 1));
+                    this.mEffect[stepIndex] = Maths.Limit(effect, 0.0F, 1.0F);
                 }
 
                 this.mMaxState = (Int16)(Maths.Limit(mGrassPotential.Evaluate(1.0F), 0.0, 1.0) * (Steps - 1)); // the max value of the potential function
@@ -166,7 +166,7 @@ namespace iLand.World
                 {
                     if (percentGrassCover > randomGenerator.GetRandomInteger(0, 100))
                     {
-                        this.Grid[lightCells[lightCell].Key] = (Int16)mPDF.GetRandomValue(randomGenerator);
+                        this.Grid[lightCells[lightCell].Key] = (Int16)mProbabilityDensityFunction.GetRandomValue(randomGenerator);
                     }
                     else
                     {
@@ -222,7 +222,7 @@ namespace iLand.World
                     if (this.Grid[cellIndex] == 0 && lightGrid[cellIndex] > mGrassLifThreshold)
                     {
                         // enable grass cover
-                        this.Grid[cellIndex] = (Int16)(Math.Max(mPDF.GetRandomValue(randomGenerator), 0.0) + 1); // switch on...
+                        this.Grid[cellIndex] = (Int16)(Math.Max(mProbabilityDensityFunction.GetRandomValue(randomGenerator), 0.0) + 1); // switch on...
                     }
                     if (this.Grid[cellIndex] == 1 && lightGrid[cellIndex] < mGrassLifThreshold)
                     {

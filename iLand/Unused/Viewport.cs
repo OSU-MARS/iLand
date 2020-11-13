@@ -14,11 +14,11 @@ namespace iLand.Tools
         private RectangleF m_world;
         private RectangleF m_viewport;
         private PointF m_delta_worldtoscreen;
-        private double m_scale_worldtoscreen;
+        private float m_scale_worldtoscreen;
 
         public Viewport()
         {
-            m_scale_worldtoscreen = 1.0;
+            m_scale_worldtoscreen = 1.0F;
         }
 
         public Viewport(RectangleF worldrect, Rectangle screenrect)
@@ -65,8 +65,8 @@ namespace iLand.Tools
         /// toWorld() converts the pixel-information (e.g. by an mouse event) to the corresponding real world coordinates (defined by viewport).
         public PointF ToWorld(Point pixel)
         {
-            PointF p = new PointF(pixel.X / (float)m_scale_worldtoscreen + m_delta_worldtoscreen.X,
-                                  (m_screen.Height - pixel.Y) / (float)m_scale_worldtoscreen + m_delta_worldtoscreen.Y);
+            PointF p = new PointF(pixel.X / m_scale_worldtoscreen + m_delta_worldtoscreen.X,
+                                  (m_screen.Height - pixel.Y) / m_scale_worldtoscreen + m_delta_worldtoscreen.Y);
             return p;
 
         }
@@ -135,12 +135,12 @@ namespace iLand.Tools
 
         /// zoom using a factor of @p factor. Values > 1 means zoom out, < 1 zoom in. (factor=1 would have no effect).
         /// after zooming, the world-point under the mouse @p screen_point is still under the mouse.
-        public void ZoomTo(Point screen_point, double factor)
+        public void ZoomTo(Point screen_point, float factor)
         {
-            PointF focus_point = ToWorld(screen_point); // point under the mouse
+            PointF focus_point = this.ToWorld(screen_point); // point under the mouse
 
-            m_viewport.Width *= (float)factor;
-            m_viewport.Height *= (float)factor;
+            m_viewport.Width *= factor;
+            m_viewport.Height *= factor;
 
             m_scale_worldtoscreen /= factor;
 
@@ -166,13 +166,13 @@ namespace iLand.Tools
         }
 
         /// set 'world_center' as the new center point of the viewport
-        public void SetViewPoint(PointF world_center, double px_per_meter)
+        public void SetViewPoint(PointF world_center, float px_per_meter)
         {
             Point p = ToScreen(world_center); // point where world_center would be
             Point target = Center(m_screen);
-            MoveTo(p, target);
-            double px_p_m = Math.Max(px_per_meter, 0.001);
-            double factor = m_scale_worldtoscreen / px_p_m;
+            this.MoveTo(p, target);
+            float px_p_m = MathF.Max(px_per_meter, 0.001F);
+            float factor = m_scale_worldtoscreen / px_p_m;
             ZoomTo(target, factor);
         }
 

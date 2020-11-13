@@ -30,29 +30,29 @@ namespace iLand.Tools
         public List<string> FactorColors { get; set; }
         public int FactorColorCount() { return this.FactorColors.Count; }
         public List<string> FactorLabels { get; private set; }
-        public double MetersPerPixel { get; private set; }
-        public double MinValue { get; private set; }
-        public double MaxValue { get; private set; }
+        public float MetersPerPixel { get; private set; }
+        public float MinValue { get; private set; }
+        public float MaxValue { get; private set; }
 
-        public void SetMinValue(double val)
+        public void SetMinValue(float val)
         {
             if (val == MinValue)
             {
                 return;
             }
             mNeedsPaletteUpdate = true;
-            SetPalette(mCurrentType, (float)val, (float)MaxValue);
+            SetPalette(mCurrentType, val, MaxValue);
             MinValue = val;
         }
 
-        public void SetMaxValue(double val)
+        public void SetMaxValue(float val)
         {
             if (val == MaxValue)
             {
                 return;
             }
             mNeedsPaletteUpdate = true; 
-            SetPalette(mCurrentType, (float)MinValue, (float)val); 
+            SetPalette(mCurrentType, MinValue, val); 
             MaxValue = val;
         }
 
@@ -83,7 +83,7 @@ namespace iLand.Tools
         }
 
         // scale
-        public void SetScale(double meter_per_pixel)
+        public void SetScale(float meter_per_pixel)
         {
             if (MetersPerPixel == meter_per_pixel)
             {
@@ -154,15 +154,15 @@ namespace iLand.Tools
 
         public Colors()
         {
-            mNeedsPaletteUpdate = true;
-            AutoScale = true;
-            HasFactors = false;
-            MetersPerPixel = 1.0;
+            this.mNeedsPaletteUpdate = true;
+            this.AutoScale = true;
+            this.HasFactors = false;
+            this.MetersPerPixel = 1.0F;
             //default start palette
             //setPalette(GridViewType.GridViewRainbow, 0, 1);
             // factors test
-            SetCaptionAndDescription(String.Empty);
-            SetPalette(GridViewType.Terrain, 0, 4);
+            this.SetCaptionAndDescription(String.Empty);
+            this.SetPalette(GridViewType.Terrain, 0, 4);
         }
 
         public static Color ColorFromPalette(int value, GridViewType view_type)
@@ -216,9 +216,9 @@ namespace iLand.Tools
             if (dem != null)
             {
                 float val = dem.EnsureViewGrid()[coordinates]; // scales from 0..1
-                col.ToHsv(out double h, out double s, out double v);
+                col.ToHsv(out float h, out float s, out float v);
                 // we adjust the 'v', the lightness: if val=0.5 -> nothing changes
-                v = Maths.Limit(v - (1.0 - val) * 0.4, 0.1, 1.0);
+                v = Maths.Limit(v - (1.0F - val) * 0.4F, 0.1F, 1.0F);
                 return ColorExtensions.FromHsv(h, s, v);
             }
 
@@ -248,7 +248,7 @@ namespace iLand.Tools
                 }
                 else
                 {
-                    col = ColorExtensions.FromHsv(0.66666666666 * rel_value, 0.95, 0.95);
+                    col = ColorExtensions.FromHsv(0.66666666666F * rel_value, 0.95F, 0.95F);
                 }
             }
             else

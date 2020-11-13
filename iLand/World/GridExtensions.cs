@@ -83,18 +83,18 @@ namespace iLand.World
             return total;
         }
 
-        public static Grid<double> ToDouble(this Grid<int> grid)
-        {
-            Grid<double> doubleGrid = new Grid<double>();
-            doubleGrid.Setup(grid.PhysicalExtent, grid.CellSize);
-            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
-            {
-                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
-                {
-                    doubleGrid[xIndex, yIndex] = grid[xIndex, yIndex];
-                }
-            }
-            return doubleGrid;
-        }
+        //public static Grid<double> ToDouble(this Grid<int> grid)
+        //{
+        //    Grid<double> doubleGrid = new Grid<double>();
+        //    doubleGrid.Setup(grid.PhysicalExtent, grid.CellSize);
+        //    for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
+        //    {
+        //        for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
+        //        {
+        //            doubleGrid[xIndex, yIndex] = grid[xIndex, yIndex];
+        //        }
+        //    }
+        //    return doubleGrid;
+        //}
     }
 }

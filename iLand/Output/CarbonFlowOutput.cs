@@ -134,8 +134,8 @@ namespace iLand.Output
             }
 
             // write landscape sums
-            double totalStockableArea = accumulatedValues[0]; // total ha of stockable area
-            if (totalStockableArea == 0.0)
+            float totalStockableArea = accumulatedValues[0]; // total ha of stockable area
+            if (totalStockableArea == 0.0F)
             {
                 return;
             }

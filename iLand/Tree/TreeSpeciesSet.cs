@@ -34,10 +34,10 @@ namespace iLand.Tree
         /// container holding the seed maps
         //private readonly List<SeedDispersal> mSeedDispersal;
 
-        public List<TreeSpecies> ActiveSpecies { get; private set; } // list of species that are "active" (flag active in database)
-        public List<int> RandomSpeciesOrder { get; private set; }
-        public TreeSpeciesStamps ReaderStamps { get; private set; }
-        public string SqlTableName { get; private set; } // table name of the species set
+        public List<TreeSpecies> ActiveSpecies { get; init; } // list of species that are "active" (flag active in database)
+        public List<int> RandomSpeciesOrder { get; init; }
+        public TreeSpeciesStamps ReaderStamps { get; init; }
+        public string SqlTableName { get; init; } // table name of the species set
 
         public TreeSpeciesSet(string sqlTableName)
         {

@@ -215,27 +215,27 @@ namespace iLand.Input
             return reader.IsDBNull(this.fecunditySerotiny) ? 0.0F : reader.GetFloat(this.fecunditySerotiny); 
         }
 
-        public double EstablishmentParametersMinTemp() { return reader.GetDouble(this.establishmentParametersMinTemp); }
+        public float EstablishmentParametersMinTemp() { return reader.GetFloat(this.establishmentParametersMinTemp); }
         public int EstablishmentParametersChillRequirement() { return reader.GetInt32(this.establishmentParametersChillRequirement); }
         public int EstablishmentParametersGddMin() { return reader.GetInt32(this.establishmentParametersGddMin); }
         public int EstablishmentParametersGddMax() { return reader.GetInt32(this.establishmentParametersGddMax); }
-        public double EstablishmentParametersGddBaseTemperature() { return reader.GetDouble(this.establishmentParametersGddBaseTemperature); }
+        public float EstablishmentParametersGddBaseTemperature() { return reader.GetFloat(this.establishmentParametersGddBaseTemperature); }
         public int EstablishmentParametersGddBudBurst() { return reader.GetInt32(this.establishmentParametersGddBudBurst); }
         public int EstablishmentParametersMinFrostFree() { return reader.GetInt32(this.establishmentParametersMinFrostFree); }
-        public double EstablishmentParametersFrostTolerance() { return reader.GetDouble(this.establishmentParametersFrostTolerance); }
+        public float EstablishmentParametersFrostTolerance() { return reader.GetFloat(this.establishmentParametersFrostTolerance); }
         
-        public double EstablishmentParametersPsiMin()
+        public float EstablishmentParametersPsiMin()
         {
-            return reader.IsDBNull(this.establishmentParametersPsiMin) ? Double.NaN : -Math.Abs(reader.GetDouble(this.establishmentParametersPsiMin)); // force negative value
+            return reader.IsDBNull(this.establishmentParametersPsiMin) ? Single.NaN : -MathF.Abs(reader.GetFloat(this.establishmentParametersPsiMin)); // force negative value
         }
         
         public string SaplingGrowthParametersHeightGrowthPotential() { return reader.GetString(this.saplingGrowthParametersHeightGrowthPotential); }
         public float SaplingGrowthParametersHdSapling() { return reader.GetFloat(this.saplingGrowthParametersHdSapling); }
         public float SaplingGrowthParametersStressThreshold() { return reader.GetFloat(this.saplingGrowthParametersStressThreshold); }
         public int SaplingGrowthParametersMaxStressYears() { return reader.GetInt32(this.saplingGrowthParametersMaxStressYears); }
-        public double SaplingGrowthParametersReferenceRatio() { return reader.GetDouble(this.saplingGrowthReferenceRatio); }
+        public float SaplingGrowthParametersReferenceRatio() { return reader.GetFloat(this.saplingGrowthReferenceRatio); }
         public float SaplingGrowthParametersReinekesR() { return reader.GetFloat(this.saplingGrowthParametersReinekesR); }
-        public double SaplingGrowthParametersBrowsingProbability() { return reader.GetDouble(this.saplingGrowthParametersBrowsingProbability); }
+        public float SaplingGrowthParametersBrowsingProbability() { return reader.GetFloat(this.saplingGrowthParametersBrowsingProbability); }
         
         public float SaplingGrowthParametersSproutGrowth() 
         { 

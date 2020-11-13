@@ -17,10 +17,10 @@ namespace iLand.Output
 
         private class LandscapeRemovalData
         {
-            public double BasalArea { get; set; }
-            public double Count { get; set; }
+            public float BasalArea { get; set; }
+            public float Count { get; set; }
             public TreeSpecies TreeSpecies { get; init; }
-            public double Volume { get; set; }
+            public float Volume { get; set; }
 
             public LandscapeRemovalData(TreeSpecies treeSpecies)
             {
@@ -30,9 +30,9 @@ namespace iLand.Output
 
             public void Zero()
             {
-                this.BasalArea = 0.0;
-                this.Count = 0.0;
-                this.Volume = 0.0;
+                this.BasalArea = 0.0F;
+                this.Count = 0.0F;
+                this.Volume = 0.0F;
             }
         }
 

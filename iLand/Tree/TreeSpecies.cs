@@ -47,7 +47,7 @@ namespace iLand.Tree
         private float mLightResponseClass; // light response class (1..5) (1=shade intolerant)
         // regeneration
         private int mMaturityYears; // a tree produces seeds if it is older than this parameter
-        private double mSeedYearProbability; // probability that a year is a seed year (=1/avg.timespan between seedyears)
+        private float mSeedYearProbability; // probability that a year is a seed year (=1/avg.timespan between seedyears)
         // regeneration - seed dispersal
         private float mTM_as1; // seed dispersal parameters (treemig)
         private float mTM_as2; // seed dispersal parameters (treemig)
@@ -56,10 +56,10 @@ namespace iLand.Tree
 
         // properties
         /// @property id 4-character unique identification of the tree species
-        public string ID { get; private set; }
+        public string ID { get; init; }
         /// the full name (e.g. Picea abies) of the species
-        public string Name { get; private set; }
-        public int Index { get; private set; } // unique index of species within current species set
+        public string Name { get; init; }
+        public int Index { get; init; } // unique index of species within current species set
         public int PhenologyClass { get; private set; } // phenology class defined in project file. class 0 = evergreen
         public bool IsConiferous { get; private set; }
         public bool IsEvergreen { get; private set; }
@@ -73,7 +73,7 @@ namespace iLand.Tree
         public float TurnoverRoot { get; private set; } // yearly turnover rate root
 
         // mortality
-        public double DeathProbabilityFixed { get; private set; } // prob. of intrinsic death per year [0..1]
+        public float DeathProbabilityFixed { get; private set; } // prob. of intrinsic death per year [0..1]
         public float FecundityM2 { get; private set; } // "surviving seeds" (cf. Moles et al) per m2, see also http://iland.boku.ac.at/fecundity
         public float FecunditySerotiny { get; private set; } // multiplier that increases fecundity for post-fire seed rain of serotinous species
         public float MaxCanopyConductance { get; private set; } // maximum canopy conductance in m/s
@@ -92,10 +92,10 @@ namespace iLand.Tree
         public float WoodDensity { get; private set; } // density of stem wood [kg/m3]
 
         public float FinerootFoliageRatio { get; private set; } // ratio of fineroot mass (kg) to foliage mass (kg)
-        public EstablishmentParameters EstablishmentParameters { get; private set; }
-        public SaplingGrowthParameters SaplingGrowthParameters { get; private set; }
+        public EstablishmentParameters EstablishmentParameters { get; init; }
+        public SaplingGrowthParameters SaplingGrowthParameters { get; init; }
         public SeedDispersal? SeedDispersal { get; set; }
-        public TreeSpeciesSet SpeciesSet { get; private set; }
+        public TreeSpeciesSet SpeciesSet { get; init; }
 
         public TreeSpecies(TreeSpeciesSet speciesSet, string id, string name)
         {
@@ -119,7 +119,7 @@ namespace iLand.Tree
             this.SpeciesSet = speciesSet;
         }
 
-        public bool Active { get; private set; }
+        public bool Active { get; init; }
 
         // allometries
         public float GetBarkThickness(float dbh) { return dbh * mBarkThicknessFactor; }
@@ -310,7 +310,7 @@ namespace iLand.Tree
             {
                 throw new SqliteException("Error loading " + species.ID + ": seed year interval must be positive.", (int)SqliteErrorCode.Error);
             }
-            species.mSeedYearProbability = 1.0 / seedYearInterval;
+            species.mSeedYearProbability = 1.0F / seedYearInterval;
             species.mMaturityYears = reader.MaturityYears();
             species.mTM_as1 = reader.SeedKernelAs1();
             species.mTM_as2 = reader.SeedKernelAs2();
@@ -427,8 +427,8 @@ namespace iLand.Tree
                 return false;
             }
             // the function result (e.g. from a logistic regression model, e.g. Schoennagel 2013) is interpreted as probability
-            double pSerotinous = this.mSerotiny.Evaluate(age);
-            return randomGenerator.GetRandomDouble() < pSerotinous;
+            float pSerotinous = (float)this.mSerotiny.Evaluate(age);
+            return randomGenerator.GetRandomFloat() < pSerotinous;
         }
 
         /** newYear is called by the SpeciesSet at the beginning of a year before any growth occurs.
@@ -440,7 +440,7 @@ namespace iLand.Tree
             {
                 // decide whether current year is a seed year
                 // TODO: link to weather conditions and time since last seed year/
-                this.IsSeedYear = (model.RandomGenerator.GetRandomDouble() < mSeedYearProbability);
+                this.IsSeedYear = (model.RandomGenerator.GetRandomFloat() < mSeedYearProbability);
                 if (this.IsSeedYear && (model.Project.System.Settings.LogLevel <= EventLevel.Informational))
                 {
                     Trace.TraceInformation("Seed year for " + this.ID + ".");

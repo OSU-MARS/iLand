@@ -4,22 +4,22 @@ namespace iLand.Input.ProjectFile
 {
     public class BarkBeetle : Enablable
 	{
-		public double MinimumDbh { get; private set; }
-		public double BackgroundInfestationProbability { get; private set; }
-		public double StormInfestationProbability { get; private set; }
-		public double BaseWinterMortality { get; private set; }
+		public float MinimumDbh { get; private set; }
+		public float BackgroundInfestationProbability { get; private set; }
+		public float StormInfestationProbability { get; private set; }
+		public float BaseWinterMortality { get; private set; }
 		public string? WinterMortalityFormula { get; private set; }
 		public string? SpreadKernelFormula { get; private set; }
-		public double SpreadKernelMaxDistance { get; private set; }
+		public float SpreadKernelMaxDistance { get; private set; }
 		public int CohortsPerGeneration { get; private set; }
 		public int CohortsPerSisterbrood { get; private set; }
 		public string? ColonizeProbabilityFormula { get; private set; }
-		public double DeadTreeSelectivity { get; private set; }
+		public float DeadTreeSelectivity { get; private set; }
 		public string? OutbreakClimateSensitivityFormula { get; private set; }
 		public int OutbreakDurationMin { get; private set; }
 		public int OutbreakDurationMax { get; private set; }
 		public string? OutbreakDurationMortalityFormula { get; private set; }
-		public double InitialInfestationProbability { get; private set; }
+		public float InitialInfestationProbability { get; private set; }
 		public BarkBeetleReferenceClimate ReferenceClimate { get; private set; }
 		public string? OnAfterBarkbeetle { get; private set; }
 
@@ -46,32 +46,32 @@ namespace iLand.Input.ProjectFile
 			}
 			else if (reader.IsStartElement("minimumDbh"))
 			{
-				this.MinimumDbh = reader.ReadElementContentAsDouble();
-				if (this.MinimumDbh < 0.0)
+				this.MinimumDbh = reader.ReadElementContentAsFloat();
+				if (this.MinimumDbh < 0.0F)
                 {
 					throw new XmlException("Minimum DBH is negative.");
                 }
 			}
 			else if (reader.IsStartElement("backgroundInfestationProbability"))
 			{
-				this.BackgroundInfestationProbability = reader.ReadElementContentAsDouble();
-				if (this.MinimumDbh < 0.0)
+				this.BackgroundInfestationProbability = reader.ReadElementContentAsFloat();
+				if (this.MinimumDbh < 0.0F)
 				{
 					throw new XmlException("Minimum DBH is negative.");
 				}
 			}
 			else if (reader.IsStartElement("stormInfestationProbability"))
 			{
-				this.StormInfestationProbability = reader.ReadElementContentAsDouble();
-				if ((this.StormInfestationProbability < 0.0) || (this.StormInfestationProbability > 1.0))
+				this.StormInfestationProbability = reader.ReadElementContentAsFloat();
+				if ((this.StormInfestationProbability < 0.0F) || (this.StormInfestationProbability > 1.0F))
 				{
 					throw new XmlException("Storm infestationprobability is negative or greater than 1.0.");
 				}
 			}
 			else if (reader.IsStartElement("baseWinterMortality"))
 			{
-				this.BaseWinterMortality = reader.ReadElementContentAsDouble();
-				if ((this.BaseWinterMortality < 0.0) || (this.BaseWinterMortality > 1.0))
+				this.BaseWinterMortality = reader.ReadElementContentAsFloat();
+				if ((this.BaseWinterMortality < 0.0F) || (this.BaseWinterMortality > 1.0F))
 				{
 					throw new XmlException("Base probability of winter mortality is negative or greater than 1.0.");
 				}
@@ -86,8 +86,8 @@ namespace iLand.Input.ProjectFile
 			}
 			else if (reader.IsStartElement("spreadKernelMaxDistance"))
 			{
-				this.SpreadKernelMaxDistance = reader.ReadElementContentAsDouble();
-				if (this.SpreadKernelMaxDistance < 0.0)
+				this.SpreadKernelMaxDistance = reader.ReadElementContentAsFloat();
+				if (this.SpreadKernelMaxDistance < 0.0F)
                 {
 					throw new XmlException("Maximum distance beetles can fly (spreadKernelMaxDistance) is negative.");
                 }
@@ -114,8 +114,8 @@ namespace iLand.Input.ProjectFile
 			}
 			else if (reader.IsStartElement("deadTreeSelectivity"))
 			{
-				this.DeadTreeSelectivity = reader.ReadElementContentAsDouble();
-				if ((this.DeadTreeSelectivity < 0.0) || (this.DeadTreeSelectivity > 1.0))
+				this.DeadTreeSelectivity = reader.ReadElementContentAsFloat();
+				if ((this.DeadTreeSelectivity < 0.0F) || (this.DeadTreeSelectivity > 1.0F))
 				{
 					throw new XmlException("Dead tree selectivity is negative or greater than 1.0.");
 				}
@@ -146,8 +146,8 @@ namespace iLand.Input.ProjectFile
 			}
 			else if (reader.IsStartElement("initialInfestationProbability"))
 			{
-				this.InitialInfestationProbability = reader.ReadElementContentAsDouble();
-				if ((this.InitialInfestationProbability < 0.0) || (this.InitialInfestationProbability > 1.0))
+				this.InitialInfestationProbability = reader.ReadElementContentAsFloat();
+				if ((this.InitialInfestationProbability < 0.0F) || (this.InitialInfestationProbability > 1.0F))
 				{
 					throw new XmlException("Initial infestation probability is negative or greater than 1.0.");
 				}

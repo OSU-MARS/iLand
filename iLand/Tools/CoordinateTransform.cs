@@ -4,31 +4,31 @@ namespace iLand.Tools
 {
     internal class CoordinateTransform
     {
-        private double rotationInRadians;
+        private float rotationInRadians;
 
-        public double SinRotate { get; set; }
-        public double CosRotate { get; set; }
-        public double SinRotateReverse { get; set; }
-        public double CosRotateReverse { get; set; }
-        public double OffsetX { get; set; }
-        public double OffsetY { get; set; }
-        public double OffsetZ { get; set; }
+        public float SinRotate { get; set; }
+        public float CosRotate { get; set; }
+        public float SinRotateReverse { get; set; }
+        public float CosRotateReverse { get; set; }
+        public float OffsetX { get; set; }
+        public float OffsetY { get; set; }
+        public float OffsetZ { get; set; }
 
         public CoordinateTransform()
         {
-            this.SetupTransformation(0.0, 0.0, 0.0, 0.0);
+            this.SetupTransformation(0.0F, 0.0F, 0.0F, 0.0F);
         }
 
-        public void SetupTransformation(double offsetX, double offsetY, double offsetZ, double rotationInDegrees)
+        public void SetupTransformation(float offsetX, float offsetY, float offsetZ, float rotationInDegrees)
         {
             this.OffsetX = offsetX;
             this.OffsetY = offsetY;
             this.OffsetZ = offsetZ;
             this.rotationInRadians = Maths.ToRadians(rotationInDegrees);
-            this.SinRotate = Math.Sin(rotationInRadians);
-            this.CosRotate = Math.Cos(rotationInRadians);
-            this.SinRotateReverse = Math.Sin(-rotationInRadians);
-            this.CosRotateReverse = Math.Cos(-rotationInRadians);
+            this.SinRotate = MathF.Sin(rotationInRadians);
+            this.CosRotate = MathF.Cos(rotationInRadians);
+            this.SinRotateReverse = MathF.Sin(-rotationInRadians);
+            this.CosRotateReverse = MathF.Cos(-rotationInRadians);
         }
     }
 }

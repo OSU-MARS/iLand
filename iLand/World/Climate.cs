@@ -36,12 +36,12 @@ namespace iLand.World
         public bool IsSetup { get; private set; }
         /// the mean annual temperature of the current year (degree C)
         public float MeanAnnualTemperature { get; private set; }
-        public string Name { get; private set; } // table name of this climate
-        public float[] PrecipitationByMonth { get; private set; }
+        public string Name { get; init; } // table name of this climate
+        public float[] PrecipitationByMonth { get; init; }
         // access to other subsystems
-        public Sun Sun { get; private set; } // solar radiation class
+        public Sun Sun { get; init; } // solar radiation class
         // get a array with mean temperatures per month (deg C)
-        public float[] TemperatureByMonth { get; private set; }
+        public float[] TemperatureByMonth { get; init; }
         public float TotalAnnualRadiation { get; private set; } // return radiation sum (MJ) of the whole year
 
         public Climate(string name)

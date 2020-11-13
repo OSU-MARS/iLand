@@ -15,7 +15,7 @@ namespace iLand.Tree
         public float AverageDeltaHPotential { get; set; } // average height increment potential (m)
         public float AverageDeltaHRealized { get; set; } // average realized height increment
         public float AverageHeight { get; set; } // average height of saplings (m)
-        public CarbonNitrogenTuple CarbonLiving { get; private set; } // kg Carbon (kg/ru) of saplings
+        public CarbonNitrogenTuple CarbonLiving { get; init; } // kg Carbon (kg/ru) of saplings
         public CarbonNitrogenTuple CarbonGain { get; private set; } // net growth (kg / ru) of saplings
         public int DeadSaplings { get; private set; } // number of tree cohorts died
         public int LivingCohorts { get; set; } // get the number of cohorts
@@ -33,8 +33,8 @@ namespace iLand.Tree
 
         public void AddCarbonOfDeadSapling(float dbh)
         { 
-            ++DeadSaplings;
-            mSumDbhDied += dbh; 
+            ++this.DeadSaplings;
+            this.mSumDbhDied += dbh; 
         }
 
         public void ClearStatistics()
@@ -83,7 +83,7 @@ namespace iLand.Tree
                 CarbonLiving.AddBiomass(foliage * nSaplings, species.CNRatioFoliage);
                 CarbonLiving.AddBiomass(fineroot * nSaplings, species.CNRatioFineRoot);
 
-                Debug.Assert(Double.IsNaN(CarbonLiving.C) == false, "carbon NaN in calculate (living trees).");
+                Debug.Assert(Single.IsNaN(this.CarbonLiving.C) == false, "carbon NaN in calculate (living trees).");
 
                 // turnover
                 if (ru.Snags != null)
@@ -159,16 +159,16 @@ namespace iLand.Tree
             float nSaplings = species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(averageDbh);
             return nSaplings;
             // *** old code (sapling.cpp) ***
-            //    double total = 0.0;
-            //    double dbh_sum = 0.0;
-            //    double h_sum = 0.0;
-            //    double age_sum = 0.0;
+            //    float total = 0.0;
+            //    float dbh_sum = 0.0;
+            //    float h_sum = 0.0;
+            //    float age_sum = 0.0;
             //    SaplingGrowthParameters &p = mRUS.species().saplingGrowthParameters();
             //    for (QVector<SaplingTreeOld>::const_iterator it = mSaplingTrees.constBegin(); it!=mSaplingTrees.constEnd(); ++it) {
             //        float dbh = it.height / p.hdSapling * 100.f;
             //        if (dbh<1.) // minimum size: 1cm
             //            continue;
-            //        double n = p.representedStemNumber(dbh); // one cohort on the pixel represents that number of trees
+            //        float n = p.representedStemNumber(dbh); // one cohort on the pixel represents that number of trees
             //        dbh_sum += n*dbh;
             //        h_sum += n*it.height;
             //        age_sum += n*it.age.age;

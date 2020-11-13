@@ -25,16 +25,16 @@ namespace iLand.World
         public float AreaInLandscape { get; set; } // total stockable area in m2 at height grid (10 m) resolution
         public float AreaWithTrees { get; private set; } // get the stocked area in m2 at height grid (10 m) resolution
         public RectangleF BoundingBox { get; set; }
-        public ResourceUnitCarbonFluxes CarbonCycle { get; private set; }
+        public ResourceUnitCarbonFluxes CarbonCycle { get; init; }
         public Climate Climate { get; set; } // link to the climate on this resource unit
         public Point TopLeftLightPosition { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
         public int EnvironmentID { get; set; }
-        public int ResourceUnitGridIndex { get; private set; }
+        public int ResourceUnitGridIndex { get; init; }
         public Snags? Snags { get; private set; } // access the snag object
         public ResourceUnitSoil? Soil { get; private set; } // access the soil model
         public SaplingCell[]? SaplingCells { get; private set; } // access the array of sapling-cells
-        public ResourceUnitTrees Trees { get; private set; }
-        public WaterCycle WaterCycle { get; private set; } // water model of the unit
+        public ResourceUnitTrees Trees { get; init; }
+        public WaterCycle WaterCycle { get; init; } // water model of the unit
 
         public ResourceUnit(Project projectFile, Climate climate, TreeSpeciesSet speciesSet, int ruGridIndex)
         {
@@ -155,7 +155,8 @@ namespace iLand.World
             }
 
             // neighboring cells
-            double crownArea = trees.GetCrownRadius(treeIndex) * trees.GetCrownRadius(treeIndex) * Math.PI; //m2
+            float crownRadius = trees.GetCrownRadius(treeIndex);
+            float crownArea = MathF.PI * crownRadius * crownRadius; //m2
             // calculate how many cells on the ground are covered by the crown (this is a rather rough estimate)
             // n_cells: in addition to the original cell
             int lightCellsInCrown = (int)Math.Round(crownArea / (Constant.LightSize * Constant.LightSize) - 1.0);
@@ -212,8 +213,8 @@ namespace iLand.World
                 this.Trees.TreeSpeciesSet.CreateRandomSpeciesOrder(model.RandomGenerator);
             }
 
-            double[] lightCorrection = new double[Constant.LightCellsPerHectare];
-            Array.Fill(lightCorrection, -1.0);
+            float[] lightCorrection = new float[Constant.LightCellsPerHectare];
+            Array.Fill(lightCorrection, -1.0F);
 
             Point ruOrigin = this.TopLeftLightPosition; // offset on LIF/saplings grid
             Point seedmapOrigin = new Point(ruOrigin.X / Constant.LightCellsPerSeedmapSize, ruOrigin.Y / Constant.LightCellsPerSeedmapSize); // seed-map has 20m resolution, LIF 2m . factor 10
@@ -288,7 +289,7 @@ namespace iLand.World
                                 }
 
                                 float lightValue = lightGrid[lightIndex];
-                                double lriCorrection = lightCorrection[lightIndexY * Constant.LightCellsPerRUsize + lightIndexX];
+                                float lriCorrection = lightCorrection[lightIndexY * Constant.LightCellsPerRUsize + lightIndexX];
                                 // calculate the LIFcorrected only once per pixel; the relative height is 0 (light level on the forest floor)
                                 if (lriCorrection < 0.0)
                                 {
@@ -297,8 +298,8 @@ namespace iLand.World
                                 }
 
                                 // check for the combination of seed availability and light on the forest floor
-                                double pGermination = seedMapValue * lriCorrection * ruSpecies.Establishment.AbioticEnvironment;
-                                if (model.RandomGenerator.GetRandomDouble() < pGermination)
+                                float pGermination = seedMapValue * lriCorrection * ruSpecies.Establishment.AbioticEnvironment;
+                                if (model.RandomGenerator.GetRandomFloat() < pGermination)
                                 {
                                     // ok, lets add a sapling at the given position (age is incremented later)
                                     sapling.SetSapling(Constant.Sapling.MinimumHeight, 0, speciesIndex);
@@ -416,14 +417,14 @@ namespace iLand.World
             }
 
             // check browsing
-            double browsingPressure = model.Project.Model.Settings.Browsing.BrowsingPressure;
+            float browsingPressure = model.Project.Model.Settings.Browsing.BrowsingPressure;
             if (browsingPressure > 0.0 && sapling.Height <= 2.0F)
             {
-                double pBrowsing = ruSpecies.Species.SaplingGrowthParameters.BrowsingProbability;
+                float pBrowsing = ruSpecies.Species.SaplingGrowthParameters.BrowsingProbability;
                 // calculate modifed annual browsing probability via odds-ratios
                 // odds = p/(1-p) . odds_mod = odds * browsingPressure . p_mod = odds_mod /( 1 + odds_mod) === p*pressure/(1-p+p*pressure)
-                double pBrowsed = pBrowsing * browsingPressure / (1.0 - pBrowsing + pBrowsing * browsingPressure);
-                if (model.RandomGenerator.GetRandomDouble() < pBrowsed)
+                float pBrowsed = pBrowsing * browsingPressure / (1.0F - pBrowsing + pBrowsing * browsingPressure);
+                if (model.RandomGenerator.GetRandomFloat() < pBrowsed)
                 {
                     heightGrowthFactor = 0.0F;
                 }
@@ -448,7 +449,7 @@ namespace iLand.World
             Debug.WriteLineIf(delta_h_pot * heightGrowthFactor < 0.0F || (!sapling.IsSprout && delta_h_pot * heightGrowthFactor > 2.0), "Sapling::growSapling", "implausible height growth.");
 
             // grow
-            sapling.Height += (float)(delta_h_pot * heightGrowthFactor);
+            sapling.Height += (delta_h_pot * heightGrowthFactor);
             sapling.Age++; // increase age of sapling by 1
 
             // recruitment?
@@ -458,26 +459,26 @@ namespace iLand.World
 
                 float dbh = sapling.Height / species.SaplingGrowthParameters.HeightDiameterRatio * 100.0F;
                 // the number of trees to create (result is in trees per pixel)
-                double n_trees = species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(dbh);
+                float n_trees = species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(dbh);
                 int saplingsToEstablish = (int)(n_trees);
 
                 // if n_trees is not an integer, choose randomly if we should add a tree.
                 // e.g.: n_trees = 2.3 . add 2 trees with 70% probability, and add 3 trees with p=30%.
-                if (model.RandomGenerator.GetRandomDouble() < (n_trees - saplingsToEstablish) || saplingsToEstablish == 0)
+                if (model.RandomGenerator.GetRandomFloat() < (n_trees - saplingsToEstablish) || saplingsToEstablish == 0)
                 {
                     saplingsToEstablish++;
                 }
 
                 // add a new tree
-                double heightOrDiameterVariation = model.Project.Model.Settings.SeedDispersal.RecruitmentDimensionVariation;
+                float heightOrDiameterVariation = model.Project.Model.Settings.SeedDispersal.RecruitmentDimensionVariation;
                 for (int saplingIndex = 0; saplingIndex < saplingsToEstablish; saplingIndex++)
                 {
                     int treeIndex = this.Trees.AddTree(model.Landscape, species.ID);
                     Trees treesOfSpecies = this.Trees.TreesBySpeciesID[species.ID];
                     treesOfSpecies.LightCellPosition[treeIndex] = model.Landscape.LightGrid.GetCellPosition(lightIndex);
                     // add variation: add +/-N% to dbh and *independently* to height.
-                    treesOfSpecies.Dbh[treeIndex] = (float)(dbh * model.RandomGenerator.GetRandomDouble(1.0 - heightOrDiameterVariation, 1.0 + heightOrDiameterVariation));
-                    treesOfSpecies.SetHeight(treeIndex, (float)(sapling.Height * model.RandomGenerator.GetRandomDouble(1.0 - heightOrDiameterVariation, 1.0 + heightOrDiameterVariation)));
+                    treesOfSpecies.Dbh[treeIndex] = dbh * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
+                    treesOfSpecies.SetHeight(treeIndex, sapling.Height * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation));
                     treesOfSpecies.Species = species;
                     treesOfSpecies.SetAge(treeIndex, sapling.Age, sapling.Height);
                     treesOfSpecies.Setup(model.Project, treeIndex);

@@ -93,16 +93,16 @@ namespace iLand.World
 
             this.Setup(heightGrid.PhysicalExtent, heightGrid.CellSize);
 
-            if ((demGrid.CellSize % CellSize) != 0.0)
+            if ((demGrid.CellSize % this.CellSize) != 0.0F)
             {
                 // simple copy of the data
                 for (int demCellIndex = 0; demCellIndex < this.Count; ++demCellIndex)
                 {
                     PointF cellCenter = this.GetCellCenterPosition(this.GetCellPosition(demCellIndex));
-                    double elevation = demGrid.GetValue(cellCenter);
+                    float elevation = demGrid.GetValue(cellCenter);
                     if ((elevation != demGrid.NoDataValue) && landscape.Extent.Contains(cellCenter))
                     {
-                        this[demCellIndex] = (float)elevation;
+                        this[demCellIndex] = elevation;
                     }
                     else
                     {
@@ -122,10 +122,10 @@ namespace iLand.World
                     for (int x = 0; x < demGrid.Columns; ++x)
                     {
                         Vector3D p3d = demGrid.GetCoordinate(x, y);
-                        if (landscape.Extent.Contains((float)p3d.X, (float)p3d.Y))
+                        if (landscape.Extent.Contains(p3d.X, p3d.Y))
                         {
-                            Point pt = GetCellIndex(new PointF((float)p3d.X, (float)p3d.Y));
-                            this[(float)p3d.X, (float)p3d.Y] = (float)demGrid.GetValue(x, y);
+                            Point pt = GetCellIndex(new PointF(p3d.X, p3d.Y));
+                            this[p3d.X, p3d.Y] = demGrid.GetValue(x, y);
                             ixmin = Math.Min(ixmin, pt.X); ixmax = Math.Max(ixmax, pt.X);
                             iymin = Math.Min(iymin, pt.Y); iymax = Math.Max(iymax, pt.Y);
                         }
@@ -144,7 +144,7 @@ namespace iLand.World
                         {
                             for (int mx = 0; mx < sizeFactor; ++mx)
                             {
-                                this[x + mx, y + my] = DEM.InterpolateBilinear(mx / (float)sizeFactor, my / (float)sizeFactor, c00, c10, c01, c11);
+                                this[x + mx, y + my] = DEM.InterpolateBilinear(mx / sizeFactor, my / sizeFactor, c00, c10, c01, c11);
                             }
                         }
                     }

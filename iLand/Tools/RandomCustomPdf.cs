@@ -13,8 +13,8 @@ namespace iLand.Tools
         private readonly RandomWeighted mRandomIndex;
         private Expression? mExpression;
         private int mSteps;
-        private double mLowerBound, mUpperBound;
-        private double mDeltaX;
+        private float mLowerBound, mUpperBound;
+        private float mDeltaX;
         private bool mSumFunction;
 
         public string? DensityFunction { get; private set; }
@@ -38,7 +38,7 @@ namespace iLand.Tools
             @p isSumFunc if true, the function given in 'funcExpr' is a cumulative probabilty density function (default=false)
             @p stepCount internal degree of 'slots' - the more slots, the more accurate (default=100)
          */
-        public void Setup(string funcExpr, double lowerBound = 0, double upperBound = 1, bool isSumFunc = false, int stepCount = 100)
+        public void Setup(string funcExpr, float lowerBound = 0, float upperBound = 1, bool isSumFunc = false, int stepCount = 100)
         {
             this.DensityFunction = funcExpr;
             this.mSteps = stepCount;
@@ -49,16 +49,16 @@ namespace iLand.Tools
             this.mLowerBound = lowerBound;
             this.mUpperBound = upperBound;
             this.mDeltaX = (mUpperBound - mLowerBound) / mSteps;
-            double stepWidth = 1.0 / mSteps;
+            float stepWidth = 1.0F / mSteps;
             for (int step = 0; step < mSteps; ++step)
             {
-                double x1 = this.mLowerBound + step * this.mDeltaX;
-                double x2 = x1 + this.mDeltaX;
+                float x1 = this.mLowerBound + step * this.mDeltaX;
+                float x2 = x1 + this.mDeltaX;
                 // p1, p2: werte der pdf bei unterer und oberer grenze des aktuellen schrittes
-                double p1 = this.mExpression.Evaluate(x1);
-                double p2 = this.mExpression.Evaluate(x2);
+                float p1 = (float)this.mExpression.Evaluate(x1);
+                float p2 = (float)this.mExpression.Evaluate(x2);
                 // areaval: numerische integration zwischen x1 und x2
-                double stepProbability = 0.5 * (p1 + p2) * stepWidth;
+                float stepProbability = 0.5F * (p1 + p2) * stepWidth;
                 if (isSumFunc)
                 {
                     stepProbability -= p1 * stepWidth; // summenwahrscheinlichkeit: nur das Delta zaehlt.
@@ -68,7 +68,7 @@ namespace iLand.Tools
             }
         }
 
-        public double GetRandomValue(RandomGenerator randomGenerator)
+        public float GetRandomValue(RandomGenerator randomGenerator)
         {
             // zufallszahl ziehen.
             if (this.mExpression == null)
@@ -79,13 +79,13 @@ namespace iLand.Tools
             // (1) select slot randomly:
             int slot = mRandomIndex.GetRandomCellIndex(randomGenerator);
             // the current slot is:
-            double basevalue = mLowerBound + slot * mDeltaX;
+            float basevalue = mLowerBound + slot * mDeltaX;
             // (2): draw a uniform random number within the slot
-            double value = randomGenerator.GetRandomDouble(basevalue, basevalue + mDeltaX);
+            float value = randomGenerator.GetRandomFloat(basevalue, basevalue + mDeltaX);
             return value;
         }
 
-        public double GetProbabilityOfRange(double lowerBound, double upperBound)
+        public float GetProbabilityInRange(float lowerBound, float upperBound)
         {
             if (this.mSumFunction)
             {
@@ -95,24 +95,23 @@ namespace iLand.Tools
                 }
                 double p1 = this.mExpression.Evaluate(lowerBound);
                 double p2 = this.mExpression.Evaluate(upperBound);
-                double probabilityOfRange = p2 - p1;
-                Debug.Assert(probabilityOfRange >= 0.0);
-                return probabilityOfRange;
+                double probabilityInRange = p2 - p1;
+                Debug.Assert(probabilityInRange >= 0.0);
+                return (float)probabilityInRange;
             }
 
             // Wahrscheinlichkeit, dass wert zwischen lower- und upper-bound liegt.
             if (lowerBound > upperBound)
             {
-                return 0.0;
+                return 0.0F;
             }
             if (lowerBound < mLowerBound || upperBound > mUpperBound)
             {
-                return 0.0;
+                return 0.0F;
             }
             // "steps" is the resolution between lower and upper bound
-            int iLow, iHigh;
-            iLow = (int)((mUpperBound - mLowerBound) / (double)mSteps * (lowerBound - mLowerBound));
-            iHigh = (int)((mUpperBound - mLowerBound) / (double)mSteps * (upperBound - mUpperBound));
+            int iLow = (int)((mUpperBound - mLowerBound) / (double)mSteps * (lowerBound - mLowerBound));
+            int iHigh = (int)((mUpperBound - mLowerBound) / (double)mSteps * (upperBound - mUpperBound));
             if (iLow < 0 || iLow >= mSteps || iHigh < 0 || iHigh >= mSteps)
             {
                 return -1;

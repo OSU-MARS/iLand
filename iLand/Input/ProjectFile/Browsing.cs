@@ -4,11 +4,11 @@ namespace iLand.Input.ProjectFile
 {
     public class Browsing : Enablable
     {
-        public double BrowsingPressure { get; private set; }
+        public float BrowsingPressure { get; private set; }
 
         public Browsing()
         {
-            this.BrowsingPressure = 0.0;
+            this.BrowsingPressure = 0.0F;
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -24,7 +24,7 @@ namespace iLand.Input.ProjectFile
             }
             else if (reader.IsStartElement("browsingPressure"))
             {
-                this.BrowsingPressure = reader.ReadElementContentAsDouble();
+                this.BrowsingPressure = reader.ReadElementContentAsFloat();
                 // no clear restriction on range of value
             }
             else if (reader.IsStartElement("enabled"))

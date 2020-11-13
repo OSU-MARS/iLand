@@ -22,7 +22,7 @@ namespace iLand.Tools
     {
         protected static readonly ReadOnlyCollection<string> BaseVariableNames;
 
-        public Model? Model { get; private set; }
+        public Model? Model { get; init; }
 
         static ExpressionWrapper()
         {

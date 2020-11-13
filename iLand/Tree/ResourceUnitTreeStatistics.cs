@@ -227,9 +227,9 @@ namespace iLand.Tree
                     //mGWL *= area_factor;
                     this.CohortCount[currentYear] = (int)(areaFactor * this.CohortCount[currentYear]); // TODO: quantization?
                     this.SaplingCount[currentYear] = (int)(areaFactor * this.SaplingCount[currentYear]); // TODO: quantization?
-                    //double mCStem, mCFoliage, mCBranch, mCCoarseRoot, mCFineRoot;
-                    //double mNStem, mNFoliage, mNBranch, mNCoarseRoot, mNFineRoot;
-                    //double mCRegeneration, mNRegeneration;
+                    //float mCStem, mCFoliage, mCBranch, mCCoarseRoot, mCFineRoot;
+                    //float mNStem, mNFoliage, mNBranch, mNCoarseRoot, mNFineRoot;
+                    //float mCRegeneration, mNRegeneration;
                     this.StemC[currentYear] *= areaFactor;
                     this.StemN[currentYear] *= areaFactor;
                     this.FoliageC[currentYear] *= areaFactor;

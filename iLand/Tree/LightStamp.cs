@@ -15,8 +15,8 @@ namespace iLand.Tree
         public int CenterCellPosition { get; set; } // delta between edge of the stamp and the logical center point (of the tree). e.g. a 5x5 stamp in an 8x8-grid has an offset from 2.
         public float CrownArea { get; private set; }
         public float CrownRadius { get; private set; }
-        public float[] Data { get; private set; }
-        public int DataSize { get; private set; } // internal size of the stamp; e.g. 4 -> 4x4 stamp with 16 pixels.
+        public float[] Data { get; init; }
+        public int DataSize { get; init; } // internal size of the stamp; e.g. 4 -> 4x4 stamp with 16 pixels.
         public LightStamp? Reader { get; private set; } // pointer to the appropriate reader stamp (if available)
 
         public LightStamp(int dataSize)

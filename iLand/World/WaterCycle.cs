@@ -26,18 +26,18 @@ namespace iLand.World
         private float mLaiNeedle;
         private float mLaiBroadleaved;
 
-        public Canopy Canopy { get; private set; } // object representing the forest canopy (interception, evaporation)
+        public Canopy Canopy { get; init; } // object representing the forest canopy (interception, evaporation)
         // TODO: should conductance move to Canopy class?
         public float CanopyConductance { get; private set; } // current canopy conductance (LAI weighted CC of available tree species) (m/s)
         public float CurrentSoilWaterContent { get; private set; } // current water content in mm water column of the soil
         public float FieldCapacity { get; private set; } //  bucket height of field-capacity (eq. -15kPa) (mm)
-        public float[] SoilWaterPsi { get; private set; } // soil water potential for each day in kPa
+        public float[] SoilWaterPsi { get; init; } // soil water potential for each day in kPa
 
         public float SoilDepth { get; private set; } // soil depth (without rocks) in mm
-        public double SnowDays { get; set; } // # of days with snowcover >0
-        public double SnowDayRadiation { get; set; } // sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
-        public double TotalEvapotranspiration { get; set; } // annual sum of evapotranspiration (mm)
-        public double TotalRunoff { get; set; } // annual sum of water loss due to lateral outflow/groundwater flow (mm)
+        public float SnowDays { get; set; } // # of days with snowcover >0
+        public float SnowDayRadiation { get; set; } // sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
+        public float TotalEvapotranspiration { get; set; } // annual sum of evapotranspiration (mm)
+        public float TotalRunoff { get; set; } // annual sum of water loss due to lateral outflow/groundwater flow (mm)
 
         public WaterCycle(Project projectFile, ResourceUnit ru)
         {
@@ -49,7 +49,7 @@ namespace iLand.World
             this.SoilWaterPsi = new float[Constant.DaysInLeapYear];
         }
 
-        public double CurrentSnowWaterEquivalent() { return mSnowPack.WaterEquivalent; } // current water stored as snow (mm water)
+        public float CurrentSnowWaterEquivalent() { return mSnowPack.WaterEquivalent; } // current water stored as snow (mm water)
         
         public void SetContent(float soilWaterInMM, float snowWaterEquivalentInMM)
         { 
@@ -111,7 +111,7 @@ namespace iLand.World
             this.Canopy.DecidousStorageFactor = projectFile.Model.Settings.InterceptionStorageBroadleaf;
             this.mSnowPack.MeltTemperature = projectFile.Model.Settings.SnowMeltTemperature;
 
-            this.TotalEvapotranspiration = this.TotalRunoff = this.SnowDayRadiation = 0.0;
+            this.TotalEvapotranspiration = this.TotalRunoff = this.SnowDayRadiation = 0.0F;
             this.SnowDays = 0;
         }
 
@@ -253,10 +253,10 @@ namespace iLand.World
             this.Canopy.SetStandParameters(this.mLaiNeedle, this.mLaiBroadleaved, this.CanopyConductance);
 
             // main loop over all days of the year
-            this.SnowDayRadiation = 0.0;
+            this.SnowDayRadiation = 0.0F;
             this.SnowDays = 0;
-            this.TotalEvapotranspiration = 0.0;
-            this.TotalRunoff = 0.0;
+            this.TotalEvapotranspiration = 0.0F;
+            this.TotalRunoff = 0.0F;
             for (int dayIndex = this.mRU.Climate.CurrentJanuary1, dayOfYear = 0; dayIndex < this.mRU.Climate.NextJanuary1; ++dayIndex, ++dayOfYear)
             {
                 ClimateDay day = this.mRU.Climate[dayIndex];
@@ -279,7 +279,7 @@ namespace iLand.World
                 if (this.CurrentSoilWaterContent > this.FieldCapacity)
                 {
                     // excess water runoff
-                    double runoffInMM = this.CurrentSoilWaterContent - this.FieldCapacity;
+                    float runoffInMM = this.CurrentSoilWaterContent - this.FieldCapacity;
                     this.TotalRunoff += runoffInMM;
                     this.CurrentSoilWaterContent = this.FieldCapacity;
                 }
@@ -289,7 +289,7 @@ namespace iLand.World
 
                 // (5) transpiration of the vegetation (and of water intercepted in canopy)
                 // calculate the LAI-weighted response values for soil water and vpd:
-                double interception_before_transpiration = Canopy.Interception;
+                float interception_before_transpiration = this.Canopy.Interception;
                 float soilAtmosphereResponse = this.GetSoilAtmosphereResponse(currentPsi, day.Vpd);
                 float et = this.Canopy.GetEvapotranspiration3PG(projectFile, day, this.mRU.Climate.GetDayLengthInHours(dayOfYear), soilAtmosphereResponse);
                 // if there is some flow from intercepted water to the ground -> add to "water_to_the_ground"

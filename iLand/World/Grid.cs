@@ -26,7 +26,7 @@ namespace iLand.World
 
         public static string ToEsriRaster<T>(Landscape landscape, Grid<T> grid) where T : notnull
         {
-            Vector3D local = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
+            Vector3D local = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0F);
             landscape.Environment.GisGrid.ModelToWorld(local, out Vector3D world);
             StringBuilder result = new StringBuilder();
             result.Append(String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
@@ -230,7 +230,7 @@ namespace iLand.World
 
         public bool IsNotSetup() { return this.data == null; }
         
-        /// returns the index of an aligned grid (with the same size and matching origin) with the double cell size (e.g. to scale from a 10m grid to a 20m grid)
+        /// returns the index of an aligned grid (with the same size and matching origin) with the doubled cell size (e.g. to scale from a 10m grid to a 20m grid)
         // public int index2(int idx) { return ((idx / mSizeX) / 2) * (mSizeX / 2) + (idx % mSizeX) / 2; }
         /// returns the index of an aligned grid (the same size) with the 5 times bigger cells (e.g. to scale from a 2m grid to a 10m grid)
         public int Index5(int index) { return ((index / this.CellsX) / 5) * (this.CellsX / 5) + (index % this.CellsX) / 5; }

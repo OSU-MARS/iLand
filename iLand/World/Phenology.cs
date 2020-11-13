@@ -16,9 +16,9 @@ namespace iLand.World
         private int mChillDaysBeforeLeafOn, mChillDaysAfterLeafOff; // number of days that meet chilling requirements (>-5 deg C, <+5 deg C) before and after the vegetation period in this yeaer
 
         public int ChillingDaysAfterLeafOffInPreviousYear { get; private set; }
-        public int LeafType { get; private set; } // identifier of this Phenology group
+        public int LeafType { get; init; } // identifier of this Phenology group
         /// get result of phenology calculation for this year (a pointer to a array of 12 values between 0..1: 0: no days with foliage)
-        public float[] LeafOnFraction { get; private set; }
+        public float[] LeafOnFraction { get; init; }
         public int LeafOnStart { get; private set; } // day of year when vegeation period starts
         public int LeafOnEnd { get; private set; } // day of year when vegeation period stops
 

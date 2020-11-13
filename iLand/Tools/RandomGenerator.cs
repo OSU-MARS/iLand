@@ -124,16 +124,16 @@ namespace iLand.Tools
         }
 
         /// returns a random number in [0,1] (i.e.="1" is a possible result!)
-        public double GetRandomDouble() 
+        public float GetRandomFloat() 
         {
-            double value = ((double)GetRandomInteger() - Int32.MinValue) / (2.0 * Int32.MaxValue + 1);
+            float value = ((float)this.GetRandomInteger() - Int32.MinValue) / (2.0F * Int32.MaxValue + 1);
             Debug.Assert((value >= 0.0) && (value <= 1.0));
             return value;
         }
 
-        public double GetRandomDouble(double maxValue)
+        public float GetRandomFloat(float maxValue)
         { 
-            return maxValue * GetRandomDouble(); 
+            return maxValue * this.GetRandomFloat(); 
         }
 
         /// get a random integer in [0,2^32-1]
@@ -151,13 +151,13 @@ namespace iLand.Tools
 
         public int GetRandomInteger(int maxValue) 
         { 
-            return maxValue > 0 ? GetRandomInteger() % maxValue : 0; 
+            return maxValue > 0 ? this.GetRandomInteger() % maxValue : 0; 
         }
 
         /// nrandom returns a random number from [p1, p2] -> p2 is a possible result!
-        public double GetRandomDouble(double p1, double p2)
+        public float GetRandomFloat(float p1, float p2)
         {
-            return p1 + GetRandomDouble(p2 - p1);
+            return p1 + this.GetRandomFloat(p2 - p1);
             //return p1 + (p2-p1)*(rand()/double(RAND_MAX));
         }
 
@@ -175,8 +175,8 @@ namespace iLand.Tools
             double x, y, r;
             do
             {
-                x = 2.0 * GetRandomDouble() - 1.0;
-                y = 2.0 * GetRandomDouble() - 1.0;
+                x = 2.0 * GetRandomFloat() - 1.0;
+                y = 2.0 * GetRandomFloat() - 1.0;
                 r = x * x + y * y;
             }
             while (r >= 1.0 || r == 0.0);

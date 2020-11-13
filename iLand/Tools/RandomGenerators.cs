@@ -66,12 +66,11 @@ namespace iLand.Tools
         private uint Xorshf96()
         {
             //period 2^96-1
-            uint t;
             x ^= x << 16;
             x ^= x >> 5;
             x ^= x << 1;
 
-            t = x;
+            uint t = x;
             x = y;
             y = z;
             z = t ^ x ^ y;

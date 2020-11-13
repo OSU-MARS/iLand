@@ -6,7 +6,7 @@ namespace iLand.Tree
     {
         public const int SaplingsPerCell = 5; // TODO: 5 slots per cell -> max of 5 saplings per 2 x 2 m cell -> upper limit of only 8000 TPH regen?
 
-        public Sapling[] Saplings { get; private set; }
+        public Sapling[] Saplings { get; init; }
         public SaplingCellState State { get; set; }
 
         public SaplingCell()

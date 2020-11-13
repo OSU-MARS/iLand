@@ -7,7 +7,7 @@ namespace iLand.Tools
     internal class RumpleIndex
     {
         private readonly Grid<float> mRumpleGrid;
-        private double mRumpleIndex;
+        private float mRumpleIndex;
         private int mLastYear;
 
         public RumpleIndex()
@@ -75,7 +75,7 @@ namespace iLand.Tools
                         if (valid)
                         {
                             validPixels++;
-                            float surface_area = (float)CalculateSurfaceArea(heights, heightGrid.CellSize);
+                            float surface_area = RumpleIndex.CalculateSurfaceArea(heights, heightGrid.CellSize);
                             surfaceAreaSum += surface_area;
                         }
                     }
@@ -88,7 +88,7 @@ namespace iLand.Tools
                     totalSurfaceArea += surfaceAreaSum;
                 }
             }
-            this.mRumpleIndex = 0.0;
+            this.mRumpleIndex = 0.0F;
             if (totalValidPixels > 0)
             {
                 float rumpleIndex = totalSurfaceArea / (totalValidPixels * heightGrid.CellSize * heightGrid.CellSize);
@@ -97,7 +97,7 @@ namespace iLand.Tools
             this.mLastYear = model.CurrentYear;
         }
 
-        public double GetIndex(Model model, bool forceRecalculate = false)
+        public float GetIndex(Model model, bool forceRecalculate = false)
         {
             if (forceRecalculate || this.mLastYear != model.CurrentYear)
             {
@@ -106,20 +106,20 @@ namespace iLand.Tools
             return this.mRumpleIndex;
         }
 
-        private static double SurfaceLength(float h1, float h2, float l)
+        private static float SurfaceLength(float h1, float h2, float l)
         {
-            return Math.Sqrt((h1 - h2) * (h1 - h2) + l * l);
+            return MathF.Sqrt((h1 - h2) * (h1 - h2) + l * l);
         }
 
-        private static double HeronTriangleArea(float a, float b, float c)
+        private static float HeronTriangleArea(float a, float b, float c)
         {
             float s = (a + b + c) / 2.0F;
-            return Math.Sqrt(s * (s - a) * (s - b) * (s - c));
+            return MathF.Sqrt(s * (s - a) * (s - b) * (s - c));
         }
 
         /// calculate the surface area of a pixel given its height value, the height of the 8 neigboring pixels, and the cellsize
         /// the algorithm is based on http://www.jennessent.com/downloads/WSB_32_3_Jenness.pdf
-        private static double CalculateSurfaceArea(float[] heights, float cellsize)
+        private static float CalculateSurfaceArea(float[] heights, float cellsize)
         {
             // values in the height array [0..8]: own height / north/east/west/south/ NE/NW/SE/SW
             // step 1: calculate length on 3d surface between all edges
@@ -129,36 +129,36 @@ namespace iLand.Tools
 
             float[] slen = new float[16]; // surface lengths (divided by 2)
                                           // horizontal
-            slen[0] = (float)SurfaceLength(heights[8], heights[1], cellsize) / 2.0F;
-            slen[1] = (float)SurfaceLength(heights[1], heights[5], cellsize) / 2.0F;
-            slen[2] = (float)SurfaceLength(heights[4], heights[0], cellsize) / 2.0F;
-            slen[3] = (float)SurfaceLength(heights[0], heights[2], cellsize) / 2.0F;
-            slen[4] = (float)SurfaceLength(heights[7], heights[3], cellsize) / 2.0F;
-            slen[5] = (float)SurfaceLength(heights[3], heights[6], cellsize) / 2.0F;
+            slen[0] = RumpleIndex.SurfaceLength(heights[8], heights[1], cellsize) / 2.0F;
+            slen[1] = RumpleIndex.SurfaceLength(heights[1], heights[5], cellsize) / 2.0F;
+            slen[2] = RumpleIndex.SurfaceLength(heights[4], heights[0], cellsize) / 2.0F;
+            slen[3] = RumpleIndex.SurfaceLength(heights[0], heights[2], cellsize) / 2.0F;
+            slen[4] = RumpleIndex.SurfaceLength(heights[7], heights[3], cellsize) / 2.0F;
+            slen[5] = RumpleIndex.SurfaceLength(heights[3], heights[6], cellsize) / 2.0F;
             // vertical
-            slen[6] = (float)SurfaceLength(heights[8], heights[4], cellsize) / 2.0F;
-            slen[7] = (float)SurfaceLength(heights[1], heights[0], cellsize) / 2.0F;
-            slen[8] = (float)SurfaceLength(heights[5], heights[2], cellsize) / 2.0F;
-            slen[9] = (float)SurfaceLength(heights[4], heights[7], cellsize) / 2.0F;
-            slen[10] = (float)SurfaceLength(heights[0], heights[3], cellsize) / 2.0F;
-            slen[11] = (float)SurfaceLength(heights[2], heights[6], cellsize) / 2.0F;
+            slen[6] = RumpleIndex.SurfaceLength(heights[8], heights[4], cellsize) / 2.0F;
+            slen[7] = RumpleIndex.SurfaceLength(heights[1], heights[0], cellsize) / 2.0F;
+            slen[8] = RumpleIndex.SurfaceLength(heights[5], heights[2], cellsize) / 2.0F;
+            slen[9] = RumpleIndex.SurfaceLength(heights[4], heights[7], cellsize) / 2.0F;
+            slen[10] = RumpleIndex.SurfaceLength(heights[0], heights[3], cellsize) / 2.0F;
+            slen[11] = RumpleIndex.SurfaceLength(heights[2], heights[6], cellsize) / 2.0F;
             // diagonal
-            float cellsize_diag = (float)Constant.Sqrt2 * cellsize;
-            slen[12] = (float)SurfaceLength(heights[0], heights[8], cellsize_diag) / 2.0F;
-            slen[13] = (float)SurfaceLength(heights[0], heights[5], cellsize_diag) / 2.0F;
-            slen[14] = (float)SurfaceLength(heights[0], heights[7], cellsize_diag) / 2.0F;
-            slen[15] = (float)SurfaceLength(heights[0], heights[6], cellsize_diag) / 2.0F;
+            float cellsize_diag = Constant.Sqrt2 * cellsize;
+            slen[12] = RumpleIndex.SurfaceLength(heights[0], heights[8], cellsize_diag) / 2.0F;
+            slen[13] = RumpleIndex.SurfaceLength(heights[0], heights[5], cellsize_diag) / 2.0F;
+            slen[14] = RumpleIndex.SurfaceLength(heights[0], heights[7], cellsize_diag) / 2.0F;
+            slen[15] = RumpleIndex.SurfaceLength(heights[0], heights[6], cellsize_diag) / 2.0F;
 
             // step 2: combine the three sides of all the 8 sub triangles using Heron's formula
-            double surface_area = 0.0;
-            surface_area += HeronTriangleArea(slen[12], slen[0], slen[7]); // i
-            surface_area += HeronTriangleArea(slen[7], slen[1], slen[13]); // ii
-            surface_area += HeronTriangleArea(slen[6], slen[2], slen[12]); // iii
-            surface_area += HeronTriangleArea(slen[13], slen[8], slen[3]); // iv
-            surface_area += HeronTriangleArea(slen[2], slen[9], slen[14]); // v
-            surface_area += HeronTriangleArea(slen[3], slen[11], slen[15]); // vi
-            surface_area += HeronTriangleArea(slen[14], slen[10], slen[4]); // vii
-            surface_area += HeronTriangleArea(slen[10], slen[15], slen[5]); // viii
+            float surface_area = 0.0F;
+            surface_area += RumpleIndex.HeronTriangleArea(slen[12], slen[0], slen[7]); // i
+            surface_area += RumpleIndex.HeronTriangleArea(slen[7], slen[1], slen[13]); // ii
+            surface_area += RumpleIndex.HeronTriangleArea(slen[6], slen[2], slen[12]); // iii
+            surface_area += RumpleIndex.HeronTriangleArea(slen[13], slen[8], slen[3]); // iv
+            surface_area += RumpleIndex.HeronTriangleArea(slen[2], slen[9], slen[14]); // v
+            surface_area += RumpleIndex.HeronTriangleArea(slen[3], slen[11], slen[15]); // vi
+            surface_area += RumpleIndex.HeronTriangleArea(slen[14], slen[10], slen[4]); // vii
+            surface_area += RumpleIndex.HeronTriangleArea(slen[10], slen[15], slen[5]); // viii
 
             return surface_area;
         }

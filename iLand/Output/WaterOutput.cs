@@ -53,8 +53,8 @@ namespace iLand.Output
 
             int resourceUnitCount = 0;
             int snowDays = 0;
-            double evapotranspiration = 0.0, runoff = 0.0, rad = 0.0, snowRad = 0.0, precip = 0.0;
-            double stockable = 0.0, stocked = 0.0;
+            float evapotranspiration = 0.0F, runoff = 0.0F, rad = 0.0F, snowRad = 0.0F, precip = 0.0F;
+            float stockable = 0.0F, stocked = 0.0F;
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 if (ru.EnvironmentID == -1)
@@ -81,7 +81,8 @@ namespace iLand.Output
                 stockable += ru.AreaInLandscape; 
                 stocked += ru.AreaWithTrees;
                 precip += ru.Climate.GetTotalPrecipitationInCurrentYear();
-                evapotranspiration += wc.TotalEvapotranspiration; runoff += wc.TotalRunoff; 
+                evapotranspiration += wc.TotalEvapotranspiration;
+                runoff += wc.TotalRunoff; 
                 snowDays += (int)wc.SnowDays;
                 rad += ru.Climate.TotalAnnualRadiation;
                 snowRad += wc.SnowDayRadiation;

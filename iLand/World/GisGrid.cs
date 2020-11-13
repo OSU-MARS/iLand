@@ -18,22 +18,16 @@ namespace iLand.World
         private readonly CoordinateTransform gisCoordTrans;
 
         private PointF origin;
-        private double[]? data;
+        private float[]? data;
 
         // access
         public int DataSize { get; private set; }   // number of data items (rows*cols)
         public int Rows { get; private set; } // number of rows
         public int Columns { get; private set; } // number of columns
-        public double CellSize { get; private set; } // size of a cell (meters)
-        public double MinValue { get; private set; } // minimum data value
-        public double MaxValue { get; private set; } // maximum data value
+        public float CellSize { get; private set; } // size of a cell (meters)
+        public float MinValue { get; private set; } // minimum data value
+        public float MaxValue { get; private set; } // maximum data value
         public int NoDataValue { get; private set; } // no data value of the grid
-
-        /// get grid value at local coordinates (X/Y); returs NODATAValue if out of range
-        /// @p X and @p Y are local coordinates.
-        public double GetValue(PointF position) { return this.GetValue(position.X, position.Y); }
-        // coordinates of the lower left corner of the grid
-        public PointF Origin { get { return origin; } }
 
         public GisGrid()
         {
@@ -45,16 +39,22 @@ namespace iLand.World
             this.Rows = 0;
         }
 
+        /// get grid value at local coordinates (X/Y); returs NODATAValue if out of range
+        /// @p X and @p Y are local coordinates.
+        public float GetValue(PointF position) { return this.GetValue(position.X, position.Y); }
+        // coordinates of the lower left corner of the grid
+        public PointF Origin { get { return origin; } }
+
         // setup of global GIS transformation
-        public void SetupTransformation(double offsetX, double offsetY, double offsetZ, double angleInDegrees)
+        public void SetupTransformation(float offsetX, float offsetY, float offsetZ, float angleInDegrees)
         {
             this.gisCoordTrans.SetupTransformation(offsetX, offsetY, offsetZ, angleInDegrees);
         }
 
         public void WorldToModel(Vector3D world, out Vector3D model)
         {
-            double x = world.X - gisCoordTrans.OffsetX;
-            double y = world.Y - gisCoordTrans.OffsetY;
+            float x = world.X - gisCoordTrans.OffsetX;
+            float y = world.Y - gisCoordTrans.OffsetY;
             model = new Vector3D(x * gisCoordTrans.CosRotate - y * gisCoordTrans.SinRotate,
                                  x * gisCoordTrans.SinRotate + y * gisCoordTrans.CosRotate,
                                  world.Z - gisCoordTrans.OffsetZ);
@@ -62,8 +62,8 @@ namespace iLand.World
 
         public void ModelToWorld(Vector3D model, out Vector3D world)
         {
-            double x = model.X;
-            double y = model.Y; // spiegeln
+            float x = model.X;
+            float y = model.Y; // spiegeln
             world = new Vector3D(x * gisCoordTrans.CosRotateReverse - y * gisCoordTrans.SinRotateReverse + gisCoordTrans.OffsetX,
                                  x * gisCoordTrans.SinRotateReverse + y * gisCoordTrans.CosRotateReverse + gisCoordTrans.OffsetY,
                                  model.Z + gisCoordTrans.OffsetZ);
@@ -79,8 +79,8 @@ namespace iLand.World
             // loads from a ESRI-Grid [RasterToFile] File.
             string[] lines = File.ReadAllLines(fileName);
 
-            this.MinValue = Double.MaxValue;
-            this.MaxValue = Double.MinValue;
+            this.MinValue = Single.MaxValue;
+            this.MaxValue = Single.MinValue;
 
             // processing of header-data
             bool header = true;
@@ -100,30 +100,30 @@ namespace iLand.World
                 }
                 else
                 {
-                    double value = Double.Parse(line[line.IndexOf(' ')..]);
+                    string valueAsString = line[line.IndexOf(' ')..];
                     if (key == "ncols")
                     {
-                        Columns = (int)value;
+                        this.Columns = Int32.Parse(valueAsString);
                     }
                     else if (key == "nrows")
                     {
-                        Rows = (int)value;
+                        this.Rows = Int32.Parse(valueAsString);
                     }
                     else if (key == "xllcorner")
                     {
-                        this.origin.X = (float)value;
+                        this.origin.X = Single.Parse(valueAsString);
                     }
                     else if (key == "yllcorner")
                     {
-                        this.origin.Y = (float)value;
+                        this.origin.Y = Single.Parse(valueAsString);
                     }
                     else if (key == "cellsize")
                     {
-                        CellSize = value;
+                        this.CellSize = Single.Parse(valueAsString);
                     }
                     else if (key == "nodata_value")
                     {
-                        NoDataValue = (int)value;
+                        this.NoDataValue = Int32.Parse(valueAsString);
                     }
                     else
                     {
@@ -134,8 +134,8 @@ namespace iLand.World
             } while (header) ;
 
             // create data
-            DataSize = Rows * Columns;
-            data = new double[DataSize];
+            this.DataSize = this.Rows * this.Columns;
+            this.data = new float[DataSize];
 
             // loop thru datalines
             for (;  row < lines.Length; ++row)
@@ -143,11 +143,11 @@ namespace iLand.World
                 string[] values = lines[row].Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 for (int col = 0; col < Columns; col++)
                 {
-                    double value = Double.Parse(values[col]);
+                    float value = Single.Parse(values[col]);
                     if (value != NoDataValue)
                     {
-                        MinValue = Math.Min(MinValue, value);
-                        MaxValue = Math.Max(MaxValue, value);
+                        this.MinValue = MathF.Min(this.MinValue, value);
+                        this.MaxValue = MathF.Max(this.MaxValue, value);
                     }
                     data[row * Columns + col] = value;
                 }
@@ -155,16 +155,16 @@ namespace iLand.World
             return true;
         }
 
-        public List<double> DistinctValues()
+        public List<float> DistinctValues()
         {
             if (data == null)
             {
-                return new List<double>();
+                return new List<float>();
             }
-            Dictionary<double, double> temp_map = new Dictionary<double, double>();
-            for (int i = 0; i < DataSize; i++)
+            Dictionary<float, float> temp_map = new Dictionary<float, float>();
+            for (int index = 0; index < this.DataSize; ++index)
             {
-                temp_map.Add(data[i], 1.0);
+                temp_map.Add(data[index], 1.0F);
             }
             temp_map.Remove(NoDataValue);
             return temp_map.Keys.ToList();
@@ -172,23 +172,23 @@ namespace iLand.World
 
         public PointF ModelToWorld(PointF modelCoordinate)
         {
-            ModelToWorld(new Vector3D(modelCoordinate.X, modelCoordinate.Y, 0.0), out Vector3D to);
-            return new PointF((float)to.X, (float)to.Y);
+            ModelToWorld(new Vector3D(modelCoordinate.X, modelCoordinate.Y, 0.0F), out Vector3D to);
+            return new PointF(to.X, to.Y);
         }
 
         public PointF WorldToModel(PointF worldCoordinate)
         {
-            WorldToModel(new Vector3D(worldCoordinate.X, worldCoordinate.Y, 0.0), out Vector3D to);
-            return new PointF((float)to.X, (float)to.Y);
+            WorldToModel(new Vector3D(worldCoordinate.X, worldCoordinate.Y, 0.0F), out Vector3D to);
+            return new PointF(to.X, to.Y);
         }
 
         /*
-        public void GetDistinctValues(TStringList *ResultList, double x_m, double y_m)
+        public void GetDistinctValues(TStringList *ResultList, float x_m, float y_m)
         {
            // alle "distinct" values in einem rechteck (picus-koordinaten)
            // herauslesen. geht nur mit integers.
-            double stepsize=CellSize/2; //  default stepsize, die haelfte der Cellsize, damit sollten alle pixel ueberstrichen werden.
-            double x=0, y=0;
+            float stepsize=CellSize/2; //  default stepsize, die haelfte der Cellsize, damit sollten alle pixel ueberstrichen werden.
+            float x=0, y=0;
             int v;
             TList *List=new TList;
             while (x<=x_m) {
@@ -209,72 +209,72 @@ namespace iLand.World
         }*/
 
         /// get value of grid at index positions
-        public double GetValue(int indexX, int indexY)
+        public float GetValue(int indexX, int indexY)
         {
             if (indexX >= 0 && indexX < Columns && indexY >= 0 && indexY < Rows)
             {
                 return this.data![indexY * Columns + indexX];
             }
-            return -1.0;  // out of scope
+            return -1.0F;  // out of scope
         }
 
         /// get value of grid at index positions
-        public double GetValue(int index)
+        public float GetValue(int index)
         {
             if (index >= 0 && index < DataSize)
             {
                 return this.data![index];
             }
-            return -1.0;  // out of scope
+            return -1.0F;  // out of scope
         }
 
-        public double GetValue(double x, double y)
+        public float GetValue(float x, float y)
         {
-            Vector3D model = new Vector3D(x, y, 0.0);
-            ModelToWorld(model, out Vector3D world);
+            Vector3D model = new Vector3D(x, y, 0.0F);
+            this.ModelToWorld(model, out Vector3D world);
 
             world.X -= this.Origin.X;
             world.Y -= this.Origin.Y;
 
             // get value out of grid.
-            // double rx = Origin.x + X * xAxis.x + Y * yAxis.x;
-            // double ry = Origin.y + X * xAxis.y + Y * yAxis.y;
+            // float rx = Origin.x + X * xAxis.x + Y * yAxis.x;
+            // float ry = Origin.y + X * xAxis.y + Y * yAxis.y;
             if (world.X < 0.0 || world.Y < 0.0)
             {
-                return -1.0;
+                return -1.0F;
             }
             int indexX = (int)(world.X / CellSize);
             int indexY = (int)(world.Y / CellSize);
             if (indexX >= 0 && indexX < Columns && indexY >= 0 && indexY < Rows)
             {
-                double value = this.data![indexY * this.Columns + indexX];
+                float value = this.data![indexY * this.Columns + indexX];
                 if (value != this.NoDataValue)
                 {
                     return value;
                 }
             }
-            return -10.0; // the ultimate NODATA- or ErrorValue
+            return -10.0F; // the ultimate NODATA- or ErrorValue
         }
 
-        public Vector3D GetCoordinate(int indexx, int indexy)
+        public Vector3D GetCoordinate(int indexX, int indexY)
         {
-            Vector3D world = new Vector3D((indexx + 0.5) * CellSize + Origin.X,
-                                          (indexy + 0.5) * CellSize + Origin.Y,
-                                          0.0);
+            Vector3D world = new Vector3D((indexX + 0.5F) * this.CellSize + this.Origin.X,
+                                          (indexY + 0.5F) * this.CellSize + this.Origin.Y,
+                                          0.0F);
             WorldToModel(world, out Vector3D model);
             return model;
         }
 
         public RectangleF GetCellExtent(int indexX, int indexY)
         {
-            Vector3D world = new Vector3D(indexX * CellSize + Origin.X,
-                                          indexY * CellSize + Origin.Y,
-                                          0.0);
+            Vector3D world = new Vector3D(indexX * this.CellSize + this.Origin.X,
+                                          indexY * this.CellSize + this.Origin.Y,
+                                          0.0F);
             WorldToModel(world, out Vector3D model);
-            RectangleF rect = new RectangleF((float)model.X, // left
-                                             (float)model.Y, // top
-                                             (float)CellSize, // width
-                                             (float)CellSize); // height
+            RectangleF rect = new RectangleF(model.X, // left
+                                             model.Y, // top
+                                             this.CellSize, // width
+                                             this.CellSize); // height
             return rect;
         }
 
@@ -345,12 +345,12 @@ namespace iLand.World
         }
         */
         /*
-        public bool GetBoundingBox(int LookFor, RectangleF Result, double x_m, double y_m)
+        public bool GetBoundingBox(int LookFor, RectangleF Result, float x_m, float y_m)
         {
              // alle "distinct" values in einem rechteck (picus-koordinaten)
              // herauslesen. geht nur mit integers.
-              double stepsize=CellSize/2; //  default stepsize, die haelfte der Cellsize, damit sollten alle pixel ueberstrichen werden.
-              double x=0, y=0;
+              float stepsize=CellSize/2; //  default stepsize, die haelfte der Cellsize, damit sollten alle pixel ueberstrichen werden.
+              float x=0, y=0;
               int v;
               Result.x1 = 1000000; Result.x2 = -10000000;
               Result.y1 = 1000000; Result.y2 = -10000000;
@@ -374,18 +374,18 @@ namespace iLand.World
         }
         */
 
-        public void Clip(RectangleF box)
+        public void Clip(RectangleF clipExtent)
         {
             // auf das angegebene Rechteck zuschneiden, alle
             // werte draussen auf -1 setzen.
-            for (int indexX = 0; indexX < this.Columns; indexX++)
+            for (int indexX = 0; indexX < this.Columns; ++indexX)
             {
-                for (int indexY = 0; indexY < this.Rows; indexY++)
+                for (int indexY = 0; indexY < this.Rows; ++indexY)
                 {
-                    Vector3D akoord = GetCoordinate(indexY * Columns + indexX);
-                    if (!box.Contains((float)akoord.X, (float)akoord.Y))
+                    Vector3D akoord = this.GetCoordinate(indexY * Columns + indexX);
+                    if (clipExtent.Contains(akoord.X, akoord.Y) == false)
                     {
-                        this.data![indexY * Columns + indexX] = -1.0;
+                        this.data![indexY * Columns + indexX] = -1.0F;
                     }
                 }
             }
@@ -397,7 +397,7 @@ namespace iLand.World
             TStringList *Result = new TStringList();
             AnsiString Line;
             int ix,iy;
-            double Value;
+            float Value;
             for (ix=0;ix<mNCols;ix++)
                 for (iy=0;iy<mNRows;iy++) {
                    Value = mData[iy*mNCols + ix];

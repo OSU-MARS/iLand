@@ -2,10 +2,8 @@
 using iLand.Tree;
 using iLand.World;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NuGet.Frameworks;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 
 namespace iLand.Test
 {
@@ -188,12 +186,12 @@ namespace iLand.Test
 
             //RumpleIndex rumpleIndex = new RumpleIndex();
             //rumpleIndex.Calculate(kalkalpen);
-            //double index = rumpleIndex.Value(kalkalpen);
+            //float index = rumpleIndex.Value(kalkalpen);
             //Assert.IsTrue(Math.Abs(index - 0.0) < 0.001);
 
             // check calculation: numbers for Jenness paper
             //float[] hs = new float[] { 165, 170, 145, 160, 183, 155, 122, 175, 190 };
-            //double area = rumpleIndex.CalculateSurfaceArea(hs, 100);
+            //float area = rumpleIndex.CalculateSurfaceArea(hs, 100);
         }
 
         [TestMethod]
@@ -247,41 +245,41 @@ namespace iLand.Test
                 13.830F, 11.426F, 13.380F, 12.314F, 14.363F, // 20...24
                 13.567F, 12.582F, 13.153F                    // 25...27
             };
-            List<double> nominalNppByYear = new List<double>()
+            List<float> nominalNppByYear = new List<float>()
             {
-                14793.009, 15600.609, 18059.067, 15911.426, 17124.919, // 0...4
-                14653.807, 15758.883, 17664.319, 16369.269, 15572.519, // 5...9
-                16836.781, 14400.212, 14684.704, 14532.705, 14449.115, // 10...14
-                14835.988, 14600.618, 13617.208, 12186.767, 13798.192, // 15...19
-                14573.193, 11968.184, 13903.084, 12706.724, 14668.152, // 20...24
-                13717.823, 12599.708, 13039.824                        // 25...27
+                14793.009F, 15600.609F, 18059.067F, 15911.426F, 17124.919F, // 0...4
+                14653.807F, 15758.883F, 17664.319F, 16369.269F, 15572.519F, // 5...9
+                16836.781F, 14400.212F, 14684.704F, 14532.705F, 14449.115F, // 10...14
+                14835.988F, 14600.618F, 13617.208F, 12186.767F, 13798.192F, // 15...19
+                14573.193F, 11968.184F, 13903.084F, 12706.724F, 14668.152F, // 20...24
+                13717.823F, 12599.708F, 13039.824F                          // 25...27
             };
-            List<double> nominalVolumeByYear = new List<double>()
+            List<float> nominalVolumeByYear = new List<float>()
             {
-                143.076, 157.751, 175.994, 190.599, 207.294, // 0...4
-                216.857, 229.379, 248.292, 263.868, 277.212, // 5...9
-                290.818, 302.361, 310.121, 321.509, 332.719, // 10...14
-                345.902, 356.460, 368.301, 373.557, 383.531, // 15...19
-                397.316, 404.170, 414.817, 421.084, 433.938, // 20...24
-                446.297, 456.167, 465.235                    // 25...27
+                143.076F, 157.751F, 175.994F, 190.599F, 207.294F, // 0...4
+                216.857F, 229.379F, 248.292F, 263.868F, 277.212F, // 5...9
+                290.818F, 302.361F, 310.121F, 321.509F, 332.719F, // 10...14
+                345.902F, 356.460F, 368.301F, 373.557F, 383.531F, // 15...19
+                397.316F, 404.170F, 414.817F, 421.084F, 433.938F, // 20...24
+                446.297F, 456.167F, 465.235F                      // 25...27
             };
             for (int year = 0; year < nominalVolumeByYear.Count; ++year)
             {
                 float gpp = gppByYear[year];
                 float nominalGpp = nominalGppByYear[year];
-                float relativeGppError = Math.Abs(1.0F - gpp / nominalGpp);
+                float relativeGppError = MathF.Abs(1.0F - gpp / nominalGpp);
 
-                double npp = nppByYear[year];
-                double nominalNpp = nominalNppByYear[year];
-                double relativeNppError = Math.Abs(1.0 - npp / nominalNpp);
+                float npp = nppByYear[year];
+                float nominalNpp = nominalNppByYear[year];
+                float relativeNppError = MathF.Abs(1.0F - npp / nominalNpp);
 
-                double volume = volumeByYear[year];
-                double nominalVolume = nominalVolumeByYear[year];
-                double relativeVolumeError = Math.Abs(1.0 - volume / nominalVolume);
+                float volume = volumeByYear[year];
+                float nominalVolume = nominalVolumeByYear[year];
+                float relativeVolumeError = MathF.Abs(1.0F - volume / nominalVolume);
 
-                Assert.IsTrue(relativeGppError < 0.02, "Expected plot 14 to have a GPP of {0:0.000} kg/m² in simulation year {1} but the projected NPP {2:0.000} kg/m², a {3:0.0%} difference.", nominalGpp, year, gpp, relativeGppError);
-                Assert.IsTrue(relativeNppError < 0.02, "Expected plot 14 to have an NPP of {0:0.000} kg/ha in simulation year {1} but the projected NPP {2:0.000} kg/ha, a {3:0.0%} difference.", nominalNpp, year, npp, relativeNppError);
-                Assert.IsTrue(relativeVolumeError < 0.02, "Expected plot 14 to carry a standing volume of {0:0.000} m³ in simulation year {1} but the projected volume was {2:0.000} m³, a {3:0.0%} difference.", nominalVolume, year, volume, relativeVolumeError);
+                Assert.IsTrue(relativeGppError < 0.02F, "Expected plot 14 to have a GPP of {0:0.000} kg/m² in simulation year {1} but the projected NPP {2:0.000} kg/m², a {3:0.0%} difference.", nominalGpp, year, gpp, relativeGppError);
+                Assert.IsTrue(relativeNppError < 0.02F, "Expected plot 14 to have an NPP of {0:0.000} kg/ha in simulation year {1} but the projected NPP {2:0.000} kg/ha, a {3:0.0%} difference.", nominalNpp, year, npp, relativeNppError);
+                Assert.IsTrue(relativeVolumeError < 0.02F, "Expected plot 14 to carry a standing volume of {0:0.000} m³ in simulation year {1} but the projected volume was {2:0.000} m³, a {3:0.0%} difference.", nominalVolume, year, volume, relativeVolumeError);
             }
         }
 
@@ -536,9 +534,9 @@ namespace iLand.Test
                 Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity));
                 Assert.IsTrue(Math.Abs(ru.WaterCycle.FieldCapacity - 66.304010358336242) < 0.001);
                 Assert.IsTrue(ru.WaterCycle.SoilWaterPsi.Length == Constant.DaysInLeapYear);
-                foreach (double psi in ru.WaterCycle.SoilWaterPsi)
+                foreach (float psi in ru.WaterCycle.SoilWaterPsi)
                 {
-                    Assert.IsTrue((psi <= 0.0) && (psi > -6000.0));
+                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F));
                 }
                 Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0) && (ru.WaterCycle.SnowDayRadiation < 5000.0)); // TODO: linkt to snow days?
                 Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear));
@@ -557,13 +555,13 @@ namespace iLand.Test
             AssertNullable.IsNotNull(species);
 
             // PIAB: 1/(1 + (x/0.55)^2)
-            double youngAgingFactor = species.GetAgingFactor(10.0F, 10);
-            double middleAgingFactor = species.GetAgingFactor(40.0F, 80);
-            double oldAgingFactor = species.GetAgingFactor(55.5F, 575);
+            float youngAgingFactor = species.GetAgingFactor(10.0F, 10);
+            float middleAgingFactor = species.GetAgingFactor(40.0F, 80);
+            float oldAgingFactor = species.GetAgingFactor(55.5F, 575);
 
-            Assert.IsTrue(Math.Abs(youngAgingFactor - 0.964912) < 0.001);
-            Assert.IsTrue(Math.Abs(middleAgingFactor - 0.481931) < 0.001);
-            Assert.IsTrue(Math.Abs(oldAgingFactor - 0.2375708) < 0.001);
+            Assert.IsTrue(MathF.Abs(youngAgingFactor - 0.964912F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(middleAgingFactor - 0.481931F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(oldAgingFactor - 0.2375708F) < 0.001F);
 
             // PIAB: mf = 0.095565 * dbh^1.56
             // round(0.095565 * c(2, 20, 50, 100) ^ 1.56, 5)
