@@ -83,7 +83,7 @@ namespace iLand.Output
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics ruSpeciesStats = ruSpecies.Statistics;
-                    if (ruSpeciesStats.TreesPerHectare == 0.0 && ruSpeciesStats.CohortCount == 0 && ruSpeciesStats.TotalStemVolumeGrowth == 0.0)
+                    if (ruSpeciesStats.TreesPerHectare[^1] == 0 && ruSpeciesStats.CohortCount[^1] == 0 && ruSpeciesStats.TotalStemVolumeGrowth[^1] == 0.0F)
                     {
                         continue;
                     }
@@ -92,7 +92,7 @@ namespace iLand.Output
                         statistics = new ResourceUnitTreeStatistics(ruSpecies);
                         this.standStatisticsBySpecies.Add(ruSpecies.Species.ID, statistics);
                     }
-                    statistics.AddWeighted(ruSpeciesStats, ru.AreaInLandscape / totalStockableArea);
+                    statistics.AddCurrentYearsWeighted(ruSpeciesStats, ru.AreaInLandscape / totalStockableArea);
                 }
             }
 
@@ -102,17 +102,17 @@ namespace iLand.Output
                 ResourceUnitTreeStatistics stat = species.Value;
                 insertRow.Parameters[0].Value = model.CurrentYear;
                 insertRow.Parameters[1].Value = species.Key; // keys: year, species
-                insertRow.Parameters[2].Value = stat.TreesPerHectare;
-                insertRow.Parameters[3].Value = stat.AverageDbh;
-                insertRow.Parameters[4].Value = stat.AverageHeight;
-                insertRow.Parameters[5].Value = stat.StemVolume;
-                insertRow.Parameters[6].Value = stat.GetTotalCarbon();
-                insertRow.Parameters[7].Value = stat.TotalStemVolumeGrowth;
-                insertRow.Parameters[8].Value = stat.BasalArea;
-                insertRow.Parameters[9].Value = stat.Npp;
-                insertRow.Parameters[10].Value = stat.NppAbove;
-                insertRow.Parameters[11].Value = stat.LeafAreaIndex;
-                insertRow.Parameters[12].Value = stat.CohortCount;
+                insertRow.Parameters[2].Value = stat.TreesPerHectare[^1];
+                insertRow.Parameters[3].Value = stat.AverageDbh[^1];
+                insertRow.Parameters[4].Value = stat.AverageHeight[^1];
+                insertRow.Parameters[5].Value = stat.StemVolume[^1];
+                insertRow.Parameters[6].Value = stat.GetMostRecentTotalCarbon();
+                insertRow.Parameters[7].Value = stat.TotalStemVolumeGrowth[^1];
+                insertRow.Parameters[8].Value = stat.BasalArea[^1];
+                insertRow.Parameters[9].Value = stat.Npp[^1];
+                insertRow.Parameters[10].Value = stat.NppAbove[^1];
+                insertRow.Parameters[11].Value = stat.LeafAreaIndex[^1];
+                insertRow.Parameters[12].Value = stat.CohortCount[^1];
                 insertRow.ExecuteNonQuery();
             }
         }

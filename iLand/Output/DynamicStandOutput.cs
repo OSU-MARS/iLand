@@ -283,7 +283,7 @@ namespace iLand.Output
                 int columnIndex = 0;
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    if (bySpecies && ruSpecies.Statistics.TreesPerHectare == 0)
+                    if (bySpecies && ruSpecies.Statistics.TreesPerHectare[^1] == 0)
                     {
                         continue;
                     }

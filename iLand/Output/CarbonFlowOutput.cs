@@ -73,7 +73,7 @@ namespace iLand.Output
                 logIndividualResourceUnits = false;
             }
 
-            double[] accumulatedValues = new double[10]; // 10 data values
+            float[] accumulatedValues = new float[10]; // 10 data values
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits) 
             {
                 if (ru.EnvironmentID == -1)
@@ -86,22 +86,21 @@ namespace iLand.Output
                     continue;
                 }
 
-
-                double areaFactor = ru.AreaInLandscape / Constant.RUArea; //conversion factor
-                double npp = ru.Trees.Statistics.Npp * Constant.BiomassCFraction; // kg C/ha
-                npp += ru.Trees.Statistics.NppSaplings * Constant.BiomassCFraction; // kgC/ha
+                float areaFactor = ru.AreaInLandscape / Constant.RUArea; //conversion factor
+                float npp = ru.Trees.Statistics.Npp[^1] * Constant.BiomassCFraction; // kg C/ha
+                npp += ru.Trees.Statistics.NppSaplings[^1] * Constant.BiomassCFraction; // kgC/ha
                 
                 // Snag pools are not scaled per ha (but refer to the stockable RU), soil pools and biomass statistics (NPP, ...) 
                 // are scaled.
-                double toAtmosphere = ru.Snags.FluxToAtmosphere.C / areaFactor; // from snags, kg/ha
-                toAtmosphere += ru.Snags.FluxToAtmosphere.C * Constant.RUArea / 10.0; // soil: t/ha -> t/m2 -> kg/ha
+                float toAtmosphere = ru.Snags.FluxToAtmosphere.C / areaFactor; // from snags, kg/ha
+                toAtmosphere += 0.1F * ru.Snags.FluxToAtmosphere.C * Constant.RUArea; // soil: t/ha -> t/m2 -> kg/ha
 
-                double toDisturbance = ru.Snags.FluxToDisturbance.C / areaFactor; // convert to kgC/ha
-                toDisturbance += ru.Snags.FluxToDisturbance.C * Constant.RUArea / 10.0; // kgC/ha
+                float toDisturbance = ru.Snags.FluxToDisturbance.C / areaFactor; // convert to kgC/ha
+                toDisturbance += 0.1F * ru.Snags.FluxToDisturbance.C * Constant.RUArea; // kgC/ha
 
-                double toHarvest = ru.Snags.FluxToExtern.C / areaFactor; // kgC/ha
+                float toHarvest = ru.Snags.FluxToExtern.C / areaFactor; // kgC/ha
 
-                double nep = npp - toAtmosphere - toHarvest - toDisturbance; // kgC/ha
+                float nep = npp - toAtmosphere - toHarvest - toDisturbance; // kgC/ha
 
                 if (logIndividualResourceUnits)
                 {

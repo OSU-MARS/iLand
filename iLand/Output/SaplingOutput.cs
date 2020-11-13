@@ -53,19 +53,19 @@ namespace iLand.Output
                     }
                 }
 
-                foreach (ResourceUnitTreeSpecies rus in ru.Trees.SpeciesAvailableOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics stat = rus.Statistics;
-                    SaplingProperties sap = rus.SaplingStats;
+                    ResourceUnitTreeStatistics stat = ruSpecies.Statistics;
+                    SaplingProperties sap = ruSpecies.SaplingStats;
 
-                    if (stat.SaplingCount == 0)
+                    if (stat.SaplingCount[^1] == 0)
                     {
                         continue;
                     }
                     insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
-                    insertRow.Parameters[3].Value = rus.Species.ID; // keys
+                    insertRow.Parameters[3].Value = ruSpecies.Species.ID; // keys
 
                     // calculate statistics based on the number of represented trees per cohort
                     // double n = sap.livingStemNumber(rus.species(), out double avg_dbh, out double avg_height, out double avg_age;

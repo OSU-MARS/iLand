@@ -768,8 +768,8 @@ namespace iLand.Tree
                 float gppBeforeAging = gppPerUnitArea * effectiveTreeArea;
                 float gpp = gppBeforeAging * agingFactor;
                 Debug.Assert(gpp >= 0.0F);
-                treeGrowthData.NppAboveground = 0.0;
-                treeGrowthData.NppStem = 0.0;
+                treeGrowthData.NppAboveground = 0.0F;
+                treeGrowthData.NppStem = 0.0F;
                 treeGrowthData.NppTotal = Constant.AutotrophicRespiration * gpp; // respiration loss (0.47), cf. Waring et al 1998.
                 treeGrowthData.StressIndex = 0.0F;
 
@@ -904,9 +904,9 @@ namespace iLand.Tree
             // see also: http://iland.boku.ac.at/allocation#reserve_and_allocation_to_stem_growth
             // (1) transfer to reserve pool
             float woodyAllocation = woodFraction * nppAvailable;
-            float to_reserve = MathF.Min(reserveSize, woodyAllocation);
-            this.NppReserve[treeIndex] = to_reserve;
-            float netWoodyAllocation = woodyAllocation - to_reserve;
+            float toReserve = MathF.Min(reserveSize, woodyAllocation);
+            this.NppReserve[treeIndex] = toReserve;
+            float netWoodyAllocation = woodyAllocation - toReserve;
 
             this.DbhDelta[treeIndex] = 0.0F; // zeroing this here causes height and diameter growth to start with an estimate of only height growth
             if (netWoodyAllocation > 0.0)
@@ -950,7 +950,7 @@ namespace iLand.Tree
         {
             // determine dh-ratio of increment
             // height increment is a function of light competition:
-            double hdRatioNewGrowth = this.GetRelativeHeightGrowth(treeIndex); // hd of height growth
+            float hdRatioNewGrowth = this.GetRelativeHeightGrowth(treeIndex); // hd of height growth
             float dbhInM = 0.01F * this.Dbh[treeIndex]; // current diameter in [m]
             float previousYearDbhIncrementInM = 0.01F * this.DbhDelta[treeIndex]; // increment of last year in [m]
 
@@ -958,37 +958,38 @@ namespace iLand.Tree
             float stemMass = massFactor * dbhInM * dbhInM * this.Height[treeIndex]; // result: kg, dbh[cm], h[meter]
 
             // factor is in diameter increment per NPP [m/kg]
-            double factorDiameter = 1.0F / (massFactor * (dbhInM + previousYearDbhIncrementInM) * (dbhInM + previousYearDbhIncrementInM) * (2.0F * this.Height[treeIndex] / dbhInM + hdRatioNewGrowth));
-            double nppStem = growthData.NppStem;
-            double deltaDbhEstimate = factorDiameter * nppStem; // estimated dbh-inc using last years increment
+            float factorDiameter = 1.0F / (massFactor * (dbhInM + previousYearDbhIncrementInM) * (dbhInM + previousYearDbhIncrementInM) * (2.0F * this.Height[treeIndex] / dbhInM + hdRatioNewGrowth));
+            float nppStem = growthData.NppStem;
+            float deltaDbhEstimate = factorDiameter * nppStem; // estimated dbh-inc using last years increment
 
             // using that dbh-increment we estimate a stem-mass-increment and the residual (Eq. 9)
-            double stemEstimate = massFactor * (dbhInM + deltaDbhEstimate) * (dbhInM + deltaDbhEstimate) * (this.Height[treeIndex] + deltaDbhEstimate * hdRatioNewGrowth);
-            double stemResidual = stemEstimate - (stemMass + nppStem);
+            float stemEstimate = massFactor * (dbhInM + deltaDbhEstimate) * (dbhInM + deltaDbhEstimate) * (this.Height[treeIndex] + deltaDbhEstimate * hdRatioNewGrowth);
+            float stemResidual = stemEstimate - (stemMass + nppStem);
 
             // the final increment is then:
-            double dbhIncrementInM = factorDiameter * (nppStem - stemResidual); // Eq. (11)
+            float dbhIncrementInM = factorDiameter * (nppStem - stemResidual); // Eq. (11)
             if (Math.Abs(stemResidual) > Math.Min(1.0, stemMass))
             {
                 // calculate final residual in stem
-                double res_final = massFactor * (dbhInM + dbhIncrementInM) * (dbhInM + dbhIncrementInM) * (this.Height[treeIndex] + dbhIncrementInM * hdRatioNewGrowth) - ((stemMass + nppStem));
+                float res_final = massFactor * (dbhInM + dbhIncrementInM) * (dbhInM + dbhIncrementInM) * (this.Height[treeIndex] + dbhIncrementInM * hdRatioNewGrowth) - ((stemMass + nppStem));
                 if (Math.Abs(res_final) > Math.Min(1.0, stemMass))
                 {
                     // for large errors in stem biomass due to errors in diameter increment (> 1kg or >stem mass), we solve the increment iteratively.
                     // first, increase increment with constant step until we overestimate the first time
                     // then,
-                    dbhIncrementInM = 0.02; // start with 2cm increment
+                    dbhIncrementInM = 0.02F; // start with 2cm increment
                     bool reached_error = false;
-                    double step = 0.01; // step-width 1cm
-                    double est_stem;
+                    float step = 0.01F; // step-width 1cm
                     do
                     {
-                        est_stem = massFactor * (dbhInM + dbhIncrementInM) * (dbhInM + dbhIncrementInM) * (this.Height[treeIndex] + dbhIncrementInM * hdRatioNewGrowth); // estimate with current increment
+                        float est_stem = massFactor * (dbhInM + dbhIncrementInM) * (dbhInM + dbhIncrementInM) * (this.Height[treeIndex] + dbhIncrementInM * hdRatioNewGrowth); // estimate with current increment
                         stemResidual = est_stem - (stemMass + nppStem);
 
-                        if (Math.Abs(stemResidual) < 1.0) // finished, if stem residual below 1kg
+                        if (MathF.Abs(stemResidual) < 1.0F) // finished, if stem residual below 1kg
+                        {
                             break;
-                        if (stemResidual > 0.0)
+                        }
+                        if (stemResidual > 0.0F)
                         {
                             dbhIncrementInM -= step;
                             reached_error = true;
@@ -999,9 +1000,10 @@ namespace iLand.Tree
                         }
                         if (reached_error)
                         {
-                            step /= 2.0;
+                            step /= 2.0F;
                         }
-                    } while (step > 0.00001); // continue until diameter "accuracy" falls below 1/100mm
+                    }
+                    while (step > 0.00001F); // continue until diameter "accuracy" falls below 1/100mm
                 }
             }
 
@@ -1031,12 +1033,12 @@ namespace iLand.Tree
             //    outList.AddRange(new object[] { net_stem_npp, stem_mass, hd_growth, factor_diameter, delta_d_estimate * 100, d_increment * 100 });
             //}
 
-            dbhIncrementInM = Math.Max(dbhIncrementInM, 0.0);
+            dbhIncrementInM = MathF.Max(dbhIncrementInM, 0.0F);
 
             // update state variables
-            this.Dbh[treeIndex] += 100.0F * (float)dbhIncrementInM; // convert from [m] to [cm]
-            this.DbhDelta[treeIndex] = 100.0F * (float)dbhIncrementInM; // save for next year's growth
-            this.Height[treeIndex] += (float)(dbhIncrementInM * hdRatioNewGrowth);
+            this.Dbh[treeIndex] += 100.0F * dbhIncrementInM; // convert from [m] to [cm]
+            this.DbhDelta[treeIndex] = 100.0F * dbhIncrementInM; // save for next year's growth
+            this.Height[treeIndex] += dbhIncrementInM * hdRatioNewGrowth;
 
             // update state of LIP stamp and opacity
             this.Stamp[treeIndex] = Species.GetStamp(this.Dbh[treeIndex], this.Height[treeIndex]); // get new stamp for updated dimensions

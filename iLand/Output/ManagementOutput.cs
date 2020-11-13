@@ -38,7 +38,7 @@ namespace iLand.Output
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics stat = ruSpecies.StatisticsManagement;
-                    if (stat.TreesPerHectare == 0)
+                    if (stat.TreesPerHectare[^1] == 0)
                     {
                         continue;
                     }

@@ -206,24 +206,24 @@ namespace iLand.Test
             ModelTest.VerifyMalcolmKnappResourceUnit(plot14);
 
             List<float> gppByYear = new List<float>();
-            List<double> nppByYear = new List<double>();
-            List<double> volumeByYear = new List<double>();
+            List<float> nppByYear = new List<float>();
+            List<float> volumeByYear = new List<float>();
             for (int year = 0; year < 28; ++year)
             {
                 plot14.RunYear();
 
                 Assert.IsTrue(plot14.Landscape.ResourceUnits.Count == 1);
                 float gpp = 0.0F;
-                double npp = 0.0;
+                float npp = 0.0F;
                 foreach (ResourceUnitTreeSpecies treeSpecies in plot14.Landscape.ResourceUnits[0].Trees.SpeciesAvailableOnResourceUnit)
                 {
                     gpp += treeSpecies.BiomassGrowth.AnnualGpp;
-                    npp += treeSpecies.Statistics.Npp;
+                    npp += treeSpecies.Statistics.Npp[^1];
                 }
                 gppByYear.Add(gpp);
                 nppByYear.Add(npp);
 
-                double volume = 0.0;
+                float volume = 0.0F;
                 foreach (Trees treesOfSpecies in plot14.Landscape.ResourceUnits[0].Trees.TreesBySpeciesID.Values)
                 {
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)

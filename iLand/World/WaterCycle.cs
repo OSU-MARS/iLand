@@ -149,7 +149,7 @@ namespace iLand.World
             const float groundVegetationCC = 0.02F;
             foreach (ResourceUnitTreeSpecies ruSpecies in this.mRU.Trees.SpeciesAvailableOnResourceUnit) 
             {
-                float lai = ruSpecies.Statistics.LeafAreaIndex;
+                float lai = ruSpecies.Statistics.LeafAreaIndex[^2]; // use previous year's LAI as this year's hasn't yet been computed
                 if (ruSpecies.Species.IsConiferous)
                 {
                     mLaiNeedle += lai;

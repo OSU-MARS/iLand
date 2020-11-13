@@ -164,7 +164,7 @@ namespace iLand.Tree
                 ruSpecies.StatisticsManagement.OnEndYear(); // stats of removed trees
                 ruSpecies.UpdateGwl(); // get sum of dead trees (died + removed)
                 ruSpecies.Statistics.OnEndYear(); // calculate the living (and add removed volume to gwl)
-                this.Statistics.Add(ruSpecies.Statistics);
+                this.Statistics.AddCurrentYears(ruSpecies.Statistics);
             }
             this.Statistics.OnEndYear(); // aggregate on RU level
         }
@@ -177,12 +177,13 @@ namespace iLand.Tree
             this.TotalLeafArea = 0.0F;
 
             // clear statistics global and per species...
-            this.Statistics.Zero();
             foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
             {
-                ruSpecies.StatisticsDead.Zero();
-                ruSpecies.StatisticsManagement.Zero();
+                ruSpecies.Statistics.OnStartYear();
+                ruSpecies.StatisticsDead.OnStartYear();
+                ruSpecies.StatisticsManagement.OnStartYear();
             }
+            this.Statistics.OnStartYear();
         }
 
         // sets the flag that indicates that the resource unit contains dead trees
@@ -310,14 +311,14 @@ namespace iLand.Tree
             }
 
             // clear statistics (ru-level and ru-species level)
-            this.Statistics.Zero();
-            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
-            {
-                ruSpecies.Statistics.Zero();
-                ruSpecies.StatisticsDead.Zero();
-                ruSpecies.StatisticsManagement.Zero();
-                ruSpecies.SaplingStats.ClearStatistics();
-            }
+            //this.Statistics.Zero();
+            //foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
+            //{
+            //    ruSpecies.Statistics.Zero();
+            //    ruSpecies.StatisticsDead.Zero();
+            //    ruSpecies.StatisticsManagement.Zero();
+            //    ruSpecies.SaplingStats.ClearStatistics();
+            //}
 
             // add all trees to the statistics objects of the species
             foreach (Trees treesOfSpecies in this.TreesBySpeciesID.Values)
@@ -335,10 +336,10 @@ namespace iLand.Tree
                 ruSpecies.SaplingStats.AverageAgeAndHeights();
                 ruSpecies.Statistics.Add(ruSpecies.SaplingStats);
                 ruSpecies.Statistics.OnEndYear();
-                this.Statistics.Add(ruSpecies.Statistics);
+                this.Statistics.AddCurrentYears(ruSpecies.Statistics);
             }
             this.Statistics.OnEndYear();
-            this.AverageAging(this.Statistics.LeafAreaIndex, this.ru.AreaInLandscape);
+            this.AverageAging(this.Statistics.LeafAreaIndex[^1], this.ru.AreaInLandscape);
         }
     }
 }

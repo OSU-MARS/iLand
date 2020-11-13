@@ -20,7 +20,7 @@ namespace iLand.Tree
         public Establishment Establishment { get; private set; } // establishment submodel
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
         public float LaiFraction { get; private set; }
-        public double RemovedStemVolume { get; private set; } // sum of volume with was remvoved because of death/management (m3/ha)
+        public float RemovedStemVolume { get; private set; } // sum of volume with was remvoved because of death/management (m3/ha)
         public ResourceUnitTreeSpeciesResponse Response { get; private set; }
         public ResourceUnit RU { get; private set; } // return pointer to resource unit
         public SaplingProperties SaplingStats { get; private set; } // statistics for the sapling sub module
@@ -41,7 +41,7 @@ namespace iLand.Tree
             ResourceUnitTreeSpeciesResponse speciesResponse = new ResourceUnitTreeSpeciesResponse(ru, this); // requires this.Species be set
             this.BiomassGrowth = new ResourceUnitTreeSpeciesGrowth(speciesResponse);
             this.Establishment = new Establishment(ru.Climate, this); // requires this.Species and this.RU be set
-            this.RemovedStemVolume = 0.0;
+            this.RemovedStemVolume = 0.0F;
             this.Response = speciesResponse;
             this.SaplingStats = new SaplingProperties();
             this.Statistics = new ResourceUnitTreeStatistics(this);
@@ -93,7 +93,7 @@ namespace iLand.Tree
             // removed growth is the running sum of all removed
             // tree volume. the current "GWL" therefore is current volume (standing) + mRemovedGrowth.
             // important: statisticsDead() and statisticsMgmt() need to calculate() before -> volume() is already scaled to ha
-            this.RemovedStemVolume += this.StatisticsDead.StemVolume + this.StatisticsManagement.StemVolume;
+            this.RemovedStemVolume += this.StatisticsDead.StemVolume[^1] + this.StatisticsManagement.StemVolume[^1];
         }
     }
 }

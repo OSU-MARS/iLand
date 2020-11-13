@@ -636,7 +636,7 @@ namespace iLand.World
                 // note: LAIFactors are only 1 if sum of LAI is > 1.0 (see WaterCycle)
                 for (int ruSpeciesIndex = 0; ruSpeciesIndex < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++ruSpeciesIndex)
                 {
-                    float speciesLeafAreaFraction = this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex].Statistics.LeafAreaIndex / allSpeciesLeafAreaIndex;
+                    float speciesLeafAreaFraction = this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex].Statistics.LeafAreaIndex[^2] / allSpeciesLeafAreaIndex; // use previous year's LAI as this year's hasn't yet been computed
                     if (speciesLeafAreaFraction > 1.000001F) // allow numerical error
                     {
                         ResourceUnitTreeSpecies ruSpecies = this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex];
@@ -677,17 +677,17 @@ namespace iLand.World
             {
                 Debug.Assert(this.Snags != null);
 
-                this.CarbonCycle.Npp = this.Trees.Statistics.Npp * Constant.BiomassCFraction;
-                this.CarbonCycle.Npp += this.Trees.Statistics.NppSaplings * Constant.BiomassCFraction;
+                this.CarbonCycle.Npp = this.Trees.Statistics.Npp[^1] * Constant.BiomassCFraction;
+                this.CarbonCycle.Npp += this.Trees.Statistics.NppSaplings[^1] * Constant.BiomassCFraction;
 
-                double area_factor = this.AreaInLandscape / Constant.RUArea; //conversion factor
-                double to_atm = this.Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha
-                to_atm += this.Soil.FluxToAtmosphere.C * Constant.RUArea / 10.0; // soil: t/ha * 0.0001 ha/m2 * 1000 kg/ton = 0.1 kg/m2
+                float area_factor = this.AreaInLandscape / Constant.RUArea; //conversion factor
+                float to_atm = this.Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha
+                to_atm += 0.1F * this.Soil.FluxToAtmosphere.C * Constant.RUArea; // soil: t/ha * 0.0001 ha/m2 * 1000 kg/ton = 0.1 kg/m2
                 this.CarbonCycle.CarbonToAtmosphere = to_atm;
 
-                double to_dist = this.Snags.FluxToDisturbance.C / area_factor;
-                to_dist += this.Soil.FluxToDisturbance.C * Constant.RUArea / 10.0;
-                double to_harvest = this.Snags.FluxToExtern.C / area_factor;
+                float to_dist = this.Snags.FluxToDisturbance.C / area_factor;
+                to_dist += 0.1F * this.Soil.FluxToDisturbance.C * Constant.RUArea;
+                float to_harvest = this.Snags.FluxToExtern.C / area_factor;
 
                 this.CarbonCycle.Nep = this.CarbonCycle.Npp - to_atm - to_dist - to_harvest; // kgC/ha
 

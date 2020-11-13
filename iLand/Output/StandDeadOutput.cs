@@ -35,24 +35,24 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
-                foreach (ResourceUnitTreeSpecies rus in ru.Trees.SpeciesAvailableOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics stat = rus.StatisticsDead;
-                    if (stat.TreesPerHectare == 0.0)
+                    ResourceUnitTreeStatistics stat = ruSpecies.StatisticsDead;
+                    if (stat.TreesPerHectare[^1] == 0.0)
                     {
                         continue;
                     }
                     insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
-                    insertRow.Parameters[3].Value = rus.Species.ID; // keys
-                    insertRow.Parameters[4].Value = stat.TreesPerHectare;
-                    insertRow.Parameters[5].Value = stat.AverageDbh;
-                    insertRow.Parameters[6].Value = stat.AverageHeight;
-                    insertRow.Parameters[7].Value = stat.StemVolume;
-                    insertRow.Parameters[8].Value = stat.BasalArea;
-                    insertRow.Parameters[9].Value = stat.Npp;
-                    insertRow.Parameters[10].Value = stat.NppAbove;
+                    insertRow.Parameters[3].Value = ruSpecies.Species.ID;
+                    insertRow.Parameters[4].Value = stat.TreesPerHectare[^1];
+                    insertRow.Parameters[5].Value = stat.AverageDbh[^1];
+                    insertRow.Parameters[6].Value = stat.AverageHeight[^1];
+                    insertRow.Parameters[7].Value = stat.StemVolume[^1];
+                    insertRow.Parameters[8].Value = stat.BasalArea[^1];
+                    insertRow.Parameters[9].Value = stat.Npp[^1];
+                    insertRow.Parameters[10].Value = stat.NppAbove[^1];
                     insertRow.ExecuteNonQuery();
                 }
             }
