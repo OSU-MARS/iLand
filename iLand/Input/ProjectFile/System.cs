@@ -1,13 +1,11 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class System : XmlSerializable
     {
-        public Paths Path { get; private set; }
-        public Database Database { get; private set; }
-        public Logging Logging { get; private set; }
-        public SystemSettings Settings { get; private set; }
+        public Paths Paths { get; init; }
 
         // not currently supported
         //<javascript>
@@ -16,10 +14,7 @@ namespace iLand.Input.ProjectFile
 
         public System(string? defaultHomePath)
         {
-            this.Path = new Paths(defaultHomePath);
-            this.Database = new Database();
-            this.Logging = new Logging();
-            this.Settings = new SystemSettings();
+            this.Paths = new Paths(defaultHomePath);
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -29,25 +24,13 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("system"))
+            if (String.Equals(reader.Name, "system", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("path"))
+            else if (String.Equals(reader.Name, "paths", StringComparison.Ordinal))
             {
-                this.Path.ReadXml(reader);
-            }
-            else if (reader.IsStartElement("database"))
-            {
-                this.Database.ReadXml(reader);
-            }
-            else if (reader.IsStartElement("logging"))
-            {
-                this.Logging.ReadXml(reader);
-            }
-            else if (reader.IsStartElement("settings"))
-            {
-                this.Settings.ReadXml(reader);
+                this.Paths.ReadXml(reader);
             }
             else
             {

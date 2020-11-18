@@ -12,18 +12,18 @@ namespace iLand.Test
         {
             Grid<float> grid = new Grid<float>();
             grid.Setup(Constant.RUSize / cellSize, Constant.RUSize / cellSize, cellSize);
-            for (int xIndex = 0; xIndex < grid.CellsX; xIndex++)
+            for (int xIndex = 0; xIndex < grid.SizeX; xIndex++)
             {
-                for (int yIndex = 0; yIndex < grid.CellsY; yIndex++)
+                for (int yIndex = 0; yIndex < grid.SizeY; yIndex++)
                 {
                     grid[xIndex, yIndex] += xIndex + yIndex; // include initialization to 0.0F in test coverage
                 }
             }
 
             float cellArea = cellSize * cellSize;
-            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
                 {
                     grid[xIndex, yIndex] /= cellArea;
                 }

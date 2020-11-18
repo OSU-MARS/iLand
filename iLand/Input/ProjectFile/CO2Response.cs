@@ -1,13 +1,14 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class CO2Response : XmlSerializable
     {
-        public float P0 { get; private set; }
         public float BaseConcentration { get; private set; }
-        public float CompensationPoint { get; private set; }
         public float Beta0 { get; private set; }
+        public float CompensationPoint { get; private set; }
+        public float P0 { get; private set; }
 
         public CO2Response()
         {
@@ -25,15 +26,15 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("CO2Response"))
+            if (String.Equals(reader.Name, "co2response", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("p0"))
+            else if (String.Equals(reader.Name, "p0", StringComparison.Ordinal))
             {
                 this.P0 = reader.ReadElementContentAsFloat();
             }
-            else if (reader.IsStartElement("baseConcentration"))
+            else if (String.Equals(reader.Name, "baseConcentration", StringComparison.Ordinal))
             {
                 this.BaseConcentration = reader.ReadElementContentAsFloat();
                 if ((this.BaseConcentration < 0.0F) || (this.BaseConcentration > 1E6F))
@@ -41,7 +42,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Base CO₂ concentration is negative or greater than 100%.");
                 }
             }
-            else if (reader.IsStartElement("compensationPoint"))
+            else if (String.Equals(reader.Name, "compensationPoint", StringComparison.Ordinal))
             {
                 this.CompensationPoint = reader.ReadElementContentAsFloat();
                 if ((this.CompensationPoint < 0.0F) || (this.CompensationPoint > 1E6F))
@@ -49,7 +50,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("CO₂ compensation point is negative or greater than 100%.");
                 }
             }
-            else if (reader.IsStartElement("beta0"))
+            else if (String.Equals(reader.Name, "beta0", StringComparison.Ordinal))
             {
                 this.Beta0 = reader.ReadElementContentAsFloat();
                 if (this.Beta0 < 0.0F)

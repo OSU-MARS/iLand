@@ -79,7 +79,7 @@ namespace iLand.Output
             string gridFile = Path.Combine(Path.GetDirectoryName(fi.FullName), Path.GetFileNameWithoutExtension(fi.FullName) + ".asc");
 
             Grid<ResourceUnit> ruGrid = model.Landscape.ResourceUnitGrid;
-            Grid<double> ruIndexGrid = new Grid<double>(ruGrid.CellsX, ruGrid.CellsY, ruGrid.CellSize);
+            Grid<double> ruIndexGrid = new Grid<double>(ruGrid.SizeX, ruGrid.SizeY, ruGrid.CellSize);
             ruIndexGrid.Setup(model.Landscape.ResourceUnitGrid.PhysicalExtent, model.Landscape.ResourceUnitGrid.CellSize);
             for (int index = 0; index < ruGrid.Count; ++index)
             {
@@ -125,13 +125,13 @@ namespace iLand.Output
                 // setup link between resource unit index and index grid:
                 // store for each resource unit *in the snapshot database* the corresponding
                 // resource unit index of the *current* simulation.
-                PointF to = model.Landscape.Environment.GisGrid.WorldToModel(grid.Origin);
+                PointF to = model.Landscape.Environment.GisGrid.GisToModel(grid.GisOrigin);
                 if ((to.X % Constant.RUSize) != 0.0 || (to.Y % Constant.RUSize) != 0.0)
                 {
-                    PointF world_offset = model.Landscape.Environment.GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
+                    PointF world_offset = model.Landscape.Environment.GisGrid.ModelToGis(new PointF(0.0F, 0.0F));
                     throw new NotSupportedException(String.Format("Loading of the snapshot '{0}' failed: The offset from the current location of the project ({3}/{4}) " +
                                              "is not a multiple of the resource unit size (100m) relative to grid of the snapshot (origin-x: {1}, origin-y: {2}).", snapshotDatabaseFilePath,
-                                     grid.Origin.X, grid.Origin.Y, world_offset.X, world_offset.Y));
+                                     grid.GisOrigin.X, grid.GisOrigin.Y, world_offset.X, world_offset.Y));
                 }
 
                 Grid<ResourceUnit> ruGrid = model.Landscape.ResourceUnitGrid;
@@ -232,7 +232,7 @@ namespace iLand.Output
                 insertTree.Parameters.Add(":npp", SqliteType.Real);
                 insertTree.Parameters.Add(":si", SqliteType.Real);
 
-                PointF offset = model.Landscape.Environment.GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
+                PointF offset = model.Landscape.Environment.GisGrid.ModelToGis(new PointF(0.0F, 0.0F));
                 List<MutableTuple<Trees, List<int>>> livingTreesInStand = model.Landscape.StandGrid.GetLivingTreesInStand(standID);
                 for (int speciesIndex = 0; speciesIndex < livingTreesInStand.Count; ++speciesIndex)
                 {
@@ -280,7 +280,7 @@ namespace iLand.Output
                 insertSapling.Parameters.Add("stress_years", SqliteType.Integer);
                 insertSapling.Parameters.Add("flags", SqliteType.Integer);
 
-                PointF offset = model.Landscape.Environment.GisGrid.ModelToWorld(new PointF(0.0F, 0.0F));
+                PointF offset = model.Landscape.Environment.GisGrid.ModelToGis(new PointF(0.0F, 0.0F));
                 SaplingCellRunner saplingRunner = new SaplingCellRunner(model.Landscape, standID);
                 for (SaplingCell saplingCell = saplingRunner.MoveNext(); saplingCell != null; saplingCell = saplingRunner.MoveNext())
                 {
@@ -328,7 +328,7 @@ namespace iLand.Output
             {
                 ++treesAdded;
 
-                PointF treeLocation = model.Landscape.Environment.GisGrid.WorldToModel(new PointF(treeReader.GetInt32(2), treeReader.GetInt32(3)));
+                PointF treeLocation = model.Landscape.Environment.GisGrid.GisToModel(new PointF(treeReader.GetInt32(2), treeReader.GetInt32(3)));
                 if (!extent.Contains(treeLocation))
                 {
                     continue;
@@ -378,7 +378,7 @@ namespace iLand.Output
                 using SqliteDataReader saplingReader = saplingQuery.ExecuteReader();
                 while (saplingReader.Read())
                 {
-                    PointF coord = model.Landscape.Environment.GisGrid.WorldToModel(new PointF(saplingReader.GetInt32(0), saplingReader.GetInt32(1)));
+                    PointF coord = model.Landscape.Environment.GisGrid.GisToModel(new PointF(saplingReader.GetInt32(0), saplingReader.GetInt32(1)));
                     if (!extent.Contains(coord))
                     {
                         continue;
@@ -716,9 +716,9 @@ namespace iLand.Output
                 snagInsert.Parameters[23].Value = snags.TimeSinceDeathByClass[0];
                 snagInsert.Parameters[24].Value = snags.TimeSinceDeathByClass[21];
                 snagInsert.Parameters[25].Value = snags.TimeSinceDeathByClass[2];
-                snagInsert.Parameters[26].Value = snags.DecompositionRateByClass[0];
-                snagInsert.Parameters[27].Value = snags.DecompositionRateByClass[1];
-                snagInsert.Parameters[28].Value = snags.DecompositionRateByClass[2];
+                snagInsert.Parameters[26].Value = snags.StemDecompositionRateByClass[0];
+                snagInsert.Parameters[27].Value = snags.StemDecompositionRateByClass[1];
+                snagInsert.Parameters[28].Value = snags.StemDecompositionRateByClass[2];
                 snagInsert.Parameters[29].Value = snags.HalfLifeByClass[0];
                 snagInsert.Parameters[30].Value = snags.HalfLifeByClass[30];
                 snagInsert.Parameters[31].Value = snags.HalfLifeByClass[2];
@@ -790,9 +790,9 @@ namespace iLand.Output
                 snags.TimeSinceDeathByClass[0] = snagReader.GetFloat(columnIndex++);
                 snags.TimeSinceDeathByClass[1] = snagReader.GetFloat(columnIndex++);
                 snags.TimeSinceDeathByClass[2] = snagReader.GetFloat(columnIndex++);
-                snags.DecompositionRateByClass[0] = snagReader.GetFloat(columnIndex++);
-                snags.DecompositionRateByClass[1] = snagReader.GetFloat(columnIndex++);
-                snags.DecompositionRateByClass[2] = snagReader.GetFloat(columnIndex++);
+                snags.StemDecompositionRateByClass[0] = snagReader.GetFloat(columnIndex++);
+                snags.StemDecompositionRateByClass[1] = snagReader.GetFloat(columnIndex++);
+                snags.StemDecompositionRateByClass[2] = snagReader.GetFloat(columnIndex++);
                 snags.HalfLifeByClass[0] = snagReader.GetFloat(columnIndex++);
                 snags.HalfLifeByClass[1] = snagReader.GetFloat(columnIndex++);
                 snags.HalfLifeByClass[2] = snagReader.GetFloat(columnIndex++);

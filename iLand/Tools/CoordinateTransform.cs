@@ -4,8 +4,6 @@ namespace iLand.Tools
 {
     internal class CoordinateTransform
     {
-        private float rotationInRadians;
-
         public float SinRotate { get; set; }
         public float CosRotate { get; set; }
         public float SinRotateReverse { get; set; }
@@ -16,19 +14,20 @@ namespace iLand.Tools
 
         public CoordinateTransform()
         {
-            this.SetupTransformation(0.0F, 0.0F, 0.0F, 0.0F);
+            this.Setup(0.0F, 0.0F, 0.0F, 0.0F);
         }
 
-        public void SetupTransformation(float offsetX, float offsetY, float offsetZ, float rotationInDegrees)
+        // xyRotation: rotation about z axis 
+        public void Setup(float offsetX, float offsetY, float offsetZ, float xyRotationInDegrees)
         {
             this.OffsetX = offsetX;
             this.OffsetY = offsetY;
             this.OffsetZ = offsetZ;
-            this.rotationInRadians = Maths.ToRadians(rotationInDegrees);
-            this.SinRotate = MathF.Sin(rotationInRadians);
-            this.CosRotate = MathF.Cos(rotationInRadians);
-            this.SinRotateReverse = MathF.Sin(-rotationInRadians);
-            this.CosRotateReverse = MathF.Cos(-rotationInRadians);
+            float xyRotationInRadians = Maths.ToRadians(xyRotationInDegrees);
+            this.SinRotate = MathF.Sin(xyRotationInRadians);
+            this.CosRotate = MathF.Cos(xyRotationInRadians);
+            this.SinRotateReverse = MathF.Sin(-xyRotationInRadians);
+            this.CosRotateReverse = MathF.Cos(-xyRotationInRadians);
         }
     }
 }

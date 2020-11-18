@@ -1,25 +1,29 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class Species : XmlSerializable
     {
-        public string? Source { get; private set; }
+        public string? DatabaseFile { get; private set; }
+        public string? DatabaseTable { get; private set; }
         public string ReaderStampFile { get; private set; }
-        public NitrogenResponseClasses NitrogenResponseClasses { get; private set; }
-        public CO2Response CO2Response { get; private set; }
-        public LightResponse LightResponse { get; private set; }
-        public List<PhenologyType> Phenology { get; private set; }
+
+        public NitrogenResponseClasses NitrogenResponseClasses { get; init; }
+        public CO2Response CO2Response { get; init; }
+        public LightResponse LightResponse { get; init; }
+        public List<PhenologyType> Phenology { get; init; }
 
         public Species()
         {
+            this.DatabaseFile = null;
+            this.DatabaseTable = null;
+            this.ReaderStampFile = "readerstamp.bin";
+
             this.CO2Response = new CO2Response();
             this.LightResponse = new LightResponse();
             this.NitrogenResponseClasses = new NitrogenResponseClasses();
-            this.ReaderStampFile = "readerstamp.bin";
-            this.Source = null;
-
             this.Phenology = new List<PhenologyType>();
         }
 
@@ -30,31 +34,35 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes.");
 			}
 
-			if (reader.IsStartElement("species"))
+			if (String.Equals(reader.Name, "species", StringComparison.Ordinal))
 			{
 				reader.Read();
 			}
-			else if (reader.IsStartElement("source"))
+            else if (String.Equals(reader.Name, "databaseFile", StringComparison.Ordinal))
+            {
+                this.DatabaseFile = reader.ReadElementContentAsString().Trim();
+            }
+            else if (String.Equals(reader.Name, "databaseTable", StringComparison.Ordinal))
 			{
-				this.Source = reader.ReadElementContentAsString().Trim();
+				this.DatabaseTable = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("reader"))
+			else if (String.Equals(reader.Name, "reader", StringComparison.Ordinal))
 			{
 				this.ReaderStampFile = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("nitrogenResponseClasses"))
+			else if (String.Equals(reader.Name, "nitrogenResponseClasses", StringComparison.Ordinal))
 			{
 				this.NitrogenResponseClasses.ReadXml(reader);
 			}
-            else if (reader.IsStartElement("CO2Response"))
+            else if (String.Equals(reader.Name, "co2response", StringComparison.Ordinal))
             {
                 this.CO2Response.ReadXml(reader);
             }
-            else if (reader.IsStartElement("lightResponse"))
+            else if (String.Equals(reader.Name, "lightResponse", StringComparison.Ordinal))
             {
                 this.LightResponse.ReadXml(reader);
             }
-            else if (reader.IsStartElement("phenology"))
+            else if (String.Equals(reader.Name, "phenology", StringComparison.Ordinal))
             {
                 XmlReader phenologyReader = reader.ReadSubtree();
                 phenologyReader.MoveToContent();

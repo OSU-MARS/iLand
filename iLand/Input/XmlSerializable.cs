@@ -14,17 +14,27 @@ namespace iLand.Input
 
         public void ReadXml(XmlReader reader)
         {
-            XmlReader elementReader = reader.ReadSubtree();
-            elementReader.MoveToContent();
-            while (elementReader.EOF == false)
+            if (reader.IsEmptyElement)
             {
-                if (elementReader.IsStartElement())
+                // skip subtree overhead in this case
+                // The single call to XmlReader.Read() which ReadStartElement() makes on an empty element doesn't advance the parent reader. The lightest
+                // weight option for handling this case is simply not to instantiate a subtree reader.
+                this.ReadStartElement(reader);
+            }
+            else
+            {
+                using XmlReader elementReader = reader.ReadSubtree();
+                elementReader.Read();
+                while (elementReader.EOF == false)
                 {
-                    this.ReadStartElement(elementReader);
-                }
-                else
-                {
-                    elementReader.Read();
+                    if (elementReader.IsStartElement())
+                    {
+                        this.ReadStartElement(elementReader);
+                    }
+                    else
+                    {
+                        elementReader.Read();
+                    }
                 }
             }
         }

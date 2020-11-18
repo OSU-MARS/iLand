@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -20,19 +21,19 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("landscape_removed"))
+            if (String.Equals(reader.Name, "landscapeRemoved", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("enabled"))
+            else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
             {
                 this.Enabled = reader.ReadElementContentAsBoolean();
             }
-            else if (reader.IsStartElement("includeHarvest"))
+            else if (String.Equals(reader.Name, "includeHarvest", StringComparison.Ordinal))
             {
                 this.IncludeHarvest = reader.ReadElementContentAsBoolean();
             }
-            else if (reader.IsStartElement("includeNatural"))
+            else if (String.Equals(reader.Name, "includeNatural", StringComparison.Ordinal))
             {
                 this.IncludeNatural = reader.ReadElementContentAsBoolean();
             }

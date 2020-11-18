@@ -77,18 +77,18 @@ namespace iLand.Tree
                 // woody parts: stem, branchse and coarse roots
                 float woodyBiomass = species.GetBiomassWoody(averageDbh) + species.GetBiomassBranch(averageDbh) + species.GetBiomassRoot(averageDbh);
                 float foliage = species.GetBiomassFoliage(averageDbh);
-                float fineroot = foliage * species.FinerootFoliageRatio;
+                float fineRoot = foliage * species.FinerootFoliageRatio;
 
-                CarbonLiving.AddBiomass(woodyBiomass * nSaplings, species.CNRatioWood);
-                CarbonLiving.AddBiomass(foliage * nSaplings, species.CNRatioFoliage);
-                CarbonLiving.AddBiomass(fineroot * nSaplings, species.CNRatioFineRoot);
+                this.CarbonLiving.AddBiomass(woodyBiomass * nSaplings, species.CNRatioWood);
+                this.CarbonLiving.AddBiomass(foliage * nSaplings, species.CNRatioFoliage);
+                this.CarbonLiving.AddBiomass(fineRoot * nSaplings, species.CNRatioFineRoot);
 
                 Debug.Assert(Single.IsNaN(this.CarbonLiving.C) == false, "carbon NaN in calculate (living trees).");
 
                 // turnover
                 if (ru.Snags != null)
                 {
-                    ru.Snags.AddTurnoverLitter(species, foliage * species.TurnoverLeaf, fineroot * species.TurnoverRoot);
+                    ru.Snags.AddTurnoverLitter(species, foliage * species.TurnoverLeaf, fineRoot * species.TurnoverFineRoot);
                 }
                 // calculate the "mortality from competition", i.e. carbon that stems from reduction of stem numbers
                 // from Reinekes formula.
@@ -101,7 +101,7 @@ namespace iLand.Tree
                     {
                         deadWood.AddBiomass(woodyBiomass * (nPreviousSaplings - nSaplings), species.CNRatioWood);
                         deadFine.AddBiomass(foliage * (nPreviousSaplings - nSaplings), species.CNRatioFoliage);
-                        deadFine.AddBiomass(fineroot * (nPreviousSaplings - nSaplings), species.CNRatioFineRoot);
+                        deadFine.AddBiomass(fineRoot * (nPreviousSaplings - nSaplings), species.CNRatioFineRoot);
                         Debug.Assert(Double.IsNaN(deadFine.C) == false, "Carbon NaN in self thinning calculation.");
                     }
                 }

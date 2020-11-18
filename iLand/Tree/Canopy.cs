@@ -12,7 +12,7 @@ namespace iLand.Tree
     public class Canopy
     {
         // Penman-Monteith parameters
-        private readonly float mAirDensity; // density of air [kg / m3]
+        private readonly float mAirDensity; // density of air, kg/m³
 
         private float mLaiNeedle; // leaf area index of coniferous species
         private float mLaiBroadleaved; // leaf area index of broadlevaed species
@@ -21,7 +21,7 @@ namespace iLand.Tree
 
         // parameters for interception
         public float NeedleStorageFactor { get; set; } // factor for calculating water storage capacity for intercepted water for conifers
-        public float DecidousStorageFactor { get; set; } // the same for broadleaved
+        public float BroadleafStorageFactor { get; set; } // the same for broadleaved
 
         public float EvaporationFromCanopy { get; private set; } // evaporation from canopy (mm)
         public float Interception { get; private set; } // mm water that is intercepted by the crown
@@ -66,7 +66,7 @@ namespace iLand.Tree
                 float maxBroadleafFlow = 0.9F * MathF.Pow(1.22F - MathF.Exp(-0.055F * preciptitationInMM), 0.35F);
                 maxInterceptionInMM += preciptitationInMM * (1.0F - maxBroadleafFlow) * mLaiBroadleaved / mLai;
                 // (2) calculate maximum storage potential based on the current LAI
-                maxStoragePotential += this.DecidousStorageFactor * mLaiBroadleaved / mLai;
+                maxStoragePotential += this.BroadleafStorageFactor * mLaiBroadleaved / mLai;
             }
 
             // the extent to which the maximum stoarge capacity is exploited, depends on LAI:
@@ -111,15 +111,14 @@ namespace iLand.Tree
             // Landsberg original: float e20 = 2.2;  //rate of change of saturated VP with T at 20C
             const float vpdToSaturationDeficit = 0.000622F; //convert VPD to saturation deficit = 18/29/1000 = molecular weight of H2O/molecular weight of air
             const float latentHeatOfVaporization = 2460000.0F; // Latent heat of vaporization. Energy required per unit mass of water vaporized [J kg-1]
-
-            float boudndaryLayerConductance = projectFile.Model.Settings.BoundaryLayerConductance; // boundary layer conductance
+            float boundaryLayerConductance = projectFile.Model.Ecosystem.BoundaryLayerConductance; // boundary layer conductance
 
             // canopy conductance.
             // The species traits are weighted by LAI on the RU.
             // maximum canopy conductance: see getStandValues()
             // current response: see calculateSoilAtmosphereResponse(). This is basically a weighted average of min(water_response, vpd_response) for each species
-            float gC = maxCanopyConductance * combinedResponse;
-            float defTerm = mAirDensity * latentHeatOfVaporization * (vpdInMillibar * vpdToSaturationDeficit) * boudndaryLayerConductance;
+            float gC = this.maxCanopyConductance * combinedResponse;
+            float defTerm = this.mAirDensity * latentHeatOfVaporization * (vpdInMillibar * vpdToSaturationDeficit) * boundaryLayerConductance;
 
             //  with temperature-dependent  slope of  vapor pressure saturation curve
             // (following  Allen et al. (1998),  http://www.fao.org/docrep/x0490e/x0490e07.htm#atmospheric%20parameters)
@@ -130,8 +129,7 @@ namespace iLand.Tree
             // keeps yields +- same results for summer, but slightly lower values in winter (2011/03/16)
             const float svp_slope = 2.2F;
 
-            float div = 1.0F + svp_slope + boudndaryLayerConductance / gC;
-            float evapotranspiration = (svp_slope * net_rad + defTerm) / div;
+            float evapotranspiration = (svp_slope * net_rad + defTerm) / (1.0F + svp_slope + boundaryLayerConductance / gC);
             float canopyTranspiration = evapotranspiration / latentHeatOfVaporization * dayLengthInSeconds;
 
             // calculate reference evapotranspiration

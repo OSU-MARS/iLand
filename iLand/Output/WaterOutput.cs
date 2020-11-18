@@ -2,17 +2,18 @@
 using iLand.Tools;
 using iLand.World;
 using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 
 namespace iLand.Output
 {
     public class WaterOutput : Output
     {
-        private readonly Expression mFilter; // condition for landscape-level output
+        private readonly Expression mYearFilter; // condition for landscape-level output
         private readonly Expression mResourceUnitFilter; // condition for resource-unit-level output
 
         public WaterOutput()
         {
-            this.mFilter = new Expression();
+            this.mYearFilter = new Expression();
             this.mResourceUnitFilter = new Expression();
 
             this.Name = "Water output";
@@ -27,28 +28,22 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
-            this.Columns.Add(new SqlColumn("stocked_area", "area (ha/ha) which is stocked (covered by crowns, absorbing radiation)", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("stockable_area", "area (ha/ha) which is stockable (and within the project area)", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("precipitation_mm", "Annual precipitation sum (mm)", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("et_mm", "Evapotranspiration (mm)", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("excess_mm", "annual sum of water loss due to lateral outflow/groundwater flow (mm)", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("snowcover_days", "days with snowcover >0mm", OutputDatatype.Integer));
-            this.Columns.Add(new SqlColumn("total_radiation", "total incoming radiation over the year (MJ/m2), sum of data in climate input)", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("radiation_snowcover", "sum of radiation input (MJ/m2) for days with snow cover", OutputDatatype.Integer));
+            this.Columns.Add(new SqlColumn("stocked_area", "area (ha/ha) which is stocked (covered by crowns, absorbing radiation)", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("stockable_area", "area (ha/ha) which is stockable (and within the project area)", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("precipitation_mm", "Annual precipitation sum (mm)", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("et_mm", "Evapotranspiration (mm)", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("excess_mm", "annual sum of water loss due to lateral outflow/groundwater flow (mm)", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("snowcover_days", "days with snowcover >0mm", SqliteType.Integer));
+            this.Columns.Add(new SqlColumn("total_radiation", "total incoming radiation over the year (MJ/m2), sum of data in climate input)", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("radiation_snowcover", "sum of radiation input (MJ/m2) for days with snow cover", SqliteType.Integer));
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             // global condition
-            if (!mFilter.IsEmpty && mFilter.Evaluate(model.CurrentYear) == 0.0)
+            if ((this.mYearFilter.IsEmpty == false) && (mYearFilter.Evaluate(model.CurrentYear) == 0.0))
             {
                 return;
-            }
-            bool logResourceUnits = true;
-            // switch off details if this is indicated in the conditionRU option
-            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Evaluate(model.CurrentYear) == 0.0)
-            {
-                logResourceUnits = false;
             }
 
             int resourceUnitCount = 0;
@@ -61,6 +56,16 @@ namespace iLand.Output
                 {
                     continue; // do not include if out of project area
                 }
+
+                bool logResourceUnits = true;
+                // switch off details if this is indicated in the conditionRU option
+                if (this.mResourceUnitFilter.IsEmpty == false)
+                {
+                    Debug.Assert(this.mResourceUnitFilter.Wrapper != null);
+                    ((ResourceUnitWrapper)this.mResourceUnitFilter.Wrapper).ResourceUnit = ru;
+                    logResourceUnits = this.mResourceUnitFilter.Evaluate(model.CurrentYear) != 0.0;
+                }
+
                 WaterCycle wc = ru.WaterCycle;
                 if (logResourceUnits)
                 {
@@ -110,8 +115,9 @@ namespace iLand.Output
         public override void Setup(Model model)
         {
             // use a condition for to control execuation for the current year
-            mFilter.SetExpression(model.Project.Output.Water.Condition);
-            mResourceUnitFilter.SetExpression(model.Project.Output.Water.ConditionRU);
+            this.mYearFilter.SetExpression(model.Project.Output.Water.Condition);
+            this.mResourceUnitFilter.SetExpression(model.Project.Output.Water.ConditionRU);
+            this.mResourceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
         }
     }
 }

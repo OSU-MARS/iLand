@@ -1,48 +1,55 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class Outputs : XmlSerializable
-    {
-		public DynamicOutput Dynamic { get; private set; }
-		public FilterOutput Tree { get; private set; }
-		public FilterOutput TreeRemoved { get; private set; }
-		public ConditionOutput Stand { get; private set; }
-		public Enablable StandDead { get; private set; }
-		public Enablable ProductionMonth { get; private set; }
-		public Enablable Management { get; private set; }
-		public ConditionOutput Sapling { get; private set; }
-		public SaplingDetailOutput SaplingDetail { get; private set; }
-		public ResourceUnitConditionOutput Carbon { get; private set; }
-		public ResourceUnitConditionOutput CarbonFlow { get; private set; }
-		public ResourceUnitConditionOutput Water { get; private set; }
-		public ConditionOutput Landscape { get; private set; }
-		public DynamicStandOutput DynamicStand { get; private set; }
-		public Enablable BarkBeetle { get; private set; }
-		public Enablable Wind { get; private set; }
-		public Enablable Fire { get; private set; }
-		public LandscapeRemovedOutput LandscapeRemoved { get; private set; }
+	{
+		public string? DatabaseFile { get; private set; }
+
+		public ResourceUnitConditionOutput Carbon { get; init; }
+		public ResourceUnitConditionOutput CarbonFlow { get; init; }
+		public DynamicStandOutput DynamicStand { get; init; }
+		public ConditionOutput Landscape { get; init; }
+		public LandscapeRemovedOutput LandscapeRemoved { get; init; }
+		public Enablable Management { get; init; }
+		public Enablable ProductionMonth { get; init; }
+		public ConditionOutput Sapling { get; init; }
+		public SaplingDetailOutput SaplingDetail { get; init; }
+		public ConditionOutput Stand { get; init; }
+		public Enablable StandDead { get; init; }
+		public FilterOutput Tree { get; init; }
+		public FilterOutput TreeRemoved { get; init; }
+		public ResourceUnitConditionOutput Water { get; init; }
+
+		public Enablable BarkBeetle { get; init; }
+		public Enablable Wind { get; init; }
+		public Enablable Fire { get; init; }
+		public Logging Logging { get; init; }
 
 		public Outputs()
         {
-			this.Dynamic = new DynamicOutput();
-			this.Tree = new FilterOutput();
-			this.TreeRemoved = new FilterOutput();
-			this.Stand = new ConditionOutput();
-			this.StandDead = new Enablable();
-			this.ProductionMonth = new Enablable();
-			this.Management = new Enablable();
-			this.Sapling = new ConditionOutput();
-			this.SaplingDetail = new SaplingDetailOutput();
+			this.DatabaseFile = null;
+
 			this.Carbon = new ResourceUnitConditionOutput();
 			this.CarbonFlow = new ResourceUnitConditionOutput();
-			this.Water = new ResourceUnitConditionOutput();
-			this.Landscape = new ConditionOutput();
 			this.DynamicStand = new DynamicStandOutput();
+			this.Landscape = new ConditionOutput();
+			this.LandscapeRemoved = new LandscapeRemovedOutput();
+			this.Management = new Enablable();
+			this.ProductionMonth = new Enablable();
+			this.Sapling = new ConditionOutput();
+			this.SaplingDetail = new SaplingDetailOutput();
+			this.Stand = new ConditionOutput();
+			this.StandDead = new Enablable();
+			this.Tree = new FilterOutput();
+			this.TreeRemoved = new FilterOutput();
+			this.Water = new ResourceUnitConditionOutput();
+
 			this.BarkBeetle = new Enablable();
 			this.Wind = new Enablable();
 			this.Fire = new Enablable();
-			this.LandscapeRemoved = new LandscapeRemovedOutput();
+			this.Logging = new Logging();
 		}
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -52,81 +59,93 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes.");
 			}
 
-			if (reader.IsStartElement("output"))
+			if (String.Equals(reader.Name, "output", StringComparison.Ordinal))
 			{
 				reader.Read();
 			}
-			else if (reader.IsStartElement("dynamic"))
+			else if (String.Equals(reader.Name, "databaseFile", StringComparison.Ordinal))
 			{
-				this.Dynamic.ReadXml(reader);
+				this.DatabaseFile = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("tree"))
+			//else if (String.Equals(reader.Name, "debugOutput", StringComparison.Ordinal))
+			//{
+			//	this.DebugOutput = reader.ReadElementContentAsBoolean();
+			//}
+			//else if (String.Equals(reader.Name, "debugOutputAutoSave", StringComparison.Ordinal))
+			//{
+			//	this.DebugOutputAutoSave = reader.ReadElementContentAsBoolean();
+			//}
+			else if (String.Equals(reader.Name, "tree", StringComparison.Ordinal))
 			{
 				this.Tree.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("treeRemoved"))
+			else if (String.Equals(reader.Name, "treeRemoved", StringComparison.Ordinal))
 			{
 				this.TreeRemoved.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("stand"))
+			else if (String.Equals(reader.Name, "stand", StringComparison.Ordinal))
 			{
 				this.Stand.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("standDead"))
+			else if (String.Equals(reader.Name, "standDead", StringComparison.Ordinal))
 			{
 				this.StandDead.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("productionMonth"))
+			else if (String.Equals(reader.Name, "productionMonth", StringComparison.Ordinal))
 			{
 				this.ProductionMonth.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("management"))
+			else if (String.Equals(reader.Name, "management", StringComparison.Ordinal))
 			{
 				this.Management.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("sapling"))
+			else if (String.Equals(reader.Name, "sapling", StringComparison.Ordinal))
 			{
 				this.Sapling.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("saplingDetail"))
+			else if (String.Equals(reader.Name, "saplingDetail", StringComparison.Ordinal))
 			{
 				this.SaplingDetail.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("carbon"))
+			else if (String.Equals(reader.Name, "carbon", StringComparison.Ordinal))
 			{
 				this.Carbon.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("carbonFlow"))
+			else if (String.Equals(reader.Name, "carbonFlow", StringComparison.Ordinal))
 			{
 				this.CarbonFlow.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("water"))
+			else if (String.Equals(reader.Name, "water", StringComparison.Ordinal))
 			{
 				this.Water.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("landscape"))
+			else if (String.Equals(reader.Name, "landscape", StringComparison.Ordinal))
 			{
 				this.Landscape.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("dynamicStand"))
+			else if (String.Equals(reader.Name, "dynamicStand", StringComparison.Ordinal))
 			{
 				this.DynamicStand.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("barkbeetle"))
+			else if (String.Equals(reader.Name, "barkbeetle", StringComparison.Ordinal))
 			{
 				this.BarkBeetle.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("wind"))
+			else if (String.Equals(reader.Name, "wind", StringComparison.Ordinal))
 			{
 				this.Wind.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("fire"))
+			else if (String.Equals(reader.Name, "fire", StringComparison.Ordinal))
 			{
 				this.Fire.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("landscape_removed"))
+			else if (String.Equals(reader.Name, "landscapeRemoved", StringComparison.Ordinal))
 			{
 				this.LandscapeRemoved.ReadXml(reader);
+			}
+			else if (String.Equals(reader.Name, "logging", StringComparison.Ordinal))
+			{
+				this.Logging.ReadXml(reader);
 			}
 			else
 			{

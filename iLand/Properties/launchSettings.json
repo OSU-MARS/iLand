@@ -2,7 +2,7 @@
   "profiles": {
     "iLand": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\PowerShell\\7-preview\\pwsh.exe",
+      "executablePath": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
       "commandLineArgs": "\"%USERPROFILE%\\source\\repos\\iLand\\UnitTests\\performanceProfile.ps1\""
     }
   }

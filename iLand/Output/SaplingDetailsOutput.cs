@@ -3,17 +3,18 @@ using iLand.Tools;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 
 namespace iLand.Output
 {
     public class SaplingDetailsOutput : Output
     {
-        private readonly Expression mFilter;
+        private readonly Expression mResourceUnitFilter;
         private float mMinDbh;
 
         public SaplingDetailsOutput()
         {
-            this.mFilter = new Expression();
+            this.mResourceUnitFilter = new Expression();
 
             this.Name = "Sapling Details Output";
             this.TableName = "saplingDetail";
@@ -25,10 +26,10 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
             this.Columns.Add(SqlColumn.CreateSpecies());
-            this.Columns.Add(new SqlColumn("n_represented", "number of trees that are represented by the cohort (Reineke function).", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("dbh", "diameter of the cohort (cm).", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("height", "height of the cohort (m).", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("age", "age of the cohort (years) ", OutputDatatype.Integer));
+            this.Columns.Add(new SqlColumn("n_represented", "number of trees that are represented by the cohort (Reineke function).", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("dbh", "diameter of the cohort (cm).", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("height", "height of the cohort (m).", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("age", "age of the cohort (years) ", SqliteType.Integer));
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
@@ -41,9 +42,11 @@ namespace iLand.Output
                 }
 
                 // exclude if a condition is specified and condition is not met
-                if (!mFilter.IsEmpty)
+                if (this.mResourceUnitFilter.IsEmpty == false)
                 {
-                    if (mFilter.Execute() == 0.0)
+                    Debug.Assert(this.mResourceUnitFilter.Wrapper != null);
+                    ((ResourceUnitWrapper)this.mResourceUnitFilter.Wrapper).ResourceUnit = ru;
+                    if (this.mResourceUnitFilter.Execute() == 0.0)
                     {
                         continue;
                     }
@@ -91,8 +94,9 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            this.mFilter.SetExpression(model.Project.Output.SaplingDetail.Condition);
-            mMinDbh = model.Project.Output.SaplingDetail.MinDbh;
+            this.mResourceUnitFilter.SetExpression(model.Project.Output.SaplingDetail.Condition);
+            this.mResourceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
+            this.mMinDbh = model.Project.Output.SaplingDetail.MinDbh;
         }
     }
 }

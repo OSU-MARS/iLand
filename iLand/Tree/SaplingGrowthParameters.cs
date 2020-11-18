@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 namespace iLand.Tree
 {
+    // http://iland.boku.ac.at/sapling+growth+and+competition
     public class SaplingGrowthParameters
     {
         public float BrowsingProbability { get; set; }

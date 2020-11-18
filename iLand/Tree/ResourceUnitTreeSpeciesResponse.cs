@@ -89,9 +89,9 @@ namespace iLand.Tree
 
             // calculate yearly responses
             WaterCycle ruWaterCycle = this.ResourceUnit.WaterCycle;
-            Phenology phenonology = this.ResourceUnit.Climate.GetPhenology(this.Species.PhenologyClass);
-            int leafOnIndex = phenonology.LeafOnStart;
-            int leafOffIndex = phenonology.LeafOnEnd;
+            Phenology phenology = this.ResourceUnit.Climate.GetPhenology(this.Species.PhenologyClass);
+            int leafOnIndex = phenology.LeafOnStart;
+            int leafOffIndex = phenology.LeafOnEnd;
 
             // nitrogen response: a yearly value based on available nitrogen
             if (this.ResourceUnit.Soil == null)

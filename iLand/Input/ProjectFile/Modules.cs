@@ -1,12 +1,13 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class Modules : XmlSerializable
 	{
-		public Fire Fire { get; private set; }
-		public Wind Wind { get; private set; }
-		public BarkBeetle BarkBeetle { get; private set; }
+		public Fire Fire { get; init; }
+		public Wind Wind { get; init; }
+		public BarkBeetle BarkBeetle { get; init; }
 
 		public Modules()
         {
@@ -22,19 +23,19 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes.");
 			}
 
-			if (reader.IsStartElement("modules"))
+			if (String.Equals(reader.Name, "modules", StringComparison.Ordinal))
 			{
 				reader.Read();
 			}
-			else if (reader.IsStartElement("fire"))
+			else if (String.Equals(reader.Name, "fire", StringComparison.Ordinal))
 			{
 				this.Fire.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("wind"))
+			else if (String.Equals(reader.Name, "wind", StringComparison.Ordinal))
 			{
 				this.Wind.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("barkbeetle"))
+			else if (String.Equals(reader.Name, "barkbeetle", StringComparison.Ordinal))
 			{
 				this.BarkBeetle.ReadXml(reader);
 			}

@@ -74,7 +74,7 @@ namespace iLand.Tree
                 // calculate the alphac (=photosynthetic efficiency) for the given month, gC/MJ radiation
                 //  this is based on a global efficiency, and modified per species
                 // maximum radiation use efficiency
-                float epsilon = projectFile.Model.Settings.Epsilon * this.SpeciesResponse.NitrogenResponseForYear * this.SpeciesResponse.CO2ResponseByMonth[month];
+                float epsilon = projectFile.Model.Ecosystem.Epsilon * this.SpeciesResponse.NitrogenResponseForYear * this.SpeciesResponse.CO2ResponseByMonth[month];
 
                 this.UtilizablePar[month] = utilizableRadiation;
                 this.MonthlyGpp[month] = utilizableRadiation * epsilon * gramsCarbonToKilogramsBiomass; // ... results in GPP of the month kg Biomass/m2 (converted from gC/m2)
@@ -93,12 +93,12 @@ namespace iLand.Tree
             // the factor f_ref: parameter that scales response values to the range 0..1 (1 for best growth conditions) (species parameter)
             float siteEnvironmentHeightDivisor = this.SpeciesResponse.Species.SaplingGrowthParameters.ReferenceRatio;
             // f_env,yr=(uapar*epsilon_eff) / (APAR * epsilon_0 * fref)
-            this.SiteEnvironmentSaplingHeightGrowthMultiplier = f_sum / (projectFile.Model.Settings.Epsilon * this.SpeciesResponse.RadiationForYear * siteEnvironmentHeightDivisor);
+            this.SiteEnvironmentSaplingHeightGrowthMultiplier = f_sum / (projectFile.Model.Ecosystem.Epsilon * this.SpeciesResponse.RadiationForYear * siteEnvironmentHeightDivisor);
             if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.0F)
             {
                 if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.5F) // error on large deviations TODO: why 1.5F instead of ~1.000001F?
                 {
-                    throw new NotSupportedException("fEnvYear > 1 for " + this.SpeciesResponse.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Settings.Epsilon + this.SpeciesResponse.RadiationForYear + siteEnvironmentHeightDivisor
+                    throw new NotSupportedException("fEnvYear > 1 for " + this.SpeciesResponse.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Ecosystem.Epsilon + this.SpeciesResponse.RadiationForYear + siteEnvironmentHeightDivisor
                              + " check calibration of the sapReferenceRatio (fref) for this species!");
                 }
                 this.SiteEnvironmentSaplingHeightGrowthMultiplier = 1.0F;
@@ -116,7 +116,7 @@ namespace iLand.Tree
             this.RootFraction = 1.0F - abovegroundFraction;
 
             // global value set?
-            float gppOverride = projectFile.Model.Parameter.GppPerYear;
+            float gppOverride = projectFile.Model.Settings.OverrideGppPerYear;
             if (gppOverride > 0.0F)
             {
                 annualRUgpp = gppOverride;

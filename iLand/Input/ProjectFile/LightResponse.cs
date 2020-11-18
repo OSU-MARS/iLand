@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -6,7 +7,7 @@ namespace iLand.Input.ProjectFile
     {
         public string? ShadeIntolerant { get; private set; }
         public string? ShadeTolerant { get; private set; }
-        public string? LriModifier { get; private set; }
+        public string? RelativeHeightLriModifier { get; private set; }
 
         public LightResponse()
         {
@@ -14,7 +15,7 @@ namespace iLand.Input.ProjectFile
             this.ShadeIntolerant = null;
             this.ShadeTolerant = null;
 
-            this.LriModifier = "1";
+            this.RelativeHeightLriModifier = "1";
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -24,21 +25,21 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("lightResponse"))
+            if (String.Equals(reader.Name, "lightResponse", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("shadeIntolerant"))
+            else if (String.Equals(reader.Name, "shadeIntolerant", StringComparison.Ordinal))
             {
                 this.ShadeIntolerant = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("shadeTolerant"))
+            else if (String.Equals(reader.Name, "shadeTolerant", StringComparison.Ordinal))
             {
                 this.ShadeTolerant = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("LRImodifier"))
+            else if (String.Equals(reader.Name, "relativeHeightLriModifier", StringComparison.Ordinal))
             {
-                this.LriModifier = reader.ReadElementContentAsString().Trim();
+                this.RelativeHeightLriModifier = reader.ReadElementContentAsString().Trim();
             }
             else
             {

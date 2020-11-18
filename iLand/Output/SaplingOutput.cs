@@ -3,16 +3,17 @@ using iLand.Tools;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 
 namespace iLand.Output
 {
     public class SaplingOutput : Output
     {
-        private readonly Expression mFilter;
+        private readonly Expression mResouceUnitFilter;
 
         public SaplingOutput()
         {
-            this.mFilter = new Expression();
+            this.mResouceUnitFilter = new Expression();
 
             this.Name = "Sapling Output";
             this.TableName = "sapling";
@@ -24,16 +25,17 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
             this.Columns.Add(SqlColumn.CreateSpecies());
-            this.Columns.Add(new SqlColumn("count_ha", "number of represented individuals per ha (tree height >1.3m).", OutputDatatype.Integer));
-            this.Columns.Add(new SqlColumn("count_small_ha", "number of represented individuals per ha (with height <=1.3m).", OutputDatatype.Integer));
-            this.Columns.Add(new SqlColumn("cohort_count_ha", "number of cohorts per ha.", OutputDatatype.Integer));
-            this.Columns.Add(new SqlColumn("height_avg_m", "arithmetic average height of the cohorts (m) ", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("age_avg", "arithmetic average age of the sapling cohorts (years)", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("count_ha", "number of represented individuals per ha (tree height >1.3m).", SqliteType.Integer));
+            this.Columns.Add(new SqlColumn("count_small_ha", "number of represented individuals per ha (with height <=1.3m).", SqliteType.Integer));
+            this.Columns.Add(new SqlColumn("cohort_count_ha", "number of cohorts per ha.", SqliteType.Integer));
+            this.Columns.Add(new SqlColumn("height_avg_m", "arithmetic average height of the cohorts (m) ", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("age_avg", "arithmetic average age of the sapling cohorts (years)", SqliteType.Real));
         }
 
         public override void Setup(Model model)
         {
-            this.mFilter.SetExpression(model.Project.Output.Sapling.Condition);
+            this.mResouceUnitFilter.SetExpression(model.Project.Output.Sapling.Condition);
+            this.mResouceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
@@ -45,9 +47,11 @@ namespace iLand.Output
                     continue; // do not include if out of project area
                 }
 
-                if (!mFilter.IsEmpty)
+                if (this.mResouceUnitFilter.IsEmpty == false)
                 {
-                    if (mFilter.Execute() == 0.0)
+                    Debug.Assert(this.mResouceUnitFilter.Wrapper != null);
+                    ((ResourceUnitWrapper)this.mResouceUnitFilter.Wrapper).ResourceUnit = ru;
+                    if (this.mResouceUnitFilter.Execute() == 0.0)
                     {
                         continue;
                     }

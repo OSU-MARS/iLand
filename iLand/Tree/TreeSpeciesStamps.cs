@@ -156,11 +156,11 @@ namespace iLand.Tree
             }
 
             // distance grid
-            if (TreeSpeciesStamps.DistanceGrid.CellsX < maxStampSize)
+            if (TreeSpeciesStamps.DistanceGrid.SizeX < maxStampSize)
             {
                 lock (TreeSpeciesStamps.DistanceGrid)
                 {
-                    if (TreeSpeciesStamps.DistanceGrid.CellsX < maxStampSize)
+                    if (TreeSpeciesStamps.DistanceGrid.SizeX < maxStampSize)
                     {
                         float lightCellSize = Constant.LightSize;
                         TreeSpeciesStamps.DistanceGrid.Setup(maxStampSize, maxStampSize, lightCellSize);

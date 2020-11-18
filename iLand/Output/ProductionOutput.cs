@@ -17,15 +17,15 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
             this.Columns.Add(SqlColumn.CreateSpecies());
-            this.Columns.Add(new SqlColumn("month", "month of year", OutputDatatype.Integer));
-            this.Columns.Add(new SqlColumn("tempResponse", "monthly average of daily respose value temperature", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("waterResponse", "monthly average of daily respose value soil water", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("vpdResponse", "monthly vapour pressure deficit respose.", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("co2Response", "monthly response value for ambient co2.", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("nitrogenResponse", "yearly respose value nitrogen", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("radiation_m2", "global radiation PAR in MJ per m2 and month", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("utilizableRadiation_m2", "utilizable PAR in MJ per m2 and month (sum of daily rad*min(respVpd,respWater,respTemp))", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("GPP_kg_m2", "GPP (without Aging) in kg Biomass/m2", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("month", "month of year", SqliteType.Integer));
+            this.Columns.Add(new SqlColumn("tempResponse", "monthly average of daily respose value temperature", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("waterResponse", "monthly average of daily respose value soil water", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("vpdResponse", "monthly vapour pressure deficit respose.", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("co2Response", "monthly response value for ambient co2.", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("nitrogenResponse", "yearly respose value nitrogen", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("radiation_m2", "global radiation PAR in MJ per m2 and month", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("utilizableRadiation_m2", "utilizable PAR in MJ per m2 and month (sum of daily rad*min(respVpd,respWater,respTemp))", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("GPP_kg_m2", "GPP (without Aging) in kg Biomass/m2", SqliteType.Real));
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

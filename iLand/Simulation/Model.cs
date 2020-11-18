@@ -42,7 +42,7 @@ namespace iLand.Simulation
             this.ScheduledEvents = null;
 
             // random seed: if stored value is <> 0, use this as the random seed (and produce hence always an equal sequence of random numbers)
-            int? seed = this.Project.System.Settings.RandomSeed;
+            int? seed = this.Project.Model.Settings.RandomSeed;
             this.RandomGenerator.Setup(RandomGenerator.RandomGeneratorType.MersenneTwister, seed); // use the MersenneTwister as default
 
             // setup of modules
@@ -60,7 +60,7 @@ namespace iLand.Simulation
             }
             this.ruParallel = new MaybeParallel<ResourceUnit>(validResourceUnits)
             {
-                IsMultithreaded = this.Project.System.Settings.Multithreading
+                IsMultithreaded = this.Project.Model.Settings.Multithreading
             };
             // Debug.WriteLine("Multithreading enabled: " + IsMultithreaded + ", thread count: " + System.Environment.ProcessorCount);
 
@@ -90,7 +90,7 @@ namespace iLand.Simulation
                 }
             }
 
-            if (this.Project.Model.Management.Enabled)
+            if (String.IsNullOrEmpty(this.Project.Model.Management.FileName) == false)
             {
                 this.Management = new Management();
                 // string mgmtFile = xml.GetString("model.management.file");
@@ -98,15 +98,11 @@ namespace iLand.Simulation
             }
 
             // time series data
-            if (this.Project.Model.World.TimeEventsEnabled)
+            string? scheduledEventsFileName = this.Project.Model.Settings.ScheduledEventsFileName;
+            if (String.IsNullOrEmpty(scheduledEventsFileName) == false)
             {
                 this.ScheduledEvents = new ScheduledEvents();
-                string? timeEventsFileName = this.Project.Model.World.TimeEventsFile;
-                if (String.IsNullOrEmpty(timeEventsFileName))
-                {
-                    throw new XmlException("/project/model/world/timeEventsFile not found");
-                }
-                this.ScheduledEvents.LoadFromFile(this.Project, this.Project.GetFilePath(ProjectDirectory.Script, timeEventsFileName));
+                this.ScheduledEvents.LoadFromFile(this.Project, this.Project.GetFilePath(ProjectDirectory.Script, scheduledEventsFileName));
             }
 
             // TODO: is this necessary?
@@ -331,7 +327,7 @@ namespace iLand.Simulation
                     Action<int> calculateDominantHeightField = treesOfSpecies.CalculateDominantHeightField;
                     Action<int> applyLightIntensityPattern = treesOfSpecies.ApplyLightIntensityPattern;
                     Action<int> readLightInfluenceField = treesOfSpecies.ReadLightInfluenceField;
-                    if (this.Project.Model.Parameter.Torus)
+                    if (this.Project.World.Geometry.IsTorus)
                     {
                         calculateDominantHeightField = treesOfSpecies.CalculateDominantHeightFieldTorus;
                         applyLightIntensityPattern = treesOfSpecies.ApplyLightIntensityPatternTorus;

@@ -1,24 +1,26 @@
 ﻿using iLand.World;
+using System;
 using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class Grass : Enablable
     {
-		public GrassAlgorithmType Type { get; private set; }
-		public string? GrassDuration { get; private set; }
-		public float LifThreshold { get; private set; }
-		public string? GrassPotential { get; private set; }
-		public int MaxTimeLag { get; private set; }
-		public string? GrassEffect { get; private set; }
+		public GrassAlgorithm Algorithm { get; private set; }
+		public string? ContinuousRegenerationEffect { get; private set; }
+		public int ContinuousYearsToFullCover { get; private set; }
+		public string? ContinuousCover { get; private set; }
+		public string? PixelDuration { get; private set; }
+		public float PixelLifThreshold { get; private set; }
 
 		public Grass()
         {
-			this.GrassDuration = null;
-			this.GrassPotential = null;
-			this.LifThreshold = 0.2F;
-			this.MaxTimeLag = 0; // TODO: unhelpful default since minimum value is 1
-			this.Type = GrassAlgorithmType.Invalid; // TODO: unhelpful default, C++ defaulted to null string
+			this.Algorithm = GrassAlgorithm.CellOnOff;
+			this.ContinuousRegenerationEffect = null;
+			this.ContinuousCover = null;
+			this.ContinuousYearsToFullCover = 1;
+			this.PixelDuration = null;
+			this.PixelLifThreshold = 0.2F;
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -28,51 +30,51 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes.");
 			}
 
-			if (reader.IsStartElement("grass"))
+			if (String.Equals(reader.Name, "grass", StringComparison.Ordinal))
 			{
 				reader.Read();
 			}
-			else if (reader.IsStartElement("enabled"))
+			else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
 			{
 				this.Enabled = reader.ReadElementContentAsBoolean();
 			}
-			else if (reader.IsStartElement("type"))
+			else if (String.Equals(reader.Name, "type", StringComparison.Ordinal))
             {
 				string grassAlgorithmAsString = reader.ReadElementContentAsString().Trim();
-				this.Type = grassAlgorithmAsString switch
+				this.Algorithm = grassAlgorithmAsString switch
 				{
-					"continuous" => GrassAlgorithmType.Continuous,
-					"pixel" => GrassAlgorithmType.Pixel,
+					"continuous" => GrassAlgorithm.ContinuousLight,
+					"pixel" => GrassAlgorithm.CellOnOff,
 					_ => throw new XmlException("Unknown grass algorithm type '" + grassAlgorithmAsString + "'.")
 				};
             }
-			else if (reader.IsStartElement("grassDuration"))
+			else if (String.Equals(reader.Name, "grassDuration", StringComparison.Ordinal))
 			{
-				this.GrassDuration = reader.ReadElementContentAsString().Trim();
+				this.PixelDuration = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("LIFThreshold"))
+			else if (String.Equals(reader.Name, "LIFThreshold", StringComparison.Ordinal))
 			{
-				this.LifThreshold = reader.ReadElementContentAsFloat();
-				if ((this.LifThreshold < 0.0F) || (this.LifThreshold > 1.0F))
+				this.PixelLifThreshold = reader.ReadElementContentAsFloat();
+				if ((this.PixelLifThreshold < 0.0F) || (this.PixelLifThreshold > 1.0F))
 				{
 					throw new XmlException("Grass LIF threshold is negative or greater than 1.0.");
 				}
 			}
-			else if (reader.IsStartElement("grassPotential"))
+			else if (String.Equals(reader.Name, "grassPotential", StringComparison.Ordinal))
 			{
-				this.GrassPotential = reader.ReadElementContentAsString().Trim();
+				this.ContinuousCover = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("maxTimeLag"))
+			else if (String.Equals(reader.Name, "maxTimeLag", StringComparison.Ordinal))
 			{
-				this.MaxTimeLag = reader.ReadElementContentAsInt();
-				if (this.MaxTimeLag < 0)
+				this.ContinuousYearsToFullCover = reader.ReadElementContentAsInt();
+				if (this.ContinuousYearsToFullCover < 0)
                 {
 					throw new XmlException("Maxium grass time lag is negative.");
                 }
 			}
-			else if (reader.IsStartElement("grassEffect"))
+			else if (String.Equals(reader.Name, "grassEffect", StringComparison.Ordinal))
 			{
-				this.GrassEffect = reader.ReadElementContentAsString().Trim();
+				this.ContinuousRegenerationEffect = reader.ReadElementContentAsString().Trim();
 			}
             else
             {

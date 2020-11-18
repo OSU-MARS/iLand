@@ -34,15 +34,15 @@ namespace iLand.World
             this.Parameters = new SoilParameters()
             {
                 AnnualNitrogenDeposition = environmentReader.AnnualNitrogenDeposition,
-                El = environmentReader.CurrentSoilEl, // past default 0.0577
-                Er = environmentReader.CurrentSoilEr, // past default 0.073
-                Hc = environmentReader.CurrentSoilHumificationRate, // past default: 0.3
-                Ko = environmentReader.CurrentSoilOrganicDecompositionRate, // past default: 0.02
+                El = environmentReader.CurrentSoilEl,
+                Er = environmentReader.CurrentSoilEr,
+                Hc = environmentReader.CurrentSoilHumificationRate,
+                Ko = environmentReader.CurrentSoilOrganicDecompositionRate,
                 Kyl = environmentReader.CurrentSoilYoungLabileDecompositionRate,
                 Kyr = environmentReader.CurrentSoilYoungRefractoryDecompositionRate,
                 Leaching = environmentReader.SoilLeaching,
                 Qb = environmentReader.SoilQb,
-                Qh = environmentReader.CurrentSoilQh, // past default 25.0
+                Qh = environmentReader.CurrentSoilQh,
                 UseDynamicAvailableNitrogen = environmentReader.UseDynamicAvailableNitrogen
             };
             if (this.Parameters.Kyl <= 0.0 || this.Parameters.Kyr <= 0.0)

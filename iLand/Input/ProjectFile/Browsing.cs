@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -8,7 +9,7 @@ namespace iLand.Input.ProjectFile
 
         public Browsing()
         {
-            this.BrowsingPressure = 0.0F;
+            this.BrowsingPressure = 1.0F;
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -18,16 +19,16 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("browsing"))
+            if (String.Equals(reader.Name, "browsing", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("browsingPressure"))
+            else if (String.Equals(reader.Name, "browsingPressure", StringComparison.Ordinal))
             {
                 this.BrowsingPressure = reader.ReadElementContentAsFloat();
                 // no clear restriction on range of value
             }
-            else if (reader.IsStartElement("enabled"))
+            else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
             {
                 this.Enabled = reader.ReadElementContentAsBoolean();
             }

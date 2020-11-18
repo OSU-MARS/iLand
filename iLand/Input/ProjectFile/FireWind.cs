@@ -1,4 +1,5 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -15,11 +16,11 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes.");
 			}
 
-			if (reader.IsStartElement("wind"))
+			if (String.Equals(reader.Name, "wind", StringComparison.Ordinal))
 			{
 				reader.Read();
 			}
-			else if (reader.IsStartElement("speedMin"))
+			else if (String.Equals(reader.Name, "speedMin", StringComparison.Ordinal))
 			{
 				this.SpeedMin = reader.ReadElementContentAsFloat();
 				if (this.SpeedMin < 0.0F)
@@ -27,7 +28,7 @@ namespace iLand.Input.ProjectFile
 					throw new XmlException("Minimum wind speed is negative.");
                 }
 			}
-			else if (reader.IsStartElement("speedMax"))
+			else if (String.Equals(reader.Name, "speedMax", StringComparison.Ordinal))
 			{
 				this.SpeedMax = reader.ReadElementContentAsFloat();
 				if (this.SpeedMax < 0.0F)
@@ -35,7 +36,7 @@ namespace iLand.Input.ProjectFile
 					throw new XmlException("Maximum wind speed is negative.");
 				}
 			}
-			else if (reader.IsStartElement("direction"))
+			else if (String.Equals(reader.Name, "direction", StringComparison.Ordinal))
 			{
 				this.Direction = reader.ReadElementContentAsFloat();
 				if ((this.Direction < 0.0F) || (this.Direction > 360.0F))

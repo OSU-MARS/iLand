@@ -4,7 +4,6 @@ namespace iLand
 {
     internal static class Constant
     {
-        public const float AutotrophicRespiration = 0.47F;
         public const float BiomassCFraction = 0.5F; // fraction of (dry) biomass which is carbon
         public const int DaysInLeapYear = 366;
 

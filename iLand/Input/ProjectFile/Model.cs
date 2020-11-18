@@ -1,28 +1,21 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class Model : XmlSerializable
     {
-		public ModelSettings Settings { get; private set; }
-		public Species Species { get; private set; }
-		public World World { get; private set; }
-		public Site Site { get; private set; }
-		public Climate Climate { get; private set; }
-		public Initialization Initialization { get; private set; }
-		public Management Management { get; private set; }
-		public Parameter Parameter { get; private set; }
+        public Ecosystem Ecosystem { get; init; }
+        public Management Management { get; init; }
+        public SeedDispersal SeedDispersal { get; init; }
+        public ModelSettings Settings { get; init; }
 
-		public Model()
+        public Model()
         {
-			this.Climate = new Climate();
-			this.Initialization = new Initialization();
-			this.Management = new Management();
-			this.Parameter = new Parameter();
-			this.Settings = new ModelSettings();
-			this.Site = new Site();
-			this.Species = new Species();
-			this.World = new World();
+            this.Ecosystem = new Ecosystem();
+            this.Management = new Management();
+            this.SeedDispersal = new SeedDispersal();
+            this.Settings = new ModelSettings();
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -32,44 +25,28 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("model"))
+            if (String.Equals(reader.Name, "model", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("settings"))
+            else if (String.Equals(reader.Name, "ecosystem", StringComparison.Ordinal))
+            {
+                this.Ecosystem.ReadXml(reader);
+            }
+            else if (String.Equals(reader.Name, "management", StringComparison.Ordinal))
+            {
+                this.Management.ReadXml(reader);
+            }
+            else if (String.Equals(reader.Name, "seedDispersal", StringComparison.Ordinal))
+            {
+                this.SeedDispersal.ReadXml(reader);
+            }
+            else if (String.Equals(reader.Name, "settings", StringComparison.Ordinal))
             {
                 this.Settings.ReadXml(reader);
             }
-			else if (reader.IsStartElement("species"))
-			{
-				this.Species.ReadXml(reader);
-			}
-			else if (reader.IsStartElement("world"))
-			{
-				this.World.ReadXml(reader);
-			}
-			else if (reader.IsStartElement("site"))
-			{
-				this.Site.ReadXml(reader);
-			}
-			else if (reader.IsStartElement("climate"))
-			{
-				this.Climate.ReadXml(reader);
-			}
-			else if (reader.IsStartElement("initialization"))
-			{
-				this.Initialization.ReadXml(reader);
-			}
-			else if (reader.IsStartElement("management"))
-			{
-				this.Management.ReadXml(reader);
-			}
-			else if (reader.IsStartElement("parameter"))
-			{
-				this.Parameter.ReadXml(reader);
-			}
-			else
-			{
+            else
+            {
                 throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
             }
         }

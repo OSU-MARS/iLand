@@ -26,14 +26,13 @@ namespace iLand.World
 
         public static string ToEsriRaster<T>(Landscape landscape, Grid<T> grid) where T : notnull
         {
-            Vector3D local = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0F);
-            landscape.Environment.GisGrid.ModelToWorld(local, out Vector3D world);
+            PointF gisGridOrigin = landscape.Environment.GisGrid.ModelToGis(grid.PhysicalExtent.TopLeft());
             StringBuilder result = new StringBuilder();
             result.Append(String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
-                                        grid.CellsX, grid.CellsY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine));
-            for (int y = grid.CellsY - 1; y >= 0; --y)
+                                        grid.SizeX, grid.SizeY, gisGridOrigin.X, gisGridOrigin.Y, grid.CellSize, -9999, System.Environment.NewLine));
+            for (int y = grid.SizeY - 1; y >= 0; --y)
             {
-                for (int x = 0; x < grid.CellsX; x++)
+                for (int x = 0; x < grid.SizeX; x++)
                 {
                     result.Append(grid[x, y].ToString() + ' ');
                 }
@@ -51,9 +50,9 @@ namespace iLand.World
             StringBuilder stringBuilder = new StringBuilder();
 
             int newlineCounter = newlineAfter;
-            for (int y = grid.CellsY - 1; y >= 0; --y)
+            for (int y = grid.SizeY - 1; y >= 0; --y)
             {
-                for (int x = 0; x < grid.CellsX; x++)
+                for (int x = 0; x < grid.SizeX; x++)
                 {
                     stringBuilder.Append(valueFunction(grid[x, y]) + sep);
 
@@ -90,15 +89,15 @@ namespace iLand.World
         public int Count { get; private set; } 
         /// get the metric rectangle of the grid
         public RectangleF PhysicalExtent { get; private set; }
-        public int CellsX { get; private set; }
-        public int CellsY { get; private set; }
+        public int SizeX { get; private set; }
+        public int SizeY { get; private set; }
 
         public Grid()
         {
             this.data = null;
             this.CellSize = 0.0F;
-            this.CellsX = 0;
-            this.CellsY = 0;
+            this.SizeX = 0;
+            this.SizeY = 0;
             this.Count = 0;
             this.PhysicalExtent = default;
         }
@@ -130,8 +129,8 @@ namespace iLand.World
         /// access (const) with index variables. use int.
         public T this[int indexX, int indexY]
         {
-            get { return this.data![indexY * this.CellsX + indexX]; }
-            set { this.data![indexY * this.CellsX + indexX] = value; }
+            get { return this.data![indexY * this.SizeX + indexX]; }
+            set { this.data![indexY * this.SizeX + indexX] = value; }
         }
 
         public T this[int indexX, int indexY, int divisor]
@@ -176,7 +175,7 @@ namespace iLand.World
         // return true, if index is within the grid
         public bool Contains(int x, int y)
         {
-            return (x >= 0 && x < this.CellsX && y >= 0 && y < this.CellsY);
+            return (x >= 0 && x < this.SizeX && y >= 0 && y < this.SizeY);
         }
 
         public bool Contains(Point pos)
@@ -225,7 +224,7 @@ namespace iLand.World
         /// get index (x/y) of the (linear) index 'index' (0..count-1)
         public Point GetCellPosition(int index)
         {
-            return new Point(index % CellsX, index / CellsX);
+            return new Point(index % SizeX, index / SizeX);
         }
 
         public bool IsNotSetup() { return this.data == null; }
@@ -233,22 +232,22 @@ namespace iLand.World
         /// returns the index of an aligned grid (with the same size and matching origin) with the doubled cell size (e.g. to scale from a 10m grid to a 20m grid)
         // public int index2(int idx) { return ((idx / mSizeX) / 2) * (mSizeX / 2) + (idx % mSizeX) / 2; }
         /// returns the index of an aligned grid (the same size) with the 5 times bigger cells (e.g. to scale from a 2m grid to a 10m grid)
-        public int Index5(int index) { return ((index / this.CellsX) / 5) * (this.CellsX / 5) + (index % this.CellsX) / 5; }
+        public int Index5(int index) { return ((index / this.SizeX) / 5) * (this.SizeX / 5) + (index % this.SizeX) / 5; }
         /// returns the index of an aligned grid (the same size) with the 10 times bigger cells (e.g. to scale from a 2m grid to a 20m grid)
-        public int Index10(int index) { return ((index / this.CellsX) / 10) * (this.CellsX / 10) + (index % this.CellsX) / 10; }
+        public int Index10(int index) { return ((index / this.SizeX) / 10) * (this.SizeX / 10) + (index % this.SizeX) / 10; }
 
-        public int IndexOf(int indexX, int indexY) { return indexY * this.CellsX + indexX; } // get the 0-based index of the cell with indices ix and iy.
-        public int IndexOf(Point cell) { return cell.Y * this.CellsX + cell.X; } // get the 0-based index of the cell at 'pos'.
+        public int IndexOf(int indexX, int indexY) { return indexY * this.SizeX + indexX; } // get the 0-based index of the cell with indices ix and iy.
+        public int IndexOf(Point cell) { return cell.Y * this.SizeX + cell.X; } // get the 0-based index of the cell at 'pos'.
 
         /// force @param pos to contain valid indices with respect to this grid.
         public void Limit(Point cell) // ensure that "pos" is a valid key. if out of range, pos is set to minimum/maximum values.
         {
-            cell.X = Math.Max(Math.Min(cell.X, this.CellsX - 1), 0);
-            cell.Y = Math.Max(Math.Min(cell.Y, this.CellsY - 1), 0);
+            cell.X = Math.Max(Math.Min(cell.X, this.SizeX - 1), 0);
+            cell.Y = Math.Max(Math.Min(cell.Y, this.SizeY - 1), 0);
         }
 
         /// get the rectangle of the grid in terms of indices
-        public Rectangle GetCellExtent() { return new Rectangle(0, 0, this.CellsX, this.CellsY); }
+        public Rectangle GetCellExtent() { return new Rectangle(0, 0, this.SizeX, this.SizeY); }
 
         public void Clear()
         {
@@ -262,7 +261,7 @@ namespace iLand.World
             {
                 throw new NotSupportedException("Either target or destination grid is not setup.");
             }
-            if ((this.CellSize != source.CellSize) || (this.CellsX != source.CellsX) || (this.CellsY != source.CellsY) || (source.Count != this.Count))
+            if ((this.CellSize != source.CellSize) || (this.SizeX != source.SizeX) || (this.SizeY != source.SizeY) || (source.Count != this.Count))
             {
                 throw new ArgumentOutOfRangeException(nameof(source));
             }
@@ -287,20 +286,20 @@ namespace iLand.World
 
         public bool Setup(int cellsX, int cellsY, float cellSize)
         {
-            this.CellsX = cellsX;
-            this.CellsY = cellsY;
+            this.SizeX = cellsX;
+            this.SizeY = cellsY;
             this.PhysicalExtent = new RectangleF(this.PhysicalExtent.X, this.PhysicalExtent.Y, cellSize * cellsX, cellSize * cellsY);
             if (this.data != null)
             {
                 // test if we can re-use the allocated memory.
-                if (this.CellsX * this.CellsY > this.Count)
+                if (this.SizeX * this.SizeY > this.Count)
                 {
                     // we cannot re-use the memory - create new data
                     this.data = null;
                 }
             }
             this.CellSize = cellSize;
-            this.Count = this.CellsX * this.CellsY;
+            this.Count = this.SizeX * this.SizeY;
             if (this.Count == 0)
             {
                 return false;
@@ -356,9 +355,9 @@ namespace iLand.World
         {
             StringBuilder csvBuilder = new StringBuilder();
             csvBuilder.AppendLine("x_m,y_m,value"); // wrong if value overrides ToString() and returns multiple values but OK for now
-            for (int xIndex = 0; xIndex < this.CellsX; ++xIndex)
+            for (int xIndex = 0; xIndex < this.SizeX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < this.CellsY; ++yIndex)
+                for (int yIndex = 0; yIndex < this.SizeY; ++yIndex)
                 {
                     PointF cellCenter = this.GetCellCenterPosition(new Point(xIndex, yIndex));
                     csvBuilder.AppendLine(cellCenter.X + "," + cellCenter.Y + "," + this[xIndex, yIndex]!.ToString());

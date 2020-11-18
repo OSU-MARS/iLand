@@ -36,12 +36,13 @@ namespace iLand.Input
         public bool UseDynamicAvailableNitrogen { get; private set; } // if true, iLand utilizes the soil-model N for species responses (and the dynamically calculated N available?)
 
         // soil parameters which obtain defaults from the project file but can be overridden in the environment file
-        public float CurrentSnagOtherCarbon { get; private set; }
-        public float CurrentSnagOtherCNRatio { get; private set; }
-        public float CurrentSnagCarbon { get; private set; }
-        public float CurrentSnagCNRatio { get; private set; }
+        public float CurrentSnagBranchRootCarbon { get; private set; }
+        public float CurrentSnagBranchRootCNRatio { get; private set; }
+        public float CurrentSnagBranchRootDecompositionRate { get; private set; }
+        public float CurrentSnagStemCarbon { get; private set; }
+        public float CurrentSnagStemCNRatio { get; private set; }
         public float CurrentSnagsPerResourceUnit { get; private set; }
-        public float CurrentSnagDecompositionRate { get; private set; }
+        public float CurrentSnagStemDecompositionRate { get; private set; }
         public float CurrentSnagHalfLife { get; private set; }
 
         public float CurrentSoilAvailableNitrogen { get; private set; }
@@ -82,7 +83,7 @@ namespace iLand.Input
 
         public void LoadFromProjectAndEnvironmentFile(Project projectFile)
         {
-            string environmentFilePath = projectFile.GetFilePath(ProjectDirectory.Home, projectFile.Model.World.EnvironmentFile); // TODO: stop requiring gis\ prefix in project file
+            string environmentFilePath = projectFile.GetFilePath(ProjectDirectory.Home, projectFile.World.EnvironmentFile); // TODO: stop requiring gis\ prefix in project file
 
             this.resourceUnitEnvironmentFile = new CsvFile();
             this.resourceUnitEnvironmentFile.LoadFile(environmentFilePath);
@@ -97,7 +98,7 @@ namespace iLand.Input
             this.CurrentResourceUnitID = 0;
             this.SpeciesSetsByTableName.Clear();
 
-            if (isGridMode)
+            if (this.isGridMode)
             {
                 int idIndex = resourceUnitEnvironmentFile.GetColumnIndex("id");
                 if (idIndex < 0)
@@ -128,47 +129,48 @@ namespace iLand.Input
             }
 
             // default snag parameters which can be overridden in environment file
-            this.CurrentSnagOtherCarbon = projectFile.Model.Initialization.Snags.OtherCarbon;
-            this.CurrentSnagOtherCNRatio = projectFile.Model.Initialization.Snags.OtherCarbonNitrogenRatio;
-            this.CurrentSnagCarbon = projectFile.Model.Initialization.Snags.StandingCarbon;
-            this.CurrentSnagCNRatio = projectFile.Model.Initialization.Snags.StandingCarbonNitrogenRatio;
-            this.CurrentSnagsPerResourceUnit = projectFile.Model.Initialization.Snags.SnagsPerResourceUnit;
-            this.CurrentSnagDecompositionRate = projectFile.Model.Initialization.Snags.StandingDecompositionRate;  // TODO: also in species table
-            this.CurrentSnagHalfLife = projectFile.Model.Initialization.Snags.SnagHalfLife; // TODO: also in species table
+            this.CurrentSnagBranchRootCarbon = projectFile.World.Initialization.Snags.BranchRootCarbon;
+            this.CurrentSnagBranchRootCNRatio = projectFile.World.Initialization.Snags.BranchRootCarbonNitrogenRatio;
+            this.CurrentSnagBranchRootDecompositionRate = projectFile.World.Initialization.Snags.BranchRootDecompositionRate;
+            this.CurrentSnagStemDecompositionRate = projectFile.World.Initialization.Snags.StemDecompositionRate; // TODO: also in species table
+            this.CurrentSnagHalfLife = projectFile.World.Initialization.Snags.SnagHalfLife; // TODO: also in species table
+            this.CurrentSnagsPerResourceUnit = projectFile.World.Initialization.Snags.SnagsPerResourceUnit;
+            this.CurrentSnagStemCarbon = projectFile.World.Initialization.Snags.StemCarbon;
+            this.CurrentSnagStemCNRatio = projectFile.World.Initialization.Snags.StemCarbonNitrogenRatio;
 
             // soil parameters not currently supported in environment file
-            this.AnnualNitrogenDeposition = projectFile.Model.Settings.DefaultSoil.NitrogenDeposition;
-            this.SoilLeaching = projectFile.Model.Settings.DefaultSoil.Leaching;
-            this.SoilQb = projectFile.Model.Settings.DefaultSoil.Qb;
-            this.UseDynamicAvailableNitrogen = projectFile.Model.Settings.DefaultSoil.UseDynamicAvailableNitrogen;
+            this.AnnualNitrogenDeposition = projectFile.World.DefaultSoil.NitrogenDeposition;
+            this.SoilLeaching = projectFile.World.DefaultSoil.Leaching;
+            this.SoilQb = projectFile.World.DefaultSoil.Qb;
+            this.UseDynamicAvailableNitrogen = projectFile.World.DefaultSoil.UseDynamicAvailableNitrogen;
 
             // default soil parameters which can be overridden in environment file
-            this.CurrentSoilEl = projectFile.Model.Settings.DefaultSoil.El;
-            this.CurrentSoilEr = projectFile.Model.Settings.DefaultSoil.Er;
-            this.CurrentSoilLeaching = projectFile.Model.Settings.DefaultSoil.Leaching;
+            this.CurrentSoilEl = projectFile.World.DefaultSoil.El;
+            this.CurrentSoilEr = projectFile.World.DefaultSoil.Er;
+            this.CurrentSoilLeaching = projectFile.World.DefaultSoil.Leaching;
 
             // default soil parameters specified in <site> rather than in <defaultSoil>
             // parameters used by resource unit soil
-            this.CurrentSoilAvailableNitrogen = projectFile.Model.Site.AvailableNitrogen;
-            this.CurrentSoilDepth = projectFile.Model.Site.SoilDepth;
-            this.CurrentSoilHumificationRate = projectFile.Model.Site.SoilHumificationRate;
-            this.CurrentSoilOrganicC = projectFile.Model.Site.SoilOrganicMatterCarbon;
-            this.CurrentSoilOrganicDecompositionRate = projectFile.Model.Site.SoilOrganicMatterDecompositionRate;
-            this.CurrentSoilOrganicN = projectFile.Model.Site.SoilOrganicMatterNitrogen;
-            this.CurrentSoilQh = projectFile.Model.Settings.DefaultSoil.Qh;
-            this.CurrentSoilYoungLabileC = projectFile.Model.Site.YoungLabileCarbon;
-            this.CurrentSoilYoungLabileDecompositionRate = projectFile.Model.Site.YoungLabileDecompositionRate; // also in species table
-            this.CurrentSoilYoungLabileN = projectFile.Model.Site.YoungLabileNitrogen;
-            this.CurrentSoilYoungRefractoryC = projectFile.Model.Site.YoungRefractoryCarbon;
-            this.CurrentSoilYoungRefractoryDecompositionRate = projectFile.Model.Site.YoungRefractoryDecompositionRate; // also in species table
-            this.CurrentSoilYoungRefractoryN = projectFile.Model.Site.YoungRefractoryNitrogen;
+            this.CurrentSoilAvailableNitrogen = projectFile.World.DefaultSoil.AvailableNitrogen;
+            this.CurrentSoilDepth = projectFile.World.DefaultSoil.SoilDepth;
+            this.CurrentSoilHumificationRate = projectFile.World.DefaultSoil.SoilHumificationRate;
+            this.CurrentSoilOrganicC = projectFile.World.DefaultSoil.SoilOrganicMatterCarbon;
+            this.CurrentSoilOrganicDecompositionRate = projectFile.World.DefaultSoil.SoilOrganicMatterDecompositionRate;
+            this.CurrentSoilOrganicN = projectFile.World.DefaultSoil.SoilOrganicMatterNitrogen;
+            this.CurrentSoilQh = projectFile.World.DefaultSoil.Qh;
+            this.CurrentSoilYoungLabileC = projectFile.World.DefaultSoil.YoungLabileCarbon;
+            this.CurrentSoilYoungLabileDecompositionRate = projectFile.World.DefaultSoil.YoungLabileDecompositionRate; // also in species table
+            this.CurrentSoilYoungLabileN = projectFile.World.DefaultSoil.YoungLabileNitrogen;
+            this.CurrentSoilYoungRefractoryC = projectFile.World.DefaultSoil.YoungRefractoryCarbon;
+            this.CurrentSoilYoungRefractoryDecompositionRate = projectFile.World.DefaultSoil.YoungRefractoryDecompositionRate; // also in species table
+            this.CurrentSoilYoungRefractoryN = projectFile.World.DefaultSoil.YoungRefractoryNitrogen;
             // parameters used by resource unit water cycle
-            this.CurrentSoilSand = projectFile.Model.Site.PercentSand;
-            this.CurrentSoilSilt = projectFile.Model.Site.PercentSilt;
-            this.CurrentSoilClay = projectFile.Model.Site.PercentClay;
+            this.CurrentSoilSand = projectFile.World.DefaultSoil.PercentSand;
+            this.CurrentSoilSilt = projectFile.World.DefaultSoil.PercentSilt;
+            this.CurrentSoilClay = projectFile.World.DefaultSoil.PercentClay;
 
-        // species sets
-        int speciesTableNameIndex;
+            // species sets
+            int speciesTableNameIndex;
             if ((speciesTableNameIndex = columnNames.IndexOf(Constant.Setting.SpeciesTable)) > -1)
             {
                 //using DebugTimer t = model.DebugTimers.Create("Environment.LoadFromString(species)");
@@ -288,19 +290,19 @@ namespace iLand.Input
                         this.CurrentClimate = climate;
                         break;
                     case Constant.Setting.Snag.OtherC:
-                        this.CurrentSnagOtherCarbon = Single.Parse(value);
+                        this.CurrentSnagBranchRootCarbon = Single.Parse(value);
                         break;
                     case Constant.Setting.Snag.OtherCN:
-                        this.CurrentSnagOtherCNRatio = Single.Parse(value);
+                        this.CurrentSnagBranchRootCNRatio = Single.Parse(value);
                         break;
                     case Constant.Setting.Snag.StandingWoodyCarbon:
-                        this.CurrentSnagCarbon = Single.Parse(value);
+                        this.CurrentSnagStemCarbon = Single.Parse(value);
                         break;
                     case Constant.Setting.Snag.StandingWoodyCNRatio:
-                        this.CurrentSnagCNRatio = Single.Parse(value);
+                        this.CurrentSnagStemCNRatio = Single.Parse(value);
                         break;
                     case Constant.Setting.Snag.StandingWoodyDecompositionRate:
-                        this.CurrentSnagDecompositionRate = Single.Parse(value);
+                        this.CurrentSnagStemDecompositionRate = Single.Parse(value);
                         break;
                     case Constant.Setting.Snag.StandingWoodyHalfLife:
                         this.CurrentSnagHalfLife = Single.Parse(value);

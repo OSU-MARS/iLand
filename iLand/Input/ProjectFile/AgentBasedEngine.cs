@@ -5,8 +5,8 @@ namespace iLand.Input.ProjectFile
 {
     public class AgentBasedEngine : XmlSerializable
     {
-        public string? File { get; private set; }
         public string? AgentDataFile { get; private set; }
+        public string? FileName { get; private set; }
 
         protected override void ReadStartElement(XmlReader reader)
         {
@@ -15,19 +15,19 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("abe"))
+            if (String.Equals(reader.Name, "abe", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("file"))
+            else if (String.Equals(reader.Name, "fileName", StringComparison.Ordinal))
             {
-                this.File = reader.ReadElementContentAsString().Trim();
-                if (String.IsNullOrEmpty(this.File) == false)
+                this.FileName = reader.ReadElementContentAsString().Trim();
+                if (String.IsNullOrEmpty(this.FileName) == false)
                 {
                     throw new NotImplementedException();
                 }
             }
-            else if (reader.IsStartElement("agentDataFile"))
+            else if (String.Equals(reader.Name, "agentDataFile", StringComparison.Ordinal))
             {
                 this.AgentDataFile = reader.ReadElementContentAsString().Trim();
                 if (String.IsNullOrEmpty(this.AgentDataFile) == false)

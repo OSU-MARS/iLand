@@ -1,48 +1,39 @@
-﻿using System.Diagnostics;
+﻿using System;
 using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class World : XmlSerializable
 	{
-		public float CellSize { get; private set; }
-		public float Width { get; private set; }
-		public float Height { get; private set; }
-		public float Buffer { get; private set; }
-		
-		// latitude of project site in degrees
-		public float Latitude { get; private set; }
-		
-		public bool ResourceUnitsAsGrid { get; private set; }
-		public bool EnvironmentEnabled { get; private set; }
-		public string? EnvironmentMode { get; private set; } // TODO: change to enum
-		public string? EnvironmentGridFile { get; private set; }
-		public string? EnvironmentFile { get; private set; }
-		public AreaMask AreaMask { get; private set; }
-		public bool TimeEventsEnabled { get; private set; }
-		public string? TimeEventsFile { get; private set; }
-		public Location? Location { get; private set; }
-		public StandGrid StandGrid { get; private set; }
 		public string? DemFile { get; private set; }
+		public string? EnvironmentFile { get; private set; }
+		public string? EnvironmentGridFile { get; private set; }
+
+		public AreaMask AreaMask { get; init; }
+		public Browsing Browsing { get; init; }
+		public Climate Climate { get; init; }
+		public WorldDebug Debug { get; init; }
+		public DefaultSoil DefaultSoil { get; init; }
+		public WorldGeometry Geometry { get; init; }
+		public Grass Grass { get; init; }
+		public WorldInitialization Initialization { get; init; }
+		public Species Species { get; init; }
+		public StandGrid StandGrid { get; init; }
 
 		public World()
         {
-			// default to a single resource unit
-			this.Buffer = 0.6F * Constant.RUSize;
-			this.CellSize = Constant.LightSize;
 			this.DemFile = null;
-			this.EnvironmentEnabled = false;
 			this.EnvironmentGridFile = null;
-			this.EnvironmentMode = null;
-			this.Height = Constant.RUSize;
-			this.Latitude = 48.0F;
-			this.ResourceUnitsAsGrid = false; // TODO: unhelpful default since must be set to true in project
-			this.TimeEventsEnabled = false;
-			this.TimeEventsFile = null;
-			this.Width = Constant.RUSize;
 
 			this.AreaMask = new AreaMask();
-			this.Location = null;
+			this.Browsing = new Browsing();
+			this.Climate = new Climate();
+			this.Debug = new WorldDebug();
+			this.DefaultSoil = new DefaultSoil();
+			this.Grass = new Grass();
+			this.Geometry = new WorldGeometry();
+			this.Initialization = new WorldInitialization();
+			this.Species = new Species();
 			this.StandGrid = new StandGrid();
         }
 
@@ -53,93 +44,59 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes.");
 			}
 
-			if (reader.IsStartElement("world"))
+			if (String.Equals(reader.Name, "world", StringComparison.Ordinal))
 			{
 				reader.Read();
 			}
-			else if (reader.IsStartElement("cellSize"))
-			{
-				this.CellSize = reader.ReadElementContentAsFloat();
-				if (this.CellSize <= 0.0F)
-				{
-					throw new XmlException("Light cell size is zero or negative.");
-				}
-			}
-			else if (reader.IsStartElement("width"))
-			{
-				this.Width = reader.ReadElementContentAsFloat();
-				if (this.Width <= 0.0F)
-				{
-					throw new XmlException("Model width is zero or negative.");
-				}
-			}
-			else if (reader.IsStartElement("height"))
-			{
-				this.Height = reader.ReadElementContentAsFloat();
-				if (this.Height <= 0.0F)
-				{
-					throw new XmlException("Model height is zero or negative.");
-				}
-			}
-			else if (reader.IsStartElement("buffer"))
-			{
-				this.Buffer = reader.ReadElementContentAsFloat();
-				if (this.Buffer <= 0.0F)
-				{
-					throw new XmlException("Light buffer width is zero or negative.");
-				}
-			}
-			else if (reader.IsStartElement("latitude"))
-			{
-				this.Latitude = reader.ReadElementContentAsFloat();
-				if ((this.Latitude < -90.0F) || (this.Latitude > 90.0F))
-				{
-					throw new XmlException("Latitude is not between -90 and 90°.");
-				}
-			}
-			else if (reader.IsStartElement("resourceUnitsAsGrid"))
-			{
-				this.ResourceUnitsAsGrid = reader.ReadElementContentAsBoolean();
-			}
-			else if (reader.IsStartElement("environmentEnabled"))
-			{
-				this.EnvironmentEnabled = reader.ReadElementContentAsBoolean();
-			}
-			else if (reader.IsStartElement("environmentMode"))
-			{
-				this.EnvironmentMode = reader.ReadElementContentAsString().Trim();
-			}
-			else if (reader.IsStartElement("environmentGrid"))
+			else if (String.Equals(reader.Name, "environmentGrid", StringComparison.Ordinal))
 			{
 				this.EnvironmentGridFile = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("environmentFile"))
+			else if (String.Equals(reader.Name, "environmentFile", StringComparison.Ordinal))
 			{
 				this.EnvironmentFile = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("areaMask"))
+			else if (String.Equals(reader.Name, "areaMask", StringComparison.Ordinal))
 			{
 				this.AreaMask.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("timeEventsEnabled"))
+			else if (String.Equals(reader.Name, "browsing", StringComparison.Ordinal))
 			{
-				this.TimeEventsEnabled = reader.ReadElementContentAsBoolean();
+				this.Browsing.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("timeEventsFile"))
+			else if (String.Equals(reader.Name, "climate", StringComparison.Ordinal))
 			{
-				this.TimeEventsFile = reader.ReadElementContentAsString().Trim();
+				this.Climate.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("location"))
+			else if (String.Equals(reader.Name, "debug", StringComparison.Ordinal))
 			{
-				Debug.Assert(this.Location == null);
-				this.Location = new Location();
-				this.Location.ReadXml(reader);
+				this.Debug.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("standGrid"))
+			else if (String.Equals(reader.Name, "defaultSoil", StringComparison.Ordinal))
+			{
+				this.DefaultSoil.ReadXml(reader);
+			}
+			else if (String.Equals(reader.Name, "geometry", StringComparison.Ordinal))
+			{
+				this.Geometry.ReadXml(reader);
+			}
+			else if (String.Equals(reader.Name, "grass", StringComparison.Ordinal))
+			{
+				this.Grass.ReadXml(reader);
+			}
+			else if (String.Equals(reader.Name, "initialization", StringComparison.Ordinal))
+			{
+				this.Initialization.ReadXml(reader);
+			}
+			else if (String.Equals(reader.Name, "species", StringComparison.Ordinal))
+			{
+				this.Species.ReadXml(reader);
+			}
+			else if (String.Equals(reader.Name, "standGrid", StringComparison.Ordinal))
 			{
 				this.StandGrid.ReadXml(reader);
 			}
-			else if (reader.IsStartElement("DEM"))
+			else if (String.Equals(reader.Name, "DEM", StringComparison.Ordinal))
 			{
 				this.DemFile = reader.ReadElementContentAsString().Trim();
 			}

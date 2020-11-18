@@ -357,7 +357,7 @@ namespace iLand.World
             {
                 ResourceUnitTreeSpecies ruSpecies = this.Trees.SpeciesAvailableOnResourceUnit[species];
                 ruSpecies.SaplingStats.AfterSaplingGrowth(model, this, ruSpecies.Species);
-                ruSpecies.Statistics.Add(ruSpecies.SaplingStats);
+                ruSpecies.Statistics.AddToCurrentYear(ruSpecies.SaplingStats);
             }
 
             // debug output related to saplings
@@ -417,7 +417,7 @@ namespace iLand.World
             }
 
             // check browsing
-            float browsingPressure = model.Project.Model.Settings.Browsing.BrowsingPressure;
+            float browsingPressure = model.Project.World.Browsing.BrowsingPressure;
             if (browsingPressure > 0.0 && sapling.Height <= 2.0F)
             {
                 float pBrowsing = ruSpecies.Species.SaplingGrowthParameters.BrowsingProbability;
@@ -433,7 +433,7 @@ namespace iLand.World
             // check mortality of saplings
             if (heightGrowthFactor < species.SaplingGrowthParameters.StressThreshold)
             {
-                sapling.StressYears++;
+                ++sapling.StressYears;
                 if (sapling.StressYears > species.SaplingGrowthParameters.MaxStressYears)
                 {
                     // sapling dies...
@@ -457,21 +457,21 @@ namespace iLand.World
             {
                 ruSpecies.SaplingStats.RecruitedSaplings++;
 
-                float dbh = sapling.Height / species.SaplingGrowthParameters.HeightDiameterRatio * 100.0F;
+                float dbh = 100.0F * sapling.Height / species.SaplingGrowthParameters.HeightDiameterRatio;
                 // the number of trees to create (result is in trees per pixel)
-                float n_trees = species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(dbh);
-                int saplingsToEstablish = (int)(n_trees);
+                float nSaplings = species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(dbh);
+                int saplingsToEstablish = (int)nSaplings;
 
                 // if n_trees is not an integer, choose randomly if we should add a tree.
                 // e.g.: n_trees = 2.3 . add 2 trees with 70% probability, and add 3 trees with p=30%.
-                if (model.RandomGenerator.GetRandomFloat() < (n_trees - saplingsToEstablish) || saplingsToEstablish == 0)
+                if (model.RandomGenerator.GetRandomFloat() < (nSaplings - saplingsToEstablish) || saplingsToEstablish == 0)
                 {
-                    saplingsToEstablish++;
+                    ++saplingsToEstablish;
                 }
 
                 // add a new tree
-                float heightOrDiameterVariation = model.Project.Model.Settings.SeedDispersal.RecruitmentDimensionVariation;
-                for (int saplingIndex = 0; saplingIndex < saplingsToEstablish; saplingIndex++)
+                float heightOrDiameterVariation = model.Project.Model.SeedDispersal.RecruitmentDimensionVariation;
+                for (int saplingIndex = 0; saplingIndex < saplingsToEstablish; ++saplingIndex)
                 {
                     int treeIndex = this.Trees.AddTree(model.Landscape, species.ID);
                     Trees treesOfSpecies = this.Trees.TreesBySpeciesID[species.ID];
@@ -482,7 +482,7 @@ namespace iLand.World
                     treesOfSpecies.Species = species;
                     treesOfSpecies.SetAge(treeIndex, sapling.Age, sapling.Height);
                     treesOfSpecies.Setup(model.Project, treeIndex);
-                    ruSpecies.Statistics.Add(treesOfSpecies, treeIndex, null); // count the newly created trees already in the stats
+                    ruSpecies.Statistics.AddToCurrentYear(treesOfSpecies, treeIndex, null); // count the newly created trees already in the stats
                 }
                 // clear all regeneration from this pixel (including this tree)
                 sapling.Clear(); // clear this tree (no carbon flow to the ground)
@@ -610,7 +610,7 @@ namespace iLand.World
                 // calculate the leaf area index (LAI)
                 float leafAreaIndex = this.Trees.TotalLeafArea / this.AreaWithTrees;
                 // calculate the intercepted radiation fraction using the law of Beer Lambert
-                float k = model.Project.Model.Settings.LightExtinctionCoefficient;
+                float k = model.Project.Model.Ecosystem.LightExtinctionCoefficient;
                 float lightInterceptionFraction = 1.0F - MathF.Exp(-k * leafAreaIndex);
                 this.Trees.PhotosyntheticallyActiveArea = this.AreaWithTrees * lightInterceptionFraction; // m2
 
@@ -678,8 +678,8 @@ namespace iLand.World
             {
                 Debug.Assert(this.Snags != null);
 
-                this.CarbonCycle.Npp = this.Trees.Statistics.Npp[^1] * Constant.BiomassCFraction;
-                this.CarbonCycle.Npp += this.Trees.Statistics.NppSaplings[^1] * Constant.BiomassCFraction;
+                this.CarbonCycle.Npp = this.Trees.StatisticsForAllSpeciesAndStands.Npp[^1] * Constant.BiomassCFraction;
+                this.CarbonCycle.Npp += this.Trees.StatisticsForAllSpeciesAndStands.NppSaplings[^1] * Constant.BiomassCFraction;
 
                 float area_factor = this.AreaInLandscape / Constant.RUArea; //conversion factor
                 float to_atm = this.Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha

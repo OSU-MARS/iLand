@@ -15,9 +15,9 @@ namespace iLand.World
     public class GisGrid
     {
         // global transformation record:
-        private readonly CoordinateTransform gisCoordTrans;
+        private readonly CoordinateTransform transform;
 
-        private PointF origin;
+        private PointF gisOrigin;
         private float[]? data;
 
         // access
@@ -32,7 +32,7 @@ namespace iLand.World
         public GisGrid()
         {
             this.data = null;
-            this.gisCoordTrans = new CoordinateTransform();
+            this.transform = new CoordinateTransform();
 
             this.CellSize = 1; // default value (for line mode)
             this.Columns = 0;
@@ -42,42 +42,89 @@ namespace iLand.World
         /// get grid value at local coordinates (X/Y); returs NODATAValue if out of range
         /// @p X and @p Y are local coordinates.
         public float GetValue(PointF position) { return this.GetValue(position.X, position.Y); }
-        // coordinates of the lower left corner of the grid
-        public PointF Origin { get { return origin; } }
 
-        // setup of global GIS transformation
-        public void SetupTransformation(float offsetX, float offsetY, float offsetZ, float angleInDegrees)
+        /// get value of grid at index positions
+        public float GetValue(int indexX, int indexY)
         {
-            this.gisCoordTrans.SetupTransformation(offsetX, offsetY, offsetZ, angleInDegrees);
-        }
-
-        public void WorldToModel(Vector3D world, out Vector3D model)
-        {
-            float x = world.X - gisCoordTrans.OffsetX;
-            float y = world.Y - gisCoordTrans.OffsetY;
-            model = new Vector3D(x * gisCoordTrans.CosRotate - y * gisCoordTrans.SinRotate,
-                                 x * gisCoordTrans.SinRotate + y * gisCoordTrans.CosRotate,
-                                 world.Z - gisCoordTrans.OffsetZ);
-        }
-
-        public void ModelToWorld(Vector3D model, out Vector3D world)
-        {
-            float x = model.X;
-            float y = model.Y; // spiegeln
-            world = new Vector3D(x * gisCoordTrans.CosRotateReverse - y * gisCoordTrans.SinRotateReverse + gisCoordTrans.OffsetX,
-                                 x * gisCoordTrans.SinRotateReverse + y * gisCoordTrans.CosRotateReverse + gisCoordTrans.OffsetY,
-                                 model.Z + gisCoordTrans.OffsetZ);
-        }
-
-        public bool LoadFromFile(string? fileName)
-        {
-            if (fileName == null)
+            if (indexX >= 0 && indexX < Columns && indexY >= 0 && indexY < Rows)
             {
-                throw new ArgumentNullException(nameof(fileName));
+                return this.data![indexY * Columns + indexX];
+            }
+            return -1.0F;  // out of scope
+        }
+
+        public float GetValue(float modelX, float modelY)
+        {
+            Vector3D modelCoordinate = new Vector3D(modelX, modelY, 0.0F);
+            Vector3D gisCoordinate = this.ModelToGis(modelCoordinate);
+
+            gisCoordinate.X -= this.GisOrigin.X;
+            gisCoordinate.Y -= this.GisOrigin.Y;
+
+            // get value out of grid.
+            // float rx = Origin.x + X * xAxis.x + Y * yAxis.x;
+            // float ry = Origin.y + X * xAxis.y + Y * yAxis.y;
+            if (gisCoordinate.X < 0.0 || gisCoordinate.Y < 0.0)
+            {
+                return -1.0F;
+            }
+            int indexX = (int)(gisCoordinate.X / this.CellSize);
+            int indexY = (int)(gisCoordinate.Y / this.CellSize);
+            if (indexX >= 0 && indexX < Columns && indexY >= 0 && indexY < Rows)
+            {
+                float value = this.data![indexY * this.Columns + indexX];
+                if (value != this.NoDataValue)
+                {
+                    return value;
+                }
+            }
+            return -10.0F; // the ultimate NODATA- or ErrorValue
+        }
+
+        // coordinates of the lower left corner of the grid
+        public PointF GisOrigin { get { return this.gisOrigin; } }
+
+        public PointF GisToModel(PointF gisCoordinate)
+        {
+            Vector3D modelCoordinate = this.GisToModel(new Vector3D(gisCoordinate.X, gisCoordinate.Y, 0.0F));
+            return new PointF(modelCoordinate.X, modelCoordinate.Y);
+        }
+
+        private Vector3D GisToModel(Vector3D gisCoordinate)
+        {
+            float x = gisCoordinate.X - this.transform.OffsetX;
+            float y = gisCoordinate.Y - this.transform.OffsetY;
+            Vector3D modelCoordinate = new Vector3D(x * this.transform.CosRotate - y * this.transform.SinRotate,
+                                                    x * this.transform.SinRotate + y * this.transform.CosRotate,
+                                                    gisCoordinate.Z - this.transform.OffsetZ);
+            return modelCoordinate;
+        }
+
+        public PointF ModelToGis(PointF modelCoordinate)
+        {
+            Vector3D gisCoordinate = this.ModelToGis(new Vector3D(modelCoordinate.X, modelCoordinate.Y, 0.0F));
+            return new PointF(gisCoordinate.X, gisCoordinate.Y);
+        }
+
+        private Vector3D ModelToGis(Vector3D modelCoordinate)
+        {
+            float x = modelCoordinate.X;
+            float y = modelCoordinate.Y; // spiegeln
+            Vector3D gisCoordinate = new Vector3D(x * this.transform.CosRotateReverse - y * transform.SinRotateReverse + this.transform.OffsetX,
+                                                  x * this.transform.SinRotateReverse + y * transform.CosRotateReverse + this.transform.OffsetY,
+                                                  modelCoordinate.Z + transform.OffsetZ);
+            return gisCoordinate;
+        }
+
+        public bool LoadFromFile(string? filePath)
+        {
+            if (filePath == null)
+            {
+                throw new ArgumentNullException(nameof(filePath));
             }
 
             // loads from a ESRI-Grid [RasterToFile] File.
-            string[] lines = File.ReadAllLines(fileName);
+            string[] lines = File.ReadAllLines(filePath);
 
             this.MinValue = Single.MaxValue;
             this.MaxValue = Single.MinValue;
@@ -111,11 +158,11 @@ namespace iLand.World
                     }
                     else if (key == "xllcorner")
                     {
-                        this.origin.X = Single.Parse(valueAsString);
+                        this.gisOrigin.X = Single.Parse(valueAsString);
                     }
                     else if (key == "yllcorner")
                     {
-                        this.origin.Y = Single.Parse(valueAsString);
+                        this.gisOrigin.Y = Single.Parse(valueAsString);
                     }
                     else if (key == "cellsize")
                     {
@@ -155,32 +202,26 @@ namespace iLand.World
             return true;
         }
 
-        public List<float> DistinctValues()
+        // setup of global GIS transformation
+        public void SetupTransformation(float offsetX, float offsetY, float offsetZ, float angleInDegrees)
         {
-            if (data == null)
-            {
-                return new List<float>();
-            }
-            Dictionary<float, float> temp_map = new Dictionary<float, float>();
-            for (int index = 0; index < this.DataSize; ++index)
-            {
-                temp_map.Add(data[index], 1.0F);
-            }
-            temp_map.Remove(NoDataValue);
-            return temp_map.Keys.ToList();
+            this.transform.Setup(offsetX, offsetY, offsetZ, angleInDegrees);
         }
 
-        public PointF ModelToWorld(PointF modelCoordinate)
-        {
-            ModelToWorld(new Vector3D(modelCoordinate.X, modelCoordinate.Y, 0.0F), out Vector3D to);
-            return new PointF(to.X, to.Y);
-        }
-
-        public PointF WorldToModel(PointF worldCoordinate)
-        {
-            WorldToModel(new Vector3D(worldCoordinate.X, worldCoordinate.Y, 0.0F), out Vector3D to);
-            return new PointF(to.X, to.Y);
-        }
+        //public List<float> GetDistinctValues()
+        //{
+        //    if (data == null)
+        //    {
+        //        return new List<float>();
+        //    }
+        //    Dictionary<float, float> temp_map = new Dictionary<float, float>();
+        //    for (int index = 0; index < this.DataSize; ++index)
+        //    {
+        //        temp_map.Add(data[index], 1.0F);
+        //    }
+        //    temp_map.Remove(NoDataValue);
+        //    return temp_map.Keys.ToList();
+        //}
 
         /*
         public void GetDistinctValues(TStringList *ResultList, float x_m, float y_m)
@@ -209,85 +250,47 @@ namespace iLand.World
         }*/
 
         /// get value of grid at index positions
-        public float GetValue(int indexX, int indexY)
+        //public float GetValue(int index)
+        //{
+        //    if (index >= 0 && index < DataSize)
+        //    {
+        //        return this.data![index];
+        //    }
+        //    return -1.0F;  // out of scope
+        //}
+
+        //public RectangleF GetCellExtent(int indexX, int indexY)
+        //{
+        //    Vector3D gisCoordinate = new Vector3D(indexX * this.CellSize + this.Origin.X,
+        //                                          indexY * this.CellSize + this.Origin.Y,
+        //                                          0.0F);
+        //    Vector3D model = this.GisToModel(gisCoordinate);
+        //    RectangleF rect = new RectangleF(model.X, // left
+        //                                     model.Y, // top
+        //                                     this.CellSize, // width
+        //                                     this.CellSize); // height
+        //    return rect;
+        //}
+
+        private Vector3D GetCoordinate(int cellIndex)
         {
-            if (indexX >= 0 && indexX < Columns && indexY >= 0 && indexY < Rows)
+            if (cellIndex < 0 || cellIndex >= this.DataSize)
             {
-                return this.data![indexY * Columns + indexX];
+                throw new ArgumentOutOfRangeException(nameof(cellIndex), "Invalid cell index.");
             }
-            return -1.0F;  // out of scope
-        }
-
-        /// get value of grid at index positions
-        public float GetValue(int index)
-        {
-            if (index >= 0 && index < DataSize)
-            {
-                return this.data![index];
-            }
-            return -1.0F;  // out of scope
-        }
-
-        public float GetValue(float x, float y)
-        {
-            Vector3D model = new Vector3D(x, y, 0.0F);
-            this.ModelToWorld(model, out Vector3D world);
-
-            world.X -= this.Origin.X;
-            world.Y -= this.Origin.Y;
-
-            // get value out of grid.
-            // float rx = Origin.x + X * xAxis.x + Y * yAxis.x;
-            // float ry = Origin.y + X * xAxis.y + Y * yAxis.y;
-            if (world.X < 0.0 || world.Y < 0.0)
-            {
-                return -1.0F;
-            }
-            int indexX = (int)(world.X / CellSize);
-            int indexY = (int)(world.Y / CellSize);
-            if (indexX >= 0 && indexX < Columns && indexY >= 0 && indexY < Rows)
-            {
-                float value = this.data![indexY * this.Columns + indexX];
-                if (value != this.NoDataValue)
-                {
-                    return value;
-                }
-            }
-            return -10.0F; // the ultimate NODATA- or ErrorValue
+            int indexX = cellIndex % this.Columns;
+            int indexY = cellIndex / this.Columns;
+            return this.GetCoordinate(indexX, indexY);
         }
 
         public Vector3D GetCoordinate(int indexX, int indexY)
         {
-            Vector3D world = new Vector3D((indexX + 0.5F) * this.CellSize + this.Origin.X,
-                                          (indexY + 0.5F) * this.CellSize + this.Origin.Y,
-                                          0.0F);
-            WorldToModel(world, out Vector3D model);
-            return model;
+            Vector3D gisCoordinate = new Vector3D((indexX + 0.5F) * this.CellSize + this.GisOrigin.X,
+                                                  (indexY + 0.5F) * this.CellSize + this.GisOrigin.Y,
+                                                  0.0F);
+            return this.GisToModel(gisCoordinate);
         }
 
-        public RectangleF GetCellExtent(int indexX, int indexY)
-        {
-            Vector3D world = new Vector3D(indexX * this.CellSize + this.Origin.X,
-                                          indexY * this.CellSize + this.Origin.Y,
-                                          0.0F);
-            WorldToModel(world, out Vector3D model);
-            RectangleF rect = new RectangleF(model.X, // left
-                                             model.Y, // top
-                                             this.CellSize, // width
-                                             this.CellSize); // height
-            return rect;
-        }
-
-        public Vector3D GetCoordinate(int cellIndex)
-        {
-            if (cellIndex < 0 || cellIndex >= DataSize)
-            {
-                throw new ArgumentOutOfRangeException(nameof(cellIndex), "gisgrid:coord: invalid index.");
-            }
-            int indexX = cellIndex % Columns;
-            int indexY = cellIndex / Columns;
-            return this.GetCoordinate(indexX, indexY);
-        }
 
         /*
         public void CountOccurence(int intID, int & Count, int & left, int & upper, int &right, int &lower, RectangleF *OuterBox)
@@ -374,22 +377,22 @@ namespace iLand.World
         }
         */
 
-        public void Clip(RectangleF clipExtent)
-        {
-            // auf das angegebene Rechteck zuschneiden, alle
-            // werte draussen auf -1 setzen.
-            for (int indexX = 0; indexX < this.Columns; ++indexX)
-            {
-                for (int indexY = 0; indexY < this.Rows; ++indexY)
-                {
-                    Vector3D akoord = this.GetCoordinate(indexY * Columns + indexX);
-                    if (clipExtent.Contains(akoord.X, akoord.Y) == false)
-                    {
-                        this.data![indexY * Columns + indexX] = -1.0F;
-                    }
-                }
-            }
-        }
+        //public void Clip(RectangleF clipExtent)
+        //{
+        //    // auf das angegebene Rechteck zuschneiden, alle
+        //    // werte draussen auf -1 setzen.
+        //    for (int indexX = 0; indexX < this.Columns; ++indexX)
+        //    {
+        //        for (int indexY = 0; indexY < this.Rows; ++indexY)
+        //        {
+        //            Vector3D akoord = this.GetCoordinate(indexY * Columns + indexX);
+        //            if (clipExtent.Contains(akoord.X, akoord.Y) == false)
+        //            {
+        //                this.data![indexY * Columns + indexX] = -1.0F;
+        //            }
+        //        }
+        //    }
+        //}
 
         /*
         public void ExportToTable(AnsiString OutFileName)

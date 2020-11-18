@@ -81,7 +81,7 @@ namespace iLand.Output
             SqliteCommand insertRow = new SqliteCommand(this.insertRowSqlText, transaction.Connection, transaction);
             for (int columnIndex = 0; columnIndex < this.Columns.Count; ++columnIndex)
             {
-                insertRow.Parameters.Add("@" + this.Columns[columnIndex].Name, this.Columns[columnIndex].Datatype);
+                insertRow.Parameters.Add("@" + this.Columns[columnIndex].Name, this.Columns[columnIndex].SqlType);
             }
 
             this.LogYear(model, insertRow);
@@ -96,7 +96,7 @@ namespace iLand.Output
             List<string> columnNames = new List<string>(this.Columns.Count);
             foreach (SqlColumn column in this.Columns)
             {
-                switch (column.Datatype)
+                switch (column.SqlType)
                 {
                     case SqliteType.Integer:
                         createTableCommand.Append(column.Name + " integer,");

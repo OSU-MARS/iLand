@@ -3,19 +3,18 @@ using iLand.Tools;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
-using System;
 using System.Diagnostics;
 
 namespace iLand.Output
 {
     public class CarbonOutput : Output
     {
-        private readonly Expression mFilter; // condition for landscape-level output
+        private readonly Expression mYearFilter; // condition for landscape-level output
         private readonly Expression mResourceUnitFilter; // condition for resource-unit-level output
 
         public CarbonOutput()
         {
-            this.mFilter = new Expression();
+            this.mYearFilter = new Expression();
             this.mResourceUnitFilter = new Expression();
 
             this.Name = "Carbon and nitrogen pools above and belowground per RU/yr";
@@ -31,49 +30,49 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
-            this.Columns.Add(new SqlColumn("area_ha", "total stockable area of the resource unit (ha)", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("stem_c", "Stem carbon kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("stem_n", "Stem nitrogen kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("branch_c", "branches carbon kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("branch_n", "branches nitrogen kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("foliage_c", "Foliage carbon kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("foliage_n", "Foliage nitrogen kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("coarseRoot_c", "coarse root carbon kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("coarseRoot_n", "coarse root nitrogen kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("fineRoot_c", "fine root carbon kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("fineRoot_n", "fine root nitrogen kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("regeneration_c", "total carbon in regeneration layer (h<4m) kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("regeneration_n", "total nitrogen in regeneration layer (h<4m) kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("snags_c", "standing dead wood carbon kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("snags_n", "standing dead wood nitrogen kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("snagsOther_c", "branches and coarse roots of standing dead trees, carbon kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("snagsOther_n", "branches and coarse roots of standing dead trees, nitrogen kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("downedWood_c", "downed woody debris (yR), carbon kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("downedWood_n", "downed woody debris (yR), nitrogen kg/ga", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("litter_c", "soil litter (yl), carbon kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("litter_n", "soil litter (yl), nitrogen kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("soil_c", "soil organic matter (som), carbon kg/ha", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("soil_n", "soil organic matter (som), nitrogen kg/ha", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("area_ha", "total stockable area of the resource unit (ha)", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("stem_c", "Stem carbon kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("stem_n", "Stem nitrogen kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("branch_c", "branches carbon kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("branch_n", "branches nitrogen kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("foliage_c", "Foliage carbon kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("foliage_n", "Foliage nitrogen kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("coarseRoot_c", "coarse root carbon kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("coarseRoot_n", "coarse root nitrogen kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("fineRoot_c", "fine root carbon kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("fineRoot_n", "fine root nitrogen kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("regeneration_c", "total carbon in regeneration layer (h<4m) kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("regeneration_n", "total nitrogen in regeneration layer (h<4m) kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("snags_c", "standing dead wood carbon kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("snags_n", "standing dead wood nitrogen kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("snagsOther_c", "branches and coarse roots of standing dead trees, carbon kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("snagsOther_n", "branches and coarse roots of standing dead trees, nitrogen kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("downedWood_c", "downed woody debris (yR), carbon kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("downedWood_n", "downed woody debris (yR), nitrogen kg/ga", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("litter_c", "soil litter (yl), carbon kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("litter_n", "soil litter (yl), nitrogen kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("soil_c", "soil organic matter (som), carbon kg/ha", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("soil_n", "soil organic matter (som), nitrogen kg/ha", SqliteType.Real));
         }
 
         public override void Setup(Model model)
         {
             // use a condition for to control execuation for the current year
-            this.mFilter.SetExpression(model.Project.Output.Carbon.Condition);
+            this.mYearFilter.SetExpression(model.Project.Output.Carbon.Condition);
             this.mResourceUnitFilter.SetExpression(model.Project.Output.Carbon.ConditionRU);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             // global condition
-            if (!mFilter.IsEmpty && mFilter.Evaluate(model.CurrentYear) == 0.0)
+            if ((this.mYearFilter.IsEmpty == false) && (this.mYearFilter.Evaluate(model.CurrentYear) == 0.0))
             {
                 return;
             }
 
             bool isRUlevel = true;
             // switch off details if this is indicated in the conditionRU option
-            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Evaluate(model.CurrentYear) == 0.0)
+            if ((this.mResourceUnitFilter.IsEmpty == false) && (this.mResourceUnitFilter.Evaluate(model.CurrentYear) == 0.0))
             {
                 isRUlevel = false;
             }
@@ -87,7 +86,7 @@ namespace iLand.Output
                 }
                 Debug.Assert(ru.Snags != null, "Resource unit has null soil when its snags are non-null.");
                 
-                ResourceUnitTreeStatistics ruStatistics = ru.Trees.Statistics;
+                ResourceUnitTreeStatistics ruStatistics = ru.Trees.StatisticsForAllSpeciesAndStands;
                 float areaFactor = ru.AreaInLandscape / Constant.RUArea; // conversion factor from real area to per ha values
                 if (isRUlevel)
                 {

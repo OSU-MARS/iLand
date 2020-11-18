@@ -41,11 +41,11 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("path"))
+            if (String.Equals(reader.Name, "paths", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("home"))
+            else if (String.Equals(reader.Name, "home", StringComparison.Ordinal))
             {
                 // interpret an empty <home> element as an indication to continue defaulting to the project directory
                 string candidateHomePath = reader.ReadElementContentAsString().Trim();
@@ -54,35 +54,35 @@ namespace iLand.Input.ProjectFile
                     this.Home = candidateHomePath;
                 }
             }
-            else if (reader.IsStartElement("database"))
+            else if (String.Equals(reader.Name, "database", StringComparison.Ordinal))
             {
                 this.Database = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("gis"))
+            else if (String.Equals(reader.Name, "gis", StringComparison.Ordinal))
             {
                 this.Gis = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("lip"))
+            else if (String.Equals(reader.Name, "lip", StringComparison.Ordinal))
             {
                 this.LightIntensityProfile = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("log"))
+            else if (String.Equals(reader.Name, "log", StringComparison.Ordinal))
             {
                 this.Log = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("temp"))
+            else if (String.Equals(reader.Name, "temp", StringComparison.Ordinal))
             {
                 this.Temp = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("script"))
+            else if (String.Equals(reader.Name, "script", StringComparison.Ordinal))
             {
                 this.Script = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("init"))
+            else if (String.Equals(reader.Name, "init", StringComparison.Ordinal))
             {
                 this.Init = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("output"))
+            else if (String.Equals(reader.Name, "output", StringComparison.Ordinal))
             {
                 this.Output = reader.ReadElementContentAsString().Trim();
             }

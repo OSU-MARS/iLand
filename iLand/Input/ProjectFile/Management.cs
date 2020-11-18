@@ -3,17 +3,14 @@ using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class Management : Enablable
+    public class Management : XmlSerializable
     {
-        public string? File { get; private set; }
+        public AgentBasedEngine Abe { get; init; }
         public bool AbeEnabled { get; private set; }
-        public AgentBasedEngine Abe { get; private set; }
+        public string? FileName { get; private set; }
 
         public Management()
         {
-            // no default in C++
-            // this.Enabled
-
             this.Abe = new AgentBasedEngine();
         }
 
@@ -24,27 +21,23 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("management"))
+            if (String.Equals(reader.Name, "management", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("enabled"))
+            else if (String.Equals(reader.Name, "fileName", StringComparison.Ordinal))
             {
-                this.Enabled = reader.ReadElementContentAsBoolean();
-            }
-            else if (reader.IsStartElement("file"))
-            {
-                this.File = reader.ReadElementContentAsString().Trim();
-                if (String.IsNullOrEmpty(this.File) == false)
+                this.FileName = reader.ReadElementContentAsString().Trim();
+                if (String.IsNullOrEmpty(this.FileName) == false)
                 {
                     throw new NotImplementedException("Management files are not currently read.");
                 }
             }
-            else if (reader.IsStartElement("abeEnabled"))
+            else if (String.Equals(reader.Name, "abeEnabled", StringComparison.Ordinal))
             {
                 this.AbeEnabled = reader.ReadElementContentAsBoolean();
             }
-            else if (reader.IsStartElement("abe"))
+            else if (String.Equals(reader.Name, "abe", StringComparison.Ordinal))
             {
                 this.Abe.ReadXml(reader);
             }

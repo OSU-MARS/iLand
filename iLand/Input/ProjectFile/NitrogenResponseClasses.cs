@@ -1,25 +1,26 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class NitrogenResponseClasses : XmlSerializable
     {
-        public float Class1A { get; private set; }
-        public float Class1B { get; private set; }
-        public float Class2A { get; private set; }
-        public float Class2B { get; private set; }
-        public float Class3A { get; private set; }
-        public float Class3B { get; private set; }
+        public float Class1K { get; private set; }
+        public float Class1Minimum { get; private set; }
+        public float Class2K { get; private set; }
+        public float Class2Minimum { get; private set; }
+        public float Class3K { get; private set; }
+        public float Class3Minimum { get; private set; }
 
         public NitrogenResponseClasses()
         {
             // no defaults in C++, must be set in project file
-            this.Class1A = 0.0F;
-            this.Class1B = 0.0F;
-            this.Class2A = 0.0F;
-            this.Class2B = 0.0F;
-            this.Class3A = 0.0F;
-            this.Class3B = 0.0F;
+            this.Class1K = 0.0F;
+            this.Class1Minimum = 0.0F;
+            this.Class2K = 0.0F;
+            this.Class2Minimum = 0.0F;
+            this.Class3K = 0.0F;
+            this.Class3Minimum = 0.0F;
         }
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -29,54 +30,54 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes.");
 			}
 
-			if (reader.IsStartElement("nitrogenResponseClasses"))
+			if (String.Equals(reader.Name, "nitrogenResponseClasses", StringComparison.Ordinal))
 			{
 				reader.Read();
 			}
-			else if (reader.IsStartElement("class_1_a"))
+			else if (String.Equals(reader.Name, "class1k", StringComparison.Ordinal))
 			{
-				this.Class1A = reader.ReadElementContentAsFloat();
-                if (this.Class1A >= 0.0F)
+				this.Class1K = reader.ReadElementContentAsFloat();
+                if (this.Class1K >= 0.0F)
                 {
                     throw new XmlException("Class 1 nitrogen response: a is zero or positive.");
                 }
 			}
-            else if (reader.IsStartElement("class_1_b"))
+            else if (String.Equals(reader.Name, "class1minimum", StringComparison.Ordinal))
             {
-                this.Class1B = reader.ReadElementContentAsFloat();
-                if (this.Class1B <= 0.0F)
+                this.Class1Minimum = reader.ReadElementContentAsFloat();
+                if (this.Class1Minimum <= 0.0F)
                 {
                     throw new XmlException("Class 1 nitrogen response: b is zero or negative.");
                 }
             }
-            else if (reader.IsStartElement("class_2_a"))
+            else if (String.Equals(reader.Name, "class2k", StringComparison.Ordinal))
             {
-                this.Class2A = reader.ReadElementContentAsFloat();
-                if (this.Class2A >= 0.0F)
+                this.Class2K = reader.ReadElementContentAsFloat();
+                if (this.Class2K >= 0.0F)
                 {
                     throw new XmlException("Class 2 nitrogen response: a is zero or positive.");
                 }
             }
-            else if (reader.IsStartElement("class_2_b"))
+            else if (String.Equals(reader.Name, "class2minimum", StringComparison.Ordinal))
             {
-                this.Class2B = reader.ReadElementContentAsFloat();
-                if (this.Class2B <= 0.0F)
+                this.Class2Minimum = reader.ReadElementContentAsFloat();
+                if (this.Class2Minimum <= 0.0F)
                 {
                     throw new XmlException("Class 2 nitrogen response: b is zero or negative.");
                 }
             }
-            else if (reader.IsStartElement("class_3_a"))
+            else if (String.Equals(reader.Name, "class3k", StringComparison.Ordinal))
             {
-                this.Class3A = reader.ReadElementContentAsFloat();
-                if (this.Class3A >= 0.0F)
+                this.Class3K = reader.ReadElementContentAsFloat();
+                if (this.Class3K >= 0.0F)
                 {
                     throw new XmlException("Class 3 nitrogen response: a is zero or positive.");
                 }
             }
-            else if (reader.IsStartElement("class_3_b"))
+            else if (String.Equals(reader.Name, "class3minimum", StringComparison.Ordinal))
             {
-                this.Class3B = reader.ReadElementContentAsFloat();
-                if (this.Class3B <= 0.0F)
+                this.Class3Minimum = reader.ReadElementContentAsFloat();
+                if (this.Class3Minimum <= 0.0F)
                 {
                     throw new XmlException("Class 3 nitrogen response: b is zero or negative.");
                 }

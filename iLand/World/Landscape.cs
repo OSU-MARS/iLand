@@ -28,22 +28,20 @@ namespace iLand.World
 
         public Landscape(Project projectFile)
         {
-            // simple case: create resource units in a regular grid.
-            if (projectFile.Model.World.ResourceUnitsAsGrid == false)
-            {
-                throw new NotImplementedException("For now, /project/world/resourceUnitsAsGrid must be set to true.");
-            }
-
             this.Dem = null;
             this.GrassCover = new GrassCover();
             this.ResourceUnits = new List<ResourceUnit>();
             this.ResourceUnitGrid = new Grid<ResourceUnit>();
             this.StandGrid = null;
 
-            float lightCellSize = projectFile.Model.World.CellSize;
-            float worldWidth = projectFile.Model.World.Width;
-            float worldHeight = projectFile.Model.World.Height;
-            float worldBuffer = projectFile.Model.World.Buffer;
+            float lightCellSize = projectFile.World.Geometry.LightCellSize;
+            if (lightCellSize != Constant.LightSize)
+            {
+                throw new NotSupportedException("Light cell size " + lightCellSize.ToString("0.000") + "m is not supported.");
+            }
+            float worldWidth = projectFile.World.Geometry.Width;
+            float worldHeight = projectFile.World.Geometry.Height;
+            float worldBuffer = projectFile.World.Geometry.Buffer;
             this.Extent = new RectangleF(0.0F, 0.0F, worldWidth, worldHeight);
             // Debug.WriteLine(String.Format("Setup of the world: {0}x{1} m with {2} m light cell size and {3} m buffer", worldWidth, worldHeight, lightCellSize, worldBuffer));
 
@@ -63,7 +61,7 @@ namespace iLand.World
 
             // setup of the digital elevation map if present
             // Performs bounds tests against height grid, so DEM must be created after grids.
-            string? demFileName = projectFile.Model.World.DemFile;
+            string? demFileName = projectFile.World.DemFile;
             if (String.IsNullOrEmpty(demFileName) == false)
             {
                 this.Dem = new DEM(this, projectFile.GetFilePath(ProjectDirectory.Home, demFileName)); // TODO: stop requiring gis\ prefix in project file
@@ -73,13 +71,13 @@ namespace iLand.World
             this.Environment = new Input.EnvironmentReader();
 
             // setup the spatial location of the project area
-            if (projectFile.Model.World.Location != null)
+            if (projectFile.World.Geometry.ModelOrigin != null)
             {
                 // setup of spatial location
-                float worldOriginX = projectFile.Model.World.Location.X;
-                float worldOriginY = projectFile.Model.World.Location.Y;
-                float worldOriginZ = projectFile.Model.World.Location.Z;
-                float worldRotation = projectFile.Model.World.Location.Rotation;
+                float worldOriginX = projectFile.World.Geometry.ModelOrigin.X;
+                float worldOriginY = projectFile.World.Geometry.ModelOrigin.Y;
+                float worldOriginZ = projectFile.World.Geometry.ModelOrigin.Z;
+                float worldRotation = projectFile.World.Geometry.ModelOrigin.Rotation;
                 this.Environment.GisGrid.SetupTransformation(worldOriginX, worldOriginY, worldOriginZ, worldRotation);
                 // Debug.WriteLine("Setup of spatial location: " + worldOriginX + "," + worldOriginY + "," + worldOriginZ + " rotation " + worldRotation);
             }
@@ -88,51 +86,26 @@ namespace iLand.World
                 this.Environment.GisGrid.SetupTransformation(0.0F, 0.0F, 0.0F, 0.0F);
             }
 
-            if (projectFile.Model.World.EnvironmentEnabled)
+            string? gridFileName = projectFile.World.EnvironmentGridFile;
+            if (gridFileName != null)
             {
-                bool isGridEnvironment = String.Equals(projectFile.Model.World.EnvironmentMode, "grid", StringComparison.Ordinal);
-                if (isGridEnvironment)
-                {
-                    string? gridFileName = projectFile.Model.World.EnvironmentGridFile;
-                    if (String.IsNullOrEmpty(gridFileName))
-                    {
-                        throw new XmlException("/projectFile/model/world/environmentGrid not found.");
-                    }
-                    string gridFilePath = projectFile.GetFilePath(ProjectDirectory.Gis, gridFileName);
-                    if (File.Exists(gridFilePath))
-                    {
-                        this.Environment.SetGridMode(gridFilePath);
-                    }
-                    else
-                    {
-                        throw new NotSupportedException(String.Format("File '{0}' specified in key 'environmentGrid' does not exist ('environmentMode' is 'grid').", gridFilePath));
-                    }
-                }
-
-                this.Environment.LoadFromProjectAndEnvironmentFile(projectFile);
-            }
-            else
-            {
-                throw new NotSupportedException("Environment should create default species set and climate from project file settings.");
-                // create default species set and climate
-                //SpeciesSet speciesSet = new SpeciesSet();
-                //mSpeciesSets.Add(speciesSet);
-                //speciesSet.Setup(this);
-                //Climate c = new Climate();
-                //Climates.Add(c);
+                string gridFilePath = projectFile.GetFilePath(ProjectDirectory.Home, gridFileName);
+                this.Environment.SetGridMode(gridFilePath);
             }
 
-            bool hasStandGrid = false;
-            if (projectFile.Model.World.StandGrid.Enabled)
+            this.Environment.LoadFromProjectAndEnvironmentFile(projectFile);
+
+            bool hasStandGrid = String.IsNullOrEmpty(projectFile.World.StandGrid.FileName) == false;
+            if (hasStandGrid)
             {
-                string? fileName = projectFile.Model.World.StandGrid.FileName;
-                this.StandGrid = new MapGrid(this, fileName); // create stand grid index later
+                string filePath = projectFile.GetFilePath(ProjectDirectory.Home, projectFile.World.StandGrid.FileName);
+                this.StandGrid = new MapGrid(this, filePath); // create stand grid index later
                 if (this.StandGrid.IsValid() == false)
                 {
                     throw new NotSupportedException();
                 }
 
-                for (int standIndex = 0; standIndex < StandGrid.Grid.Count; standIndex++)
+                for (int standIndex = 0; standIndex < StandGrid.Grid.Count; ++standIndex)
                 {
                     int standID = this.StandGrid.Grid[standIndex];
                     this.HeightGrid[standIndex].SetInWorld(standID > -1);
@@ -141,7 +114,7 @@ namespace iLand.World
             }
             else
             {
-                if (projectFile.Model.Parameter.Torus == false)
+                if (projectFile.World.Geometry.IsTorus == false)
                 {
                     // in the case we have no stand grid but only a large rectangle (without the torus option)
                     // we assume a forest outside
@@ -210,18 +183,18 @@ namespace iLand.World
             this.CalculateStockableArea();
 
             // setup of the project area mask
-            if ((hasStandGrid == false) && projectFile.Model.World.AreaMask.Enabled && (projectFile.Model.World.AreaMask.ImageFile != null)) // TODO: String.IsNullOrEmpty(ImageFile)?
+            if ((hasStandGrid == false) && projectFile.World.AreaMask.Enabled && (String.IsNullOrEmpty(projectFile.World.AreaMask.ImageFile) == false))
             {
                 // to be extended!!! e.g. to load ESRI-style text files....
                 // setup a grid with the same size as the height grid...
-                Grid<float> worldMask = new Grid<float>(this.HeightGrid.CellsX, this.HeightGrid.CellsY, this.HeightGrid.CellSize);
-                string fileName = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.Model.World.AreaMask.ImageFile);
-                Grid.LoadGridFromImage(fileName, worldMask); // fetch from image
+                Grid<float> worldMask = new Grid<float>(this.HeightGrid.SizeX, this.HeightGrid.SizeY, this.HeightGrid.CellSize);
+                string areaMaskFileName = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.World.AreaMask.ImageFile);
+                Grid.LoadGridFromImage(areaMaskFileName, worldMask); // fetch from image
                 for (int index = 0; index < worldMask.Count; ++index)
                 {
                     this.HeightGrid[index].SetInWorld(worldMask[index] > 0.99);
                 }
-                Debug.WriteLine("loaded project area mask from" + fileName);
+                Debug.WriteLine("loaded project area mask from" + areaMaskFileName);
             }
             if (this.ResourceUnits.Count == 0)
             {

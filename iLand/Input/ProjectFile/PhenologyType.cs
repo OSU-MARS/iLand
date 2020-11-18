@@ -30,7 +30,7 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 0)
             {
-                if (reader.IsStartElement("type"))
+                if (String.Equals(reader.Name, "type", StringComparison.Ordinal))
                 {
                     if (reader.AttributeCount != 1)
                     {
@@ -50,7 +50,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Encountered unexpected attributes.");
                 }
             }
-            else if (reader.IsStartElement("vpdMin"))
+            else if (String.Equals(reader.Name, "vpdMin", StringComparison.Ordinal))
             {
                 this.VpdMin = reader.ReadElementContentAsFloat();
                 if (this.VpdMin < 0.0F)
@@ -58,7 +58,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Minimum vapor pressure deficit is negative.");
                 }
             }
-            else if (reader.IsStartElement("vpdMax"))
+            else if (String.Equals(reader.Name, "vpdMax", StringComparison.Ordinal))
             {
                 this.VpdMax = reader.ReadElementContentAsFloat();
                 if (this.VpdMax < 0.0F)
@@ -66,7 +66,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Minimum vapor pressure deficit is negative.");
                 }
             }
-            else if (reader.IsStartElement("dayLengthMin"))
+            else if (String.Equals(reader.Name, "dayLengthMin", StringComparison.Ordinal))
             {
                 this.DayLengthMin = reader.ReadElementContentAsFloat();
                 if (this.DayLengthMin < 0.0F)
@@ -74,7 +74,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Minimum day length is negative.");
                 }
             }
-            else if (reader.IsStartElement("dayLengthMax"))
+            else if (String.Equals(reader.Name, "dayLengthMax", StringComparison.Ordinal))
             {
                 this.DayLengthMax = reader.ReadElementContentAsFloat();
                 if (this.DayLengthMax < 0.0F)
@@ -82,7 +82,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Maximum day length is negative.");
                 }
             }
-            else if (reader.IsStartElement("tempMin"))
+            else if (String.Equals(reader.Name, "tempMin", StringComparison.Ordinal))
             {
                 this.TempMin = reader.ReadElementContentAsFloat();
                 if (this.TempMin < -273.15F)
@@ -90,7 +90,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Minimum temperature is below absolute zero.");
                 }
             }
-            else if (reader.IsStartElement("tempMax"))
+            else if (String.Equals(reader.Name, "tempMax", StringComparison.Ordinal))
             {
                 this.TempMax = reader.ReadElementContentAsFloat();
                 if (this.TempMax < -273.15F)

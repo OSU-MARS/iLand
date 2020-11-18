@@ -1,45 +1,38 @@
 ﻿using Microsoft.Data.Sqlite;
-using System;
 
 namespace iLand.Output
 {
     public class SqlColumn
     {
-        public SqliteType Datatype { get; init; }
         public string Description { get; init; }
         public string Name { get; init; }
+        public SqliteType SqlType { get; init; }
 
-        public SqlColumn(string name, string description, OutputDatatype datatype)
+        public SqlColumn(string name, string description, SqliteType sqlType)
         {
             this.Name = name;
             this.Description = description;
-            this.Datatype = datatype switch
-            {
-                OutputDatatype.Integer => SqliteType.Integer,
-                OutputDatatype.Double => SqliteType.Real,
-                OutputDatatype.String => SqliteType.Text,
-                _ => throw new NotSupportedException() // blob
-            };
+            this.SqlType = sqlType;
         }
 
         public static SqlColumn CreateID()
         {
-            return new SqlColumn("rid", "id of ressource unit (-1: no ids set)", OutputDatatype.Integer);
+            return new SqlColumn("rid", "id of ressource unit (-1: no ids set)", SqliteType.Integer);
         }
 
         public static SqlColumn CreateResourceUnit()
         {
-            return new SqlColumn("ru", "index of ressource unit", OutputDatatype.Integer);
+            return new SqlColumn("ru", "index of ressource unit", SqliteType.Integer);
         }
 
         public static SqlColumn CreateSpecies()
         {
-            return new SqlColumn("species", "tree species", OutputDatatype.String);
+            return new SqlColumn("species", "tree species", SqliteType.Text);
         }
 
         public static SqlColumn CreateYear() 
         { 
-            return new SqlColumn("year", "simulation year", OutputDatatype.Integer); 
+            return new SqlColumn("year", "simulation year", SqliteType.Integer); 
         }
     }
 }

@@ -1,11 +1,16 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class DynamicStandOutput : DynamicOutput
+    public class DynamicStandOutput : ConditionOutput
     {
         public bool BySpecies { get; private set; }
         public bool ByResourceUnit { get; private set; }
+
+        public string? Columns { get; protected set; }
+        public string? ResourceUnitFilter { get; protected set; }
+        public string? TreeFilter { get; protected set; }
 
         public DynamicStandOutput()
         {
@@ -23,35 +28,35 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("dynamicStand"))
+            if (String.Equals(reader.Name, "dynamicStand", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("enabled"))
+            else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
             {
                 this.Enabled = reader.ReadElementContentAsBoolean();
             }
-            else if (reader.IsStartElement("condition"))
+            else if (String.Equals(reader.Name, "condition", StringComparison.Ordinal))
             {
                 this.Condition = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("rufilter"))
+            else if (String.Equals(reader.Name, "rufilter", StringComparison.Ordinal))
             {
                 this.ResourceUnitFilter = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("columns"))
+            else if (String.Equals(reader.Name, "columns", StringComparison.Ordinal))
             {
                 this.Columns = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("treefilter"))
+            else if (String.Equals(reader.Name, "treefilter", StringComparison.Ordinal))
             {
                 this.TreeFilter = reader.ReadElementContentAsString().Trim();
             }
-            else if (reader.IsStartElement("bySpecies"))
+            else if (String.Equals(reader.Name, "bySpecies", StringComparison.Ordinal))
             {
                 this.BySpecies = reader.ReadElementContentAsBoolean();
             }
-            else if (reader.IsStartElement("byResourceUnit"))
+            else if (String.Equals(reader.Name, "byResourceUnit", StringComparison.Ordinal))
             {
                 this.ByResourceUnit = reader.ReadElementContentAsBoolean();
             }

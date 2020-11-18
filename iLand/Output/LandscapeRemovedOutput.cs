@@ -53,19 +53,19 @@ namespace iLand.Output
                                "the setting 'includeHarvest' controls whether to include ('true') or exclude ('false') harvested trees.";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateSpecies());
-            this.Columns.Add(new SqlColumn("reason", "Resaon for tree death: 'N': Natural mortality, 'H': Harvest (removed from the forest), 'D': Disturbance (not salvage-harvested), 'S': Salvage harvesting (i.e. disturbed trees which are harvested), 'C': killed/cut down by management", OutputDatatype.String));
-            this.Columns.Add(new SqlColumn("count", "number of died trees (living, >4m height) ", OutputDatatype.Integer));
-            this.Columns.Add(new SqlColumn("volume_m3", "sum of volume (geomery, taper factor) in m3", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("reason", "Resaon for tree death: 'N': Natural mortality, 'H': Harvest (removed from the forest), 'D': Disturbance (not salvage-harvested), 'S': Salvage harvesting (i.e. disturbed trees which are harvested), 'C': killed/cut down by management", SqliteType.Text));
+            this.Columns.Add(new SqlColumn("count", "number of died trees (living, >4m height) ", SqliteType.Integer));
+            this.Columns.Add(new SqlColumn("volume_m3", "sum of volume (geomery, taper factor) in m3", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", SqliteType.Real));
         }
 
         public void AddTree(Tree.Trees trees, int treeIndex, MortalityCause removalType)
         {
-            if (removalType == MortalityCause.Stress && !mIncludeDeadTrees)
+            if (this.mIncludeDeadTrees == false && (removalType == MortalityCause.Stress))
             {
                 return;
             }
-            if ((removalType == MortalityCause.Harvest || removalType == MortalityCause.Salavaged || removalType == MortalityCause.CutDown) && !mIncludeHarvestTrees)
+            if (this.mIncludeHarvestTrees == false && (removalType == MortalityCause.Harvest || removalType == MortalityCause.Salavaged || removalType == MortalityCause.CutDown))
             {
                 return;
             }

@@ -165,13 +165,13 @@ namespace iLand.World
         public float GetOrientation(PointF point, out float rslope_angle, out float rslope_aspect)
         {
             Point pt = GetCellIndex(point);
-            if (pt.X > 0 && pt.X < CellsX + 1 && pt.Y > 0 && pt.Y < CellsY - 1)
+            if (pt.X > 0 && pt.X < SizeX + 1 && pt.Y > 0 && pt.Y < SizeY - 1)
             {
                 int p = this.IndexOf(pt);
-                float z2 = this[p - CellsX];
+                float z2 = this[p - SizeX];
                 float z4 = this[p - 1];
                 float z6 = this[p + 1];
-                float z8 = this[p + CellsX];
+                float z8 = this[p + SizeX];
                 float g = (-z4 + z6) / (2 * CellSize);
                 float h = (z2 - z8) / (2 * CellSize);
 

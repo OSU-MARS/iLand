@@ -16,7 +16,7 @@ namespace iLand.Input
     /** @class StandLoader
         loads (initializes) trees for a "stand" from various sources.
         StandLoader initializes trees on the landscape. It reads (usually) from text files, creates the
-        trees and distributes the trees on the landscape (on the ResoureceUnit or on a stand defined by a grid).
+        trees and distributes the trees on the landscape (on the ResourceUnit or on a stand defined by a grid).
 
         See http://iland.boku.ac.at/initialize+trees
         */
@@ -39,11 +39,11 @@ namespace iLand.Input
         private int mHeightGridTries; // maximum number of tries to land at pixel with fitting height
 
         /// set a constraining height grid (10m resolution)
-        private MapGrid initHeightGrid; // grid with tree heights
+        private MapGrid initialHeightGrid; // grid with tree heights
 
         public StandReader()
         {
-            this.initHeightGrid = new MapGrid();
+            this.initialHeightGrid = new MapGrid();
             this.mHeightGridResponse = null;
             this.mProbabilityDistribution = null;
             this.mTreeRowsByStandID = new Dictionary<int, List<StandInitializationFileRow>>();
@@ -83,29 +83,29 @@ namespace iLand.Input
           */
         public void Setup(Project projectFile, Landscape landscape, RandomGenerator randomGenerator)
         {
-            bool heightGridEnabled = projectFile.Model.Initialization.HeightGrid.Enabled;
-            this.mHeightGridTries = projectFile.Model.Initialization.HeightGrid.MaxTries;
-            if (heightGridEnabled)
+            this.mHeightGridTries = projectFile.World.Initialization.HeightGrid.MaxTries;
+            string? initialHeightGridFile = projectFile.World.Initialization.HeightGrid.FileName;
+            if (String.IsNullOrEmpty(initialHeightGridFile) == false)
             {
-                string initHeightGridFile = projectFile.GetFilePath(ProjectDirectory.Home, projectFile.Model.Initialization.HeightGrid.FileName);
-                this.initHeightGrid = new MapGrid(landscape, initHeightGridFile);
-                if (this.initHeightGrid.IsValid() == false)
+                string initialHeightGridPath = projectFile.GetFilePath(ProjectDirectory.Home, initialHeightGridFile);
+                this.initialHeightGrid = new MapGrid(landscape, initialHeightGridPath);
+                if (this.initialHeightGrid.IsValid() == false)
                 {
-                    throw new NotSupportedException(String.Format("Error when loading grid with tree heights for stand initalization: file {0} not found or not valid.", initHeightGridFile));
+                    throw new NotSupportedException(String.Format("Error when loading grid with tree heights for stand initalization: file {0} not found or not valid.", initialHeightGridPath));
                 }
 
-                string expr = projectFile.Model.Initialization.HeightGrid.FitFormula;
-                this.mHeightGridResponse = new Expression(expr);
+                string fitFormula = projectFile.World.Initialization.HeightGrid.FitFormula;
+                this.mHeightGridResponse = new Expression(fitFormula);
                 this.mHeightGridResponse.Linearize(0.0, 2.0);
             }
 
             //Tree.ResetStatistics();
 
             // one global init-file for the whole area:
-            string? initializationMode = projectFile.Model.Initialization.Mode;
-            string? treeFileType = projectFile.Model.Initialization.Type;
-            string? treeFileName = projectFile.Model.Initialization.File;
-            if (String.Equals(initializationMode, "single", StringComparison.Ordinal))
+            ResourceUnitTreeInitializationMethod ruInitializationMethod = projectFile.World.Initialization.TreeInitializationMethod;
+            string? treeFileType = projectFile.World.Initialization.TreeFileFormat;
+            string? treeFileName = projectFile.World.Initialization.TreeFile;
+            if (ruInitializationMethod == ResourceUnitTreeInitializationMethod.Single)
             {
                 // useful for 1ha simulations only...
                 if (landscape.ResourceUnits.Count > 1)
@@ -113,13 +113,11 @@ namespace iLand.Input
                     throw new NotSupportedException("'mode' is 'single' but more than one resource unit is simulated (consider using another mode).");
                 }
 
-                this.LoadInitFile(projectFile, landscape, landscape.ResourceUnits[0], randomGenerator, treeFileName, treeFileType, 0); // this is the first resource unit
+                this.LoadTreeFile(projectFile, landscape, landscape.ResourceUnits[0], randomGenerator, treeFileName, treeFileType, 0); // this is the first resource unit
                 StandReader.EvaluateDebugTrees(projectFile, landscape);
-                return;
             }
-
-            // call a single tree init for each resource unit
-            if (initializationMode == "unit")
+            // cloned resource units: initialize each resource unit from a single, common tree file
+            else if (ruInitializationMethod == ResourceUnitTreeInitializationMethod.Unit)
             {
                 foreach (ResourceUnit ru in landscape.ResourceUnits)
                 {
@@ -129,20 +127,20 @@ namespace iLand.Input
                     {
                         continue;
                     }
-                    this.LoadInitFile(projectFile, landscape, ru, randomGenerator, treeFileName, treeFileType, 0);
+                    // TODO: why reload trees each time when all RUs share the same init file?
+                    this.LoadTreeFile(projectFile, landscape, ru, randomGenerator, treeFileName, treeFileType, 0);
                 }
                 StandReader.EvaluateDebugTrees(projectFile, landscape);
                 return;
             }
-
-            // map-modus: load a init file for each "polygon" in the standgrid
-            if (initializationMode == "map")
+            // map-modus: load a different tree init file for each stand "polygon" in the standgrid
+            else if (ruInitializationMethod == ResourceUnitTreeInitializationMethod.Unit)
             {
                 if (landscape.StandGrid == null || landscape.StandGrid.IsValid() == false)
                 {
                     throw new NotSupportedException("model.initialization.mode is 'map' but there is no valid stand grid defined (model.world.standGrid)");
                 }
-                string mapFileName = projectFile.GetFilePath(ProjectDirectory.Home, projectFile.Model.Initialization.MapFileName);
+                string mapFileName = projectFile.GetFilePath(ProjectDirectory.Home, projectFile.World.Initialization.MapFileName);
 
                 CsvFile mapFile = new CsvFile(mapFileName);
                 if (mapFile.RowCount == 0)
@@ -168,81 +166,78 @@ namespace iLand.Input
                             {
                                 throw new NullReferenceException("Expected only a default resource unit on landscape.");
                             }
-                            this.LoadInitFile(projectFile, landscape, landscape.ResourceUnits[0], randomGenerator, treeFileName, treeFileType, key);
+                            this.LoadTreeFile(projectFile, landscape, landscape.ResourceUnits[0], randomGenerator, treeFileName, treeFileType, key);
                         }
                     }
                 }
 
                 StandReader.EvaluateDebugTrees(projectFile, landscape);
-                return;
             }
-
             // standgrid mode: load one large init file
-            if (String.Equals(initializationMode, "standgrid", StringComparison.Ordinal) == false)
+            else if (ruInitializationMethod == ResourceUnitTreeInitializationMethod.StandGrid)
             {
-                throw new NotSupportedException("Invalid initalization.mode '" + initializationMode + "'.");
+                throw new NotImplementedException("Tree initialization mode " + ruInitializationMethod + " is not currently supported.");
             }
+            else
+            {
+                treeFileName = projectFile.GetFilePath(ProjectDirectory.Init, treeFileName);
+                if (!File.Exists(treeFileName))
+                {
+                    throw new FileNotFoundException(String.Format("File '{0}' does not exist.", treeFileName));
+                }
 
-            treeFileName = projectFile.GetFilePath(ProjectDirectory.Init, treeFileName);
-            if (!File.Exists(treeFileName))
-            {
-                throw new FileNotFoundException(String.Format("File '{0}' does not exist.", treeFileName));
-            }
+                // this processes the init file (also does the checking) and
+                // stores in a Dictionary datastrucutre
+                if (landscape.ResourceUnits.Count != 1)
+                {
+                    throw new NullReferenceException("Expected only a default resource unit on landscape.");
+                }
+                this.ParseInitFile(treeFileName, landscape.ResourceUnits[0]);
 
-            // this processes the init file (also does the checking) and
-            // stores in a Dictionary datastrucutre
-            if (landscape.ResourceUnits.Count != 1)
-            {
-                throw new NullReferenceException("Expected only a default resource unit on landscape.");
-            }
-            this.ParseInitFile(treeFileName, landscape.ResourceUnits[0]);
+                // setup the random distribution
+                string? probabilityDistributionFunction = projectFile.World.Initialization.RandomFunction;
+                if (probabilityDistributionFunction == null)
+                {
+                    throw new NotSupportedException("");
+                }
+                if (this.mProbabilityDistribution == null || (this.mProbabilityDistribution.DensityFunction != probabilityDistributionFunction))
+                {
+                    this.mProbabilityDistribution = new RandomCustomPdf(probabilityDistributionFunction);
+                }
 
-            // setup the random distribution
-            string? probabilityDistributionFunction = projectFile.Model.Initialization.RandomFunction;
-            if (probabilityDistributionFunction == null)
-            {
-                throw new NotSupportedException("");
-            }
-            if (this.mProbabilityDistribution == null || (this.mProbabilityDistribution.DensityFunction != probabilityDistributionFunction))
-            {
-                this.mProbabilityDistribution = new RandomCustomPdf(probabilityDistributionFunction);
-            }
+                if (this.mTreeRowsByStandID.Count == 0)
+                {
+                    throw new NotSupportedException("'mode' is 'standgrid' but the init file is empty.");
+                }
+                foreach (KeyValuePair<int, List<StandInitializationFileRow>> it in this.mTreeRowsByStandID)
+                {
+                    this.InitializeStand(projectFile, landscape, randomGenerator, it.Key);
+                }
 
-            if (this.mTreeRowsByStandID.Count == 0)
-            {
-                throw new NotSupportedException("'mode' is 'standgrid' but the init file is empty.");
+                StandReader.EvaluateDebugTrees(projectFile, landscape);
             }
-            foreach (KeyValuePair<int, List<StandInitializationFileRow>> it in this.mTreeRowsByStandID)
-            {
-                this.InitializeStand(projectFile, landscape, randomGenerator, it.Key);
-            }
-
-            StandReader.EvaluateDebugTrees(projectFile, landscape);
         }
 
         public void SetupSaplings(Model model)
         {
-            string? mode = model.Project.Model.Initialization.Mode;
-            if (String.Equals(mode, "standgrid", StringComparison.Ordinal))
+            // nothing to do if no saplings are specified
+            string? saplingFileName = model.Project.World.Initialization.SaplingFile;
+            if (String.IsNullOrEmpty(saplingFileName))
             {
-                // load a file with saplings per polygon
-                string? saplingFileName = model.Project.Model.Initialization.SaplingFile;
-                if (String.IsNullOrEmpty(saplingFileName))
-                {
-                    return;
-                }
-                saplingFileName = model.Project.GetFilePath(ProjectDirectory.Init, saplingFileName);
-                if (File.Exists(saplingFileName) == false)
-                {
-                    throw new NotSupportedException(String.Format("load-sapling-ini-file: file '{0}' does not exist.", saplingFileName));
-                }
-                CsvFile saplingFile = new CsvFile(saplingFileName);
-                int standIDindex = saplingFile.GetColumnIndex("stand_id");
-                if (standIDindex == -1)
-                {
-                    throw new NotSupportedException("he init file contains no 'stand_id' column (required in 'standgrid' mode).");
-                }
+                return;
+            }
+            // load a file with saplings per polygon
+            string saplingFilePath = model.Project.GetFilePath(ProjectDirectory.Init, saplingFileName);
+            CsvFile saplingFile = new CsvFile(saplingFilePath);
+            int standIDindex = saplingFile.GetColumnIndex("stand_id");
+            if (standIDindex == -1)
+            {
+                throw new NotSupportedException("The sapling init file contains no 'stand_id' column (required in 'standgrid' mode).");
+            }
 
+            ResourceUnitTreeInitializationMethod treeInitializationMethod = model.Project.World.Initialization.TreeInitializationMethod;
+            if (treeInitializationMethod == ResourceUnitTreeInitializationMethod.StandGrid)
+            {
                 int previousStandID = -99999;
                 int standStartRow = -1;
                 for (int row = 0; row < saplingFile.RowCount; ++row)
@@ -265,12 +260,17 @@ namespace iLand.Input
                     this.LoadSaplingsLif(model, previousStandID, saplingFile, standStartRow, saplingFile.RowCount - 1); // the last stand
                 }
             }
+            else if (saplingFile.RowCount != 1)
+            {
+                throw new NotSupportedException("Sapling initialization not supported for tree initialization method " + treeInitializationMethod + ".");
+            }
+            // nothing to do: sapling file is empty
         }
 
         public static void EvaluateDebugTrees(Project projectFile, Landscape landscape)
         {
             // evaluate debugging
-            string? isDebugTreeExpressionString = projectFile.Model.Parameter.DebugTree;
+            string? isDebugTreeExpressionString = projectFile.World.Debug.DebugTree;
             if (String.IsNullOrEmpty(isDebugTreeExpressionString) == false)
             {
                 if (String.Equals(isDebugTreeExpressionString, "debugstamp", StringComparison.OrdinalIgnoreCase))
@@ -307,7 +307,7 @@ namespace iLand.Input
         /// load a single init file. Calls loadPicusFile() or loadiLandFile()
         /// @param fileName file to load
         /// @param type init mode. allowed: "picus"/"single" or "iland"/"distribution"
-        public int LoadInitFile(Project projectFile, Landscape landscape, ResourceUnit ru, RandomGenerator randomGenerator, string? treeFileName, string? fileFormat, int standID)
+        public int LoadTreeFile(Project projectFile, Landscape landscape, ResourceUnit ru, RandomGenerator randomGenerator, string? treeFileName, string? fileFormat, int standID)
         {
             string treeFilePath = projectFile.GetFilePath(ProjectDirectory.Init, treeFileName);
             if (!File.Exists(treeFilePath))
@@ -315,15 +315,15 @@ namespace iLand.Input
                 throw new FileNotFoundException(String.Format("File '{0}' does not exist!", treeFilePath));
             }
 
-            if (String.Equals(fileFormat, "picus", StringComparison.Ordinal) || String.Equals(fileFormat, "single", StringComparison.Ordinal))
+            if (String.Equals(fileFormat, "csvOrPicus", StringComparison.Ordinal))
             {
                 if (standID > 0)
                 {
                     throw new XmlException(String.Format("Initialization type '{0}' currently not supported for stand initilization mode!" + fileFormat));
                 }
-                return StandReader.LoadPicusFile(projectFile, landscape, ru, treeFilePath);
+                return StandReader.LoadCsvOrPicusFile(projectFile, landscape, ru, treeFilePath);
             }
-            if (String.Equals(fileFormat, "iland", StringComparison.Ordinal) || String.Equals(fileFormat, "distribution", StringComparison.Ordinal))
+            if (String.Equals(fileFormat, "iLand", StringComparison.Ordinal) || String.Equals(fileFormat, "distribution", StringComparison.Ordinal))
             {
                 return this.LoadDistributionList(projectFile, landscape, ru, randomGenerator, treeFilePath, standID);
             }
@@ -333,26 +333,27 @@ namespace iLand.Input
         /** load a list of trees (given by content) to a resource unit. Param fileName is just for error reporting.
             returns the number of loaded trees.
           */
-        private static int LoadPicusFile(Project projectFile, Landscape landscape, ResourceUnit ru, string fileName)
+        private static int LoadCsvOrPicusFile(Project projectFile, Landscape landscape, ResourceUnit ru, string treeFileName)
         {
-            string picusTreeList = File.ReadAllText(fileName);
-            if (String.IsNullOrEmpty(picusTreeList))
+            string treeFileContent = File.ReadAllText(treeFileName);
+            if (String.IsNullOrEmpty(treeFileContent))
             {
-                throw new FileLoadException("File '" + fileName + "' is empty.");
+                throw new FileLoadException("File '" + treeFileName + "' is empty.");
             }
 
             // cut out the <trees> </trees> part if present
-            int treesElementStart = picusTreeList.IndexOf("<trees>", StringComparison.Ordinal);
+            int treesElementStart = treeFileContent.IndexOf("<trees>", StringComparison.Ordinal);
             if (treesElementStart > -1)
             {
-                int treesElementStop = picusTreeList.IndexOf("</trees>", StringComparison.Ordinal);
-                picusTreeList = picusTreeList[(treesElementStart + "<trees>".Length)..(treesElementStop - 1)];
+                int treesElementStop = treeFileContent.IndexOf("</trees>", StringComparison.Ordinal);
+                treeFileContent = treeFileContent[(treesElementStart + "<trees>".Length)..(treesElementStop - 1)];
             }
 
             CsvFile picusTreeFile = new CsvFile();
-            picusTreeFile.LoadFromString(picusTreeList);
+            picusTreeFile.LoadFromString(treeFileContent);
 
-            int idColumn = picusTreeFile.GetColumnIndex("id");
+            int standIDcolumn = picusTreeFile.GetColumnIndex("standID");
+            int tagColumn = picusTreeFile.GetColumnIndex("id");
             int xColumn = picusTreeFile.GetColumnIndex("x");
             int yColumn = picusTreeFile.GetColumnIndex("y");
             int dbhColumn = picusTreeFile.GetColumnIndex("bhdfrom");
@@ -371,7 +372,7 @@ namespace iLand.Input
             int ageColumnIndex = picusTreeFile.GetColumnIndex("age");
             if (xColumn == -1 || yColumn == -1 || dbhColumn == -1 || speciesColumn == -1 || heightColumn == -1)
             {
-                throw new NotSupportedException(String.Format("Initfile {0} is not valid! Required columns are: x, y, bhdfrom or dbh, species, and treeheight or height.", fileName));
+                throw new NotSupportedException(String.Format("Initfile {0} is not valid! Required columns are: x, y, bhdfrom or dbh, species, and treeheight or height.", treeFileName));
             }
 
             PointF ruOffset = ru.BoundingBox.TopLeft();
@@ -397,12 +398,12 @@ namespace iLand.Input
                 string speciesID = picusTreeFile.GetValue(speciesColumn, rowIndex);
                 if (Int32.TryParse(speciesID, out int picusID))
                 {
-                    int idx = StandReader.PicusSpeciesIDs.IndexOf(picusID);
-                    if (idx == -1)
+                    int speciesIndex = StandReader.PicusSpeciesIDs.IndexOf(picusID);
+                    if (speciesIndex == -1)
                     {
                         throw new NotSupportedException("Invalid Picus species id " + picusID);
                     }
-                    speciesID = StandReader.iLandSpeciesIDs[idx];
+                    speciesID = StandReader.iLandSpeciesIDs[speciesIndex];
                 }
                 TreeSpecies species = speciesSet[speciesID];
                 if (ru == null || species == null)
@@ -413,11 +414,11 @@ namespace iLand.Input
                 int treeIndex = ru.Trees.AddTree(landscape, speciesID);
                 Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[species.ID];
                 treesOfSpecies.SetLightCellIndex(treeIndex, physicalPosition);
-                if (idColumn >= 0)
+                if (tagColumn >= 0)
                 {
                     // override default of ID = count of trees currently on resource unit
                     // So long as all trees are specified from a tree list and AddTree() isn't called later then IDs will remain unique.
-                    treesOfSpecies.Tag[treeIndex] = Int32.Parse(picusTreeFile.GetValue(idColumn, rowIndex));
+                    treesOfSpecies.Tag[treeIndex] = Int32.Parse(picusTreeFile.GetValue(tagColumn, rowIndex));
                 }
 
                 treesOfSpecies.Dbh[treeIndex] = dbh;
@@ -429,6 +430,10 @@ namespace iLand.Input
                     age = Int32.Parse(picusTreeFile.GetValue(ageColumnIndex, rowIndex));
                 }
                 treesOfSpecies.SetAge(treeIndex, age, treesOfSpecies.Height[treeIndex]);
+                if (standIDcolumn >= 0)
+                {
+                    treesOfSpecies.StandID[treeIndex] = Int32.Parse(picusTreeFile.GetValue(standIDcolumn, rowIndex));
+                }
 
                 treesOfSpecies.Setup(projectFile, treeIndex);
                 ++treeCount;
@@ -612,11 +617,11 @@ namespace iLand.Input
         {
             Debug.Assert(this.mProbabilityDistribution != null);
 
-            List<MutableTuple<int, float>> resourceUnitBasalAreaByHeightCellIndex = new List<MutableTuple<int, float>>();
-            for (int heightCellIndex = 0; heightCellIndex < Constant.HeightSizePerRU * Constant.HeightSizePerRU; ++heightCellIndex)
-            {
-                resourceUnitBasalAreaByHeightCellIndex.Add(new MutableTuple<int, float>(heightCellIndex, 0.0F));
-            }
+            //List<MutableTuple<int, float>> resourceUnitBasalAreaByHeightCellIndex = new List<MutableTuple<int, float>>();
+            //for (int heightCellIndex = 0; heightCellIndex < Constant.HeightSizePerRU * Constant.HeightSizePerRU; ++heightCellIndex)
+            //{
+            //    resourceUnitBasalAreaByHeightCellIndex.Add(new MutableTuple<int, float>(heightCellIndex, 0.0F));
+            //}
 
             // a multimap holds a list for all trees.
             // key is the index of a 10x10m pixel within the resource unit
@@ -630,7 +635,7 @@ namespace iLand.Input
                     // create trees
                     int treeIndex = ru.Trees.AddTree(landscape, standRow.TreeSpecies.ID);
                     Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[standRow.TreeSpecies.ID];
-                    treesOfSpecies.Dbh[treeIndex] = (float)randomGenerator.GetRandomFloat(standRow.DbhFrom, standRow.DbhTo);
+                    treesOfSpecies.Dbh[treeIndex] = randomGenerator.GetRandomFloat(standRow.DbhFrom, standRow.DbhTo);
                     treesOfSpecies.SetHeight(treeIndex, 0.001F * treesOfSpecies.Dbh[treeIndex] * (float)standRow.HeightDiameterRatio); // dbh from cm->m, *hd-ratio -> meter height
                     treesOfSpecies.Species = standRow.TreeSpecies;
                     if (standRow.Age < 1)
@@ -655,24 +660,25 @@ namespace iLand.Input
                     // key: rank of target pixel
                     // item1: index of target pixel
                     // item2: sum of target pixel
-                    int randomHeightCellIndex = Maths.Limit((int)(Constant.HeightSizePerRU * Constant.HeightSizePerRU * randomValue), 0, Constant.HeightSizePerRU * Constant.HeightSizePerRU - 1); // get from random number generator
-                    if (treeIndexByHeightCellIndex.TryGetValue(randomHeightCellIndex, out MutableTuple<Trees, List<int>>? treesInCell) == false)
+                    int heightCellIndex = Maths.Limit((int)(Constant.HeightSizePerRU * Constant.HeightSizePerRU * randomValue), 0, Constant.HeightSizePerRU * Constant.HeightSizePerRU - 1); // get from random number generator
+                    // int heightCellIndex = landscape.HeightGrid.IndexOf(landscape.HeightGrid.GetCellIndex(treesOfSpecies.GetCellCenterPoint(treeIndex)));
+                    if (treeIndexByHeightCellIndex.TryGetValue(heightCellIndex, out MutableTuple<Trees, List<int>>? treesInCell) == false)
                     {
                         treesInCell = new MutableTuple<Trees, List<int>>(treesOfSpecies, new List<int>());
-                        treeIndexByHeightCellIndex.Add(randomHeightCellIndex, treesInCell);
+                        treeIndexByHeightCellIndex.Add(heightCellIndex, treesInCell);
                     }
                     treesInCell.Item2.Add(treesOfSpecies.Tag[treeIndex]); // store tree in map
 
-                    MutableTuple<int, float> resourceUnitBasalArea = resourceUnitBasalAreaByHeightCellIndex[randomHeightCellIndex];
-                    resourceUnitBasalArea.Item2 += treesOfSpecies.GetBasalArea(treeIndex); // aggregate the basal area for each 10m pixel
-                    if ((totalTreeCount < 20 && index % 2 == 0) ||
-                        (totalTreeCount < 100 && index % 10 == 0) ||
-                        (index % 30 == 0))
-                    {
-                        resourceUnitBasalAreaByHeightCellIndex.Sort(StandReader.SortPairLessThan);
-                    }
+                    //MutableTuple<int, float> resourceUnitBasalArea = resourceUnitBasalAreaByHeightCellIndex[randomHeightCellIndex];
+                    //resourceUnitBasalArea.Item2 += treesOfSpecies.GetBasalArea(treeIndex); // aggregate the basal area for each 10m pixel
+                    //if ((totalTreeCount < 20 && index % 2 == 0) ||
+                    //    (totalTreeCount < 100 && index % 10 == 0) ||
+                    //    (index % 30 == 0))
+                    //{
+                    //    resourceUnitBasalAreaByHeightCellIndex.Sort(StandReader.SortPairLessThan);
+                    //}
                 }
-                resourceUnitBasalAreaByHeightCellIndex.Sort(StandReader.SortPairLessThan);
+                //resourceUnitBasalAreaByHeightCellIndex.Sort(StandReader.SortPairLessThan);
             }
 
             for (int heightCellIndex = 0; heightCellIndex < Constant.HeightSizePerRU * Constant.HeightSizePerRU; ++heightCellIndex)
@@ -767,15 +773,15 @@ namespace iLand.Input
                 {
                     GridCellIndex = heightCellIndex // index in the 10m grid
                 };
-                if (this.initHeightGrid.IsValid())
+                if (this.initialHeightGrid.IsValid())
                 {
-                    heightCell.MaxHeight = this.initHeightGrid.Grid[heightCell.GridCellIndex];
+                    heightCell.MaxHeight = this.initialHeightGrid.Grid[heightCell.GridCellIndex];
                 }
                 heightCells.Add(heightCell);
             }
             float standAreaInResourceUnits = standGrid.GetArea(standID) / Constant.RUArea;
 
-            if (this.initHeightGrid.IsValid() && (this.mHeightGridResponse == null))
+            if (this.initialHeightGrid.IsValid() && (this.mHeightGridResponse == null))
             {
                 throw new NotSupportedException("Attempt to initialize from height grid but without response function.");
             }
@@ -825,7 +831,7 @@ namespace iLand.Input
                 for (int i = 0; i < count; ++i)
                 {
                     bool found = false;
-                    int tries = mHeightGridTries;
+                    int tries = this.mHeightGridTries;
                     while (!found && --tries != 0)
                     {
                         // calculate random value. "density" is from 1..-1.
@@ -849,10 +855,10 @@ namespace iLand.Input
                         // key: rank of target pixel
                         key = Maths.Limit((int)(heightCells.Count * randomValue), 0, heightCells.Count - 1); // get from random number generator
 
-                        if (this.initHeightGrid.IsValid())
+                        if (this.initialHeightGrid.IsValid())
                         {
                             // calculate how good the selected pixel fits w.r.t. the predefined height
-                            double p_value = heightCells[key].MaxHeight > 0.0 ? this.mHeightGridResponse.Evaluate(init_max_height / heightCells[key].MaxHeight) : 0.0;
+                            float p_value = heightCells[key].MaxHeight > 0.0F ? (float)this.mHeightGridResponse.Evaluate(init_max_height / heightCells[key].MaxHeight) : 0.0F;
                             if (randomGenerator.GetRandomFloat() < p_value)
                             {
                                 found = true;
@@ -1049,7 +1055,7 @@ namespace iLand.Input
             return 0;
         }
 
-        private int LoadSaplingsLif(Model model, int standID, CsvFile init, int startRowIndex, int endRowIndex)
+        private int LoadSaplingsLif(Model model, int standID, CsvFile saplingFile, int startRowIndex, int endRowIndex)
         {
             MapGrid? standGrid = model.Landscape.StandGrid; // default
             if (standGrid == null)
@@ -1093,14 +1099,14 @@ namespace iLand.Input
 
             // parse the content of the init-file
             // species
-            int speciesIndex = init.GetColumnIndex("species");
-            int countIndex = init.GetColumnIndex("count");
-            int heightIndex = init.GetColumnIndex("height");
-            int heightFromIndex = init.GetColumnIndex("height_from");
-            int heightToIndex = init.GetColumnIndex("height_to");
-            int ageIndex = init.GetColumnIndex("age");
-            int topAgeIndex = init.GetColumnIndex("age4m");
-            int minLifIndex = init.GetColumnIndex("min_lif");
+            int speciesIndex = saplingFile.GetColumnIndex("species");
+            int countIndex = saplingFile.GetColumnIndex("count");
+            int heightIndex = saplingFile.GetColumnIndex("height");
+            int heightFromIndex = saplingFile.GetColumnIndex("height_from");
+            int heightToIndex = saplingFile.GetColumnIndex("height_to");
+            int ageIndex = saplingFile.GetColumnIndex("age");
+            int topAgeIndex = saplingFile.GetColumnIndex("age4m");
+            int minLifIndex = saplingFile.GetColumnIndex("min_lif");
             if ((heightFromIndex == -1) ^ (heightToIndex == -1))
             {
                 throw new FileLoadException("Height not correctly provided. Use either 'height' or 'height_from' and 'height_to'.");
@@ -1113,14 +1119,14 @@ namespace iLand.Input
             int total = 0;
             for (int row = startRowIndex; row <= endRowIndex; ++row)
             {
-                int cellsWithSaplings = (int)(Double.Parse(init.GetValue(countIndex, row)) * standAreaInHa); // no. of pixels that should be filled (sapling grid is the same resolution as the lif-grid)
+                int cellsWithSaplings = (int)(Double.Parse(saplingFile.GetValue(countIndex, row)) * standAreaInHa); // no. of pixels that should be filled (sapling grid is the same resolution as the lif-grid)
                 // TODO: constants for defaults, 5 cm is also hard coded elsewhere
-                float height = heightIndex == -1 ? Constant.Sapling.MinimumHeight : Single.Parse(init.GetValue(heightIndex, row));
-                int age = ageIndex == -1 ? 1 : Int32.Parse(init.GetValue(ageIndex, row));
-                float age4m = topAgeIndex == -1 ? 10.0F : Single.Parse(init.GetValue(topAgeIndex, row));
-                float minHeight = heightFromIndex == -1 ? -1.0F : Single.Parse(init.GetValue(heightFromIndex, row));
-                float maxHeight = heightToIndex == -1 ? -1.0F : Single.Parse(init.GetValue(heightToIndex, row));
-                float minLightIntensity = minLifIndex == -1 ? 1.0F : Single.Parse(init.GetValue(minLifIndex, row));
+                float height = heightIndex == -1 ? Constant.Sapling.MinimumHeight : Single.Parse(saplingFile.GetValue(heightIndex, row));
+                int age = ageIndex == -1 ? 1 : Int32.Parse(saplingFile.GetValue(ageIndex, row));
+                float age4m = topAgeIndex == -1 ? 10.0F : Single.Parse(saplingFile.GetValue(topAgeIndex, row));
+                float minHeight = heightFromIndex == -1 ? -1.0F : Single.Parse(saplingFile.GetValue(heightFromIndex, row));
+                float maxHeight = heightToIndex == -1 ? -1.0F : Single.Parse(saplingFile.GetValue(heightToIndex, row));
+                float minLightIntensity = minLifIndex == -1 ? 1.0F : Single.Parse(saplingFile.GetValue(minLifIndex, row));
                 // find LIF-level in the pixels
                 int minLightIndex = 0;
                 if (minLightIntensity < 1.0)
@@ -1160,7 +1166,7 @@ namespace iLand.Input
                     SaplingCell? saplingCell = model.Landscape.GetSaplingCell(lightCellIndex, true, out ResourceUnit ru);
                     if (saplingCell != null)
                     {
-                        TreeSpecies species = ru.Trees.TreeSpeciesSet[init.GetValue(speciesIndex, row)];
+                        TreeSpecies species = ru.Trees.TreeSpeciesSet[saplingFile.GetValue(speciesIndex, row)];
                         Sapling? sapling = saplingCell.AddSaplingIfSlotFree(height, age, species.Index);
                         if (sapling != null)
                         {
@@ -1181,9 +1187,9 @@ namespace iLand.Input
             }
 
             // initialize grass cover
-            if (init.GetColumnIndex("grass_cover") > -1)
+            if (saplingFile.GetColumnIndex("grass_cover") > -1)
             {
-                int grass_cover_value = Int32.Parse(init.GetValue("grass_cover", startRowIndex));
+                int grass_cover_value = Int32.Parse(saplingFile.GetValue("grass_cover", startRowIndex));
                 if (grass_cover_value < 0 || grass_cover_value > 100)
                 {
                     throw new NotSupportedException(String.Format("The grass cover percentage (column 'grass_cover') for stand '{0}' is '{1}', which is invalid (expected: 0-100)", standID, grass_cover_value));

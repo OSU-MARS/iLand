@@ -1,8 +1,9 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class StandGrid : Enablable
+    public class StandGrid : XmlSerializable
     {
         public string? FileName { get; private set; }
 
@@ -18,15 +19,11 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes.");
             }
 
-            if (reader.IsStartElement("standGrid"))
+            if (String.Equals(reader.Name, "standGrid", StringComparison.Ordinal))
             {
                 reader.Read();
             }
-            else if (reader.IsStartElement("enabled"))
-            {
-                this.Enabled = reader.ReadElementContentAsBoolean();
-            }
-            else if (reader.IsStartElement("fileName"))
+            else if (String.Equals(reader.Name, "fileName", StringComparison.Ordinal))
             {
                 this.FileName = reader.ReadElementContentAsString().Trim();
             }

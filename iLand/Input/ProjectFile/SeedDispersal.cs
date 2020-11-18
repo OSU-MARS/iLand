@@ -1,32 +1,32 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class SeedDispersal : XmlSerializable
     {
-		public SeedBelt SeedBelt { get; private set; }
-        public bool DumpSeedMapsEnabled { get; private set; }
 		public string? DumpSeedMapsPath { get; private set; }
 		public string? ExternalSeedBackgroundInput { get; private set; }
 		public bool ExternalSeedEnabled { get; private set; }
-		public string? ExternalSeedSource { get; private set; }
+		public string? ExternalSeedDirection { get; private set; }
 		public string? ExternalSeedSpecies { get; private set; }
 		public string? ExternalSeedBuffer { get; private set; }
 		public float RecruitmentDimensionVariation { get; private set; }
-		public LongDistanceDispersal LongDistanceDispersal { get; private set; }
+
+		public LongDistanceDispersal LongDistanceDispersal { get; init; }
+		public ExternalSeedBelt ExternalSeedBelt { get; init; }
 		
 		public SeedDispersal()
         {
-			this.DumpSeedMapsEnabled = false;
 			this.DumpSeedMapsPath = null;
 			this.ExternalSeedBackgroundInput = null;
+			this.ExternalSeedBelt = new ExternalSeedBelt();
 			this.ExternalSeedBuffer = null;
 			this.ExternalSeedEnabled = false;
-			this.ExternalSeedSource = null;
+			this.ExternalSeedDirection = null;
 			this.ExternalSeedSpecies = null;
 			this.LongDistanceDispersal = new LongDistanceDispersal();
 			this.RecruitmentDimensionVariation = 0.1F; // +/- 10%
-			this.SeedBelt = new SeedBelt();
         }
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -36,43 +36,39 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes.");
 			}
 
-			if (reader.IsStartElement("seedDispersal"))
+			if (String.Equals(reader.Name, "seedDispersal", StringComparison.Ordinal))
 			{
 				reader.Read();
 			}
-			else if (reader.IsStartElement("seedBelt"))
-			{
-				this.SeedBelt.ReadXml(reader);
-			}
-			else if (reader.IsStartElement("dumpSeedMapsEnabled"))
-			{
-				this.DumpSeedMapsEnabled = reader.ReadElementContentAsBoolean();
-			}
-			else if (reader.IsStartElement("dumpSeedMapsPath"))
+			else if (String.Equals(reader.Name, "dumpSeedMapsPath", StringComparison.Ordinal))
 			{
 				this.DumpSeedMapsPath = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("externalSeedBackgroundInput"))
+			else if (String.Equals(reader.Name, "externalSeedBackgroundInput", StringComparison.Ordinal))
 			{
 				this.ExternalSeedBackgroundInput = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("externalSeedEnabled"))
+			else if (String.Equals(reader.Name, "externalSeedBelt", StringComparison.Ordinal))
+			{
+				this.ExternalSeedBelt.ReadXml(reader);
+			}
+			else if (String.Equals(reader.Name, "externalSeedEnabled", StringComparison.Ordinal))
 			{
 				this.ExternalSeedEnabled = reader.ReadElementContentAsBoolean();
 			}
-			else if (reader.IsStartElement("externalSeedSource"))
+			else if (String.Equals(reader.Name, "externalSeedSource", StringComparison.Ordinal))
 			{
-				this.ExternalSeedSource = reader.ReadElementContentAsString().Trim();
+				this.ExternalSeedDirection = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("externalSeedSpecies"))
+			else if (String.Equals(reader.Name, "externalSeedSpecies", StringComparison.Ordinal))
 			{
 				this.ExternalSeedSpecies = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("externalSeedBuffer"))
+			else if (String.Equals(reader.Name, "externalSeedBuffer", StringComparison.Ordinal))
 			{
 				this.ExternalSeedBuffer = reader.ReadElementContentAsString().Trim();
 			}
-			else if (reader.IsStartElement("recruitmentDimensionVariation"))
+			else if (String.Equals(reader.Name, "recruitmentDimensionVariation", StringComparison.Ordinal))
 			{
 				this.RecruitmentDimensionVariation = reader.ReadElementContentAsFloat();
 				if (this.RecruitmentDimensionVariation < 0.0)
@@ -80,7 +76,7 @@ namespace iLand.Input.ProjectFile
 					throw new XmlException("Variation in sapling recruitment dimensions is negative.");
                 }
 			}
-			else if (reader.IsStartElement("longDistanceDispersal"))
+			else if (String.Equals(reader.Name, "longDistanceDispersal", StringComparison.Ordinal))
 			{
 				this.LongDistanceDispersal.ReadXml(reader);
 			}

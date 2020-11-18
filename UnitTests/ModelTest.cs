@@ -325,23 +325,23 @@ namespace iLand.Test
             Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.Width == 100.0F + 2.0F * 60.0F);
             Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.X == -60.0);
             Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.Y == -60.0);
-            Assert.IsTrue(model.Landscape.HeightGrid.CellsX == 22);
-            Assert.IsTrue(model.Landscape.HeightGrid.CellsY == 32);
+            Assert.IsTrue(model.Landscape.HeightGrid.SizeX == 22);
+            Assert.IsTrue(model.Landscape.HeightGrid.SizeY == 32);
             Assert.IsTrue(model.Landscape.LightGrid.PhysicalExtent.Height == 200.0F + 2.0F * 60.0F); // 100 x 200 m world + 60 m buffering = 220 x 320 m
             Assert.IsTrue(model.Landscape.LightGrid.PhysicalExtent.Width == 100.0F + 2.0F * 60.0F);
             Assert.IsTrue(model.Landscape.LightGrid.PhysicalExtent.X == -60.0);
             Assert.IsTrue(model.Landscape.LightGrid.PhysicalExtent.Y == -60.0);
-            Assert.IsTrue(model.Landscape.LightGrid.CellsX == 110);
-            Assert.IsTrue(model.Landscape.LightGrid.CellsY == 160);
+            Assert.IsTrue(model.Landscape.LightGrid.SizeX == 110);
+            Assert.IsTrue(model.Landscape.LightGrid.SizeY == 160);
             Assert.IsTrue(model.Landscape.ResourceUnits.Count == 2);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.PhysicalExtent.Height == 200.0);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.PhysicalExtent.Width == 100.0);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.PhysicalExtent.X == 0.0);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.PhysicalExtent.Y == 0.0);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.CellsX == 1);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.CellsY == 2);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.SizeX == 1);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.SizeY == 2);
             Assert.IsTrue(model.Landscape.StandGrid == null);
-            Assert.IsTrue(model.Project.System.Settings.Multithreading == false);
+            Assert.IsTrue(model.Project.Model.Settings.Multithreading == false);
         }
 
         private static void VerifyMalcolmKnappClimate(Model model)
@@ -404,11 +404,11 @@ namespace iLand.Test
             // displayColor D6F288
             Assert.IsTrue(douglasFir.EstablishmentParameters.ChillRequirement == 56);
             Assert.IsTrue(Math.Abs(douglasFir.EstablishmentParameters.FrostTolerance - 0.5) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.EstablishmentParameters.GddBaseTemperature - 3.4) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.EstablishmentParameters.GrowingDegreeDaysBaseTemperature - 3.4) < 0.001);
             Assert.IsTrue(douglasFir.EstablishmentParameters.GddBudBurst == 255);
-            Assert.IsTrue(douglasFir.EstablishmentParameters.GddMax == 3261);
-            Assert.IsTrue(douglasFir.EstablishmentParameters.GddMin == 177);
-            Assert.IsTrue(douglasFir.EstablishmentParameters.MinFrostFree == 65);
+            Assert.IsTrue(douglasFir.EstablishmentParameters.MaximumGrowingDegreeDays == 3261);
+            Assert.IsTrue(douglasFir.EstablishmentParameters.MinimumGrowingDegreeDays == 177);
+            Assert.IsTrue(douglasFir.EstablishmentParameters.MinimumFrostFreeDays == 65);
             Assert.IsTrue(Math.Abs(douglasFir.EstablishmentParameters.MinTemp + 37.0) < 0.001);
             Assert.IsTrue(Double.IsNaN(douglasFir.EstablishmentParameters.PsiMin));
             Assert.IsTrue(Math.Abs(douglasFir.FecundityM2 - 114.0) < 0.001);
@@ -452,12 +452,12 @@ namespace iLand.Test
             // Assert.IsTrue(douglasFir.SeedDispersal.SeedMap == null);
             // Assert.IsTrue(Object.ReferenceEquals(douglasFir.SeedDispersal.Species, douglasFir));
             Assert.IsTrue(douglasFir.SnagHalflife == 40);
-            Assert.IsTrue(Math.Abs(douglasFir.SnagKsw - 0.08) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.SnagKyl - 0.322) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.SnagKyr - 0.1791) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.SnagDecompositionRate - 0.08) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.LitterDecompositionRate - 0.322) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.CoarseWoodyDebrisDecompositionRate - 0.1791) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.SpecificLeafArea - 5.84) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.TurnoverLeaf - 0.18) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.TurnoverRoot - 0.617284) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.TurnoverFineRoot - 0.617284) < 0.001);
             Assert.IsTrue(Math.Abs(douglasFir.VolumeFactor - 0.423492) < 0.001); // 0.539208 * pi/4
             Assert.IsTrue(Math.Abs(douglasFir.WoodDensity - 450.0) < 0.001);
 
@@ -473,20 +473,20 @@ namespace iLand.Test
         {
             Assert.IsTrue(model.Landscape.Environment.UseDynamicAvailableNitrogen == false);
 
+            Assert.IsTrue(model.Project.Model.Ecosystem.AirDensity == 1.204F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.BoundaryLayerConductance == 0.2F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.Epsilon == 2.7F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.LaiThresholdForClosedStands == 3.0F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.LightExtinctionCoefficient == 0.6F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.LightExtinctionCoefficientOpacity == 0.6F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.TemperatureTau == 6.0F);
             Assert.IsTrue(model.Project.Model.Settings.RegenerationEnabled == false);
             Assert.IsTrue(model.Project.Model.Settings.MortalityEnabled == true);
             Assert.IsTrue(model.Project.Model.Settings.GrowthEnabled == true);
             Assert.IsTrue(model.Project.Model.Settings.CarbonCycleEnabled == true);
-            Assert.IsTrue(model.Project.Model.Settings.Epsilon == 2.7F);
-            Assert.IsTrue(model.Project.Model.Settings.LightExtinctionCoefficient == 0.6F);
-            Assert.IsTrue(model.Project.Model.Settings.LightExtinctionCoefficientOpacity == 0.6F);
-            Assert.IsTrue(model.Project.Model.Settings.TemperatureTau == 6.0F);
-            Assert.IsTrue(model.Project.Model.Settings.AirDensity == 1.204F);
-            Assert.IsTrue(model.Project.Model.Settings.LaiThresholdForClosedStands == 3.0F);
-            Assert.IsTrue(model.Project.Model.Settings.BoundaryLayerConductance == 0.2F);
             Assert.IsTrue(model.Project.Model.Settings.UseParFractionBelowGroundAllocation == true);
-            Assert.IsTrue(model.Project.Model.Parameter.Torus == true);
-            Assert.IsTrue(Math.Abs(model.Project.Model.World.Latitude - 49.261F) < 0.003);
+            Assert.IsTrue(Math.Abs(model.Project.World.Geometry.Latitude - 49.261F) < 0.003);
+            Assert.IsTrue(model.Project.World.Geometry.IsTorus == true);
         }
 
         private static void VerifyMalcolmKnappResourceUnit(Model model)

@@ -136,7 +136,7 @@ namespace iLand.World
             }
             string query = String.Format("select year,month,day,min_temp,max_temp,prec,rad,vpd from {0} {1} order by year, month, day", Name, climateTableQueryFilter);
 
-            string climateDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.System.Database.Climate);
+            string climateDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Climate.DatabaseFile);
             using SqliteConnection climateDatabase = Landscape.GetDatabaseConnection(climateDatabaseFilePath, true);
             using SqliteCommand queryCommand = new SqliteCommand(query, climateDatabase);
             using SqliteDataReader climateReader = queryCommand.ExecuteReader();
@@ -185,7 +185,7 @@ namespace iLand.World
                     }
 
                     ClimateDay day;
-                    if (mDays.Count <= dayIndex)
+                    if (this.mDays.Count <= dayIndex)
                     {
                         day = new ClimateDay();
                         mDays.Add(day);
@@ -252,14 +252,14 @@ namespace iLand.World
             
             int lastDay = this.IndexOf(11, 30); // 31 December in zero based indexing
             ClimateDay lastDayOfYear = mDays[lastDay];
-            float tau = projectFile.Model.Settings.TemperatureTau;
+            float tau = projectFile.Model.Ecosystem.TemperatureTau;
             // handle first day: use tissue temperature of the last day of the last year (if available)
-            mDays[0].TempDelayed = lastDayOfYear.TempDelayed + 1.0F / tau * (mDays[0].MeanDaytimeTemperature - lastDayOfYear.TempDelayed);
+            this.mDays[0].TempDelayed = lastDayOfYear.TempDelayed + 1.0F / tau * (mDays[0].MeanDaytimeTemperature - lastDayOfYear.TempDelayed);
 
-            for (int c = 1; c < mDays.Count; ++c)
+            for (int dayIndex2 = 1; dayIndex2 < this.mDays.Count; ++dayIndex2)
             {
-                // first order dynamic delayed model (Maekela 2008)
-                mDays[c].TempDelayed = mDays[c - 1].TempDelayed + 1.0F / tau * (mDays[c].MeanDaytimeTemperature - mDays[c - 1].TempDelayed);
+                // first order dynamic delayed model (Mäkelä 2008)
+                this.mDays[dayIndex2].TempDelayed = mDays[dayIndex2 - 1].TempDelayed + 1.0F / tau * (mDays[dayIndex2].MeanDaytimeTemperature - mDays[dayIndex2 - 1].TempDelayed);
             }
         }
 
@@ -317,14 +317,14 @@ namespace iLand.World
                         throw new NotSupportedException(String.Format("Climate: load year with random sampling: the actual year {0} is invalid. Only {1} years are loaded from the climate database.", mCurrentDataYear, mYearsToLoad));
                     }
                 }
-                if (model.Project.System.Settings.LogLevel <= EventLevel.Informational)
+                if (model.Project.Output.Logging.LogLevel <= EventLevel.Informational)
                 {
                     Trace.TraceInformation("Climate: current year (randomized): " + mCurrentDataYear);
                 }
             }
 
-            this.CarbonDioxidePpm = model.Project.Model.Climate.CO2ConcentrationInPpm;
-            if (model.Project.System.Settings.LogLevel <= EventLevel.Informational)
+            this.CarbonDioxidePpm = model.Project.World.Climate.CO2ConcentrationInPpm;
+            if (model.Project.Output.Logging.LogLevel <= EventLevel.Informational)
             {
                 Trace.TraceInformation("CO2 concentration " + this.CarbonDioxidePpm + " ppm.");
             }
@@ -396,15 +396,15 @@ namespace iLand.World
         // setup routine that opens database connection
         public void Setup(Project projectFile)
         {
-            this.climateTableQueryFilter = projectFile.Model.Climate.Filter;
+            this.climateTableQueryFilter = projectFile.World.Climate.DatabaseQueryFilter;
 
-            this.mYearsToLoad = projectFile.Model.Climate.BatchYears;
-            this.mDoRandomSampling = projectFile.Model.Climate.RandomSamplingEnabled;
+            this.mYearsToLoad = projectFile.World.Climate.BatchYears;
+            this.mDoRandomSampling = projectFile.World.Climate.RandomSamplingEnabled;
             this.mRandomYearList.Clear();
             this.mRandomListIndex = -1;
             if (this.mDoRandomSampling)
             {
-                string? list = projectFile.Model.Climate.RandomSamplingList;
+                string? list = projectFile.World.Climate.RandomSamplingList;
                 if (String.IsNullOrEmpty(list) == false)
                 {
                     List<string> strlist = Regex.Split(list, "\\W+").ToList();
@@ -431,8 +431,8 @@ namespace iLand.World
                     Debug.WriteLine("Climate: Random sampling enabled (without a fixed list). climate: " + Name);
                 }
             }
-            mDefaultTemperatureAddition = projectFile.Model.Climate.TemperatureShift;
-            this.mDefaultPrecipitationMultiplier = projectFile.Model.Climate.PrecipitationMultiplier;
+            mDefaultTemperatureAddition = projectFile.World.Climate.TemperatureShift;
+            this.mDefaultPrecipitationMultiplier = projectFile.World.Climate.PrecipitationMultiplier;
             if (this.mDefaultTemperatureAddition != 0.0F || this.mDefaultPrecipitationMultiplier != 1.0F)
             {
                 Debug.WriteLine("Climate modification: add temperature: " + mDefaultTemperatureAddition + ". Multiply precipitation: " + mDefaultPrecipitationMultiplier);
@@ -445,7 +445,7 @@ namespace iLand.World
             // load first chunk...
             this.LoadYear(projectFile);
             this.SetupPhenology(projectFile);
-            this.Sun.Setup(Maths.ToRadians(projectFile.Model.World.Latitude));
+            this.Sun.Setup(Maths.ToRadians(projectFile.World.Geometry.Latitude));
             this.mCurrentDataYear = -1; // go to "-1" -> the first call to next year will go to year 0.
             this.mSampledYears.Clear();
             this.IsSetup = true;
@@ -458,7 +458,7 @@ namespace iLand.World
             this.mPhenology.Add(new Phenology(this)); // id=0
 
             // TODO: remove PhenologyType and make Phenology XML serializable
-            foreach (PhenologyType phenology in project.Model.Species.Phenology)
+            foreach (PhenologyType phenology in project.World.Species.Phenology)
             {
                 if (phenology.ID < 0)
                 {

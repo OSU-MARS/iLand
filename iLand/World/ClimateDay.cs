@@ -12,7 +12,7 @@ namespace iLand.World
         public float MeanDaytimeTemperature { get; set; } // average day  degree C (of the light hours)
         public float MinTemperature { get; set; } // minimum temperature of the day
         public float MaxTemperature { get; set; } // maximum temperature of the day
-        public float TempDelayed { get; set; } // temperature delayed (after Maekela, 2008) for response calculations
+        public float TempDelayed { get; set; } // temperature delayed (after Mäkelä 2008) for response calculations
         public float Preciptitation { get; set; } // sum of day [mm]
         public float Radiation { get; set; } // sum of day (MJ/m2)
         public float Vpd { get; set; } // average of day [kPa] = [0.1 mbar] (1 bar = 100kPa)

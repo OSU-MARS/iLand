@@ -40,6 +40,7 @@ namespace iLand.Tree
         public ResourceUnit RU { get; init; } // pointer to the ressource unit the tree belongs to.
         public TreeSpecies Species { get; set; } // pointer to the tree species of the tree.
         public List<LightStamp?> Stamp { get; init; }
+        public List<int> StandID { get; init; }
         public List<int> Tag { get; init; } // (usually) numerical unique ID of the tree
 
         // biomass properties
@@ -71,6 +72,7 @@ namespace iLand.Tree
             this.RU = resourceUnit;
             this.Species = species;
             this.Stamp = new List<Tree.LightStamp?>(Constant.Simd128x4.Width);
+            this.StandID = new List<int>(Constant.Simd128x4.Width);
             this.StemMass = new List<float>(Constant.Simd128x4.Width);
             this.StressIndex = new List<float>(Constant.Simd128x4.Width);
             this.Tag = new List<int>(Constant.Simd128x4.Width);
@@ -105,6 +107,7 @@ namespace iLand.Tree
                 this.NppReserve.Capacity = value;
                 this.Opacity.Capacity = value;
                 this.Stamp.Capacity = value;
+                this.StandID.Capacity = value;
                 this.StemMass.Capacity = value;
                 this.StressIndex.Capacity = value;
             }
@@ -189,6 +192,7 @@ namespace iLand.Tree
             this.NppReserve.Add(0.0F);
             this.Opacity.Add(0.0F);
             this.Stamp.Add(null);
+            this.StandID.Add(-1);
             this.StemMass.Add(0.0F);
             this.StressIndex.Add(0.0F);
         }
@@ -212,6 +216,7 @@ namespace iLand.Tree
             this.NppReserve.Add(other.NppReserve[otherTreeIndex]);
             this.Opacity.Add(other.Opacity[otherTreeIndex]);
             this.Stamp.Add(other.Stamp[otherTreeIndex]);
+            this.StandID.Add(other.StandID[otherTreeIndex]);
             this.StemMass.Add(other.StemMass[otherTreeIndex]);
             this.StressIndex.Add(other.StressIndex[otherTreeIndex]);
         }
@@ -235,6 +240,7 @@ namespace iLand.Tree
             this.NppReserve[destinationIndex] = this.NppReserve[sourceIndex];
             this.Opacity[destinationIndex] = this.Opacity[sourceIndex];
             this.Stamp[destinationIndex] = this.Stamp[sourceIndex];
+            this.StandID[destinationIndex] = this.StandID[sourceIndex];
             this.StemMass[destinationIndex] = this.StemMass[sourceIndex];
             this.StressIndex[destinationIndex] = this.StressIndex[sourceIndex];
         }
@@ -494,7 +500,7 @@ namespace iLand.Tree
             this.RU.Trees.OnTreeDied();
             
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
-            ruSpecies.StatisticsDead.Add(this, treeIndex, null); // add tree to statistics
+            ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null); // add tree to statistics
             
             this.OnTreeRemoved(model, treeIndex, MortalityCause.Stress);
             
@@ -688,6 +694,7 @@ namespace iLand.Tree
             this.NppReserve.RemoveRange(index, count);
             this.Opacity.RemoveRange(index, count);
             this.Stamp.RemoveRange(index, count);
+            this.StandID.RemoveRange(index, count);
             this.StemMass.RemoveRange(index, count);
             this.StressIndex.RemoveRange(index, count);
         }
@@ -747,9 +754,8 @@ namespace iLand.Tree
         public void CalculateAnnualGrowth(Model model)
         {
             // get the GPP for a "unit area" of the tree species
-            float gppPerUnitArea = this.RU.Trees.GetResourceUnitSpecies(this.Species).BiomassGrowth.AnnualGpp;
+            ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
             TreeGrowthData treeGrowthData = new TreeGrowthData();
-
             for (int treeIndex = 0; treeIndex < this.Count; ++treeIndex)
             {
                 // increase age
@@ -765,12 +771,12 @@ namespace iLand.Tree
 
                 // step 2: calculate GPP of the tree based
                 // (2) GPP (without aging-effect) in kg Biomass / year
-                float gppBeforeAging = gppPerUnitArea * effectiveTreeArea;
-                float gpp = gppBeforeAging * agingFactor;
-                Debug.Assert(gpp >= 0.0F);
+                float treeGppBeforeAging = ruSpecies.BiomassGrowth.AnnualGpp * effectiveTreeArea;
+                float treeGpp = treeGppBeforeAging * agingFactor;
+                Debug.Assert(treeGpp >= 0.0F);
                 treeGrowthData.NppAboveground = 0.0F;
                 treeGrowthData.NppStem = 0.0F;
-                treeGrowthData.NppTotal = Constant.AutotrophicRespiration * gpp; // respiration loss (0.47), cf. Waring et al 1998.
+                treeGrowthData.NppTotal = model.Project.Model.Ecosystem.AutotrophicRespirationMultiplier * treeGpp; // respiration loss (0.47), cf. Waring et al 1998.
                 treeGrowthData.StressIndex = 0.0F;
 
                 //DBGMODE(
@@ -800,7 +806,13 @@ namespace iLand.Tree
 
                 if (this.IsDead(treeIndex) == false)
                 {
-                    this.RU.Trees.GetResourceUnitSpecies(this.Species).Statistics.Add(this, treeIndex, treeGrowthData);
+                    ruSpecies.Statistics.AddToCurrentYear(this, treeIndex, treeGrowthData);
+
+                    int standID = this.StandID[treeIndex];
+                    if (standID >= 0)
+                    {
+                        this.RU.Trees.TreeStatisticsByStandID[standID].AddToCurrentYear(this, treeIndex, treeGrowthData);
+                    }
                 }
 
                 // regeneration
@@ -826,7 +838,7 @@ namespace iLand.Tree
 
             // turnover rates
             float foliageTurnover = this.Species.TurnoverLeaf;
-            float rootTurnover = this.Species.TurnoverRoot;
+            float rootTurnover = this.Species.TurnoverFineRoot;
             // the turnover rate of wood depends on the size of the reserve pool:
             float woodTurnover = reserveAllocation / (this.StemMass[treeIndex] + reserveAllocation);
 
@@ -1041,9 +1053,9 @@ namespace iLand.Tree
             this.Height[treeIndex] += dbhIncrementInM * hdRatioNewGrowth;
 
             // update state of LIP stamp and opacity
-            this.Stamp[treeIndex] = Species.GetStamp(this.Dbh[treeIndex], this.Height[treeIndex]); // get new stamp for updated dimensions
+            this.Stamp[treeIndex] = this.Species.GetStamp(this.Dbh[treeIndex], this.Height[treeIndex]); // get new stamp for updated dimensions
             // calculate the CrownFactor which reflects the opacity of the crown
-            float k = model.Project.Model.Settings.LightExtinctionCoefficientOpacity;
+            float k = model.Project.Model.Ecosystem.LightExtinctionCoefficientOpacity;
             this.Opacity[treeIndex] = 1.0F - MathF.Exp(-k * this.LeafArea[treeIndex] / this.Stamp[treeIndex]!.CrownArea);
         }
 
@@ -1093,7 +1105,7 @@ namespace iLand.Tree
 
             // LeafArea[m2] = LeafMass[kg] * specificLeafArea[m2/kg]
             this.LeafArea[treeIndex] = this.FoliageMass[treeIndex] * this.Species.SpecificLeafArea;
-            this.Opacity[treeIndex] = 1.0F - MathF.Exp(-projectFile.Model.Settings.LightExtinctionCoefficientOpacity * this.LeafArea[treeIndex] / this.Stamp[treeIndex]!.CrownArea);
+            this.Opacity[treeIndex] = 1.0F - MathF.Exp(-projectFile.Model.Ecosystem.LightExtinctionCoefficientOpacity * this.LeafArea[treeIndex] / this.Stamp[treeIndex]!.CrownArea);
             this.NppReserve[treeIndex] = (1.0F + this.Species.FinerootFoliageRatio) * this.FoliageMass[treeIndex]; // initial value
             this.DbhDelta[treeIndex] = 0.1F; // initial value: used in growth() to estimate diameter increment
         }
@@ -1105,7 +1117,7 @@ namespace iLand.Tree
             this.SetDeathReasonHarvested(treeIndex);
             this.RU.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(Species);
-            ruSpecies.StatisticsManagement.Add(this, treeIndex, null);
+            ruSpecies.StatisticsManagement.AddToCurrentYear(this, treeIndex, null);
             this.OnTreeRemoved(model, treeIndex, this.IsCutDown(treeIndex) ?  MortalityCause.CutDown : MortalityCause.Harvest);
 
             this.RU.AddSprout(model, this, treeIndex);
@@ -1123,7 +1135,7 @@ namespace iLand.Tree
             this.SetFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
             this.RU.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
-            ruSpecies.StatisticsDead.Add(this, treeIndex, null);
+            ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null);
             this.OnTreeRemoved(model, treeIndex, MortalityCause.Disturbance);
 
             this.RU.AddSprout(model, this, treeIndex);

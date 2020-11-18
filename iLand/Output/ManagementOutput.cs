@@ -19,11 +19,11 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
             this.Columns.Add(SqlColumn.CreateSpecies());
-            this.Columns.Add(new SqlColumn("count_ha", "tree count (living)", OutputDatatype.Integer));
-            this.Columns.Add(new SqlColumn("dbh_avg_cm", "average dbh (cm)", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("height_avg_m", "average tree height (m)", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("volume_m3", "volume (geomery, taper factor) in m3", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("count_ha", "tree count (living)", SqliteType.Integer));
+            this.Columns.Add(new SqlColumn("dbh_avg_cm", "average dbh (cm)", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("height_avg_m", "average tree height (m)", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("volume_m3", "volume (geomery, taper factor) in m3", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", SqliteType.Real));
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

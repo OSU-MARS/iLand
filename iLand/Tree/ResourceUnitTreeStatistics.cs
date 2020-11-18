@@ -145,7 +145,7 @@ namespace iLand.Tree
             //mNRegeneration=0.0F;
         }
 
-        public void Add(SaplingProperties sapling)
+        public void AddToCurrentYear(SaplingProperties sapling)
         {
             int currentYear = this.RegenerationC.Count - 1;
             this.CohortCount[currentYear] += sapling.LivingCohorts;
@@ -159,7 +159,7 @@ namespace iLand.Tree
             this.NppSaplings[currentYear] += sapling.CarbonGain.C / Constant.BiomassCFraction;
         }
 
-        public void Add(Trees trees, int treeIndex, TreeGrowthData? treeGrowth, bool skipDead = false)
+        public void AddToCurrentYear(Trees trees, int treeIndex, TreeGrowthData? treeGrowth, bool skipDead = false)
         {
             if (skipDead && trees.IsDead(treeIndex))
             {

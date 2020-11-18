@@ -2,17 +2,18 @@
 using iLand.Tools;
 using iLand.World;
 using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 
 namespace iLand.Output
 {
     public class CarbonFlowOutput : Output
     {
-        private readonly Expression mFilter; // condition for landscape-level output
+        private readonly Expression mYearFilter; // condition for landscape-level output
         private readonly Expression mResourceUnitFilter; // condition for resource-unit-level output
 
         public CarbonFlowOutput()
         {
-            this.mFilter = new Expression();
+            this.mYearFilter = new Expression();
             this.mResourceUnitFilter = new Expression();
 
             this.Name = "Carbon fluxes per RU or landscape/yr";
@@ -29,46 +30,43 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
-            this.Columns.Add(new SqlColumn("area_ha", "total stockable area of the resource unit (or landscape) (ha)", OutputDatatype.Double));
+            this.Columns.Add(new SqlColumn("area_ha", "total stockable area of the resource unit (or landscape) (ha)", SqliteType.Real));
             this.Columns.Add(new SqlColumn("GPP", "actually realized gross primary production, kg C; ((primary production|GPP)) including " +
                                            "the effect of decreasing productivity with age; note that a rough estimate of " +
-                                           "((sapling growth and competition|#sapling C and N dynamics|sapling GPP)) is added to the GPP of adult trees here.", OutputDatatype.Double));
+                                           "((sapling growth and competition|#sapling C and N dynamics|sapling GPP)) is added to the GPP of adult trees here.", SqliteType.Real));
             this.Columns.Add(new SqlColumn("NPP", "net primary production, kg C; calculated as NPP=GPP-Ra; Ra, the autotrophic respiration (kg C/ha) is calculated as" +
-                                           " a fixed fraction of GPP in iLand (see ((primary production|here)) for details). ", OutputDatatype.Double));
+                                           " a fixed fraction of GPP in iLand (see ((primary production|here)) for details). ", SqliteType.Real));
             this.Columns.Add(new SqlColumn("Rh", "heterotrophic respiration, kg C; sum of C released to the atmosphere from detrital pools, i.e." +
-                                           " ((snag dynamics|#Snag decomposition|snags)), ((soil C and N cycling|downed deadwood, litter, and mineral soil)).", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("dist_loss", "disturbance losses, kg C; C that leaves the ecosystem as a result of disturbances, e.g. fire consumption", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("mgmt_loss", "management losses, kg C; C that leaves the ecosystem as a result of management interventions, e.g. harvesting", OutputDatatype.Double));
+                                           " ((snag dynamics|#Snag decomposition|snags)), ((soil C and N cycling|downed deadwood, litter, and mineral soil)).", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("dist_loss", "disturbance losses, kg C; C that leaves the ecosystem as a result of disturbances, e.g. fire consumption", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("mgmt_loss", "management losses, kg C; C that leaves the ecosystem as a result of management interventions, e.g. harvesting", SqliteType.Real));
             this.Columns.Add(new SqlColumn("NEP", "net ecosytem productivity kg C, NEP=NPP - Rh - disturbance losses - management losses. " +
                                            "Note that NEP is also equal to the total net changes over all ecosystem C pools, as reported in the " +
-                                           "carbon output (cf. [http://www.jstor.org/stable/3061028|Randerson et al. 2002])", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("cumNPP", "cumulative NPP, kg C. This is a running sum of NPP (including tree NPP and sapling carbon gain).", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("cumRh", "cumulative flux to atmosphere (heterotrophic respiration), kg C. This is a running sum of Rh.", OutputDatatype.Double));
-            this.Columns.Add(new SqlColumn("cumNEP", "cumulative NEP (net ecosystem productivity), kg C. This is a running sum of NEP (positive values: carbon gain, negative values: carbon loss).", OutputDatatype.Double));
+                                           "carbon output (cf. [http://www.jstor.org/stable/3061028|Randerson et al. 2002])", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("cumNPP", "cumulative NPP, kg C. This is a running sum of NPP (including tree NPP and sapling carbon gain).", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("cumRh", "cumulative flux to atmosphere (heterotrophic respiration), kg C. This is a running sum of Rh.", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("cumNEP", "cumulative NEP (net ecosystem productivity), kg C. This is a running sum of NEP (positive values: carbon gain, negative values: carbon loss).", SqliteType.Real));
         }
 
         public override void Setup(Model model)
         {
             // use a condition for to control execution for the current year
-            this.mFilter.SetExpression(model.Project.Output.Carbon.Condition);
+            this.mYearFilter.SetExpression(model.Project.Output.Carbon.Condition);
             this.mResourceUnitFilter.SetExpression(model.Project.Output.Carbon.ConditionRU);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            if (model.Landscape.ResourceUnits.Count == 0)
-            {
-                // TODO: when would there be zero RUs?
-                return;
-            }
+            Debug.Assert(model.Landscape.ResourceUnits.Count > 0);
+
             // global condition
-            if ((mFilter.IsEmpty == false) && (mFilter.Evaluate(model.CurrentYear) == 0.0))
+            if ((this.mYearFilter.IsEmpty == false) && (this.mYearFilter.Evaluate(model.CurrentYear) == 0.0))
             {
                 return;
             }
             bool logIndividualResourceUnits = true;
             // switch off details if this is indicated in the conditionRU option
-            if (!mResourceUnitFilter.IsEmpty && mResourceUnitFilter.Evaluate(model.CurrentYear) == 0.0)
+            if ((this.mResourceUnitFilter.IsEmpty == false) && (this.mResourceUnitFilter.Evaluate(model.CurrentYear) == 0.0))
             {
                 logIndividualResourceUnits = false;
             }
@@ -87,8 +85,8 @@ namespace iLand.Output
                 }
 
                 float areaFactor = ru.AreaInLandscape / Constant.RUArea; //conversion factor
-                float npp = ru.Trees.Statistics.Npp[^1] * Constant.BiomassCFraction; // kg C/ha
-                npp += ru.Trees.Statistics.NppSaplings[^1] * Constant.BiomassCFraction; // kgC/ha
+                float npp = ru.Trees.StatisticsForAllSpeciesAndStands.Npp[^1] * Constant.BiomassCFraction; // kg C/ha
+                npp += ru.Trees.StatisticsForAllSpeciesAndStands.NppSaplings[^1] * Constant.BiomassCFraction; // kgC/ha
                 
                 // Snag pools are not scaled per ha (but refer to the stockable RU), soil pools and biomass statistics (NPP, ...) 
                 // are scaled.
@@ -108,7 +106,7 @@ namespace iLand.Output
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
                     insertRow.Parameters[3].Value = areaFactor;
-                    insertRow.Parameters[4].Value = npp / Constant.AutotrophicRespiration; // GPP_act
+                    insertRow.Parameters[4].Value = npp / model.Project.Model.Ecosystem.AutotrophicRespirationMultiplier; // GPP_act
                     insertRow.Parameters[5].Value = npp; // NPP
                     insertRow.Parameters[6].Value = -toAtmosphere; // rh
                     insertRow.Parameters[7].Value = -toDisturbance; // disturbance
@@ -122,7 +120,7 @@ namespace iLand.Output
 
                 // landscape level
                 accumulatedValues[0] += areaFactor; // total area in ha
-                accumulatedValues[1] += npp / Constant.AutotrophicRespiration * areaFactor; // GPP_act
+                accumulatedValues[1] += npp / model.Project.Model.Ecosystem.AutotrophicRespirationMultiplier * areaFactor; // GPP_act
                 accumulatedValues[2] += npp * areaFactor; // NPP
                 accumulatedValues[3] += -toAtmosphere * areaFactor; // rh
                 accumulatedValues[4] += -toDisturbance * areaFactor; // disturbance

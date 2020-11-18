@@ -138,10 +138,10 @@ namespace iLand.Output
             //SqlHelper.ExecuteSql(String.Format("insert into runs (id, timestamp) values ({0}, '{1}')", maxID, timestamp), g.DatabaseInput);
             // replace path information
             // setup final path
-            string? outputDatabaseFile = model.Project.System.Database.Output;
+            string? outputDatabaseFile = model.Project.Output.DatabaseFile;
             if (String.IsNullOrWhiteSpace(outputDatabaseFile))
             {
-                throw new XmlException("The /project/system/database/out element is missing or does not specify an output database file name.");
+                throw new XmlException("The /project/output/databaseFile element is missing or does not specify an output database file name.");
             }
             string outputDatabasePath = model.Project.GetFilePath(ProjectDirectory.Output, outputDatabaseFile);
             // dbPath.Replace("$id$", maxID.ToString(), StringComparison.Ordinal);

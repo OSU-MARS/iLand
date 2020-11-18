@@ -44,7 +44,7 @@ namespace iLand.World
             this.mRU = ru;
             this.mSnowPack = new SnowPack();
 
-            this.Canopy = new Canopy(projectFile.Model.Settings.AirDensity);
+            this.Canopy = new Canopy(projectFile.Model.Ecosystem.AirDensity);
             this.SoilDepth = 0;
             this.SoilWaterPsi = new float[Constant.DaysInLeapYear];
         }
@@ -107,9 +107,9 @@ namespace iLand.World
             this.CanopyConductance = 0.0F;
 
             // canopy settings
-            this.Canopy.NeedleStorageFactor = projectFile.Model.Settings.InterceptionStorageNeedle;
-            this.Canopy.DecidousStorageFactor = projectFile.Model.Settings.InterceptionStorageBroadleaf;
-            this.mSnowPack.MeltTemperature = projectFile.Model.Settings.SnowMeltTemperature;
+            this.Canopy.BroadleafStorageFactor = projectFile.Model.Ecosystem.InterceptionStorageBroadleaf;
+            this.Canopy.NeedleStorageFactor = projectFile.Model.Ecosystem.InterceptionStorageNeedle;
+            this.mSnowPack.MeltTemperature = projectFile.Model.Ecosystem.SnowmeltTemperature;
 
             this.TotalEvapotranspiration = this.TotalRunoff = this.SnowDayRadiation = 0.0F;
             this.SnowDays = 0;
@@ -175,11 +175,11 @@ namespace iLand.World
             }
             this.CanopyConductance /= totalLai;
 
-            if (totalLai < projectFile.Model.Settings.LaiThresholdForClosedStands)
+            if (totalLai < projectFile.Model.Ecosystem.LaiThresholdForClosedStands)
             {
                 // following Landsberg and Waring: when LAI is < 3 (default for laiThresholdForClosedStands), a linear "ramp" from 0 to 3 is assumed
                 // http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance
-                this.CanopyConductance *= totalLai / projectFile.Model.Settings.LaiThresholdForClosedStands;
+                this.CanopyConductance *= totalLai / projectFile.Model.Ecosystem.LaiThresholdForClosedStands;
             }
         }
 
