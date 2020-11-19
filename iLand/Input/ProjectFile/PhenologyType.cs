@@ -34,20 +34,20 @@ namespace iLand.Input.ProjectFile
                 {
                     if (reader.AttributeCount != 1)
                     {
-                        throw new XmlException("Encountered unexpected attributes.");
+                        throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
                     }
 
                     string? idAsString = reader.GetAttribute("id");
                     if (String.IsNullOrWhiteSpace(idAsString))
                     {
-                        throw new XmlException("id attribute of phenology type is empty.");
+                        throw new XmlException("id attribute of phenology type is missing.");
                     }
                     this.ID = Int32.Parse(idAsString);
                     reader.ReadStartElement();
                 }
                 else
                 {
-                    throw new XmlException("Encountered unexpected attributes.");
+                    throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
                 }
             }
             else if (String.Equals(reader.Name, "vpdMin", StringComparison.Ordinal))
@@ -100,7 +100,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

@@ -9,7 +9,7 @@ namespace iLand.Tree
         //  GPP production (yearly) (kg Biomass) per m² (effective area)
         public float AnnualGpp { get; private set; }
         // monthly Gross Primary Production [kg Biomass / m²]
-        public float[] MonthlyGpp { get; init; }
+        public float[] MonthlyGpp { get; private init; }
         /// fraction of biomass that should be distributed to roots
         public float RootFraction { get; private set; }
         // f_env,yr: aggregate environmental factor [0..1}
@@ -18,7 +18,7 @@ namespace iLand.Tree
         // species specific responses
         public ResourceUnitTreeSpeciesResponse SpeciesResponse { get; set; }
         // utilizable radiation MJ/m² and month
-        public float[] UtilizablePar { get; init; }
+        public float[] UtilizablePar { get; private init; }
 
         public ResourceUnitTreeSpeciesGrowth(ResourceUnitTreeSpeciesResponse speciesResponse)
         {
@@ -67,7 +67,7 @@ namespace iLand.Tree
                 //                      mResponse.vpdResponse()[month] *
                 //                      mResponse.soilWaterResponse()[month] *
                 //                      mResponse.tempResponse()[month];
-                // minimum approach: for each day the minimum aof vpd, temp, soilwater is calculated, then averaged for each month
+                // minimum approach: for each day the minimum of vpd, temp, and soil water is calculated, then averaged for each month
                 //float response = mResponse.absorbedRadiation()[month] *
                 //                  mResponse.minimumResponses()[month];
                 float utilizableRadiation = this.SpeciesResponse.UtilizableRadiationByMonth[month]; // utilizable radiation of the month ... (MJ/m2)

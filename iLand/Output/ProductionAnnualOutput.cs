@@ -6,9 +6,9 @@ using Microsoft.Data.Sqlite;
 namespace iLand.Output
 {
     /** ProductionOut describes finegrained production details on the level of resourceunits per month. */
-    public class ProductionOutput : Output
+    public class ProductionAnnualOutput : AnnualOutput
     {
-        public ProductionOutput()
+        public ProductionAnnualOutput()
         {
             this.Name = "Production per month, species and resource unit";
             this.TableName = "productionMonth";

@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Xml;
 
 namespace iLand.Simulation
 {
@@ -18,14 +17,14 @@ namespace iLand.Simulation
 
         public int CurrentYear { get; set; }
 
-        public Landscape Landscape { get; init; }
-        public Management? Management { get; init; }
-        public ModelSettings ModelSettings { get; init; }
-        public Plugin.Modules Modules { get; init; }
-        public Output.Outputs Outputs { get; init; }
-        public Project Project { get; init; }
-        public RandomGenerator RandomGenerator { get; init; }
-        public ScheduledEvents? ScheduledEvents { get; init; }
+        public Landscape Landscape { get; private init; }
+        public Management? Management { get; private init; }
+        public ModelSettings ModelSettings { get; private init; }
+        public Plugin.Modules Modules { get; private init; }
+        public Output.AnnualOutputs AnnualOutputs { get; private init; }
+        public Project Project { get; private init; }
+        public RandomGenerator RandomGenerator { get; private init; }
+        public ScheduledEvents? ScheduledEvents { get; private init; }
 
         public Model(Project projectFile, Landscape landscape)
         {
@@ -35,7 +34,7 @@ namespace iLand.Simulation
             this.Landscape = landscape;
 
             this.ModelSettings = new ModelSettings();
-            this.Outputs = new Output.Outputs();
+            this.AnnualOutputs = new Output.AnnualOutputs();
             this.RandomGenerator = new RandomGenerator();
 
             this.Management = null;
@@ -131,11 +130,11 @@ namespace iLand.Simulation
             }
 
             // setup outputs
-            this.Outputs.Setup(this);
+            this.AnnualOutputs.Setup(this);
 
             // outputs to create with inital state (without any growth) are called here:
             this.CurrentYear = 0; // set clock to "0" (for outputs with initial state)
-            this.Outputs.LogYear(this); // log initial state
+            this.AnnualOutputs.LogYear(this); // log initial state
             this.CurrentYear = 1; // set to first year
         }
 
@@ -280,7 +279,7 @@ namespace iLand.Simulation
                 ru.OnEndYear();
             }
             // create outputs
-            this.Outputs.LogYear(this);
+            this.AnnualOutputs.LogYear(this);
 
             //this.GlobalSettings.SystemStatistics.WriteOutputTime += toutput.Elapsed();
             //this.GlobalSettings.SystemStatistics.TotalYearTime += t.Elapsed();
@@ -302,7 +301,7 @@ namespace iLand.Simulation
             {
                 if (disposing)
                 {
-                    this.Outputs.Dispose();
+                    this.AnnualOutputs.Dispose();
                 }
                 this.isDisposed = true;
             }

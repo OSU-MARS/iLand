@@ -8,6 +8,7 @@ namespace iLand.Input.ProjectFile
         public float BrowsingPressure { get; private set; }
 
         public Browsing()
+            : base("browsing")
         {
             this.BrowsingPressure = 1.0F;
         }
@@ -16,25 +17,16 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes.");
-            }
-
-            if (String.Equals(reader.Name, "browsing", StringComparison.Ordinal))
-            {
-                reader.Read();
+                this.ReadEnabled(reader);
             }
             else if (String.Equals(reader.Name, "browsingPressure", StringComparison.Ordinal))
             {
                 this.BrowsingPressure = reader.ReadElementContentAsFloat();
                 // no clear restriction on range of value
             }
-            else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
-            {
-                this.Enabled = reader.ReadElementContentAsBoolean();
-            }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

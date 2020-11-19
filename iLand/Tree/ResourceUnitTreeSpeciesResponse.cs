@@ -20,18 +20,18 @@ namespace iLand.Tree
         */
     public class ResourceUnitTreeSpeciesResponse
     {
-        public ResourceUnit ResourceUnit { get; init; }
-        public TreeSpecies Species { get; init; }
+        public ResourceUnit ResourceUnit { get; private init; }
+        public TreeSpecies Species { get; private init; }
 
-        public float[] CO2ResponseByMonth { get; init; }
-        public float[] GlobalRadiationByMonth { get; init; } // radiation sum in MJ/m2
-        public float[] SoilWaterResponseByMonth { get; init; } // average of soilwater response
+        public float[] CO2ResponseByMonth { get; private init; }
+        public float[] GlobalRadiationByMonth { get; private init; } // radiation sum in MJ/m2
+        public float[] SoilWaterResponseByMonth { get; private init; } // average of soilwater response
         public float NitrogenResponseForYear { get; private set; }
         public float RadiationForYear { get; private set; } // total radiation of the year (MJ/m2)
-        public float[] TempResponseByMonth { get; init; } // average of temperature response
-        public float[] UtilizableRadiationByMonth { get; init; } // sum of daily radiation*minResponse (MJ/m2)
+        public float[] TempResponseByMonth { get; private init; } // average of temperature response
+        public float[] UtilizableRadiationByMonth { get; private init; } // sum of daily radiation*minResponse (MJ/m2)
         public float UtilizableRadiationForYear { get; private set; } // yearly sum of utilized radiation (MJ/m2)
-        public float[] VpdResponseByMonth { get; init; } // mean of vpd-response
+        public float[] VpdResponseByMonth { get; private init; } // mean of vpd-response
 
         public ResourceUnitTreeSpeciesResponse(ResourceUnit ru, ResourceUnitTreeSpecies ruSpecies)
         {
@@ -115,7 +115,7 @@ namespace iLand.Tree
                 float soilWaterResponse = this.Species.GetSoilWaterResponse(ruWaterCycle.SoilWaterPsi[dayOfYear]);
                 this.SoilWaterResponseByMonth[monthIndex] += soilWaterResponse;
 
-                float tempResponse = this.Species.GetTemperatureResponse(day.TempDelayed);
+                float tempResponse = this.Species.GetTemperatureResponse(day.MeanDaytimeTemperatureMA1);
                 this.TempResponseByMonth[monthIndex] += tempResponse;
 
                 float vpdResponse = this.Species.GetVpdResponse(day.Vpd);

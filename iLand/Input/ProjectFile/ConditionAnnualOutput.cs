@@ -3,14 +3,14 @@ using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class AreaMask : Enablable
+    public class ConditionAnnualOutput : Enablable
     {
-        public string? ImageFile { get; private set; }
+        public string? Condition { get; protected set; }
 
-        public AreaMask()
-            : base("areaMask")
+        public ConditionAnnualOutput(string elementName)
+            : base(elementName)
         {
-            this.ImageFile = null;
+            this.Condition = null;
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -19,9 +19,9 @@ namespace iLand.Input.ProjectFile
             {
                 this.ReadEnabled(reader);
             }
-            else if (String.Equals(reader.Name, "imageFile", StringComparison.Ordinal))
+            else if (String.Equals(reader.Name, "condition", StringComparison.Ordinal))
             {
-                this.ImageFile = reader.ReadElementContentAsString().Trim();
+                this.Condition = reader.ReadElementContentAsString().Trim();
             }
             else
             {

@@ -6,14 +6,14 @@ namespace iLand.Input.ProjectFile
     public class DefaultSoil : XmlSerializable
     {
         public float AvailableNitrogen { get; private set; }
-        public float Leaching { get; private set; }
+        public float NitrogenLeachingFraction { get; private set; }
         public float NitrogenDeposition { get; private set; }
         public bool UseDynamicAvailableNitrogen { get; private set; }
 
-        public float El { get; private set; }
-        public float Er { get; private set; }
-        public float Qb { get; private set; }
-        public float Qh { get; private set; }
+        public float MicrobialLabileEfficiency { get; private set; }
+        public float MicrobialRefractoryEfficiency { get; private set; }
+        public float SoilMicrobeCarbonNitrogenRatio { get; private set; }
+        public float SoilOrganicMatterCarbonNitrogenRatio { get; private set; }
 
         public float PercentSand { get; private set; }
         public float PercentSilt { get; private set; }
@@ -36,15 +36,17 @@ namespace iLand.Input.ProjectFile
 
         public DefaultSoil()
         {
-            this.Leaching = 0.15F;
+            this.NitrogenLeachingFraction = 0.0015F;
             this.NitrogenDeposition = 0.0F;
             this.UseDynamicAvailableNitrogen = false;
 
-            this.El = 0.0577F;
-            this.Er = 0.073F;
-            this.Qb = 5.0F;
-            this.Qh = 25.0F;
+            this.MicrobialLabileEfficiency = 0.0577F;
+            this.MicrobialRefractoryEfficiency = 0.073F;
+            this.SoilMicrobeCarbonNitrogenRatio = 5.0F;
+            this.SoilOrganicMatterCarbonNitrogenRatio = 25.0F;
 
+            this.SnagDbhBreakpointSmallMedium = 20.0F;
+            this.SnagDdhBreakpointMediumLarge = 100.0F;
             this.SoilHumificationRate = 0.3F;
             this.SoilOrganicMatterDecompositionRate = 0.02F;
             this.YoungRefractoryDecompositionRate = -1.0F;
@@ -54,7 +56,7 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes.");
+                throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
             if (String.Equals(reader.Name, "defaultSoil", StringComparison.Ordinal))
@@ -77,7 +79,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Soil depth is zero or negative.");
                 }
             }
-            else if (String.Equals(reader.Name, "pctSand", StringComparison.Ordinal))
+            else if (String.Equals(reader.Name, "percentSand", StringComparison.Ordinal))
             {
                 this.PercentSand = reader.ReadElementContentAsFloat();
                 if ((this.PercentSand < 0.0F) || (this.PercentSand > 100.0F))
@@ -85,7 +87,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Soil sand content is negative or greater than 100%.");
                 }
             }
-            else if (String.Equals(reader.Name, "pctSilt", StringComparison.Ordinal))
+            else if (String.Equals(reader.Name, "percentSilt", StringComparison.Ordinal))
             {
                 this.PercentSilt = reader.ReadElementContentAsFloat();
                 if ((this.PercentSilt < 0.0F) || (this.PercentSilt > 100.0F))
@@ -93,7 +95,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Soil silt content is negative or greater than 100%.");
                 }
             }
-            else if (String.Equals(reader.Name, "pctClay", StringComparison.Ordinal))
+            else if (String.Equals(reader.Name, "percentClay", StringComparison.Ordinal))
             {
                 this.PercentClay = reader.ReadElementContentAsFloat();
                 if ((this.PercentClay < 0.0F) || (this.PercentClay > 100.0F))
@@ -149,7 +151,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Young refractory decomposition rate is negative.");
                 }
             }
-            else if (String.Equals(reader.Name, "somC", StringComparison.Ordinal))
+            else if (String.Equals(reader.Name, "soilOrganicMatterC", StringComparison.Ordinal))
             {
                 this.SoilOrganicMatterCarbon = reader.ReadElementContentAsFloat();
                 if (this.SoilOrganicMatterCarbon < 0.0F)
@@ -157,7 +159,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Soil organic matter carbon is negative.");
                 }
             }
-            else if (String.Equals(reader.Name, "somN", StringComparison.Ordinal))
+            else if (String.Equals(reader.Name, "soilOrganicMatterN", StringComparison.Ordinal))
             {
                 this.SoilOrganicMatterNitrogen = reader.ReadElementContentAsFloat();
                 if (this.SoilOrganicMatterNitrogen < 0.0F)
@@ -165,7 +167,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Soil organic matter nitrogen is negative.");
                 }
             }
-            else if (String.Equals(reader.Name, "somDecompRate", StringComparison.Ordinal))
+            else if (String.Equals(reader.Name, "soilOrganicMatterDecompRate", StringComparison.Ordinal))
             {
                 this.SoilOrganicMatterDecompositionRate = reader.ReadElementContentAsFloat();
                 if (this.SoilOrganicMatterDecompositionRate < 0.0F)
@@ -183,37 +185,37 @@ namespace iLand.Input.ProjectFile
             }
             else if (String.Equals(reader.Name, "el", StringComparison.Ordinal))
             {
-                this.El = reader.ReadElementContentAsFloat();
-                if (this.El < 0.0F)
+                this.MicrobialLabileEfficiency = reader.ReadElementContentAsFloat();
+                if (this.MicrobialLabileEfficiency < 0.0F)
                 {
                     throw new XmlException("El is negative.");
                 }
             }
             else if (String.Equals(reader.Name, "er", StringComparison.Ordinal))
             {
-                this.Er = reader.ReadElementContentAsFloat();
-                if (this.Er < 0.0F)
+                this.MicrobialRefractoryEfficiency = reader.ReadElementContentAsFloat();
+                if (this.MicrobialRefractoryEfficiency < 0.0F)
                 {
                     throw new XmlException("Er is negative.");
                 }
             }
             else if (String.Equals(reader.Name, "qb", StringComparison.Ordinal))
             {
-                this.Qb = reader.ReadElementContentAsFloat();
-                if (this.Qb < 0.0F)
+                this.SoilMicrobeCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+                if (this.SoilMicrobeCarbonNitrogenRatio < 0.0F)
                 {
                     throw new XmlException("Qb is negative.");
                 }
             }
             else if (String.Equals(reader.Name, "qh", StringComparison.Ordinal))
             {
-                this.Qh = reader.ReadElementContentAsFloat();
-                if (this.Qh < 0.0F)
+                this.SoilOrganicMatterCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+                if (this.SoilOrganicMatterCarbonNitrogenRatio < 0.0F)
                 {
                     throw new XmlException("Qh is negative.");
                 }
             }
-            else if (String.Equals(reader.Name, "swdDBHClass12", StringComparison.Ordinal))
+            else if (String.Equals(reader.Name, "snagSmallMediumDbhBreakpoint", StringComparison.Ordinal))
             {
                 this.SnagDbhBreakpointSmallMedium = reader.ReadElementContentAsFloat();
                 if (this.SnagDbhBreakpointSmallMedium < 0.0F)
@@ -221,7 +223,7 @@ namespace iLand.Input.ProjectFile
                     throw new XmlException("Breakpoint between DBH classes 1 and 2 is negative.");
                 }
             }
-            else if (String.Equals(reader.Name, "swdDBHClass23", StringComparison.Ordinal))
+            else if (String.Equals(reader.Name, "snagMediumLargeDbhBreakpoint", StringComparison.Ordinal))
             {
                 this.SnagDdhBreakpointMediumLarge = reader.ReadElementContentAsFloat();
                 if (this.SnagDdhBreakpointMediumLarge < 0.0F)
@@ -233,12 +235,12 @@ namespace iLand.Input.ProjectFile
             {
                 this.UseDynamicAvailableNitrogen = reader.ReadElementContentAsBoolean();
             }
-            else if (String.Equals(reader.Name, "leaching", StringComparison.Ordinal))
+            else if (String.Equals(reader.Name, "nitrogenLeachingFraction", StringComparison.Ordinal))
             {
-                this.Leaching = reader.ReadElementContentAsFloat();
-                if (this.Leaching < 0.0F)
+                this.NitrogenLeachingFraction = reader.ReadElementContentAsFloat();
+                if ((this.NitrogenLeachingFraction < 0.0F || this.NitrogenLeachingFraction > 1.0))
                 {
-                    throw new XmlException("Leaching rate is negative.");
+                    throw new XmlException("Fraction of nitrogen in soil humus lost to annual leaching is negative or greater than 1.0.");
                 }
             }
             else if (String.Equals(reader.Name, "nitrogenDeposition", StringComparison.Ordinal))
@@ -251,7 +253,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

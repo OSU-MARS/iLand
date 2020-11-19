@@ -22,7 +22,7 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes.");
+                throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
             if (String.Equals(reader.Name, "lightResponse", StringComparison.Ordinal))
@@ -43,7 +43,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

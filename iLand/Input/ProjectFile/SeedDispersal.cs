@@ -13,8 +13,8 @@ namespace iLand.Input.ProjectFile
 		public string? ExternalSeedBuffer { get; private set; }
 		public float RecruitmentDimensionVariation { get; private set; }
 
-		public LongDistanceDispersal LongDistanceDispersal { get; init; }
-		public ExternalSeedBelt ExternalSeedBelt { get; init; }
+		public LongDistanceDispersal LongDistanceDispersal { get; private init; }
+		public ExternalSeedBelt ExternalSeedBelt { get; private init; }
 		
 		public SeedDispersal()
         {
@@ -33,10 +33,16 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes.");
+				if (String.Equals(reader.Name, "externalSeedBelt", StringComparison.Ordinal))
+				{
+					this.ExternalSeedBelt.ReadXml(reader);
+				}
+				else
+				{
+					throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+				}
 			}
-
-			if (String.Equals(reader.Name, "seedDispersal", StringComparison.Ordinal))
+			else if (String.Equals(reader.Name, "seedDispersal", StringComparison.Ordinal))
 			{
 				reader.Read();
 			}
@@ -47,10 +53,6 @@ namespace iLand.Input.ProjectFile
 			else if (String.Equals(reader.Name, "externalSeedBackgroundInput", StringComparison.Ordinal))
 			{
 				this.ExternalSeedBackgroundInput = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "externalSeedBelt", StringComparison.Ordinal))
-			{
-				this.ExternalSeedBelt.ReadXml(reader);
 			}
 			else if (String.Equals(reader.Name, "externalSeedEnabled", StringComparison.Ordinal))
 			{
@@ -82,7 +84,7 @@ namespace iLand.Input.ProjectFile
 			}
 			else
 			{
-				throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

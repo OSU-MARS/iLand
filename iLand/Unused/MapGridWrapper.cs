@@ -6,7 +6,7 @@ namespace iLand.World
     {
         //private bool mCreated;
 
-        public MapGrid StandGrid { get; init; }
+        public MapGrid StandGrid { get; private init; }
 
         public MapGridWrapper(Model model)
         {

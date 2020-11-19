@@ -16,18 +16,18 @@ namespace iLand.Tree
       */
     public class ResourceUnitTreeSpecies
     {
-        public ResourceUnitTreeSpeciesGrowth BiomassGrowth { get; init; } // the 3pg production model of this species x resourceunit
-        public Establishment Establishment { get; init; } // establishment submodel
+        public ResourceUnitTreeSpeciesGrowth BiomassGrowth { get; private init; } // the 3pg production model of this species x resourceunit
+        public Establishment Establishment { get; private init; } // establishment submodel
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
         public float LaiFraction { get; private set; }
         public float RemovedStemVolume { get; private set; } // sum of volume with was remvoved because of death/management (m3/ha)
-        public ResourceUnitTreeSpeciesResponse Response { get; init; }
-        public ResourceUnit RU { get; init; } // return pointer to resource unit
-        public SaplingProperties SaplingStats { get; init; } // statistics for the sapling sub module
-        public TreeSpecies Species { get; init; } // return pointer to species
-        public ResourceUnitTreeStatistics Statistics { get; init; } // statistics of this species on the resource unit
-        public ResourceUnitTreeStatistics StatisticsDead { get; init; } // statistics of trees that have died
-        public ResourceUnitTreeStatistics StatisticsManagement { get; init; } // statistics of removed trees
+        public ResourceUnitTreeSpeciesResponse Response { get; private init; }
+        public ResourceUnit RU { get; private init; } // return pointer to resource unit
+        public SaplingProperties SaplingStats { get; private init; } // statistics for the sapling sub module
+        public TreeSpecies Species { get; private init; } // return pointer to species
+        public ResourceUnitTreeStatistics Statistics { get; private init; } // statistics of this species on the resource unit
+        public ResourceUnitTreeStatistics StatisticsDead { get; private init; } // statistics of trees that have died
+        public ResourceUnitTreeStatistics StatisticsManagement { get; private init; } // statistics of removed trees
         
         public ResourceUnitTreeSpecies(TreeSpecies treeSpecies, ResourceUnit ru)
         {
@@ -44,9 +44,9 @@ namespace iLand.Tree
             this.RemovedStemVolume = 0.0F;
             this.Response = speciesResponse;
             this.SaplingStats = new SaplingProperties();
-            this.Statistics = new ResourceUnitTreeStatistics(this);
-            this.StatisticsDead = new ResourceUnitTreeStatistics(this);
-            this.StatisticsManagement = new ResourceUnitTreeStatistics(this);
+            this.Statistics = new ResourceUnitTreeStatistics(ru, this);
+            this.StatisticsDead = new ResourceUnitTreeStatistics(ru, this);
+            this.StatisticsManagement = new ResourceUnitTreeStatistics(ru, this);
         }
 
         public void SetRULaiFraction(float laiFraction)
@@ -93,7 +93,7 @@ namespace iLand.Tree
             // removed growth is the running sum of all removed
             // tree volume. the current "GWL" therefore is current volume (standing) + mRemovedGrowth.
             // important: statisticsDead() and statisticsMgmt() need to calculate() before -> volume() is already scaled to ha
-            this.RemovedStemVolume += this.StatisticsDead.StemVolume[^1] + this.StatisticsManagement.StemVolume[^1];
+            this.RemovedStemVolume += this.StatisticsDead.StemVolume + this.StatisticsManagement.StemVolume;
         }
     }
 }

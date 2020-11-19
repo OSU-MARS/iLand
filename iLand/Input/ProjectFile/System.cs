@@ -5,7 +5,7 @@ namespace iLand.Input.ProjectFile
 {
     public class System : XmlSerializable
     {
-        public Paths Paths { get; init; }
+        public Paths Paths { get; private init; }
 
         // not currently supported
         //<javascript>
@@ -21,7 +21,7 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes.");
+                throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
             if (String.Equals(reader.Name, "system", StringComparison.Ordinal))
@@ -34,7 +34,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

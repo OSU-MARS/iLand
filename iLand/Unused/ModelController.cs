@@ -13,10 +13,10 @@ namespace iLand.Simulation
         private readonly List<string> mDynData;
 
         public bool DynamicOutputEnabled { get; set; }
-        public string LastError { get; init; } // error message of the last received error
+        public string LastError { get; private init; } // error message of the last received error
         public string LoadedJavascriptFile { get; set; }
-        public Model Model { get; init; }
-        public int YearsToRun { get; init; } // returns total number of years to simulate
+        public Model Model { get; private init; }
+        public int YearsToRun { get; private init; } // returns total number of years to simulate
 
         public ModelController()
         {

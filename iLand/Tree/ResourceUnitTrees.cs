@@ -1,4 +1,5 @@
-﻿using iLand.World;
+﻿using iLand.Input.ProjectFile;
+using iLand.World;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,7 +8,8 @@ namespace iLand.Tree
 {
     public class ResourceUnitTrees
     {
-        private int mNextTreeID;
+        private int nextDefaultTreeID;
+        private readonly bool retainStandStatisticsInMemory;
         private readonly ResourceUnit ru;
 
         public float AggregatedLightWeightedLeafArea { get; private set; } // sum of lightresponse*LA of the current unit
@@ -16,17 +18,18 @@ namespace iLand.Tree
         public bool HasDeadTrees { get; private set; } // if true, the resource unit has dead trees and needs maybe some cleanup
         public float PhotosyntheticallyActiveArea { get; set; } // TotalArea - Unstocked Area - loss due to BeerLambert (m2)
         public float PhotosyntheticallyActiveAreaPerLightWeightedLeafArea { get; private set; } ///<
-        public List<ResourceUnitTreeSpecies> SpeciesAvailableOnResourceUnit { get; init; }
-        public ResourceUnitTreeStatistics StatisticsForAllSpeciesAndStands { get; init; }
+        public List<ResourceUnitTreeSpecies> SpeciesAvailableOnResourceUnit { get; private init; }
+        public ResourceUnitTreeStatistics StatisticsForAllSpeciesAndStands { get; private init; }
         public float TotalLeafArea { get; private set; } // total leaf area of resource unit (m2)
         public float TotalLightWeightedLeafArea { get; private set; } // sum of lightResponse * LeafArea for all trees
-        public Dictionary<string, Trees> TreesBySpeciesID { get; init; } // reference to the tree list.
-        public Dictionary<int, ResourceUnitTreeStatistics> TreeStatisticsByStandID { get; init; }
-        public TreeSpeciesSet TreeSpeciesSet { get; init; } // get SpeciesSet this RU links to.
+        public Dictionary<string, Trees> TreesBySpeciesID { get; private init; } // reference to the tree list.
+        public Dictionary<int, ResourceUnitTreeStatistics> TreeStatisticsByStandID { get; private init; }
+        public TreeSpeciesSet TreeSpeciesSet { get; private init; } // get SpeciesSet this RU links to.
 
-        public ResourceUnitTrees(ResourceUnit ru, TreeSpeciesSet treeSpeciesSet)
+        public ResourceUnitTrees(Project projectFile, ResourceUnit ru, TreeSpeciesSet treeSpeciesSet)
         {
-            this.mNextTreeID = 0;
+            this.nextDefaultTreeID = 0;
+            this.retainStandStatisticsInMemory = projectFile.Output.Memory.StandStatistics.Enabled;
             this.ru = ru;
 
             this.AggregatedLightWeightedLeafArea = 0.0F;
@@ -37,7 +40,10 @@ namespace iLand.Tree
             this.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea = 0.0F;
             this.SpeciesAvailableOnResourceUnit = new List<ResourceUnitTreeSpecies>(treeSpeciesSet.Count);
             this.TreeStatisticsByStandID = new Dictionary<int, ResourceUnitTreeStatistics>();
-            this.StatisticsForAllSpeciesAndStands = new ResourceUnitTreeStatistics(ruSpecies: null);
+            this.StatisticsForAllSpeciesAndStands = new ResourceUnitTreeStatistics(ru)
+            {
+                IsPerHectare = true
+            };
             this.TotalLeafArea = 0.0F;
             this.TotalLightWeightedLeafArea = 0.0F;
             this.TreesBySpeciesID = new Dictionary<string, Trees>();
@@ -90,7 +96,7 @@ namespace iLand.Tree
 
             int treeIndex = treesOfSpecies.Count;
             treesOfSpecies.Add();
-            treesOfSpecies.Tag[treeIndex] = this.mNextTreeID++; // doesn't guarantee unique tree ID when tree lists are combined with regeneration
+            treesOfSpecies.Tag[treeIndex] = this.nextDefaultTreeID++; // doesn't guarantee unique tree ID when tree lists are combined with regeneration
             return treeIndex;
         }
 
@@ -101,12 +107,16 @@ namespace iLand.Tree
             this.TotalLeafArea += leafArea;
         }
 
-        public void AverageAging(float ruLeafAreaIndex, float stockableArea)
+        private void AverageAging()
         {
-            this.AverageLeafAreaWeightedAgingFactor = ruLeafAreaIndex > 0.0 ? this.AverageLeafAreaWeightedAgingFactor / (ruLeafAreaIndex * stockableArea) : 0.0F;
-            if (this.AverageLeafAreaWeightedAgingFactor < 0.0F || this.AverageLeafAreaWeightedAgingFactor > 1.0F)
+            this.AverageLeafAreaWeightedAgingFactor = this.TotalLeafArea > 0.0F ? this.AverageLeafAreaWeightedAgingFactor / this.TotalLeafArea : 0.0F; // calculate aging value (calls to addAverageAging() by individual trees)
+            if (this.AverageLeafAreaWeightedAgingFactor < 0.00001F)
             {
-                throw new NotSupportedException("Average aging out of range onRU " + this.ru.ResourceUnitGridIndex + " with , LAI " + ruLeafAreaIndex + ".");
+                Debug.WriteLine("RU-index " + this.ru.ResourceUnitGridIndex + " average aging < 0.00001. Suspiciously low.");
+            }
+            if ((this.AverageLeafAreaWeightedAgingFactor < 0.0F) || (this.AverageLeafAreaWeightedAgingFactor > 1.0F))
+            {
+                throw new ArithmeticException("Average aging invalid: RU-index " + this.ru.ResourceUnitGridIndex + ", LAI " + this.StatisticsForAllSpeciesAndStands.LeafAreaIndex);
             }
         }
 
@@ -120,16 +130,7 @@ namespace iLand.Tree
         public void AfterTreeGrowth()
         {
             ru.Trees.RemoveDeadTrees();
-
-            this.AverageLeafAreaWeightedAgingFactor = this.TotalLeafArea > 0.0F ? this.AverageLeafAreaWeightedAgingFactor / this.TotalLeafArea : 0.0F; // calculate aging value (calls to addAverageAging() by individual trees)
-            if ((this.AverageLeafAreaWeightedAgingFactor > 0.0F) && (this.AverageLeafAreaWeightedAgingFactor < 0.00001F))
-            {
-                Debug.WriteLine("RU-index " + this.ru.ResourceUnitGridIndex + " average aging < 0.00001.");
-            }
-            if ((this.AverageLeafAreaWeightedAgingFactor < 0.0F) || (this.AverageLeafAreaWeightedAgingFactor > 1.0F))
-            {
-                throw new ArithmeticException("Average aging invalid: RU-index " + this.ru.ResourceUnitGridIndex + ", LAI " + this.StatisticsForAllSpeciesAndStands.LeafAreaIndex);
-            }
+            this.AverageAging();
         }
 
         public void CalculatePhotosyntheticActivityRatio()
@@ -182,14 +183,20 @@ namespace iLand.Tree
             this.TotalLightWeightedLeafArea = 0.0F;
             this.TotalLeafArea = 0.0F;
 
-            // clear statistics global and per species...
+            // reset resource unit-level statistics and species dead and management statistics
+            // Species' live statistics are not zeroed at this point as current year resource unit GPP and NPP calculations require the species' leaf area in 
+            // the previous year.
+            this.StatisticsForAllSpeciesAndStands.Zero();
             foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
             {
-                ruSpecies.Statistics.OnStartYear();
-                ruSpecies.StatisticsDead.OnStartYear();
-                ruSpecies.StatisticsManagement.OnStartYear();
+                // ruSpecies.Statistics.Zero(); // deferred until ResourceUnit.CalculateWaterAndBiomassGrowthForYear()
+                ruSpecies.StatisticsDead.Zero();
+                ruSpecies.StatisticsManagement.Zero();
             }
-            this.StatisticsForAllSpeciesAndStands.OnStartYear();
+            foreach (ResourceUnitTreeStatistics standStatistics in this.TreeStatisticsByStandID.Values)
+            {
+                standStatistics.Zero();
+            }
         }
 
         // sets the flag that indicates that the resource unit contains dead trees
@@ -226,12 +233,13 @@ namespace iLand.Tree
                 ResourceUnitTreeSpecies speciesOnRU = this.GetResourceUnitSpecies(treesOfSpecies.Species);
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    speciesOnRU.Statistics.AddToCurrentYear(treesOfSpecies, treeIndex, null);
+                    Debug.Assert(treesOfSpecies.IsDead(treeIndex) == false);
+                    speciesOnRU.Statistics.AddToCurrentYear(treesOfSpecies, treeIndex, null, skipDead: true);
 
                     int standID = treesOfSpecies.StandID[treeIndex];
                     if (standID >= 0)
                     {
-                        this.TreeStatisticsByStandID[standID].AddToCurrentYear(treesOfSpecies, treeIndex, null);
+                        this.TreeStatisticsByStandID[standID].AddToCurrentYear(treesOfSpecies, treeIndex, null, skipDead: true);
                     }
                 }
             }
@@ -335,7 +343,14 @@ namespace iLand.Tree
                         {
                             if (this.TreeStatisticsByStandID.TryGetValue(standID, out currentStandStatistics) == false)
                             {
-                                currentStandStatistics = new ResourceUnitTreeStatistics(null);
+                                if (this.retainStandStatisticsInMemory)
+                                {
+                                    currentStandStatistics = new ResourceUnitTreeStatisticsWithPreviousYears(this.ru);
+                                }
+                                else
+                                {
+                                    currentStandStatistics = new ResourceUnitTreeStatistics(this.ru);
+                                }
                                 this.TreeStatisticsByStandID.Add(standID, currentStandStatistics);
                             }
 
@@ -355,7 +370,7 @@ namespace iLand.Tree
                 this.StatisticsForAllSpeciesAndStands.AddCurrentYears(ruSpecies.Statistics);
             }
             this.StatisticsForAllSpeciesAndStands.OnEndYear();
-            this.AverageAging(this.StatisticsForAllSpeciesAndStands.LeafAreaIndex[^1], this.ru.AreaInLandscape);
+            this.AverageAging();
         }
     }
 }

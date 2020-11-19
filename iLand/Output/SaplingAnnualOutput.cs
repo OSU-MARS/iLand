@@ -7,11 +7,11 @@ using System.Diagnostics;
 
 namespace iLand.Output
 {
-    public class SaplingOutput : Output
+    public class SaplingAnnualOutput : AnnualOutput
     {
         private readonly Expression mResouceUnitFilter;
 
-        public SaplingOutput()
+        public SaplingAnnualOutput()
         {
             this.mResouceUnitFilter = new Expression();
 
@@ -34,7 +34,7 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            this.mResouceUnitFilter.SetExpression(model.Project.Output.Sapling.Condition);
+            this.mResouceUnitFilter.SetExpression(model.Project.Output.Annual.Sapling.Condition);
             this.mResouceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
         }
 
@@ -62,7 +62,7 @@ namespace iLand.Output
                     ResourceUnitTreeStatistics stat = ruSpecies.Statistics;
                     SaplingProperties sap = ruSpecies.SaplingStats;
 
-                    if (stat.SaplingCount[^1] == 0)
+                    if (stat.SaplingCount == 0)
                     {
                         continue;
                     }

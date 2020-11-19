@@ -14,7 +14,7 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 2)
             {
-                throw new XmlException("Encountered unexpected attributes.");
+                throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
             string? xAsString = reader.GetAttribute("x");

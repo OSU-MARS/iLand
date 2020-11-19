@@ -25,9 +25,10 @@ namespace iLand.Input.ProjectFile
 		public float BurnFoliageFraction { get; private set; }
 		public float BurnBranchFraction { get; private set; }
 		public float BurnStemFraction { get; private set; }
-		public FireWind Wind { get; init; }
+		public FireWind Wind { get; private init; }
 
 		public Fire()
+			: base("fire")
         {
 			this.Wind = new FireWind();
         }
@@ -36,16 +37,7 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes.");
-			}
-
-			if (String.Equals(reader.Name, "fire", StringComparison.Ordinal))
-			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
-			{
-				this.Enabled = reader.ReadElementContentAsBoolean();
+				this.ReadEnabled(reader);
 			}
 			else if (String.Equals(reader.Name, "onlySimulation", StringComparison.Ordinal))
 			{
@@ -177,7 +169,7 @@ namespace iLand.Input.ProjectFile
 			}
 			else
 			{
-				throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

@@ -13,18 +13,18 @@ namespace iLand.World
 {
     public class Landscape
     {
-        public RectangleF Extent { get; init; } // extent of the model, not including surrounding light buffer cells
+        public RectangleF Extent { get; private init; } // extent of the model, not including surrounding light buffer cells
         public float TotalStockableHectares { get; private set; } // total stockable area of the landscape (ha)
 
-        public DEM? Dem { get; init; }
-        public Input.EnvironmentReader Environment { get; init; }
-        public GrassCover GrassCover { get; init; }
-        public List<ResourceUnit> ResourceUnits { get; init; }
+        public DEM? Dem { get; private init; }
+        public Input.EnvironmentReader Environment { get; private init; }
+        public GrassCover GrassCover { get; private init; }
+        public List<ResourceUnit> ResourceUnits { get; private init; }
 
-        public Grid<float> LightGrid { get; init; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
-        public Grid<HeightCell> HeightGrid { get; init; } // stores maximum heights of trees and some flags (currently 10x10m)
-        public Grid<ResourceUnit> ResourceUnitGrid { get; init; }
-        public MapGrid? StandGrid { get; init; } // retrieve the spatial grid that defines the stands (10m resolution)
+        public Grid<float> LightGrid { get; private init; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
+        public Grid<HeightCell> HeightGrid { get; private init; } // stores maximum heights of trees and some flags (currently 10x10m)
+        public Grid<ResourceUnit> ResourceUnitGrid { get; private init; }
+        public MapGrid? StandGrid { get; private init; } // retrieve the spatial grid that defines the stands (10m resolution)
 
         public Landscape(Project projectFile)
         {

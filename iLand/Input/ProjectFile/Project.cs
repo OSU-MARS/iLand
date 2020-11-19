@@ -6,12 +6,12 @@ namespace iLand.Input.ProjectFile
 {
     public class Project : XmlSerializable
     {
-		public System System { get; init; }
-        public Model Model { get; init; }
-		public Outputs Output { get; init; }
-		public Modules Modules { get; init; }
-		public User User { get; init; }
-		public World World { get; init; }
+		public System System { get; private init; }
+        public Model Model { get; private init; }
+		public Outputs Output { get; private init; }
+		public Modules Modules { get; private init; }
+		public User User { get; private init; }
+		public World World { get; private init; }
 
 		public Project(string xmlFilePath)
         {
@@ -58,7 +58,7 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes.");
+				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
 			if (String.Equals(reader.Name, "project", StringComparison.Ordinal))
@@ -91,7 +91,7 @@ namespace iLand.Input.ProjectFile
 			}
 			else
 			{
-				throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

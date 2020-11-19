@@ -11,25 +11,25 @@ namespace iLand.Output
     /** @class OutputManager
        Global container that handles data output.
       */
-    public class Outputs : IDisposable
+    public class AnnualOutputs : IDisposable
     {
         private SqliteConnection? database;
-        private readonly List<Output> enabledOutputs;
+        private readonly List<AnnualOutput> enabledOutputs;
         private int firstUncommittedYear;
         private bool isDisposed;
         private readonly int logCommitIntervalInYears;
         private SqliteTransaction? loggingTransaction;
 
-        public LandscapeRemovedOutput? LandscapeRemoved { get; private set; }
-        public TreeRemovedOutput? TreeRemoved { get; private set; }
+        public LandscapeRemovedAnnualOutput? LandscapeRemoved { get; private set; }
+        public TreeRemovedAnnualOutput? TreeRemoved { get; private set; }
 
         // on creation of the output manager
         // an instance of every iLand output
         // must be added to the list of outputs.
-        public Outputs()
+        public AnnualOutputs()
         {
             this.database = null; // initialized in Setup()
-            this.enabledOutputs = new List<Output>();
+            this.enabledOutputs = new List<AnnualOutput>();
             this.firstUncommittedYear = -1;
             this.isDisposed = false;
             this.logCommitIntervalInYears = 10; // 
@@ -68,63 +68,63 @@ namespace iLand.Output
 
         public void Setup(Model model)
         {
-            if (model.Project.Output.Carbon.Enabled)
+            if (model.Project.Output.Annual.Carbon.Enabled)
             {
-                this.enabledOutputs.Add(new CarbonOutput());
+                this.enabledOutputs.Add(new CarbonAnnualOutput());
             }
-            if (model.Project.Output.CarbonFlow.Enabled)
+            if (model.Project.Output.Annual.CarbonFlow.Enabled)
             {
-                this.enabledOutputs.Add(new CarbonFlowOutput());
+                this.enabledOutputs.Add(new CarbonFlowAnnualOutput());
             }
-            if (model.Project.Output.DynamicStand.Enabled)
+            if (model.Project.Output.Annual.DynamicStand.Enabled)
             {
-                this.enabledOutputs.Add(new DynamicStandOutput());
+                this.enabledOutputs.Add(new DynamicStandAnnualOutput());
             }
-            if (model.Project.Output.Landscape.Enabled)
+            if (model.Project.Output.Annual.Landscape.Enabled)
             {
-                this.enabledOutputs.Add(new LandscapeOutput());
+                this.enabledOutputs.Add(new LandscapeTreeSpeciesAnnualOutput());
             }
-            if (model.Project.Output.LandscapeRemoved.Enabled)
+            if (model.Project.Output.Annual.LandscapeRemoved.Enabled)
             {
-                this.LandscapeRemoved = new LandscapeRemovedOutput();
+                this.LandscapeRemoved = new LandscapeRemovedAnnualOutput();
                 this.enabledOutputs.Add(this.LandscapeRemoved);
             }
-            if (model.Project.Output.ProductionMonth.Enabled)
+            if (model.Project.Output.Annual.ProductionMonth.Enabled)
             {
-                this.enabledOutputs.Add(new ProductionOutput());
+                this.enabledOutputs.Add(new ProductionAnnualOutput());
             }
-            if (model.Project.Output.Management.Enabled)
+            if (model.Project.Output.Annual.Management.Enabled)
             {
-                this.enabledOutputs.Add(new ManagementOutput());
+                this.enabledOutputs.Add(new ManagementAnnualOutput());
             }
-            if (model.Project.Output.SaplingDetail.Enabled)
+            if (model.Project.Output.Annual.SaplingDetail.Enabled)
             {
-                this.enabledOutputs.Add(new SaplingDetailsOutput());
+                this.enabledOutputs.Add(new SaplingDetailsAnnualOutput());
             }
-            if (model.Project.Output.Sapling.Enabled)
+            if (model.Project.Output.Annual.Sapling.Enabled)
             {
-                this.enabledOutputs.Add(new SaplingOutput());
+                this.enabledOutputs.Add(new SaplingAnnualOutput());
             }
-            if (model.Project.Output.Stand.Enabled)
+            if (model.Project.Output.Annual.Stand.Enabled)
             {
-                this.enabledOutputs.Add(new StandOutput());
+                this.enabledOutputs.Add(new StandAnnualOutput());
             }
-            if (model.Project.Output.StandDead.Enabled)
+            if (model.Project.Output.Annual.StandDead.Enabled)
             {
-                this.enabledOutputs.Add(new StandDeadOutput());
+                this.enabledOutputs.Add(new StandDeadAnnualOutput());
             }
-            if (model.Project.Output.Tree.Enabled)
+            if (model.Project.Output.Annual.Tree.Enabled)
             {
-                this.enabledOutputs.Add(new TreeOutput());
+                this.enabledOutputs.Add(new TreesAnnualOutput());
             }
-            if (model.Project.Output.TreeRemoved.Enabled)
+            if (model.Project.Output.Annual.TreeRemoved.Enabled)
             {
-                this.TreeRemoved = new TreeRemovedOutput();
+                this.TreeRemoved = new TreeRemovedAnnualOutput();
                 this.enabledOutputs.Add(this.TreeRemoved);
             }
-            if (model.Project.Output.Water.Enabled)
+            if (model.Project.Output.Annual.Water.Enabled)
             {
-                this.enabledOutputs.Add(new WaterOutput());
+                this.enabledOutputs.Add(new WaterAnnualOutput());
             }
             
             if (this.enabledOutputs.Count == 0)
@@ -138,7 +138,7 @@ namespace iLand.Output
             //SqlHelper.ExecuteSql(String.Format("insert into runs (id, timestamp) values ({0}, '{1}')", maxID, timestamp), g.DatabaseInput);
             // replace path information
             // setup final path
-            string? outputDatabaseFile = model.Project.Output.DatabaseFile;
+            string? outputDatabaseFile = model.Project.Output.Annual.DatabaseFile;
             if (String.IsNullOrWhiteSpace(outputDatabaseFile))
             {
                 throw new XmlException("The /project/output/databaseFile element is missing or does not specify an output database file name.");
@@ -149,7 +149,7 @@ namespace iLand.Output
             this.database = Landscape.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
 
             using SqliteTransaction outputTableCreationTransaction = this.database.BeginTransaction();
-            foreach (Output output in this.enabledOutputs)
+            foreach (AnnualOutput output in this.enabledOutputs)
             {
                 output.Setup(model);
                 output.Open(outputTableCreationTransaction);
@@ -186,7 +186,7 @@ namespace iLand.Output
                 this.loggingTransaction = this.database.BeginTransaction();
                 this.firstUncommittedYear = model.CurrentYear;
             }
-            foreach (Output output in this.enabledOutputs)
+            foreach (AnnualOutput output in this.enabledOutputs)
             {
                 output.LogYear(model, this.loggingTransaction);
             }

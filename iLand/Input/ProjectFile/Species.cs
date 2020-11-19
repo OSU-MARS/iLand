@@ -10,10 +10,10 @@ namespace iLand.Input.ProjectFile
         public string? DatabaseTable { get; private set; }
         public string ReaderStampFile { get; private set; }
 
-        public NitrogenResponseClasses NitrogenResponseClasses { get; init; }
-        public CO2Response CO2Response { get; init; }
-        public LightResponse LightResponse { get; init; }
-        public List<PhenologyType> Phenology { get; init; }
+        public NitrogenResponseClasses NitrogenResponseClasses { get; private init; }
+        public CO2Response CO2Response { get; private init; }
+        public LightResponse LightResponse { get; private init; }
+        public List<PhenologyType> Phenology { get; private init; }
 
         public Species()
         {
@@ -31,7 +31,7 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes.");
+				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
 			if (String.Equals(reader.Name, "species", StringComparison.Ordinal))
@@ -74,7 +74,7 @@ namespace iLand.Input.ProjectFile
                         {
                             if (reader.AttributeCount != 0)
                             {
-                                throw new XmlException("Encountered unexpected attributes.");
+                                throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
                             }
                             phenologyReader.Read();
                         }
@@ -97,7 +97,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-				throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

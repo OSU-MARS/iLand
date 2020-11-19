@@ -26,7 +26,7 @@ namespace iLand.World
         // grid of current grass cover, same cell size as light grid
         // cell on-off mode: 0 = pixel enabled for regeneration, n > 1 = pixel disabled for regeneration for next n years
         // continuous mode: 0 = no cover in light pixel, Q15MaxValue = 100% cover in light pixel
-        public Grid<Int16> CoverOrOnOffGrid { get; init; }
+        public Grid<Int16> CoverOrOnOffGrid { get; private init; }
         public bool IsEnabled { get; private set; }
 
         public GrassCover()

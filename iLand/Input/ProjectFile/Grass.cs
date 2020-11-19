@@ -14,6 +14,7 @@ namespace iLand.Input.ProjectFile
 		public float PixelLifThreshold { get; private set; }
 
 		public Grass()
+			: base("grass")
         {
 			this.Algorithm = GrassAlgorithm.CellOnOff;
 			this.ContinuousRegenerationEffect = null;
@@ -27,16 +28,7 @@ namespace iLand.Input.ProjectFile
         {
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes.");
-			}
-
-			if (String.Equals(reader.Name, "grass", StringComparison.Ordinal))
-			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
-			{
-				this.Enabled = reader.ReadElementContentAsBoolean();
+				this.ReadEnabled(reader);
 			}
 			else if (String.Equals(reader.Name, "type", StringComparison.Ordinal))
             {
@@ -52,7 +44,7 @@ namespace iLand.Input.ProjectFile
 			{
 				this.PixelDuration = reader.ReadElementContentAsString().Trim();
 			}
-			else if (String.Equals(reader.Name, "LIFThreshold", StringComparison.Ordinal))
+			else if (String.Equals(reader.Name, "lifThreshold", StringComparison.Ordinal))
 			{
 				this.PixelLifThreshold = reader.ReadElementContentAsFloat();
 				if ((this.PixelLifThreshold < 0.0F) || (this.PixelLifThreshold > 1.0F))
@@ -78,7 +70,7 @@ namespace iLand.Input.ProjectFile
 			}
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

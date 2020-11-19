@@ -11,22 +11,27 @@
       <script>scripts</script>
       <temp>temp</temp>
     </paths>
+    <!-- not supported in this iLand version -->
     <!-- <javascript>
       <fileName></fileName>
     </javascript> -->
   </system>
   <model>
     <ecosystem>
+      <!-- air density in kg/m³ -->
       <airDensity>1.204</airDensity>
       <boundaryLayerConductance>0.2</boundaryLayerConductance>
+      <!-- maximum light use efficiency -->
       <epsilon>2.7</epsilon>
       <interceptionStorageNeedle>4</interceptionStorageNeedle>
       <interceptionStorageBroadleaf>4</interceptionStorageBroadleaf>
       <laiThresholdForClosedStands>3</laiThresholdForClosedStands>
+      <!-- Beer-Lambert k -->
       <lightExtinctionCoefficient>0.6</lightExtinctionCoefficient>
       <lightExtinctionCoefficientOpacity>0.6</lightExtinctionCoefficientOpacity>
-      <snowMeltTemperature>2</snowMeltTemperature>
-      <temperatureTau>6</temperatureTau>
+      <snowMeltTemperature>0</snowMeltTemperature>
+      <!-- time constant of Mäkelä 2008's MA(1) process -->
+      <temperatureAveragingTau>6</temperatureAveragingTau>
     </ecosystem>
     <management>
       <fileName></fileName>
@@ -37,9 +42,8 @@
       </abe>
     </management>
     <seedDispersal>
-      <externalSeedBelt>
-        <!-- An example seed belt definition; not particularly useful for this example application -->
-        <enabled>false</enabled>
+      <externalSeedBelt enabled="false">
+        <!-- an example seed belt definition, not particularly useful for this example application -->
         <width>5</width>
         <sectorsX>5</sectorsX>
         <sectorsY>2</sectorsY>
@@ -73,8 +77,7 @@
   </model>
   <world>
     <environmentFile>gis\Kalkalpen environment subset.csv</environmentFile>
-    <browsing>
-      <enabled>false</enabled>
+    <browsing enabled="false">
       <!-- scaling factor modifying the base probability (1=100% of the species specific parameter)-->
       <browsingPressure>1</browsingPressure>
     </browsing>
@@ -93,39 +96,40 @@
       <dumpStamps>false</dumpStamps>
     </debug>
     <defaultSoil>
-      <availableNitrogen>84</availableNitrogen>
-      <leaching>0.47</leaching>
+      <!-- plant accessible nitrogen and deposition, kg/ha-yr, and fraction of O layer nitrogen removed by annual leaching -->
       <!-- derived from Zöbelboden-data. Hülber et al. reported values a bit lower than that for the same area: http://onlinelibrary.wiley.com/doi/10.3170/2008-7-18489/pdf -->
+      <availableNitrogen>84</availableNitrogen>
       <nitrogenDeposition>21.8</nitrogenDeposition>
+      <nitrogenLeachingFraction>0.0047</nitrogenLeachingFraction>
       <useDynamicAvailableNitrogen>true</useDynamicAvailableNitrogen>
+      <!-- soil depth, cm, and texture percentages -->
       <soilDepth>38</soilDepth>
-      <pctSand>9</pctSand>
-      <pctSilt>53</pctSilt>
-      <pctClay>38</pctClay>
+      <percentSand>9</percentSand>
+      <percentSilt>53</percentSilt>
+      <percentClay>38</percentClay>
+      <!-- initial content of carbon and nitrogen pools, kg/ha, and annual decomposition rates (labile pool is litter, refractory pool is coarse woody debris) -->
       <youngLabileC>12375</youngLabileC>
       <youngLabileN>652.1</youngLabileN>
       <youngLabileDecompRate>0.227</youngLabileDecompRate>
       <youngRefractoryC>33832</youngRefractoryC>
       <youngRefractoryN>121.2</youngRefractoryN>
       <youngRefractoryDecompRate>0.071</youngRefractoryDecompRate>
-      <somC>128666</somC>
-      <somN>83.68</somN>
-      <somDecompRate>0.011656</somDecompRate>
+      <soilOrganicMatterC>128666</soilOrganicMatterC>
+      <soilOrganicMatterN>83.68</soilOrganicMatterN>
+      <soilOrganicMatterDecompRate>0.011656</soilOrganicMatterDecompRate>
       <soilHumificationRate>0.2992</soilHumificationRate>
-      <!-- CN ratio of soil microbes -->
+      <!-- carbon-nitrogen ratio of soil microbes -->
       <qb>5</qb>
-      <!-- CN ratio of SOM -->
-      <!-- leaching>0.47</leaching> -->
-      <!-- how many percent of the mineralized nitrogen in O is not available for plants  but is leached -->
-      <el>0.152</el>
       <!-- microbal efficiency in the labile pool, auxiliary parameter -->
-      <er>0.319</er>
+      <el>0.152</el>
       <!-- microbal efficiency in the refractory pool, auxiliary parameter -->
+      <er>0.319</er>
+      <!-- carbon-nitrogen ratio of soil organic matter -->
       <qh>14.5</qh>
-      <swdDBHClass12>20</swdDBHClass12>
-      <swdDBHClass23>100</swdDBHClass23>
+      <snagSmallMediumDbhBreakpoint>20</snagSmallMediumDbhBreakpoint>
+      <snagMediumLargeDbhBreakpoint>100</snagMediumLargeDbhBreakpoint>
     </defaultSoil>
-    <DEM />
+    <dem />
     <geometry>
       <!-- must be multiple of seed map cell size, which is hard coded to 20 m, if regeneration is enabled -->
       <buffer>60</buffer>
@@ -143,12 +147,11 @@
         <rotation></rotation>-->
       </modelOrigin>
     </geometry>
-    <grass>
-      <enabled>true</enabled>
+    <grass enabled="true">
       <!-- 'pixel' or 'continuous' -->
       <type>pixel</type>
       <grassDuration>polygon(x, 0,0, 6,0, 6,1, 30,1, 30,0)</grassDuration>
-      <LIFThreshold>0.2</LIFThreshold>
+      <lifThreshold>0.2</lifThreshold>
       <!-- continuous mode -->
       <grassPotential>polygon(0.9999*x^0.15)</grassPotential>
       <!-- maximum duration (years) from 0 to full cover -->
@@ -221,75 +224,80 @@
     <standGrid />
   </world>
   <output>
-    <databaseFile>Kalkalpen subset output.sqlite</databaseFile>
     <logging>
       <logLevel>warning</logLevel>
       <!-- setting to true forces debug output to be written immediately (can help for debugging) -->
       <flush>false</flush>
     </logging>
-    <tree>
-      <!-- SQL insert rate is ~47,000 rows/core-second (i7-3770, Microsoft.Data.Sqlite 5.0.0) which is dominated by individual tree logging 
-           When simulation speed is a concern, consider disabling tree logging or filtering trees. -->
-      <enabled>true</enabled>
-    </tree>
-    <treeRemoved>
-      <enabled>true</enabled>
-    </treeRemoved>
-    <stand>
-      <enabled>true</enabled>
-    </stand>
-    <standDead>
-      <enabled>true</enabled>
-    </standDead>
-    <productionMonth>
-      <enabled>true</enabled>
-    </productionMonth>
-    <management>
-      <enabled>true</enabled>
-    </management>
-    <sapling>
-      <enabled>true</enabled>
-    </sapling>
-    <saplingDetail>
-      <enabled>true</enabled>
-    </saplingDetail>
-    <carbon>
-      <enabled>true</enabled>
-    </carbon>
-    <carbonFlow>
-      <enabled>true</enabled>
-    </carbonFlow>
-    <water>
-      <enabled>true</enabled>
-    </water>
-    <landscape>
-      <enabled>true</enabled>
-    </landscape>
-    <dynamicStand>
-      <enabled>true</enabled>
-    </dynamicStand>
-    <barkbeetle>
-      <enabled>true</enabled>
-    </barkbeetle>
-    <wind>
-      <enabled>true</enabled>
-    </wind>
-    <fire>
-      <enabled>true</enabled>
-    </fire>
-    <landscapeRemoved>
-      <enabled>true</enabled>
-      <includeHarvest>true</includeHarvest>
-      <includeNatural>true</includeNatural>
-    </landscapeRemoved>
+    <annual>
+      <!-- iland.boku.ac.at/outputs -->
+      <databaseFile>Kalkalpen subset output.sqlite</databaseFile>
+      <barkBeetle enabled="true" />
+      <carbon enabled="true" />
+      <carbonFlow enabled="true">
+        <condition></condition>
+        <conditionRU>in(year, 0,50, 100, 200, 300, 400, 500, 1000)</conditionRU>
+      </carbonFlow>
+      <dynamicStand enabled="true">
+        <!-- <condition>in(year, 5,10,15,20,25,30,35,40)</condition> -->
+        <!-- <ruFilter>0</ruFilter>-->
+        <!-- resource unit filter: id -->
+        <!-- <treeFilter>speciesindex=0</treeFilter> -->
+        <bySpecies>true</bySpecies>
+        <byResourceUnit>true</byResourceUnit>
+        <columns>
+          dbh.mean, dbh.sd, dbh.p5, dbh.p25, dbh.p75, dbh.p95
+          height.mean, height.sd, height.p5, height.p25, height.p75, height.p95,
+          age.mean,age.sd,age.min,age.max,
+          if(dbh&lt;10,1,0).sum,if(dbh&gt;10 and dbh&lt;20,1,0).sum, if(dbh&gt;20 and dbh&lt;30,1,0).sum, if(dbh&gt;30 and dbh&lt;40,1,0).sum, if(dbh&gt;40 and dbh&lt;50,1,0).sum, if(dbh&gt;50 and dbh&lt;60,1,0).sum, if(dbh&gt;60 and dbh&lt;70,1,0).sum, if(dbh&gt;70 and dbh&lt;80,1,0).sum, if(dbh&gt;80 and dbh&lt;90,1,0).sum, if(dbh&gt;90 and dbh&lt;100,1,0).sum, if(dbh&gt;=100,1,0).sum
+        </columns>
+      </dynamicStand>
+      <landscape enabled="true">
+        <condition></condition>
+      </landscape>
+      <wind enabled="true" />
+      <fire enabled="true" />
+      <landscapeRemoved enabled="true">
+        <includeHarvest>true</includeHarvest>
+        <includeNatural>true</includeNatural>
+      </landscapeRemoved>
+      <management enabled="true" />
+      <productionMonth enabled="true" />
+      <sapling enabled="true" />
+      <saplingDetail enabled="true">
+        <!--<minDbh></minDbh>-->
+      </saplingDetail>
+      <stand enabled="true">
+        <!-- <ruFilter>0</ruFilter> -->
+        <!-- <condition>in(year, 50,100,150,200)</condition>, mod(year,25)=0 -->
+      </stand>
+      <standDead enabled="true" />
+      <tree enabled="true">
+        <!-- SQL insert rate is ~47,000 rows/core-second (i7-3770, Microsoft.Data.Sqlite 5.0.0) which is dominated by individual tree logging 
+             When simulation speed is a concern, consider disabling tree logging or filtering trees. -->
+        <!-- <ruFilter>0</ruFilter> -->
+        <!-- modulo: mod(id,100)=0 -->
+      </tree>
+      <treeRemoved enabled="true">
+        <!-- individual tree output -->
+        <filter></filter>
+        <!-- modulo: <filter>mod(id,100)=0</filter> -->
+      </treeRemoved>
+      <water enabled="true">
+        <condition></condition>
+        <!--<conditionRU>in(year, 0, 50, 100, 200, 300, 400, 500, 1000)</conditionRU>--> <!-- broken by expression variable indexing bug (mostly) inherited from C++ -->
+        <!-- mod(year,10)=0 -->
+      </water>
+    </annual>
+    <memory>
+      <standStatistics enabled="false" />
+    </memory>
   </output>
   <modules>
     <!-- section for "plugins" add a section for each plugin and enable/disable with 
      the "enabled" switch. 
      http://iland.boku.ac.at/disturbance+modules -->
-    <fire>
-      <!-- name of the module -->
-      <enabled>false</enabled>
+    <fire enabled="false">
       <!-- the "enabled" tag is available for each module -->
       <onlySimulation>true</onlySimulation>
       <KBDIref>0.3</KBDIref>
@@ -324,8 +332,7 @@
         <direction>270</direction>
       </wind>
     </fire>
-    <wind>
-      <enabled>true</enabled>
+    <wind enabled="true">
       <speciesParameter>wind</speciesParameter>
       <!-- table name of the species parameter table -->
       <soilFreezeMode>auto</soilFreezeMode>
@@ -365,8 +372,7 @@
       <!--  gives the probability that a cell (10x10m) acts as start point of wind damage (without being an edge cell). A thus "flagged" cell acts as a starting point during the whole wind event. -->
       <onAfterWind></onAfterWind>
     </wind>
-    <barkbeetle>
-      <enabled>true</enabled>
+    <barkBeetle enabled="true">
       <minimumDbh>15</minimumDbh>
       <backgroundInfestationProbability>0.000685</backgroundInfestationProbability>
       <!--0.000685= 1/365*1/4, assuming a 365 year rotation period (Thom et al. 2013) and a mean size of 4 ha; NB: the size could actually be estimated theoretically from the dispersal and generations parameters, assuming that hosts are not limited: if we assume that every generation spreads on average 3 10m cells (area= 0.28ha), and if the average number of generations is 2, and the average outbreak duration 6 years, we get an average outbreak area of 3.39 ha, so the 4 ha assumed above were in the right ballbark!!-->
@@ -402,7 +408,7 @@
       </referenceClimate>
       <onAfterBarkbeetle></onAfterBarkbeetle>
       <!-- afterBB() -->
-    </barkbeetle>
+    </barkBeetle>
   </modules>
   <user>
     <!-- user defined settings (which could be accessed via Javascript if it was included in this build) -->

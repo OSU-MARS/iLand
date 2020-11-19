@@ -12,7 +12,7 @@ using Model = iLand.Simulation.Model;
 
 namespace iLand.Output
 {
-    internal class Snapshot : Output
+    internal class Snapshot : AnnualOutput
     {
         private readonly Dictionary<int, ResourceUnit> mResourceUnits;
 

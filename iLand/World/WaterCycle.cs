@@ -26,12 +26,12 @@ namespace iLand.World
         private float mLaiNeedle;
         private float mLaiBroadleaved;
 
-        public Canopy Canopy { get; init; } // object representing the forest canopy (interception, evaporation)
+        public Canopy Canopy { get; private init; } // object representing the forest canopy (interception, evaporation)
         // TODO: should conductance move to Canopy class?
         public float CanopyConductance { get; private set; } // current canopy conductance (LAI weighted CC of available tree species) (m/s)
         public float CurrentSoilWaterContent { get; private set; } // current water content in mm water column of the soil
         public float FieldCapacity { get; private set; } //  bucket height of field-capacity (eq. -15kPa) (mm)
-        public float[] SoilWaterPsi { get; init; } // soil water potential for each day in kPa
+        public float[] SoilWaterPsi { get; private init; } // soil water potential for each day in kPa
 
         public float SoilDepth { get; private set; } // soil depth (without rocks) in mm
         public float SnowDays { get; set; } // # of days with snowcover >0
@@ -149,7 +149,7 @@ namespace iLand.World
             const float groundVegetationCC = 0.02F;
             foreach (ResourceUnitTreeSpecies ruSpecies in this.mRU.Trees.SpeciesAvailableOnResourceUnit) 
             {
-                float lai = ruSpecies.Statistics.LeafAreaIndex[^2]; // use previous year's LAI as this year's hasn't yet been computed
+                float lai = ruSpecies.Statistics.LeafAreaIndex; // use previous year's LAI as this year's hasn't yet been computed
                 if (ruSpecies.Species.IsConiferous)
                 {
                     mLaiNeedle += lai;

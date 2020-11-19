@@ -21,10 +21,11 @@ namespace iLand.Input.ProjectFile
 		public int OutbreakDurationMax { get; private set; }
 		public string? OutbreakDurationMortalityFormula { get; private set; }
 		public float InitialInfestationProbability { get; private set; }
-		public BarkBeetleReferenceClimate ReferenceClimate { get; init; }
+		public BarkBeetleReferenceClimate ReferenceClimate { get; private init; }
 		public string? OnAfterBarkbeetle { get; private set; }
 
 		public BarkBeetle()
+			: base("barkBeetle")
         {
 			this.ReferenceClimate = new BarkBeetleReferenceClimate();
         }
@@ -33,17 +34,7 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes.");
-			}
-
-			if (String.Equals(reader.Name, "barkbeetle", StringComparison.Ordinal))
-			{
-				reader.Read();
-				return;
-			}
-			else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
-			{
-				this.Enabled = reader.ReadElementContentAsBoolean();
+				this.ReadEnabled(reader);
 			}
 			else if (String.Equals(reader.Name, "minimumDbh", StringComparison.Ordinal))
 			{
@@ -163,7 +154,7 @@ namespace iLand.Input.ProjectFile
 			}
 			else
 			{
-				throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

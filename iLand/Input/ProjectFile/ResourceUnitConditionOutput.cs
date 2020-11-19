@@ -3,11 +3,12 @@ using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class ResourceUnitConditionOutput : ConditionOutput
+    public class ResourceUnitConditionOutput : ConditionAnnualOutput
     {
         public string? ConditionRU { get; private set; }
 
-        public ResourceUnitConditionOutput()
+        public ResourceUnitConditionOutput(string elementName)
+            : base(elementName)
         {
             this.ConditionRU = null;
         }
@@ -16,18 +17,7 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes.");
-            }
-
-            if (String.Equals(reader.Name, "carbon", StringComparison.Ordinal) ||
-                String.Equals(reader.Name, "carbonFlow", StringComparison.Ordinal) ||
-                String.Equals(reader.Name, "water", StringComparison.Ordinal))
-            {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
-            {
-                this.Enabled = reader.ReadElementContentAsBoolean();
+                this.ReadEnabled(reader);
             }
             else if (String.Equals(reader.Name, "condition", StringComparison.Ordinal))
             {
@@ -39,7 +29,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

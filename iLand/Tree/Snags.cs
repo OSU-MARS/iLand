@@ -16,23 +16,23 @@ namespace iLand.Tree
         private readonly CarbonNitrogenTuple mTotalSnagInput; // total input to the snag state (i.e. mortality/harvest and litter)
         private CarbonNitrogenTuple mStandingWoodyToSoil; // total flux from standing dead wood (book-keeping) -> soil (kg/ha)
 
-        public ResourceUnit RU { get; init; } // link to resource unit
-        public CarbonNitrogenPool[] StandingWoodyDebrisByClass { get; init; } // standing woody debris pool (0: smallest dimater class, e.g. <10cm, 1: medium, 2: largest class (e.g. >30cm)) kg/ha
-        public float[] NumberOfSnagsByClass { get; init; } // number of snags in diameter class
-        public float[] AverageDbhByClass { get; init; } // average diameter in class (cm)
-        public float[] AverageHeightByClass { get; init; } // average height in class (m)
-        public float[] AverageVolumeByClass { get; init; } // average volume in class (m3)
-        public float[] TimeSinceDeathByClass { get; init; } // time since death: mass-weighted age of the content of the snag pool
-        public float[] StemDecompositionRateByClass { get; init; } // standing woody debris decay rate (weighted average of species values)
-        public float[] HalfLifeByClass { get; init; } // half-life values (yrs) (averaged)
-        public CarbonNitrogenPool[] BranchesAndCoarseRootsByYear { get; init; } // pool for branch biomass and coarse root biomass
+        public ResourceUnit RU { get; private init; } // link to resource unit
+        public CarbonNitrogenPool[] StandingWoodyDebrisByClass { get; private init; } // standing woody debris pool (0: smallest dimater class, e.g. <10cm, 1: medium, 2: largest class (e.g. >30cm)) kg/ha
+        public float[] NumberOfSnagsByClass { get; private init; } // number of snags in diameter class
+        public float[] AverageDbhByClass { get; private init; } // average diameter in class (cm)
+        public float[] AverageHeightByClass { get; private init; } // average height in class (m)
+        public float[] AverageVolumeByClass { get; private init; } // average volume in class (m3)
+        public float[] TimeSinceDeathByClass { get; private init; } // time since death: mass-weighted age of the content of the snag pool
+        public float[] StemDecompositionRateByClass { get; private init; } // standing woody debris decay rate (weighted average of species values)
+        public float[] HalfLifeByClass { get; private init; } // half-life values (yrs) (averaged)
+        public CarbonNitrogenPool[] BranchesAndCoarseRootsByYear { get; private init; } // pool for branch biomass and coarse root biomass
         public int BranchCounter { get; set; } // index which of the branch pools should be emptied
 
         public float ClimateFactor { get; set; } // the 're' climate factor to modify decay rates (also used in ICBM/2N model)
-        public CarbonNitrogenTuple FluxToAtmosphere { get; init; } // total kg/ha heterotrophic respiration / flux to atm
+        public CarbonNitrogenTuple FluxToAtmosphere { get; private init; } // total kg/ha heterotrophic respiration / flux to atm
         public CarbonNitrogenTuple FluxToDisturbance { get; private set; } // total kg/ha due to disturbance (e.g. fire)
-        public CarbonNitrogenTuple FluxToExtern { get; init; } // total kg/ha harvests
-        public CarbonNitrogenPool LabileFlux { get; init; } // litter flux to the soil (kg/ha)
+        public CarbonNitrogenTuple FluxToExtern { get; private init; } // total kg/ha harvests
+        public CarbonNitrogenPool LabileFlux { get; private init; } // litter flux to the soil (kg/ha)
         public CarbonNitrogenPool RefractoryFlux { get; private set; } // deadwood flux to the soil (kg/ha)
         public float StandingAndDebrisCarbon { get; private set; } // sum of carbon content in all snag compartments (kg/ha)
         public CarbonNitrogenTuple TotalStanding { get; private set; } // sum of C and N in SWD pools (stems) kg/ha

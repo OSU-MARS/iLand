@@ -7,11 +7,11 @@ using Microsoft.Data.Sqlite;
 namespace iLand.Output
 {
     /** StandOut is basic stand level info per species and ressource unit */
-    public class StandOutput : Output
+    public class StandAnnualOutput : AnnualOutput
     {
         private readonly Expression mYearFilter;
 
-        public StandOutput()
+        public StandAnnualOutput()
         {
             this.mYearFilter = new Expression();
 
@@ -45,7 +45,7 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            this.mYearFilter.SetExpression(model.Project.Output.Stand.Condition);
+            this.mYearFilter.SetExpression(model.Project.Output.Annual.Stand.Condition);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
@@ -67,7 +67,7 @@ namespace iLand.Output
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics speciesStats = ruSpecies.Statistics;
-                    if (speciesStats.TreesPerHectare[^1] == 0 && speciesStats.CohortCount[^1] == 0)
+                    if (speciesStats.TreeCount == 0 && speciesStats.CohortCount == 0)
                     {
                         continue;
                     }
@@ -77,17 +77,17 @@ namespace iLand.Output
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID;
                     insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.RUArea; // keys
                     // insertRow.Parameters[4].Value = ru.boundingBox().center().x() << ru.boundingBox().center().y();  // temp
-                    insertRow.Parameters[5].Value = speciesStats.TreesPerHectare[^1];
-                    insertRow.Parameters[6].Value = speciesStats.AverageDbh[^1];
-                    insertRow.Parameters[7].Value = speciesStats.AverageHeight[^1];
-                    insertRow.Parameters[8].Value = speciesStats.StemVolume[^1];
-                    insertRow.Parameters[9].Value = speciesStats.GetMostRecentTotalCarbon();
-                    insertRow.Parameters[10].Value = speciesStats.TotalStemVolumeGrowth[^1];
-                    insertRow.Parameters[11].Value = speciesStats.BasalArea[^1];
-                    insertRow.Parameters[12].Value = speciesStats.Npp[^1];
-                    insertRow.Parameters[13].Value = speciesStats.NppAbove[^1];
-                    insertRow.Parameters[14].Value = speciesStats.LeafAreaIndex[^1];
-                    insertRow.Parameters[15].Value = speciesStats.CohortCount[^1];
+                    insertRow.Parameters[5].Value = speciesStats.TreeCount;
+                    insertRow.Parameters[6].Value = speciesStats.AverageDbh;
+                    insertRow.Parameters[7].Value = speciesStats.AverageHeight;
+                    insertRow.Parameters[8].Value = speciesStats.StemVolume;
+                    insertRow.Parameters[9].Value = speciesStats.GetTotalCarbon();
+                    insertRow.Parameters[10].Value = speciesStats.LiveAndSnagStemVolume;
+                    insertRow.Parameters[11].Value = speciesStats.BasalArea;
+                    insertRow.Parameters[12].Value = speciesStats.TreeNpp;
+                    insertRow.Parameters[13].Value = speciesStats.TreeNppAboveground;
+                    insertRow.Parameters[14].Value = speciesStats.LeafAreaIndex;
+                    insertRow.Parameters[15].Value = speciesStats.CohortCount;
                     insertRow.ExecuteNonQuery();
                 }
             }

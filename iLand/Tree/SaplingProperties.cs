@@ -15,7 +15,7 @@ namespace iLand.Tree
         public float AverageDeltaHPotential { get; set; } // average height increment potential (m)
         public float AverageDeltaHRealized { get; set; } // average realized height increment
         public float AverageHeight { get; set; } // average height of saplings (m)
-        public CarbonNitrogenTuple CarbonLiving { get; init; } // kg Carbon (kg/ru) of saplings
+        public CarbonNitrogenTuple CarbonLiving { get; private init; } // kg Carbon (kg/ru) of saplings
         public CarbonNitrogenTuple CarbonGain { get; private set; } // net growth (kg / ru) of saplings
         public int DeadSaplings { get; private set; } // number of tree cohorts died
         public int LivingCohorts { get; set; } // get the number of cohorts

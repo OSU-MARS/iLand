@@ -17,10 +17,10 @@ namespace iLand.Tools
         public enum Type { SettingInvalid, SpeciesSetting, ModelSetting };
         private Type mType;
 
-        public object DefaultValue { get; init; }
-        public string Description { get; init; }
-        public string Name { get; init; }
-        public string Url { get; init; }
+        public object DefaultValue { get; private init; }
+        public string Description { get; private init; }
+        public string Name { get; private init; }
+        public string Url { get; private init; }
 
         public static Type TypeFromName(string settingName)
         {

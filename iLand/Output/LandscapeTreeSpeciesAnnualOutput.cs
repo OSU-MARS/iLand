@@ -8,15 +8,15 @@ using System.Collections.Generic;
 namespace iLand.Output
 {
     /** LandscapeOut is aggregated output for the total landscape per species. All values are per hectare values. */
-    public class LandscapeOutput : Output
+    public class LandscapeTreeSpeciesAnnualOutput : AnnualOutput
     {
         private readonly Expression filter;
-        private readonly Dictionary<string, ResourceUnitTreeStatistics> standStatisticsBySpecies;
+        private readonly Dictionary<string, LandscapeTreeSpeciesStatistics> treeSpeciesStatistics;
 
-        public LandscapeOutput()
+        public LandscapeTreeSpeciesAnnualOutput()
         {
             this.filter = new Expression();
-            this.standStatisticsBySpecies = new Dictionary<string, ResourceUnitTreeStatistics>();
+            this.treeSpeciesStatistics = new Dictionary<string, LandscapeTreeSpeciesStatistics>();
 
             this.Name = "Landscape aggregates per species";
             this.TableName = "landscape";
@@ -43,7 +43,7 @@ namespace iLand.Output
         public override void Setup(Model model)
         {
             // use a condition for to control execuation for the current year
-            this.filter.SetExpression(model.Project.Output.Landscape.Condition);
+            this.filter.SetExpression(model.Project.Output.Annual.Landscape.Condition);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
@@ -57,21 +57,9 @@ namespace iLand.Output
             }
 
             // clear landscape stats
-            foreach (KeyValuePair<string, ResourceUnitTreeStatistics> speciesStatistics in this.standStatisticsBySpecies)
+            foreach (KeyValuePair<string, LandscapeTreeSpeciesStatistics> speciesStatistics in this.treeSpeciesStatistics)
             {
                 speciesStatistics.Value.Zero();
-            }
-
-            // extract total stockable area
-            float totalStockableArea = 0.0F;
-            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
-            {
-                totalStockableArea += ru.AreaInLandscape;
-            }
-
-            if (totalStockableArea == 0.0F)
-            {
-                return;
             }
 
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
@@ -83,36 +71,38 @@ namespace iLand.Output
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics ruSpeciesStats = ruSpecies.Statistics;
-                    if (ruSpeciesStats.TreesPerHectare[^1] == 0 && ruSpeciesStats.CohortCount[^1] == 0 && ruSpeciesStats.TotalStemVolumeGrowth[^1] == 0.0F)
+                    if (ruSpeciesStats.TreeCount == 0 && ruSpeciesStats.CohortCount == 0 && ruSpeciesStats.LiveAndSnagStemVolume == 0.0F)
                     {
                         continue;
                     }
-                    if (this.standStatisticsBySpecies.TryGetValue(ruSpecies.Species.ID, out ResourceUnitTreeStatistics? statistics) == false)
+                    if (this.treeSpeciesStatistics.TryGetValue(ruSpecies.Species.ID, out LandscapeTreeSpeciesStatistics? speciesStatistics) == false)
                     {
-                        statistics = new ResourceUnitTreeStatistics(ruSpecies);
-                        this.standStatisticsBySpecies.Add(ruSpecies.Species.ID, statistics);
+                        speciesStatistics = new LandscapeTreeSpeciesStatistics();
+                        this.treeSpeciesStatistics.Add(ruSpecies.Species.ID, speciesStatistics);
                     }
-                    statistics.AddCurrentYearsWeighted(ruSpeciesStats, ru.AreaInLandscape / totalStockableArea);
+                    speciesStatistics.AddResourceUnit(ru, ruSpeciesStats);
                 }
             }
 
-            // now add to output stream
-            foreach (KeyValuePair<string, ResourceUnitTreeStatistics> species in this.standStatisticsBySpecies)
+            // write species to output stream
+            foreach (KeyValuePair<string, LandscapeTreeSpeciesStatistics> species in this.treeSpeciesStatistics)
             {
-                ResourceUnitTreeStatistics stat = species.Value;
+                LandscapeTreeSpeciesStatistics speciesStats = species.Value;
+                speciesStats.ConvertSumsToAreaWeightedAverages();
+
                 insertRow.Parameters[0].Value = model.CurrentYear;
                 insertRow.Parameters[1].Value = species.Key; // keys: year, species
-                insertRow.Parameters[2].Value = stat.TreesPerHectare[^1];
-                insertRow.Parameters[3].Value = stat.AverageDbh[^1];
-                insertRow.Parameters[4].Value = stat.AverageHeight[^1];
-                insertRow.Parameters[5].Value = stat.StemVolume[^1];
-                insertRow.Parameters[6].Value = stat.GetMostRecentTotalCarbon();
-                insertRow.Parameters[7].Value = stat.TotalStemVolumeGrowth[^1];
-                insertRow.Parameters[8].Value = stat.BasalArea[^1];
-                insertRow.Parameters[9].Value = stat.Npp[^1];
-                insertRow.Parameters[10].Value = stat.NppAbove[^1];
-                insertRow.Parameters[11].Value = stat.LeafAreaIndex[^1];
-                insertRow.Parameters[12].Value = stat.CohortCount[^1];
+                insertRow.Parameters[2].Value = speciesStats.TreeCount;
+                insertRow.Parameters[3].Value = speciesStats.AverageDbh;
+                insertRow.Parameters[4].Value = speciesStats.AverageHeight;
+                insertRow.Parameters[5].Value = speciesStats.LiveStemVolume;
+                insertRow.Parameters[6].Value = speciesStats.TotalCarbon;
+                insertRow.Parameters[7].Value = speciesStats.LiveAndSnagStemVolume;
+                insertRow.Parameters[8].Value = speciesStats.BasalArea;
+                insertRow.Parameters[9].Value = speciesStats.TreeNpp;
+                insertRow.Parameters[10].Value = speciesStats.TreeNppAboveground;
+                insertRow.Parameters[11].Value = speciesStats.LeafAreaIndex;
+                insertRow.Parameters[12].Value = speciesStats.CohortCount;
                 insertRow.ExecuteNonQuery();
             }
         }

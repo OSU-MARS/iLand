@@ -20,17 +20,17 @@ namespace iLand.Tree
         private readonly List<SaplingTreeOld> mSaplingTrees;
         private float mSumDbhDied; // running sum of dbh of died trees (used to calculate detritus)
 
-        public double AverageAge { get; init; } // average age of saplings (years)
-        public double AverageDeltaHPot { get; init; } // average height increment potential (m)
-        public float AverageDeltaHRealized { get; init; } // average realized height increment
-        public float AverageHeight { get; init; } // average height of saplings (m)
-        public CarbonNitrogenTuple CarbonGain { get; init; }  // net growth (kg / ru) of saplings
-        public CarbonNitrogenTuple CarbonLiving { get; init; } // state of the living
-        public int DeadSaplings { get; init; } // number of trees died
-        public int LivingSaplings { get; init; } // number of trees (cohorts!!!) currently in the regeneration layer
-        public int NewSaplings { get; init; } // number of trees added
-        public BitArray PresentPositions { get; init; }
-        public int RecruitedSaplings { get; init; } // number recruited (i.e. grown out of regeneration layer)
+        public double AverageAge { get; private init; } // average age of saplings (years)
+        public double AverageDeltaHPot { get; private init; } // average height increment potential (m)
+        public float AverageDeltaHRealized { get; private init; } // average realized height increment
+        public float AverageHeight { get; private init; } // average height of saplings (m)
+        public CarbonNitrogenTuple CarbonGain { get; private init; }  // net growth (kg / ru) of saplings
+        public CarbonNitrogenTuple CarbonLiving { get; private init; } // state of the living
+        public int DeadSaplings { get; private init; } // number of trees died
+        public int LivingSaplings { get; private init; } // number of trees (cohorts!!!) currently in the regeneration layer
+        public int NewSaplings { get; private init; } // number of trees added
+        public BitArray PresentPositions { get; private init; }
+        public int RecruitedSaplings { get; private init; } // number recruited (i.e. grown out of regeneration layer)
 
         public Sapling()
         {

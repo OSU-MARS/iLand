@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace iLand.Output
 {
-    public class DynamicStandOutput : Output
+    public class DynamicStandAnnualOutput : AnnualOutput
     {
         private static readonly ReadOnlyCollection<string> Aggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95", "sd" }.AsReadOnly();
 
@@ -27,7 +27,7 @@ namespace iLand.Output
             public string Expression { get; set; }
         };
 
-        public DynamicStandOutput()
+        public DynamicStandAnnualOutput()
         {
             this.mYearFilter = new Expression();
             this.mFieldList = new List<DynamicOutputField>();
@@ -60,15 +60,15 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            string? columnString = model.Project.Output.DynamicStand.Columns;
+            string? columnString = model.Project.Output.Annual.DynamicStand.Columns;
             if (String.IsNullOrEmpty(columnString))
             {
                 return;
             }
 
-            this.mResourceUnitfilter.SetExpression(model.Project.Output.DynamicStand.ResourceUnitFilter);
-            this.mTreeFilter.SetExpression(model.Project.Output.DynamicStand.TreeFilter);
-            this.mYearFilter.SetExpression(model.Project.Output.DynamicStand.Condition);
+            this.mResourceUnitfilter.SetExpression(model.Project.Output.Annual.DynamicStand.ResourceUnitFilter);
+            this.mTreeFilter.SetExpression(model.Project.Output.Annual.DynamicStand.TreeFilter);
+            this.mYearFilter.SetExpression(model.Project.Output.Annual.DynamicStand.Condition);
             // clear columns
             this.Columns.RemoveRange(4, Columns.Count - 4);
             this.mFieldList.Clear();
@@ -96,7 +96,7 @@ namespace iLand.Output
                     fieldForColumn.Expression = columnVariable;
                 }
 
-                fieldForColumn.AggregationIndex = DynamicStandOutput.Aggregations.IndexOf(columnVariableAggregation);
+                fieldForColumn.AggregationIndex = DynamicStandAnnualOutput.Aggregations.IndexOf(columnVariableAggregation);
                 if (fieldForColumn.AggregationIndex == -1)
                 {
                     throw new NotSupportedException(String.Format("Invalid aggregate expression for dynamic output: {0}{2}allowed:{1}",
@@ -126,8 +126,8 @@ namespace iLand.Output
             }
 
             //using DebugTimer dt = model.DebugTimers.Create("DynamicStandOutput.LogYear()");
-            bool perSpecies = model.Project.Output.DynamicStand.BySpecies;
-            bool perRU = model.Project.Output.DynamicStand.ByResourceUnit;
+            bool perSpecies = model.Project.Output.Annual.DynamicStand.BySpecies;
+            bool perRU = model.Project.Output.Annual.DynamicStand.ByResourceUnit;
             if (perRU)
             {
                 // when looping over resource units, do it differently (old way)
@@ -278,16 +278,16 @@ namespace iLand.Output
                     }
                 }
 
-                int columnIndex = 0;
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    if (bySpecies && ruSpecies.Statistics.TreesPerHectare[^1] == 0)
+                    if (bySpecies && ruSpecies.Statistics.TreeCount == 0)
                     {
                         continue;
                     }
 
                     // dynamic calculations
-                    foreach (DynamicOutputField field in mFieldList)
+                    int columnIndex = 0;
+                    foreach (DynamicOutputField field in this.mFieldList)
                     {
                         if (String.IsNullOrEmpty(field.Expression) == false)
                         {

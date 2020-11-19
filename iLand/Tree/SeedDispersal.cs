@@ -50,8 +50,8 @@ namespace iLand.Tree
         // external seeds
         private readonly Grid<float> mExternalSeedMap; // for more complex external seed input, this map holds that information
 
-        public Grid<float> SeedMap { get; init; } // (large) seedmap. Is filled by individual trees and then processed
-        public TreeSpecies Species { get; init; }
+        public Grid<float> SeedMap { get; private init; } // (large) seedmap. Is filled by individual trees and then processed
+        public TreeSpecies Species { get; private init; }
 
         public SeedDispersal(TreeSpecies species)
         {

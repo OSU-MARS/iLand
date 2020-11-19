@@ -5,9 +5,9 @@ using Microsoft.Data.Sqlite;
 
 namespace iLand.Output
 {
-    public class ManagementOutput : Output
+    public class ManagementAnnualOutput : AnnualOutput
     {
-        public ManagementOutput()
+        public ManagementAnnualOutput()
         {
             this.Name = "Removed trees by species/RU";
             this.TableName = "management";
@@ -38,7 +38,7 @@ namespace iLand.Output
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics stat = ruSpecies.StatisticsManagement;
-                    if (stat.TreesPerHectare[^1] == 0)
+                    if (stat.TreeCount == 0)
                     {
                         continue;
                     }
@@ -47,7 +47,7 @@ namespace iLand.Output
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID; // keys
-                    insertRow.Parameters[4].Value = stat.TreesPerHectare;
+                    insertRow.Parameters[4].Value = stat.TreeCount;
                     insertRow.Parameters[5].Value = stat.AverageDbh;
                     insertRow.Parameters[6].Value = stat.AverageHeight;
                     insertRow.Parameters[7].Value = stat.StemVolume;

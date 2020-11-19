@@ -27,28 +27,28 @@ namespace iLand.Tree
         // various flags
         private readonly List<TreeFlags> flags;
 
-        public List<int> Age { get; init; } // the tree age (years)
-        public List<float> Dbh { get; init; } // diameter at breast height in cm
-        public List<float> DbhDelta { get; init; } // diameter growth [cm]
-        public List<float> Height { get; init; } // tree height in m
-        public List<float> LeafArea { get; init; } // leaf area (m2) of the tree
-        public List<Point> LightCellPosition { get; init; } // index of the trees position on the basic LIF grid
-        public List<float> LightResourceIndex { get; init; } // LRI of the tree (updated during readStamp())
-        public List<float> LightResponse { get; init; } // light response used for distribution of biomass on RU level
-        public List<float> NppReserve { get; init; } // NPP reserve pool [kg] - stores a part of assimilates for use in less favorable years
-        public List<float> Opacity { get; init; } // multiplier on LIP weights, depending on leaf area status (opacity of the crown)
-        public ResourceUnit RU { get; init; } // pointer to the ressource unit the tree belongs to.
+        public List<int> Age { get; private init; } // the tree age (years)
+        public List<float> Dbh { get; private init; } // diameter at breast height in cm
+        public List<float> DbhDelta { get; private init; } // diameter growth [cm]
+        public List<float> Height { get; private init; } // tree height in m
+        public List<float> LeafArea { get; private init; } // leaf area (m2) of the tree
+        public List<Point> LightCellPosition { get; private init; } // index of the trees position on the basic LIF grid
+        public List<float> LightResourceIndex { get; private init; } // LRI of the tree (updated during readStamp())
+        public List<float> LightResponse { get; private init; } // light response used for distribution of biomass on RU level
+        public List<float> NppReserve { get; private init; } // NPP reserve pool [kg] - stores a part of assimilates for use in less favorable years
+        public List<float> Opacity { get; private init; } // multiplier on LIP weights, depending on leaf area status (opacity of the crown)
+        public ResourceUnit RU { get; private init; } // pointer to the ressource unit the tree belongs to.
         public TreeSpecies Species { get; set; } // pointer to the tree species of the tree.
-        public List<LightStamp?> Stamp { get; init; }
-        public List<int> StandID { get; init; }
-        public List<int> Tag { get; init; } // (usually) numerical unique ID of the tree
+        public List<LightStamp?> Stamp { get; private init; }
+        public List<int> StandID { get; private init; }
+        public List<int> Tag { get; private init; } // (usually) numerical unique ID of the tree
 
         // biomass properties
-        public List<float> CoarseRootMass { get; init; } // mass (kg) of coarse roots
-        public List<float> FineRootMass { get; init; } // mass (kg) of fine roots
-        public List<float> FoliageMass { get; init; } // mass (kg) of foliage
-        public List<float> StemMass { get; init; } // mass (kg) of stem
-        public List<float> StressIndex { get; init; } // the scalar stress rating (0..1), used for mortality
+        public List<float> CoarseRootMass { get; private init; } // mass (kg) of coarse roots
+        public List<float> FineRootMass { get; private init; } // mass (kg) of fine roots
+        public List<float> FoliageMass { get; private init; } // mass (kg) of foliage
+        public List<float> StemMass { get; private init; } // mass (kg) of stem
+        public List<float> StressIndex { get; private init; } // the scalar stress rating (0..1), used for mortality
 
         public Trees(Landscape landscape, ResourceUnit resourceUnit, TreeSpecies species)
         {
@@ -500,7 +500,7 @@ namespace iLand.Tree
             this.RU.Trees.OnTreeDied();
             
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
-            ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null); // add tree to statistics
+            ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null, skipDead: false); // add tree to statistics
             
             this.OnTreeRemoved(model, treeIndex, MortalityCause.Stress);
             
@@ -806,12 +806,12 @@ namespace iLand.Tree
 
                 if (this.IsDead(treeIndex) == false)
                 {
-                    ruSpecies.Statistics.AddToCurrentYear(this, treeIndex, treeGrowthData);
+                    ruSpecies.Statistics.AddToCurrentYear(this, treeIndex, treeGrowthData, skipDead: true);
 
                     int standID = this.StandID[treeIndex];
                     if (standID >= 0)
                     {
-                        this.RU.Trees.TreeStatisticsByStandID[standID].AddToCurrentYear(this, treeIndex, treeGrowthData);
+                        this.RU.Trees.TreeStatisticsByStandID[standID].AddToCurrentYear(this, treeIndex, treeGrowthData, skipDead: true);
                     }
                 }
 
@@ -1117,7 +1117,7 @@ namespace iLand.Tree
             this.SetDeathReasonHarvested(treeIndex);
             this.RU.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(Species);
-            ruSpecies.StatisticsManagement.AddToCurrentYear(this, treeIndex, null);
+            ruSpecies.StatisticsManagement.AddToCurrentYear(this, treeIndex, null, skipDead: false);
             this.OnTreeRemoved(model, treeIndex, this.IsCutDown(treeIndex) ?  MortalityCause.CutDown : MortalityCause.Harvest);
 
             this.RU.AddSprout(model, this, treeIndex);
@@ -1135,7 +1135,7 @@ namespace iLand.Tree
             this.SetFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
             this.RU.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
-            ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null);
+            ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null, skipDead: false);
             this.OnTreeRemoved(model, treeIndex, MortalityCause.Disturbance);
 
             this.RU.AddSprout(model, this, treeIndex);
@@ -1225,14 +1225,14 @@ namespace iLand.Tree
                 reason = MortalityCause.CutDown;
             }
             // create output for tree removals
-            if (model.Outputs.TreeRemoved != null)
+            if (model.AnnualOutputs.TreeRemoved != null)
             {
-                model.Outputs.TreeRemoved.TryAddTree(model, this, treeIndex, reason);
+                model.AnnualOutputs.TreeRemoved.TryAddTree(model, this, treeIndex, reason);
             }
 
-            if (model.Outputs.LandscapeRemoved != null)
+            if (model.AnnualOutputs.LandscapeRemoved != null)
             {
-                model.Outputs.LandscapeRemoved.AddTree(this, treeIndex, reason);
+                model.AnnualOutputs.LandscapeRemoved.AddTree(this, treeIndex, reason);
             }
         }
     }

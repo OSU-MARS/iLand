@@ -17,7 +17,7 @@ namespace iLand.Tools
         private int mRemaining;
 
         // currently selected
-        public int Index { get; init; } // retrieve (random) index
+        public int Index { get; private init; } // retrieve (random) index
 
         public RandomIndex(int count)
         {

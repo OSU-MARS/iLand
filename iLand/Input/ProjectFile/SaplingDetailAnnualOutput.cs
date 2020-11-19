@@ -3,11 +3,12 @@ using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class SaplingDetailOutput : ConditionOutput
+    public class SaplingDetailAnnualOutput : ConditionAnnualOutput
     {
         public float MinDbh { get; private set; }
 
-        public SaplingDetailOutput()
+        public SaplingDetailAnnualOutput()
+            : base("saplingDetail")
         {
             this.MinDbh = 0.0F;
         }
@@ -16,16 +17,7 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes.");
-            }
-
-            if (String.Equals(reader.Name, "saplingDetail", StringComparison.Ordinal))
-            {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
-            {
-                this.Enabled = reader.ReadElementContentAsBoolean();
+                this.ReadEnabled(reader);
             }
             else if (String.Equals(reader.Name, "condition", StringComparison.Ordinal))
             {
@@ -41,7 +33,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

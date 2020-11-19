@@ -1,5 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using iLand.World;
+using System;
+using System.Diagnostics;
 
 namespace iLand.Tree
 {
@@ -15,82 +16,100 @@ namespace iLand.Tree
       */
     public class ResourceUnitTreeStatistics
     {
-        private float mSumDbh;
-        private float mSumHeight;
+        private readonly bool requiresPerHectareConversion;
+        private readonly ResourceUnit ru;
+        private float sumDbh;
+        private float sumHeight;
         private float sumSaplingAge;
 
-        public List<float> AverageDbh { get; init; } // average dbh (cm)
-        public List<float> AverageHeight { get; init; } // average tree height (m)
-        public List<float> BasalArea { get; init; } // sum of basal area of all trees (m2/ha)
-        public List<int> CohortCount { get; init; } // number of cohorts of saplings / ha
-        public List<float> TreesPerHectare { get; init; }
-        public List<float> TotalStemVolumeGrowth { get; init; } // total increment (gesamtwuchsleistung, m3/ha)
-        public List<float> LeafAreaIndex { get; init; } // [m2/m2]/ha stocked area.
-        public List<float> MeanSaplingAge { get; init; } // average age of sapling (currenty not weighted with represented sapling numbers...)
-        public List<float> Npp { get; init; } // sum. of NPP (kg Biomass increment, above+belowground, trees >4m)/ha
-        public List<float> NppAbove { get; init; } // above ground NPP (kg Biomass increment)/ha
-        public List<float> NppSaplings { get; init; } // carbon gain of saplings (kg Biomass increment)/ha
-        public ResourceUnitTreeSpecies? ResourceUnitSpecies { get; init; }
-        // number of sapling (Reinekes Law)
-        public List<int> SaplingCount { get; init; } // number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
-        public List<float> StemVolume { get; init; } // sum of tree volume (m3/ha)
+        public bool IsPerHectare { get; init; } // if true, metrics are per hectare, if false metrics are aggregated across trees but not per area
+
+        // trees
+        public float AverageDbh { get; private set; } // average DBH, cm
+        public float AverageHeight { get; private set; } // average tree height, m
+        public float BasalArea { get; private set; } // sum of basal area of all trees, m² on resource unit or m²/ha
+        public float LeafArea { get; private set; } // m² on resource unit
+        public float LeafAreaIndex { get; private set; } // [m²/m²]/ha of height cells containing trees
+        public float StemVolume { get; private set; } // sum of trees' stem volume, m³ or m³/ha, may be live, dead, or removed depending on what this statistics object represents
+        public float LiveAndSnagStemVolume { get; private set; } // total increment (gesamtwuchsleistung), m³ or m³/ha
+        public float TreeCount { get; private set; } // trees on resource unit or TPH
+        public float TreeNpp { get; private set; } // sum of above + belowground NPP of trees >4m tall, (kg biomass increment) or (kg biomass increment)/ha
+        public float TreeNppAboveground { get; private set; } // (kg biomass increment) or (kg biomass increment)/ha
+        public ResourceUnitTreeSpecies? ResourceUnitSpecies { get; private init; } // species if statistics are species-specific, otherwise null
+
+        // saplings
+        public int CohortCount { get; private set; } // number of cohorts of saplings or cohorts/ha
+        public float MeanSaplingAge { get; private set; } // average age of sapling (not currently weighted by represented sapling numbers)
+        public float SaplingNpp { get; private set; } // carbon gain of saplings (kg biomass increment) or (kg biomass increment)/ha
+        public int SaplingCount { get; private set; } // number of individuals in regeneration layer (represented by CohortCount cohorts), saplings or saplings/ha
+        
         // carbon/nitrogen cycle
-        public List<float> BranchC { get; init; }
-        public List<float> BranchN { get; init; }
-        public List<float> CoarseRootC { get; init; }
-        public List<float> CoarseRootN { get; init; }
-        public List<float> FineRootC { get; init; }
-        public List<float> FineRootN { get; init; }
-        public List<float> FoliageC { get; init; }
-        public List<float> FoliageN { get; init; }
-        public List<float> RegenerationC { get; init; }
-        public List<float> RegenerationN { get; init; }
-        public List<float> StemC { get; init; }
-        public List<float> StemN { get; init; }
+        public float BranchCarbon { get; private set; } // kg or kg/ha
+        public float BranchNitrogen { get; private set; } // kg or kg/ha
+        public float CoarseRootCarbon { get; private set; } // kg or kg/ha
+        public float CoarseRootNitrogen { get; private set; } // kg or kg/ha
+        public float FineRootCarbon { get; private set; } // kg or kg/ha
+        public float FineRootNitrogen { get; private set; } // kg or kg/ha
+        public float FoliageCarbon { get; private set; } // kg or kg/ha
+        public float FoliageNitrogen { get; private set; } // kg or kg/ha
+        public float RegenerationCarbon { get; private set; } // kg or kg/ha
+        public float RegenerationNitrogen { get; private set; } // kg or kg/ha
+        public float StemCarbon { get; private set; } // kg or kg/ha
+        public float StemNitrogen { get; private set; } // kg or kg/ha
 
-        public ResourceUnitTreeStatistics(ResourceUnitTreeSpecies? ruSpecies)
+        public ResourceUnitTreeStatistics(ResourceUnit ru)
         {
-            this.ResourceUnitSpecies = ruSpecies;
+            this.ru = ru;
+            this.sumDbh = 0.0F;
+            this.sumHeight = 0.0F;
+            this.sumSaplingAge = 0.0F;
 
-            int defaultCapacity = 20;
-            this.CohortCount = new List<int>(defaultCapacity) { 0 };
-            this.SaplingCount = new List<int>(defaultCapacity) { 0 };
+            this.IsPerHectare = false;
+            this.requiresPerHectareConversion = false;
+            this.ResourceUnitSpecies = null;
 
-            this.AverageDbh = new List<float>(defaultCapacity) { 0.0F };
-            this.AverageHeight = new List<float>(defaultCapacity) { 0.0F };
-            this.BasalArea = new List<float>(defaultCapacity) { 0.0F };
-            this.TreesPerHectare = new List<float>(defaultCapacity) { 0.0F };
-            this.TotalStemVolumeGrowth = new List<float>(defaultCapacity) { 0.0F };
-            this.LeafAreaIndex = new List<float>(defaultCapacity) { 0.0F };
-            this.MeanSaplingAge = new List<float>(defaultCapacity) { 0.0F };
-            this.Npp = new List<float>(defaultCapacity) { 0.0F };
-            this.NppAbove = new List<float>(defaultCapacity) { 0.0F };
-            this.NppSaplings = new List<float>(defaultCapacity) { 0.0F };
-            this.StemVolume = new List<float>(defaultCapacity) { 0.0F };
-            this.BranchC = new List<float>(defaultCapacity) { 0.0F };
-            this.BranchN = new List<float>(defaultCapacity) { 0.0F };
-            this.CoarseRootC = new List<float>(defaultCapacity) { 0.0F };
-            this.CoarseRootN = new List<float>(defaultCapacity) { 0.0F };
-            this.FineRootC = new List<float>(defaultCapacity) { 0.0F };
-            this.FineRootN = new List<float>(defaultCapacity) { 0.0F };
-            this.FoliageC = new List<float>(defaultCapacity) { 0.0F };
-            this.FoliageN = new List<float>(defaultCapacity) { 0.0F };
-            this.RegenerationC = new List<float>(defaultCapacity) { 0.0F };
-            this.RegenerationN = new List<float>(defaultCapacity) { 0.0F };
-            this.StemC = new List<float>(defaultCapacity) { 0.0F };
-            this.StemN = new List<float>(defaultCapacity) { 0.0F };
+            this.AverageDbh = 0.0F;
+            this.AverageHeight = 0.0F;
+            this.BasalArea = 0.0F;
+            this.LeafArea = 0.0F;
+            this.LeafAreaIndex = 0.0F;
+            this.StemVolume = 0.0F;
+            this.LiveAndSnagStemVolume = 0.0F;
+            this.TreeNpp = 0.0F;
+            this.TreeNppAboveground = 0.0F;
+            this.TreeCount = 0.0F;
+
+            this.CohortCount = 0;
+            this.MeanSaplingAge = 0.0F;
+            this.SaplingNpp = 0.0F;
+            this.SaplingCount = 0;
+
+            this.BranchCarbon = 0.0F;
+            this.BranchNitrogen = 0.0F;
+            this.CoarseRootCarbon = 0.0F;
+            this.CoarseRootNitrogen = 0.0F;
+            this.FineRootCarbon = 0.0F;
+            this.FineRootNitrogen = 0.0F;
+            this.FoliageCarbon = 0.0F;
+            this.FoliageNitrogen = 0.0F;
+            this.RegenerationCarbon = 0.0F;
+            this.RegenerationNitrogen = 0.0F;
+            this.StemCarbon = 0.0F;
+            this.StemNitrogen = 0.0F;
         }
 
-        private int CurrentYear
+        public ResourceUnitTreeStatistics(ResourceUnit ru, ResourceUnitTreeSpecies ruSpecies)
+            : this(ru)
         {
-            get { return this.TreesPerHectare.Count - 1; }
+            this.IsPerHectare = true;
+            this.requiresPerHectareConversion = true;
+            this.ResourceUnitSpecies = ruSpecies;
         }
 
         /// total carbon stock: sum of carbon of all living trees + regeneration layer
-        public float GetMostRecentTotalCarbon()
+        public float GetTotalCarbon()
         {
-            int currentYear = this.CurrentYear;
-            return this.StemC[currentYear] + this.BranchC[currentYear] + this.FoliageC[currentYear] + this.FineRootC[currentYear] + this.CoarseRootC[currentYear] + this.RegenerationC[currentYear];
+            return this.StemCarbon + this.BranchCarbon + this.FoliageCarbon + this.FineRootCarbon + this.CoarseRootCarbon + this.RegenerationCarbon;
         }
 
         public void Zero()
@@ -100,255 +119,198 @@ namespace iLand.Tree
 
             this.sumSaplingAge = 0.0F;
 
-            int currentYear = this.CurrentYear;
-            this.Npp[currentYear] = 0.0F;
-            this.NppAbove[currentYear] = 0.0F;
-            this.NppSaplings[currentYear] = 0.0F;
-            this.CohortCount[currentYear] = 0;
-            this.SaplingCount[currentYear] = 0;
-            this.MeanSaplingAge[currentYear] = 0.0F;
-            this.RegenerationC[currentYear] = 0.0F;
-            this.RegenerationN[currentYear] = 0.0F;
+            this.TreeNpp = 0.0F;
+            this.TreeNppAboveground = 0.0F;
+            this.SaplingNpp = 0.0F;
+            this.CohortCount = 0;
+            this.SaplingCount = 0;
+            this.MeanSaplingAge = 0.0F;
+            this.RegenerationCarbon = 0.0F;
+            this.RegenerationNitrogen = 0.0F;
         }
 
         public void ZeroTreeStatistics()
         {
             // reset only those values that are directly accumulated from trees
             // TODO: why aren't non-sapling NPP fields cleared here?
-            this.mSumDbh = 0.0F;
-            this.mSumHeight = 0.0F;
+            this.sumDbh = 0.0F;
+            this.sumHeight = 0.0F;
 
-            int currentYear = this.CurrentYear;
-            this.TreesPerHectare[currentYear] = 0.0F;
-            this.AverageDbh[currentYear] = 0.0F;
-            this.AverageHeight[currentYear] = 0.0f;
-            this.BasalArea[currentYear] = 0.0F;
-            this.StemVolume[currentYear] = 0.0F;
-            this.TotalStemVolumeGrowth[currentYear] = 0.0F;
-            this.LeafAreaIndex[currentYear] = 0.0F;
+            this.TreeCount = 0.0F;
+            this.AverageDbh = 0.0F;
+            this.AverageHeight = 0.0f;
+            this.BasalArea = 0.0F;
+            this.StemVolume = 0.0F;
+            this.LiveAndSnagStemVolume = 0.0F;
+            this.LeafArea = 0.0F;
+            this.LeafAreaIndex = 0.0F;
             /*mNPP = mNPPabove = 0.0F;
             mNPPsaplings = 0.0F;
             mCohortCount = mSaplingCount = 0;
             mAverageSaplingAge = 0.0F;
             mSumSaplingAge = 0.0F;*/
-            this.StemC[currentYear] = 0.0F;
-            this.FoliageC[currentYear] = 0.0F;
-            this.BranchC[currentYear] = 0.0F;
-            this.CoarseRootC[currentYear] = 0.0F;
-            this.FineRootC[currentYear] = 0.0F;
-            this.StemN[currentYear] = 0.0F;
-            this.FoliageN[currentYear] = 0.0F;
-            this.BranchN[currentYear] = 0.0F;
-            this.CoarseRootN[currentYear] = 0.0F;
-            this.FineRootN[currentYear] = 0.0F;
+            this.StemCarbon = 0.0F;
+            this.FoliageCarbon = 0.0F;
+            this.BranchCarbon = 0.0F;
+            this.CoarseRootCarbon = 0.0F;
+            this.FineRootCarbon = 0.0F;
+            this.StemNitrogen = 0.0F;
+            this.FoliageNitrogen = 0.0F;
+            this.BranchNitrogen = 0.0F;
+            this.CoarseRootNitrogen = 0.0F;
+            this.FineRootNitrogen = 0.0F;
             //mCRegeneration=0.0F; 
             //mNRegeneration=0.0F;
         }
 
         public void AddToCurrentYear(SaplingProperties sapling)
         {
-            int currentYear = this.RegenerationC.Count - 1;
-            this.CohortCount[currentYear] += sapling.LivingCohorts;
-            this.SaplingCount[currentYear] += (int)sapling.LivingSaplings; // saplings with height >1.3m
+            this.CohortCount += sapling.LivingCohorts;
+            this.SaplingCount += (int)sapling.LivingSaplings; // saplings with height >1.3m
 
             this.sumSaplingAge += sapling.AverageAge * sapling.LivingCohorts;
 
-            this.RegenerationC[currentYear] += sapling.CarbonLiving.C;
-            this.RegenerationN[currentYear] += sapling.CarbonLiving.N;
+            this.RegenerationCarbon += sapling.CarbonLiving.C;
+            this.RegenerationNitrogen += sapling.CarbonLiving.N;
 
-            this.NppSaplings[currentYear] += sapling.CarbonGain.C / Constant.BiomassCFraction;
+            this.SaplingNpp += sapling.CarbonGain.C / Constant.BiomassCFraction;
         }
 
-        public void AddToCurrentYear(Trees trees, int treeIndex, TreeGrowthData? treeGrowth, bool skipDead = false)
+        public void AddToCurrentYear(Trees trees, int treeIndex, TreeGrowthData? treeGrowth, bool skipDead)
         {
             if (skipDead && trees.IsDead(treeIndex))
             {
                 return;
             }
 
-            int currentYear = this.CurrentYear;
-            ++this.TreesPerHectare[currentYear];
-            this.mSumDbh += trees.Dbh[treeIndex];
-            this.mSumHeight += trees.Height[treeIndex];
-            this.BasalArea[currentYear] += trees.GetBasalArea(treeIndex);
-            this.StemVolume[currentYear] += trees.GetStemVolume(treeIndex);
-            this.LeafAreaIndex[currentYear] += trees.LeafArea[treeIndex]; // warning: sum of leafarea!
+            // trees
+            this.sumDbh += trees.Dbh[treeIndex];
+            this.sumHeight += trees.Height[treeIndex];
+            this.BasalArea += trees.GetBasalArea(treeIndex);
+            this.LeafArea += trees.LeafArea[treeIndex];
+            this.StemVolume += trees.GetStemVolume(treeIndex);
+            ++this.TreeCount;
             if (treeGrowth != null)
             {
-                this.Npp[currentYear] += treeGrowth.NppTotal;
-                this.NppAbove[currentYear] += treeGrowth.NppAboveground;
+                this.TreeNpp += treeGrowth.NppTotal;
+                this.TreeNppAboveground += treeGrowth.NppAboveground;
             }
+
             // carbon and nitrogen pools
-            this.BranchC[currentYear] += Constant.BiomassCFraction * trees.GetBranchBiomass(treeIndex);
-            this.BranchN[currentYear] += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.GetBranchBiomass(treeIndex);
-            this.CoarseRootC[currentYear] += Constant.BiomassCFraction * trees.CoarseRootMass[treeIndex];
-            this.CoarseRootN[currentYear] += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.CoarseRootMass[treeIndex];
-            this.FineRootC[currentYear] += Constant.BiomassCFraction * trees.FineRootMass[treeIndex];
-            this.FineRootN[currentYear] += Constant.BiomassCFraction / trees.Species.CNRatioFineRoot * trees.FineRootMass[treeIndex];
-            this.FoliageC[currentYear] += Constant.BiomassCFraction * trees.FoliageMass[treeIndex];
-            this.FoliageN[currentYear] += Constant.BiomassCFraction / trees.Species.CNRatioFineRoot * trees.FoliageMass[treeIndex];
-            this.StemC[currentYear] += Constant.BiomassCFraction * trees.StemMass[treeIndex];
-            this.StemN[currentYear] += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.StemMass[treeIndex];
+            this.BranchCarbon += Constant.BiomassCFraction * trees.GetBranchBiomass(treeIndex);
+            this.BranchNitrogen += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.GetBranchBiomass(treeIndex);
+            this.CoarseRootCarbon += Constant.BiomassCFraction * trees.CoarseRootMass[treeIndex];
+            this.CoarseRootNitrogen += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.CoarseRootMass[treeIndex];
+            this.FineRootCarbon += Constant.BiomassCFraction * trees.FineRootMass[treeIndex];
+            this.FineRootNitrogen += Constant.BiomassCFraction / trees.Species.CNRatioFineRoot * trees.FineRootMass[treeIndex];
+            this.FoliageCarbon += Constant.BiomassCFraction * trees.FoliageMass[treeIndex];
+            this.FoliageNitrogen += Constant.BiomassCFraction / trees.Species.CNRatioFineRoot * trees.FoliageMass[treeIndex];
+            this.StemCarbon += Constant.BiomassCFraction * trees.StemMass[treeIndex];
+            this.StemNitrogen += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.StemMass[treeIndex];
         }
 
-        // note: mRUS = 0 for aggregated statistics
-        public void OnEndYear()
+        public virtual void OnEndYear()
         {
-            int currentYear = this.CurrentYear;
-            float treesPerHectare = this.TreesPerHectare[currentYear];
+            float treesPerHectare = this.TreeCount;
             if (treesPerHectare > 0.0F)
             {
-                this.AverageDbh[currentYear] = this.mSumDbh / treesPerHectare;
-                this.AverageHeight[currentYear] = this.mSumHeight / treesPerHectare;
-                if (this.ResourceUnitSpecies != null && this.ResourceUnitSpecies.RU.AreaInLandscape > 0.0F)
-                {
-                    this.LeafAreaIndex[currentYear] /= this.ResourceUnitSpecies.RU.AreaInLandscape; // convert from leafarea to LAI
-                }
+                this.AverageDbh = this.sumDbh / treesPerHectare;
+                this.AverageHeight = this.sumHeight / treesPerHectare;
             }
-            if (this.CohortCount[currentYear] != 0)
+            if (this.CohortCount != 0)
             {
-                this.MeanSaplingAge[currentYear] = this.sumSaplingAge / this.CohortCount[currentYear]; // else leave mean sapling age as zero
+                this.MeanSaplingAge = this.sumSaplingAge / this.CohortCount; // else leave mean sapling age as zero
             }
+            Debug.Assert(this.ru.AreaInLandscape > 0.0F);
+            this.LeafAreaIndex = this.LeafArea / this.ru.AreaInLandscape; // this.ru.AreaWithTrees;
+            this.LiveAndSnagStemVolume = this.StemVolume; // initialization, removed volume may be added below
 
             // scale values to per hectare if resource unit <> 1ha
             // note: do this only on species-level (avoid double scaling)
-            if (this.ResourceUnitSpecies != null)
-            {
-                float areaFactor = Constant.RUArea / this.ResourceUnitSpecies.RU.AreaInLandscape;
-                if (areaFactor != 1.0F)
+            if (this.requiresPerHectareConversion)
+            {              
+                float ruExpansionFactor = Constant.RUArea / this.ru.AreaInLandscape;
+                if (ruExpansionFactor != 1.0F)
                 {
-                    this.TreesPerHectare[currentYear] *= areaFactor;
-                    this.BasalArea[currentYear] *= areaFactor;
-                    this.StemVolume[currentYear] *= areaFactor;
-                    this.mSumDbh *= areaFactor;
-                    this.Npp[currentYear] *= areaFactor;
-                    this.NppAbove[currentYear] *= areaFactor;
-                    this.NppSaplings[currentYear] *= areaFactor;
-                    //mGWL *= area_factor;
-                    this.CohortCount[currentYear] = (int)(areaFactor * this.CohortCount[currentYear]); // TODO: quantization?
-                    this.SaplingCount[currentYear] = (int)(areaFactor * this.SaplingCount[currentYear]); // TODO: quantization?
-                    //float mCStem, mCFoliage, mCBranch, mCCoarseRoot, mCFineRoot;
-                    //float mNStem, mNFoliage, mNBranch, mNCoarseRoot, mNFineRoot;
-                    //float mCRegeneration, mNRegeneration;
-                    this.StemC[currentYear] *= areaFactor;
-                    this.StemN[currentYear] *= areaFactor;
-                    this.FoliageC[currentYear] *= areaFactor;
-                    this.FoliageN[currentYear] *= areaFactor;
-                    this.BranchC[currentYear] *= areaFactor;
-                    this.BranchN[currentYear] *= areaFactor;
-                    this.CoarseRootC[currentYear] *= areaFactor;
-                    this.CoarseRootN[currentYear] *= areaFactor;
-                    this.FineRootC[currentYear] *= areaFactor;
-                    this.FineRootN[currentYear] *= areaFactor;
-                    this.RegenerationC[currentYear] *= areaFactor;
-                    this.RegenerationN[currentYear] *= areaFactor;
-                }
-                this.TotalStemVolumeGrowth[currentYear] = this.StemVolume[currentYear] + this.ResourceUnitSpecies.RemovedStemVolume; // removedVolume: per ha, SumVolume now too
-            }
-        }
+                    this.sumDbh *= ruExpansionFactor; // probably not strictly necessary
+                    this.BasalArea *= ruExpansionFactor;
+                    this.StemVolume *= ruExpansionFactor;
+                    this.LiveAndSnagStemVolume *= ruExpansionFactor;
+                    this.TreeCount *= ruExpansionFactor;
+                    this.TreeNpp *= ruExpansionFactor;
+                    this.TreeNppAboveground *= ruExpansionFactor;
 
-        public void OnStartYear()
-        {
-            this.Npp.Add(0.0F);
-            this.NppAbove.Add(0.0F);
-            this.NppSaplings.Add(0.0F);
-            this.CohortCount.Add(0);
-            this.SaplingCount.Add(0);
-            this.MeanSaplingAge.Add(0.0F);
-            this.RegenerationC.Add(0.0F);
-            this.RegenerationN.Add(0.0F);
-            this.TreesPerHectare.Add(0.0F);
-            this.AverageDbh.Add(0.0F);
-            this.AverageHeight.Add(0.0F);
-            this.BasalArea.Add(0.0F);
-            this.StemVolume.Add(0.0F);
-            this.TotalStemVolumeGrowth.Add(0.0F);
-            this.LeafAreaIndex.Add(0.0F);
-            this.StemC.Add(0.0F);
-            this.FoliageC.Add(0.0F);
-            this.BranchC.Add(0.0F);
-            this.CoarseRootC.Add(0.0F);
-            this.FineRootC.Add(0.0F);
-            this.StemN.Add(0.0F);
-            this.FoliageN.Add(0.0F);
-            this.BranchN.Add(0.0F);
-            this.CoarseRootN.Add(0.0F);
-            this.FineRootN.Add(0.0F);
+                    //mGWL *= area_factor;
+                    this.CohortCount = (int)(ruExpansionFactor * this.CohortCount); // TODO: change to float to avoid quantization?
+                    this.SaplingCount = (int)(ruExpansionFactor * this.SaplingCount); // TODO: change to float to avoid quantization?
+                    this.SaplingNpp *= ruExpansionFactor;
+
+                    this.BranchCarbon *= ruExpansionFactor;
+                    this.BranchNitrogen *= ruExpansionFactor;
+                    this.CoarseRootCarbon *= ruExpansionFactor;
+                    this.CoarseRootNitrogen *= ruExpansionFactor;
+                    this.FineRootCarbon *= ruExpansionFactor;
+                    this.FineRootNitrogen *= ruExpansionFactor;
+                    this.FoliageCarbon *= ruExpansionFactor;
+                    this.FoliageNitrogen *= ruExpansionFactor;
+                    this.RegenerationCarbon *= ruExpansionFactor;
+                    this.RegenerationNitrogen *= ruExpansionFactor;
+                    this.StemCarbon *= ruExpansionFactor;
+                    this.StemNitrogen *= ruExpansionFactor;
+                }
+
+                if (this.ResourceUnitSpecies != null)
+                {
+                    this.LiveAndSnagStemVolume += this.ResourceUnitSpecies.RemovedStemVolume; // RemovedStemVolume assumed to be in m³/ha
+                }
+            }
         }
 
         public void AddCurrentYears(ResourceUnitTreeStatistics other)
         {
-            if (this.TreesPerHectare.Count != other.TreesPerHectare.Count)
+            if (Object.ReferenceEquals(this.ru, other.ru) == false)
             {
-                throw new ArgumentOutOfRangeException(nameof(other));
+                throw new ArgumentOutOfRangeException(nameof(other), "Attempt to add statistics from different resource units (grid indices " + this.ru.ResourceUnitGridIndex + " and " + other.ru.ResourceUnitGridIndex + ".");
             }
+            if (this.IsPerHectare != other.IsPerHectare)
+            {
+                throw new ArgumentOutOfRangeException(nameof(other), "Attempt to add statistics with mismatched units. Per hectare settings: " + this.IsPerHectare + " and " + other.IsPerHectare + ".");
+            }
+            Debug.Assert(this.ResourceUnitSpecies == null && other.ResourceUnitSpecies != null);
 
-            int currentYear = this.CurrentYear;
-            this.TreesPerHectare[currentYear] += other.TreesPerHectare[currentYear];
-            this.BasalArea[currentYear] += other.BasalArea[currentYear];
-            this.mSumDbh += other.mSumDbh;
-            this.mSumHeight += other.mSumHeight;
-            this.StemVolume[currentYear] += other.StemVolume[currentYear];
-            this.LeafAreaIndex[currentYear] += other.LeafAreaIndex[currentYear];
-            this.Npp[currentYear] += other.Npp[currentYear];
-            this.NppAbove[currentYear] += other.NppAbove[currentYear];
-            this.NppSaplings[currentYear] += other.NppSaplings[currentYear];
-            this.TotalStemVolumeGrowth[currentYear] += other.TotalStemVolumeGrowth[currentYear];
+            // trees
+            this.sumDbh += other.sumDbh;
+            this.sumHeight += other.sumHeight;
+
+            this.BasalArea += other.BasalArea;
+            this.LeafArea += other.LeafArea;
+            this.LeafAreaIndex += other.LeafAreaIndex; // can add directly due to same resource unit constraint
+            this.LiveAndSnagStemVolume += other.LiveAndSnagStemVolume;
+            this.StemVolume += other.StemVolume;
+            this.TreeCount += other.TreeCount;
+            this.TreeNpp += other.TreeNpp;
+            this.TreeNppAboveground += other.TreeNppAboveground;
+
             // regeneration
-            this.CohortCount[currentYear] += other.CohortCount[currentYear];
-            this.SaplingCount[currentYear] += other.SaplingCount[currentYear];
             this.sumSaplingAge += other.sumSaplingAge;
-            // carbon/nitrogen pools
-            this.StemC[currentYear] += other.StemC[currentYear];
-            this.StemN[currentYear] += other.StemN[currentYear];
-            this.BranchC[currentYear] += other.BranchC[currentYear];
-            this.BranchN[currentYear] += other.BranchN[currentYear];
-            this.FoliageC[currentYear] += other.FoliageC[currentYear];
-            this.FoliageN[currentYear] += other.FoliageN[currentYear];
-            this.FineRootC[currentYear] += other.FineRootC[currentYear];
-            this.FineRootN[currentYear] += other.FineRootN[currentYear];
-            this.CoarseRootC[currentYear] += other.CoarseRootC[currentYear];
-            this.CoarseRootN[currentYear] += other.CoarseRootN[currentYear];
-            this.RegenerationC[currentYear] += other.RegenerationC[currentYear];
-            this.RegenerationN[currentYear] += other.RegenerationN[currentYear];
-        }
 
-        public void AddCurrentYearsWeighted(ResourceUnitTreeStatistics other, float weight)
-        {
-            // aggregates that are not scaled to hectares
-            int currentYear = this.CurrentYear;
-            this.TreesPerHectare[currentYear] += other.TreesPerHectare[currentYear] * weight;
-            this.BasalArea[currentYear] += other.BasalArea[currentYear] * weight;
-            this.mSumDbh += other.mSumDbh * weight;
-            this.mSumHeight += other.mSumHeight * weight;
-            this.StemVolume[currentYear] += other.StemVolume[currentYear] * weight;
-            // averages that are scaled to per hectare need to be scaled
-            this.AverageDbh[currentYear] += other.AverageDbh[currentYear] * weight;
-            this.AverageHeight[currentYear] += other.AverageHeight[currentYear] * weight;
-            this.MeanSaplingAge[currentYear] += other.MeanSaplingAge[currentYear] * weight;
-            this.LeafAreaIndex[currentYear] += other.LeafAreaIndex[currentYear] * weight;
+            this.CohortCount += other.CohortCount;
+            this.SaplingCount += other.SaplingCount;
+            this.SaplingNpp += other.SaplingNpp;
 
-            this.Npp[currentYear] += other.Npp[currentYear] * weight;
-            this.NppAbove[currentYear] += other.NppAbove[currentYear] * weight;
-            this.NppSaplings[currentYear] += other.NppSaplings[currentYear] * weight;
-            this.TotalStemVolumeGrowth[currentYear] += other.TotalStemVolumeGrowth[currentYear] * weight;
-            // regeneration
-            this.CohortCount[currentYear] += (int)(other.CohortCount[currentYear] * weight); // BUGBUG: quantization?
-            this.SaplingCount[currentYear] += (int)(other.SaplingCount[currentYear] * weight); // BUGBUG: quantization?
-            this.sumSaplingAge += other.sumSaplingAge * weight;
             // carbon/nitrogen pools
-            this.StemC[currentYear] += other.StemC[currentYear] * weight;
-            this.StemN[currentYear] += other.StemN[currentYear] * weight;
-            this.BranchC[currentYear] += other.BranchC[currentYear] * weight;
-            this.BranchN[currentYear] += other.BranchN[currentYear] * weight;
-            this.FoliageC[currentYear] += other.FoliageC[currentYear] * weight;
-            this.FoliageN[currentYear] += other.FoliageN[currentYear] * weight;
-            this.FineRootC[currentYear] += other.FineRootC[currentYear] * weight;
-            this.FineRootN[currentYear] += other.FineRootN[currentYear] * weight;
-            this.CoarseRootC[currentYear] += other.CoarseRootC[currentYear] * weight;
-            this.CoarseRootN[currentYear] += other.CoarseRootN[currentYear] * weight;
-            this.RegenerationC[currentYear] += other.RegenerationC[currentYear] * weight;
-            this.RegenerationN[currentYear] += other.RegenerationN[currentYear] * weight;
+            this.BranchCarbon += other.BranchCarbon;
+            this.BranchNitrogen += other.BranchNitrogen;
+            this.CoarseRootCarbon += other.CoarseRootCarbon;
+            this.FineRootCarbon += other.FineRootCarbon;
+            this.FineRootNitrogen += other.FineRootNitrogen;
+            this.CoarseRootNitrogen += other.CoarseRootNitrogen;
+            this.FoliageCarbon += other.FoliageCarbon;
+            this.FoliageNitrogen += other.FoliageNitrogen;
+            this.RegenerationCarbon += other.RegenerationCarbon;
+            this.RegenerationNitrogen += other.RegenerationNitrogen;
+            this.StemCarbon += other.StemCarbon;
+            this.StemNitrogen += other.StemNitrogen;
         }
     }
 }

@@ -56,10 +56,10 @@ namespace iLand.Tree
 
         // properties
         /// @property id 4-character unique identification of the tree species
-        public string ID { get; init; }
+        public string ID { get; private init; }
         /// the full name (e.g. Picea abies) of the species
-        public string Name { get; init; }
-        public int Index { get; init; } // unique index of species within current species set
+        public string Name { get; private init; }
+        public int Index { get; private init; } // unique index of species within current species set
         public int PhenologyClass { get; private set; } // phenology class defined in project file. class 0 = evergreen
         public bool IsConiferous { get; private set; }
         public bool IsEvergreen { get; private set; }
@@ -92,10 +92,10 @@ namespace iLand.Tree
         public float WoodDensity { get; private set; } // density of stem wood [kg/m3]
 
         public float FinerootFoliageRatio { get; private set; } // ratio of fineroot mass (kg) to foliage mass (kg)
-        public EstablishmentParameters EstablishmentParameters { get; init; }
-        public SaplingGrowthParameters SaplingGrowthParameters { get; init; }
+        public EstablishmentParameters EstablishmentParameters { get; private init; }
+        public SaplingGrowthParameters SaplingGrowthParameters { get; private init; }
         public SeedDispersal? SeedDispersal { get; set; }
-        public TreeSpeciesSet SpeciesSet { get; init; }
+        public TreeSpeciesSet SpeciesSet { get; private init; }
 
         public TreeSpecies(TreeSpeciesSet speciesSet, string id, string name)
         {
@@ -119,7 +119,7 @@ namespace iLand.Tree
             this.SpeciesSet = speciesSet;
         }
 
-        public bool Active { get; init; }
+        public bool Active { get; private init; }
 
         // allometries
         public float GetBarkThickness(float dbh) { return dbh * this.mBarkThicknessFactor; }

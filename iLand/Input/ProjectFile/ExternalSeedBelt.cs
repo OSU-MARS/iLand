@@ -9,9 +9,10 @@ namespace iLand.Input.ProjectFile
         public int SectorsX { get; private set; }
         public int SectorsY { get; private set; }
         public int WidthInM { get; private set; }
-		public List<ExternalSeedBeltSector> Sectors { get; init; }
+		public List<ExternalSeedBeltSector> Sectors { get; private init; }
 
 		public ExternalSeedBelt()
+            : base("externalSeedBelt")
         {
 			this.SectorsX = 0;
 			this.SectorsY = 0;
@@ -32,16 +33,8 @@ namespace iLand.Input.ProjectFile
                 }
                 else
                 {
-                    throw new XmlException("Encountered unexpected attributes.");
+                    this.ReadEnabled(reader);
                 }
-            }
-            else if (String.Equals(reader.Name, "externalSeedBelt", StringComparison.Ordinal))
-            {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
-            {
-                this.Enabled = reader.ReadElementContentAsBoolean();
             }
             else if (String.Equals(reader.Name, "width", StringComparison.Ordinal))
             {
@@ -69,7 +62,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

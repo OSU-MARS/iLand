@@ -465,10 +465,10 @@ namespace iLand.Tools
                         {
                             this.AddVariable(mToken);
                         }
-                        mTokens[mExecuteIndex].Type = ExpressionTokenType.Variable;
-                        mTokens[mExecuteIndex].Value = 0;
-                        mTokens[mExecuteIndex++].Index = GetVariableIndex(mToken);
-                        this.CheckBuffer(mExecuteIndex);
+                        this.mTokens[mExecuteIndex].Type = ExpressionTokenType.Variable;
+                        this.mTokens[mExecuteIndex].Value = 0;
+                        this.mTokens[mExecuteIndex++].Index = this.GetVariableIndex(this.mToken);
+                        this.CheckBuffer(this.mExecuteIndex);
                         this.IsConstant = false;
                     //}
                 }
@@ -576,10 +576,10 @@ namespace iLand.Tools
             {
                 this.Parse();
             }
-            int idx = GetVariableIndex(name);
-            if (idx >= 0 && idx < 10)
+            int variableIndex = this.GetVariableIndex(name);
+            if (variableIndex >= 0 && variableIndex < 10)
             {
-                mVariableValues[idx] = value;
+                this.mVariableValues[variableIndex] = value;
             }
             else
             {
@@ -841,23 +841,23 @@ namespace iLand.Tools
         public double AddVariable(string varName)
         {
             // add var
-            int idx = mVariableNames.IndexOf(varName);
+            int idx = this.mVariableNames.IndexOf(varName);
             if (idx == -1)
             {
-                mVariableNames.Add(varName);
+                this.mVariableNames.Add(varName);
             }
-            return mVariableValues[GetVariableIndex(varName)];
+            return this.mVariableValues[this.GetVariableIndex(varName)];
         }
 
-        public int GetVariableIndex(string variableName)
+        private int GetVariableIndex(string variableName)
         {
-            int idx;
-            if (Wrapper != null)
+            int index;
+            if (this.Wrapper != null)
             {
-                idx = Wrapper.GetVariableIndex(variableName);
-                if (idx > -1)
+                index = this.Wrapper.GetVariableIndex(variableName);
+                if (index > -1)
                 {
-                    return 100 + idx;
+                    return 100 + index;
                 }
             }
 
@@ -879,17 +879,17 @@ namespace iLand.Tools
             //        return 1000 + idx;
             //    }
             //}
-            idx = mVariableNames.IndexOf(variableName);
-            if (idx > -1)
+            index = mVariableNames.IndexOf(variableName);
+            if (index > -1)
             {
-                return idx;
+                return index;
             }
             // if in strict mode, all variables must be already available at this stage.
-            if (RequireExternalVariableBinding)
+            if (this.RequireExternalVariableBinding)
             {
                 throw new NotSupportedException(String.Format("Variable '{0}' in (strict) expression '{1}' not available!", variableName, this.ExpressionString));
             }
-            return -1;
+            throw new ArgumentOutOfRangeException(nameof(variableName), "Variable '" + variableName + "' not found in expression.");
         }
 
         private double GetModelVariable(int valueIndex, ExpressionWrapper? wrapper = null)

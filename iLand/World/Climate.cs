@@ -36,12 +36,12 @@ namespace iLand.World
         public bool IsSetup { get; private set; }
         /// the mean annual temperature of the current year (degree C)
         public float MeanAnnualTemperature { get; private set; }
-        public string Name { get; init; } // table name of this climate
-        public float[] PrecipitationByMonth { get; init; }
+        public string Name { get; private init; } // table name of this climate
+        public float[] PrecipitationByMonth { get; private init; }
         // access to other subsystems
-        public Sun Sun { get; init; } // solar radiation class
+        public Sun Sun { get; private init; } // solar radiation class
         // get a array with mean temperatures per month (deg C)
-        public float[] TemperatureByMonth { get; init; }
+        public float[] TemperatureByMonth { get; private init; }
         public float TotalAnnualRadiation { get; private set; } // return radiation sum (MJ) of the whole year
 
         public Climate(string name)
@@ -136,6 +136,13 @@ namespace iLand.World
             }
             string query = String.Format("select year,month,day,min_temp,max_temp,prec,rad,vpd from {0} {1} order by year, month, day", Name, climateTableQueryFilter);
 
+            // if available, retain last day of previous
+            ClimateDay? lastDayOfPreviousYear = null;
+            if (this.mDays.Count > 0)
+            {
+                lastDayOfPreviousYear = this.mDays[^1];
+            }
+
             string climateDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Climate.DatabaseFile);
             using SqliteConnection climateDatabase = Landscape.GetDatabaseConnection(climateDatabaseFilePath, true);
             using SqliteCommand queryCommand = new SqliteCommand(query, climateDatabase);
@@ -188,11 +195,11 @@ namespace iLand.World
                     if (this.mDays.Count <= dayIndex)
                     {
                         day = new ClimateDay();
-                        mDays.Add(day);
+                        this.mDays.Add(day);
                     }
                     else
                     {
-                        day = mDays[dayIndex];
+                        day = this.mDays[dayIndex];
                     }
                     day.Year = climateReader.GetInt32(0);
                     day.Month = climateReader.GetInt32(1);
@@ -243,6 +250,13 @@ namespace iLand.World
                     }
                 }
             }
+            if (this.mDays.Count > dayIndex)
+            {
+                // drop any days left over from a previous climate load
+                // This is likely to happen in any case where multiple climate loads occur since the length of the database is probably not an exact 
+                // multiple of the load size.
+                this.mDays.RemoveRange(dayIndex, this.mDays.Count - dayIndex);
+            }
 
             this.mMonthDayIndices.Add(dayIndex); // the absolute last day...
             this.mNextYearToLoad += this.mYearsToLoad;
@@ -250,16 +264,20 @@ namespace iLand.World
             this.CurrentJanuary1 = this.mMonthDayIndices[Constant.MonthsInYear * this.mCurrentDataYear];
             this.NextJanuary1 = this.mMonthDayIndices[Constant.MonthsInYear * (this.mCurrentDataYear + 1)]; // point to 1 January of the next year
             
-            int lastDay = this.IndexOf(11, 30); // 31 December in zero based indexing
-            ClimateDay lastDayOfYear = mDays[lastDay];
-            float tau = projectFile.Model.Ecosystem.TemperatureTau;
-            // handle first day: use tissue temperature of the last day of the last year (if available)
-            this.mDays[0].TempDelayed = lastDayOfYear.TempDelayed + 1.0F / tau * (mDays[0].MeanDaytimeTemperature - lastDayOfYear.TempDelayed);
+            int lastDayIndex = this.IndexOf(11, 30); // 31 December in zero based indexing
+            ClimateDay lastDayOfYear = this.mDays[lastDayIndex];
 
-            for (int dayIndex2 = 1; dayIndex2 < this.mDays.Count; ++dayIndex2)
+            // first order dynamic delayed model of Mäkelä 2008
+            // handle first day: use tissue temperature of the last day of the previous year if available
+            float tau = projectFile.Model.Ecosystem.TemperatureAveragingTau;
+            this.mDays[0].MeanDaytimeTemperatureMA1 = this.mDays[0].MeanDaytimeTemperature;
+            if (lastDayOfPreviousYear != null)
             {
-                // first order dynamic delayed model (Mäkelä 2008)
-                this.mDays[dayIndex2].TempDelayed = mDays[dayIndex2 - 1].TempDelayed + 1.0F / tau * (mDays[dayIndex2].MeanDaytimeTemperature - mDays[dayIndex2 - 1].TempDelayed);
+                this.mDays[0].MeanDaytimeTemperatureMA1 = lastDayOfPreviousYear.MeanDaytimeTemperatureMA1 + 1.0F / tau * (this.mDays[0].MeanDaytimeTemperature - lastDayOfPreviousYear.MeanDaytimeTemperatureMA1);
+            }
+            for (int averageIndex = 1; averageIndex < this.mDays.Count; ++averageIndex)
+            {
+                this.mDays[averageIndex].MeanDaytimeTemperatureMA1 = this.mDays[averageIndex - 1].MeanDaytimeTemperatureMA1 + 1.0F / tau * (this.mDays[averageIndex].MeanDaytimeTemperature - this.mDays[averageIndex - 1].MeanDaytimeTemperatureMA1);
             }
         }
 
@@ -349,7 +367,7 @@ namespace iLand.World
 
             for (int dayIndex = this.CurrentJanuary1; dayIndex < this.NextJanuary1; ++dayIndex)
             {
-                ClimateDay day = mDays[dayIndex];
+                ClimateDay day = this.mDays[dayIndex];
                 this.TotalAnnualRadiation += day.Radiation;
                 this.MeanAnnualTemperature += day.MeanDaytimeTemperature;
                 this.PrecipitationByMonth[day.Month - 1] += day.Preciptitation;

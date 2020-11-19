@@ -26,20 +26,16 @@ namespace iLand.Input.ProjectFile
         public float EdgeBackgroundProbability { get; private set; }
         public string? OnAfterWind { get; private set; }
 
+        public Wind()
+            : base("wind")
+        {
+        }
+
         protected override void ReadStartElement(XmlReader reader)
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes.");
-            }
-
-            if (String.Equals(reader.Name, "wind", StringComparison.Ordinal))
-            {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
-            {
-                this.Enabled = reader.ReadElementContentAsBoolean();
+                this.ReadEnabled(reader);
             }
             else if (String.Equals(reader.Name, "speciesParameter", StringComparison.Ordinal))
             {
@@ -165,7 +161,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

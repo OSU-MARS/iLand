@@ -6,12 +6,12 @@ using System.Diagnostics;
 
 namespace iLand.Output
 {
-    public class WaterOutput : Output
+    public class WaterAnnualOutput : AnnualOutput
     {
         private readonly Expression mYearFilter; // condition for landscape-level output
         private readonly Expression mResourceUnitFilter; // condition for resource-unit-level output
 
-        public WaterOutput()
+        public WaterAnnualOutput()
         {
             this.mYearFilter = new Expression();
             this.mResourceUnitFilter = new Expression();
@@ -115,8 +115,8 @@ namespace iLand.Output
         public override void Setup(Model model)
         {
             // use a condition for to control execuation for the current year
-            this.mYearFilter.SetExpression(model.Project.Output.Water.Condition);
-            this.mResourceUnitFilter.SetExpression(model.Project.Output.Water.ConditionRU);
+            this.mYearFilter.SetExpression(model.Project.Output.Annual.Water.Condition);
+            this.mResourceUnitFilter.SetExpression(model.Project.Output.Annual.Water.ConditionRU);
             this.mResourceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
         }
     }

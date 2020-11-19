@@ -8,7 +8,7 @@ using Model = iLand.Simulation.Model;
 namespace iLand.Output
 {
     /** LandscapeRemovedOut is aggregated output for removed trees on the full landscape. All values are per hectare values. */
-    public class LandscapeRemovedOutput : Output
+    public class LandscapeRemovedAnnualOutput : AnnualOutput
     {
         private const int KeyRemovalTypeMultiplier = 10000;
 
@@ -19,7 +19,7 @@ namespace iLand.Output
         {
             public float BasalArea { get; set; }
             public float Count { get; set; }
-            public TreeSpecies TreeSpecies { get; init; }
+            public TreeSpecies TreeSpecies { get; private init; }
             public float Volume { get; set; }
 
             public LandscapeRemovalData(TreeSpecies treeSpecies)
@@ -38,7 +38,7 @@ namespace iLand.Output
 
         private readonly Dictionary<int, LandscapeRemovalData> removalsByTypeAndSpeciesIndex;
 
-        public LandscapeRemovedOutput()
+        public LandscapeRemovedAnnualOutput()
         {
             this.removalsByTypeAndSpeciesIndex = new Dictionary<int, LandscapeRemovalData>();
 
@@ -70,8 +70,8 @@ namespace iLand.Output
                 return;
             }
 
-            Debug.Assert(trees.Species.Index < LandscapeRemovedOutput.KeyRemovalTypeMultiplier);
-            int key = LandscapeRemovedOutput.KeyRemovalTypeMultiplier * (int)removalType + trees.Species.Index;
+            Debug.Assert(trees.Species.Index < LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier);
+            int key = LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier * (int)removalType + trees.Species.Index;
             if (this.removalsByTypeAndSpeciesIndex.TryGetValue(key, out LandscapeRemovalData? removalData) == false)
             {
                 removalData = new LandscapeRemovalData(trees.Species);
@@ -88,8 +88,8 @@ namespace iLand.Output
             {
                 if (removal.Value.Count > 0)
                 {
-                    MortalityCause removalType = (MortalityCause)(removal.Key / LandscapeRemovedOutput.KeyRemovalTypeMultiplier);
-                    int speciesIndex = removal.Key % LandscapeRemovedOutput.KeyRemovalTypeMultiplier;
+                    MortalityCause removalType = (MortalityCause)(removal.Key / LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier);
+                    int speciesIndex = removal.Key % LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier;
                     insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = removal.Value.TreeSpecies.ID;
                     insertRow.Parameters[2].Value = removalType switch
@@ -117,8 +117,8 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            this.mIncludeHarvestTrees = model.Project.Output.LandscapeRemoved.IncludeHarvest;
-            this.mIncludeDeadTrees = model.Project.Output.LandscapeRemoved.IncludeNatural;
+            this.mIncludeHarvestTrees = model.Project.Output.Annual.LandscapeRemoved.IncludeHarvest;
+            this.mIncludeDeadTrees = model.Project.Output.Annual.LandscapeRemoved.IncludeNatural;
         }
     }
 }

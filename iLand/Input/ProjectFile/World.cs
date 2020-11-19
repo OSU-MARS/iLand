@@ -9,16 +9,16 @@ namespace iLand.Input.ProjectFile
 		public string? EnvironmentFile { get; private set; }
 		public string? EnvironmentGridFile { get; private set; }
 
-		public AreaMask AreaMask { get; init; }
-		public Browsing Browsing { get; init; }
-		public Climate Climate { get; init; }
-		public WorldDebug Debug { get; init; }
-		public DefaultSoil DefaultSoil { get; init; }
-		public WorldGeometry Geometry { get; init; }
-		public Grass Grass { get; init; }
-		public WorldInitialization Initialization { get; init; }
-		public Species Species { get; init; }
-		public StandGrid StandGrid { get; init; }
+		public AreaMask AreaMask { get; private init; }
+		public Browsing Browsing { get; private init; }
+		public Climate Climate { get; private init; }
+		public WorldDebug Debug { get; private init; }
+		public DefaultSoil DefaultSoil { get; private init; }
+		public WorldGeometry Geometry { get; private init; }
+		public Grass Grass { get; private init; }
+		public WorldInitialization Initialization { get; private init; }
+		public Species Species { get; private init; }
+		public StandGrid StandGrid { get; private init; }
 
 		public World()
         {
@@ -41,28 +41,26 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes.");
+				if (String.Equals(reader.Name, "areaMask", StringComparison.Ordinal))
+				{
+					this.AreaMask.ReadXml(reader);
+				}
+				else if (String.Equals(reader.Name, "browsing", StringComparison.Ordinal))
+				{
+					this.Browsing.ReadXml(reader);
+				}
+				else if (String.Equals(reader.Name, "grass", StringComparison.Ordinal))
+				{
+					this.Grass.ReadXml(reader);
+				}
+				else
+				{
+					throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+				}
 			}
-
-			if (String.Equals(reader.Name, "world", StringComparison.Ordinal))
+			else if (String.Equals(reader.Name, "world", StringComparison.Ordinal))
 			{
 				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "environmentGrid", StringComparison.Ordinal))
-			{
-				this.EnvironmentGridFile = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "environmentFile", StringComparison.Ordinal))
-			{
-				this.EnvironmentFile = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "areaMask", StringComparison.Ordinal))
-			{
-				this.AreaMask.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "browsing", StringComparison.Ordinal))
-			{
-				this.Browsing.ReadXml(reader);
 			}
 			else if (String.Equals(reader.Name, "climate", StringComparison.Ordinal))
 			{
@@ -76,13 +74,21 @@ namespace iLand.Input.ProjectFile
 			{
 				this.DefaultSoil.ReadXml(reader);
 			}
+			else if (String.Equals(reader.Name, "dem", StringComparison.Ordinal))
+			{
+				this.DemFile = reader.ReadElementContentAsString().Trim();
+			}
+			else if (String.Equals(reader.Name, "environmentGrid", StringComparison.Ordinal))
+			{
+				this.EnvironmentGridFile = reader.ReadElementContentAsString().Trim();
+			}
+			else if (String.Equals(reader.Name, "environmentFile", StringComparison.Ordinal))
+			{
+				this.EnvironmentFile = reader.ReadElementContentAsString().Trim();
+			}
 			else if (String.Equals(reader.Name, "geometry", StringComparison.Ordinal))
 			{
 				this.Geometry.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "grass", StringComparison.Ordinal))
-			{
-				this.Grass.ReadXml(reader);
 			}
 			else if (String.Equals(reader.Name, "initialization", StringComparison.Ordinal))
 			{
@@ -96,13 +102,9 @@ namespace iLand.Input.ProjectFile
 			{
 				this.StandGrid.ReadXml(reader);
 			}
-			else if (String.Equals(reader.Name, "DEM", StringComparison.Ordinal))
-			{
-				this.DemFile = reader.ReadElementContentAsString().Trim();
-			}
 			else
 			{
-				throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

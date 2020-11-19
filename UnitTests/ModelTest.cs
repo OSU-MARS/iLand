@@ -64,6 +64,7 @@ namespace iLand.Test
                         Assert.IsTrue((ru.Trees.AverageLightRelativeIntensity > 0.0) && (ru.Trees.AverageLightRelativeIntensity <= 1.0));
                         Assert.IsTrue((ru.Trees.PhotosyntheticallyActiveArea > 0.0) && (ru.Trees.PhotosyntheticallyActiveArea <= Constant.RUArea));
                         Assert.IsTrue((ru.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea > 0.0) && (ru.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea <= 1.0));
+                        Assert.IsTrue(ru.Trees.TreeStatisticsByStandID.Count == 0);
                         Assert.IsTrue((ru.Trees.TotalLeafArea > 0.0) && (ru.Trees.TotalLeafArea < 20.0F * Constant.RUArea));
                     }
 
@@ -205,7 +206,7 @@ namespace iLand.Test
 
             List<float> gppByYear = new List<float>();
             List<float> nppByYear = new List<float>();
-            List<float> volumeByYear = new List<float>();
+            List<float> stemVolumeByYear = new List<float>();
             for (int year = 0; year < 28; ++year)
             {
                 plot14.RunYear();
@@ -216,7 +217,7 @@ namespace iLand.Test
                 foreach (ResourceUnitTreeSpecies treeSpecies in plot14.Landscape.ResourceUnits[0].Trees.SpeciesAvailableOnResourceUnit)
                 {
                     gpp += treeSpecies.BiomassGrowth.AnnualGpp;
-                    npp += treeSpecies.Statistics.Npp[^1];
+                    npp += treeSpecies.Statistics.TreeNpp;
                 }
                 gppByYear.Add(gpp);
                 nppByYear.Add(npp);
@@ -229,7 +230,10 @@ namespace iLand.Test
                         volume += treesOfSpecies.GetStemVolume(treeIndex);
                     }
                 }
-                volumeByYear.Add(volume);
+                stemVolumeByYear.Add(volume);
+
+                Assert.IsTrue(plot14.Landscape.ResourceUnits[0].Trees.TreeStatisticsByStandID.Count == 1);
+                Assert.IsTrue(plot14.Landscape.ResourceUnits[0].Trees.TreeStatisticsByStandID.ContainsKey(14));
             }
 
             ModelTest.VerifyMalcolmKnappClimate(plot14);
@@ -263,6 +267,7 @@ namespace iLand.Test
                 397.316F, 404.170F, 414.817F, 421.084F, 433.938F, // 20...24
                 446.297F, 456.167F, 465.235F                      // 25...27
             };
+            ResourceUnitTreeStatisticsWithPreviousYears plotStatistics = (ResourceUnitTreeStatisticsWithPreviousYears)plot14.Landscape.ResourceUnits[0].Trees.TreeStatisticsByStandID[14];
             for (int year = 0; year < nominalVolumeByYear.Count; ++year)
             {
                 float gpp = gppByYear[year];
@@ -271,15 +276,88 @@ namespace iLand.Test
 
                 float npp = nppByYear[year];
                 float nominalNpp = nominalNppByYear[year];
+                float plotNpp = plotStatistics.TreeNppByYear[year];
                 float relativeNppError = MathF.Abs(1.0F - npp / nominalNpp);
 
-                float volume = volumeByYear[year];
+                float stemVolume = stemVolumeByYear[year];
                 float nominalVolume = nominalVolumeByYear[year];
-                float relativeVolumeError = MathF.Abs(1.0F - volume / nominalVolume);
+                float plotVolume = plotStatistics.LiveStemVolumeByYear[year];
+                float relativeVolumeError = MathF.Abs(1.0F - stemVolume / nominalVolume);
 
-                Assert.IsTrue(relativeGppError < 0.02F, "Expected plot 14 to have a GPP of {0:0.000} kg/m² in simulation year {1} but the projected NPP {2:0.000} kg/m², a {3:0.0%} difference.", nominalGpp, year, gpp, relativeGppError);
-                Assert.IsTrue(relativeNppError < 0.02F, "Expected plot 14 to have an NPP of {0:0.000} kg/ha in simulation year {1} but the projected NPP {2:0.000} kg/ha, a {3:0.0%} difference.", nominalNpp, year, npp, relativeNppError);
-                Assert.IsTrue(relativeVolumeError < 0.02F, "Expected plot 14 to carry a standing volume of {0:0.000} m³ in simulation year {1} but the projected volume was {2:0.000} m³, a {3:0.0%} difference.", nominalVolume, year, volume, relativeVolumeError);
+                Assert.IsTrue(relativeGppError < 0.02F, "Expected plot 14 to have a GPP of {0:0.000} kg/m² in simulation year {1} but the projected GPP was {2:0.000} kg/m², a {3:0.0%} difference.", nominalGpp, year, gpp, relativeGppError);
+                Assert.IsTrue(relativeNppError < 0.02F, "Expected plot 14 to have an NPP of {0:0.000} kg/ha in simulation year {1} but the projected NPP was {2:0.000} kg/ha, a {3:0.0%} difference.", nominalNpp, year, npp, relativeNppError);
+                Assert.IsTrue(relativeVolumeError < 0.02F, "Expected plot 14 to carry a standing volume of {0:0.000} m³ in simulation year {1} but the projected volume was {2:0.000} m³, a {3:0.0%} difference.", nominalVolume, year, stemVolume, relativeVolumeError);
+                Assert.IsTrue(npp == plotNpp);
+                Assert.IsTrue(MathF.Abs(stemVolume - plotVolume) < 0.0001F);
+
+                // plot statistics are multiplied by expansion factor obtained from portion of resource unit occupied to obtain per hectare values
+                if (year == 0)
+                {
+                    // sanity checks on initial state
+                    Assert.IsTrue(plotStatistics.AverageDbhByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.AverageHeightByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.BasalAreaByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.LeafAreaIndexByYear[year] >= 1.0F);
+                    Assert.IsTrue(plotStatistics.LiveStemVolumeByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.LiveAndSnagStemVolumeByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.TreeNppAbovegroundByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.TreeNppByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.TreeCountByYear[year] == 221.0F);
+
+                    Assert.IsTrue(plotStatistics.CohortCountByYear[year] == 0);
+                    Assert.IsTrue(plotStatistics.MeanSaplingAgeByYear[year] == 0.0F);
+                    Assert.IsTrue(plotStatistics.SaplingNppByYear[year] == 0.0F);
+
+                    Assert.IsTrue(plotStatistics.BranchCarbonByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.BranchNitrogenByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.CoarseRootCarbonByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.CoarseRootNitrogenByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.FineRootCarbonByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.FineRootNitrogenByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.FoliageCarbonByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.FoliageNitrogenByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.RegenerationCarbonByYear[year] == 0.0F);
+                    Assert.IsTrue(plotStatistics.RegenerationNitrogenByYear[year] == 0.0F);
+                    Assert.IsTrue(plotStatistics.SaplingCountByYear[year] == 0);
+                    Assert.IsTrue(plotStatistics.StemCarbonByYear[year] > 0.0F);
+                    Assert.IsTrue(plotStatistics.StemNitrogenByYear[year] > 0.0F);
+                }
+                else
+                {
+                    // sanity checks on growth
+                    int previousYear = year - 1;
+                    Assert.IsTrue(plotStatistics.AverageDbhByYear[year] > plotStatistics.AverageDbhByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.AverageHeightByYear[year] > plotStatistics.AverageHeightByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.BasalAreaByYear[year] > 0.95F * plotStatistics.BasalAreaByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.LeafAreaIndexByYear[year] > 0.95F * plotStatistics.LeafAreaIndexByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.LiveStemVolumeByYear[year] > 0.95F * plotStatistics.LiveStemVolumeByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.LiveAndSnagStemVolumeByYear[year] >= 0.95F * plotStatistics.LiveAndSnagStemVolumeByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.StemCarbonByYear[year] > 0.99F * plotStatistics.StemCarbonByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.StemNitrogenByYear[year] > 0.99F * plotStatistics.StemNitrogenByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.TreeCountByYear[year] <= plotStatistics.TreeCountByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.TreeNppAbovegroundByYear[year] > 0.75F * plotStatistics.TreeNppAbovegroundByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.TreeNppByYear[year] > 0.75F * plotStatistics.TreeNppByYear[previousYear]);
+
+                    Assert.IsTrue(plotStatistics.MeanSaplingAgeByYear[year] == 0.0F); // regeneration not enabled
+                    Assert.IsTrue(plotStatistics.RegenerationCarbonByYear[year] == 0.0F);
+                    Assert.IsTrue(plotStatistics.RegenerationNitrogenByYear[year] == 0.0F);
+                    Assert.IsTrue(plotStatistics.SaplingNppByYear[year] == 0.0F); // regeneration not enabled
+                    Assert.IsTrue(plotStatistics.SaplingCountByYear[year] == 0);
+
+                    Assert.IsTrue(plotStatistics.BranchCarbonByYear[year] > 0.95F * plotStatistics.BranchCarbonByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.BranchNitrogenByYear[year] > 0.95F * plotStatistics.BranchNitrogenByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.CoarseRootCarbonByYear[year] > 0.95F * plotStatistics.CoarseRootCarbonByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.CoarseRootNitrogenByYear[year] > 0.95F * plotStatistics.CoarseRootNitrogenByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.CohortCountByYear[year] == 0); // no saplings at initialization and regeneration not enabled
+                    Assert.IsTrue(plotStatistics.FineRootCarbonByYear[year] > 0.95F * plotStatistics.FineRootCarbonByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.FineRootNitrogenByYear[year] > 0.95F * plotStatistics.FineRootNitrogenByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.FoliageCarbonByYear[year] > 0.95F * plotStatistics.FoliageCarbonByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.FoliageNitrogenByYear[year] > 0.95F * plotStatistics.FoliageNitrogenByYear[previousYear]);
+
+                    // sanity checks on ranges
+                    Assert.IsTrue(plotStatistics.LiveStemVolumeByYear[year] >= plotStatistics.LiveAndSnagStemVolumeByYear[year]);
+                    Assert.IsTrue((plotStatistics.LeafAreaIndexByYear[year] > 1.0F) && (plotStatistics.LeafAreaIndexByYear[year] < 20.0F));
+                }
             }
         }
 
@@ -479,7 +557,7 @@ namespace iLand.Test
             Assert.IsTrue(model.Project.Model.Ecosystem.LaiThresholdForClosedStands == 3.0F);
             Assert.IsTrue(model.Project.Model.Ecosystem.LightExtinctionCoefficient == 0.6F);
             Assert.IsTrue(model.Project.Model.Ecosystem.LightExtinctionCoefficientOpacity == 0.6F);
-            Assert.IsTrue(model.Project.Model.Ecosystem.TemperatureTau == 6.0F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.TemperatureAveragingTau == 6.0F);
             Assert.IsTrue(model.Project.Model.Settings.RegenerationEnabled == false);
             Assert.IsTrue(model.Project.Model.Settings.MortalityEnabled == true);
             Assert.IsTrue(model.Project.Model.Settings.GrowthEnabled == true);

@@ -59,7 +59,7 @@ namespace iLand.Output
         }
         @endcode
         */
-    public abstract class Output
+    public abstract class AnnualOutput
     {
         private string? insertRowSqlText;
 
@@ -69,7 +69,7 @@ namespace iLand.Output
         public string? Description { get; protected set; } // description of output
         public string? TableName { get; protected set; } // internal output name (no spaces allowed)
 
-        public Output()
+        public AnnualOutput()
         {
             this.insertRowSqlText = null;
 

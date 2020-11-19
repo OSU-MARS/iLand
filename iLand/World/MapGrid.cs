@@ -24,7 +24,7 @@ namespace iLand.World
         private readonly Dictionary<int, List<MutableTuple<ResourceUnit, float>>> mResourceUnitsByStandID; // holds a list of resource units + areas per map-id
         private readonly Dictionary<int, List<int>> mNeighborListByStandID; // a list of neighboring polygons; for each ID all neighboring IDs are stored.
 
-        public Grid<int> Grid { get; init; }
+        public Grid<int> Grid { get; private init; }
         // file name of the grid
         public string? Name { get; private set; }
 

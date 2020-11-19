@@ -25,7 +25,7 @@ namespace iLand.Tree
 
         public float EvaporationFromCanopy { get; private set; } // evaporation from canopy (mm)
         public float Interception { get; private set; } // mm water that is intercepted by the crown
-        public float[] ReferenceEvapotranspirationByMonth { get; init; } // monthly reference ET (see Adair et al 2008)
+        public float[] ReferenceEvapotranspirationByMonth { get; private init; } // monthly reference ET (see Adair et al 2008)
 
         public Canopy(float airDensity)
         {
@@ -120,7 +120,7 @@ namespace iLand.Tree
             float gC = this.maxCanopyConductance * combinedResponse;
             float defTerm = this.mAirDensity * latentHeatOfVaporization * (vpdInMillibar * vpdToSaturationDeficit) * boundaryLayerConductance;
 
-            //  with temperature-dependent  slope of  vapor pressure saturation curve
+            // with temperature-dependent slope of vapor pressure saturation curve
             // (following  Allen et al. (1998),  http://www.fao.org/docrep/x0490e/x0490e07.htm#atmospheric%20parameters)
             // svp_slope in mbar.
             //float svp_slope = 4098. * (6.1078 * exp(17.269 * temperature / (temperature + 237.3))) / ((237.3+temperature)*(237.3+temperature));

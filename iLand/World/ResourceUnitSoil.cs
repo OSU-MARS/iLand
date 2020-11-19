@@ -11,8 +11,8 @@ namespace iLand.World
         */
     public class ResourceUnitSoil
     {
-        public SoilParameters Parameters { get; init; }
-        public ResourceUnit RU { get; init; } // link to containing resource unit
+        public SoilParameters Parameters { get; private init; }
+        public ResourceUnit RU { get; private init; } // link to containing resource unit
 
         public float ClimateDecompositionFactor { get; set; } // set the climate decomposition factor for the current year
         public CarbonNitrogenTuple FluxToAtmosphere { get; private set; } // total flux due to heterotrophic respiration kg/ha
@@ -30,7 +30,7 @@ namespace iLand.World
 
             // see Xenakis 2008 for parameter definitions
             // Xenakis G, Raya D, Maurizio M. 2008. Sensitivity and uncertainty analysis from a coupled 3-PG and soil organic matter 
-            // decomposition model. Ecological Modelling 219(1–2):1-16. https://doi.org/10.1016/j.ecolmodel.2008.07.020
+            //   decomposition model. Ecological Modelling 219(1–2):1-16. https://doi.org/10.1016/j.ecolmodel.2008.07.020
             this.Parameters = new SoilParameters()
             {
                 AnnualNitrogenDeposition = environmentReader.AnnualNitrogenDeposition,
@@ -40,7 +40,7 @@ namespace iLand.World
                 Ko = environmentReader.CurrentSoilOrganicDecompositionRate,
                 Kyl = environmentReader.CurrentSoilYoungLabileDecompositionRate,
                 Kyr = environmentReader.CurrentSoilYoungRefractoryDecompositionRate,
-                Leaching = environmentReader.SoilLeaching,
+                Leaching = environmentReader.CurrentSoilLeaching,
                 Qb = environmentReader.SoilQb,
                 Qh = environmentReader.CurrentSoilQh,
                 UseDynamicAvailableNitrogen = environmentReader.UseDynamicAvailableNitrogen

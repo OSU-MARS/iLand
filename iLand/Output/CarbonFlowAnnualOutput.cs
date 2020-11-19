@@ -6,12 +6,12 @@ using System.Diagnostics;
 
 namespace iLand.Output
 {
-    public class CarbonFlowOutput : Output
+    public class CarbonFlowAnnualOutput : AnnualOutput
     {
         private readonly Expression mYearFilter; // condition for landscape-level output
         private readonly Expression mResourceUnitFilter; // condition for resource-unit-level output
 
-        public CarbonFlowOutput()
+        public CarbonFlowAnnualOutput()
         {
             this.mYearFilter = new Expression();
             this.mResourceUnitFilter = new Expression();
@@ -51,8 +51,8 @@ namespace iLand.Output
         public override void Setup(Model model)
         {
             // use a condition for to control execution for the current year
-            this.mYearFilter.SetExpression(model.Project.Output.Carbon.Condition);
-            this.mResourceUnitFilter.SetExpression(model.Project.Output.Carbon.ConditionRU);
+            this.mYearFilter.SetExpression(model.Project.Output.Annual.Carbon.Condition);
+            this.mResourceUnitFilter.SetExpression(model.Project.Output.Annual.Carbon.ConditionRU);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
@@ -85,8 +85,8 @@ namespace iLand.Output
                 }
 
                 float areaFactor = ru.AreaInLandscape / Constant.RUArea; //conversion factor
-                float npp = ru.Trees.StatisticsForAllSpeciesAndStands.Npp[^1] * Constant.BiomassCFraction; // kg C/ha
-                npp += ru.Trees.StatisticsForAllSpeciesAndStands.NppSaplings[^1] * Constant.BiomassCFraction; // kgC/ha
+                float npp = ru.Trees.StatisticsForAllSpeciesAndStands.TreeNpp * Constant.BiomassCFraction; // kg C/ha
+                npp += ru.Trees.StatisticsForAllSpeciesAndStands.SaplingNpp * Constant.BiomassCFraction; // kgC/ha
                 
                 // Snag pools are not scaled per ha (but refer to the stockable RU), soil pools and biomass statistics (NPP, ...) 
                 // are scaled.

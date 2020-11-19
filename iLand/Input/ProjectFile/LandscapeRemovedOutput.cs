@@ -9,6 +9,7 @@ namespace iLand.Input.ProjectFile
 		public bool IncludeNatural { get; private set; }
 
 		public LandscapeRemovedOutput()
+            : base("landscapeRemoved")
         {
             this.IncludeHarvest = true;
             this.IncludeNatural = false;
@@ -18,16 +19,7 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes.");
-            }
-
-            if (String.Equals(reader.Name, "landscapeRemoved", StringComparison.Ordinal))
-            {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
-            {
-                this.Enabled = reader.ReadElementContentAsBoolean();
+                this.ReadEnabled(reader);
             }
             else if (String.Equals(reader.Name, "includeHarvest", StringComparison.Ordinal))
             {
@@ -39,7 +31,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

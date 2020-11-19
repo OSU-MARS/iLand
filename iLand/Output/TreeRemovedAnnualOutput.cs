@@ -7,12 +7,12 @@ using System.Collections.Generic;
 
 namespace iLand.Output
 {
-    public class TreeRemovedOutput : Output
+    public class TreeRemovedAnnualOutput : AnnualOutput
     {
         private readonly Expression treeFilter;
         private readonly Dictionary<ResourceUnit, MutableTuple<Trees, List<MortalityCause>>> removedTreesByResourceUnit;
 
-        public TreeRemovedOutput()
+        public TreeRemovedAnnualOutput()
         {
             this.treeFilter = new Expression();
             this.removedTreesByResourceUnit = new Dictionary<ResourceUnit, MutableTuple<Trees, List<MortalityCause>>>();
@@ -110,7 +110,7 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            this.treeFilter.SetExpression(model.Project.Output.TreeRemoved.Filter);
+            this.treeFilter.SetExpression(model.Project.Output.Annual.TreeRemoved.Filter);
         }
     }
 }

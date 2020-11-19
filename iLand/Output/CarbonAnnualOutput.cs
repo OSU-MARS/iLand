@@ -3,16 +3,17 @@ using iLand.Tools;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
+using System;
 using System.Diagnostics;
 
 namespace iLand.Output
 {
-    public class CarbonOutput : Output
+    public class CarbonAnnualOutput : AnnualOutput
     {
         private readonly Expression mYearFilter; // condition for landscape-level output
         private readonly Expression mResourceUnitFilter; // condition for resource-unit-level output
 
-        public CarbonOutput()
+        public CarbonAnnualOutput()
         {
             this.mYearFilter = new Expression();
             this.mResourceUnitFilter = new Expression();
@@ -58,8 +59,8 @@ namespace iLand.Output
         public override void Setup(Model model)
         {
             // use a condition for to control execuation for the current year
-            this.mYearFilter.SetExpression(model.Project.Output.Carbon.Condition);
-            this.mResourceUnitFilter.SetExpression(model.Project.Output.Carbon.ConditionRU);
+            this.mYearFilter.SetExpression(model.Project.Output.Annual.Carbon.Condition);
+            this.mResourceUnitFilter.SetExpression(model.Project.Output.Annual.Carbon.ConditionRU);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
@@ -87,6 +88,11 @@ namespace iLand.Output
                 Debug.Assert(ru.Snags != null, "Resource unit has null soil when its snags are non-null.");
                 
                 ResourceUnitTreeStatistics ruStatistics = ru.Trees.StatisticsForAllSpeciesAndStands;
+                if (ruStatistics.IsPerHectare == false)
+                {
+                    throw new NotSupportedException("Attempt to log statistics which are not per hectare.");
+                }
+
                 float areaFactor = ru.AreaInLandscape / Constant.RUArea; // conversion factor from real area to per ha values
                 if (isRUlevel)
                 {
@@ -95,20 +101,20 @@ namespace iLand.Output
                     insertRow.Parameters[2].Value = ru.EnvironmentID;
                     insertRow.Parameters[3].Value = areaFactor;
                     // biomass from trees (scaled to 1ha already)
-                    insertRow.Parameters[4].Value = ruStatistics.StemC[^1];
-                    insertRow.Parameters[5].Value = ruStatistics.StemN[^1];
-                    insertRow.Parameters[6].Value = ruStatistics.BranchC[^1];
-                    insertRow.Parameters[7].Value = ruStatistics.BranchN[^1];
-                    insertRow.Parameters[8].Value = ruStatistics.FoliageC[^1];
-                    insertRow.Parameters[9].Value = ruStatistics.FoliageN[^1];
-                    insertRow.Parameters[10].Value = ruStatistics.CoarseRootC[^1];
-                    insertRow.Parameters[11].Value = ruStatistics.CoarseRootN[^1];
-                    insertRow.Parameters[12].Value = ruStatistics.FineRootC[^1];
-                    insertRow.Parameters[13].Value = ruStatistics.FineRootN[^1];
+                    insertRow.Parameters[4].Value = ruStatistics.StemCarbon;
+                    insertRow.Parameters[5].Value = ruStatistics.StemNitrogen;
+                    insertRow.Parameters[6].Value = ruStatistics.BranchCarbon;
+                    insertRow.Parameters[7].Value = ruStatistics.BranchNitrogen;
+                    insertRow.Parameters[8].Value = ruStatistics.FoliageCarbon;
+                    insertRow.Parameters[9].Value = ruStatistics.FoliageNitrogen;
+                    insertRow.Parameters[10].Value = ruStatistics.CoarseRootCarbon;
+                    insertRow.Parameters[11].Value = ruStatistics.CoarseRootNitrogen;
+                    insertRow.Parameters[12].Value = ruStatistics.FineRootCarbon;
+                    insertRow.Parameters[13].Value = ruStatistics.FineRootNitrogen;
 
                     // biomass from regeneration
-                    insertRow.Parameters[14].Value = ruStatistics.RegenerationC[^1];
-                    insertRow.Parameters[15].Value = ruStatistics.RegenerationN[^1];
+                    insertRow.Parameters[14].Value = ruStatistics.RegenerationCarbon;
+                    insertRow.Parameters[15].Value = ruStatistics.RegenerationNitrogen;
 
                     // biomass from standing dead woods
                     if (ru.Snags.TotalStanding == null) // expected in year 0
@@ -146,19 +152,19 @@ namespace iLand.Output
                 // landscape level statistics
                 accumulatedValues[0] += areaFactor;
                 // carbon pools aboveground are in kg/resource unit, e.g., the sum of stem-carbon of all trees, so no scaling required
-                accumulatedValues[1] += ruStatistics.StemC[^1] * areaFactor;
-                accumulatedValues[2] += ruStatistics.StemN[^1] * areaFactor;
-                accumulatedValues[3] += ruStatistics.BranchC[^1] * areaFactor;
-                accumulatedValues[4] += ruStatistics.BranchN[^1] * areaFactor;
-                accumulatedValues[5] += ruStatistics.FoliageC[^1] * areaFactor;
-                accumulatedValues[6] += ruStatistics.FoliageN[^1] * areaFactor;
-                accumulatedValues[7] += ruStatistics.CoarseRootC[^1] * areaFactor;
-                accumulatedValues[8] += ruStatistics.CoarseRootN[^1] * areaFactor;
-                accumulatedValues[9] += ruStatistics.FineRootC[^1] * areaFactor;
-                accumulatedValues[10] += ruStatistics.FineRootN[^1] * areaFactor;
+                accumulatedValues[1] += ruStatistics.StemCarbon * areaFactor;
+                accumulatedValues[2] += ruStatistics.StemNitrogen * areaFactor;
+                accumulatedValues[3] += ruStatistics.BranchCarbon * areaFactor;
+                accumulatedValues[4] += ruStatistics.BranchNitrogen * areaFactor;
+                accumulatedValues[5] += ruStatistics.FoliageCarbon * areaFactor;
+                accumulatedValues[6] += ruStatistics.FoliageNitrogen * areaFactor;
+                accumulatedValues[7] += ruStatistics.CoarseRootCarbon * areaFactor;
+                accumulatedValues[8] += ruStatistics.CoarseRootNitrogen * areaFactor;
+                accumulatedValues[9] += ruStatistics.FineRootCarbon * areaFactor;
+                accumulatedValues[10] += ruStatistics.FineRootNitrogen * areaFactor;
                 // regen
-                accumulatedValues[11] += ruStatistics.RegenerationC[^1];
-                accumulatedValues[12] += ruStatistics.RegenerationN[^1];
+                accumulatedValues[11] += ruStatistics.RegenerationCarbon;
+                accumulatedValues[12] += ruStatistics.RegenerationNitrogen;
                 // standing dead wood
                 if (ru.Snags.TotalStanding != null)
                 {

@@ -5,36 +5,49 @@ namespace iLand.Input.ProjectFile
 {
     public class Enablable : XmlSerializable
     {
+        private readonly string elementName;
+
         public bool Enabled { get; protected set; }
 
-        public Enablable()
+        public Enablable(string elementName)
         {
+            this.elementName = elementName;
+
             this.Enabled = false;
+        }
+
+        protected void ReadEnabled(XmlReader reader)
+        {
+            if (String.Equals(reader.Name, elementName, StringComparison.Ordinal))
+            {
+                if (reader.AttributeCount != 1)
+                {
+                    throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+                }
+
+                string? enabledAsString = reader.GetAttribute("enabled");
+                if (String.IsNullOrWhiteSpace(enabledAsString))
+                {
+                    throw new XmlException("enabled attribute of " + reader.Name + " is empty.");
+                }
+                this.Enabled = Boolean.Parse(enabledAsString);
+                reader.ReadStartElement();
+            }
+            else
+            {
+                throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+            }
         }
 
         protected override void ReadStartElement(XmlReader reader)
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes.");
-            }
-
-            if (String.Equals(reader.Name, "productionMonth", StringComparison.Ordinal) ||
-                String.Equals(reader.Name, "management", StringComparison.Ordinal) ||
-                String.Equals(reader.Name, "barkbeetle", StringComparison.Ordinal) ||
-                String.Equals(reader.Name, "wind", StringComparison.Ordinal) ||
-                String.Equals(reader.Name, "fire", StringComparison.Ordinal) ||
-                String.Equals(reader.Name, "standDead", StringComparison.Ordinal))
-            {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "enabled", StringComparison.Ordinal))
-            {
-                this.Enabled = reader.ReadElementContentAsBoolean();
+                this.ReadEnabled(reader);
             }
             else
             {
-                throw new XmlException("Encountered unknown element '" + reader.Name + "'.");
+                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

@@ -5,11 +5,11 @@ using Microsoft.Data.Sqlite;
 
 namespace iLand.Output
 {
-    public class TreeOutput : Output
+    public class TreesAnnualOutput : AnnualOutput
     {
         private readonly Expression mTreeFilter;
 
-        public TreeOutput()
+        public TreesAnnualOutput()
         {
             this.mTreeFilter = new Expression();
 
@@ -42,7 +42,7 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            this.mTreeFilter.SetExpression(model.Project.Output.Tree.Filter);
+            this.mTreeFilter.SetExpression(model.Project.Output.Annual.Tree.Filter);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

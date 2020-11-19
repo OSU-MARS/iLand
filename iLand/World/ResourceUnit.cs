@@ -25,16 +25,16 @@ namespace iLand.World
         public float AreaInLandscape { get; set; } // total stockable area in m2 at height grid (10 m) resolution
         public float AreaWithTrees { get; private set; } // get the stocked area in m2 at height grid (10 m) resolution
         public RectangleF BoundingBox { get; set; }
-        public ResourceUnitCarbonFluxes CarbonCycle { get; init; }
+        public ResourceUnitCarbonFluxes CarbonCycle { get; private init; }
         public Climate Climate { get; set; } // link to the climate on this resource unit
         public Point TopLeftLightPosition { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
         public int EnvironmentID { get; set; }
-        public int ResourceUnitGridIndex { get; init; }
+        public int ResourceUnitGridIndex { get; private init; }
         public Snags? Snags { get; private set; } // access the snag object
         public ResourceUnitSoil? Soil { get; private set; } // access the soil model
         public SaplingCell[]? SaplingCells { get; private set; } // access the array of sapling-cells
-        public ResourceUnitTrees Trees { get; init; }
-        public WaterCycle WaterCycle { get; init; } // water model of the unit
+        public ResourceUnitTrees Trees { get; private init; }
+        public WaterCycle WaterCycle { get; private init; } // water model of the unit
 
         public ResourceUnit(Project projectFile, Climate climate, TreeSpeciesSet speciesSet, int ruGridIndex)
         {
@@ -50,7 +50,7 @@ namespace iLand.World
             this.SaplingCells = null;
             this.Snags = null;
             this.Soil = null;
-            this.Trees = new ResourceUnitTrees(this, speciesSet);
+            this.Trees = new ResourceUnitTrees(projectFile, this, speciesSet);
             this.WaterCycle = new WaterCycle(projectFile, this);
         }
 
@@ -482,7 +482,8 @@ namespace iLand.World
                     treesOfSpecies.Species = species;
                     treesOfSpecies.SetAge(treeIndex, sapling.Age, sapling.Height);
                     treesOfSpecies.Setup(model.Project, treeIndex);
-                    ruSpecies.Statistics.AddToCurrentYear(treesOfSpecies, treeIndex, null); // count the newly created trees already in the stats
+                    Debug.Assert(treesOfSpecies.IsDead(treeIndex) == false);
+                    ruSpecies.Statistics.AddToCurrentYear(treesOfSpecies, treeIndex, null, skipDead: true); // count the newly created trees already in the stats
                 }
                 // clear all regeneration from this pixel (including this tree)
                 sapling.Clear(); // clear this tree (no carbon flow to the ground)
@@ -558,7 +559,7 @@ namespace iLand.World
         {
             if (this.Trees.TotalLightWeightedLeafArea == 0.0 || this.heightCellsOnLandscape == 0)
             {
-                // clear statistics of resourceunitspecies
+                // clear statistics of resource unit species
                 for (int species = 0; species < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++species)
                 {
                     this.Trees.SpeciesAvailableOnResourceUnit[species].Statistics.Zero();
@@ -637,7 +638,7 @@ namespace iLand.World
                 // note: LAIFactors are only 1 if sum of LAI is > 1.0 (see WaterCycle)
                 for (int ruSpeciesIndex = 0; ruSpeciesIndex < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++ruSpeciesIndex)
                 {
-                    float speciesLeafAreaFraction = this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex].Statistics.LeafAreaIndex[^2] / allSpeciesLeafAreaIndex; // use previous year's LAI as this year's hasn't yet been computed
+                    float speciesLeafAreaFraction = this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex].Statistics.LeafAreaIndex / allSpeciesLeafAreaIndex; // use previous year's LAI as this year's hasn't yet been computed
                     if (speciesLeafAreaFraction > 1.000001F) // allow numerical error
                     {
                         ResourceUnitTreeSpecies ruSpecies = this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex];
@@ -678,8 +679,8 @@ namespace iLand.World
             {
                 Debug.Assert(this.Snags != null);
 
-                this.CarbonCycle.Npp = this.Trees.StatisticsForAllSpeciesAndStands.Npp[^1] * Constant.BiomassCFraction;
-                this.CarbonCycle.Npp += this.Trees.StatisticsForAllSpeciesAndStands.NppSaplings[^1] * Constant.BiomassCFraction;
+                this.CarbonCycle.Npp = this.Trees.StatisticsForAllSpeciesAndStands.TreeNpp * Constant.BiomassCFraction;
+                this.CarbonCycle.Npp += this.Trees.StatisticsForAllSpeciesAndStands.SaplingNpp * Constant.BiomassCFraction;
 
                 float area_factor = this.AreaInLandscape / Constant.RUArea; //conversion factor
                 float to_atm = this.Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha
