@@ -244,7 +244,8 @@ namespace iLand.Tree
             {
                 throw new SqliteException("Error loading " + species.ID + ": at least one biomass parameter is zero, negative, or improbably high.", (int)SqliteErrorCode.Error);
             }
-            // Aging
+
+            // aAging
             species.mMaximumAge = reader.MaximumAge();
             species.mMaximumHeight = reader.MaximumHeight();
             species.mAging.SetAndParse(reader.Aging());

@@ -27,6 +27,11 @@ namespace iLand
         public const float QuarterPi = 0.25F * MathF.PI;
         public const float Sqrt2 = 1.4142135623731F;
 
+        public static class Database
+        {
+            public const string DefaultSpeciesTable = "species";
+        }
+
         public static class Sapling
         {
             public const int HeightClasses = 41;

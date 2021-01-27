@@ -6,7 +6,7 @@
       <home></home>
       <database>database</database>
       <init>init</init>
-      <lip>lip</lip>
+      <lip>lip-europe</lip>
       <output>..\..\TestResults</output>
       <script>scripts</script>
       <temp>temp</temp>

@@ -29,7 +29,7 @@ namespace iLand.Tree
             public LightStamp Stamp { get; set; }
         }
 
-        private string? mFileName;
+        private string? mFilePath;
         private readonly Grid<LightStamp?> lightStampsByDbhAndHDRatio;
         private readonly List<LightStampWithTreeSize> lightStampsWithTreeSizes;
 
@@ -346,14 +346,14 @@ namespace iLand.Tree
         }
 
         /// convenience function that loads stamps directly from a single file.
-        public void Load(string fileName)
+        public void Load(string filePath)
         {
-            FileInfo stampFile = new FileInfo(fileName);
+            FileInfo stampFile = new FileInfo(filePath);
             if (!stampFile.Exists)
             {
-                throw new FileNotFoundException(String.Format("The LIP stampfile {0} cannot be found!", fileName));
+                throw new FileNotFoundException(String.Format("The LIP stampfile {0} cannot be found!", filePath));
             }
-            mFileName = fileName;
+            this.mFilePath = filePath;
 
             using FileStream stampStream = stampFile.OpenRead();
             using StampReaderBigEndian stampReader = new StampReaderBigEndian(stampStream);
@@ -393,9 +393,9 @@ namespace iLand.Tree
                 float dbh = stampReader.ReadSingle();
                 float hdRatio = stampReader.ReadSingle();
                 float crownRadius = stampReader.ReadSingle();
-                Debug.Assert((dbh >= 0.0F) && (dbh < 200.0F)); // cm
-                Debug.Assert((hdRatio >= 0.0F) && (hdRatio < 200.0F)); // ratio
-                Debug.Assert((crownRadius >= 0.0F) && (crownRadius < 50.0F)); // m
+                Debug.Assert((dbh >= 0.0F) && (dbh < 225.0F), filePath + ": DBH"); // cm, maximum set by Pacific Northwest Douglas-fir
+                Debug.Assert((hdRatio >= 0.0F) && (hdRatio < 200.0F), filePath + ": height-diameter ratio"); // ratio
+                Debug.Assert((crownRadius >= 0.0F) && (crownRadius < 50.0F), filePath + ": crown radius"); // m
                 //Debug.WriteLine("stamp bhd hdvalue type readsum dominance type" + bhd + hdvalue + type + readsum + domvalue + type;
 
                 LightStamp stamp = new LightStamp(type);
@@ -448,7 +448,7 @@ namespace iLand.Tree
 
         public string Dump()
         {
-            StringBuilder stampString = new StringBuilder(String.Format("****** Dump of StampContainer {0} **********", this.mFileName));
+            StringBuilder stampString = new StringBuilder(String.Format("****** Dump of StampContainer {0} **********", this.mFilePath));
             foreach (LightStampWithTreeSize stamp in this.lightStampsWithTreeSizes)
             {
                 stampString.AppendFormat("Stamp size: {0} offset: {1} dbh: {2} hd-ratio: {3}", Math.Sqrt((double)stamp.Stamp.Count()), stamp.Stamp.CenterCellPosition, stamp.Dbh, stamp.HDratio);

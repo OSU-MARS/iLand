@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <system>
+    <paths>
+      <lip>lip-pnw</lip>
+    </paths>
+  </system>
+  <world>
+    <species>
+      <databaseFile>species_param_pnw.sqlite</databaseFile>
+      <co2response>
+        <p0>1</p0>
+        <baseConcentration>380</baseConcentration>
+        <compensationPoint>80</compensationPoint>
+        <beta0>0.3</beta0>
+      </co2response>
+      <lightResponse>
+        <shadeIntolerant>1-exp(-5.5*(lri-0.05))</shadeIntolerant>
+        <shadeTolerant>min(10*lri,max(0.1613*lri+0.7871,lri))</shadeTolerant>
+        <relativeHeightLriModifier>exp(ln(lri)/0.6*(1-0.4*relH))</relativeHeightLriModifier>
+      </lightResponse>
+      <nitrogenResponseClasses>
+        <class1k>-0.045</class1k>
+        <class1minimum>10</class1minimum>
+        <class2k>-0.055</class2k>
+        <class2minimum>25</class2minimum>
+        <class3k>-0.065</class3k>
+        <class3minimum>40</class3minimum>
+      </nitrogenResponseClasses>
+    </species>
+  </world>
+</project>

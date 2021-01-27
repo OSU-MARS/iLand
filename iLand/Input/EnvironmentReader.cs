@@ -172,26 +172,26 @@ namespace iLand.Input
             if ((speciesTableNameIndex = columnNames.IndexOf(Constant.Setting.SpeciesTable)) > -1)
             {
                 //using DebugTimer t = model.DebugTimers.Create("Environment.LoadFromString(species)");
-                List<string> uniqueSpeciesSetNames = resourceUnitEnvironmentFile.GetColumnValues(speciesTableNameIndex).Distinct().ToList();
+                List<string> uniqueSpeciesTableNames = resourceUnitEnvironmentFile.GetColumnValues(speciesTableNameIndex).Distinct().ToList();
                 //Debug.WriteLine("Environment: Creating " + uniqueSpeciesSetNames + " species sets.");
-                foreach (string setName in uniqueSpeciesSetNames)
+                foreach (string tableName in uniqueSpeciesTableNames)
                 {
                     //model.GlobalSettings.Settings.SetParameter(Constant.Setting.SpeciesTable, name); // set xml value
                     // create species sets
-                    TreeSpeciesSet speciesSet = new TreeSpeciesSet(setName);
+                    TreeSpeciesSet speciesSet = new TreeSpeciesSet(tableName);
                     speciesSet.Setup(projectFile);
 
                     if (this.CurrentSpeciesSet == null)
                     {
                         this.CurrentSpeciesSet = speciesSet;
                     }
-                    this.SpeciesSetsByTableName.Add(setName, speciesSet);
+                    this.SpeciesSetsByTableName.Add(tableName, speciesSet);
                 }
             }
             else
             {
                 // no species sets specified
-                TreeSpeciesSet defaultSpeciesSet = new TreeSpeciesSet("species");
+                TreeSpeciesSet defaultSpeciesSet = new TreeSpeciesSet(Constant.Database.DefaultSpeciesTable);
                 defaultSpeciesSet.Setup(projectFile);
                 this.CurrentSpeciesSet = defaultSpeciesSet;
                 this.SpeciesSetsByTableName.Add(defaultSpeciesSet.SqlTableName, defaultSpeciesSet);

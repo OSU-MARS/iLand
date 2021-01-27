@@ -1,9 +1,14 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input;
+using iLand.Input.ProjectFile;
 using iLand.Tree;
 using iLand.World;
+using Microsoft.Data.Sqlite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using Climate = iLand.World.Climate;
+using Model = iLand.Simulation.Model;
 
 namespace iLand.Test
 {
@@ -242,31 +247,32 @@ namespace iLand.Test
 
             List<float> nominalGppByYear = new List<float>()
             {
-                12.088F, 12.704F, 14.728F, 13.042F, 14.137F, // 0...4
-                12.213F, 13.230F, 14.942F, 13.980F, 13.482F, // 5...9
-                14.701F, 12.654F, 12.992F, 12.971F, 13.054F, // 10...14
-                13.479F, 13.384F, 12.628F, 11.413F, 13.063F, // 15...19
-                13.830F, 11.426F, 13.380F, 12.314F, 14.363F, // 20...24
-                13.567F, 12.582F, 13.153F                    // 25...27
+                12.240F, 12.794F, 14.665F, 12.996F, 14.101F, // 0...4
+                11.844F, 13.174F, 14.702F, 13.839F, 12.772F, // 5...9
+                14.147F, 11.693F, 12.328F, 12.094F, 13.013F, // 10...14
+                13.080F, 12.770F, 11.509F,  9.254F, 10.880F, // 15...19
+                12.756F,  9.754F, 13.145F, 11.282F, 14.278F, // 20...24
+                13.172F, 12.541F, 13.094F                    // 25...27
             };
             List<float> nominalNppByYear = new List<float>()
             {
-                14793.009F, 15600.609F, 18059.067F, 15911.426F, 17124.919F, // 0...4
-                14653.807F, 15758.883F, 17664.319F, 16369.269F, 15572.519F, // 5...9
-                16836.781F, 14400.212F, 14684.704F, 14532.705F, 14449.115F, // 10...14
-                14835.988F, 14600.618F, 13617.208F, 12186.767F, 13798.192F, // 15...19
-                14573.193F, 11968.184F, 13903.084F, 12706.724F, 14668.152F, // 20...24
-                13717.823F, 12599.708F, 13039.824F                          // 25...27
+                15764.021F, 16742.770F, 19395.607F, 17333.035F, 18888.552F, // 0...4
+                15920.201F, 17736.863F, 19826.050F, 18687.125F, 17258.761F, // 5...9
+                19123.072F, 15808.806F, 16665.195F, 16344.984F, 17579.642F, // 10...14
+                17662.183F, 17233.628F, 15520.372F, 12467.263F, 14650.895F, // 15...19
+                17162.412F, 13104.591F, 17650.404F, 15123.036F, 19111.804F, // 20...24
+                17602.904F, 16732.328F, 17440.533F                          // 25...27
             };
             List<float> nominalVolumeByYear = new List<float>()
             {
-                143.076F, 157.751F, 175.994F, 190.599F, 207.294F, // 0...4
-                216.857F, 229.379F, 248.292F, 263.868F, 277.212F, // 5...9
-                290.818F, 302.361F, 310.121F, 321.509F, 332.719F, // 10...14
-                345.902F, 356.460F, 368.301F, 373.557F, 383.531F, // 15...19
-                397.316F, 404.170F, 414.817F, 421.084F, 433.938F, // 20...24
-                446.297F, 456.167F, 465.235F                      // 25...27
+                122.155F, 137.857F, 157.567F, 173.757F, 192.479F, // 0...4
+                206.206F, 223.124F, 243.391F, 261.805F, 277.746F, // 5...9
+                296.864F, 310.332F, 324.610F, 338.826F, 354.700F, // 10...14
+                371.545F, 387.718F, 401.099F, 408.646F, 420.784F, // 15...19
+                437.235F, 446.261F, 463.997F, 475.264F, 492.470F, // 20...24
+                508.142F, 523.903F, 541.203F                      // 25...27
             };
+
             ResourceUnitTreeStatisticsWithPreviousYears plotStatistics = (ResourceUnitTreeStatisticsWithPreviousYears)plot14.Landscape.ResourceUnits[0].Trees.TreeStatisticsByStandID[14];
             for (int year = 0; year < nominalVolumeByYear.Count; ++year)
             {
@@ -302,7 +308,7 @@ namespace iLand.Test
                     Assert.IsTrue(plotStatistics.LiveAndSnagStemVolumeByYear[year] > 0.0F);
                     Assert.IsTrue(plotStatistics.TreeNppAbovegroundByYear[year] > 0.0F);
                     Assert.IsTrue(plotStatistics.TreeNppByYear[year] > 0.0F);
-                    Assert.IsTrue(plotStatistics.TreeCountByYear[year] == 221.0F);
+                    Assert.IsTrue(plotStatistics.TreeCountByYear[year] == 222.0F);
 
                     Assert.IsTrue(plotStatistics.CohortCountByYear[year] == 0);
                     Assert.IsTrue(plotStatistics.MeanSaplingAgeByYear[year] == 0.0F);
@@ -335,7 +341,7 @@ namespace iLand.Test
                     Assert.IsTrue(plotStatistics.StemCarbonByYear[year] > 0.99F * plotStatistics.StemCarbonByYear[previousYear]);
                     Assert.IsTrue(plotStatistics.StemNitrogenByYear[year] > 0.99F * plotStatistics.StemNitrogenByYear[previousYear]);
                     Assert.IsTrue(plotStatistics.TreeCountByYear[year] <= plotStatistics.TreeCountByYear[previousYear]);
-                    Assert.IsTrue(plotStatistics.TreeNppAbovegroundByYear[year] > 0.75F * plotStatistics.TreeNppAbovegroundByYear[previousYear]);
+                    Assert.IsTrue(plotStatistics.TreeNppAbovegroundByYear[year] > 0.67F * plotStatistics.TreeNppAbovegroundByYear[previousYear]);
                     Assert.IsTrue(plotStatistics.TreeNppByYear[year] > 0.75F * plotStatistics.TreeNppByYear[previousYear]);
 
                     Assert.IsTrue(plotStatistics.MeanSaplingAgeByYear[year] == 0.0F); // regeneration not enabled
@@ -393,6 +399,32 @@ namespace iLand.Test
             ModelTest.VerifyMalcolmKnappClimate(nelder1);
             ModelTest.VerifyMalcolmKnappModel(nelder1);
             ModelTest.VerifyMalcolmKnappDouglasFir(nelder1);
+        }
+
+        [TestMethod]
+        public void PacificNorthwestSpecies()
+        {
+            Project pnwProject = new Project(LandTest.GetPacificNorthwestProjectPath(this.TestContext!));
+
+            TreeSpeciesSet pnwSpecies = new TreeSpeciesSet(Constant.Database.DefaultSpeciesTable);
+            pnwSpecies.Setup(pnwProject);
+
+            TreeSpecies abam = pnwSpecies["abam"];
+            TreeSpecies abgr = pnwSpecies["abgr"];
+            TreeSpecies abpr = pnwSpecies["abpr"];
+            TreeSpecies acma = pnwSpecies["acma"];
+            TreeSpecies alru = pnwSpecies["alru"];
+            TreeSpecies pisi = pnwSpecies["pisi"];
+            TreeSpecies pipo = pnwSpecies["pipo"]; // TODO: what ecoregion are parameters for?
+            TreeSpecies psme = pnwSpecies["psme"];
+            TreeSpecies tshe = pnwSpecies["tshe"];
+            TreeSpecies tsme = pnwSpecies["tsme"];
+            TreeSpecies thpl = pnwSpecies["thpl"];
+
+            Assert.IsTrue(pnwSpecies.ActiveSpecies.Count == 11);
+            Assert.IsTrue(pnwSpecies.Count == 11);
+            Assert.IsTrue((abam != null) && (abgr != null) && (abpr != null) && (acma != null) && (alru != null) && (pisi != null) &&
+                          (pipo != null) && (psme != null) && (tshe != null) && (tsme != null) && (thpl != null));
         }
 
         private static void VerifyKalkalpenModel(Model model)
@@ -461,37 +493,36 @@ namespace iLand.Test
             TreeSpecies douglasFir = model.Landscape.ResourceUnits[0].Trees.TreeSpeciesSet[0];
             Assert.IsTrue(douglasFir.Active);
             Assert.IsTrue(String.Equals(douglasFir.ID, "psme", StringComparison.Ordinal));
-            // maximumAge  500
-            // maximumHeight   90
-            // aging   1 / (1 + (x / 0.7) ^ 2)
+            // maximumHeight   100
+            // aging   1 / (1 + (x/0.95)^4)
             // douglasFir.Aging();
             // barkThickness   0.065
             // bmWoody_a   0.10568
             // bmWoody_b   2.4247
-            // bmFoliage_a 0.058067
+            // bmFoliage_a 0.05226
             // bmFoliage_b 1.7009
-            // bmRoot_a    0.03575375
-            // bmRoot_b    2.1641
-            // bmBranch_a  0.024871
+            // bmRoot_a    0.0418
+            // bmRoot_b    2.33
+            // bmBranch_a  0.04004
             // bmBranch_b  2.1382
-            Assert.IsTrue(Math.Abs(douglasFir.CNRatioFineRoot - 42.11) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.CNRatioFoliage - 72.0) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.CNRatioWood - 880.33) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.DeathProbabilityFixed - 0.00080063445425371249) < 0.000001); // transformed from 0.67
+            Assert.IsTrue(MathF.Abs(douglasFir.CNRatioFineRoot - 9.0F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.CNRatioFoliage - 60.3F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.CNRatioWood - 452.0F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.DeathProbabilityFixed - 0.00355005264F) < 0.000001F); // transformed from 0.67
             // probStress  6.9
             // displayColor D6F288
-            Assert.IsTrue(douglasFir.EstablishmentParameters.ChillRequirement == 56);
-            Assert.IsTrue(Math.Abs(douglasFir.EstablishmentParameters.FrostTolerance - 0.5) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.EstablishmentParameters.GrowingDegreeDaysBaseTemperature - 3.4) < 0.001);
+            Assert.IsTrue(douglasFir.EstablishmentParameters.ChillRequirement == 30);
+            Assert.IsTrue(MathF.Abs(douglasFir.EstablishmentParameters.FrostTolerance - 0.5F) < 0.001);
+            Assert.IsTrue(MathF.Abs(douglasFir.EstablishmentParameters.GrowingDegreeDaysBaseTemperature - 3.4F) < 0.001F);
             Assert.IsTrue(douglasFir.EstablishmentParameters.GddBudBurst == 255);
             Assert.IsTrue(douglasFir.EstablishmentParameters.MaximumGrowingDegreeDays == 3261);
             Assert.IsTrue(douglasFir.EstablishmentParameters.MinimumGrowingDegreeDays == 177);
             Assert.IsTrue(douglasFir.EstablishmentParameters.MinimumFrostFreeDays == 65);
-            Assert.IsTrue(Math.Abs(douglasFir.EstablishmentParameters.MinTemp + 37.0) < 0.001);
-            Assert.IsTrue(Double.IsNaN(douglasFir.EstablishmentParameters.PsiMin));
-            Assert.IsTrue(Math.Abs(douglasFir.FecundityM2 - 114.0) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.FecunditySerotiny - 0.0) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.FinerootFoliageRatio - 0.75) < 0.001);
+            Assert.IsTrue(MathF.Abs(douglasFir.EstablishmentParameters.MinTemp + 37.0F) < 0.001F);
+            Assert.IsTrue(Single.IsNaN(douglasFir.EstablishmentParameters.PsiMin));
+            Assert.IsTrue(MathF.Abs(douglasFir.FecundityM2 - 20.0F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.FecunditySerotiny - 0.0F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.FinerootFoliageRatio - 1.0F) < 0.001F);
             // HDlow   145.0998 * 1 * 0.8 * (1 - 0.28932) * d ^ -0.28932
             // HDhigh  100 / d + 25 + 100 * exp(-0.3 * (0.08 * d) ^ 1.5) + 120 * exp(-0.01 * d)
             Assert.IsTrue(String.Equals(douglasFir.ID, "psme", StringComparison.OrdinalIgnoreCase));
@@ -502,7 +533,7 @@ namespace iLand.Test
             Assert.IsTrue(douglasFir.IsTreeSerotinousRandom(model.RandomGenerator, 40) == false);
             // lightResponseClass  2.78
             Assert.IsTrue(Math.Abs(douglasFir.MaxCanopyConductance - 0.017) < 0.001);
-            Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menzisii", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menziesii", StringComparison.OrdinalIgnoreCase));
             Assert.IsTrue(Math.Abs(douglasFir.NonSeedYearFraction - 0.25) < 0.001);
             Assert.IsTrue(douglasFir.PhenologyClass == 0);
             Assert.IsTrue(Math.Abs(douglasFir.PsiMin + 1.234) < 0.001);
@@ -516,33 +547,33 @@ namespace iLand.Test
             // seedKernel_as1  30
             // seedKernel_as2  200
             // seedKernel_ks0  0.2
-            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.BrowsingProbability - 0.3509615) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.HeightDiameterRatio - 89.0F) < 0.001);
-            Assert.IsTrue(String.Equals(douglasFir.SaplingGrowthParameters.HeightGrowthPotential.ExpressionString, "41.4*(1-(1-(h/41.4)^(1/3))*exp(-0.0408))^3", StringComparison.OrdinalIgnoreCase));
-            Assert.IsTrue(douglasFir.SaplingGrowthParameters.MaxStressYears == 3);
-            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.ReferenceRatio - 0.506) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.ReinekeR - 159.0) < 0.001);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowthParameters.BrowsingProbability - 0.5F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowthParameters.HeightDiameterRatio - 112.0F) < 0.001F);
+            Assert.IsTrue(String.Equals(douglasFir.SaplingGrowthParameters.HeightGrowthPotential.ExpressionString, "1.2*72.2*(1-(1-(h/72.2)^(1/3))*exp(-0.0427))^3", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(douglasFir.SaplingGrowthParameters.MaxStressYears == 2);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowthParameters.ReferenceRatio - 0.503F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowthParameters.ReinekeR - 164.0F) < 0.001F);
             Assert.IsTrue(douglasFir.SaplingGrowthParameters.RepresentedClasses.Count == 41);
-            Assert.IsTrue(Double.IsNaN(douglasFir.SaplingGrowthParameters.SproutGrowth));
-            Assert.IsTrue(Math.Abs(douglasFir.SaplingGrowthParameters.StressThreshold - 0.1) < 0.001);
+            Assert.IsTrue(Single.IsNaN(douglasFir.SaplingGrowthParameters.SproutGrowth));
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowthParameters.StressThreshold - 0.1F) < 0.001F);
             Assert.IsTrue(douglasFir.SeedDispersal == null);
             // Assert.IsTrue(String.Equals(douglasFir.SeedDispersal.DumpNextYearFileName, null, StringComparison.OrdinalIgnoreCase));
             // Assert.IsTrue(douglasFir.SeedDispersal.SeedMap == null);
             // Assert.IsTrue(Object.ReferenceEquals(douglasFir.SeedDispersal.Species, douglasFir));
-            Assert.IsTrue(douglasFir.SnagHalflife == 40);
-            Assert.IsTrue(Math.Abs(douglasFir.SnagDecompositionRate - 0.08) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.LitterDecompositionRate - 0.322) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.CoarseWoodyDebrisDecompositionRate - 0.1791) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.SpecificLeafArea - 5.84) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.TurnoverLeaf - 0.18) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.TurnoverFineRoot - 0.617284) < 0.001);
-            Assert.IsTrue(Math.Abs(douglasFir.VolumeFactor - 0.423492) < 0.001); // 0.539208 * pi/4
-            Assert.IsTrue(Math.Abs(douglasFir.WoodDensity - 450.0) < 0.001);
+            Assert.IsTrue(douglasFir.SnagHalflife == 20);
+            Assert.IsTrue(MathF.Abs(douglasFir.SnagDecompositionRate - 0.04F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.LitterDecompositionRate - 0.22F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.CoarseWoodyDebrisDecompositionRate - 0.08F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.SpecificLeafArea - 5.80F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.TurnoverLeaf - 0.2F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.TurnoverFineRoot - 0.33F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.VolumeFactor - 0.353429F) < 0.001F); // 0.45 * pi/4
+            Assert.IsTrue(MathF.Abs(douglasFir.WoodDensity - 450.0F) < 0.001F);
 
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 Assert.IsTrue(Object.ReferenceEquals(douglasFir.SpeciesSet, ru.Trees.TreeSpeciesSet));
-                Assert.IsTrue(ru.Trees.TreeSpeciesSet.Count == 1);
+                Assert.IsTrue(ru.Trees.TreeSpeciesSet.Count == 11);
                 Assert.IsTrue(Object.ReferenceEquals(douglasFir, ru.Trees.TreeSpeciesSet.ActiveSpecies[0]));
             }
         }
