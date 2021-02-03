@@ -245,32 +245,34 @@ namespace iLand.Test
             ModelTest.VerifyMalcolmKnappModel(plot14);
             ModelTest.VerifyMalcolmKnappDouglasFir(plot14);
 
+            // regex for reformatting copy/paste of values from watch window: "\s+\[\d+]\s+(\d+.\d{1,3})\d*\s+float\r?\n" -> "$1F, "
             List<float> nominalGppByYear = new List<float>()
             {
-                12.240F, 12.794F, 14.665F, 12.996F, 14.101F, // 0...4
-                11.844F, 13.174F, 14.702F, 13.839F, 12.772F, // 5...9
-                14.147F, 11.693F, 12.328F, 12.094F, 13.013F, // 10...14
-                13.080F, 12.770F, 11.509F,  9.254F, 10.880F, // 15...19
-                12.756F,  9.754F, 13.145F, 11.282F, 14.278F, // 20...24
-                13.172F, 12.541F, 13.094F                    // 25...27
+                10.331F, 11.133F, 14.020F, 11.316F, 13.527F, // 0...4
+                10.526F, 12.332F, 12.791F, 12.987F, 11.235F, // 5...9
+                11.608F, 10.062F, 11.081F,  9.992F, 12.681F, // 10...14
+                11.237F, 11.539F, 10.230F,  8.268F,  9.310F, // 15...19
+                11.888F,  8.964F, 11.145F, 10.091F, 13.221F, // 20...24
+                10.973F, 12.179F, 12.647F                    // 25...27
             };
+            
             List<float> nominalNppByYear = new List<float>()
             {
-                15764.021F, 16742.770F, 19395.607F, 17333.035F, 18888.552F, // 0...4
-                15920.201F, 17736.863F, 19826.050F, 18687.125F, 17258.761F, // 5...9
-                19123.072F, 15808.806F, 16665.195F, 16344.984F, 17579.642F, // 10...14
-                17662.183F, 17233.628F, 15520.372F, 12467.263F, 14650.895F, // 15...19
-                17162.412F, 13104.591F, 17650.404F, 15123.036F, 19111.804F, // 20...24
-                17602.904F, 16732.328F, 17440.533F                          // 25...27
+                13305.625F, 14514.859F, 18456.353F, 15041.932F, 18053.941F,
+                14110.686F, 16558.890F, 17210.685F, 17502.668F, 15159.530F,
+                15669.442F, 13588.600F, 14967.475F, 13497.672F, 17130.728F,
+                15179.787F, 15582.680F, 13804.854F, 11158.202F, 12561.510F,
+                16028.833F, 12079.922F, 15009.008F, 13583.033F, 17776.400F,
+                14749.142F, 16356.83F, 16963.591F
             };
             List<float> nominalVolumeByYear = new List<float>()
             {
-                122.155F, 137.857F, 157.567F, 173.757F, 192.479F, // 0...4
-                206.206F, 223.124F, 243.391F, 261.805F, 277.746F, // 5...9
-                296.864F, 310.332F, 324.610F, 338.826F, 354.700F, // 10...14
-                371.545F, 387.718F, 401.099F, 408.646F, 420.784F, // 15...19
-                437.235F, 446.261F, 463.997F, 475.264F, 492.470F, // 20...24
-                508.142F, 523.903F, 541.203F                      // 25...27
+                118.143F, 130.357F, 148.674F, 161.134F, 178.615F,
+                189.416F, 204.427F, 220.182F, 236.591F, 248.959F,
+                261.886F, 271.750F, 283.939F, 293.349F, 309.284F,
+                320.494F, 333.093F, 340.758F, 346.781F, 355.119F,
+                368.386F, 374.821F, 386.607F, 395.546F, 410.205F,
+                422.316F, 437.456F, 452.937F
             };
 
             ResourceUnitTreeStatisticsWithPreviousYears plotStatistics = (ResourceUnitTreeStatisticsWithPreviousYears)plot14.Landscape.ResourceUnits[0].Trees.TreeStatisticsByStandID[14];
@@ -624,34 +626,34 @@ namespace iLand.Test
                 //ru.Soil.InputLabile;
                 //ru.Soil.InputRefractory;
                 AssertNullable.IsNotNull(ru.Soil);
-                Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.C - 161.086F) < 0.001F);
-                Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.N - 17.73954F) < 0.00001F);
-                Assert.IsTrue(MathF.Abs(ru.Soil.PlantAvailableNitrogen - 56.186F) < 0.001F);
-                Assert.IsTrue(MathF.Abs(ru.Soil.YoungLabile.C - 4.8414983F) < 0.001F);
-                Assert.IsTrue(MathF.Abs(ru.Soil.YoungLabile.N - 0.2554353F) < 0.0001F);
-                Assert.IsTrue(ru.Soil.YoungLabile.DecompositionRate == 0.322F);
-                Assert.IsTrue(MathF.Abs(ru.Soil.YoungRefractory.C - 45.97414F) < 0.001F);
-                Assert.IsTrue(MathF.Abs(ru.Soil.YoungRefractory.N - 0.261731F) < 0.0001F);
-                Assert.IsTrue(ru.Soil.YoungRefractory.DecompositionRate == 0.1790625F);
+                Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.C - 161.086F) < 0.001F, "Soil: organic carbon");
+                Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.N - 17.73954F) < 0.00001F, "Soil: organic nitrogen");
+                Assert.IsTrue(MathF.Abs(ru.Soil.PlantAvailableNitrogen - 56.186F) < 0.001F, "Soil: plant available nitrogen");
+                Assert.IsTrue(MathF.Abs(ru.Soil.YoungLabile.C - 4.8414983F) < 0.001F, "Soil: young labile carbon");
+                Assert.IsTrue(MathF.Abs(ru.Soil.YoungLabile.N - 0.2554353F) < 0.0001F, "Soil: young labile nitrogen");
+                Assert.IsTrue(ru.Soil.YoungLabile.DecompositionRate == 0.322F, "Soil: young labile decomposition rate");
+                Assert.IsTrue(MathF.Abs(ru.Soil.YoungRefractory.C - 45.97414F) < 0.001F, "Soil: young refractory carbon");
+                Assert.IsTrue(MathF.Abs(ru.Soil.YoungRefractory.N - 0.261731F) < 0.0001F, "Soil: young refractory nitrogen");
+                Assert.IsTrue(ru.Soil.YoungRefractory.DecompositionRate == 0.1790625F, "Soil: young refractory decomposition rate");
                 //ru.Variables.CarbonToAtm;
                 //ru.Variables.CarbonUptake;
                 //ru.Variables.CumCarbonToAtm;
                 //ru.Variables.CumCarbonUptake;
                 //ru.Variables.CumNep;
                 //ru.Variables.Nep;
-                Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0); // initially zero
-                Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity));
-                Assert.IsTrue(Math.Abs(ru.WaterCycle.FieldCapacity - 66.304010358336242) < 0.001);
-                Assert.IsTrue(ru.WaterCycle.SoilWaterPsi.Length == Constant.DaysInLeapYear);
+                Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
+                Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity), "Soil: current water content");
+                Assert.IsTrue(MathF.Abs(ru.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity");
+                Assert.IsTrue(ru.WaterCycle.SoilWaterPsi.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
                 foreach (float psi in ru.WaterCycle.SoilWaterPsi)
                 {
-                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F));
+                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential");
                 }
-                Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0) && (ru.WaterCycle.SnowDayRadiation < 5000.0)); // TODO: linkt to snow days?
-                Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear));
-                Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepth - 1340) < 0.001);
-                Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0); // zero at initialization
-                Assert.IsTrue(ru.WaterCycle.TotalRunoff == 0.0); // zero at initialization
+                Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0F) && (ru.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: linkt to snow days?
+                Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0F) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear), "Water cycle: snow days");
+                Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepth - 1340.0F) < 0.001F, "Soil: depth");
+                Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0F, "Soil: evapotranspiration"); // zero at initialization
+                Assert.IsTrue(ru.WaterCycle.TotalRunoff == 0.0F, "Soil: runoff"); // zero at initialization
             }
 
             Assert.IsTrue(model.Landscape.ResourceUnits.Count == 1);
