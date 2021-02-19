@@ -45,8 +45,8 @@ namespace iLand.Tree
         }
 
         /** calculate a resource unit's GPP
-          ResourceUnit-level production following the 3PG approach from Landsberg and Waring.
-          @sa http://iland.boku.ac.at/primary+production */
+          ResourceUnit-level production following the 3-PG approach from Landsberg and Waring.
+          @sa http://iland-model.org/primary+production */
         public void CalculateGppForYear(Project projectFile)
         {
             Debug.Assert(this.SpeciesResponse != null);
@@ -59,7 +59,7 @@ namespace iLand.Tree
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
                 // This is based on the utilizable photosynthetic active radiation.
-                // @sa http://iland.boku.ac.at/primary+production
+                // @sa http://iland-model.org/primary+production
                 // calculate the available radiation. This is done at SpeciesResponse-Level (SpeciesResponse::calculate())
                 // see Equation (3)
                 // multiplicative approach: responses are averaged one by one and multiplied on a monthly basis
@@ -74,7 +74,7 @@ namespace iLand.Tree
                 // calculate the alphac (=photosynthetic efficiency) for the given month, gC/MJ radiation
                 //  this is based on a global efficiency, and modified per species
                 // maximum radiation use efficiency
-                float epsilon = projectFile.Model.Ecosystem.Epsilon * this.SpeciesResponse.NitrogenResponseForYear * this.SpeciesResponse.CO2ResponseByMonth[month];
+                float epsilon = projectFile.Model.Ecosystem.LightUseEpsilon * this.SpeciesResponse.NitrogenResponseForYear * this.SpeciesResponse.CO2ResponseByMonth[month];
 
                 this.UtilizablePar[month] = utilizableRadiation;
                 this.MonthlyGpp[month] = utilizableRadiation * epsilon * gramsCarbonToKilogramsBiomass; // ... results in GPP of the month kg Biomass/m2 (converted from gC/m2)
@@ -83,7 +83,7 @@ namespace iLand.Tree
                 Debug.Assert(this.MonthlyGpp[month] >= 0.0);
             }
 
-            // calculate f_env,yr: see http://iland.boku.ac.at/sapling+growth+and+competition
+            // calculate f_env,yr: see http://iland-model.org/sapling+growth+and+competition
             float f_sum = 0.0F;
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
@@ -93,12 +93,12 @@ namespace iLand.Tree
             // the factor f_ref: parameter that scales response values to the range 0..1 (1 for best growth conditions) (species parameter)
             float siteEnvironmentHeightDivisor = this.SpeciesResponse.Species.SaplingGrowthParameters.ReferenceRatio;
             // f_env,yr=(uapar*epsilon_eff) / (APAR * epsilon_0 * fref)
-            this.SiteEnvironmentSaplingHeightGrowthMultiplier = f_sum / (projectFile.Model.Ecosystem.Epsilon * this.SpeciesResponse.RadiationForYear * siteEnvironmentHeightDivisor);
+            this.SiteEnvironmentSaplingHeightGrowthMultiplier = f_sum / (projectFile.Model.Ecosystem.LightUseEpsilon * this.SpeciesResponse.RadiationForYear * siteEnvironmentHeightDivisor);
             if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.0F)
             {
                 if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.5F) // error on large deviations TODO: why 1.5F instead of ~1.000001F?
                 {
-                    throw new NotSupportedException("fEnvYear > 1 for " + this.SpeciesResponse.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Ecosystem.Epsilon + this.SpeciesResponse.RadiationForYear + siteEnvironmentHeightDivisor
+                    throw new NotSupportedException("fEnvYear > 1 for " + this.SpeciesResponse.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Ecosystem.LightUseEpsilon + this.SpeciesResponse.RadiationForYear + siteEnvironmentHeightDivisor
                              + " check calibration of the sapReferenceRatio (fref) for this species!");
                 }
                 this.SiteEnvironmentSaplingHeightGrowthMultiplier = 1.0F;

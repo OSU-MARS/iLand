@@ -144,7 +144,7 @@ namespace iLand.Simulation
           (2) Reset statistics for resource unit as well as for dead/managed trees
           (3) Invoke Management.
           (4) *after* that, calculate Light patterns
-          (5) 3PG on stand level, tree growth. Clear stand-statistcs before they are filled by single-tree-growth. calculate water cycle (with LAIs before management)
+          (5) 3-PG on stand level, tree growth. Clear stand-statistcs before they are filled by single-tree-growth. calculate water cycle (with LAIs before management)
           (6) execute Regeneration
           (7) invoke disturbance modules
           (8) calculate carbon cycle
@@ -198,7 +198,7 @@ namespace iLand.Simulation
             /** Main function for the growth of stands and trees.
                This includes several steps.
                (1) calculate the stocked area (i.e. count pixels in height grid)
-               (2) 3PG production (including response calculation, water cycle)
+               (2) 3-PG production (including response calculation, water cycle)
                (3) single tree growth (including mortality)
                (4) cleanup of tree lists (remove dead trees)
               */

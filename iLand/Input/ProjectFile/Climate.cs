@@ -23,6 +23,8 @@ namespace iLand.Input.ProjectFile
             this.BatchYears = 100;
             this.CO2ConcentrationInPpm = 400.0F;
             this.DatabaseFile = null;
+            this.DatabaseQueryFilter = null;
+            this.DefaultDatabaseTable = null;
             this.PrecipitationMultiplier = 1.0F;
             this.RandomSamplingEnabled = false;
             this.RandomSamplingList = null;

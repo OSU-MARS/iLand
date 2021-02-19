@@ -22,7 +22,7 @@
       <airDensity>1.204</airDensity>
       <boundaryLayerConductance>0.2</boundaryLayerConductance>
       <!-- maximum light use efficiency -->
-      <epsilon>2.7</epsilon>
+      <lightUseEpsilon>2.7</lightUseEpsilon>
       <interceptionStorageNeedle>4</interceptionStorageNeedle>
       <interceptionStorageBroadleaf>4</interceptionStorageBroadleaf>
       <laiThresholdForClosedStands>3</laiThresholdForClosedStands>

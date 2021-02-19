@@ -15,7 +15,7 @@ namespace iLand.Input
     /// </summary>
     /// <remarks>
     /// Data is read from various sources and presented to the core model with a standardized interface.
-    //  See http://iland.boku.ac.at/simulation+extent.
+    //  See http://iland-model.org/simulation+extent.
     /// </remarks>
     public class EnvironmentReader
     {

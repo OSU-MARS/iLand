@@ -12,7 +12,7 @@ namespace iLand.Output
         {
             this.Name = "Production per month, species and resource unit";
             this.TableName = "productionMonth";
-            this.Description = "Details about the 3PG production submodule on monthly basis and for each species and resource unit.";
+            this.Description = "Details about the 3-PG production submodule on monthly basis and for each species and resource unit.";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());

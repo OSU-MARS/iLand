@@ -9,7 +9,7 @@ namespace iLand.Tree
         SpeciesResponse combines data from different sources and converts information about the environment
         into responses of a species. The spatial level is the "ResourceUnit", where homogenetiy of environmental factors
         is assumed. The temporal aggregation depends on the factor, but usually, the daily environmental data is
-        aggregated to monthly response values (which subsequently are used during 3PG production).
+        aggregated to monthly response values (which subsequently are used during 3-PG production).
         Sources are:
         - vapour pressure deficit (dryness of atmosphere): directly from climate data (daily)
         - soil water status (dryness of soil)(daily)
@@ -128,7 +128,7 @@ namespace iLand.Tree
                     // environmental responses for the day
                     // combine responses
                     float minimumResponse = MathF.Min(MathF.Min(vpdResponse, tempResponse), soilWaterResponse);
-                    // calculate utilizable radiation, Eq. 4, http://iland.boku.ac.at/primary+production
+                    // calculate utilizable radiation, Eq. 4, http://iland-model.org/primary+production
                     float utilizableRadiation = day.Radiation * minimumResponse;
                     
                     Debug.Assert(minimumResponse >= 0.0 && minimumResponse < 1.000001);
@@ -153,9 +153,9 @@ namespace iLand.Tree
                 this.SoilWaterResponseByMonth[month] /= daysInMonth;
                 this.TempResponseByMonth[month] /= daysInMonth;
                 this.VpdResponseByMonth[month] /= daysInMonth;
-                // CO2 response equations assume nitrogen and soil water responses are in [0 1], so CO2 response is calculated after finding the average soil water
+                // CO₂ response equations assume nitrogen and soil water responses are in [0 1], so CO₂ response is calculated after finding the average soil water
                 // response
-                float ambientCO2 = climate.CarbonDioxidePpm; // CO2 level of first day of year (co2 is static)
+                float ambientCO2 = climate.CarbonDioxidePpm; // CO2 level of first day of year (CO₂ is static)
                 this.CO2ResponseByMonth[month] = this.Species.SpeciesSet.GetCarbonDioxideResponse(ambientCO2, this.NitrogenResponseForYear, this.SoilWaterResponseByMonth[month]);
                 this.UtilizableRadiationForYear += this.UtilizableRadiationByMonth[month];
 

@@ -14,7 +14,7 @@ namespace iLand.World
         (Climate, Soil, Water, ...).
         A resource unit has a size of (currently) 100x100m. Many processes in iLand operate on the level of a ResourceUnit.
         Each resource unit has the same Climate and other properties (e.g. available nitrogen).
-        Proceses on this level are, inter alia, NPP Production (see Production3PG), water calculations (WaterCycle), the modeling
+        Proceses on this level are, inter alia, NPP Production (see Production3-PG), water calculations (WaterCycle), the modeling
         of dead trees (Snag) and soil processes (Soil).
         */
     public class ResourceUnit
@@ -401,7 +401,7 @@ namespace iLand.World
             float lriCorrection = species.SpeciesSet.GetLriCorrection(lif_value, relativeHeight); // correction based on height
             float lightResponse = species.GetLightResponse(lriCorrection); // species specific light response (LUI, light utilization index)
 
-            ruSpecies.CalculateBiomassGrowthForYear(model.Project, fromEstablishment: true); // calculate the 3pg module (this is done only once per RU); true: call comes from regeneration
+            ruSpecies.CalculateBiomassGrowthForYear(model.Project, fromEstablishment: true); // calculate the 3-PG module (this is done only once per RU); true: call comes from regeneration
             float siteEnvironmentHeightMultiplier = ruSpecies.BiomassGrowth.SiteEnvironmentSaplingHeightGrowthMultiplier;
             float heightGrowthFactor = siteEnvironmentHeightMultiplier * lightResponse; // relative growth
 
@@ -549,12 +549,12 @@ namespace iLand.World
             }
         }
 
-        /** production() is the "stand-level" part of the biomass production (3PG).
+        /** production() is the "stand-level" part of the biomass production (3-PG).
             - The amount of radiation intercepted by the stand is calculated
             - the water cycle is calculated
             - statistics for each species are cleared
-            - The 3PG production for each species and ressource unit is called (calculates species-responses and NPP production)
-            see also: http://iland.boku.ac.at/individual+tree+light+availability */
+            - The 3-PG production for each species and ressource unit is called (calculates species-responses and NPP production)
+            see also: http://iland-model.org/individual+tree+light+availability */
         public void CalculateWaterAndBiomassGrowthForYear(Model model)
         {
             if (this.Trees.TotalLightWeightedLeafArea == 0.0 || this.heightCellsOnLandscape == 0)
@@ -652,10 +652,10 @@ namespace iLand.World
             WaterCycleData hydrologicState = this.WaterCycle.RunYear(model.Project);
             model.Modules.CalculateWater(this, hydrologicState);
 
-            // invoke species specific calculation (3PG)
+            // invoke species specific calculation (3-PG)
             for (int speciesIndex = 0; speciesIndex < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++speciesIndex)
             {
-                this.Trees.SpeciesAvailableOnResourceUnit[speciesIndex].CalculateBiomassGrowthForYear(model.Project, fromEstablishment: false); // CALCULATE 3PG
+                this.Trees.SpeciesAvailableOnResourceUnit[speciesIndex].CalculateBiomassGrowthForYear(model.Project, fromEstablishment: false); // CALCULATE 3-PG
 
                 // debug output related to production
                 //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.StandGpp) && Species[speciesIndex].LaiFraction > 0.0)

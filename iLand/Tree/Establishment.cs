@@ -7,7 +7,7 @@ namespace iLand.Tree
 {
     /** @class Establishment
         Establishment deals with the establishment process of saplings.
-        http://iland.boku.ac.at/establishment
+        http://iland-model.org/establishment
         Prerequisites for establishment are:
         the availability of seeds: derived from the seed-maps per Species (@sa SeedDispersal)
         the quality of the abiotic environment (TACA-model): calculations are performend here, based on climate and species responses
@@ -120,14 +120,14 @@ namespace iLand.Tree
 
         /** Calculate the abiotic environemnt for seedling for a given species and a given resource unit.
          The model is closely based on the TACA approach of Nitschke and Innes (2008), Ecol. Model 210, 263-277
-         more details: http://iland.boku.ac.at/establishment#abiotic_environment
+         more details: http://iland-model.org/establishment#abiotic_environment
          a model mockup in R: script_establishment.r
          */
         public void CalculateAbioticEnvironment(Project projectFile)
         {
             //DebugTimer t("est_abiotic"); t.setSilent();
             // make sure that required calculations (e.g. watercycle are already performed)
-            this.mRUspecies.CalculateBiomassGrowthForYear(projectFile, fromEstablishment: true); // calculate the 3pg module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
+            this.mRUspecies.CalculateBiomassGrowthForYear(projectFile, fromEstablishment: true); // calculate the 3-PG module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
 
             EstablishmentParameters establishment = mRUspecies.Species.EstablishmentParameters;
             Phenology pheno = mClimate.GetPhenology(mRUspecies.Species.PhenologyClass);

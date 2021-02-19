@@ -268,7 +268,7 @@ namespace iLand.Tree
         }
 
         /// do the yearly calculation
-        /// see http://iland.boku.ac.at/snag+dynamics
+        /// see http://iland-model.org/snag+dynamics
         public void RunYear()
         {
             this.mStandingWoodyToSoil.Zero();

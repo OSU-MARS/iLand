@@ -9,14 +9,14 @@ namespace iLand.Tree
         Data stored is either statistical (i.e. number of trees per species) or used
         within the model (e.g. fraction of utilizable Radiation).
         Important submodules are:
-        * 3PG production (Production3PG)
+        * 3-PG production (Production3-PG)
         * Establishment
         * Growth and Recruitment of Saplings
         * Snag dynamics
       */
     public class ResourceUnitTreeSpecies
     {
-        public ResourceUnitTreeSpeciesGrowth BiomassGrowth { get; private init; } // the 3pg production model of this species x resourceunit
+        public ResourceUnitTreeSpeciesGrowth BiomassGrowth { get; private init; } // the 3-PG production model of this species x resourceunit
         public Establishment Establishment { get; private init; } // establishment submodel
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
         public float LaiFraction { get; private set; }

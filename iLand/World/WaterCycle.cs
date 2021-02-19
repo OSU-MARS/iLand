@@ -13,7 +13,7 @@ namespace iLand.World
         transpiration from the canopy.
         The WaterCycle covers the "soil water bucket". Main entry function is run().
 
-        See http://iland.boku.ac.at/water+cycle
+        See http://iland-model.org/water+cycle
         */
     public class WaterCycle
     {
@@ -117,7 +117,7 @@ namespace iLand.World
 
         /** function to calculate the water pressure [saugspannung] for a given amount of water.
             returns water potential in kPa.
-          see http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance */
+          see http://iland-model.org/water+cycle#transpiration_and_canopy_conductance */
         public float GetPsiFromSoilWaterContent(float soilWaterContentInMM)
         {
             // psi_x = psi_ref * ( rho_x / rho_ref) ^ b
@@ -131,7 +131,7 @@ namespace iLand.World
 
         /// calculate the height of the water column for a given pressure
         /// return water amount in mm
-        /// see http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance
+        /// see http://iland-model.org/water+cycle#transpiration_and_canopy_conductance
         public float GetSoilWaterContentFromPsi(float psiInKilopascals)
         {
             // rho_x = rho_ref * (psi_x / psi_ref)^(1/b)
@@ -178,7 +178,7 @@ namespace iLand.World
             if (totalLai < projectFile.Model.Ecosystem.LaiThresholdForClosedStands)
             {
                 // following Landsberg and Waring: when LAI is < 3 (default for laiThresholdForClosedStands), a linear "ramp" from 0 to 3 is assumed
-                // http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance
+                // http://iland-model.org/water+cycle#transpiration_and_canopy_conductance
                 this.CanopyConductance *= totalLai / projectFile.Model.Ecosystem.LaiThresholdForClosedStands;
             }
         }
@@ -242,7 +242,7 @@ namespace iLand.World
 
         /// Main Water Cycle function. This function triggers all water related tasks for
         /// one simulation year.
-        /// @sa http://iland.boku.ac.at/water+cycle
+        /// @sa http://iland-model.org/water+cycle
         public WaterCycleData RunYear(Project projectFile)
         {
             //using DebugTimer tw = model.DebugTimers.Create("WaterCycle.Run()");

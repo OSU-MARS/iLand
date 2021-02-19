@@ -13,7 +13,7 @@ using Model = iLand.Simulation.Model;
 namespace iLand.World
 {
     // Climate handles climate input data and performs some basic related calculations on that data.
-    // http://iland.boku.ac.at/ClimateData
+    // http://iland-model.org/ClimateData
     public class Climate
     {
         private string? climateTableQueryFilter;

@@ -7,7 +7,7 @@ namespace iLand.World
 {
     /** @class Soil provides an implementation of the ICBM/2N soil carbon and nitrogen dynamics model.
         The ICBM/2N model was developed by Kaetterer and Andren (2001) and merged with 3-PG as 3-PGN by Xenakis et al. 2008.
-        See http://iland.boku.ac.at/soil+C+and+N+cycling for a model overview and the rationale of the model choice.
+        See http://iland-model.org/soil+C+and+N+cycling for a model overview and the rationale of the model choice.
         */
     public class ResourceUnitSoil
     {

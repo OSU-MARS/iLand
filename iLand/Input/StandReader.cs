@@ -18,7 +18,7 @@ namespace iLand.Input
         StandLoader initializes trees on the landscape. It reads (usually) from text files, creates the
         trees and distributes the trees on the landscape (on the ResourceUnit or on a stand defined by a grid).
 
-        See http://iland.boku.ac.at/initialize+trees
+        See http://iland-model.org/initialize+trees
         */
     internal class StandReader
     {
@@ -444,7 +444,7 @@ namespace iLand.Input
 
         /** initialize trees on a resource unit based on dbh distributions.
           use a fairly clever algorithm to determine tree positions.
-          see http://iland.boku.ac.at/initialize+trees
+          see http://iland-model.org/initialize+trees
           @param content tree init file (including headers) in a string
           @param ru resource unit
           @param fileName source file name (for error reporting)
@@ -744,7 +744,7 @@ namespace iLand.Input
         // Initialization routine based on a stand map.
         // Basically a list of 10m pixels for a given stand is retrieved
         // and the filled with the same procedure as the resource unit based init
-        // see http://iland.boku.ac.at/initialize+trees
+        // see http://iland-model.org/initialize+trees
         private void InitializeStand(Project projectFile, Landscape landscape, RandomGenerator randomGenerator, int standID)
         {
             MapGrid? standGrid = landscape.StandGrid;

@@ -586,7 +586,7 @@ namespace iLand.Test
 
             Assert.IsTrue(model.Project.Model.Ecosystem.AirDensity == 1.204F);
             Assert.IsTrue(model.Project.Model.Ecosystem.BoundaryLayerConductance == 0.2F);
-            Assert.IsTrue(model.Project.Model.Ecosystem.Epsilon == 2.7F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.LightUseEpsilon == 2.7F);
             Assert.IsTrue(model.Project.Model.Ecosystem.LaiThresholdForClosedStands == 3.0F);
             Assert.IsTrue(model.Project.Model.Ecosystem.LightExtinctionCoefficient == 0.6F);
             Assert.IsTrue(model.Project.Model.Ecosystem.LightExtinctionCoefficientOpacity == 0.6F);

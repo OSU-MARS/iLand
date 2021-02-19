@@ -16,7 +16,7 @@ namespace iLand.Tree
         The class encapsulates the dispersal of seeds of one species over the whole landscape.
         The dispersal algortihm operate on grids with a 20m resolution.
 
-        See http://iland.boku.ac.at/dispersal
+        See http://iland-model.org/dispersal
         */
     public class SeedDispersal
     {

@@ -14,8 +14,8 @@ namespace iLand.Input.ProjectFile
 		// 3-PG evapotranspiration
 		public float BoundaryLayerConductance { get; private set; }
 
-		// maximum light use efficency used for the 3PG model
-		public float Epsilon { get; private set; }
+		// maximum monthly mean light use efficency used for the 3-PG model, gC/MJ
+		public float LightUseEpsilon { get; private set; }
 
 		public float InterceptionStorageBroadleaf { get; private set; }
 		public float InterceptionStorageNeedle { get; private set; }
@@ -41,12 +41,12 @@ namespace iLand.Input.ProjectFile
 			this.AirDensity = 1.2041F; // dry air at 20 °C and 101.325 kPa
 			this.AutotrophicRespirationMultiplier = 0.47F;
 			this.BoundaryLayerConductance = 0.2F;
-			this.Epsilon = 1.8F; // max light use efficiency (aka alpha_c)
 			this.InterceptionStorageBroadleaf = 2.0F;
 			this.InterceptionStorageNeedle = 4.0F;
 			this.LaiThresholdForClosedStands = 3.0F;
 			this.LightExtinctionCoefficient = 0.5F;
 			this.LightExtinctionCoefficientOpacity = 0.5F;
+			this.LightUseEpsilon = 2.8F; // max light use efficiency (aka alpha_c), gC/MJ
 			this.SnowmeltTemperature = 0.0F;
 			this.TemperatureAveragingTau = 5.0F;
 		}
@@ -70,12 +70,12 @@ namespace iLand.Input.ProjectFile
 					throw new XmlException("Autotrophic respiration multiplier is negative or greater than 1.0.");
 				}
 			}
-			else if (String.Equals(reader.Name, "epsilon", StringComparison.Ordinal))
+			else if (String.Equals(reader.Name, "lightUseEpsilon", StringComparison.Ordinal))
 			{
-				this.Epsilon = reader.ReadElementContentAsFloat();
-				if (this.Epsilon < 0.0F)
+				this.LightUseEpsilon = reader.ReadElementContentAsFloat();
+				if (this.LightUseEpsilon < 0.0F)
 				{
-					throw new XmlException("Epsilon is negative.");
+					throw new XmlException("Light use epsilon is negative.");
 				}
 			}
 			else if (String.Equals(reader.Name, "lightExtinctionCoefficient", StringComparison.Ordinal))

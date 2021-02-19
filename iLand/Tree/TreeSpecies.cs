@@ -14,7 +14,7 @@ namespace iLand.Tree
       Because the individual trees are designed as leightweight as possible, lots of stuff is done by the Species.
       Inter alia, Species do:
       - store all the precalcualted patterns for light competition (LIP, stamps)
-      - do most of the growth (3PG) calculation
+      - do most of the growth (3-PG) calculation
       */
     public class TreeSpecies
     {
@@ -35,12 +35,12 @@ namespace iLand.Tree
         private float mFormFactor; // taper form factor of the stem [-] used for volume / stem-mass calculation calculation
         // mortality
         private float mStressMortalityCoefficient; // max. prob. of death per year when tree suffering maximum stress
-        // Aging
+        // aging
         private float mMaximumAge; // maximum age of species (years)
         private float mMaximumHeight; // maximum height of species (m) for aging
         private readonly Expression mAging;
         // environmental responses
-        private float mRespVpdExponent; // exponent in vpd response calculation (Mkela 2008)
+        private float mRespVpdK; // exponent in vpd response calculation (Mäkelä 2008)
         private float mRespTempMin; // temperature response calculation offset
         private float mRespTempMax; // temperature response calculation: saturation point for temp. response
         private float mRespNitrogenClass; // nitrogen response class (1..3). fractional values (e.g. 1.2) are interpolated.
@@ -74,7 +74,7 @@ namespace iLand.Tree
 
         // mortality
         public float DeathProbabilityFixed { get; private set; } // prob. of intrinsic death per year [0..1]
-        public float FecundityM2 { get; private set; } // "surviving seeds" (cf. Moles et al) per m2, see also http://iland.boku.ac.at/fecundity
+        public float FecundityM2 { get; private set; } // "surviving seeds" (cf. Moles et al) per m2, see also http://iland-model.org/fecundity
         public float FecunditySerotiny { get; private set; } // multiplier that increases fecundity for post-fire seed rain of serotinous species
         public float MaxCanopyConductance { get; private set; } // maximum canopy conductance in m/s
         public float NonSeedYearFraction { get; private set; }
@@ -274,10 +274,10 @@ namespace iLand.Tree
             species.mStressMortalityCoefficient = stressMortalityCoefficient;
 
             // envirionmental responses
-            species.mRespVpdExponent = reader.RespVpdExponent();
+            species.mRespVpdK = reader.RespVpdExponent();
             species.mRespTempMin = reader.RespTempMin();
             species.mRespTempMax = reader.RespTempMax();
-            if (species.mRespVpdExponent >= 0.0F)
+            if (species.mRespVpdK >= 0.0F)
             {
                 throw new SqliteException("Error loading " + species.ID + ": VPD exponent greater than or equal to zero.", (int)SqliteErrorCode.Error);
             }
@@ -372,7 +372,7 @@ namespace iLand.Tree
         /** Aging formula.
            calculates a relative "age" by combining a height- and an age-related term using a harmonic mean,
            and feeding this into the Landsberg and Waring formula.
-           see http://iland.boku.ac.at/primary+production#respiration_and_aging
+           see http://iland-model.org/primary+production#respiration_and_aging
            @param useAge set to true if "real" tree age is available. If false, only the tree height is used.
           */
         public float GetAgingFactor(float height, int age)
@@ -384,7 +384,7 @@ namespace iLand.Tree
             float relativeAge = MathF.Min(age / mMaximumAge, 0.999999F);
 
             // harmonic mean: http://en.wikipedia.org/wiki/Harmonic_mean
-            float x = 1.0F - 2.0F / (1.0F / (1.0F - relativeHeight) + 1.0F / (1.0F - relativeAge)); // Note:
+            float x = 1.0F - 2.0F / (1.0F / (1.0F - relativeHeight) + 1.0F / (1.0F - relativeAge));
 
             float agingFactor = (float)mAging.Evaluate(x);
 
@@ -463,7 +463,7 @@ namespace iLand.Tree
             Input: vpd [kPa]*/
         public float GetVpdResponse(float vpd)
         {
-            return MathF.Exp(this.mRespVpdExponent * vpd);
+            return MathF.Exp(this.mRespVpdK * vpd);
         }
 
         /** temperatureResponse calculates response on delayed daily temperature.

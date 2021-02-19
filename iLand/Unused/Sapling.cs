@@ -10,7 +10,7 @@ namespace iLand.Tree
 {
     /** @class Sapling
         Sapling stores saplings per species and resource unit and computes sapling growth (before recruitment).
-        http://iland.boku.ac.at/sapling+growth+and+competition
+        http://iland-model.org/sapling+growth+and+competition
         Saplings are established in a separate step (@sa Regeneration). If sapling reach a height of 4m, they are recruited and become "real" iLand-trees.
         Within the regeneration layer, a cohort-approach is applied.
         */
@@ -230,7 +230,7 @@ namespace iLand.Tree
 
         /// growth function for an indivudal sapling.
         /// returns true, if sapling survives, false if sapling dies or is recruited to iLand.
-        /// see also http://iland.boku.ac.at/recruitment
+        /// see also http://iland-model.org/recruitment
         private bool GrowSapling(Model model, SaplingTreeOld sapling, float f_env_yr, Species species)
         {
             Point lightCellPosition = model.LightGrid.GetCellPosition(sapling.LightPixelIndex);
@@ -351,7 +351,7 @@ namespace iLand.Tree
             Species species = mResourceUnitSpecies.Species;
 
             // calculate necessary growth modifier (this is done only once per year)
-            mResourceUnitSpecies.CalculateBiomassGrowthForYear(model, true); // calculate the 3pg module (this is done only if that did not happen up to now); true: call comes from regeneration
+            mResourceUnitSpecies.CalculateBiomassGrowthForYear(model, true); // calculate the 3-PG module (this is done only if that did not happen up to now); true: call comes from regeneration
 
             float f_env_yr = mResourceUnitSpecies.BiomassGrowth.EnvironmentalFactor;
             this.LivingSaplings = 0;

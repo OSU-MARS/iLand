@@ -3,7 +3,7 @@
 namespace iLand.World
 {
     // current climate variables of a day. @sa Climate.
-    // http://iland.boku.ac.at/ClimateData
+    // http://iland-model.org/ClimateData
     public class ClimateDay
     {
         public int Year { get; set; } // year

@@ -541,7 +541,7 @@ namespace iLand.Tree
             The LIF field is scanned within the crown area of the focal tree, and the influence of
             the focal tree is "subtracted" from the LIF values.
             Finally, the "LRI correction" is applied.
-            see http://iland.boku.ac.at/competition+for+light for details.
+            see http://iland-model.org/competition+for+light for details.
           */
         public void ReadLightInfluenceField(int treeIndex)
         {
@@ -621,7 +621,7 @@ namespace iLand.Tree
                 int yTorus = GetTorusIndex(readerOriginY + readerY, Constant.LightCellsPerRUsize, bufferOffset, ruOffset.Y);
                 for (int readerX = 0; readerX < readerSize; ++readerX)
                 {
-                    // see http://iland.boku.ac.at/competition+for+light 
+                    // see http://iland-model.org/competition+for+light 
                     int xTorus = GetTorusIndex(readerOriginX + readerX, Constant.LightCellsPerRUsize, bufferOffset, ruOffset.X);
                     float dominantHeightTorus = this.heightGrid[xTorus, yTorus, Constant.LightCellsPerHeightSize].Height; // ry: gets ++ed in outer loop, rx not
                     float influenceZ = MathF.Max(this.Height[treeIndex] - reader.GetDistanceToCenter(readerX, readerY), 0.0F); // distance to center = height (45 degree line)
@@ -718,7 +718,7 @@ namespace iLand.Tree
         public void CalculateLightResponse(int treeIndex)
         {
             // calculate a light response from lri:
-            // http://iland.boku.ac.at/individual+tree+light+availability
+            // http://iland-model.org/individual+tree+light+availability
             float lri = Maths.Limit(this.LightResourceIndex[treeIndex] * this.RU.Trees.AverageLightRelativeIntensity, 0.0F, 1.0F); // Eq. (3)
             this.LightResponse[treeIndex] = this.Species.GetLightResponse(lri); // Eq. (4)
             this.RU.Trees.AddLightResponse(this.LeafArea[treeIndex], this.LightResponse[treeIndex]);
@@ -745,9 +745,9 @@ namespace iLand.Tree
 
         /** grow() is the main function of the yearly tree growth.
           The main steps are:
-          - Production of GPP/NPP   @sa http://iland.boku.ac.at/primary+production http://iland.boku.ac.at/individual+tree+light+availability
-          - Partitioning of NPP to biomass compartments of the tree @sa http://iland.boku.ac.at/allocation
-          - Growth of the stem http://iland.boku.ac.at/stem+growth (???)
+          - Production of GPP/NPP   @sa http://iland-model.org/primary+production http://iland-model.org/individual+tree+light+availability
+          - Partitioning of NPP to biomass compartments of the tree @sa http://iland-model.org/allocation
+          - Growth of the stem http://iland-model.org/stem+growth (???)
           Further activties: * the age of the tree is increased
                              * the mortality sub routine is executed
                              * seeds are produced */
@@ -822,7 +822,7 @@ namespace iLand.Tree
 
         /** partitioning of this years assimilates (NPP) to biomass compartments.
           Conceptionally, the algorithm is based on Duursma, 2007.
-          @sa http://iland.boku.ac.at/allocation */
+          @sa http://iland-model.org/allocation */
         private void PartitionBiomass(TreeGrowthData growthData, Model model, int treeIndex)
         {
             // available resources
@@ -867,7 +867,7 @@ namespace iLand.Tree
             }
 
             // Roots
-            // http://iland.boku.ac.at/allocation#belowground_NPP
+            // http://iland-model.org/allocation#belowground_NPP
             this.FineRootMass[treeIndex] -= rootSenescence; // reduce only fine root pool
             float rootAllocation = rootFraction * nppAvailable;
             // 1st, refill the fine root pool
@@ -913,7 +913,7 @@ namespace iLand.Tree
             growthData.StressIndex = MathF.Max(1.0F - nppAvailable / (foliageTurnover * foliageBiomass + rootTurnover * foliageBiomass * this.Species.FinerootFoliageRatio + reserveSize), 0.0F);
 
             // Woody compartments
-            // see also: http://iland.boku.ac.at/allocation#reserve_and_allocation_to_stem_growth
+            // see also: http://iland-model.org/allocation#reserve_and_allocation_to_stem_growth
             // (1) transfer to reserve pool
             float woodyAllocation = woodFraction * nppAvailable;
             float toReserve = MathF.Min(reserveSize, woodyAllocation);

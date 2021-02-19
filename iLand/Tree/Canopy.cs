@@ -8,7 +8,7 @@ namespace iLand.Tree
         Calculates the amount of preciptitation that does not reach the ground and
         is stored in the canopy. The approach is adopted from Picus 1.3.
         Returns the amount of precipitation (mm) that surpasses the canopy layer.
-        @sa http://iland.boku.ac.at/water+cycle#precipitation_and_interception */
+        @sa http://iland-model.org/water+cycle#precipitation_and_interception */
     public class Canopy
     {
         // Penman-Monteith parameters
@@ -96,7 +96,7 @@ namespace iLand.Tree
         }
 
         // Returns the total sum of evaporation+transpiration in mm of the day.
-        public float GetEvapotranspiration3PG(Project projectFile, ClimateDay day, float dayLengthInHours, float combinedResponse)
+        public float GetEvapotranspiration3PG(Project projectFile, ClimateDay day, float dayLengthInHours, float soilAtmosphereResponse)
         {
             float vpdInMillibar = 10.0F * day.Vpd; // convert from kPa to mbar
             float meanDaytimeTemperature = day.MeanDaytimeTemperature; // average temperature of the day (degree C)
@@ -117,7 +117,7 @@ namespace iLand.Tree
             // The species traits are weighted by LAI on the RU.
             // maximum canopy conductance: see getStandValues()
             // current response: see calculateSoilAtmosphereResponse(). This is basically a weighted average of min(water_response, vpd_response) for each species
-            float gC = this.maxCanopyConductance * combinedResponse;
+            float gC = this.maxCanopyConductance * soilAtmosphereResponse;
             float defTerm = this.mAirDensity * latentHeatOfVaporization * (vpdInMillibar * vpdToSaturationDeficit) * boundaryLayerConductance;
 
             // with temperature-dependent slope of vapor pressure saturation curve
@@ -125,7 +125,7 @@ namespace iLand.Tree
             // svp_slope in mbar.
             //float svp_slope = 4098. * (6.1078 * exp(17.269 * temperature / (temperature + 237.3))) / ((237.3+temperature)*(237.3+temperature));
 
-            // alternatively: very simple variant (following here the original 3PG code). This
+            // alternatively: very simple variant (following here the original 3-PG code). This
             // keeps yields +- same results for summer, but slightly lower values in winter (2011/03/16)
             const float svp_slope = 2.2F;
 
@@ -148,7 +148,7 @@ namespace iLand.Tree
                 float div_evap = 1.0F + svp_slope;
                 float potentialCanopyEvaporation = (svp_slope * net_rad + defTerm) / div_evap / latentHeatOfVaporization * dayLengthInSeconds;
                 // reduce the amount of transpiration on a wet day based on the approach of
-                // Wigmosta et al (1994). See http://iland.boku.ac.at/water+cycle#transpiration_and_canopy_conductance
+                // Wigmosta et al (1994). See http://iland-model.org/water+cycle#transpiration_and_canopy_conductance
 
                 float ratio_T_E = canopyTranspiration / potentialCanopyEvaporation;
                 float canopyEvaporation = MathF.Min(potentialCanopyEvaporation, this.Interception);
