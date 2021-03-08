@@ -49,7 +49,7 @@ namespace iLand.Tools
             {
                 int validPixels = 0;
                 float surfaceAreaSum = 0.0F;
-                GridWindowEnumerator<HeightCell> runner = new GridWindowEnumerator<HeightCell>(heightGrid, mRumpleGrid.GetCellExtent(mRumpleGrid.GetCellPosition(rumpleGridIndex)));
+                GridWindowEnumerator<HeightCell> runner = new(heightGrid, mRumpleGrid.GetCellExtent(mRumpleGrid.GetCellPosition(rumpleGridIndex)));
                 while (runner.MoveNext())
                 {
                     if (runner.Current.IsOnLandscape())

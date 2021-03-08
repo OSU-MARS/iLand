@@ -27,10 +27,10 @@ namespace iLand.Test
                 ModelTest.VerifyKalkalpenModel(kalkalpen);
                 ModelTest.VerifyNorwaySpruce(kalkalpen);
 
-                Dictionary<int, float> initialDiameters = new Dictionary<int, float>();
-                Dictionary<int, float> initialHeights = new Dictionary<int, float>();
-                Dictionary<int, float> finalDiameters = new Dictionary<int, float>();
-                Dictionary<int, float> finalHeights = new Dictionary<int, float>();
+                Dictionary<int, float> initialDiameters = new();
+                Dictionary<int, float> initialHeights = new();
+                Dictionary<int, float> finalDiameters = new();
+                Dictionary<int, float> finalHeights = new();
                 for (int year = 0; year < 3; ++year)
                 {
                     initialDiameters.Clear();
@@ -209,9 +209,9 @@ namespace iLand.Test
             // check soil properties at initial load
             ModelTest.VerifyMalcolmKnappResourceUnit(plot14);
 
-            List<float> gppByYear = new List<float>();
-            List<float> nppByYear = new List<float>();
-            List<float> stemVolumeByYear = new List<float>();
+            List<float> gppByYear = new();
+            List<float> nppByYear = new();
+            List<float> stemVolumeByYear = new();
             for (int year = 0; year < 28; ++year)
             {
                 plot14.RunYear();
@@ -246,7 +246,7 @@ namespace iLand.Test
             ModelTest.VerifyMalcolmKnappDouglasFir(plot14);
 
             // regex for reformatting copy/paste of values from watch window: "\s+\[\d+]\s+(\d+.\d{1,3})\d*\s+float\r?\n" -> "$1F, "
-            List<float> nominalGppByYear = new List<float>()
+            List<float> nominalGppByYear = new()
             {
                 10.331F, 11.133F, 14.020F, 11.316F, 13.527F, // 0...4
                 10.526F, 12.332F, 12.791F, 12.987F, 11.235F, // 5...9
@@ -256,7 +256,7 @@ namespace iLand.Test
                 10.973F, 12.179F, 12.647F                    // 25...27
             };
             
-            List<float> nominalNppByYear = new List<float>()
+            List<float> nominalNppByYear = new()
             {
                 13305.625F, 14514.859F, 18456.353F, 15041.932F, 18053.941F,
                 14110.686F, 16558.890F, 17210.685F, 17502.668F, 15159.530F,
@@ -265,7 +265,7 @@ namespace iLand.Test
                 16028.833F, 12079.922F, 15009.008F, 13583.033F, 17776.400F,
                 14749.142F, 16356.83F, 16963.591F
             };
-            List<float> nominalVolumeByYear = new List<float>()
+            List<float> nominalVolumeByYear = new()
             {
                 118.143F, 130.357F, 148.674F, 161.134F, 178.615F,
                 189.416F, 204.427F, 220.182F, 236.591F, 248.959F,
@@ -406,9 +406,9 @@ namespace iLand.Test
         [TestMethod]
         public void PacificNorthwestSpecies()
         {
-            Project pnwProject = new Project(LandTest.GetPacificNorthwestProjectPath(this.TestContext!));
+            Project pnwProject = new(LandTest.GetPacificNorthwestProjectPath(this.TestContext!));
 
-            TreeSpeciesSet pnwSpecies = new TreeSpeciesSet(Constant.Database.DefaultSpeciesTable);
+            TreeSpeciesSet pnwSpecies = new(Constant.Database.DefaultSpeciesTable);
             pnwSpecies.Setup(pnwProject);
 
             TreeSpecies abam = pnwSpecies["abam"];

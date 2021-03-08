@@ -55,7 +55,7 @@ namespace iLand.World
 
         public float GetValue(float modelX, float modelY)
         {
-            Vector3D modelCoordinate = new Vector3D(modelX, modelY, 0.0F);
+            Vector3D modelCoordinate = new(modelX, modelY, 0.0F);
             Vector3D gisCoordinate = this.ModelToGis(modelCoordinate);
 
             gisCoordinate.X -= this.GisOrigin.X;
@@ -94,9 +94,9 @@ namespace iLand.World
         {
             float x = gisCoordinate.X - this.transform.OffsetX;
             float y = gisCoordinate.Y - this.transform.OffsetY;
-            Vector3D modelCoordinate = new Vector3D(x * this.transform.CosRotate - y * this.transform.SinRotate,
-                                                    x * this.transform.SinRotate + y * this.transform.CosRotate,
-                                                    gisCoordinate.Z - this.transform.OffsetZ);
+            Vector3D modelCoordinate = new(x * this.transform.CosRotate - y * this.transform.SinRotate,
+                                           x * this.transform.SinRotate + y * this.transform.CosRotate,
+                                           gisCoordinate.Z - this.transform.OffsetZ);
             return modelCoordinate;
         }
 
@@ -110,9 +110,9 @@ namespace iLand.World
         {
             float x = modelCoordinate.X;
             float y = modelCoordinate.Y; // spiegeln
-            Vector3D gisCoordinate = new Vector3D(x * this.transform.CosRotateReverse - y * transform.SinRotateReverse + this.transform.OffsetX,
-                                                  x * this.transform.SinRotateReverse + y * transform.CosRotateReverse + this.transform.OffsetY,
-                                                  modelCoordinate.Z + transform.OffsetZ);
+            Vector3D gisCoordinate = new(x * this.transform.CosRotateReverse - y * transform.SinRotateReverse + this.transform.OffsetX,
+                                         x * this.transform.SinRotateReverse + y * transform.CosRotateReverse + this.transform.OffsetY,
+                                         modelCoordinate.Z + transform.OffsetZ);
             return gisCoordinate;
         }
 
@@ -285,9 +285,9 @@ namespace iLand.World
 
         public Vector3D GetCoordinate(int indexX, int indexY)
         {
-            Vector3D gisCoordinate = new Vector3D((indexX + 0.5F) * this.CellSize + this.GisOrigin.X,
-                                                  (indexY + 0.5F) * this.CellSize + this.GisOrigin.Y,
-                                                  0.0F);
+            Vector3D gisCoordinate = new((indexX + 0.5F) * this.CellSize + this.GisOrigin.X,
+                                         (indexY + 0.5F) * this.CellSize + this.GisOrigin.Y,
+                                         0.0F);
             return this.GisToModel(gisCoordinate);
         }
 

@@ -48,8 +48,8 @@ namespace iLand.Tools
 
             // now loop over all pixels and run a floodfill algorithm
             Point start;
-            Queue<Point> pqueue = new Queue<Point>(); // for the flood fill algorithm
-            List<int> counts = new List<int>();
+            Queue<Point> pqueue = new(); // for the flood fill algorithm
+            List<int> counts = new();
             int patch_index = 0;
             int total_size = 0;
             int patches_skipped = 0;
@@ -154,10 +154,10 @@ namespace iLand.Tools
 
             // calculate the crown cover per resource unit. We use the "reader"-stamps of the individual trees
             // as they represent the crown (size). We also simply hijack the LIF grid for our calculations.
-            Grid<float> crownCoverGrid = new Grid<float>(model.Landscape.LightGrid);
+            Grid<float> crownCoverGrid = new(model.Landscape.LightGrid);
             crownCoverGrid.Fill(0.0F);
             // we simply iterate over all trees of all resource units (not bothering about multithreading here)
-            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model.Landscape);
+            AllTreesEnumerator allTreeEnumerator = new(model.Landscape);
             while (allTreeEnumerator.MoveNextLiving())
             {
                 // apply the reader-stamp
@@ -194,7 +194,7 @@ namespace iLand.Tools
                     continue;
                 }
                 int cellsWithCrownCoverage = 0;
-                GridWindowEnumerator<float> coverRunner = new GridWindowEnumerator<float>(crownCoverGrid, mCrownCoverGrid.GetCellExtent(mCrownCoverGrid.GetCellPosition(crownIndex)));
+                GridWindowEnumerator<float> coverRunner = new(crownCoverGrid, mCrownCoverGrid.GetCellExtent(mCrownCoverGrid.GetCellPosition(crownIndex)));
                 while (coverRunner.MoveNext())
                 {
                     float canopyCover = coverRunner.Current;

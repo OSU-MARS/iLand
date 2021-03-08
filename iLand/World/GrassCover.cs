@@ -116,7 +116,7 @@ namespace iLand.World
                 {
                     throw new NotSupportedException("Required expression 'grassEffect' is missing.");
                 }
-                Expression continousRegenerationEffect = new Expression(grassEffect);
+                Expression continousRegenerationEffect = new(grassEffect);
 
                 this.continuousYearsToFullCover = projectFile.World.Grass.ContinuousYearsToFullCover;
                 if (this.continuousYearsToFullCover == 0)

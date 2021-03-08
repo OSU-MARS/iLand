@@ -54,7 +54,7 @@ namespace iLand.Tree
                 TreeSpecies species = treeSpeciesSet[index];
                 Debug.Assert(species.Index == index);
 
-                ResourceUnitTreeSpecies ruSpecies = new ResourceUnitTreeSpecies(species, ru);
+                ResourceUnitTreeSpecies ruSpecies = new(species, ru);
                 this.SpeciesAvailableOnResourceUnit.Add(ruSpecies);
             }
         }

@@ -293,12 +293,12 @@ namespace iLand.Tree
         {
             Debug.Assert(this.lightGrid != null && this.Stamp != null && this.RU != null);
             int lightBufferWidth = this.lightGrid.GetCellIndex(new PointF(0.0F, 0.0F)).X; // offset of buffer
-            Point treePositionInRU = new Point((this.LightCellPosition[treeIndex].X - lightBufferWidth) % Constant.LightCellsPerRUsize + lightBufferWidth,
-                                               (this.LightCellPosition[treeIndex].Y - lightBufferWidth) % Constant.LightCellsPerRUsize + lightBufferWidth); // offset within the ha
-            Point ruOffset = new Point(this.LightCellPosition[treeIndex].X - treePositionInRU.X, this.LightCellPosition[treeIndex].Y - treePositionInRU.Y); // offset of the corner of the resource index
+            Point treePositionInRU = new((this.LightCellPosition[treeIndex].X - lightBufferWidth) % Constant.LightCellsPerRUsize + lightBufferWidth,
+                                         (this.LightCellPosition[treeIndex].Y - lightBufferWidth) % Constant.LightCellsPerRUsize + lightBufferWidth); // offset within the ha
+            Point ruOffset = new(this.LightCellPosition[treeIndex].X - treePositionInRU.X, this.LightCellPosition[treeIndex].Y - treePositionInRU.Y); // offset of the corner of the resource index
 
             LightStamp stamp = this.Stamp[treeIndex]!;
-            Point stampOrigin = new Point(treePositionInRU.X - stamp.CenterCellPosition, treePositionInRU.Y - stamp.CenterCellPosition);
+            Point stampOrigin = new(treePositionInRU.X - stamp.CenterCellPosition, treePositionInRU.Y - stamp.CenterCellPosition);
 
             int stampSize = stamp.Size();
             if (this.lightGrid.Contains(stampOrigin) == false || this.lightGrid.Contains(new Point(stampOrigin.X + stampSize, stampOrigin.Y + stampSize)) == false)
@@ -337,7 +337,7 @@ namespace iLand.Tree
             */
         public void CalculateDominantHeightField(int treeIndex)
         {
-            Point heightCellPosition = new Point(this.LightCellPosition[treeIndex].X / Constant.LightCellsPerHeightSize, this.LightCellPosition[treeIndex].Y / Constant.LightCellsPerHeightSize); // pos of tree on height grid
+            Point heightCellPosition = new(this.LightCellPosition[treeIndex].X / Constant.LightCellsPerHeightSize, this.LightCellPosition[treeIndex].Y / Constant.LightCellsPerHeightSize); // pos of tree on height grid
 
             // count trees that are on height-grid cells (used for stockable area)
             this.heightGrid[heightCellPosition].AddTree(this.Height[treeIndex]);
@@ -411,13 +411,13 @@ namespace iLand.Tree
         public void CalculateDominantHeightFieldTorus(int treeIndex)
         {
             // height of Z*
-            Point heightCellPosition = new Point(this.LightCellPosition[treeIndex].X / Constant.LightCellsPerHeightSize, this.LightCellPosition[treeIndex].Y / Constant.LightCellsPerHeightSize); // pos of tree on height grid
+            Point heightCellPosition = new(this.LightCellPosition[treeIndex].X / Constant.LightCellsPerHeightSize, this.LightCellPosition[treeIndex].Y / Constant.LightCellsPerHeightSize); // pos of tree on height grid
             int bufferOffset = this.heightGrid.GetCellIndex(new PointF(0.0F, 0.0F)).X; // offset of buffer (i.e.: size of buffer in height-pixels)
             heightCellPosition.X = (heightCellPosition.X - bufferOffset) % Constant.HeightSizePerRU + bufferOffset; // 10: 10 x 10m pixeln in 100m
             heightCellPosition.Y = (heightCellPosition.Y - bufferOffset) % Constant.HeightSizePerRU + bufferOffset;
 
             // torus coordinates: ru_offset = coords of lower left corner of 1ha patch
-            Point ru_offset = new Point(this.LightCellPosition[treeIndex].X / Constant.LightCellsPerHeightSize - heightCellPosition.X, this.LightCellPosition[treeIndex].Y / Constant.LightCellsPerHeightSize - heightCellPosition.Y);
+            Point ru_offset = new(this.LightCellPosition[treeIndex].X / Constant.LightCellsPerHeightSize - heightCellPosition.X, this.LightCellPosition[treeIndex].Y / Constant.LightCellsPerHeightSize - heightCellPosition.Y);
 
             // count trees that are on height-grid cells (used for stockable area)
             int torusX = GetTorusIndex(heightCellPosition.X, 10, bufferOffset, ru_offset.X);
@@ -607,9 +607,9 @@ namespace iLand.Tree
             LightStamp reader = this.Stamp[treeIndex]!.Reader!;
             int bufferOffset = this.lightGrid.GetCellIndex(new PointF(0.0F, 0.0F)).X; // offset of buffer
 
-            Point treePositionInRU = new Point((this.LightCellPosition[treeIndex].X - bufferOffset) % Constant.LightCellsPerRUsize + bufferOffset,
-                                               (this.LightCellPosition[treeIndex].Y - bufferOffset) % Constant.LightCellsPerRUsize + bufferOffset); // offset within the ha
-            Point ruOffset = new Point(this.LightCellPosition[treeIndex].X - treePositionInRU.X, this.LightCellPosition[treeIndex].Y - treePositionInRU.Y); // offset of the corner of the resource index
+            Point treePositionInRU = new((this.LightCellPosition[treeIndex].X - bufferOffset) % Constant.LightCellsPerRUsize + bufferOffset,
+                                         (this.LightCellPosition[treeIndex].Y - bufferOffset) % Constant.LightCellsPerRUsize + bufferOffset); // offset within the ha
+            Point ruOffset = new(this.LightCellPosition[treeIndex].X - treePositionInRU.X, this.LightCellPosition[treeIndex].Y - treePositionInRU.Y); // offset of the corner of the resource index
 
             float lightIndex = 0.0F;
             int readerSize = reader.Size();
@@ -755,7 +755,7 @@ namespace iLand.Tree
         {
             // get the GPP for a "unit area" of the tree species
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
-            TreeGrowthData treeGrowthData = new TreeGrowthData();
+            TreeGrowthData treeGrowthData = new();
             for (int treeIndex = 0; treeIndex < this.Count; ++treeIndex)
             {
                 // increase age

@@ -27,7 +27,7 @@ namespace iLand.Input.ProjectFile
             {
                 if (String.Equals(reader.Name, "species", StringComparison.Ordinal))
                 {
-                    ExternalSeedBeltSector species = new ExternalSeedBeltSector();
+                    ExternalSeedBeltSector species = new();
                     species.ReadXml(reader);
                     this.Sectors.Add(species);
                 }

@@ -21,7 +21,7 @@ namespace iLand.Simulation
 
         public void LoadFromFile(Project projectFile, string fileName)
         {
-            CsvFile eventFile = new CsvFile(projectFile.GetFilePath(ProjectDirectory.Home, fileName));
+            CsvFile eventFile = new(projectFile.GetFilePath(ProjectDirectory.Home, fileName));
             List<string> headers = eventFile.ColumnNames;
             int yearIndex = eventFile.GetColumnIndex("year");
             if (yearIndex == -1)
@@ -43,7 +43,7 @@ namespace iLand.Simulation
                 {
                     if (column != yearIndex)
                     {
-                        MutableTuple<string, string> eventInYear = new MutableTuple<string, string>(headers[column], line[column]);
+                        MutableTuple<string, string> eventInYear = new(headers[column], line[column]);
                         eventsOfYear.Add(eventInYear);
                     }
                 }

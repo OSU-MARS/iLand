@@ -282,7 +282,7 @@ namespace iLand.Tools
                 return "<null>";
             }
 
-            StringBuilder expression = new StringBuilder();
+            StringBuilder expression = new();
             foreach (ExpressionToken token in this.mTokens)
             {
                 expression.Append(token.Type switch
@@ -631,8 +631,8 @@ namespace iLand.Tools
             }
 
             double[] varSpace = variableList ?? this.mVariableValues;
-            List<double> stack = new List<double>(32);
-            List<bool> logicStack = new List<bool>(32) { true }; // zumindest eins am anfang... (at least one thing at the beginning)
+            List<double> stack = new(32);
+            List<bool> logicStack = new(32) { true }; // zumindest eins am anfang... (at least one thing at the beginning)
             int stackDepth = 0;  // p=head pointer
             int logicStackDepth = 1;
             int execIndex = 0;

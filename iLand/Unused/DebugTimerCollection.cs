@@ -25,7 +25,7 @@ namespace iLand.Tools
 
         public DebugTimer Create(string name)
         {
-            DebugTimer timer = new DebugTimer(name, this);
+            DebugTimer timer = new(name, this);
 
             if (this.totalElapsedTimeByName.ContainsKey(name) == false)
             {

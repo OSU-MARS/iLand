@@ -80,7 +80,7 @@ namespace iLand.Tools
 
         public void SetSeed()
         {
-            Random random = new Random();
+            Random random = new();
             for (int index = 0; index < this.wellrngState.Length; ++index)
             {
                 this.wellrngState[index] = (uint)random.Next();
@@ -92,7 +92,7 @@ namespace iLand.Tools
 
         public void SetSeed(int seed)
         {
-            Random random = new Random(seed);
+            Random random = new(seed);
             for (int index = 0; index < this.wellrngState.Length; ++index)
             {
                 this.wellrngState[index] = (uint)random.Next();

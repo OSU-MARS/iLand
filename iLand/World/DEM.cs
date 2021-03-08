@@ -79,7 +79,7 @@ namespace iLand.World
             }
 
             Grid<HeightCell> heightGrid = landscape.HeightGrid;
-            GisGrid demGrid = new GisGrid();
+            GisGrid demGrid = new();
             if (demGrid.LoadFromFile(demFilePath) == false)
             {
                 throw new FileLoadException("Unable to load DEM file " + demFilePath + ".");

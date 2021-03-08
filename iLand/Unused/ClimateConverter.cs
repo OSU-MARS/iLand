@@ -103,32 +103,32 @@ namespace iLand.Tools
             }
 
             // load file
-            CsvFile file = new CsvFile();
+            CsvFile file = new();
             file.LoadFile(this.FileName);
             if (file.RowCount < 2)
             {
                 throw new NotSupportedException("File '" + this.FileName + "' is empty.");
             }
 
-            SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
+            SqliteConnectionStringBuilder connectionString = new()
             {
                 DataSource = this.ConnectionString
             };
-            using SqliteConnection db = new SqliteConnection(connectionString.ConnectionString);
+            using SqliteConnection db = new(connectionString.ConnectionString);
             db.Open();
             using (SqliteTransaction transaction = db.BeginTransaction())
             {
                 // prepare output database
-                using SqliteCommand dropIfExists = new SqliteCommand(String.Format("drop table if exists {0}", TableName), db, transaction);
+                using SqliteCommand dropIfExists = new(String.Format("drop table if exists {0}", TableName), db, transaction);
                 dropIfExists.ExecuteNonQuery();
-                using SqliteCommand create = new SqliteCommand(String.Format("CREATE TABLE {0} ( year INTEGER, month INTEGER, day INTEGER, " +
-                                                                             "temp REAL, min_temp REAL, prec REAL, rad REAL, vpd REAL)", TableName),
-                                                               db, transaction);
+                using SqliteCommand create = new(String.Format("CREATE TABLE {0} ( year INTEGER, month INTEGER, day INTEGER, " +
+                                                               "temp REAL, min_temp REAL, prec REAL, rad REAL, vpd REAL)", TableName),
+                                                 db, transaction);
                 create.ExecuteNonQuery();
 
                 // prepare insert statement
-                using SqliteCommand insert = new SqliteCommand(String.Format("insert into {0} (year, month, day, temp, min_temp, prec, rad, vpd) values (?,?,?, ?,?,?,?,?)", TableName),
-                                                               db, transaction);
+                using SqliteCommand insert = new(String.Format("insert into {0} (year, month, day, temp, min_temp, prec, rad, vpd) values (?,?,?, ?,?,?,?,?)", TableName),
+                                                 db, transaction);
                 // do this for each row
                 for (int row = 0; row < file.RowCount; row++)
                 {

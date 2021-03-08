@@ -433,7 +433,7 @@ namespace iLand.Tree
 
             // filling of the kernel.... use the treemig density function
             float dist_center_cell = MathF.Sqrt(seedCellSize * seedCellSize / MathF.PI);
-            Point kernelCenter = new Point(kernelOffset, kernelOffset);
+            Point kernelCenter = new(kernelOffset, kernelOffset);
             for (int kernelIndex = 0; kernelIndex < kernel.Count; ++kernelIndex)
             {
                 float value = kernel.GetCenterToCenterCellDistance(kernelCenter, kernel.GetCellPosition(kernelIndex));
@@ -856,7 +856,7 @@ namespace iLand.Tree
                                 // distance and direction:
                                 float radius = model.RandomGenerator.GetRandomFloat(mLddDistance[distanceIndex], mLddDistance[distanceIndex + 1]) / seedmap.CellSize; // choose a random distance (in pixels)
                                 float phi = model.RandomGenerator.GetRandomFloat() * 2.0F * MathF.PI; // choose a random direction
-                                Point ldd = new Point((int)(pt.X + radius * MathF.Cos(phi)), (int)(pt.Y + radius * MathF.Sin(phi)));
+                                Point ldd = new((int)(pt.X + radius * MathF.Cos(phi)), (int)(pt.Y + radius * MathF.Sin(phi)));
                                 if (seedmap.Contains(ldd))
                                 {
                                     float val = seedmap[ldd];
@@ -961,7 +961,7 @@ namespace iLand.Tree
                                     // distance and direction:
                                     float radiusInCells = model.RandomGenerator.GetRandomFloat(this.mLddDistance[ringIndex], this.mLddDistance[ringIndex + 1]) / this.SeedMap.CellSize; // choose a random distance (in pixels)
                                     float phi = 2.0F * MathF.PI * model.RandomGenerator.GetRandomFloat(); // choose a random direction
-                                    Point seedCellPosition = new Point(sourceCellIndex.X + (int)(radiusInCells * MathF.Cos(phi)), sourceCellIndex.Y + (int)(radiusInCells * MathF.Sin(phi)));
+                                    Point seedCellPosition = new(sourceCellIndex.X + (int)(radiusInCells * MathF.Cos(phi)), sourceCellIndex.Y + (int)(radiusInCells * MathF.Sin(phi)));
                                     if (this.SeedMap.Contains(seedCellPosition))
                                     {
                                         this.SeedMap[seedCellPosition] += ldd_val;
@@ -984,9 +984,9 @@ namespace iLand.Tree
                     {
                         Point sourceCellPosition = sourceMap.GetCellPosition(sourceIndex);
                         // get the origin of the resource unit *on* the seedmap in *seedmap-coords*:
-                        Point ruOffset = new Point(((sourceCellPosition.X - seedmapOffset) / seedCellsPerRU) * seedCellsPerRU + seedmapOffset,
-                                                   ((sourceCellPosition.Y - seedmapOffset) / seedCellsPerRU) * seedCellsPerRU + seedmapOffset);  // coords RU origin
-                        Point offsetInRU = new Point((sourceCellPosition.X - seedmapOffset) % seedCellsPerRU, (sourceCellPosition.Y - seedmapOffset) % seedCellsPerRU);  // offset of current point within the RU
+                        Point ruOffset = new((sourceCellPosition.X - seedmapOffset) / seedCellsPerRU * seedCellsPerRU + seedmapOffset,
+                                             (sourceCellPosition.Y - seedmapOffset) / seedCellsPerRU * seedCellsPerRU + seedmapOffset);  // coords RU origin
+                        Point offsetInRU = new((sourceCellPosition.X - seedmapOffset) % seedCellsPerRU, (sourceCellPosition.Y - seedmapOffset) % seedCellsPerRU);  // offset of current point within the RU
 
                         //Point sm=sourcemap.indexOf(src)-Point(offset, offset);
                         for (int indexY = 0; indexY < kernel.SizeY; ++indexY)
@@ -1020,7 +1020,7 @@ namespace iLand.Tree
                                     // distance and direction:
                                     float radius = model.RandomGenerator.GetRandomFloat(mLddDistance[densityIndex], mLddDistance[densityIndex + 1]) / SeedMap.CellSize; // choose a random distance (in pixels)
                                     float phi = model.RandomGenerator.GetRandomFloat() * 2.0F * MathF.PI; // choose a random direction
-                                    Point ldd = new Point((int)(radius * MathF.Cos(phi)), (int)(radius * MathF.Sin(phi))); // destination (offset)
+                                    Point ldd = new((int)(radius * MathF.Cos(phi)), (int)(radius * MathF.Sin(phi))); // destination (offset)
                                     Point torusIndex = ruOffset.Add(new Point(Maths.Modulo((offsetInRU.X + ldd.X), seedCellsPerRU), Maths.Modulo((offsetInRU.Y + ldd.Y), seedCellsPerRU)));
 
                                     if (this.SeedMap.Contains(torusIndex))

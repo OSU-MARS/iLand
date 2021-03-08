@@ -246,7 +246,7 @@ namespace iLand.World
         public WaterCycleData RunYear(Project projectFile)
         {
             //using DebugTimer tw = model.DebugTimers.Create("WaterCycle.Run()");
-            WaterCycleData hydrologicState = new WaterCycleData();
+            WaterCycleData hydrologicState = new();
 
             // preparations (once a year)
             this.GetStandValues(projectFile); // fetch canopy characteristics from iLand (including weighted average for mCanopyConductance)

@@ -64,8 +64,8 @@ namespace iLand.Tree
             CarbonNitrogenTuple previousCarbonLiving = this.CarbonLiving;
             this.CarbonLiving.Zero();
 
-            CarbonNitrogenTuple deadWood = new CarbonNitrogenTuple(); // pools for mortality
-            CarbonNitrogenTuple deadFine = new CarbonNitrogenTuple();
+            CarbonNitrogenTuple deadWood = new(); // pools for mortality
+            CarbonNitrogenTuple deadFine = new();
             // average dbh
             if (this.LivingCohorts > 0)
             {

@@ -75,14 +75,14 @@ namespace iLand.Output
 
             // setup fields
             // int pos = 0;
-            TreeWrapper treeWrapper = new TreeWrapper(model);
-            Regex regex = new Regex("([^\\.]+).(\\w+)[,\\s]*"); // two parts: before dot and after dot, and , + whitespace at the end
+            TreeWrapper treeWrapper = new(model);
+            Regex regex = new("([^\\.]+).(\\w+)[,\\s]*"); // two parts: before dot and after dot, and , + whitespace at the end
             MatchCollection columns = regex.Matches(columnString);
             foreach (Match column in columns)
             {
                 string columnVariable = column.Groups[1].Value; // field / expresssion
                 string columnVariableAggregation = column.Groups[2].Value;
-                DynamicOutputField fieldForColumn = new DynamicOutputField();
+                DynamicOutputField fieldForColumn = new();
                 // parse field
                 if (columnVariable.Length > 0 && !columnVariable.Contains('('))
                 {
@@ -140,18 +140,18 @@ namespace iLand.Output
             {
                 throw new NotImplementedException("Generation of a unique list of species from multiple species sets is not currently supported.");
             }
-            List<double> fieldData = new List<double>(); //statistics data
-            TreeWrapper treeWrapper = new TreeWrapper(model);
-            Expression customExpression = new Expression();
+            List<double> fieldData = new(); //statistics data
+            TreeWrapper treeWrapper = new(model);
+            Expression customExpression = new();
 
             TreeSpeciesSet treeSpeciesSet = model.Landscape.Environment.SpeciesSetsByTableName.First().Value;
-            List<Trees> liveTreesOfSpecies = new List<Trees>();
+            List<Trees> liveTreesOfSpecies = new();
             for (int speciesSet = 0; speciesSet < treeSpeciesSet.ActiveSpecies.Count; ++speciesSet)
             {
                 liveTreesOfSpecies.Clear();
 
                 TreeSpecies species = treeSpeciesSet.ActiveSpecies[speciesSet];
-                AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model.Landscape);
+                AllTreesEnumerator allTreeEnumerator = new(model.Landscape);
                 while (allTreeEnumerator.MoveNextLiving())
                 {
                     if (perSpecies && allTreeEnumerator.CurrentTrees.Species != species)
@@ -167,7 +167,7 @@ namespace iLand.Output
 
                 // dynamic calculations
                 int columnIndex = 0;
-                SummaryStatistics fieldStatistics = new SummaryStatistics(); // statistcs helper class
+                SummaryStatistics fieldStatistics = new(); // statistcs helper class
                 foreach (DynamicOutputField field in this.mFieldList)
                 {
                     if (String.IsNullOrEmpty(field.Expression) == false)
@@ -254,13 +254,13 @@ namespace iLand.Output
                 return; // nothing to do if no fields to log
             }
 
-            List<double> data = new List<double>(); //statistics data
-            SummaryStatistics fieldStatistics = new SummaryStatistics(); // statistcs helper class
-            TreeWrapper treeWrapper = new TreeWrapper(model);
-            ResourceUnitWrapper ruWrapper = new ResourceUnitWrapper(model);
+            List<double> data = new(); //statistics data
+            SummaryStatistics fieldStatistics = new(); // statistcs helper class
+            TreeWrapper treeWrapper = new(model);
+            ResourceUnitWrapper ruWrapper = new(model);
             this.mResourceUnitfilter.Wrapper = ruWrapper;
 
-            Expression fieldExpression = new Expression();
+            Expression fieldExpression = new();
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 if (ru.EnvironmentID == -1)

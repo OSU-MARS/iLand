@@ -27,7 +27,7 @@ namespace iLand.World
         public static string ToEsriRaster<T>(Landscape landscape, Grid<T> grid) where T : notnull
         {
             PointF gisGridOrigin = landscape.Environment.GisGrid.ModelToGis(grid.PhysicalExtent.TopLeft());
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
             result.Append(String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
                                         grid.SizeX, grid.SizeY, gisGridOrigin.X, gisGridOrigin.Y, grid.CellSize, -9999, System.Environment.NewLine));
             for (int y = grid.SizeY - 1; y >= 0; --y)
@@ -47,7 +47,7 @@ namespace iLand.World
         /// @param newline_after if <>-1 a newline is added after every 'newline_after' data values
         public static string ToString<T>(Grid<T> grid, Func<T, string> valueFunction, char sep = ';', int newlineAfter = -1)
         {
-            StringBuilder stringBuilder = new StringBuilder();
+            StringBuilder stringBuilder = new();
 
             int newlineCounter = newlineAfter;
             for (int y = grid.SizeY - 1; y >= 0; --y)
@@ -203,7 +203,7 @@ namespace iLand.World
         /// get the metric rectangle of the cell with index @pos
         public RectangleF GetCellExtent(Point cell) // return coordinates of rect given by @param pos.
         {
-            RectangleF extent = new RectangleF(this.PhysicalExtent.Left + this.CellSize * cell.X, this.PhysicalExtent.Top + cell.Y * this.CellSize, this.CellSize, this.CellSize);
+            RectangleF extent = new(this.PhysicalExtent.Left + this.CellSize * cell.X, this.PhysicalExtent.Top + cell.Y * this.CellSize, this.CellSize, this.CellSize);
             return extent;
         }
 
@@ -353,7 +353,7 @@ namespace iLand.World
         /// rows will be y-lines, columns x-values. (see grid.cpp)
         public string ToCsv()
         {
-            StringBuilder csvBuilder = new StringBuilder();
+            StringBuilder csvBuilder = new();
             csvBuilder.AppendLine("x_m,y_m,value"); // wrong if value overrides ToString() and returns multiple values but OK for now
             for (int xIndex = 0; xIndex < this.SizeX; ++xIndex)
             {

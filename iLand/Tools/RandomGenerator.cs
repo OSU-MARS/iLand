@@ -56,7 +56,7 @@ namespace iLand.Tools
                         return;
                     }
 
-                    RandomGenerators generator = new RandomGenerators();
+                    RandomGenerators generator = new();
                     generator.SetSeed(mBuffer[RandomByteBufferSize + 4]); // use the last value as seed for the next round....
                     switch (mGeneratorType)
                     {
@@ -112,7 +112,7 @@ namespace iLand.Tools
 
             if (oneSeed.HasValue == false)
             {
-                Random random = new Random();
+                Random random = new();
                 this.mBuffer[RandomGenerator.RandomByteBufferSize + 4] = random.Next();
             }
             else

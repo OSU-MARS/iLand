@@ -22,7 +22,7 @@ namespace iLand.Input.ProjectFile
 			this.User = new User();
 			this.World = new World();
 
-			using FileStream stream = new FileStream(xmlFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+			using FileStream stream = new(xmlFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 			using XmlReader reader = XmlReader.Create(stream);
 			reader.MoveToContent();
 			this.ReadXml(reader);

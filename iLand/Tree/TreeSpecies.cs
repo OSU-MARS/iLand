@@ -157,7 +157,7 @@ namespace iLand.Tree
             */
         public static TreeSpecies Load(Project projectFile, SpeciesReader reader, TreeSpeciesSet speciesSet)
         {
-            TreeSpecies species = new TreeSpecies(speciesSet, reader.ID(), reader.Name())
+            TreeSpecies species = new(speciesSet, reader.ID(), reader.Name())
             {
                 Active = reader.Active(),
             };

@@ -38,7 +38,7 @@ namespace iLand.Tree
             this.RU = ru;
             this.Species = treeSpecies;
 
-            ResourceUnitTreeSpeciesResponse speciesResponse = new ResourceUnitTreeSpeciesResponse(ru, this); // requires this.Species be set
+            ResourceUnitTreeSpeciesResponse speciesResponse = new(ru, this); // requires this.Species be set
             this.BiomassGrowth = new ResourceUnitTreeSpeciesGrowth(speciesResponse);
             this.Establishment = new Establishment(ru.Climate, this); // requires this.Species and this.RU be set
             this.RemovedStemVolume = 0.0F;

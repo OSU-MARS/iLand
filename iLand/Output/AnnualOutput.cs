@@ -78,7 +78,7 @@ namespace iLand.Output
 
         public void LogYear(Model model, SqliteTransaction transaction)
         {
-            SqliteCommand insertRow = new SqliteCommand(this.insertRowSqlText, transaction.Connection, transaction);
+            SqliteCommand insertRow = new(this.insertRowSqlText, transaction.Connection, transaction);
             for (int columnIndex = 0; columnIndex < this.Columns.Count; ++columnIndex)
             {
                 insertRow.Parameters.Add("@" + this.Columns[columnIndex].Name, this.Columns[columnIndex].SqlType);
@@ -92,8 +92,8 @@ namespace iLand.Output
         public void Open(SqliteTransaction transaction)
         {
             // ensure an empty table exists for this output to log to
-            StringBuilder createTableCommand = new StringBuilder("create table " + this.TableName + "(");
-            List<string> columnNames = new List<string>(this.Columns.Count);
+            StringBuilder createTableCommand = new("create table " + this.TableName + "(");
+            List<string> columnNames = new(this.Columns.Count);
             foreach (SqlColumn column in this.Columns)
             {
                 switch (column.SqlType)
@@ -114,9 +114,9 @@ namespace iLand.Output
             }
             createTableCommand[^1] = ')'; // replace last "," with )
 
-            SqliteCommand dropTable = new SqliteCommand(String.Format("drop table if exists {0}", this.TableName), transaction.Connection, transaction);
+            SqliteCommand dropTable = new(String.Format("drop table if exists {0}", this.TableName), transaction.Connection, transaction);
             dropTable.ExecuteNonQuery(); // drop table (if exists)
-            SqliteCommand createTable = new SqliteCommand(createTableCommand.ToString(), transaction.Connection, transaction);
+            SqliteCommand createTable = new(createTableCommand.ToString(), transaction.Connection, transaction);
             createTable.ExecuteNonQuery(); // (re-)create table
 
             this.insertRowSqlText = "insert into " + this.TableName + " (" + String.Join(", ", columnNames) + ") values (@" + String.Join(", @", columnNames) + ")";

@@ -145,7 +145,7 @@ namespace iLand.World
 
             string climateDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Climate.DatabaseFile);
             using SqliteConnection climateDatabase = Landscape.GetDatabaseConnection(climateDatabaseFilePath, true);
-            using SqliteCommand queryCommand = new SqliteCommand(query, climateDatabase);
+            using SqliteCommand queryCommand = new(query, climateDatabase);
             using SqliteDataReader climateReader = queryCommand.ExecuteReader();
 
             int dayIndex = 0;
@@ -482,14 +482,14 @@ namespace iLand.World
                 {
                     throw new XmlException("Invalid leaf type ID " + phenology.ID + ".");
                 }
-                Phenology item = new Phenology(phenology.ID, 
-                                               this, 
-                                               phenology.VpdMin,
-                                               phenology.VpdMax,
-                                               phenology.DayLengthMin,
-                                               phenology.DayLengthMax,
-                                               phenology.TempMin,
-                                               phenology.TempMax);
+                Phenology item = new(phenology.ID, 
+                                     this, 
+                                     phenology.VpdMin,
+                                     phenology.VpdMax,
+                                     phenology.DayLengthMin,
+                                     phenology.DayLengthMax,
+                                     phenology.TempMin,
+                                     phenology.TempMax);
                 mPhenology.Add(item);
             } 
         }

@@ -27,7 +27,7 @@
 
         public void Add(CarbonNitrogenTuple cnTuple, float decompositionRate)
         {
-            CarbonNitrogenPool pool = new CarbonNitrogenPool() { C = cnTuple.C, N = cnTuple.N, DecompositionRate = decompositionRate };
+            CarbonNitrogenPool pool = new() { C = cnTuple.C, N = cnTuple.N, DecompositionRate = decompositionRate };
             this.DecompositionRate = this.GetWeightedDecomposiitonRate(pool);
             this.C += cnTuple.C;
             this.N += cnTuple.N;
@@ -36,7 +36,7 @@
         // increase pool (and weight the value)
         public static CarbonNitrogenPool operator +(CarbonNitrogenPool pool1, CarbonNitrogenPool pool2)
         {
-            CarbonNitrogenPool sum = new CarbonNitrogenPool() { C = pool1.C, N = pool1.N, DecompositionRate = pool1.DecompositionRate };
+            CarbonNitrogenPool sum = new() { C = pool1.C, N = pool1.N, DecompositionRate = pool1.DecompositionRate };
             sum.GetWeightedDecomposiitonRate(pool2);
             sum.C += pool2.C;
             sum.N += pool2.N;

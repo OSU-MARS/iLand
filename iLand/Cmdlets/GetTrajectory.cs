@@ -23,10 +23,10 @@ namespace iLand.Cmdlets
 
         protected override void ProcessRecord()
         {
-            Project projectFile = new Project(this.Project!);
-            Landscape landscape = new Landscape(projectFile);
+            Project projectFile = new(this.Project!);
+            Landscape landscape = new(projectFile);
 
-            using Model model = new Model(projectFile, landscape);
+            using Model model = new(projectFile, landscape);
             model.Setup();
             for (int year = 0; year < Years; ++year)
             {

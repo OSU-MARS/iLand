@@ -217,7 +217,7 @@ namespace iLand.World
             Array.Fill(lightCorrection, -1.0F);
 
             Point ruOrigin = this.TopLeftLightPosition; // offset on LIF/saplings grid
-            Point seedmapOrigin = new Point(ruOrigin.X / Constant.LightCellsPerSeedmapSize, ruOrigin.Y / Constant.LightCellsPerSeedmapSize); // seed-map has 20m resolution, LIF 2m . factor 10
+            Point seedmapOrigin = new(ruOrigin.X / Constant.LightCellsPerSeedmapSize, ruOrigin.Y / Constant.LightCellsPerSeedmapSize); // seed-map has 20m resolution, LIF 2m . factor 10
             this.Trees.TreeSpeciesSet.GetRandomSpeciesSampleIndices(model.RandomGenerator, out int sampleBegin, out int sampleEnd);
             for (int sampleIndex = sampleBegin; sampleIndex != sampleEnd; ++sampleIndex)
             {

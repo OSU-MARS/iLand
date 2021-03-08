@@ -69,8 +69,8 @@ namespace iLand.Tools
 
         public bool LoadFile(string fileName)
         {
-            using FileStream stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using StreamReader reader = new StreamReader(stream);
+            using FileStream stream = new(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using StreamReader reader = new(stream);
             string content = reader.ReadToEnd();
             if (String.IsNullOrEmpty(content))
             {
@@ -151,7 +151,7 @@ namespace iLand.Tools
 
         public List<string> GetRow(int rowIndex)
         {
-            List<string> line = new List<string>(this.ColumnCount);
+            List<string> line = new(this.ColumnCount);
             line.AddRange(mRows[rowIndex].Split(mSeparator, StringSplitOptions.None));
             return line;
         }
@@ -179,7 +179,7 @@ namespace iLand.Tools
 
         public List<string> GetColumnValues(int columnIndex)
         {
-            List<string> result = new List<string>(this.RowCount);
+            List<string> result = new(this.RowCount);
             for (int row = 0; row < this.RowCount; ++row)
             {
                 result.Add(this.GetValue(columnIndex, row));

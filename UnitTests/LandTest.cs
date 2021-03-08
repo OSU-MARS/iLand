@@ -30,10 +30,10 @@ namespace iLand.Test
 
         protected static Model LoadProject(string projectFilePath)
         {
-            Project projectFile = new Project(projectFilePath);
-            Landscape landscape = new Landscape(projectFile);
+            Project projectFile = new(projectFilePath);
+            Landscape landscape = new(projectFile);
 
-            Model model = new Model(projectFile, landscape);
+            Model model = new(projectFile, landscape);
             model.Setup();
             return model;
         }

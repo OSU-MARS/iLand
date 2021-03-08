@@ -45,7 +45,7 @@ namespace iLand.World
             this.Extent = new RectangleF(0.0F, 0.0F, worldWidth, worldHeight);
             // Debug.WriteLine(String.Format("Setup of the world: {0}x{1} m with {2} m light cell size and {3} m buffer", worldWidth, worldHeight, lightCellSize, worldBuffer));
 
-            RectangleF worldExtentBuffered = new RectangleF(-worldBuffer, -worldBuffer, worldWidth + 2 * worldBuffer, worldHeight + 2 * worldBuffer);
+            RectangleF worldExtentBuffered = new(-worldBuffer, -worldBuffer, worldWidth + 2 * worldBuffer, worldHeight + 2 * worldBuffer);
             // Debug.WriteLine("Setup grid rectangle: " + worldExtentBuffered);
 
             this.LightGrid = new Grid<float>(worldExtentBuffered, lightCellSize);
@@ -140,7 +140,7 @@ namespace iLand.World
                     {
                         throw new NotSupportedException("Climate or species parameterizations not found for resource unit " + ruGridIndex + ".");
                     }
-                    ResourceUnit newRU = new ResourceUnit(projectFile, this.Environment.CurrentClimate, this.Environment.CurrentSpeciesSet, ruGridIndex)
+                    ResourceUnit newRU = new(projectFile, this.Environment.CurrentClimate, this.Environment.CurrentSpeciesSet, ruGridIndex)
                     {
                         BoundingBox = ruExtent,
                         EnvironmentID = this.Environment.CurrentResourceUnitID, // set id of resource unit in grid mode
@@ -187,7 +187,7 @@ namespace iLand.World
             {
                 // to be extended!!! e.g. to load ESRI-style text files....
                 // setup a grid with the same size as the height grid...
-                Grid<float> worldMask = new Grid<float>(this.HeightGrid.SizeX, this.HeightGrid.SizeY, this.HeightGrid.CellSize);
+                Grid<float> worldMask = new(this.HeightGrid.SizeX, this.HeightGrid.SizeY, this.HeightGrid.CellSize);
                 string areaMaskFileName = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.World.AreaMask.ImageFile);
                 Grid.LoadGridFromImage(areaMaskFileName, worldMask); // fetch from image
                 for (int index = 0; index < worldMask.Count; ++index)
@@ -206,7 +206,7 @@ namespace iLand.World
             {
                 //mGrid.setup(GlobalSettings.instance().model().grid().metricRect(), GlobalSettings.instance().model().grid().cellsize());
                 // mask out out-of-project areas
-                GridWindowEnumerator<float> lightRunner = new GridWindowEnumerator<float>(this.LightGrid, this.ResourceUnitGrid.PhysicalExtent);
+                GridWindowEnumerator<float> lightRunner = new(this.LightGrid, this.ResourceUnitGrid.PhysicalExtent);
                 while (lightRunner.MoveNext())
                 {
                     SaplingCell? saplingCell = this.GetSaplingCell(this.LightGrid.GetCellPosition(lightRunner.CurrentIndex), false, out ResourceUnit _); // false: retrieve also invalid cells
@@ -241,7 +241,7 @@ namespace iLand.World
                 //            ru.setStockableArea(0.);
                 //            continue;
                 //        }
-                GridWindowEnumerator<HeightCell> heightRunner = new GridWindowEnumerator<HeightCell>(this.HeightGrid, ru.BoundingBox);
+                GridWindowEnumerator<HeightCell> heightRunner = new(this.HeightGrid, ru.BoundingBox);
                 int heightCellsInLandscape = 0;
                 int heightCellsInRU = 0;
                 while (heightRunner.MoveNext())
@@ -287,7 +287,7 @@ namespace iLand.World
 
             // mark those pixels that are at the edge of a "forest-out-of-area"
             // Use GridWindowEnumerator rather than cell indexing in order to be able to access neighbors.
-            GridWindowEnumerator<HeightCell> runner = new GridWindowEnumerator<HeightCell>(this.HeightGrid, this.HeightGrid.PhysicalExtent);
+            GridWindowEnumerator<HeightCell> runner = new(this.HeightGrid, this.HeightGrid.PhysicalExtent);
             HeightCell[] neighbors = new HeightCell[8];
             while (runner.MoveNext())
             {
@@ -317,12 +317,12 @@ namespace iLand.World
                 }
             }
 
-            SqliteConnectionStringBuilder connectionString = new SqliteConnectionStringBuilder()
+            SqliteConnectionStringBuilder connectionString = new()
             {
                 DataSource = databaseFilePath,
                 Mode = openReadOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
             };
-            SqliteConnection connection = new SqliteConnection(connectionString.ConnectionString);
+            SqliteConnection connection = new(connectionString.ConnectionString);
             connection.Open();
             if (openReadOnly == false)
             {
@@ -332,14 +332,14 @@ namespace iLand.World
                 // caution can be exchanged for speed. For example, journal_mode = memory, synchronous = off, and temp_store = memory 
                 // make the model unit tests run 4-5x times faster than default settings.
                 // pragma synchronous cannot be changed within a transaction
-                using SqliteCommand synchronization = new SqliteCommand("pragma synchronous(off)", connection);
+                using SqliteCommand synchronization = new("pragma synchronous(off)", connection);
                 synchronization.ExecuteNonQuery();
 
                 using SqliteTransaction transaction = connection.BeginTransaction();
                 // little to no difference between journal_mode = memory and journal_mode = off
-                using SqliteCommand journalMode = new SqliteCommand("pragma journal_mode(memory)", connection, transaction);
+                using SqliteCommand journalMode = new("pragma journal_mode(memory)", connection, transaction);
                 journalMode.ExecuteNonQuery();
-                using SqliteCommand tempStore = new SqliteCommand("pragma temp_store(memory)", connection, transaction);
+                using SqliteCommand tempStore = new("pragma temp_store(memory)", connection, transaction);
                 tempStore.ExecuteNonQuery();
                 transaction.Commit();
             }

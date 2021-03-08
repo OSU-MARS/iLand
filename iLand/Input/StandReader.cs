@@ -142,7 +142,7 @@ namespace iLand.Input
                 }
                 string mapFileName = projectFile.GetFilePath(ProjectDirectory.Home, projectFile.World.Initialization.MapFileName);
 
-                CsvFile mapFile = new CsvFile(mapFileName);
+                CsvFile mapFile = new(mapFileName);
                 if (mapFile.RowCount == 0)
                 {
                     throw new NotSupportedException(String.Format("Map file {0} is empty or missing.", mapFileName));
@@ -228,7 +228,7 @@ namespace iLand.Input
             }
             // load a file with saplings per polygon
             string saplingFilePath = model.Project.GetFilePath(ProjectDirectory.Init, saplingFileName);
-            CsvFile saplingFile = new CsvFile(saplingFilePath);
+            CsvFile saplingFile = new(saplingFilePath);
             int standIDindex = saplingFile.GetColumnIndex("stand_id");
             if (standIDindex == -1)
             {
@@ -276,7 +276,7 @@ namespace iLand.Input
                 if (String.Equals(isDebugTreeExpressionString, "debugstamp", StringComparison.OrdinalIgnoreCase))
                 {
                     // check for trees which aren't correctly placed
-                    AllTreesEnumerator treeIterator = new AllTreesEnumerator(landscape);
+                    AllTreesEnumerator treeIterator = new(landscape);
                     while (treeIterator.MoveNext())
                     {
                         if (landscape.LightGrid.Contains(treeIterator.CurrentTrees.LightCellPosition[treeIterator.CurrentTreeIndex]) == false)
@@ -287,9 +287,9 @@ namespace iLand.Input
                     return;
                 }
 
-                TreeWrapper treeWrapper = new TreeWrapper(null);
-                Expression isDebugTreeExpression = new Expression(isDebugTreeExpressionString, treeWrapper); // load expression dbg_str and enable external model variables
-                AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(landscape);
+                TreeWrapper treeWrapper = new(null);
+                Expression isDebugTreeExpression = new(isDebugTreeExpressionString, treeWrapper); // load expression dbg_str and enable external model variables
+                AllTreesEnumerator allTreeEnumerator = new(landscape);
                 while (allTreeEnumerator.MoveNext())
                 {
                     // TODO: why is debug expression evaluated for all trees rather than just trees marked for debugging?
@@ -349,7 +349,7 @@ namespace iLand.Input
                 treeFileContent = treeFileContent[(treesElementStart + "<trees>".Length)..(treesElementStop - 1)];
             }
 
-            CsvFile picusTreeFile = new CsvFile();
+            CsvFile picusTreeFile = new();
             picusTreeFile.LoadFromString(treeFileContent);
 
             int standIDcolumn = picusTreeFile.GetColumnIndex("standID");
@@ -383,7 +383,7 @@ namespace iLand.Input
                 float dbh = Single.Parse(picusTreeFile.GetValue(dbhColumn, rowIndex));
                 //if (dbh<5.)
                 //    continue;
-                PointF physicalPosition = new PointF();
+                PointF physicalPosition = new();
                 if (xColumn >= 0 && yColumn >= 0)
                 {
                     physicalPosition.X = Single.Parse(picusTreeFile.GetValue(xColumn, rowIndex)) + ruOffset.X;
@@ -478,7 +478,7 @@ namespace iLand.Input
             Debug.Assert(speciesSet != null);
 
             //DebugTimer t("loadiLandFile");
-            CsvFile standFile = new CsvFile(treeFileName);
+            CsvFile standFile = new(treeFileName);
 
             int countIndex = standFile.GetColumnIndex("count");
             int speciesIndex = standFile.GetColumnIndex("species");
@@ -498,7 +498,7 @@ namespace iLand.Input
             int totalCount = 0;
             for (int rowIndex = 0; rowIndex < standFile.RowCount; ++rowIndex)
             {
-                StandInitializationFileRow standRow = new StandInitializationFileRow(speciesSet[standFile.GetValue(speciesIndex, rowIndex)])
+                StandInitializationFileRow standRow = new(speciesSet[standFile.GetValue(speciesIndex, rowIndex)])
                 {
                     Count = Single.Parse(standFile.GetValue(countIndex, rowIndex)),
                     DbhFrom = Single.Parse(standFile.GetValue(dbhFromIndex, rowIndex)),
@@ -625,7 +625,7 @@ namespace iLand.Input
 
             // a multimap holds a list for all trees.
             // key is the index of a 10x10m pixel within the resource unit
-            Dictionary<int, MutableTuple<Trees, List<int>>> treeIndexByHeightCellIndex = new Dictionary<int, MutableTuple<Trees, List<int>>>();
+            Dictionary<int, MutableTuple<Trees, List<int>>> treeIndexByHeightCellIndex = new();
             int totalTreeCount = 0;
             foreach (StandInitializationFileRow standRow in this.mTreeRowsForDefaultStand)
             {
@@ -733,8 +733,8 @@ namespace iLand.Input
                     // get position from fixed lists (one for even, one for uneven resource units)
                     int pos = ru.ResourceUnitGridIndex % Constant.LightSize != 0 ? EvenList[index] : UnevenList[index];
                     // position of resource unit + position of 10x10m pixel + position within 10x10m pixel
-                    Point lightCellIndex = new Point(offsetIdx.X + Constant.LightCellsPerHeightSize * (heightCellIndex / Constant.HeightSize) + pos / Constant.LightCellsPerHeightSize,
-                                                     offsetIdx.Y + Constant.LightCellsPerHeightSize * (heightCellIndex % Constant.HeightSize) + pos % Constant.LightCellsPerHeightSize);
+                    Point lightCellIndex = new(offsetIdx.X + Constant.LightCellsPerHeightSize * (heightCellIndex / Constant.HeightSize) + pos / Constant.LightCellsPerHeightSize,
+                                               offsetIdx.Y + Constant.LightCellsPerHeightSize * (heightCellIndex % Constant.HeightSize) + pos % Constant.LightCellsPerHeightSize);
                     //Debug.WriteLine(tree_no++ + "to" + index);
                     treesInCell.Item1.LightCellPosition[treeIndex] = lightCellIndex;
                 }
@@ -762,14 +762,14 @@ namespace iLand.Input
             }
             // a multiHash holds a list for all trees.
             // key is the location of the 10x10m pixel
-            Dictionary<Point, MutableTuple<Trees, List<int>>> treeIndicesByHeightCellIndex = new Dictionary<Point, MutableTuple<Trees, List<int>>>();
-            List<HeightInitCell> heightCells = new List<HeightInitCell>(heightGridCellIndicesInStand.Count); // working list of all 10m pixels
+            Dictionary<Point, MutableTuple<Trees, List<int>>> treeIndicesByHeightCellIndex = new();
+            List<HeightInitCell> heightCells = new(heightGridCellIndicesInStand.Count); // working list of all 10m pixels
 
             foreach (int cellIndex in heightGridCellIndicesInStand)
             {
                 Point heightCellIndex = standGrid.Grid.GetCellPosition(cellIndex);
                 ResourceUnit ru = landscape.GetResourceUnit(standGrid.Grid.GetCellCenterPosition(heightCellIndex));
-                HeightInitCell heightCell = new HeightInitCell(ru)
+                HeightInitCell heightCell = new(ru)
                 {
                     GridCellIndex = heightCellIndex // index in the 10m grid
                 };
@@ -949,8 +949,8 @@ namespace iLand.Input
                     }
                     // get position from fixed lists (one for even, one for uneven resource units)
                     int pos = heightCell.ResourceUnit.ResourceUnitGridIndex % Constant.LightSize != 0 ? StandReader.EvenList[index] : StandReader.UnevenList[index];
-                    Point lightCellIndex = new Point(heightCell.GridCellIndex.X * Constant.LightCellsPerHeightSize + pos / Constant.LightCellsPerHeightSize, // convert to LIF index
-                                                     heightCell.GridCellIndex.Y * Constant.LightCellsPerHeightSize + pos % Constant.LightCellsPerHeightSize);
+                    Point lightCellIndex = new(heightCell.GridCellIndex.X * Constant.LightCellsPerHeightSize + pos / Constant.LightCellsPerHeightSize, // convert to LIF index
+                                               heightCell.GridCellIndex.Y * Constant.LightCellsPerHeightSize + pos % Constant.LightCellsPerHeightSize);
                     if (landscape.LightGrid.Contains(lightCellIndex) == false)
                     {
                         throw new NotSupportedException("Tree is positioned outside of the light grid.");
@@ -1075,7 +1075,7 @@ namespace iLand.Input
             }
 
             // prepare space for LIF-pointers (2m Pixel)
-            List<KeyValuePair<int, float>> lightCellIndexAndValues = new List<KeyValuePair<int, float>>(standGridIndices.Count * Constant.LightCellsPerHeightSize * Constant.LightCellsPerHeightSize);
+            List<KeyValuePair<int, float>> lightCellIndexAndValues = new(standGridIndices.Count * Constant.LightCellsPerHeightSize * Constant.LightCellsPerHeightSize);
             Grid<float> lightGrid = model.Landscape.LightGrid;
             for (int standGridIndex = 0; standGridIndex < standGridIndices.Count; ++standGridIndex)
             {
@@ -1087,7 +1087,7 @@ namespace iLand.Input
                     for (int lightX = 0; lightX < Constant.LightCellsPerHeightSize; ++lightX)
                     {
                         int modelIndex = lightGrid.IndexOf(cellOrigin.X + lightX, cellOrigin.Y + lightY);
-                        KeyValuePair<int, float> indexAndValue = new KeyValuePair<int, float>(modelIndex, lightGrid[modelIndex]);
+                        KeyValuePair<int, float> indexAndValue = new(modelIndex, lightGrid[modelIndex]);
                         lightCellIndexAndValues.Add(indexAndValue);
                     }
                 }

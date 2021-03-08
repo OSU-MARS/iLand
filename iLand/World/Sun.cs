@@ -26,7 +26,7 @@ namespace iLand.World
 
         public string Dump()
         {
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
             result.AppendLine(String.Format("lat: {0}, longest day: {1}", mLatitudeInRadians, LongestDay));
             result.AppendLine("day;daylength");
             for (int day = 0; day < this.mDayLengthInHours.Length; ++day)

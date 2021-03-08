@@ -34,27 +34,27 @@ namespace iLand.Output
                 using SqliteTransaction transaction = snapshotDatabase.BeginTransaction();
                 // create tables
                 // trees
-                using SqliteCommand dropTrees = new SqliteCommand("drop table trees", snapshotDatabase, transaction);
+                using SqliteCommand dropTrees = new("drop table trees", snapshotDatabase, transaction);
                 dropTrees.ExecuteNonQuery();
-                using SqliteCommand createTrees = new SqliteCommand("create table trees (ID integer, RUindex integer, posX integer, posY integer, species text,  age integer, height real, dbh real, leafArea real, opacity real, foliageMass real, woodyMass real, fineRootMass real, coarseRootMass real, NPPReserve real, stressIndex real)", snapshotDatabase, transaction);
+                using SqliteCommand createTrees = new("create table trees (ID integer, RUindex integer, posX integer, posY integer, species text,  age integer, height real, dbh real, leafArea real, opacity real, foliageMass real, woodyMass real, fineRootMass real, coarseRootMass real, NPPReserve real, stressIndex real)", snapshotDatabase, transaction);
                 createTrees.ExecuteNonQuery();
                 // soil
-                using SqliteCommand dropSoil = new SqliteCommand("drop table soil", snapshotDatabase, transaction);
+                using SqliteCommand dropSoil = new("drop table soil", snapshotDatabase, transaction);
                 dropSoil.ExecuteNonQuery();
-                using SqliteCommand createSoil = new SqliteCommand("create table soil (RUindex integer, kyl real, kyr real, inLabC real, inLabN real, inLabP real, inRefC real, inRefN real, inRefP real, YLC real, YLN real, YLP real, YRC real, YRN real, YRP real, SOMC real, SOMN real, WaterContent, SnowPack real)", snapshotDatabase, transaction);
+                using SqliteCommand createSoil = new("create table soil (RUindex integer, kyl real, kyr real, inLabC real, inLabN real, inLabP real, inRefC real, inRefN real, inRefP real, YLC real, YLN real, YLP real, YRC real, YRN real, YRP real, SOMC real, SOMN real, WaterContent, SnowPack real)", snapshotDatabase, transaction);
                 createSoil.ExecuteNonQuery();
                 // snag
-                using SqliteCommand dropSnag = new SqliteCommand("drop table snag", snapshotDatabase, transaction);
+                using SqliteCommand dropSnag = new("drop table snag", snapshotDatabase, transaction);
                 dropSoil.ExecuteNonQuery();
-                using SqliteCommand createSnag = new SqliteCommand("create table snag(RUIndex integer, climateFactor real, SWD1C real, SWD1N real, SWD2C real, SWD2N real, SWD3C real, SWD3N real, " +
-                                                                   "totalSWDC real, totalSWDN real, NSnags1 real, NSnags2 real, NSnags3 real, dbh1 real, dbh2 real, dbh3 real, height1 real, height2 real, height3 real, " +
-                                                                   "volume1 real, volume2 real, volume3 real, tsd1 real, tsd2 real, tsd3 real, ksw1 real, ksw2 real, ksw3 real, halflife1 real, halflife2 real, halflife3 real, " +
-                                                                   "branch1C real, branch1N real, branch2C real, branch2N real, branch3C real, branch3N real, branch4C real, branch4N real, branch5C real, branch5N real, branchIndex integer)", snapshotDatabase, transaction);
+                using SqliteCommand createSnag = new("create table snag(RUIndex integer, climateFactor real, SWD1C real, SWD1N real, SWD2C real, SWD2N real, SWD3C real, SWD3N real, " +
+                                                     "totalSWDC real, totalSWDN real, NSnags1 real, NSnags2 real, NSnags3 real, dbh1 real, dbh2 real, dbh3 real, height1 real, height2 real, height3 real, " +
+                                                     "volume1 real, volume2 real, volume3 real, tsd1 real, tsd2 real, tsd3 real, ksw1 real, ksw2 real, ksw3 real, halflife1 real, halflife2 real, halflife3 real, " +
+                                                     "branch1C real, branch1N real, branch2C real, branch2N real, branch3C real, branch3N real, branch4C real, branch4N real, branch5C real, branch5N real, branchIndex integer)", snapshotDatabase, transaction);
                 createSnag.ExecuteNonQuery();
                 // saplings/regeneration
-                using SqliteCommand dropSaplings = new SqliteCommand("drop table saplings", snapshotDatabase, transaction);
+                using SqliteCommand dropSaplings = new("drop table saplings", snapshotDatabase, transaction);
                 dropSoil.ExecuteNonQuery();
-                using SqliteCommand createSaplings = new SqliteCommand("create table saplings (RUindex integer, species text, posx integer, posy integer, age integer, height float, stress_years integer)", snapshotDatabase, transaction);
+                using SqliteCommand createSaplings = new("create table saplings (RUindex integer, species text, posx integer, posy integer, age integer, height float, stress_years integer)", snapshotDatabase, transaction);
                 createSnag.ExecuteNonQuery();
                 transaction.Commit();
                 Debug.WriteLine("Snapshot - tables created. Database " + fileName);
@@ -75,11 +75,11 @@ namespace iLand.Output
             Snapshot.SaveSaplings(snapshotDatabase);
 
             // save a grid of the indices
-            FileInfo fi = new FileInfo(snapshotDatabaseFileName);
+            FileInfo fi = new(snapshotDatabaseFileName);
             string gridFile = Path.Combine(Path.GetDirectoryName(fi.FullName), Path.GetFileNameWithoutExtension(fi.FullName) + ".asc");
 
             Grid<ResourceUnit> ruGrid = model.Landscape.ResourceUnitGrid;
-            Grid<double> ruIndexGrid = new Grid<double>(ruGrid.SizeX, ruGrid.SizeY, ruGrid.CellSize);
+            Grid<double> ruIndexGrid = new(ruGrid.SizeX, ruGrid.SizeY, ruGrid.CellSize);
             ruIndexGrid.Setup(model.Landscape.ResourceUnitGrid.PhysicalExtent, model.Landscape.ResourceUnitGrid.CellSize);
             for (int index = 0; index < ruGrid.Count; ++index)
             {
@@ -104,7 +104,7 @@ namespace iLand.Output
         {
             //using DebugTimer t = model.DebugTimers.Create("Snapshot.Load()");
             string gridFile = Path.Combine(Path.GetDirectoryName(snapshotDatabaseFilePath), Path.GetFileNameWithoutExtension(snapshotDatabaseFilePath) + ".asc");
-            GisGrid grid = new GisGrid();
+            GisGrid grid = new();
             mResourceUnits.Clear();
 
             if (!grid.LoadFromFile(gridFile))
@@ -181,8 +181,8 @@ namespace iLand.Output
             // Check database
             using SqliteConnection standSnapshotDatabase = Landscape.GetDatabaseConnection(model.Project.GetFilePath(ProjectDirectory.Home, fileName), openReadOnly: false);
 
-            List<string> tableNames = new List<string>();
-            SqliteCommand selectTableNames = new SqliteCommand("SELECT name FROM sqlite_schema WHERE type='table'", standSnapshotDatabase);
+            List<string> tableNames = new();
+            SqliteCommand selectTableNames = new("SELECT name FROM sqlite_schema WHERE type='table'", standSnapshotDatabase);
             SqliteDataReader tableNameReader = selectTableNames.ExecuteReader();
             while (tableNameReader.Read())
             {
@@ -194,15 +194,15 @@ namespace iLand.Output
             {
                 // create tables
                 using SqliteTransaction tablesTransaction = standSnapshotDatabase.BeginTransaction();
-                using SqliteCommand dropTrees = new SqliteCommand("drop table trees_stand", standSnapshotDatabase, tablesTransaction);
+                using SqliteCommand dropTrees = new("drop table trees_stand", standSnapshotDatabase, tablesTransaction);
                 dropTrees.ExecuteNonQuery();
                 // trees
-                using SqliteCommand createTrees = new SqliteCommand("create table trees_stand (standID integer, ID integer, posX integer, posY integer, species text,  age integer, height real, dbh real, leafArea real, opacity real, foliageMass real, woodyMass real, fineRootMass real, coarseRootMass real, NPPReserve real, stressIndex real)", standSnapshotDatabase, tablesTransaction);
+                using SqliteCommand createTrees = new("create table trees_stand (standID integer, ID integer, posX integer, posY integer, species text,  age integer, height real, dbh real, leafArea real, opacity real, foliageMass real, woodyMass real, fineRootMass real, coarseRootMass real, NPPReserve real, stressIndex real)", standSnapshotDatabase, tablesTransaction);
                 createTrees.ExecuteNonQuery();
                 // saplings/regeneration
-                using SqliteCommand dropSaplings = new SqliteCommand("drop table saplings_stand", standSnapshotDatabase, tablesTransaction);
+                using SqliteCommand dropSaplings = new("drop table saplings_stand", standSnapshotDatabase, tablesTransaction);
                 dropSaplings.ExecuteNonQuery();
-                using SqliteCommand createSaplings = new SqliteCommand("create table saplings_stand (standID integer, posx integer, posy integer, species_index integer, age integer, height float, stress_years integer, flags integer)", standSnapshotDatabase, tablesTransaction);
+                using SqliteCommand createSaplings = new("create table saplings_stand (standID integer, posx integer, posy integer, species_index integer, age integer, height float, stress_years integer, flags integer)", standSnapshotDatabase, tablesTransaction);
                 createSaplings.ExecuteNonQuery();
                 tablesTransaction.Commit();
             }
@@ -210,11 +210,11 @@ namespace iLand.Output
             // save trees
             using (SqliteTransaction treesTransaction = standSnapshotDatabase.BeginTransaction())
             {
-                using SqliteCommand deleteStand = new SqliteCommand(String.Format("delete from trees_stand where standID={0}", standID), standSnapshotDatabase, treesTransaction);
+                using SqliteCommand deleteStand = new(String.Format("delete from trees_stand where standID={0}", standID), standSnapshotDatabase, treesTransaction);
                 deleteStand.ExecuteNonQuery();
 
-                using SqliteCommand insertTree = new SqliteCommand("insert into trees_stand (standID, ID, posX, posY, species,  age, height, dbh, leafArea, opacity, foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex) " +
-                                  "values (:standid, :id, :x, :y, :spec, :age, :h, :d, :la, :opa, :mfol, :mwood, :mfr, :mcr, :npp, :si)");
+                using SqliteCommand insertTree = new("insert into trees_stand (standID, ID, posX, posY, species,  age, height, dbh, leafArea, opacity, foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex) " +
+                                                     "values (:standid, :id, :x, :y, :spec, :age, :h, :d, :la, :opa, :mfol, :mwood, :mfr, :mcr, :npp, :si)");
                 insertTree.Parameters.Add(":standID", SqliteType.Integer);
                 insertTree.Parameters.Add(":id", SqliteType.Integer);
                 insertTree.Parameters.Add(":x", SqliteType.Real);
@@ -266,11 +266,11 @@ namespace iLand.Output
             if (model.ModelSettings.RegenerationEnabled)
             {
                 using SqliteTransaction saplingTransaction = standSnapshotDatabase.BeginTransaction();
-                using SqliteCommand deleteSaplings = new SqliteCommand(String.Format("delete from saplings_stand where standID={0}", standID), standSnapshotDatabase, saplingTransaction);
+                using SqliteCommand deleteSaplings = new(String.Format("delete from saplings_stand where standID={0}", standID), standSnapshotDatabase, saplingTransaction);
                 deleteSaplings.ExecuteNonQuery();
 
-                using SqliteCommand insertSapling = new SqliteCommand(String.Format("insert into saplings_stand (standID, posx, posy, species_index, age, height, stress_years, flags) " +
-                                                                               "values (?,?,?,?,?,?,?,?)"), standSnapshotDatabase, saplingTransaction);
+                using SqliteCommand insertSapling = new(String.Format("insert into saplings_stand (standID, posx, posy, species_index, age, height, stress_years, flags) " +
+                                                                      "values (?,?,?,?,?,?,?,?)"), standSnapshotDatabase, saplingTransaction);
                 insertSapling.Parameters.Add("standID", SqliteType.Integer);
                 insertSapling.Parameters.Add("posx", SqliteType.Real);
                 insertSapling.Parameters.Add("posy", SqliteType.Real);
@@ -281,7 +281,7 @@ namespace iLand.Output
                 insertSapling.Parameters.Add("flags", SqliteType.Integer);
 
                 PointF offset = model.Landscape.Environment.GisGrid.ModelToGis(new PointF(0.0F, 0.0F));
-                SaplingCellRunner saplingRunner = new SaplingCellRunner(model.Landscape, standID);
+                SaplingCellRunner saplingRunner = new(model.Landscape, standID);
                 for (SaplingCell saplingCell = saplingRunner.MoveNext(); saplingCell != null; saplingCell = saplingRunner.MoveNext())
                 {
                     for (int index = 0; index < saplingCell.Saplings.Length; ++index)
@@ -319,9 +319,9 @@ namespace iLand.Output
 
             // load from database
             RectangleF extent = model.Landscape.Extent;
-            using SqliteCommand treeQuery = new SqliteCommand(String.Format("select standID, ID, posX, posY, species,  age, height, dbh, leafArea, opacity, " +
-                                                                            "foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex " +
-                                                                            "from trees_stand where standID={0}", standID), db);
+            using SqliteCommand treeQuery = new(String.Format("select standID, ID, posX, posY, species,  age, height, dbh, leafArea, opacity, " +
+                                                              "foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex " +
+                                                              "from trees_stand where standID={0}", standID), db);
             using SqliteDataReader treeReader = treeQuery.ExecuteReader();
             int treesAdded = 0;
             while (treeReader.Read())
@@ -365,7 +365,7 @@ namespace iLand.Output
             if (model.ModelSettings.RegenerationEnabled)
             {
                 // (1) remove all saplings:
-                SaplingCellRunner saplingRunner = new SaplingCellRunner(model.Landscape, standID);
+                SaplingCellRunner saplingRunner = new(model.Landscape, standID);
                 for (SaplingCell saplingCell = saplingRunner.MoveNext(); saplingCell != null; saplingCell = saplingRunner.MoveNext())
                 {
                     existingSaplingsRemoved += saplingCell.GetOccupiedSlotCount();
@@ -373,8 +373,8 @@ namespace iLand.Output
                 }
 
                 // (2) load saplings from database
-                SqliteCommand saplingQuery = new SqliteCommand(String.Format("select posx, posy, species_index, age, height, stress_years, flags " +
-                                                                             "from saplings_stand where standID={0}", standID), db);
+                SqliteCommand saplingQuery = new(String.Format("select posx, posy, species_index, age, height, stress_years, flags " +
+                                                               "from saplings_stand where standID={0}", standID), db);
                 using SqliteDataReader saplingReader = saplingQuery.ExecuteReader();
                 while (saplingReader.Read())
                 {
@@ -408,8 +408,8 @@ namespace iLand.Output
         private static void SaveTrees(Model model, SqliteConnection db)
         {
             using SqliteTransaction treeTransaction = db.BeginTransaction();
-            SqliteCommand treeInsert = new SqliteCommand(String.Format("insert into trees (ID, RUindex, posX, posY, species,  age, height, dbh, leafArea, opacity, foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex) " +
-                              "values (:id, :index, :x, :y, :spec, :age, :h, :d, :la, :opa, :mfol, :mwood, :mfr, :mcr, :npp, :si)"), db);
+            SqliteCommand treeInsert = new(String.Format("insert into trees (ID, RUindex, posX, posY, species,  age, height, dbh, leafArea, opacity, foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex) " +
+                                                         "values (:id, :index, :x, :y, :spec, :age, :h, :d, :la, :opa, :mfol, :mwood, :mfr, :mcr, :npp, :si)"), db);
             treeInsert.Parameters.Add(":id", SqliteType.Integer);
             treeInsert.Parameters.Add(":index", SqliteType.Integer);
             treeInsert.Parameters.Add(":x", SqliteType.Integer);
@@ -427,7 +427,7 @@ namespace iLand.Output
             treeInsert.Parameters.Add(":npp", SqliteType.Integer);
             treeInsert.Parameters.Add(":si", SqliteType.Integer);
 
-            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model.Landscape);
+            AllTreesEnumerator allTreeEnumerator = new(model.Landscape);
             while (allTreeEnumerator.MoveNext())
             {
                 Trees trees = allTreeEnumerator.CurrentTrees;
@@ -468,7 +468,7 @@ namespace iLand.Output
             ResourceUnit ru = null;
             int n = 0, ntotal = 0;
             // load the trees from the database
-            using SqliteCommand treeQuery = new SqliteCommand("select ID, RUindex, posX, posY, species,  age, height, dbh, leafArea, opacity, foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex from trees", db);
+            using SqliteCommand treeQuery = new("select ID, RUindex, posX, posY, species,  age, height, dbh, leafArea, opacity, foliageMass, woodyMass, fineRootMass, coarseRootMass, NPPReserve, stressIndex from trees", db);
             using SqliteDataReader treeReader = treeQuery.ExecuteReader();
             while (treeReader.Read())
             {
@@ -522,8 +522,8 @@ namespace iLand.Output
         private static void SaveSoil(Model model, SqliteConnection db)
         {
             using SqliteTransaction soilTransaction = db.BeginTransaction();
-            using SqliteCommand soilInsert = new SqliteCommand(String.Format("insert into soil (RUindex, kyl, kyr, inLabC, inLabN, inLabP, inRefC, inRefN, inRefP, YLC, YLN, YLP, YRC, YRN, YRP, SOMC, SOMN, WaterContent, SnowPack) " +
-                                                                             "values (@idx, @kyl, @kyr, @inLabC, @iLN, @iLP, @iRC, @iRN, @iRP, @ylc, @yln, @ylp, @yrc, @yrn, @yrp, @somc, @somn, @wc, @swe)"), db, soilTransaction);
+            using SqliteCommand soilInsert = new(String.Format("insert into soil (RUindex, kyl, kyr, inLabC, inLabN, inLabP, inRefC, inRefN, inRefP, YLC, YLN, YLP, YRC, YRN, YRP, SOMC, SOMN, WaterContent, SnowPack) " +
+                                                               "values (@idx, @kyl, @kyr, @inLabC, @iLN, @iLP, @iRC, @iRN, @iRP, @ylc, @yln, @ylp, @yrc, @yrn, @yrp, @somc, @somn, @wc, @swe)"), db, soilTransaction);
             soilInsert.Parameters.Add("@idx", SqliteType.Integer);
             soilInsert.Parameters.Add("@kyl", SqliteType.Real);
             soilInsert.Parameters.Add("@kyr", SqliteType.Real);
@@ -584,7 +584,7 @@ namespace iLand.Output
 
         private void LoadSoil(SqliteConnection db)
         {
-            using SqliteCommand soilQuery = new SqliteCommand("select RUindex, kyl, kyr, inLabC, inLabN, inLabP, inRefC, inRefN, inRefP, YLC, YLN, YLP, YRC, YRN, YRP, SOMC, SOMN, WaterContent, SnowPack from soil", db);
+            using SqliteCommand soilQuery = new("select RUindex, kyl, kyr, inLabC, inLabN, inLabP, inRefC, inRefN, inRefP, YLC, YLN, YLP, YRC, YRN, YRP, SOMC, SOMN, WaterContent, SnowPack from soil", db);
             int ru_index = -1;
             ResourceUnit ru = null;
             //int n = 0;
@@ -632,14 +632,14 @@ namespace iLand.Output
         private static void SaveSnags(Model model, SqliteConnection db)
         {
             using SqliteTransaction snagTransaction = db.BeginTransaction();
-            SqliteCommand snagInsert = new SqliteCommand(String.Format("insert into snag(RUIndex, climateFactor, SWD1C, SWD1N, SWD2C, SWD2N, SWD3C, SWD3N, " +
-                                                                       "totalSWDC, totalSWDN, NSnags1, NSnags2, NSnags3, dbh1, dbh2, dbh3, height1, height2, height3, " +
-                                                                       "volume1, volume2, volume3, tsd1, tsd2, tsd3, ksw1, ksw2, ksw3, halflife1, halflife2, halflife3, " +
-                                                                       "branch1C, branch1N, branch2C, branch2N, branch3C, branch3N, branch4C, branch4N, branch5C, branch5N, branchIndex) " +
-                                                                       "values (?,?,?,?,?,?,?,?, " +
-                                                                       "?,?,?,?,?,?,?,?,?,?,?," +
-                                                                       "?,?,?,?,?,?,?,?,?,?,?,?," +
-                                                                       "?,?,?,?,?,?,?,?,?,?,?)"), db, snagTransaction);
+            SqliteCommand snagInsert = new(String.Format("insert into snag(RUIndex, climateFactor, SWD1C, SWD1N, SWD2C, SWD2N, SWD3C, SWD3N, " +
+                                                         "totalSWDC, totalSWDN, NSnags1, NSnags2, NSnags3, dbh1, dbh2, dbh3, height1, height2, height3, " +
+                                                         "volume1, volume2, volume3, tsd1, tsd2, tsd3, ksw1, ksw2, ksw3, halflife1, halflife2, halflife3, " +
+                                                         "branch1C, branch1N, branch2C, branch2N, branch3C, branch3N, branch4C, branch4N, branch5C, branch5N, branchIndex) " +
+                                                         "values (?,?,?,?,?,?,?,?, " +
+                                                         "?,?,?,?,?,?,?,?,?,?,?," +
+                                                         "?,?,?,?,?,?,?,?,?,?,?,?," +
+                                                         "?,?,?,?,?,?,?,?,?,?,?)"), db, snagTransaction);
             snagInsert.Parameters.Add("RUIndex", SqliteType.Integer);
             snagInsert.Parameters.Add("climateFactor", SqliteType.Real);
             snagInsert.Parameters.Add("SWD1C", SqliteType.Real);
@@ -748,7 +748,7 @@ namespace iLand.Output
         private void LoadSnags(SqliteConnection db)
         {
             //int n = 0;
-            using SqliteCommand snagQuery = new SqliteCommand("select RUIndex, climateFactor, SWD1C, SWD1N, SWD2C, SWD2N, SWD3C, SWD3N, totalSWDC, totalSWDN, NSnags1, NSnags2, NSnags3, dbh1, dbh2, dbh3, height1, height2, height3, volume1, volume2, volume3, tsd1, tsd2, tsd3, ksw1, ksw2, ksw3, halflife1, halflife2, halflife3, branch1C, branch1N, branch2C, branch2N, branch3C, branch3N, branch4C, branch4N, branch5C, branch5N, branchIndex from snag", db);
+            using SqliteCommand snagQuery = new("select RUIndex, climateFactor, SWD1C, SWD1N, SWD2C, SWD2N, SWD3C, SWD3N, totalSWDC, totalSWDN, NSnags1, NSnags2, NSnags3, dbh1, dbh2, dbh3, height1, height2, height3, volume1, volume2, volume3, tsd1, tsd2, tsd3, ksw1, ksw2, ksw3, halflife1, halflife2, halflife3, branch1C, branch1N, branch2C, branch2N, branch3C, branch3N, branch4C, branch4N, branch5C, branch5N, branchIndex from snag", db);
             using SqliteDataReader snagReader = snagQuery.ExecuteReader();
             while (snagReader.Read())
             {
@@ -819,7 +819,7 @@ namespace iLand.Output
 
         private static void SaveSaplings(SqliteConnection db)
         {
-            using SqliteCommand q = new SqliteCommand("insert into saplings (RUindex, species, posx, posy, age, height, stress_years) values (?,?,?,?,?,?,?)", db);
+            using SqliteCommand q = new("insert into saplings (RUindex, species, posx, posy, age, height, stress_years) values (?,?,?,?,?,?,?)", db);
             // int n = 0;
             throw new NotSupportedException("saveSaplings() not implemented");
             //    foreach (ResourceUnit *ru, globalSettings().model().ruList()) {
@@ -853,7 +853,7 @@ namespace iLand.Output
 
         private void LoadSaplings(Model model, SqliteConnection db)
         {
-            SqliteCommand saplingQuery = new SqliteCommand("select RUindex, species, posx, posy, age, height, stress_years from saplings", db);
+            SqliteCommand saplingQuery = new("select RUindex, species, posx, posy, age, height, stress_years from saplings", db);
 
             // clear all saplings in the whole project area: added for testing/debugging
             //    foreach( ResourceUnit *ru, globalSettings().model().ruList()) {

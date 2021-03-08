@@ -49,7 +49,7 @@ namespace iLand.Simulation
 
             // setup the helper that does the multithreading
             // list of "valid" resource units
-            List<ResourceUnit> validResourceUnits = new List<ResourceUnit>();
+            List<ResourceUnit> validResourceUnits = new();
             foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
             {
                 if (ru.EnvironmentID != -1)
@@ -115,7 +115,7 @@ namespace iLand.Simulation
         {
             // initialize stands
             // TODO: consolidate this into Landscape?
-            StandReader standReader = new StandReader();
+            StandReader standReader = new();
             standReader.Setup(this.Project, this.Landscape, this.RandomGenerator);
             standReader.SetupSaplings(this);
 
@@ -240,7 +240,7 @@ namespace iLand.Simulation
                 //using DebugTimer tseed = this.DebugTimers.Create("Model.RunYear(seed dispersal, establishment, sapling growth");
                 foreach (TreeSpeciesSet speciesSet in this.Landscape.Environment.SpeciesSetsByTableName.Values)
                 {
-                    MaybeParallel<TreeSpecies> speciesParallel = new MaybeParallel<TreeSpecies>(speciesSet.ActiveSpecies); // initialize a thread runner object with all active species
+                    MaybeParallel<TreeSpecies> speciesParallel = new(speciesSet.ActiveSpecies); // initialize a thread runner object with all active species
                     speciesParallel.ForEach((TreeSpecies species) =>
                     {
                         Debug.Assert(species.SeedDispersal != null, "Attempt to disperse seeds from a tree species not configured for seed dispersal.");

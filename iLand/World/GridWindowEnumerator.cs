@@ -20,9 +20,9 @@ namespace iLand.World
             Point topLeft = grid.GetCellIndex(physicalExtentToRun.Left, physicalExtentToRun.Top);
             Point bottomRight = grid.GetCellIndex(physicalExtentToRun.Right, physicalExtentToRun.Bottom);
             
-            Rectangle cellExtentToRun = new Rectangle(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
-            Point upperLeftCellInWindow = new Point(cellExtentToRun.Left, cellExtentToRun.Top);
-            Point lowerRightCellInWindow = new Point(cellExtentToRun.Right, cellExtentToRun.Bottom);
+            Rectangle cellExtentToRun = new(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
+            Point upperLeftCellInWindow = new(cellExtentToRun.Left, cellExtentToRun.Top);
+            Point lowerRightCellInWindow = new(cellExtentToRun.Right, cellExtentToRun.Bottom);
 
             this.grid = grid;
             this.columnsInWindow = lowerRightCellInWindow.X - upperLeftCellInWindow.X;

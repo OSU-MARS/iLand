@@ -99,8 +99,8 @@
 
   <ItemGroup>
     <PackageReference Include="MersenneTwister" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="5.0.2" />
-    <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.1.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="5.0.4" />
+    <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.1.2" />
   </ItemGroup>
   
 </Project>

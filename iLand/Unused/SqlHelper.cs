@@ -11,7 +11,7 @@ namespace iLand.Tools
           A Null-Variant is returned, if the query has no results. */
         public static object QueryValue(string query, SqliteConnection database)
         {
-            SqliteCommand q = new SqliteCommand(query, database);
+            SqliteCommand q = new(query, database);
             return q.ExecuteScalar();
         }
 
@@ -19,7 +19,7 @@ namespace iLand.Tools
             Use for insert, update, ... statements without return values. */
         public static bool ExecuteSql(string query, SqliteConnection database)
         {
-            SqliteCommand q = new SqliteCommand(query, database);
+            SqliteCommand q = new(query, database);
             q.ExecuteNonQuery();
             return true;
         }

@@ -178,7 +178,7 @@ namespace iLand.Input
                 {
                     //model.GlobalSettings.Settings.SetParameter(Constant.Setting.SpeciesTable, name); // set xml value
                     // create species sets
-                    TreeSpeciesSet speciesSet = new TreeSpeciesSet(tableName);
+                    TreeSpeciesSet speciesSet = new(tableName);
                     speciesSet.Setup(projectFile);
 
                     if (this.CurrentSpeciesSet == null)
@@ -191,7 +191,7 @@ namespace iLand.Input
             else
             {
                 // no species sets specified
-                TreeSpeciesSet defaultSpeciesSet = new TreeSpeciesSet(Constant.Database.DefaultSpeciesTable);
+                TreeSpeciesSet defaultSpeciesSet = new(Constant.Database.DefaultSpeciesTable);
                 defaultSpeciesSet.Setup(projectFile);
                 this.CurrentSpeciesSet = defaultSpeciesSet;
                 this.SpeciesSetsByTableName.Add(defaultSpeciesSet.SqlTableName, defaultSpeciesSet);
@@ -201,7 +201,7 @@ namespace iLand.Input
             if (columnNames.IndexOf(Constant.Setting.Climate.Name) == -1)
             {
                 // no named climates defined: create a single default climate
-                World.Climate defaultClimate = new World.Climate("default");
+                World.Climate defaultClimate = new("default");
                 defaultClimate.Setup(projectFile);
                 ClimatesByName.Add(defaultClimate.Name, defaultClimate);
                 CurrentClimate = defaultClimate;

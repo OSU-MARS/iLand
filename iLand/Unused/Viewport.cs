@@ -65,8 +65,8 @@ namespace iLand.Tools
         /// toWorld() converts the pixel-information (e.g. by an mouse event) to the corresponding real world coordinates (defined by viewport).
         public PointF ToWorld(Point pixel)
         {
-            PointF p = new PointF(pixel.X / m_scale_worldtoscreen + m_delta_worldtoscreen.X,
-                                  (m_screen.Height - pixel.Y) / m_scale_worldtoscreen + m_delta_worldtoscreen.Y);
+            PointF p = new(pixel.X / m_scale_worldtoscreen + m_delta_worldtoscreen.X,
+                           (m_screen.Height - pixel.Y) / m_scale_worldtoscreen + m_delta_worldtoscreen.Y);
             return p;
 
         }
@@ -74,8 +74,8 @@ namespace iLand.Tools
         /// toScreen() converts world coordinates in screen coordinates using the defined viewport.
         public Point ToScreen(PointF p)
         {
-            Point pixel = new Point((int)Math.Round((p.X - m_delta_worldtoscreen.X) * m_scale_worldtoscreen),
-                                    m_screen.Height - 1 - (int)Math.Round((p.Y - m_delta_worldtoscreen.Y) * m_scale_worldtoscreen));
+            Point pixel = new((int)Math.Round((p.X - m_delta_worldtoscreen.X) * m_scale_worldtoscreen),
+                              m_screen.Height - 1 - (int)Math.Round((p.Y - m_delta_worldtoscreen.Y) * m_scale_worldtoscreen));
             return pixel;
         }
 
@@ -90,7 +90,7 @@ namespace iLand.Tools
         {
             Point p1 = ToScreen(new PointF(world.Left, world.Bottom));
             Point p2 = ToScreen(new PointF(world.Right, world.Top));
-            Rectangle r = new Rectangle(p1.X, p2.Y, p2.X - p1.X, p2.Y - p1.Y);
+            Rectangle r = new(p1.X, p2.Y, p2.X - p1.X, p2.Y - p1.Y);
             return r;
         }
 
@@ -112,7 +112,7 @@ namespace iLand.Tools
             float scale_x = m_screen.Width / m_world.Width; // pixel per meter in x
             float scale_y = m_screen.Height / m_world.Height; // pixel per meter in y
             float scale = Math.Min(scale_x, scale_y);
-            PointF d = new PointF();
+            PointF d = new();
             if (scale_x < scale_y)
             {
                 // x-axis fills the screen; center in y-axis

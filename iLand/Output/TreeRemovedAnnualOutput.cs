@@ -49,7 +49,7 @@ namespace iLand.Output
             if (this.treeFilter.IsEmpty == false)
             {
                 // skip trees if filter is present
-                TreeWrapper treeWrapper = new TreeWrapper(model)
+                TreeWrapper treeWrapper = new(model)
                 {
                     Trees = trees,
                     TreeIndex = treeIndex

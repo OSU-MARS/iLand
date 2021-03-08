@@ -120,9 +120,9 @@ namespace iLand.Tree
             this.NumberOfSnagsByClass[1] = environmentReader.CurrentSnagsPerResourceUnit;
             this.HalfLifeByClass[1] = environmentReader.CurrentSnagHalfLife;
             // and for the Branch/coarse root pools: split the init value into five chunks
-            CarbonNitrogenPool branches = new CarbonNitrogenPool(environmentReader.CurrentSnagBranchRootCarbon,
-                                                                 environmentReader.CurrentSnagBranchRootCarbon / environmentReader.CurrentSnagBranchRootCNRatio,
-                                                                 environmentReader.CurrentSnagBranchRootDecompositionRate);
+            CarbonNitrogenPool branches = new(environmentReader.CurrentSnagBranchRootCarbon,
+                                              environmentReader.CurrentSnagBranchRootCarbon / environmentReader.CurrentSnagBranchRootCNRatio,
+                                              environmentReader.CurrentSnagBranchRootDecompositionRate);
             this.StandingAndDebrisCarbon = branches.C + this.StandingWoodyDebrisByClass[1].C;
 
             branches *= 1.0F / this.BranchesAndCoarseRootsByYear.Length;

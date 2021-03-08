@@ -177,7 +177,7 @@ namespace iLand.World
         // load ESRI style text file
         public bool LoadFromFile(Landscape landscape, string? fileName)
         {
-            GisGrid gisGrid = new GisGrid();
+            GisGrid gisGrid = new();
             if (gisGrid.LoadFromFile(fileName))
             {
                 this.Name = fileName;
@@ -201,7 +201,7 @@ namespace iLand.World
         public List<ResourceUnit> GetResourceUnitsInStand(int standID)
         {
             IReadOnlyCollection<MutableTuple<ResourceUnit, float>> resourceUnitsInStand = mResourceUnitsByStandID[standID];
-            List<ResourceUnit> resourceUnits = new List<ResourceUnit>(resourceUnitsInStand.Count);
+            List<ResourceUnit> resourceUnits = new(resourceUnitsInStand.Count);
             foreach (MutableTuple<ResourceUnit, float> ru in resourceUnitsInStand)
             {
                 resourceUnits.Add(ru.Item1);
@@ -212,13 +212,13 @@ namespace iLand.World
         /// return a list of all living trees on the area denoted by 'id'
         public List<MutableTuple<Trees, List<int>>> GetLivingTreesInStand(int standID)
         {
-            List<MutableTuple<Trees, List<int>>> livingTrees = new List<MutableTuple<Trees, List<int>>>();
+            List<MutableTuple<Trees, List<int>>> livingTrees = new();
             List<ResourceUnit> resourceUnitsInStand = this.GetResourceUnitsInStand(standID);
             foreach (ResourceUnit ru in resourceUnitsInStand)
             {
                 foreach (Trees trees in ru.Trees.TreesBySpeciesID.Values)
                 {
-                    MutableTuple<Trees, List<int>> livingTreesInStand = new MutableTuple<Trees, List<int>>(trees, new List<int>());
+                    MutableTuple<Trees, List<int>> livingTreesInStand = new(trees, new List<int>());
                     for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                     {
                         if ((this.GetStandIDFromLightCoordinate(trees.LightCellPosition[treeIndex]) == standID) && (trees.IsDead(treeIndex) == false))
@@ -242,7 +242,7 @@ namespace iLand.World
                 rList.Capacity = estimatedTreeCount;
             }
             Expression? treeFilterExpression = null;
-            TreeWrapper treeWrapper = new TreeWrapper(model);
+            TreeWrapper treeWrapper = new(model);
             if (String.IsNullOrEmpty(filter) == false)
             {
                 treeFilterExpression = new Expression(filter, treeWrapper);
@@ -298,9 +298,9 @@ namespace iLand.World
         /// The selection is limited to pixels within the world's extent
         public List<int> GetGridIndices(int standID)
         {
-            List<int> result = new List<int>();
+            List<int> result = new();
             RectangleF rect = mBoundingBoxByStandID[standID].Item1;
-            GridWindowEnumerator<int> runner = new GridWindowEnumerator<int>(this.Grid, rect);
+            GridWindowEnumerator<int> runner = new(this.Grid, rect);
             while (runner.MoveNext())
             {
                 int cellStandID = runner.Current;
@@ -346,7 +346,7 @@ namespace iLand.World
         {
             this.mNeighborListByStandID.Clear();
 
-            GridWindowEnumerator<int> gridRuner = new GridWindowEnumerator<int>(this.Grid, this.Grid.GetCellExtent()); // the full grid
+            GridWindowEnumerator<int> gridRuner = new(this.Grid, this.Grid.GetCellExtent()); // the full grid
             int[] neighbors4 = new int[4];
             while (gridRuner.MoveNext())
             {

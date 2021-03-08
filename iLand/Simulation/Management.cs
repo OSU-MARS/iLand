@@ -51,8 +51,8 @@ namespace iLand.Simulation
 
         public static int KillTreesAboveRetentionThreshold(Model model, int treesToRetain)
         {
-            AllTreesEnumerator allTreeEnumerator = new AllTreesEnumerator(model.Landscape);
-            List<MutableTuple<Trees, int>> livingTrees = new List<MutableTuple<Trees, int>>();
+            AllTreesEnumerator allTreeEnumerator = new(model.Landscape);
+            List<MutableTuple<Trees, int>> livingTrees = new();
             while (allTreeEnumerator.MoveNextLiving())
             {
                 livingTrees.Add(new MutableTuple<Trees, int>(allTreeEnumerator.CurrentTrees, allTreeEnumerator.CurrentTreeIndex));
@@ -238,8 +238,8 @@ namespace iLand.Simulation
           */
         private int RemoveTrees(Model model, string treeSelectionExpressionString, float removalProbabilityIfSelected, bool management)
         {
-            TreeWrapper treeWrapper = new TreeWrapper(model);
-            Expression selectionExpression = new Expression(treeSelectionExpressionString, treeWrapper);
+            TreeWrapper treeWrapper = new(model);
+            Expression selectionExpression = new(treeSelectionExpressionString, treeWrapper);
             selectionExpression.EnableIncrementalSum();
             int treesRemoved = 0;
             for (int speciesIndex = 0; speciesIndex < mTreesInMostRecentlyLoadedStand.Count; ++speciesIndex)
@@ -328,7 +328,7 @@ namespace iLand.Simulation
 
         public int FilterByTreeID(List<int> treeIDlist)
         {
-            List<MutableTuple<Trees, List<int>>> filteredTrees = new List<MutableTuple<Trees, List<int>>>();
+            List<MutableTuple<Trees, List<int>>> filteredTrees = new();
             int treesSelected = 0;
             foreach (MutableTuple<Trees, List<int>> treesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
             {
@@ -357,8 +357,8 @@ namespace iLand.Simulation
 
         public int Filter(Model model, string filter)
         {
-            TreeWrapper treeWrapper = new TreeWrapper(model);
-            Expression filterExpression = new Expression(filter, treeWrapper);
+            TreeWrapper treeWrapper = new(model);
+            Expression filterExpression = new(filter, treeWrapper);
             filterExpression.EnableIncrementalSum();
 
             for (int treesOfSpeciesIndex = 0; treesOfSpeciesIndex < this.mTreesInMostRecentlyLoadedStand.Count; ++treesOfSpeciesIndex)
@@ -459,7 +459,7 @@ namespace iLand.Simulation
             //}
             //loadFromMap(wrap.map(), key);
             RectangleF boundingBox = standGrid.GetBoundingBox(key);
-            GridWindowEnumerator<float> runner = new GridWindowEnumerator<float>(model.Landscape.LightGrid, boundingBox);
+            GridWindowEnumerator<float> runner = new(model.Landscape.LightGrid, boundingBox);
             while (runner.MoveNext())
             {
                 if (standGrid.GetStandIDFromLightCoordinate(runner.GetCellPosition()) == key)

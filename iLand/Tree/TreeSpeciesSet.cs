@@ -87,9 +87,9 @@ namespace iLand.Tree
 
             string speciesDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Species.DatabaseFile);
             using SqliteConnection speciesDatabase = Landscape.GetDatabaseConnection(speciesDatabaseFilePath, true);
-            using SqliteCommand speciesSelect = new SqliteCommand(String.Format("select * from {0}", this.SqlTableName), speciesDatabase);
+            using SqliteCommand speciesSelect = new(String.Format("select * from {0}", this.SqlTableName), speciesDatabase);
             // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");
-            using SpeciesReader speciesReader = new SpeciesReader(speciesSelect.ExecuteReader());
+            using SpeciesReader speciesReader = new(speciesSelect.ExecuteReader());
             while (speciesReader.Read())
             {
                 bool isActive = speciesReader.Active();
@@ -207,7 +207,7 @@ namespace iLand.Tree
             this.RandomSpeciesOrder.Capacity = this.ActiveSpecies.Count * TreeSpeciesSet.RandomSets;
             for (int setIndex = 0; setIndex < TreeSpeciesSet.RandomSets; ++setIndex)
             {
-                List<int> samples = new List<int>(ActiveSpecies.Count);
+                List<int> samples = new(ActiveSpecies.Count);
                 // fill list
                 foreach (TreeSpecies species in this.ActiveSpecies)
                 {

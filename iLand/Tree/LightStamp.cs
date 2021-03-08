@@ -93,7 +93,7 @@ namespace iLand.Tree
 
         public string Dump()
         {
-            StringBuilder result = new StringBuilder();
+            StringBuilder result = new();
             for (int y = 0; y < this.DataSize; ++y)
             {
                 string line = String.Empty;

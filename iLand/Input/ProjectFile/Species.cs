@@ -80,7 +80,7 @@ namespace iLand.Input.ProjectFile
                         }
                         else if (phenologyReader.IsStartElement("type"))
                         {
-                            PhenologyType phenology = new PhenologyType();
+                            PhenologyType phenology = new();
                             phenology.ReadXml(phenologyReader);
                             this.Phenology.Add(phenology);
                         }
