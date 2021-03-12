@@ -609,10 +609,10 @@ namespace iLand.World
                 Debug.Assert(this.AreaWithTrees > 0.0F);
 
                 // calculate the leaf area index (LAI)
-                float leafAreaIndex = this.Trees.TotalLeafArea / this.AreaWithTrees;
+                float ruLeafAreaIndex = this.Trees.TotalLeafArea / this.AreaWithTrees;
                 // calculate the intercepted radiation fraction using the law of Beer Lambert
-                float k = model.Project.Model.Ecosystem.LightExtinctionCoefficient;
-                float lightInterceptionFraction = 1.0F - MathF.Exp(-k * leafAreaIndex);
+                float ruK = model.Project.Model.Ecosystem.ResourceUnitLightExtinctionCoefficient;
+                float lightInterceptionFraction = 1.0F - MathF.Exp(-ruK * ruLeafAreaIndex);
                 this.Trees.PhotosyntheticallyActiveArea = this.AreaWithTrees * lightInterceptionFraction; // m2
 
                 // calculate the total weighted leaf area on this RU:

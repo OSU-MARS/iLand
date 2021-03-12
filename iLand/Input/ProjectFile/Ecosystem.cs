@@ -12,6 +12,7 @@ namespace iLand.Input.ProjectFile
 		public float AutotrophicRespirationMultiplier { get; private set; }
 
 		// 3-PG evapotranspiration
+		// evaporation transmittance, m/s
 		public float BoundaryLayerConductance { get; private set; }
 
 		// maximum monthly mean light use efficency used for the 3-PG model, gC/MJ
@@ -21,13 +22,13 @@ namespace iLand.Input.ProjectFile
 		public float InterceptionStorageNeedle { get; private set; }
 
 		// for calculation of max-canopy-conductance
-		public float LaiThresholdForClosedStands { get; private set; }
+		public float LaiThresholdForConstantStandConductance { get; private set; }
 
 		// "k" parameter (Beer-Lambert) used for calculation of absorbed light on resource unit level
-		public float LightExtinctionCoefficient { get; private set; }
+		public float ResourceUnitLightExtinctionCoefficient { get; private set; }
 
 		// "k" for beer lambert used for opacity of single trees
-		public float LightExtinctionCoefficientOpacity { get; private set; }
+		public float TreeLightStampExtinctionCoefficient { get; private set; }
 
 		public float SnowmeltTemperature { get; private set; }
 
@@ -43,9 +44,9 @@ namespace iLand.Input.ProjectFile
 			this.BoundaryLayerConductance = 0.2F;
 			this.InterceptionStorageBroadleaf = 2.0F;
 			this.InterceptionStorageNeedle = 4.0F;
-			this.LaiThresholdForClosedStands = 3.0F;
-			this.LightExtinctionCoefficient = 0.5F;
-			this.LightExtinctionCoefficientOpacity = 0.5F;
+			this.LaiThresholdForConstantStandConductance = 3.0F;
+			this.ResourceUnitLightExtinctionCoefficient = 0.5F;
+			this.TreeLightStampExtinctionCoefficient = 0.5F;
 			this.LightUseEpsilon = 2.8F; // max light use efficiency (aka alpha_c), gC/MJ
 			this.SnowmeltTemperature = 0.0F;
 			this.TemperatureAveragingTau = 5.0F;
@@ -80,16 +81,16 @@ namespace iLand.Input.ProjectFile
 			}
 			else if (String.Equals(reader.Name, "lightExtinctionCoefficient", StringComparison.Ordinal))
 			{
-				this.LightExtinctionCoefficient = reader.ReadElementContentAsFloat();
-				if (this.LightExtinctionCoefficient < 0.0F)
+				this.ResourceUnitLightExtinctionCoefficient = reader.ReadElementContentAsFloat();
+				if (this.ResourceUnitLightExtinctionCoefficient < 0.0F)
 				{
 					throw new XmlException("Light extinction coefficient is negative.");
 				}
 			}
 			else if (String.Equals(reader.Name, "lightExtinctionCoefficientOpacity", StringComparison.Ordinal))
 			{
-				this.LightExtinctionCoefficientOpacity = reader.ReadElementContentAsFloat();
-				if (this.LightExtinctionCoefficientOpacity < 0.0F)
+				this.TreeLightStampExtinctionCoefficient = reader.ReadElementContentAsFloat();
+				if (this.TreeLightStampExtinctionCoefficient < 0.0F)
 				{
 					throw new XmlException("Light extinction opacity is negative.");
 				}
@@ -112,10 +113,10 @@ namespace iLand.Input.ProjectFile
 			}
 			else if (String.Equals(reader.Name, "laiThresholdForClosedStands", StringComparison.Ordinal))
 			{
-				this.LaiThresholdForClosedStands = reader.ReadElementContentAsFloat();
-				if (this.AirDensity < 0.0F)
+				this.LaiThresholdForConstantStandConductance = reader.ReadElementContentAsFloat();
+				if (this.LaiThresholdForConstantStandConductance < 0.0F)
 				{
-					throw new XmlException("Air density is negative.");
+					throw new XmlException("LAI threshold for closed stands is negative.");
 				}
 			}
 			else if (String.Equals(reader.Name, "boundaryLayerConductance", StringComparison.Ordinal))

@@ -63,13 +63,13 @@ namespace iLand.Tree
                 // calculate the available radiation. This is done at SpeciesResponse-Level (SpeciesResponse::calculate())
                 // see Equation (3)
                 // multiplicative approach: responses are averaged one by one and multiplied on a monthly basis
-                //    float response = mResponse.absorbedRadiation()[month] *
-                //                      mResponse.vpdResponse()[month] *
-                //                      mResponse.soilWaterResponse()[month] *
-                //                      mResponse.tempResponse()[month];
+                //    float utilizableRadiation = mResponse.absorbedRadiation()[month] *
+                //                                mResponse.vpdModifier()[month] *
+                //                                mResponse.soilWaterModifier()[month] *
+                //                                mResponse.tempModifier()[month];
                 // minimum approach: for each day the minimum of vpd, temp, and soil water is calculated, then averaged for each month
-                //float response = mResponse.absorbedRadiation()[month] *
-                //                  mResponse.minimumResponses()[month];
+                //   float response = mResponse.absorbedRadiation()[month] *
+                //                    mResponse.minimumModifiers()[month];
                 float utilizableRadiation = this.SpeciesResponse.UtilizableRadiationByMonth[month]; // utilizable radiation of the month ... (MJ/m2)
                 // calculate the alphac (=photosynthetic efficiency) for the given month, gC/MJ radiation
                 //  this is based on a global efficiency, and modified per species

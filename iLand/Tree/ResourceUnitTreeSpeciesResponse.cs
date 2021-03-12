@@ -74,11 +74,11 @@ namespace iLand.Tree
         /// @param psi_kPa psi of the soil in kPa
         /// @param vpd vapor pressure deficit in kPa
         /// @return minimum of soil water and vpd response
-        public void GetLimitingSoilWaterOrVpdResponse(float psiInKilopascals, float vpd, out float minResponse)
+        public void GetLimitingSoilWaterOrVpdModifier(float psiInKilopascals, float vpdInKiloPascals, out float minModifier)
         {
-            float waterResponse = this.Species.GetSoilWaterResponse(psiInKilopascals);
-            float vpdResponse = this.Species.GetVpdResponse(vpd);
-            minResponse = MathF.Min(waterResponse, vpdResponse);
+            float waterModifier = this.Species.GetSoilWaterModifier(psiInKilopascals);
+            float vpdModifier = this.Species.GetVpdModifier(vpdInKiloPascals);
+            minModifier = MathF.Min(waterModifier, vpdModifier);
         }
 
         /// Main function that calculates monthly / annual species responses
@@ -100,7 +100,7 @@ namespace iLand.Tree
             }
             else
             {
-                this.NitrogenResponseForYear = this.Species.GetNitrogenResponse(this.ResourceUnit.Soil.PlantAvailableNitrogen);
+                this.NitrogenResponseForYear = this.Species.GetNitrogenModifier(this.ResourceUnit.Soil.PlantAvailableNitrogen);
                 Debug.Assert(this.NitrogenResponseForYear >= 0.0);
             }
 
@@ -112,13 +112,13 @@ namespace iLand.Tree
                 // environmental responses
                 this.GlobalRadiationByMonth[monthIndex] += day.Radiation;
 
-                float soilWaterResponse = this.Species.GetSoilWaterResponse(ruWaterCycle.SoilWaterPsi[dayOfYear]);
+                float soilWaterResponse = this.Species.GetSoilWaterModifier(ruWaterCycle.SoilWaterPsi[dayOfYear]);
                 this.SoilWaterResponseByMonth[monthIndex] += soilWaterResponse;
 
-                float tempResponse = this.Species.GetTemperatureResponse(day.MeanDaytimeTemperatureMA1);
+                float tempResponse = this.Species.GetTemperatureModifier(day.MeanDaytimeTemperatureMA1);
                 this.TempResponseByMonth[monthIndex] += tempResponse;
 
-                float vpdResponse = this.Species.GetVpdResponse(day.Vpd);
+                float vpdResponse = this.Species.GetVpdModifier(day.Vpd);
                 this.VpdResponseByMonth[monthIndex] += vpdResponse;
 
                 // no utilizable radiation if day is outside of leaf on period so nothing to add

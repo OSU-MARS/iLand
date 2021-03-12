@@ -78,7 +78,6 @@ namespace iLand.Tree
         public float FecunditySerotiny { get; private set; } // multiplier that increases fecundity for post-fire seed rain of serotinous species
         public float MaxCanopyConductance { get; private set; } // maximum canopy conductance in m/s
         public float NonSeedYearFraction { get; private set; }
-        public float PsiMin { get; private set; }
 
         // snags
         public float SnagDecompositionRate { get; private set; } // standing woody debris (swd) decomposition rate
@@ -87,6 +86,7 @@ namespace iLand.Tree
         public float CoarseWoodyDebrisDecompositionRate { get; private set; } // decomposition rate for refractory matter (woody) used in soil model
 
         // growth
+        public float MinimumSoilWaterPotential { get; private set; } // soil water potential in MPa, http://iland-model.org/soil+water+response
         public float SpecificLeafArea { get; private set; } // m²/kg; conversion factor from kg OTS to leaf area m²
         public float VolumeFactor { get; private set; } // factor for volume calculation: V = factor * D^2*H (incorporates density and the form of the bole)
         public float WoodDensity { get; private set; } // density of stem wood [kg/m3]
@@ -124,10 +124,10 @@ namespace iLand.Tree
         // allometries
         public float GetBarkThickness(float dbh) { return dbh * this.mBarkThicknessFactor; }
         public float GetBiomassFoliage(float dbh) { return this.mFoliageA * MathF.Pow(dbh, this.mFoliageB); }
-        public float GetBiomassWoody(float dbh) { return this.mWoodyA * MathF.Pow(dbh, this.mWoodyB); }
+        public float GetBiomassStem(float dbh) { return this.mWoodyA * MathF.Pow(dbh, this.mWoodyB); }
         public float GetBiomassRoot(float dbh) { return this.mRootA * MathF.Pow(dbh, this.mRootB); }
         public float GetBiomassBranch(float dbh) { return this.mBranchA * MathF.Pow(dbh, this.mBranchB); }
-        public float GetWoodFoliageRatio() { return this.mWoodyB / this.mFoliageB; } // TODO: why are only exponent powers considered?
+        public float GetStemFoliageRatio() { return this.mWoodyB / this.mFoliageB; } // Duursma et al. 2007 eq 20
 
         public LightStamp GetStamp(float dbh, float height) { return this.mLightIntensityProfiles.GetStamp(dbh, height); }
 
@@ -136,9 +136,9 @@ namespace iLand.Tree
             return this.SpeciesSet.GetLightResponse(lightResourceIndex, this.mLightResponseClass); 
         }
 
-        public float GetNitrogenResponse(float availableNitrogen) 
+        public float GetNitrogenModifier(float availableNitrogen) 
         {
-            return this.SpeciesSet.GetNitrogenResponse(availableNitrogen, this.mRespNitrogenClass); 
+            return this.SpeciesSet.GetNitrogenModifier(availableNitrogen, this.mRespNitrogenClass); 
         }
 
         // parameters for seed dispersal from equation 6 of
@@ -297,7 +297,7 @@ namespace iLand.Tree
 
             // water
             species.MaxCanopyConductance = reader.MaxCanopyConductance();
-            species.PsiMin = reader.PsiMin();
+            species.MinimumSoilWaterPotential = reader.PsiMin();
 
             // light
             species.mLightResponseClass = reader.LightResponseClass();
@@ -459,32 +459,32 @@ namespace iLand.Tree
             hdRatioUpperBound = (float)mHDhigh.Evaluate(dbh);
         }
 
-        /** vpdResponse calculates response on vpd.
+        /** vpdResponse calculates response on vapor pressure deficit.
             Input: vpd [kPa]*/
-        public float GetVpdResponse(float vpd)
+        public float GetVpdModifier(float vpdInKiloPascals)
         {
-            return MathF.Exp(this.mRespVpdK * vpd);
+            return MathF.Exp(this.mRespVpdK * vpdInKiloPascals);
         }
 
         /** temperatureResponse calculates response on delayed daily temperature.
             Input: average temperature [C]
             Note: slightly different from Mäkelä 2008: the maximum parameter (Sk) in iLand is interpreted as the absolute
-                  temperature yielding a response of 1; in Mkela 2008, Sk is the width of the range (relative to the lower threhold)
+                  temperature yielding a response of 1; in Mäkelä 2008, Sk is the width of the range (relative to the lower threshold)
             */
-        public float GetTemperatureResponse(float laggedTemperature)
+        public float GetTemperatureModifier(float laggedTemperature)
         {
-            float response = MathF.Max(laggedTemperature - this.mRespTempMin, 0.0F);
-            response = MathF.Min(response / (this.mRespTempMax - this.mRespTempMin), 1.0F);
-            return response;
+            float modifier = MathF.Max(laggedTemperature - this.mRespTempMin, 0.0F);
+            modifier = MathF.Min(modifier / (this.mRespTempMax - this.mRespTempMin), 1.0F);
+            return modifier;
         }
 
-        /** soilwaterResponse is a function of the current matrix potential of the soil.
-          */
-        public float GetSoilWaterResponse(float psiInKilopascals)
+        // soilwaterResponse is a function of the current matric potential of the soil.
+        // iLand specific model chosen from Hanson 2004: http://iland-model.org/soil+water+response
+        public float GetSoilWaterModifier(float psiInKilopascals)
         {
             float psiInMPa = 0.001F * psiInKilopascals; // convert to MPa
-            float response = Maths.Limit((psiInMPa - this.PsiMin) / (-0.015F - this.PsiMin), 0.0F, 1.0F);
-            return response;
+            float waterResponse = Maths.Limit((psiInMPa - this.MinimumSoilWaterPotential) / (-0.015F - this.MinimumSoilWaterPotential), 0.0F, 1.0F);
+            return waterResponse;
         }
 
         /** calculate probabilty of death based on the current stress index. */

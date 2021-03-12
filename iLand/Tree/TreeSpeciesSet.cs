@@ -225,40 +225,40 @@ namespace iLand.Tree
 
         /// calculate nitrogen response for a given amount of available nitrogen and a response class
         /// for fractional values, the response value is interpolated between the fixedly defined classes (1,2,3)
-        public float GetNitrogenResponse(float availableNitrogen, float responseClass)
+        public float GetNitrogenModifier(float availableNitrogen, float responseClass)
         {
             if (responseClass > 2.0F)
             {
                 if (responseClass == 3.0F)
                 {
-                    return TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, this.class3K, this.class3minimum);
+                    return TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class3K, this.class3minimum);
                 }
                 else
                 {
                     // linear interpolation between 2 and 3
-                    float response2 = TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, this.class2K, this.class2minimum);
-                    float response3 = TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, this.class3K, this.class3minimum);
-                    return response2 + (responseClass - 2.0F) * (response3 - response2);
+                    float modifier2 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class2K, this.class2minimum);
+                    float modifier3 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class3K, this.class3minimum);
+                    return modifier2 + (responseClass - 2.0F) * (modifier3 - modifier2);
                 }
             }
             else if (responseClass == 2.0F)
             {
-                return TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, this.class2K, this.class2minimum);
+                return TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class2K, this.class2minimum);
             }
             else if (responseClass == 1.0F)
             {
-                return TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, this.class1K, this.class1minimum);
+                return TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class1K, this.class1minimum);
             }
             else
             {
                 // linear interpolation between 1 and 2
-                float response1 = TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, this.class1K, this.class1minimum);
-                float response2 = TreeSpeciesSet.GetNitrogenResponse(availableNitrogen, this.class2K, this.class2minimum);
-                return response1 + (responseClass - 1.0F) * (response2 - response1);
+                float modifier1 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class1K, this.class1minimum);
+                float modifier2 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class2K, this.class2minimum);
+                return modifier1 + (responseClass - 1.0F) * (modifier2 - modifier1);
             }
         }
 
-        private static float GetNitrogenResponse(float availableNitrogen, float nitrogenK, float minimumNitrogen)
+        private static float GetNitrogenModifier(float availableNitrogen, float nitrogenK, float minimumNitrogen)
         {
             if (availableNitrogen <= minimumNitrogen)
             {
@@ -288,8 +288,8 @@ namespace iLand.Tree
             float r = 1.0F + Constant.Ln2 * beta; // NPP increase for a doubling of atmospheric CO2 (Eq. 17)
 
             // fertilization function (cf. Farquhar, 1980) based on Michaelis-Menten expressions
-            float deltaC =  mCO2baseConcentration - mCO2compensationPoint;
-            float k2 = (2.0F * mCO2baseConcentration - mCO2compensationPoint - r * deltaC) / ((r - 1.0F) * deltaC * (2.0F * mCO2baseConcentration - mCO2compensationPoint)); // Eq. 16
+            float deltaC =  this.mCO2baseConcentration - this.mCO2compensationPoint;
+            float k2 = (2.0F * this.mCO2baseConcentration - this.mCO2compensationPoint - r * deltaC) / ((r - 1.0F) * deltaC * (2.0F * this.mCO2baseConcentration - this.mCO2compensationPoint)); // Eq. 16
             float k1 = (1.0F + k2 * deltaC) / deltaC;
 
             float response = mCO2p0 * k1 * (ambientCO2 - mCO2compensationPoint) / (1 + k2 * (ambientCO2 - mCO2compensationPoint)); // Eq. 16

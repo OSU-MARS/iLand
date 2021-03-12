@@ -538,7 +538,7 @@ namespace iLand.Test
             Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menziesii", StringComparison.OrdinalIgnoreCase));
             Assert.IsTrue(Math.Abs(douglasFir.NonSeedYearFraction - 0.25) < 0.001);
             Assert.IsTrue(douglasFir.PhenologyClass == 0);
-            Assert.IsTrue(Math.Abs(douglasFir.PsiMin + 1.234) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.MinimumSoilWaterPotential + 1.234) < 0.001);
             // respNitrogenClass   2
             // respTempMax 20
             // respTempMin 0
@@ -587,9 +587,9 @@ namespace iLand.Test
             Assert.IsTrue(model.Project.Model.Ecosystem.AirDensity == 1.204F);
             Assert.IsTrue(model.Project.Model.Ecosystem.BoundaryLayerConductance == 0.2F);
             Assert.IsTrue(model.Project.Model.Ecosystem.LightUseEpsilon == 2.7F);
-            Assert.IsTrue(model.Project.Model.Ecosystem.LaiThresholdForClosedStands == 3.0F);
-            Assert.IsTrue(model.Project.Model.Ecosystem.LightExtinctionCoefficient == 0.6F);
-            Assert.IsTrue(model.Project.Model.Ecosystem.LightExtinctionCoefficientOpacity == 0.6F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.LaiThresholdForConstantStandConductance == 3.0F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.ResourceUnitLightExtinctionCoefficient == 0.6F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.TreeLightStampExtinctionCoefficient == 0.6F);
             Assert.IsTrue(model.Project.Model.Ecosystem.TemperatureAveragingTau == 6.0F);
             Assert.IsTrue(model.Project.Model.Settings.RegenerationEnabled == false);
             Assert.IsTrue(model.Project.Model.Settings.MortalityEnabled == true);

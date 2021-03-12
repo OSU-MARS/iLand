@@ -15,16 +15,25 @@ namespace iLand.Tree
         private readonly float mAirDensity; // density of air, kg/m³
 
         private float mLaiNeedle; // leaf area index of coniferous species
-        private float mLaiBroadleaved; // leaf area index of broadlevaed species
+        private float mLaiBroadleaf; // leaf area index of broadlevaed species
         private float mLai; // total leaf area index
-        private float maxCanopyConductance; // averaged maximum canopy conductance of current species distribution (m/s)
+        // averaged maximum canopy conductance of current species distribution (m/s)
+        // Also stated in mmol H₂O / (m²s) of projected leaf area. Conversion to iLand's units is gmax_mmol / gmax_ms = P/RT with
+        // P = atmospheric pressure, T = air temp, R = gas constant:
+        //   P/RT = 100 kPa / (8.31446261815324 J/(K mol) (25 + 273.15°C)) = 40,339.55 mmol / m³ at standard temperature and pressure
+        // since 1 kPa = 1000 J / m³ => gmax_ms = gmax_mmol = 0.000024790 gmax_mmol.
+        // The 0.017 m/s used in species_param_europe.sqlite is 686 mmol H₂O / (m²s) which is appears high for temperate forest per
+        // Körner 1995 as cited by Landsberg 1997.
+        // Körner C. 1995. Leaf Diffusive Conductances in the Major Vegetation Types of the Globe, chapter 22 in Schulze ED, Caldwell
+        //   MM eds. Ecophysiology of Photosynthesis. Springer-Verlag, Berlin Germany. https://doi.org/10.1007/978-3-642-79354-7_22
+        private float meanMaxCanopyConductance;
 
         // parameters for interception
-        public float NeedleStorageFactor { get; set; } // factor for calculating water storage capacity for intercepted water for conifers
-        public float BroadleafStorageFactor { get; set; } // the same for broadleaved
+        public float NeedleStorageInMM { get; set; } // factor for calculating water storage capacity for intercepted water for conifers
+        public float BroadleafStorageInMM { get; set; } // the same for broadleaved
 
         public float EvaporationFromCanopy { get; private set; } // evaporation from canopy (mm)
-        public float Interception { get; private set; } // mm water that is intercepted by the crown
+        public float StoredWaterInMM { get; private set; } // mm water that is intercepted by the crown
         public float[] ReferenceEvapotranspirationByMonth { get; private init; } // monthly reference ET (see Adair et al 2008)
 
         public Canopy(float airDensity)
@@ -34,60 +43,60 @@ namespace iLand.Tree
             this.ReferenceEvapotranspirationByMonth = new float[Constant.MonthsInYear];
         }
 
-        public float Flow(float preciptitationInMM)
+        public float FlowDayToStorage(float precipitationInMM)
         {
             // sanity checks
-            this.Interception = 0.0F;
+            this.StoredWaterInMM = 0.0F;
             this.EvaporationFromCanopy = 0.0F;
-            if (preciptitationInMM == 0.0F)
+            if (precipitationInMM == 0.0F)
             {
                 return 0.0F;
             }
-            if (mLai == 0.0)
+            if (this.mLai == 0.0)
             {
-                return preciptitationInMM;
+                return precipitationInMM;
             }
             float maxInterceptionInMM = 0.0F; // maximum interception based on the current foliage
             float maxStoragePotential = 0.0F; // storage capacity at very high LAI
 
-            if (mLaiNeedle > 0.0F)
+            if (this.mLaiNeedle > 0.0F)
             {
                 // (1) calculate maximum fraction of thru-flow the crown (based on precipitation)
-                float maxNeedleFlow = 0.9F * MathF.Sqrt(1.03F - MathF.Exp(-0.055F * preciptitationInMM));
-                maxInterceptionInMM += preciptitationInMM * (1.0F - maxNeedleFlow * mLaiNeedle / mLai);
+                float maxNeedleFlow = 0.9F * MathF.Sqrt(1.03F - MathF.Exp(-0.055F * precipitationInMM));
+                maxInterceptionInMM += precipitationInMM * (1.0F - maxNeedleFlow * this.mLaiNeedle / this.mLai);
                 // (2) calculate maximum storage potential based on the current LAI
                 //     by weighing the needle/decidious storage capacity
-                maxStoragePotential += this.NeedleStorageFactor * mLaiNeedle / mLai;
+                maxStoragePotential += this.NeedleStorageInMM * this.mLaiNeedle / this.mLai;
             }
 
-            if (mLaiBroadleaved > 0.0)
+            if (this.mLaiBroadleaf > 0.0)
             {
                 // (1) calculate maximum fraction of thru-flow the crown (based on precipitation)
-                float maxBroadleafFlow = 0.9F * MathF.Pow(1.22F - MathF.Exp(-0.055F * preciptitationInMM), 0.35F);
-                maxInterceptionInMM += preciptitationInMM * (1.0F - maxBroadleafFlow) * mLaiBroadleaved / mLai;
+                float maxBroadleafFlow = 0.9F * MathF.Pow(1.22F - MathF.Exp(-0.055F * precipitationInMM), 0.35F);
+                maxInterceptionInMM += precipitationInMM * (1.0F - maxBroadleafFlow) * this.mLaiBroadleaf / this.mLai;
                 // (2) calculate maximum storage potential based on the current LAI
-                maxStoragePotential += this.BroadleafStorageFactor * mLaiBroadleaved / mLai;
+                maxStoragePotential += this.BroadleafStorageInMM * this.mLaiBroadleaf / this.mLai;
             }
 
             // the extent to which the maximum stoarge capacity is exploited, depends on LAI:
-            float maxStorageInMM = maxStoragePotential * (1.0F - MathF.Exp(-0.5F * mLai));
+            float maxStorageInMM = maxStoragePotential * (1.0F - MathF.Exp(-0.5F * this.mLai));
 
             // (3) calculate actual interception and store for evaporation calculation
-            this.Interception = MathF.Min(maxStorageInMM, maxInterceptionInMM);
+            this.StoredWaterInMM = MathF.Min(maxStorageInMM, maxInterceptionInMM);
 
             // (4) limit interception with amount of precipitation
-            this.Interception = MathF.Min(this.Interception, preciptitationInMM);
+            this.StoredWaterInMM = MathF.Min(this.StoredWaterInMM, precipitationInMM);
 
-            // (5) reduce precipitation by the amount is intercepted by the canopy
-            return preciptitationInMM - this.Interception;
+            // (5) throughfall is precipitation minus the amount intercepted by the canopy
+            return precipitationInMM - this.StoredWaterInMM;
         }
 
-        public void SetStandParameters(float laiNeedle, float laiBroadleaf, float maxCanopyConductance)
+        public void SetStandParameters(float laiNeedle, float laiBroadleaf, float meanMaxCanopyConductance)
         {
             this.mLaiNeedle = laiNeedle;
-            this.mLaiBroadleaved = laiBroadleaf;
+            this.mLaiBroadleaf = laiBroadleaf;
             this.mLai = laiNeedle + laiBroadleaf;
-            this.maxCanopyConductance = maxCanopyConductance;
+            this.meanMaxCanopyConductance = meanMaxCanopyConductance;
 
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
@@ -95,8 +104,8 @@ namespace iLand.Tree
             }
         }
 
-        // Returns the total sum of evaporation+transpiration in mm of the day.
-        public float GetEvapotranspiration3PG(Project projectFile, ClimateDay day, float dayLengthInHours, float soilAtmosphereResponse)
+        // returns the total sum of evaporation+transpiration in mm of the day
+        public float FlowDayEvapotranspiration3PG(Project projectFile, ClimateDay day, float dayLengthInHours, float soilAtmosphereResponse)
         {
             float vpdInMillibar = 10.0F * day.Vpd; // convert from kPa to mbar
             float meanDaytimeTemperature = day.MeanDaytimeTemperature; // average temperature of the day (degree C)
@@ -108,20 +117,21 @@ namespace iLand.Tree
             const float qb = 0.8F;
             float net_rad = qa + qb * rad;
 
-            // Landsberg original: float e20 = 2.2;  //rate of change of saturated VP with T at 20C
-            const float vpdToSaturationDeficit = 0.000622F; //convert VPD to saturation deficit = 18/29/1000 = molecular weight of H2O/molecular weight of air
+            // Landsberg original: float e20 = 2.2;  // rate of change of saturated VP with T at 20C
+            const float vpdToSaturationDeficit = 0.000622F; // convert VPD to saturation deficit = 18/29/1000 = molecular weight of H2O/molecular weight of air
             const float latentHeatOfVaporization = 2460000.0F; // Latent heat of vaporization. Energy required per unit mass of water vaporized [J kg-1]
-            float boundaryLayerConductance = projectFile.Model.Ecosystem.BoundaryLayerConductance; // boundary layer conductance
+            float boundaryLayerConductance = projectFile.Model.Ecosystem.BoundaryLayerConductance; // gA, m/s
 
             // canopy conductance.
             // The species traits are weighted by LAI on the RU.
             // maximum canopy conductance: see getStandValues()
-            // current response: see calculateSoilAtmosphereResponse(). This is basically a weighted average of min(water_response, vpd_response) for each species
-            float gC = this.maxCanopyConductance * soilAtmosphereResponse;
+            // current response: see calculateSoilAtmosphereModifier(). This is basically a weighted average of min(water_response, vpd_response) for
+            // each species.
+            float gC = this.meanMaxCanopyConductance * soilAtmosphereResponse;
             float defTerm = this.mAirDensity * latentHeatOfVaporization * (vpdInMillibar * vpdToSaturationDeficit) * boundaryLayerConductance;
 
             // with temperature-dependent slope of vapor pressure saturation curve
-            // (following  Allen et al. (1998),  http://www.fao.org/docrep/x0490e/x0490e07.htm#atmospheric%20parameters)
+            // (following  Allen et al. (1998), http://www.fao.org/docrep/x0490e/x0490e07.htm#atmospheric%20parameters)
             // svp_slope in mbar.
             //float svp_slope = 4098. * (6.1078 * exp(17.269 * temperature / (temperature + 237.3))) / ((237.3+temperature)*(237.3+temperature));
 
@@ -142,7 +152,7 @@ namespace iLand.Tree
             et0_day /= et0_div;
             this.ReferenceEvapotranspirationByMonth[day.Month - 1] += et0_day;
 
-            if (this.Interception > 0.0F)
+            if (this.StoredWaterInMM > 0.0F)
             {
                 // we assume that for evaporation from leaf surface gBL/gC -> 0
                 float div_evap = 1.0F + svp_slope;
@@ -151,12 +161,12 @@ namespace iLand.Tree
                 // Wigmosta et al (1994). See http://iland-model.org/water+cycle#transpiration_and_canopy_conductance
 
                 float ratio_T_E = canopyTranspiration / potentialCanopyEvaporation;
-                float canopyEvaporation = MathF.Min(potentialCanopyEvaporation, this.Interception);
+                float canopyEvaporation = MathF.Min(potentialCanopyEvaporation, this.StoredWaterInMM);
 
                 // for interception -> 0, the canopy transpiration is unchanged
                 canopyTranspiration = (potentialCanopyEvaporation - canopyEvaporation) * ratio_T_E;
 
-                this.Interception -= canopyEvaporation; // reduce interception
+                this.StoredWaterInMM -= canopyEvaporation; // reduce interception
                 this.EvaporationFromCanopy = canopyEvaporation; // evaporation from intercepted water
             }
             return canopyTranspiration;

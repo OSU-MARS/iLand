@@ -262,16 +262,17 @@ namespace iLand.Tree
                 int lightIndex = this.lightGrid.IndexOf(stampOrigin.X, lightY);
                 for (int lightX = stampOrigin.X, stampX = 0; stampX < stampSize; ++lightX, ++lightIndex, ++stampX)
                 {
+                    // http://iland-model.org/competition+for+light
                     // suppose there is no stamping outside
-                    float value = stamp[stampX, stampY]; // stampvalue
+                    float iStarXYJ = stamp[stampX, stampY]; // stampvalue
                     //if (value>0.f) {
                     float dominantHeight = this.heightGrid[lightX, lightY, Constant.LightCellsPerHeightSize].Height; // height of Z* on the current position
                     float z = MathF.Max(this.Height[treeIndex] - stamp.GetDistanceToCenter(stampX, stampY), 0.0F); // distance to center = height (45 degree line)
-                    float z_zstar = (z >= dominantHeight) ? 1.0F : z / dominantHeight;
-                    value = 1.0F - value * this.Opacity[treeIndex] * z_zstar; // calculated value
-                    value = MathF.Max(value, 0.02F); // limit value
+                    float zStarXYJ = (z >= dominantHeight) ? 1.0F : z / dominantHeight; // tree influence height
+                    iStarXYJ = 1.0F - iStarXYJ * this.Opacity[treeIndex] * zStarXYJ; // this tree's Beer-Lambert contribution to shading of light grid cell
+                    iStarXYJ = MathF.Max(iStarXYJ, 0.02F); // limit value
 
-                    this.lightGrid[lightIndex] *= value;
+                    this.lightGrid[lightIndex] *= iStarXYJ; // compound LIF intensity
                 }
             }
 
@@ -779,23 +780,24 @@ namespace iLand.Tree
                 treeGrowthData.NppTotal = model.Project.Model.Ecosystem.AutotrophicRespirationMultiplier * treeGpp; // respiration loss (0.47), cf. Waring et al 1998.
                 treeGrowthData.StressIndex = 0.0F;
 
-                //DBGMODE(
+                //#ifdef DEBUG
                 //if (model.GlobalSettings.IsDebugEnabled(DebugOutputs.TreeNpp) && IsDebugging())
                 //{
                 //    List<object> outList = model.GlobalSettings.DebugList(ID, DebugOutputs.TreeNpp);
                 //    DumpList(outList); // add tree headers
                 //    outList.AddRange(new object[] { this.LightResourceIndex[treeIndex] * RU.LriModifier, LightResponse, effective_area, raw_gpp, gpp, d.NppTotal, agingFactor });
                 //}
-                //); // DBGMODE()
-                if (model.Project.Model.Settings.GrowthEnabled && (treeGrowthData.NppTotal > 0.0))
+                //); 
+                //#endif
+                if (model.Project.Model.Settings.GrowthEnabled && (treeGrowthData.NppTotal > 0.0F))
                 {
                     this.PartitionBiomass(treeGrowthData, model, treeIndex); // split npp to compartments and grow (diameter, height)
                 }
 
                 // mortality
                 //#ifdef ALT_TREE_MORTALITY
-                //    // alternative variant of tree mortality (note: mStrssIndex used otherwise)
-                //    altMortality(d);
+                // alternative variant of tree mortality (note: mStrssIndex used otherwise)
+                // altMortality(d);
                 //#else
                 if (model.Project.Model.Settings.MortalityEnabled)
                 {
@@ -821,7 +823,9 @@ namespace iLand.Tree
         }
 
         /** partitioning of this years assimilates (NPP) to biomass compartments.
-          Conceptionally, the algorithm is based on Duursma, 2007.
+          Conceptionally, the algorithm is based on 
+            Duursma RA, Marshall JD, Robinson AP, Pangle RE. 2007. Description and test of a simple process-based model of forest growth
+              for mixed-species stands. Ecological Modelling 203(3–4):297-311. https://doi.org/10.1016/j.ecolmodel.2006.11.032
           @sa http://iland-model.org/allocation */
         private void PartitionBiomass(TreeGrowthData growthData, Model model, int treeIndex)
         {
@@ -831,10 +835,10 @@ namespace iLand.Tree
             float reserveSize = foliageBiomass * (1.0F + this.Species.FinerootFoliageRatio);
             float reserveAllocation = MathF.Min(reserveSize, (1.0F + this.Species.FinerootFoliageRatio) * this.FoliageMass[treeIndex]); // not always try to refill reserve 100%
 
-            ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(Species);
+            ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
             float rootFraction = ruSpecies.BiomassGrowth.RootFraction;
             growthData.NppAboveground = growthData.NppTotal * (1.0F - rootFraction); // aboveground: total NPP - fraction to roots
-            float woodFoliageRatio = Species.GetWoodFoliageRatio(); // ratio of allometric exponents (b_woody / b_foliage)
+            float woodFoliageRatio = this.Species.GetStemFoliageRatio(); // ratio of allometric exponents (b_woody / b_foliage)
 
             // turnover rates
             float foliageTurnover = this.Species.TurnoverLeaf;
@@ -1055,8 +1059,8 @@ namespace iLand.Tree
             // update state of LIP stamp and opacity
             this.Stamp[treeIndex] = this.Species.GetStamp(this.Dbh[treeIndex], this.Height[treeIndex]); // get new stamp for updated dimensions
             // calculate the CrownFactor which reflects the opacity of the crown
-            float k = model.Project.Model.Ecosystem.LightExtinctionCoefficientOpacity;
-            this.Opacity[treeIndex] = 1.0F - MathF.Exp(-k * this.LeafArea[treeIndex] / this.Stamp[treeIndex]!.CrownArea);
+            float treeK = model.Project.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
+            this.Opacity[treeIndex] = 1.0F - MathF.Exp(-treeK * this.LeafArea[treeIndex] / this.Stamp[treeIndex]!.CrownArea);
         }
 
         /// return the HD ratio of this year's increment based on the light status.
@@ -1101,11 +1105,12 @@ namespace iLand.Tree
             this.FoliageMass[treeIndex] = this.Species.GetBiomassFoliage(dbh);
             this.CoarseRootMass[treeIndex] = this.Species.GetBiomassRoot(dbh); // coarse root (allometry)
             this.FineRootMass[treeIndex] = this.FoliageMass[treeIndex] * this.Species.FinerootFoliageRatio; //  fine root (size defined  by finerootFoliageRatio)
-            this.StemMass[treeIndex] = this.Species.GetBiomassWoody(dbh);
+            this.StemMass[treeIndex] = this.Species.GetBiomassStem(dbh);
 
             // LeafArea[m2] = LeafMass[kg] * specificLeafArea[m2/kg]
             this.LeafArea[treeIndex] = this.FoliageMass[treeIndex] * this.Species.SpecificLeafArea;
-            this.Opacity[treeIndex] = 1.0F - MathF.Exp(-projectFile.Model.Ecosystem.LightExtinctionCoefficientOpacity * this.LeafArea[treeIndex] / this.Stamp[treeIndex]!.CrownArea);
+            float treeK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
+            this.Opacity[treeIndex] = 1.0F - MathF.Exp(-treeK * this.LeafArea[treeIndex] / this.Stamp[treeIndex]!.CrownArea);
             this.NppReserve[treeIndex] = (1.0F + this.Species.FinerootFoliageRatio) * this.FoliageMass[treeIndex]; // initial value
             this.DbhDelta[treeIndex] = 0.1F; // initial value: used in growth() to estimate diameter increment
         }
