@@ -186,32 +186,32 @@ namespace iLand.World
         /// calculate responses for ground vegetation, i.e. for "unstocked" areas.
         /// this duplicates calculations done in Species.
         /// @return Minimum of vpd and soilwater response for default
-        private static float GetLimitingWaterVpdResponse(float psiInKilopascals, float vpdInKilopascals)
+        private static float GetLimitingWaterVpdModifier(float psiInKilopascals, float vpdInKilopascals)
         {
             // constant parameters used for ground vegetation:
             const float mPsiMin = 1.5F; // MPa
             const float mRespVpdExponent = -0.6F;
-            // see TreeSpecies.GetSoilWaterResponse() and ResourceUnitTreeSpeciesResponse.GetLimitingSoilWaterOrVpdResponse()
+            // see TreeSpecies.GetSoilWaterModifier() and ResourceUnitTreeSpeciesResponse.GetLimitingSoilWaterOrVpdModifier()
             float psiMPa = 0.001F * psiInKilopascals; // convert to MPa
-            float waterResponse = Maths.Limit(1.0F - psiMPa / mPsiMin, 0.0F, 1.0F);
-            // see Species.GetVpdResponse()
+            float waterModifier = Maths.Limit(1.0F - psiMPa / mPsiMin, 0.0F, 1.0F);
+            // see Species.GetVpdModifier()
 
-            float vpdResponse = MathF.Exp(mRespVpdExponent * vpdInKilopascals);
-            return Math.Min(waterResponse, vpdResponse);
+            float vpdModifier = MathF.Exp(mRespVpdExponent * vpdInKilopascals);
+            return Math.Min(waterModifier, vpdModifier);
         }
 
         /// Calculate combined VPD and soil water response for all species on the RU. This is used for calculation of the transpiration.
-        private float GetSoilAtmosphereResponse(float psiInKilopascals, float vpdInKilopascals)
+        private float GetSoilAtmosphereModifier(float psiInKilopascals, float vpdInKilopascals)
         {
-            float soilAtmosphereResponse = 0.0F; // LAI weighted minimum response for all speices on the RU
+            float soilAtmosphereModifier = 0.0F; // LAI weighted minimum response for all speices on the RU
             float totalLaiFactor = 0.0F;
             foreach (ResourceUnitTreeSpecies ruSpecies in this.mRU.Trees.SpeciesAvailableOnResourceUnit)
             {
                 if (ruSpecies.LaiFraction > 0.0F)
                 {
                     // retrieve the minimum of VPD / soil water response for that species
-                    ruSpecies.Response.GetLimitingSoilWaterOrVpdResponse(psiInKilopascals, vpdInKilopascals, out float limitingResponse);
-                    soilAtmosphereResponse += limitingResponse * ruSpecies.LaiFraction;
+                    ruSpecies.Response.GetLimitingSoilWaterOrVpdModifier(psiInKilopascals, vpdInKilopascals, out float limitingResponse);
+                    soilAtmosphereModifier += limitingResponse * ruSpecies.LaiFraction;
                     totalLaiFactor += ruSpecies.LaiFraction;
                 }
             }
@@ -219,25 +219,25 @@ namespace iLand.World
             if (totalLaiFactor < 1.0F)
             {
                 // the LAI is below 1: the rest is considered as "ground vegetation"
-                soilAtmosphereResponse += WaterCycle.GetLimitingWaterVpdResponse(psiInKilopascals, vpdInKilopascals) * (1.0F - totalLaiFactor);
+                soilAtmosphereModifier += WaterCycle.GetLimitingWaterVpdModifier(psiInKilopascals, vpdInKilopascals) * (1.0F - totalLaiFactor);
             }
 
             // add an aging factor to the total response (averageAging: leaf area weighted mean aging value):
             // conceptually: response = min(vpd_response, water_response)*aging
             if (totalLaiFactor == 1.0F)
             {
-                soilAtmosphereResponse *= mRU.Trees.AverageLeafAreaWeightedAgingFactor; // no ground cover: use aging value for all LA
+                soilAtmosphereModifier *= mRU.Trees.AverageLeafAreaWeightedAgingFactor; // no ground cover: use aging value for all LA
             }
             else if (totalLaiFactor > 0.0F && mRU.Trees.AverageLeafAreaWeightedAgingFactor > 0.0F)
             {
-                soilAtmosphereResponse *= (1.0F - totalLaiFactor) * 1.0F + (totalLaiFactor * mRU.Trees.AverageLeafAreaWeightedAgingFactor); // between 0..1: a part of the LAI is "ground cover" (aging=1)
+                soilAtmosphereModifier *= (1.0F - totalLaiFactor) * 1.0F + (totalLaiFactor * mRU.Trees.AverageLeafAreaWeightedAgingFactor); // between 0..1: a part of the LAI is "ground cover" (aging=1)
             }
 
-            if (this.mRU.Trees.AverageLeafAreaWeightedAgingFactor > 1.0F || this.mRU.Trees.AverageLeafAreaWeightedAgingFactor < 0.0F || soilAtmosphereResponse < 0.0F || soilAtmosphereResponse > 1.0F)
+            if (this.mRU.Trees.AverageLeafAreaWeightedAgingFactor > 1.0F || this.mRU.Trees.AverageLeafAreaWeightedAgingFactor < 0.0F || soilAtmosphereModifier < 0.0F || soilAtmosphereModifier > 1.0F)
             {
-                throw new NotSupportedException("Average aging or soil atmosphere response invalid. Aging: " + mRU.Trees.AverageLeafAreaWeightedAgingFactor + ", soil-atmosphere response " + soilAtmosphereResponse + ", total LAI factor: " + totalLaiFactor + ".");
+                throw new NotSupportedException("Average aging or soil atmosphere response invalid. Aging: " + mRU.Trees.AverageLeafAreaWeightedAgingFactor + ", soil-atmosphere response " + soilAtmosphereModifier + ", total LAI factor: " + totalLaiFactor + ".");
             }
-            return soilAtmosphereResponse;
+            return soilAtmosphereModifier;
         }
 
         /// Main Water Cycle function. This function triggers all water related tasks for
@@ -290,7 +290,7 @@ namespace iLand.World
                 // (5) transpiration of the vegetation (and of water intercepted in canopy)
                 // calculate the LAI-weighted response values for soil water and vpd:
                 float interception_before_transpiration = this.Canopy.Interception;
-                float soilAtmosphereResponse = this.GetSoilAtmosphereResponse(currentPsi, day.Vpd);
+                float soilAtmosphereResponse = this.GetSoilAtmosphereModifier(currentPsi, day.Vpd);
                 float et = this.Canopy.GetEvapotranspiration3PG(projectFile, day, this.mRU.Climate.GetDayLengthInHours(dayOfYear), soilAtmosphereResponse);
                 // if there is some flow from intercepted water to the ground -> add to "water_to_the_ground"
                 if (this.Canopy.Interception < interception_before_transpiration)

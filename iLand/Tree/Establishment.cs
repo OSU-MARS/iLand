@@ -111,7 +111,7 @@ namespace iLand.Tree
                 return 1.0F; // invalid vegetation period?
             }
 
-            // calculate the response of the species to this value of psi (see also Species::soilwaterResponse())
+            // calculate the response of the species to this value of psi (see also Species.GetSoilWaterModifier())
             float meanPsiMPa = 0.001F * miniumumMovingAverage; // convert to MPa
             float result = Maths.Limit((meanPsiMPa - minimumPsiMPa) / (-0.015F - minimumPsiMPa), 0.0F, 1.0F);
 

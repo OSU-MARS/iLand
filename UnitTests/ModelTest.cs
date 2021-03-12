@@ -538,7 +538,7 @@ namespace iLand.Test
             Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menziesii", StringComparison.OrdinalIgnoreCase));
             Assert.IsTrue(Math.Abs(douglasFir.NonSeedYearFraction - 0.25) < 0.001);
             Assert.IsTrue(douglasFir.PhenologyClass == 0);
-            Assert.IsTrue(Math.Abs(douglasFir.PsiMin + 1.234) < 0.001);
+            Assert.IsTrue(Math.Abs(douglasFir.MinimumSoilWaterPotential + 1.234) < 0.001);
             // respNitrogenClass   2
             // respTempMax 20
             // respTempMin 0

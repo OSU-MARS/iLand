@@ -17,7 +17,16 @@ namespace iLand.Tree
         private float mLaiNeedle; // leaf area index of coniferous species
         private float mLaiBroadleaved; // leaf area index of broadlevaed species
         private float mLai; // total leaf area index
-        private float maxCanopyConductance; // averaged maximum canopy conductance of current species distribution (m/s)
+        // averaged maximum canopy conductance of current species distribution (m/s)
+        // Also stated in mmol H₂O / (m²s) of projected leaf area. Conversion to iLand's units is gmax_mmol / gmax_ms = P/RT with
+        // P = atmospheric pressure, T = air temp, R = gas constant:
+        //   P/RT = 100 kPa / (8.31446261815324 J/(K mol) (25 + 273.15°C)) = 40,339.55 mmol / m³ at standard temperature and pressure
+        // since 1 kPa = 1000 J / m³ => gmax_ms = gmax_mmol = 0.000024790 gmax_mmol.
+        // The 0.017 m/s used in species_param_europe.sqlite is 686 mmol H₂O / (m²s) which is appears high for temperate forest per
+        // Körner 1995 as cited by Landsberg 1997.
+        // Körner C. 1995. Leaf Diffusive Conductances in the Major Vegetation Types of the Globe, chapter 22 in Schulze ED, Caldwell
+        //   MM eds. Ecophysiology of Photosynthesis. Springer-Verlag, Berlin Germany. https://doi.org/10.1007/978-3-642-79354-7_22
+        private float meanMaxCanopyConductance;
 
         // parameters for interception
         public float NeedleStorageFactor { get; set; } // factor for calculating water storage capacity for intercepted water for conifers
@@ -82,12 +91,12 @@ namespace iLand.Tree
             return preciptitationInMM - this.Interception;
         }
 
-        public void SetStandParameters(float laiNeedle, float laiBroadleaf, float maxCanopyConductance)
+        public void SetStandParameters(float laiNeedle, float laiBroadleaf, float meanMaxCanopyConductance)
         {
             this.mLaiNeedle = laiNeedle;
             this.mLaiBroadleaved = laiBroadleaf;
             this.mLai = laiNeedle + laiBroadleaf;
-            this.maxCanopyConductance = maxCanopyConductance;
+            this.meanMaxCanopyConductance = meanMaxCanopyConductance;
 
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
@@ -116,8 +125,8 @@ namespace iLand.Tree
             // canopy conductance.
             // The species traits are weighted by LAI on the RU.
             // maximum canopy conductance: see getStandValues()
-            // current response: see calculateSoilAtmosphereResponse(). This is basically a weighted average of min(water_response, vpd_response) for each species
-            float gC = this.maxCanopyConductance * soilAtmosphereResponse;
+            // current response: see calculateSoilAtmosphereModifier(). This is basically a weighted average of min(water_response, vpd_response) for each species
+            float gC = this.meanMaxCanopyConductance * soilAtmosphereResponse;
             float defTerm = this.mAirDensity * latentHeatOfVaporization * (vpdInMillibar * vpdToSaturationDeficit) * boundaryLayerConductance;
 
             // with temperature-dependent slope of vapor pressure saturation curve
