@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>iLand</RootNamespace>
     <Version>1.0.0</Version>
     <Company>Oregon State University</Company>
@@ -9,10 +9,9 @@
     <RepositoryUrl>https://github.com/OSU-MARS/iLand</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>GPLv3</PackageLicenseExpression>
-    <Copyright>Copyright © 2020-2021 Oregon State University</Copyright>
+    <Copyright>Copyright © 2020-2022 Oregon State University</Copyright>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Platforms>x64</Platforms>
-    <LangVersion>9.0</LangVersion>
     <Description>A C# port of the iLand 1.0 (2016) spatial growth and yield model created by Rupert Seidl and Werner Rammer.</Description>
     <AssemblyName>iLand</AssemblyName>
     <Nullable>enable</Nullable>
@@ -99,8 +98,8 @@
 
   <ItemGroup>
     <PackageReference Include="MersenneTwister" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="5.0.4" />
-    <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.1.3" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.1" />
+    <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.2.1" />
   </ItemGroup>
   
 </Project>

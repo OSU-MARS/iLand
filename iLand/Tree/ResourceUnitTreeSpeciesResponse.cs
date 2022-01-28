@@ -131,8 +131,8 @@ namespace iLand.Tree
                     // calculate utilizable radiation, Eq. 4, http://iland-model.org/primary+production
                     float utilizableRadiation = day.Radiation * minimumResponse;
                     
-                    Debug.Assert(minimumResponse >= 0.0 && minimumResponse < 1.000001);
-                    Debug.Assert(utilizableRadiation >= 0.0 && utilizableRadiation < 100.0); // sanity upper bound
+                    Debug.Assert(minimumResponse >= 0.0F && minimumResponse < 1.000001F);
+                    Debug.Assert(utilizableRadiation >= 0.0F && utilizableRadiation < 100.0F); // sanity upper bound
                     this.UtilizableRadiationByMonth[monthIndex] += utilizableRadiation;
                 }
                 //DBGMODE(

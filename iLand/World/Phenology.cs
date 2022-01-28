@@ -17,13 +17,14 @@ namespace iLand.World
 
         public int ChillingDaysAfterLeafOffInPreviousYear { get; private set; }
         public int LeafType { get; private init; } // identifier of this Phenology group
-        /// get result of phenology calculation for this year (a pointer to a array of 12 values between 0..1: 0: no days with foliage)
+        // get result of phenology calculation for this year (a pointer to a array of 12 values between 0..1: 0 = no days with foliage)
+        // BUGBUG: set but not consumed
         public float[] LeafOnFraction { get; private init; }
         public int LeafOnStart { get; private set; } // day of year when vegeation period starts
         public int LeafOnEnd { get; private set; } // day of year when vegeation period stops
 
         public int GetLeafOnDurationInDays() { return this.LeafOnEnd - this.LeafOnStart; } // length of vegetation period in days, returns 365 for evergreens
-        /// get days of year that meet chilling requirements: the days in the autumn of the last year + the days of this spring season
+        // get days of year that meet chilling requirements: the days in the autumn of the last year + the days of this spring season
         public int GetWinterChillingDays() { return this.mChillDaysBeforeLeafOn + this.ChillingDaysAfterLeafOffInPreviousYear; }
 
         // 

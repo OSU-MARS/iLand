@@ -70,11 +70,25 @@ namespace iLand.World
                 throw new NotSupportedException(String.Format("Setup WaterCycle: soil textures do not sum to 100% within 0.01%. Sand: {0}%, silt: {1}%, clay: {2}%. Are these values specified in /project/model/site?", percentSand, percentSilt, percentClay));
             }
 
-            // calculate soil characteristics based on empirical functions (Schwalm & Ek, 2004)
-            // note: the variables are percentages [0..100]
-            this.mPsi_sat = -0.000098F * MathF.Exp((1.54F - 0.0095F * percentSand + 0.0063f * percentSilt) * MathF.Log(10.0F)); // Eq. 83
-            this.mPsi_koeff_b = -(3.1F + 0.157F * percentClay - 0.003F * percentSand);  // Eq. 84
-            this.mTheta_sat = 0.01F * (50.5F - 0.142F * percentSand - 0.037F * percentClay); // Eq. 78
+            // calculate soil characteristics based on empirical functions from sparse United States data: 35 points in 23 states
+            // Schwalm CR, Ek AR. 2004. A process-based model of forest ecosystems driven by meteorology. Ecological Modelling 179(3):317-348.
+            //   https://doi.org/10.1016/j.ecolmodel.2004.04.016
+            // Cosby BJ, Hornberger GM, Clapp RB, Ginn TR. 1984. A Statistical Exploration of the Relationships of Soil Moisture Characteristics
+            //   to the Physical Properties of Soils. Water Resources Research 20(6): 682-690. https://doi.org/10.1029/WR020i006p00682
+            // Variables are percentages [0..100] with Schwalm and Ek reusing Cosby et al.'s simple linear regressions. Cosby et al. regressed
+            // on two earlier studies sampling 35 points in 23 states, primarily in the eastern United States and preferentially in the southeastern
+            // United States.
+            // TODO: Update this to some pedotransfer function with a broader calibration. See 
+            // A Global High-Resolution Data Set of Soil Hydraulic and Thermal Properties for Land Surface Modeling
+            // Dai Y, Xin Q, Wei N, et al. 2019. A Global High-Resolution Data Set of Soil Hydraulic and Thermal Properties for Land Surface
+            //   Modeling. Journal of Advances in Modeling Earth Systems 11(9):2996-3023. https://doi.org/10.1029/2019MS001784
+            // Zhang X, Zhu J, Wendroth O, et al. 2019. Effect of Macroporosity on Pedotransfer Function Estimates at the Field Scale. Vadose Zone
+            //   Journal 18(1):1-15. https://doi.org/10.2136/vzj2018.08.0151
+            // Zhang Y, Schaap G. 2017. Weighted recalibration of the Rosetta pedotransfer model with improved estimates of hydraulic parameter
+            //   distributions and summary statistics (Rosetta3). Journal of Hydrology 547:39-53. https://doi.org/10.1016/j.jhydrol.2017.01.004
+            this.mPsi_sat = -0.000098F * MathF.Exp((1.54F - 0.0095F * percentSand + 0.0063F * percentSilt) * MathF.Log(10.0F)); // Schwalm and Ek eq. 83, Cosby et al. Table 4
+            this.mPsi_koeff_b = -(3.1F + 0.157F * percentClay - 0.003F * percentSand);  // eq. 84
+            this.mTheta_sat = 0.01F * (50.5F - 0.142F * percentSand - 0.037F * percentClay); // eq. 78
 
             this.mPermanentWiltingPoint = this.GetSoilWaterContentFromPsi(-4000.0F); // maximum psi is set to a constant of -4MPa
 

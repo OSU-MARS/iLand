@@ -45,7 +45,7 @@ namespace iLand.Input
         public float CurrentSnagHalfLife { get; private set; }
 
         public float CurrentSoilAvailableNitrogen { get; private set; }
-        public float CurrentSoilDepth { get; private set; }
+        public float CurrentSoilDepth { get; private set; } // cm
         public float CurrentSoilEr { get; private set; }
         public float CurrentSoilEl { get; private set; }
         public float CurrentSoilLeaching { get; private set; }
@@ -307,6 +307,9 @@ namespace iLand.Input
                         break;
                     case Constant.Setting.Snag.StandingWoodyCount:
                         this.CurrentSnagsPerResourceUnit = Single.Parse(value);
+                        break;
+                    case Constant.Setting.Soil.AnnualNitrogenDeposition:
+                        this.AnnualNitrogenDeposition = Single.Parse(value);
                         break;
                     case Constant.Setting.Soil.AvailableNitrogen:
                         this.CurrentSoilAvailableNitrogen = Single.Parse(value);

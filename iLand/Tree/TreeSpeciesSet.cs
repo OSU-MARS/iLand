@@ -292,7 +292,7 @@ namespace iLand.Tree
             float k2 = (2.0F * this.mCO2baseConcentration - this.mCO2compensationPoint - r * deltaC) / ((r - 1.0F) * deltaC * (2.0F * this.mCO2baseConcentration - this.mCO2compensationPoint)); // Eq. 16
             float k1 = (1.0F + k2 * deltaC) / deltaC;
 
-            float response = mCO2p0 * k1 * (ambientCO2 - mCO2compensationPoint) / (1 + k2 * (ambientCO2 - mCO2compensationPoint)); // Eq. 16
+            float response = this.mCO2p0 * k1 * (ambientCO2 - mCO2compensationPoint) / (1 + k2 * (ambientCO2 - mCO2compensationPoint)); // Eq. 16
             return response;
         }
 

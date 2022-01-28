@@ -184,10 +184,10 @@ namespace iLand.Tree
                     this.mHasExternalSeedInput = seedDispersal.ExternalSeedSpecies.Contains(this.Species.ID);
                     string direction = seedDispersal.ExternalSeedDirection.ToLowerInvariant();
                     // encode cardinal positions as bits: e.g: "e,w" . 6
-                    this.mExternalSeedDirection += direction.Contains("n") ? 1 : 0;
-                    this.mExternalSeedDirection += direction.Contains("e") ? 2 : 0;
-                    this.mExternalSeedDirection += direction.Contains("s") ? 4 : 0;
-                    this.mExternalSeedDirection += direction.Contains("w") ? 8 : 0;
+                    this.mExternalSeedDirection += direction.Contains('n', StringComparison.Ordinal) ? 1 : 0;
+                    this.mExternalSeedDirection += direction.Contains('e', StringComparison.Ordinal) ? 2 : 0;
+                    this.mExternalSeedDirection += direction.Contains('s', StringComparison.Ordinal) ? 4 : 0;
+                    this.mExternalSeedDirection += direction.Contains('w', StringComparison.Ordinal) ? 8 : 0;
                     List<string> buffer_list = Regex.Matches(seedDispersal.ExternalSeedBuffer, "([^\\.\\w]+)").Select(match => match.Value).ToList();
                     int index = buffer_list.IndexOf(this.Species.ID);
                     if (index >= 0)

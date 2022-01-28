@@ -140,7 +140,7 @@ namespace iLand.World
                     continue;
                 }
 
-                string key = line.Substring(0, line.IndexOf(' ')).ToLowerInvariant();
+                string key = line[..line.IndexOf(' ')].ToLowerInvariant();
                 if (key.Length > 0 && (Char.IsNumber(key[0]) || key[0] == '-'))
                 {
                     header = false;

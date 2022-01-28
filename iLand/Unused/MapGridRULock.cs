@@ -1,4 +1,5 @@
 ﻿using iLand.World;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -29,7 +30,7 @@ namespace iLand.Tools
                         {
                             if (mLockedElements[elements[i]] != id)
                             {
-                                Debug.WriteLine("MapGridRULock: must wait (" + Thread.CurrentThread.ManagedThreadId + id + "). stand with lock: " + mLockedElements[elements[i]] + ".Lock list length" + mLockedElements.Count);
+                                Debug.WriteLine("MapGridRULock: must wait (" + Environment.CurrentManagedThreadId + id + "). stand with lock: " + mLockedElements[elements[i]] + ".Lock list length" + mLockedElements.Count);
                                 ok = false;
                             }
                             else
