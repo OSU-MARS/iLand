@@ -431,8 +431,7 @@ namespace iLand.Test
 
         private static void VerifyKalkalpenModel(Model model)
         {
-            Assert.IsTrue(model.Landscape.Environment.ClimatesByName.Count == 1);
-            Assert.IsTrue(model.Landscape.Dem == null);
+            Assert.IsTrue(model.Landscape.Environment.ClimatesByID.Count == 1);
             Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.Height == 200.0F + 2.0F * 60.0F);
             Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.Width == 100.0F + 2.0F * 60.0F);
             Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.X == -60.0);
@@ -458,8 +457,8 @@ namespace iLand.Test
 
         private static void VerifyMalcolmKnappClimate(Model model)
         {
-            Assert.IsTrue(model.Landscape.Environment.ClimatesByName.Count == 1);
-            foreach (Climate climate in model.Landscape.Environment.ClimatesByName.Values)
+            Assert.IsTrue(model.Landscape.Environment.ClimatesByID.Count == 1);
+            foreach (Climate climate in model.Landscape.Environment.ClimatesByID.Values)
             {
                 Phenology conifer = climate.GetPhenology(0);
                 // private phenology variables read from the project file
@@ -476,7 +475,7 @@ namespace iLand.Test
                 //   tableName, batchYears, temperatureShift, precipitationShift, randomSamplingEnabled, randomSamplingList, filter
                 Assert.IsTrue(climate.CarbonDioxidePpm == 360.0);
                 Assert.IsTrue((climate.MeanAnnualTemperature > 0.0) && (climate.MeanAnnualTemperature < 30.0));
-                Assert.IsTrue(String.Equals(climate.Name, "HaneyUBC", StringComparison.OrdinalIgnoreCase));
+                // Assert.IsTrue(String.Equals(climate.ClimateTableName, "HaneyUBC", StringComparison.OrdinalIgnoreCase));
                 Assert.IsTrue(conifer.LeafType == 0);
                 Assert.IsTrue(broadleaf.LeafType == 1);
                 Assert.IsTrue(deciduousConifer.LeafType == 2);
@@ -642,16 +641,16 @@ namespace iLand.Test
                 //ru.Variables.CumNep;
                 //ru.Variables.Nep;
                 Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
-                Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity), "Soil: current water content");
+                Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity), "Water cycle: current water content of " + ru.WaterCycle.CurrentSoilWaterContent + " mm is negative or greater than the field capacity of " + ru.WaterCycle.FieldCapacity + " mm.");
                 Assert.IsTrue(MathF.Abs(ru.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity");
-                Assert.IsTrue(ru.WaterCycle.SoilWaterPsi.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
-                foreach (float psi in ru.WaterCycle.SoilWaterPsi)
+                Assert.IsTrue(ru.WaterCycle.SoilWaterPotentialByDay.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
+                foreach (float psi in ru.WaterCycle.SoilWaterPotentialByDay)
                 {
                     Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential");
                 }
                 Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0F) && (ru.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: linkt to snow days?
                 Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0F) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear), "Water cycle: snow days");
-                Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepth - 1340.0F) < 0.001F, "Soil: depth");
+                Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepthInMM - 1340.0F) < 0.001F, "Soil: depth");
                 Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0F, "Soil: evapotranspiration"); // zero at initialization
                 Assert.IsTrue(ru.WaterCycle.TotalRunoff == 0.0F, "Soil: runoff"); // zero at initialization
             }

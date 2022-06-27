@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /** StatData.
       * Helper class for statistics. This class calculates from a double-vector relevant information used for box plots. */
@@ -155,9 +155,7 @@ namespace iLand.Tools
                     if (i <= j)
                     {
                         //ELEM_SWAP(a[i],a[j]) ; swap elements:
-                        double temp = mData[i];
-                        mData[i] = mData[j];
-                        mData[j] = temp;
+                        (mData[j], mData[i]) = (mData[i], mData[j]);
                         i++; 
                         j--;
                     }

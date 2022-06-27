@@ -5,7 +5,7 @@ namespace iLand.Input.ProjectFile
 {
     public class WorldInitialization : XmlSerializable
     {
-        public string? MapFileName { get; private set; }
+        public string? StandMapFileName { get; private set; }
 		public string? RandomFunction { get; private set; }
 		public string? SaplingFile { get; private set; }
         public string? TreeFile { get; private set; }
@@ -18,8 +18,8 @@ namespace iLand.Input.ProjectFile
         public WorldInitialization()
         {
 			this.TreeFile = null;
-			this.MapFileName = "init";
-			this.TreeInitializationMethod = ResourceUnitTreeInitializationMethod.Unit;
+			this.StandMapFileName = "init";
+			this.TreeInitializationMethod = ResourceUnitTreeInitializationMethod.CloneSingleResourceUnit;
 			this.RandomFunction = "1-x^2";
 			this.SaplingFile = null;
 			this.TreeFileFormat = null;
@@ -41,7 +41,7 @@ namespace iLand.Input.ProjectFile
             }
             else if (String.Equals(reader.Name, "mapFileName", StringComparison.Ordinal))
             {
-                this.MapFileName = reader.ReadElementContentAsString().Trim();
+                this.StandMapFileName = reader.ReadElementContentAsString().Trim();
             }
             else if (String.Equals(reader.Name, "treeInitializationMethod", StringComparison.Ordinal))
             {

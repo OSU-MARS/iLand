@@ -1,9 +1,7 @@
-﻿using iLand.Tools;
+﻿using iLand.Tool;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 
 namespace iLand.World
 {
@@ -272,16 +270,16 @@ namespace iLand.World
         //    return rect;
         //}
 
-        private Vector3D GetCoordinate(int cellIndex)
-        {
-            if (cellIndex < 0 || cellIndex >= this.DataSize)
-            {
-                throw new ArgumentOutOfRangeException(nameof(cellIndex), "Invalid cell index.");
-            }
-            int indexX = cellIndex % this.Columns;
-            int indexY = cellIndex / this.Columns;
-            return this.GetCoordinate(indexX, indexY);
-        }
+        //private Vector3D GetCoordinate(int cellIndex)
+        //{
+        //    if (cellIndex < 0 || cellIndex >= this.DataSize)
+        //    {
+        //        throw new ArgumentOutOfRangeException(nameof(cellIndex), "Invalid cell index.");
+        //    }
+        //    int indexX = cellIndex % this.Columns;
+        //    int indexY = cellIndex / this.Columns;
+        //    return this.GetCoordinate(indexX, indexY);
+        //}
 
         public Vector3D GetCoordinate(int indexX, int indexY)
         {

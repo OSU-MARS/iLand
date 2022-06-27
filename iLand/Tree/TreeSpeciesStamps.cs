@@ -52,8 +52,8 @@ namespace iLand.Tree
             this.lightStampsByDbhAndHDRatio.Fill(null);
 
             this.Description = String.Empty;            
-            //this.UseLookup = true;
-            //Debug.WriteLine("grid after init" << gridToString(m_lookup);
+            // this.UseLookup = true;
+            // Debug.WriteLine("grid after init" << gridToString(m_lookup);
         }
 
         public int Count() { return lightStampsWithTreeSizes.Count; }
@@ -213,7 +213,7 @@ namespace iLand.Tree
                 hdClass = Constant.Stamp.HeightDiameterClassCount - 1;
             }
             int diameterClass = (int)crownRadiusInMeters;
-            //Debug.WriteLine("Readerstamp r="<< crown_radius_m<<" index dbh hd:" << cls_dbh << cls_hd;
+            // Debug.WriteLine("Readerstamp r="<< crown_radius_m<<" index dbh hd:" << cls_dbh << cls_hd;
             stamp.SetCrownRadiusAndArea(crownRadiusInMeters);
 
             // prepare special keys for reader stamps
@@ -396,7 +396,7 @@ namespace iLand.Tree
                 Debug.Assert((dbh >= 0.0F) && (dbh < 225.0F), filePath + ": DBH"); // cm, maximum set by Pacific Northwest Douglas-fir
                 Debug.Assert((hdRatio >= 0.0F) && (hdRatio < 200.0F), filePath + ": height-diameter ratio"); // ratio
                 Debug.Assert((crownRadius >= 0.0F) && (crownRadius < 50.0F), filePath + ": crown radius"); // m
-                //Debug.WriteLine("stamp bhd hdvalue type readsum dominance type" + bhd + hdvalue + type + readsum + domvalue + type;
+                // Debug.WriteLine("stamp bhd hdvalue type readsum dominance type" + bhd + hdvalue + type + readsum + domvalue + type;
 
                 LightStamp stamp = new(type);
                 stamp.Load(stampReader);

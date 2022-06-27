@@ -112,7 +112,7 @@ namespace iLand.Tree
                 // environmental responses
                 this.GlobalRadiationByMonth[monthIndex] += day.Radiation;
 
-                float soilWaterResponse = this.Species.GetSoilWaterModifier(ruWaterCycle.SoilWaterPsi[dayOfYear]);
+                float soilWaterResponse = this.Species.GetSoilWaterModifier(ruWaterCycle.SoilWaterPotentialByDay[dayOfYear]);
                 this.SoilWaterResponseByMonth[monthIndex] += soilWaterResponse;
 
                 float tempResponse = this.Species.GetTemperatureModifier(day.MeanDaytimeTemperatureMA1);
@@ -131,7 +131,7 @@ namespace iLand.Tree
                     // calculate utilizable radiation, Eq. 4, http://iland-model.org/primary+production
                     float utilizableRadiation = day.Radiation * minimumResponse;
                     
-                    Debug.Assert(minimumResponse >= 0.0F && minimumResponse < 1.000001F);
+                    Debug.Assert(minimumResponse >= 0.0F && minimumResponse < 1.000001F, "Minimum of VPD (" + vpdResponse + "), temperature (" + tempResponse + "), and soil water (" + soilWaterResponse + ") responses is not in [0, 1].");
                     Debug.Assert(utilizableRadiation >= 0.0F && utilizableRadiation < 100.0F); // sanity upper bound
                     this.UtilizableRadiationByMonth[monthIndex] += utilizableRadiation;
                 }

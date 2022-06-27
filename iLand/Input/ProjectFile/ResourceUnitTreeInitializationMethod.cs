@@ -2,8 +2,10 @@
 {
     public enum ResourceUnitTreeInitializationMethod
     {
-        Single,
-        StandGrid,
-        Unit
+        CloneSingleResourceUnit,
+        OneFilePerStand,
+        SingleResourceUnit,
+        SingleResourceUnitWithRandomTrees,
+        StandGrid
     }
 }

@@ -1,1 +1,0 @@
-"year" "modules.wind.speed" "modules.wind.dayOfYear" "modules.wind.direction"

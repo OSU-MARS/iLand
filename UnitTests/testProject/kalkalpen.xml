@@ -72,7 +72,7 @@
       <usePARFractionBelowGroundAllocation>true</usePARFractionBelowGroundAllocation>
       <overrideGppPerYear>0</overrideGppPerYear>
       <randomSeed>0</randomSeed>
-      <scheduledEventsFileName>empty time event script.txt</scheduledEventsFileName>
+      <scheduledEventsFileName>empty time event script.csv</scheduledEventsFileName>
     </settings>
   </model>
   <world>
@@ -129,7 +129,6 @@
       <snagSmallMediumDbhBreakpoint>20</snagSmallMediumDbhBreakpoint>
       <snagMediumLargeDbhBreakpoint>100</snagMediumLargeDbhBreakpoint>
     </defaultSoil>
-    <dem />
     <geometry>
       <!-- must be multiple of seed map cell size, which is hard coded to 20 m, if regeneration is enabled -->
       <buffer>60</buffer>
@@ -160,14 +159,14 @@
       <grassEffect>polygon(0.9999*x^0.15)</grassEffect>
     </grass>
     <initialization>
-      <!-- only supported with treeInitializationMethod = standGrid -->
+      <!-- saplingFile only supported with treeInitializationMethod = standGrid -->
       <saplingFile />
       <snags />
       <!-- assumed to be in the project's init directory -->
-      <treeFile>all European species.txt</treeFile>
+      <treeFile>one tree of each European species.picus</treeFile>
       <!-- csvOrPicus|iLand -->
       <treeFileFormat>csvOrPicus</treeFileFormat>
-      <treeInitializationMethod>unit</treeInitializationMethod>
+      <treeInitializationMethod>cloneSingleResourceUnit</treeInitializationMethod>
       <heightGrid>
         <!-- file specifying initial heights to generate trees from -->
         <!--<fileName>lidar_np.txt</fileName>-->

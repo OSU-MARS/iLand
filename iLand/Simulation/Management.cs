@@ -1,4 +1,4 @@
-﻿using iLand.Tools;
+﻿using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
 using System;
@@ -542,7 +542,7 @@ namespace iLand.Simulation
                 ru.Snags.TransferStandingWoodToSoil(slashFraction * area_factor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
-            //Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));
+            // Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));
         }
 
         /** loadFromMap selects trees located on pixels with value 'key' within the grid 'map_grid'.

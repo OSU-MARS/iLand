@@ -1,6 +1,6 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
-using iLand.Tools;
+using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
 using System;
@@ -61,7 +61,7 @@ namespace iLand.Simulation
             {
                 IsMultithreaded = this.Project.Model.Settings.Multithreading
             };
-            // Debug.WriteLine("Multithreading enabled: " + IsMultithreaded + ", thread count: " + System.Environment.ProcessorCount);
+            // Trace.TraceInformation("Multithreading enabled: " + IsMultithreaded + ", thread count: " + System.Environment.ProcessorCount);
 
             // setup of external modules
             this.Modules.SetupDisturbances();
@@ -73,7 +73,7 @@ namespace iLand.Simulation
                     if (ru != null)
                     {
                         RectangleF ruPosition = this.Landscape.ResourceUnitGrid.GetCellExtent(this.Landscape.ResourceUnitGrid.CellIndexOf(ru));
-                        this.Landscape.Environment.SetPosition(this.Project, ruPosition.Center()); // if environment is 'disabled' default values from the project file are used.
+                        this.Landscape.Environment.SetPosition(ruPosition.Center()); // if environment is 'disabled' default values from the project file are used.
                         this.Modules.SetupResourceUnit(ru);
                     }
                 }
@@ -100,8 +100,7 @@ namespace iLand.Simulation
             string? scheduledEventsFileName = this.Project.Model.Settings.ScheduledEventsFileName;
             if (String.IsNullOrEmpty(scheduledEventsFileName) == false)
             {
-                this.ScheduledEvents = new ScheduledEvents();
-                this.ScheduledEvents.LoadFromFile(this.Project, this.Project.GetFilePath(ProjectDirectory.Script, scheduledEventsFileName));
+                this.ScheduledEvents = new(this.Project, this.Project.GetFilePath(ProjectDirectory.Script, scheduledEventsFileName));
             }
 
             // TODO: is this necessary?
@@ -164,7 +163,7 @@ namespace iLand.Simulation
                 this.ScheduledEvents.RunYear(this);
             }
             // load the next year of the climate database
-            foreach (World.Climate climate in this.Landscape.Environment.ClimatesByName.Values)
+            foreach (World.Climate climate in this.Landscape.Environment.ClimatesByID.Values)
             {
                 climate.OnStartYear(this);
             }

@@ -1,10 +1,10 @@
 ﻿#nullable disable
+using iLand.Input;
 using Microsoft.Data.Sqlite;
 using System;
-using System.Diagnostics;
 using System.Globalization;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /** @class ClimateConverter
         Converts text-file-based data into the iLand climate data format.
@@ -79,95 +79,89 @@ namespace iLand.Tools
 
         public void ConvertFileToDatabase()
         {
-            mExpYear.SetExpression(this.Year);
-            mExpMonth.SetExpression(this.Month);
-            mExpDay.SetExpression(this.Day);
-
-            mExpTemp.SetExpression(this.Temp);
-            mExpMinTemp.SetExpression(this.MinTemp);
-            mExpPrec.SetExpression(this.Prec);
-            mExpRad.SetExpression(this.Rad);
-            mExpVpd.SetExpression(this.Vpd);
-
-            if (String.IsNullOrEmpty(this.ConnectionString))
+            if (String.IsNullOrWhiteSpace(this.ConnectionString))
             {
-                throw new NotSupportedException("Database is empty.");
+                throw new NotSupportedException(nameof(this.ConnectionString) + " is empty.");
+            }
+            if (String.IsNullOrWhiteSpace(this.FileName))
+            {
+                throw new NotSupportedException(nameof(this.FileName) + " is empty.");
             }
             if (String.IsNullOrWhiteSpace(this.TableName))
             {
-                throw new NotSupportedException("Invalid table name.");
-            }
-            if (String.IsNullOrEmpty(this.FileName))
-            {
-                throw new NotSupportedException("Empty filename.");
+                throw new NotSupportedException(nameof(this.TableName) + " is empty.");
             }
 
+            this.mExpYear.SetExpression(this.Year);
+            this.mExpMonth.SetExpression(this.Month);
+            this.mExpDay.SetExpression(this.Day);
+
+            this.mExpTemp.SetExpression(this.Temp);
+            this.mExpMinTemp.SetExpression(this.MinTemp);
+            this.mExpPrec.SetExpression(this.Prec);
+            this.mExpRad.SetExpression(this.Rad);
+            this.mExpVpd.SetExpression(this.Vpd);
+
             // load file
-            CsvFile file = new();
-            file.LoadFile(this.FileName);
-            if (file.RowCount < 2)
-            {
-                throw new NotSupportedException("File '" + this.FileName + "' is empty.");
-            }
+            // TODO: validate column order is year, month, day, temp, min_temp, prec, rad, vpd
+            using CsvFile climateFile = new(this.FileName);
 
             SqliteConnectionStringBuilder connectionString = new()
             {
                 DataSource = this.ConnectionString
             };
-            using SqliteConnection db = new(connectionString.ConnectionString);
-            db.Open();
-            using (SqliteTransaction transaction = db.BeginTransaction())
+            using SqliteConnection sqlConnection = new(connectionString.ConnectionString);
+            sqlConnection.Open();
+            using SqliteTransaction transaction = sqlConnection.BeginTransaction();
+
+            // prepare output database
+            using SqliteCommand dropIfExists = new(String.Format("drop table if exists {0}", TableName), sqlConnection, transaction);
+            dropIfExists.ExecuteNonQuery();
+            using SqliteCommand create = new(String.Format("CREATE TABLE {0} (year INTEGER, month INTEGER, day INTEGER, " +
+                                                           "temp REAL, min_temp REAL, prec REAL, rad REAL, vpd REAL)", TableName),
+                                             sqlConnection, transaction);
+            create.ExecuteNonQuery();
+
+            // prepare insert statement
+            using SqliteCommand insert = new(String.Format("insert into {0} (year, month, day, temp, min_temp, prec, rad, vpd) values (?,?,?, ?,?,?,?,?)", TableName),
+                                             sqlConnection, transaction);
+            climateFile.Parse((string[] row) =>
             {
-                // prepare output database
-                using SqliteCommand dropIfExists = new(String.Format("drop table if exists {0}", TableName), db, transaction);
-                dropIfExists.ExecuteNonQuery();
-                using SqliteCommand create = new(String.Format("CREATE TABLE {0} ( year INTEGER, month INTEGER, day INTEGER, " +
-                                                               "temp REAL, min_temp REAL, prec REAL, rad REAL, vpd REAL)", TableName),
-                                                 db, transaction);
-                create.ExecuteNonQuery();
-
-                // prepare insert statement
-                using SqliteCommand insert = new(String.Format("insert into {0} (year, month, day, temp, min_temp, prec, rad, vpd) values (?,?,?, ?,?,?,?,?)", TableName),
-                                                 db, transaction);
-                // do this for each row
-                for (int row = 0; row < file.RowCount; row++)
+                // fetch values from input file
+                for (int columnIndex = 0; columnIndex < climateFile.ColumnCount; ++columnIndex)
                 {
-                    // fetch values from input file
-                    for (int columnIndex = 0; columnIndex < file.ColumnCount; ++columnIndex)
+                    double value = Double.Parse(row[columnIndex]);
+                    // store value in each of the expression variables
+                    for (int j = 0; j < 8; j++)
                     {
-                        double value = Double.Parse(file.GetValue(columnIndex, row));
-                        // store value in each of the expression variables
-                        for (int j = 0; j < 8; j++)
-                        {
-                            mVars[j * 10 + columnIndex] = value; // store in the locataion mVars[x] points to.
-                        }
+                        this.mVars[10 * j + columnIndex] = value;
                     }
-
-                    // calculate new values....
-                    int year = (int)mExpYear.Execute();
-                    int month = (int)mExpMonth.Execute();
-                    int day = (int)mExpDay.Execute();
-                    double temp = mExpTemp.Execute();
-                    double min_temp = mExpMinTemp.Execute();
-                    double prec = mExpPrec.Execute();
-                    double rad = mExpRad.Execute();
-                    double vpd = mExpVpd.Execute();
-
-                    // bind values
-                    insert.Parameters[0].Value = year;
-                    insert.Parameters[1].Value = month;
-                    insert.Parameters[2].Value = day;
-                    insert.Parameters[3].Value = temp;
-                    insert.Parameters[4].Value = min_temp;
-                    insert.Parameters[5].Value = prec;
-                    insert.Parameters[6].Value = rad;
-                    insert.Parameters[7].Value = vpd;
-                    insert.ExecuteNonQuery();
                 }
 
-                transaction.Commit();
-            }
-            Debug.WriteLine("run: processing complete. " + file.RowCount + " rows inserted.");
+                // calculate new values....
+                int year = (int)this.mExpYear.Execute();
+                int month = (int)this.mExpMonth.Execute();
+                int day = (int)this.mExpDay.Execute();
+                double temp = this.mExpTemp.Execute();
+                double min_temp = this.mExpMinTemp.Execute();
+                double prec = this.mExpPrec.Execute();
+                double rad = this.mExpRad.Execute();
+                double vpd = this.mExpVpd.Execute();
+
+                // bind values
+                insert.Parameters[0].Value = year;
+                insert.Parameters[1].Value = month;
+                insert.Parameters[2].Value = day;
+                insert.Parameters[3].Value = temp;
+                insert.Parameters[4].Value = min_temp;
+                insert.Parameters[5].Value = prec;
+                insert.Parameters[6].Value = rad;
+                insert.Parameters[7].Value = vpd;
+                insert.ExecuteNonQuery();
+            });
+
+            transaction.Commit();
+            // Debug.WriteLine("run: processing complete. " + file.RowCount + " rows inserted.");
         }
     }
 }

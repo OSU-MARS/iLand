@@ -32,22 +32,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Simulation\SystemStatistics.cs" />
-    <Compile Remove="Output\Snapshot.cs" />
-    <Compile Remove="Tools\ClimateConverter.cs" />
-    <Compile Remove="Tools\ColorExtensions.cs" />
-    <Compile Remove="Tools\Colors.cs" />
-    <Compile Remove="Tools\DebugOutputs.cs" />
-    <Compile Remove="Tools\DebugTimer.cs" />
-    <Compile Remove="Tools\DebugTimerCollection.cs" />
-    <Compile Remove="Tools\Helper.cs" />
-    <Compile Remove="Tools\MapGridRULock.cs" />
-    <Compile Remove="Tools\RumpleIndex.cs" />
-    <Compile Remove="Tools\SpatialAnalysis.cs" />
-    <Compile Remove="Tools\SqlHelper.cs" />
-    <Compile Remove="Tools\TickTack.cs" />
-    <Compile Remove="Tools\UpdateState.cs" />
-    <Compile Remove="Tools\Viewport.cs" />
+	<Compile Remove="Unused\Colors.cs" />
+    <Compile Remove="Unused\DEM.cs" />
     <Compile Remove="Unused\GrassCoverLayers.cs" />
     <Compile Remove="Unused\GridViewType.cs" />
     <Compile Remove="Unused\LayeredGrid.cs" />
@@ -68,6 +54,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Unused\DEM.cs" />
     <None Include="Unused\GrassCoverLayers.cs" />
     <None Include="Unused\LayeredGrid.cs" />
     <None Include="Unused\LayeredGridBase.cs" />
@@ -98,8 +85,8 @@
 
   <ItemGroup>
     <PackageReference Include="MersenneTwister" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.1" />
-    <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.2.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.6" />
+    <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.2.5" />
   </ItemGroup>
   
 </Project>

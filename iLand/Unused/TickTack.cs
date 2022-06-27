@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     // TODO: remove and convert to Stopwatch()
     internal class TickTack

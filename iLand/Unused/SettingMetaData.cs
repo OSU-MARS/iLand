@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /** This helper class holds meta data (description, Urls, etc) about model settings.
        Various types of settings (species, model, ...) are stored together.

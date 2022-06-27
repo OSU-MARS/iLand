@@ -1,5 +1,5 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Tools;
+using iLand.Tool;
 using iLand.World;
 using System;
 using System.Collections.Generic;
@@ -138,7 +138,7 @@ namespace iLand.Tree
 
                 // set up the special seed kernel for post fire seed rain
                 this.CreateKernel(this.mKernelSerotiny, this.mTreeMigFecundityPerCell * this.Species.FecunditySerotiny, 1.0F);
-                Debug.WriteLine("created extra seed map and serotiny seed kernel for species " + Species.Name + " with fecundity factor " + Species.FecunditySerotiny);
+                // Debug.WriteLine("created extra seed map and serotiny seed kernel for species " + Species.Name + " with fecundity factor " + Species.FecunditySerotiny);
             }
             this.mHasPendingSerotiny = false;
 
@@ -193,7 +193,7 @@ namespace iLand.Tree
                     if (index >= 0)
                     {
                         this.mExternalSeedBuffer = Int32.Parse(buffer_list[index + 1]);
-                        Debug.WriteLine("enabled special buffer for species " + Species.ID + ": distance of " + mExternalSeedBuffer + " pixels = " + mExternalSeedBuffer * 20.0 + " m");
+                        // Debug.WriteLine("enabled special buffer for species " + Species.ID + ": distance of " + mExternalSeedBuffer + " pixels = " + mExternalSeedBuffer * 20.0 + " m");
                     }
 
                     // background seed rain (i.e. for the full landscape), use regexp
@@ -202,13 +202,13 @@ namespace iLand.Tree
                     if (index >= 0)
                     {
                         this.mExternalSeedBackgroundInput = Single.Parse(background_input_list[index + 1]);
-                        Debug.WriteLine("enabled background seed input (for full area) for species " + Species.ID + ": p=" + mExternalSeedBackgroundInput);
+                        // Debug.WriteLine("enabled background seed input (for full area) for species " + Species.ID + ": p=" + mExternalSeedBackgroundInput);
                     }
 
-                    if (this.mHasExternalSeedInput)
-                    {
-                        Debug.WriteLine("External seed input enabled for " + Species.ID);
-                    }
+                    // if (this.mHasExternalSeedInput)
+                    // {
+                    //     Debug.WriteLine("External seed input enabled for " + Species.ID);
+                    // }
                 }
             }
 
@@ -718,7 +718,7 @@ namespace iLand.Tree
                 //using DebugTimer t = model.DebugTimers.Create("SeedDispersal.Execute()");
 
                 // (1) detect edges
-                if (this.DetectEdges(this.SeedMap))
+                if (SeedDispersal.DetectEdges(this.SeedMap))
                 {
                     // (2) distribute seed probabilites from edges
                     this.DistributeSeedProbability(model, this.SeedMap, this.Species.IsSeedYear ? mKernelSeedYear : mKernelNonSeedYear);
@@ -728,7 +728,7 @@ namespace iLand.Tree
                 if (this.mHasPendingSerotiny)
                 {
                     //Debug.WriteLine("calculating extra seed rain (serotiny)....");
-                    if (this.DetectEdges(this.mSeedMapSerotiny))
+                    if (SeedDispersal.DetectEdges(this.mSeedMapSerotiny))
                     {
                         this.DistributeSeedProbability(model, this.mSeedMapSerotiny, this.mKernelSerotiny);
                     }
@@ -738,10 +738,10 @@ namespace iLand.Tree
                         this.SeedMap[seedIndex] = MathF.Max(this.SeedMap[seedIndex], this.mSeedMapSerotiny[seedIndex]);
                     }
 
-                    float total = this.mSeedMapSerotiny.Sum();
+                    // float total = this.mSeedMapSerotiny.Sum();
                     this.mSeedMapSerotiny.Fill(0.0F); // clear
                     this.mHasPendingSerotiny = false;
-                    Debug.WriteLine("serotiny event: extra seed input " + total + " (total sum of seed probability over all pixels of the serotiny seed map) of species " + Species.Name);
+                    // Debug.WriteLine("serotiny event: extra seed input " + total + " (total sum of seed probability over all pixels of the serotiny seed map) of species " + Species.Name);
                 }
             }
             else
@@ -755,7 +755,7 @@ namespace iLand.Tree
         /** scans the seed image and detects "edges".
             edges are then subsequently marked (set to -1). This is pass 1 of the seed distribution process.
             */
-        private bool DetectEdges(Grid<float> seedMap)
+        private static bool DetectEdges(Grid<float> seedMap)
         {
             // fill mini-gaps
             int n_gaps_filled = 0;
@@ -808,10 +808,10 @@ namespace iLand.Tree
 
                 }
             }
-            if (this.mDumpSeedMaps)
-            {
-                Debug.WriteLine("species: " + Species.ID + " # of gaps filled: " + n_gaps_filled + " # of edge-pixels: " + edgeCount);
-            }
+            // if (this.mDumpSeedMaps)
+            // {
+            //     Debug.WriteLine("species: " + Species.ID + " # of gaps filled: " + n_gaps_filled + " # of edge-pixels: " + edgeCount);
+            // }
             // TODO: what if edgeFound == true but edgeCount == 0?
             return edgeFound;
         }

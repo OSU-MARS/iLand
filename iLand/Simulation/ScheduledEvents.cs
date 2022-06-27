@@ -1,5 +1,5 @@
-﻿using iLand.Input.ProjectFile;
-using iLand.Tools;
+﻿using iLand.Input;
+using iLand.Input.ProjectFile;
 using System;
 using System.Collections.Generic;
 
@@ -9,46 +9,35 @@ namespace iLand.Simulation
     {
         private readonly Dictionary<int, List<MutableTuple<string, string>>> eventsByYear;
 
-        public ScheduledEvents()
+        public ScheduledEvents(Project projectFile, string eventFilePath)
         {
             this.eventsByYear = new Dictionary<int, List<MutableTuple<string, string>>>();
-        }
-
-        public void Clear()
-        { 
-            this.eventsByYear.Clear();
-        }
-
-        public void LoadFromFile(Project projectFile, string fileName)
-        {
-            CsvFile eventFile = new(projectFile.GetFilePath(ProjectDirectory.Home, fileName));
-            List<string> headers = eventFile.ColumnNames;
+            
+            using CsvFile eventFile = new(projectFile.GetFilePath(ProjectDirectory.Home, eventFilePath));
             int yearIndex = eventFile.GetColumnIndex("year");
             if (yearIndex == -1)
             {
-                throw new NotSupportedException(String.Format("TimeEvents: input file '{0}' has no 'year' column.", fileName));
+                throw new NotSupportedException(String.Format("TimeEvents: input file '{0}' has no 'year' column.", eventFilePath));
             }
-            // TODO: validate header
-            for (int row = 1; row < eventFile.RowCount; ++row)
+
+            eventFile.Parse((string[] row) =>
             {
-                List<string> line = eventFile.GetRow(row);
-                int year = Int32.Parse(line[yearIndex]);
+                int year = Int32.Parse(row[yearIndex]);
                 if (this.eventsByYear.TryGetValue(year, out List<MutableTuple<string, string>>? eventsOfYear) == false)
                 {
                     eventsOfYear = new List<MutableTuple<string, string>>();
                     this.eventsByYear.Add(year, eventsOfYear);
                 }
 
-                for (int column = 0; column < line.Count; column++)
+                for (int column = 0; column < row.Length; column++)
                 {
                     if (column != yearIndex)
                     {
-                        MutableTuple<string, string> eventInYear = new(headers[column], line[column]);
+                        MutableTuple<string, string> eventInYear = new(eventFile.Columns[column], row[column]);
                         eventsOfYear.Add(eventInYear);
                     }
                 }
-            } // foreach row
-            // Debug.WriteLine(String.Format("ScheduledEvents.LoadFromFile('{0}'). {1} items stored.", fileName, eventsByYear.Count));
+            });
         }
 
         public void RunYear(Model model)
@@ -77,7 +66,7 @@ namespace iLand.Simulation
                 {
                     throw new NotImplementedException();
                     //globalSettings.Settings.SetParameter(key, eventInYear.Item2.ToString());
-                    //Debug.WriteLine("TimeEvents: set " + key + "to" + eventInYear.Item2.ToString());
+                    // Debug.WriteLine("TimeEvents: set " + key + "to" + eventInYear.Item2.ToString());
                 }
                 ++valuesSet;
             }

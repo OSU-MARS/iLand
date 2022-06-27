@@ -1,5 +1,5 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Tools;
+using iLand.Tool;
 using iLand.World;
 using System;
 
@@ -93,7 +93,7 @@ namespace iLand.Tree
             {
                 // running average: remove oldest item, add new item in a ringbuffer
                 currentPsiSum -= soilWaterPotentialsInAverage[averageIndex];
-                soilWaterPotentialsInAverage[averageIndex] = water.SoilWaterPsi[dayOfYear];
+                soilWaterPotentialsInAverage[averageIndex] = water.SoilWaterPotentialByDay[dayOfYear];
                 currentPsiSum += soilWaterPotentialsInAverage[averageIndex];
 
                 if (dayOfYear >= leafOnStart && dayOfYear <= leafOnEnd)
@@ -149,11 +149,11 @@ namespace iLand.Tree
             int veg_period_end = pheno.LeafOnEnd;
             if (veg_period_end >= 365)
             {
-                veg_period_end = mClimate.Sun.LastDayLongerThan10_5Hours;
+                veg_period_end = this.mClimate.Sun.LastDayLongerThan10_5Hours;
             }
-            for (int index = mClimate.CurrentJanuary1; index != mClimate.NextJanuary1; ++index, ++doy)
+            for (int index = this.mClimate.CurrentJanuary1; index != this.mClimate.NextJanuary1; ++index, ++doy)
             {
-                ClimateDay day = mClimate[index];
+                ClimateDay day = this.mClimate[index];
                 // minimum temperature: if temp too low . set prob. to zero
                 if (day.MinTemperature < establishment.MinTemp)
                 {

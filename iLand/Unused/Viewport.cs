@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /** @class Viewport
       Handles coordinaive transforation between grids (based on real-world metric coordinates).

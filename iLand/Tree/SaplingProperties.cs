@@ -117,7 +117,7 @@ namespace iLand.Tree
 
                 deadFine.AddBiomass(foliage, species.CNRatioFoliage);
                 deadFine.AddBiomass(foliage * species.FinerootFoliageRatio, species.CNRatioFineRoot);
-                Debug.WriteLineIf(Double.IsNaN(deadFine.C), "carbon NaN in calculate (died trees).");
+                //Debug.WriteLineIf(Double.IsNaN(deadFine.C), "carbon NaN in calculate (died trees).");
             }
             if (!deadWood.HasNoCarbon() || !deadFine.HasNoCarbon())
             {

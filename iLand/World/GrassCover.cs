@@ -1,5 +1,5 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Tools;
+using iLand.Tool;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -208,7 +208,7 @@ namespace iLand.World
                     int maxCover = (int)(Maths.Limit(this.continousCover.Evaluate(lightGrid[lightIndex]), 0.0, 1.0) * (GrassCover.FullCoverValue - 1));
                     this.CoverOrOnOffGrid[lightIndex] = (Int16)Math.Min(this.CoverOrOnOffGrid[lightIndex] + this.continousGrowthRate, maxCover);
                 }
-                //Debug.WriteLine("skipped " << cellsSkipped);
+                // Debug.WriteLine("skipped " << cellsSkipped);
             }
             else if (algorithm == GrassAlgorithm.CellOnOff)
             {

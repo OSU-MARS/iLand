@@ -1,6 +1,6 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
-using iLand.Tools;
+using iLand.Tool;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Diagnostics;
@@ -166,10 +166,10 @@ namespace iLand.Tree
             species.mLightIntensityProfiles.Load(projectFile.GetFilePath(ProjectDirectory.LightIntensityProfile, stampFile));
             // attach writer stamps to reader stamps
             species.mLightIntensityProfiles.AttachReaderStamps(species.SpeciesSet.ReaderStamps);
-            if (projectFile.World.Debug.DumpStamps)
-            {
-                Debug.WriteLine(species.mLightIntensityProfiles.Dump());
-            }
+            // if (projectFile.World.Debug.DumpStamps)
+            // {
+            //     Debug.WriteLine(species.mLightIntensityProfiles.Dump());
+            // }
 
             // general properties
             species.IsConiferous = reader.IsConiferous();
@@ -344,14 +344,14 @@ namespace iLand.Tree
             species.SaplingGrowthParameters.ReinekeR = reader.SaplingGrowthParametersReinekesR();
             species.SaplingGrowthParameters.BrowsingProbability = reader.SaplingGrowthParametersBrowsingProbability();
             species.SaplingGrowthParameters.SproutGrowth = reader.SaplingGrowthParametersSproutGrowth();
-            if (species.SaplingGrowthParameters.SproutGrowth > 0.0F)
-            {
-                if (species.SaplingGrowthParameters.SproutGrowth < 1.0F || species.SaplingGrowthParameters.SproutGrowth > 10.0F)
-                {
-                    // TODO: convert to error?
-                    Debug.WriteLine("Value of 'sapSproutGrowth' dubious for species " + species.Name + "(value: " + species.SaplingGrowthParameters.SproutGrowth + ")");
-                }
-            }
+            // if (species.SaplingGrowthParameters.SproutGrowth > 0.0F)
+            // {
+            //     if (species.SaplingGrowthParameters.SproutGrowth < 1.0F || species.SaplingGrowthParameters.SproutGrowth > 10.0F)
+            //     {
+            //         // TODO: convert to error?
+            //         Debug.WriteLine("Value of 'sapSproutGrowth' dubious for species " + species.Name + "(value: " + species.SaplingGrowthParameters.SproutGrowth + ")");
+            //     }
+            // }
             species.SaplingGrowthParameters.SetupReinekeLookup();
             if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
             {
@@ -444,7 +444,7 @@ namespace iLand.Tree
                 // decide whether current year is a seed year
                 // TODO: link to weather conditions and time since last seed year/
                 this.IsSeedYear = (model.RandomGenerator.GetRandomFloat() < mSeedYearProbability);
-                if (this.IsSeedYear && (model.Project.Output.Logging.LogLevel <= EventLevel.Informational))
+                if (this.IsSeedYear && (model.Project.Output.Logging.LogLevel >= EventLevel.Informational))
                 {
                     Trace.TraceInformation("Seed year for " + this.ID + ".");
                 }

@@ -46,15 +46,15 @@ namespace iLand.World
                          float minTemp, float maxTemp)
             : this(climate)
         {
-            LeafType = id;
-            mMinVpd = minVpd;
-            mMaxVpd = maxVpd;
-            mMinDayLength = minDayLength;
-            mMaxDayLength = maxDayLength;
-            mMinTemp = minTemp;
-            mMaxTemp = maxTemp;
-            mChillDaysAfterLeafOff = 0;
-            ChillingDaysAfterLeafOffInPreviousYear = 0;
+            this.LeafType = id;
+            this.mMinVpd = minVpd;
+            this.mMaxVpd = maxVpd;
+            this.mMinDayLength = minDayLength;
+            this.mMaxDayLength = maxDayLength;
+            this.mMinTemp = minTemp;
+            this.mMaxTemp = maxTemp;
+            this.mChillDaysAfterLeafOff = 0;
+            this.ChillingDaysAfterLeafOffInPreviousYear = 0;
         }
 
         // some special calculations used for establishment
@@ -63,9 +63,9 @@ namespace iLand.World
             this.mChillDaysBeforeLeafOn = 0;
             int chillDaysAfterLeafOff = 0;
             int lastDayWithLeaves = leafOffDay > 0 ? leafOffDay : this.LeafOnEnd;
-            for (int dayOfYear = 0, index = mClimate.CurrentJanuary1; index != mClimate.NextJanuary1; ++dayOfYear, ++index)
+            for (int dayOfYear = 0, index = this.mClimate.CurrentJanuary1; index != this.mClimate.NextJanuary1; ++dayOfYear, ++index)
             {
-                ClimateDay day = mClimate[index];
+                ClimateDay day = this.mClimate[index];
                 if (day.MeanDaytimeTemperature >= -5.0 && day.MeanDaytimeTemperature < 5.0)
                 {
                     if (dayOfYear < this.LeafOnStart)
@@ -104,69 +104,69 @@ namespace iLand.World
                 return;
             }
 
-            bool inside_period = !mClimate.Sun.IsNorthernHemisphere(); // on northern hemisphere 1.1. is in winter
-            int day_start = -1, day_stop = -1;
+            bool inside_period = !this.mClimate.Sun.IsNorthernHemisphere(); // on northern hemisphere 1.1. is in winter
+            int leafOnStartDay = -1, leafOnEndDay = -1;
             int day_wait_for = -1;
 
-            for (int dayOfYear = 0, index = mClimate.CurrentJanuary1; index != mClimate.NextJanuary1; ++dayOfYear, ++index)
+            for (int dayOfYear = 0, index = this.mClimate.CurrentJanuary1; index != this.mClimate.NextJanuary1; ++dayOfYear, ++index)
             {
-                ClimateDay day = mClimate[index];
+                ClimateDay day = this.mClimate[index];
                 if (day_wait_for >= 0 && dayOfYear < day_wait_for)
                 {
                     continue;
                 }
-                float vpdFactor = 1.0F - Phenology.GetRelativePositionInRange(day.Vpd, mMinVpd, mMaxVpd); // high value for low vpd
-                float tempFactor = Phenology.GetRelativePositionInRange(day.MinTemperature, mMinTemp, mMaxTemp);
-                float dayLengthFactor = Phenology.GetRelativePositionInRange(mClimate.Sun.GetDayLengthInHours(dayOfYear), mMinDayLength, mMaxDayLength);
+                float vpdFactor = 1.0F - Phenology.GetRelativePositionInRange(day.Vpd, this.mMinVpd, this.mMaxVpd); // high value for low vpd
+                float tempFactor = Phenology.GetRelativePositionInRange(day.MinTemperature, this.mMinTemp, this.mMaxTemp);
+                float dayLengthFactor = Phenology.GetRelativePositionInRange(this.mClimate.Sun.GetDayLengthInHours(dayOfYear), this.mMinDayLength, this.mMaxDayLength);
                 float gsi = vpdFactor * tempFactor * dayLengthFactor; // combined factor of effect of vpd, temperature and day length
                 if (!inside_period && gsi > 0.5)
                 {
                     // switch from winter -> summer
                     inside_period = true;
-                    day_start = dayOfYear;
-                    if (day_stop != -1)
+                    leafOnStartDay = dayOfYear;
+                    if (leafOnEndDay != -1)
                     {
                         break;
                     }
-                    day_wait_for = mClimate.Sun.LongestDay;
+                    day_wait_for = this.mClimate.Sun.LongestDay;
                 }
                 else if (inside_period && gsi < 0.5)
                 {
                     // switch from summer to winter
-                    day_stop = dayOfYear;
-                    if (day_start != -1)
+                    leafOnEndDay = dayOfYear;
+                    if (leafOnStartDay != -1)
                     {
                         break; // finished
                     }
-                    day_wait_for = mClimate.Sun.LongestDay;
+                    day_wait_for = this.mClimate.Sun.LongestDay;
                     inside_period = false;
                 }
             }
-            day_start -= 10; // three-week-floating average: subtract 10 days
-            day_stop -= 10;
-            if (day_start < -1 || day_stop < -1)
+            leafOnStartDay -= 10; // three-week-floating average: subtract 10 days
+            leafOnEndDay -= 10;
+            if (leafOnStartDay < -1 || leafOnEndDay < -1)
             {
-                //throw IException(QString("Phenology::calculation(): was not able to determine the length of the vegetation period for group {0}. climate table: '{1}'.", id(), mClimate.name()));
-                Debug.WriteLine("Phenology::calculation(): vegetation period is 0 for group " + LeafType + ", climate table: " + mClimate.Name);
-                day_start = mClimate.GetDaysInYear() - 1; // last day of the year, never reached
-                day_stop = day_start; // never reached
+                // throw IException(QString("Phenology::calculation(): was not able to determine the length of the vegetation period for group {0}. climate table: '{1}'.", id(), mClimate.name()));
+                // Debug.WriteLine("Phenology::calculation(): vegetation period is 0 for group " + LeafType + ", climate table: " + mClimate.Name);
+                leafOnStartDay = this.mClimate.GetDaysInYear() - 1; // last day of the year, never reached
+                leafOnEndDay = leafOnStartDay; // never reached
             }
             //if (GlobalSettings.Instance.LogDebug())
             //{
             //    Debug.WriteLine("Jolly-phenology. start " + mClimate.DayOfYear(day_start) + " stop " + mClimate.DayOfYear(day_stop));
             //}
-            this.LeafOnStart = day_start;
-            this.LeafOnEnd = day_stop;
+            this.LeafOnStart = leafOnStartDay;
+            this.LeafOnEnd = leafOnEndDay;
             // convert yeardays to dates
-            mClimate.ToZeroBasedDate(day_start, out int bDay, out int leafOnMonth, out int _);
-            mClimate.ToZeroBasedDate(day_stop, out int _, out int leafOffMonth, out int _);
+            this.mClimate.ToZeroBasedDate(leafOnStartDay, out int leafOnDayIndex, out int leafOnMonthIndex);
+            this.mClimate.ToZeroBasedDate(leafOnEndDay, out int _, out int leafOffMonthIndex);
             for (int month = 0; month < 12; ++month)
             {
-                if (month < leafOnMonth || month > leafOffMonth)
+                if ((month < leafOnMonthIndex) || (month > leafOffMonthIndex))
                 {
                     this.LeafOnFraction[month] = 0.0F; // out of season
                 }
-                else if (month > leafOnMonth && month < leafOffMonth)
+                else if ((month > leafOnMonthIndex) && (month < leafOffMonthIndex))
                 {
                     this.LeafOnFraction[month] = 1.0F; // full inside of season
                 }
@@ -174,13 +174,13 @@ namespace iLand.World
                 {
                     // fractions of month
                     this.LeafOnFraction[month] = 1.0F;
-                    if (month == leafOnMonth)
+                    if (month == leafOnMonthIndex)
                     {
-                        this.LeafOnFraction[month] -= (bDay + 1) / mClimate.GetDaysInMonth(leafOnMonth);
+                        this.LeafOnFraction[month] -= (leafOnDayIndex + 1) / this.mClimate.GetDaysInMonth(leafOnMonthIndex);
                     }
-                    if (month == leafOffMonth)
+                    if (month == leafOffMonthIndex)
                     {
-                        this.LeafOnFraction[month] -= (mClimate.GetDaysInMonth(leafOffMonth) - (bDay + 1)) / mClimate.GetDaysInMonth(leafOffMonth);
+                        this.LeafOnFraction[month] -= (this.mClimate.GetDaysInMonth(leafOffMonthIndex) - (leafOnDayIndex + 1)) / this.mClimate.GetDaysInMonth(leafOffMonthIndex);
                     }
                 }
             }

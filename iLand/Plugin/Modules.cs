@@ -48,9 +48,7 @@ namespace iLand.Plugin
                 if (beetleIndex < windIndex)
                 {
                     // swap
-                    IDisturbanceInterface temp = mModules[beetleIndex];
-                    mModules[beetleIndex] = mModules[windIndex];
-                    mModules[windIndex] = temp;
+                    (mModules[windIndex], mModules[beetleIndex]) = (mModules[beetleIndex], mModules[windIndex]);
                 }
             }
         }
@@ -71,7 +69,7 @@ namespace iLand.Plugin
 
         public void SetupResourceUnit(ResourceUnit ru)
         {
-            foreach (ISetupResourceUnitInterface setupResourceUnit in mSetupRUs)
+            foreach (ISetupResourceUnitInterface setupResourceUnit in this.mSetupRUs)
             {
                 setupResourceUnit.SetupResourceUnit(ru);
             }
@@ -79,7 +77,7 @@ namespace iLand.Plugin
 
         public void SetupDisturbances()
         {
-            foreach (IDisturbanceInterface module in mModules)
+            foreach (IDisturbanceInterface module in this.mModules)
             {
                 module.Setup();
             }

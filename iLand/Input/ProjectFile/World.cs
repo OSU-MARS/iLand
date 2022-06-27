@@ -5,7 +5,6 @@ namespace iLand.Input.ProjectFile
 {
     public class World : XmlSerializable
 	{
-		public string? DemFile { get; private set; }
 		public string? EnvironmentFile { get; private set; }
 		public string? EnvironmentGridFile { get; private set; }
 
@@ -22,7 +21,6 @@ namespace iLand.Input.ProjectFile
 
 		public World()
         {
-			this.DemFile = null;
 			this.EnvironmentGridFile = null;
 
 			this.AreaMask = new AreaMask();
@@ -73,10 +71,6 @@ namespace iLand.Input.ProjectFile
 			else if (String.Equals(reader.Name, "defaultSoil", StringComparison.Ordinal))
 			{
 				this.DefaultSoil.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "dem", StringComparison.Ordinal))
-			{
-				this.DemFile = reader.ReadElementContentAsString().Trim();
 			}
 			else if (String.Equals(reader.Name, "environmentGrid", StringComparison.Ordinal))
 			{

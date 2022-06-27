@@ -1,6 +1,5 @@
-﻿using iLand.Tools;
+﻿using iLand.Tool;
 using System;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 
@@ -113,9 +112,9 @@ namespace iLand.World
             else
             {
                 // bilinear approximation approach
-                Debug.WriteLine("DEM: built-in bilinear interpolation from cell size " + demGrid.CellSize);
+                // Debug.WriteLine("DEM: built-in bilinear interpolation from cell size " + demGrid.CellSize);
                 int sizeFactor = (int)(demGrid.CellSize / this.CellSize); // size-factor
-                Fill(-1.0F);
+                this.Fill(-1.0F);
                 int ixmin = 10000000, iymin = 1000000, ixmax = -1, iymax = -1;
                 for (int y = 0; y < demGrid.Rows; ++y)
                 {

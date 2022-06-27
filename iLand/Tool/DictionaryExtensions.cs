@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     internal static class DictionaryExtensions
     {

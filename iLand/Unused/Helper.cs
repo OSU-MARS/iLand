@@ -2,7 +2,7 @@
 //using System.IO;
 //using System.Text.RegularExpressions;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /** Helper contains a bunch of (static) helper functions.
       * including simplifed functions to read/write plain text files (loadTextFile(), saveToTextFile()),

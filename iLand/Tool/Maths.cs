@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     internal class Maths
     {

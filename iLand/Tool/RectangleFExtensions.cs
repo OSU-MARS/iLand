@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     internal static class RectangleFExtensions
     {

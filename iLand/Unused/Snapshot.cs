@@ -105,7 +105,7 @@ namespace iLand.Output
             //using DebugTimer t = model.DebugTimers.Create("Snapshot.Load()");
             string gridFile = Path.Combine(Path.GetDirectoryName(snapshotDatabaseFilePath), Path.GetFileNameWithoutExtension(snapshotDatabaseFilePath) + ".asc");
             GisGrid grid = new();
-            mResourceUnits.Clear();
+            this.mResourceUnits.Clear();
 
             if (!grid.LoadFromFile(gridFile))
             {
@@ -116,7 +116,7 @@ namespace iLand.Output
                     ResourceUnit ru = ruGrid[index];
                     if (ru != null)
                     {
-                        mResourceUnits.Add(index, ru);
+                        this.mResourceUnits.Add(index, ru);
                     }
                 }
             }

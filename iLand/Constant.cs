@@ -32,6 +32,11 @@ namespace iLand
             public const string DefaultSpeciesTable = "species";
         }
 
+        public static class File
+        {
+            public const int DefaultBufferSize = 128 * 1024; // 128 kB
+        }
+
         public static class Sapling
         {
             public const int HeightClasses = 41;
@@ -42,7 +47,10 @@ namespace iLand
 
         public static class Setting
         {
+            public const string ID = "id";
             public const string SpeciesTable = "model.species.source";
+            public const string CenterX = "centerX";
+            public const string CenterY = "centerY";
 
             public static class Climate
             {

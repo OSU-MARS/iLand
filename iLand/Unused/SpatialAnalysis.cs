@@ -8,7 +8,7 @@ using System.Drawing;
 using System.IO;
 using Model = iLand.Simulation.Model;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /**
      * @brief The SpatialAnalysis class is the scripting class related to extra spatial analysis functions.

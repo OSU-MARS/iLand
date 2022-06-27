@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     public class DebugTimerCollection
     {

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /** @class SqlHelper
         A helper class for simple execution of database commands.

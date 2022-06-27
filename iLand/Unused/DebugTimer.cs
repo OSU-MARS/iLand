@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Globalization;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /** Timer class that writes timings to the Debug-Output-Channel
         The class writes the elapsed time to qDebug() when either destructed, or when explicitely showElapsed() is called.

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     internal class Colors
     {

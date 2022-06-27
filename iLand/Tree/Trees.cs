@@ -1,5 +1,5 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Tools;
+using iLand.Tool;
 using iLand.World;
 using System;
 using System.Diagnostics;
@@ -579,8 +579,8 @@ namespace iLand.Tree
                     {
                         value *= outsideAreaFactor;
                     }
-                    //Debug.WriteLine(x + y + local_dom + z + z_zstar + own_value + value + *(grid_value-1) + (*reader)(x,y) + mStamp.offsetValue(x,y,d_offset);
-                    //if (value>0.)
+                    // Debug.WriteLine(x + y + local_dom + z + z_zstar + own_value + value + *(grid_value-1) + (*reader)(x,y) + mStamp.offsetValue(x,y,d_offset);
+                    // if (value>0.)
                     sum += value * reader[x, y];
                 }
             }
@@ -599,7 +599,7 @@ namespace iLand.Tree
             // Finally, add LRI of this Tree to the ResourceUnit!
             this.RU.Trees.AddWeightedLeafArea(this.LeafArea[treeIndex], this.LightResourceIndex[treeIndex]);
 
-            //Debug.WriteLine("Tree #"<< id() + "value" + sum + "Impact" + mImpact;
+            // Debug.WriteLine("Tree #"<< id() + "value" + sum + "Impact" + mImpact;
         }
 
         /// Torus version of read stamp (glued edges)
@@ -636,14 +636,14 @@ namespace iLand.Tree
                     float cellIndex = cellIntensity / focalIntensity; // remove impact of focal tree
 
                     // debug for one tree in HJA
-                    //if (id()==178020)
-                    //    Debug.WriteLine(x + y + xt + yt + *grid_value + local_dom + own_value + value + (*reader)(x,y);
-                    //if (_isnan(value))
-                    //    Debug.WriteLine("isnan" + id();
-                    if (cellIndex * reader[readerX, readerY] > 1.0)
-                    {
-                        Debug.WriteLine("LIFTorus: value > 1.0.");
-                    }
+                    // if (id()==178020)
+                    //     Debug.WriteLine(x + y + xt + yt + *grid_value + local_dom + own_value + value + (*reader)(x,y);
+                    // if (_isnan(value))
+                    //     Debug.WriteLine("isnan" + id();
+                    // if (cellIndex * reader[readerX, readerY] > 1.0)
+                    // {
+                    //     Debug.WriteLine("LIFTorus: value > 1.0.");
+                    // }
                     lightIndex += cellIndex * reader[readerX, readerY];
                     //} // isIndexValid
                 }
@@ -660,9 +660,9 @@ namespace iLand.Tree
             if (Double.IsNaN(this.LightResourceIndex[treeIndex]))
             {
                 throw new InvalidOperationException("Light resource index unexpectedly NaN.");
-                //Debug.WriteLine("LRI invalid (nan) " + ID);
-                //this.LightResourceIndex[treeIndex] = 0.0F;
-                //Debug.WriteLine(reader.dump();
+                // Debug.WriteLine("LRI invalid (nan) " + ID);
+                // this.LightResourceIndex[treeIndex] = 0.0F;
+                // Debug.WriteLine(reader.dump();
             }
 
             Debug.Assert(this.LightResourceIndex[treeIndex] >= 0.0F && this.LightResourceIndex[treeIndex] < 50.0F); // sanity upper bound
@@ -670,7 +670,7 @@ namespace iLand.Tree
             {
                 this.LightResourceIndex[treeIndex] = 1.0F; // TODO: why clamp?
             }
-            //Debug.WriteLine("Tree #"<< id() + "value" + sum + "Impact" + mImpact;
+            // Debug.WriteLine("Tree #"<< id() + "value" + sum + "Impact" + mImpact;
 
             // Finally, add LRI of this Tree to the ResourceUnit!
             this.RU.Trees.AddWeightedLeafArea(this.LeafArea[treeIndex], this.LightResourceIndex[treeIndex]);
@@ -1023,10 +1023,6 @@ namespace iLand.Tree
                 }
             }
 
-            if (dbhIncrementInM < 0.0F)
-            {
-                Debug.WriteLine("grow_diameter: d_inc < 0.0");
-            }
             Debug.Assert((dbhIncrementInM >= 0.0) && (dbhIncrementInM <= 0.1), String.Format("Diameter increment out of range: HD {0}, factor_diameter {1}, stem_residual {2}, delta_d_estimate {3}, d_increment {4}, final residual {5} kg.",
                                                                                              hdRatioNewGrowth, 
                                                                                              factorDiameter, 
@@ -1037,10 +1033,10 @@ namespace iLand.Tree
 
             //DBGMODE(
             // do not calculate res_final twice if already done
-            //Debug.WriteLineIf((res_final == 0.0 ? Math.Abs(mass_factor * (d_m + d_increment) * (d_m + d_increment) * (this.height[treeIndex] + d_increment * hd_growth) - ((stem_mass + net_stem_npp))) : res_final) > 1, Dump(),
-            //    "grow_diameter: final residual stem estimate > 1kg");
-            //Debug.WriteLineIf(d_increment > 10.0 || d_increment * hd_growth > 10.0, String.Format("d-increment {0} h-increment {1} ", d_increment, d_increment * hd_growth / 100.0) + Dump(),
-            //    "grow_diameter growth out of bound");
+            // Debug.WriteLineIf((res_final == 0.0 ? Math.Abs(mass_factor * (d_m + d_increment) * (d_m + d_increment) * (this.height[treeIndex] + d_increment * hd_growth) - ((stem_mass + net_stem_npp))) : res_final) > 1, Dump(),
+            //     "grow_diameter: final residual stem estimate > 1kg");
+            // Debug.WriteLineIf(d_increment > 10.0 || d_increment * hd_growth > 10.0, String.Format("d-increment {0} h-increment {1} ", d_increment, d_increment * hd_growth / 100.0) + Dump(),
+            //     "grow_diameter growth out of bound");
 
             //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.TreeGrowth) && IsDebugging())
             //{

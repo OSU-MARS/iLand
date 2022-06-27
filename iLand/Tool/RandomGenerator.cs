@@ -2,7 +2,7 @@
 using System;
 using System.Diagnostics;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     // a new set of numbers is generated for every 5*500000 = 2.500.000 numbers
     public class RandomGenerator

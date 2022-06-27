@@ -1,7 +1,7 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.World;
-using iLand.Tools;
+using iLand.Tool;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
@@ -80,13 +80,13 @@ namespace iLand.Tree
         {
             string readerStampFile = projectFile.GetFilePath(ProjectDirectory.LightIntensityProfile, projectFile.World.Species.ReaderStampFile);
             this.ReaderStamps.Load(readerStampFile);
-            if (projectFile.World.Debug.DumpStamps)
-            {
-                Debug.WriteLine(this.ReaderStamps.Dump());
-            }
+            // if (projectFile.World.Debug.DumpStamps)
+            // {
+            //     Debug.WriteLine(this.ReaderStamps.Dump());
+            // }
 
             string speciesDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Species.DatabaseFile);
-            using SqliteConnection speciesDatabase = Landscape.GetDatabaseConnection(speciesDatabaseFilePath, true);
+            using SqliteConnection speciesDatabase = Landscape.GetDatabaseConnection(speciesDatabaseFilePath, openReadOnly: true);
             using SqliteCommand speciesSelect = new(String.Format("select * from {0}", this.SqlTableName), speciesDatabase);
             // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");
             using SpeciesReader speciesReader = new(speciesSelect.ExecuteReader());
@@ -103,12 +103,12 @@ namespace iLand.Tree
                 this.mSpeciesByID.Add(species.ID, species);
             }
 
-            //Debug.WriteLine("Loaded " + mSpeciesByID.Count + " active species.");
-            //Debug.WriteLine("index, id, name");
-            //foreach (Species s in this.ActiveSpecies)
-            //{
-            //    Debug.WriteLine(s.Index + " " + s.ID + " " + s.Name);
-            //}
+            // Debug.WriteLine("Loaded " + mSpeciesByID.Count + " active species.");
+            // Debug.WriteLine("index, id, name");
+            // foreach (Species s in this.ActiveSpecies)
+            // {
+            //     Debug.WriteLine(s.Index + " " + s.ID + " " + s.Name);
+            // }
 
             // setup nitrogen response
             this.class1K = projectFile.World.Species.NitrogenResponseClasses.Class1K;
@@ -271,7 +271,7 @@ namespace iLand.Tree
         /** calculation for the CO2 response for the ambientCO2 for the water- and nitrogen responses given.
             The calculation follows Friedlingsstein 1995 (see also links to equations in code)
             see also: http://iland-model.org/CO2+response
-            @param ambientCO2 current CO2 concentration (ppm)
+            @param ambientCO2 current CO₂ concentration (ppm)
             @param nitrogenResponse (yearly) nitrogen response of the species
             @param soilWaterReponse soil water response (mean value for a month)
             */

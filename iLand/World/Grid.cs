@@ -1,6 +1,7 @@
-﻿using iLand.Tools;
+﻿using iLand.Tool;
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Text;
 
@@ -115,18 +116,22 @@ namespace iLand.World
 
         public Grid(Grid<T> other)
         {
+            if (other.data == null)
+            {
+                throw new ArgumentOutOfRangeException(nameof(other));
+            }
+
             this.Setup(other.PhysicalExtent, other.CellSize);
-            //setup(toCopy.cellsize(), toCopy.sizeX(), toCopy.sizeY());
-            Array.Copy(other.data!, 0, this.data!, 0, other.data!.Length);
+            Array.Copy(other.data, 0, this.data, 0, other.data.Length);
         }
 
-        /// use the square brackets to access by index
+
         public T this[int index]
         {
             get { return this.data![index]; }
             set { this.data![index] = value; }
         }
-        /// access (const) with index variables. use int.
+
         public T this[int indexX, int indexY]
         {
             get { return this.data![indexY * this.SizeX + indexX]; }
@@ -252,7 +257,7 @@ namespace iLand.World
         public void Clear()
         {
             // BUGBUG: what about all other fields?
-            data = null;
+            this.data = null;
         }
 
         public void CopyFrom(Grid<T> source)
@@ -278,39 +283,27 @@ namespace iLand.World
             Array.Fill(this.data!, value);
         }
 
+        public void FillDefault()
+        {
+            this.Fill(default);
+        }
+
+        public float GetCenterToCenterCellDistance(Point p1, Point p2)
+        {
+            PointF fp1 = GetCellCenterPosition(p1);
+            PointF fp2 = GetCellCenterPosition(p2);
+            float distance = MathF.Sqrt((fp1.X - fp2.X) * (fp1.X - fp2.X) + (fp1.Y - fp2.Y) * (fp1.Y - fp2.Y));
+            return distance;
+        }
+
+        [MemberNotNull(nameof(Grid<T>.data))]
         public bool Setup(Grid<T> source)
         {
             this.Clear();
             return this.Setup(source.PhysicalExtent, source.CellSize);
         }
 
-        public bool Setup(int cellsX, int cellsY, float cellSize)
-        {
-            this.SizeX = cellsX;
-            this.SizeY = cellsY;
-            this.PhysicalExtent = new RectangleF(this.PhysicalExtent.X, this.PhysicalExtent.Y, cellSize * cellsX, cellSize * cellsY);
-            if (this.data != null)
-            {
-                // test if we can re-use the allocated memory.
-                if (this.SizeX * this.SizeY > this.Count)
-                {
-                    // we cannot re-use the memory - create new data
-                    this.data = null;
-                }
-            }
-            this.CellSize = cellSize;
-            this.Count = this.SizeX * this.SizeY;
-            if (this.Count == 0)
-            {
-                return false;
-            }
-            if (this.data == null)
-            {
-                this.data = new T[this.Count];
-            }
-            return true;
-        }
-
+        [MemberNotNull(nameof(Grid<T>.data))]
         public bool Setup(RectangleF extent, float cellSize)
         {
             if (cellSize <= 0.0F)
@@ -336,17 +329,43 @@ namespace iLand.World
             return this.Setup(cellsX, cellsY, cellSize);
         }
 
-        public void FillDefault()
+        [MemberNotNull(nameof(Grid<T>.data))]
+        public bool Setup(int cellsX, int cellsY, float cellSize)
         {
-            this.Fill(default);
-        }
+            if (cellsX < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(cellsX));
+            }
+            if (cellsY < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(cellsY));
+            }
+            if (cellSize < 0.0F)
+            {
+                throw new ArgumentOutOfRangeException(nameof(cellSize));
+            }
 
-        public float GetCenterToCenterCellDistance(Point p1, Point p2)
-        {
-            PointF fp1 = GetCellCenterPosition(p1);
-            PointF fp2 = GetCellCenterPosition(p2);
-            float distance = MathF.Sqrt((fp1.X - fp2.X) * (fp1.X - fp2.X) + (fp1.Y - fp2.Y) * (fp1.Y - fp2.Y));
-            return distance;
+            if (this.data != null)
+            {
+                // reuse the data array that's already been allocated if it's large enough
+                // If needed, shrinkage of the array can be supported.
+                if (cellsX * cellsY > this.Count)
+                {
+                    this.data = null;
+                }
+            }
+
+            this.CellSize = cellSize;
+            this.Count = cellsX * cellsY;
+            this.SizeX = cellsX;
+            this.SizeY = cellsY;
+            this.PhysicalExtent = new RectangleF(this.PhysicalExtent.X, this.PhysicalExtent.Y, cellSize * cellsX, cellSize * cellsY);
+
+            if (this.data == null)
+            {
+                this.data = new T[this.Count];
+            }
+            return true;
         }
 
         /// dumps a Grid<T> to a long data CSV.

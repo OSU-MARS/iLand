@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /** @class RandomCustomPDF provide random numbers with a user defined probaility density function.
         Call setup() or use the constructor to provide a function-expression with one variable (e.g. 'x^2').
@@ -17,7 +17,7 @@ namespace iLand.Tools
         private float mDeltaX;
         private bool mSumFunction;
 
-        public string? DensityFunction { get; private set; }
+        public string? ProbabilityDensityFunction { get; private set; }
 
         public RandomCustomPdf()
         {
@@ -25,10 +25,10 @@ namespace iLand.Tools
             this.mRandomIndex = new RandomWeighted();
         }
 
-        public RandomCustomPdf(string densityFunction)
+        public RandomCustomPdf(string probabilityDensityExpression)
             : this()
         {
-            this.Setup(densityFunction);
+            this.Setup(probabilityDensityExpression);
         }
 
         /** setup of the properites of the RandomCustomPDF.
@@ -38,12 +38,12 @@ namespace iLand.Tools
             @p isSumFunc if true, the function given in 'funcExpr' is a cumulative probabilty density function (default=false)
             @p stepCount internal degree of 'slots' - the more slots, the more accurate (default=100)
          */
-        public void Setup(string funcExpr, float lowerBound = 0, float upperBound = 1, bool isSumFunc = false, int stepCount = 100)
+        public void Setup(string probabilityDensityExpression, float lowerBound = 0, float upperBound = 1, bool isSumFunc = false, int stepCount = 100)
         {
-            this.DensityFunction = funcExpr;
+            this.ProbabilityDensityFunction = probabilityDensityExpression;
             this.mSteps = stepCount;
             this.mSumFunction = isSumFunc;
-            this.mExpression = new Expression(funcExpr);
+            this.mExpression = new(probabilityDensityExpression);
 
             this.mRandomIndex.Setup(mSteps);
             this.mLowerBound = lowerBound;

@@ -18,7 +18,7 @@ namespace iLand.Input.ProjectFile
         {
 			this.Flush = Trace.AutoFlush;
 			this.LogFile = null;
-			this.LogLevel = EventLevel.Informational;
+			this.LogLevel = EventLevel.Warning;
         }
 
 		protected override void ReadStartElement(XmlReader reader)

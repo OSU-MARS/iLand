@@ -1,5 +1,5 @@
 ﻿using iLand.Input;
-using iLand.Tools;
+using iLand.Tool;
 using System;
 using System.Diagnostics;
 
@@ -26,6 +26,11 @@ namespace iLand.World
 
         public ResourceUnitSoil(EnvironmentReader environmentReader, ResourceUnit ru)
         {
+            if (environmentReader.CurrentEnvironment == null)
+            {
+                throw new ArgumentOutOfRangeException(nameof(environmentReader));
+            }
+
             this.RU = ru;
 
             // see Xenakis 2008 for parameter definitions
@@ -34,15 +39,15 @@ namespace iLand.World
             this.Parameters = new SoilParameters()
             {
                 AnnualNitrogenDeposition = environmentReader.AnnualNitrogenDeposition,
-                El = environmentReader.CurrentSoilEl,
-                Er = environmentReader.CurrentSoilEr,
-                Hc = environmentReader.CurrentSoilHumificationRate,
-                Ko = environmentReader.CurrentSoilOrganicDecompositionRate,
-                Kyl = environmentReader.CurrentSoilYoungLabileDecompositionRate,
-                Kyr = environmentReader.CurrentSoilYoungRefractoryDecompositionRate,
-                Leaching = environmentReader.CurrentSoilLeaching,
+                El = environmentReader.CurrentEnvironment.SoilEl,
+                Er = environmentReader.CurrentEnvironment.SoilEr,
+                Hc = environmentReader.CurrentEnvironment.SoilHumificationRate,
+                Ko = environmentReader.CurrentEnvironment.SoilOrganicDecompositionRate,
+                Kyl = environmentReader.CurrentEnvironment.SoilYoungLabileDecompositionRate,
+                Kyr = environmentReader.CurrentEnvironment.SoilYoungRefractoryDecompositionRate,
+                Leaching = environmentReader.CurrentEnvironment.SoilLeaching,
                 Qb = environmentReader.SoilQb,
-                Qh = environmentReader.CurrentSoilQh,
+                Qh = environmentReader.CurrentEnvironment.SoilQh,
                 UseDynamicAvailableNitrogen = environmentReader.UseDynamicAvailableNitrogen
             };
             if (this.Parameters.Kyl <= 0.0 || this.Parameters.Kyr <= 0.0)
@@ -56,16 +61,16 @@ namespace iLand.World
             this.InputLabile = new CarbonNitrogenPool();
             this.InputRefractory = new CarbonNitrogenPool();
             // ICBM/2 "old" carbon pool: humified soil organic content
-            this.OrganicMatter = new CarbonNitrogenTuple(0.001F * environmentReader.CurrentSoilOrganicC, // environment values are in kg/ha, pool sizes are in t/ha
-                                                         0.001F * environmentReader.CurrentSoilOrganicN);
-            this.PlantAvailableNitrogen = environmentReader.CurrentSoilAvailableNitrogen; // TODO: gets overwritten rather than modified in NewYear()?
+            this.OrganicMatter = new CarbonNitrogenTuple(0.001F * environmentReader.CurrentEnvironment.SoilOrganicC, // environment values are in kg/ha, pool sizes are in t/ha
+                                                         0.001F * environmentReader.CurrentEnvironment.SoilOrganicN);
+            this.PlantAvailableNitrogen = environmentReader.CurrentEnvironment.SoilAvailableNitrogen; // TODO: gets overwritten rather than modified in NewYear()?
             // ICBM/2 litter layer
-            this.YoungLabile = new CarbonNitrogenPool(0.001F * environmentReader.CurrentSoilYoungLabileC,
-                                                      0.001F * environmentReader.CurrentSoilYoungLabileN,
+            this.YoungLabile = new CarbonNitrogenPool(0.001F * environmentReader.CurrentEnvironment.SoilYoungLabileC,
+                                                      0.001F * environmentReader.CurrentEnvironment.SoilYoungLabileN,
                                                       this.Parameters.Kyl);
             // ICBM/2 coarse woody debris
-            this.YoungRefractory = new CarbonNitrogenPool(0.001F * environmentReader.CurrentSoilYoungRefractoryC,
-                                                          0.001F * environmentReader.CurrentSoilYoungRefractoryN,
+            this.YoungRefractory = new CarbonNitrogenPool(0.001F * environmentReader.CurrentEnvironment.SoilYoungRefractoryC,
+                                                          0.001F * environmentReader.CurrentEnvironment.SoilYoungRefractoryN,
                                                           this.Parameters.Kyr);
 
             if (!this.OrganicMatter.HasCarbonAndNitrogen())
@@ -274,29 +279,28 @@ namespace iLand.World
         {
             if (downWoodFraction < 0.0 || downWoodFraction > 1.0)
             {
-                Debug.WriteLine("warning: Soil:disturbance: DWD-fraction invalid " + downWoodFraction);
+                throw new ArgumentOutOfRangeException(nameof(downWoodFraction));
             }
             if (litterFraction < 0.0 || litterFraction > 1.0)
             {
-                Debug.WriteLine("warning: Soil:disturbance: litter-fraction invalid " + litterFraction);
+                throw new ArgumentOutOfRangeException(nameof(litterFraction));
             }
             if (soilFraction < 0.0 || soilFraction > 1.0)
             {
-                Debug.WriteLine("warning: Soil:disturbance: soil-fraction invalid " + soilFraction);
+                throw new ArgumentOutOfRangeException(nameof(soilFraction));
+
             }
             // down woody debris
             this.FluxToDisturbance += this.YoungRefractory * Maths.Limit(downWoodFraction, 0.0F, 1.0F);
-            this.YoungRefractory *= (1.0F - downWoodFraction);
+            this.YoungRefractory *= 1.0F - downWoodFraction;
             // litter
             this.FluxToDisturbance += this.YoungLabile * Maths.Limit(litterFraction, 0.0F, 1.0F);
-            this.YoungLabile *= (1.0F - litterFraction);
+            this.YoungLabile *= 1.0F - litterFraction;
             // old soil organic matter
             this.FluxToDisturbance += this.OrganicMatter * Maths.Limit(soilFraction, 0.0F, 1.0F);
-            this.OrganicMatter *= (1.0F - soilFraction);
-            if (Double.IsNaN(PlantAvailableNitrogen) || Double.IsNaN(YoungRefractory.C))
-            {
-                Debug.WriteLine("Available Nitrogen is NAN.");
-            }
+            this.OrganicMatter *= 1.0F - soilFraction;
+
+            Debug.Assert((Single.IsNaN(this.PlantAvailableNitrogen) == false) && (Single.IsNaN(this.YoungRefractory.C) == false));
         }
     }
 }

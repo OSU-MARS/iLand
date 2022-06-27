@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /** @class Expression
       An expression engine for mathematical expressions provided as strings.

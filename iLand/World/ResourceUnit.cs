@@ -405,10 +405,7 @@ namespace iLand.World
             float siteEnvironmentHeightMultiplier = ruSpecies.BiomassGrowth.SiteEnvironmentSaplingHeightGrowthMultiplier;
             float heightGrowthFactor = siteEnvironmentHeightMultiplier * lightResponse; // relative growth
 
-            if (h_pot < 0.0 || delta_h_pot < 0.0 || lriCorrection < 0.0 || lriCorrection > 1.0 || heightGrowthFactor < 0.0 || heightGrowthFactor > 1.0)
-            {
-                Debug.WriteLine("invalid values in Sapling::growSapling");
-            }
+            Debug.Assert((h_pot >= 0.0F) && (delta_h_pot >= 0.0F) && (lriCorrection >= 0.0F) && (lriCorrection <= 1.0F) && (heightGrowthFactor >= 0.0F) && (heightGrowthFactor <= 1.0F), "Sapling growth out of range.");
 
             // sprouts grow faster. Sprouts therefore are less prone to stress (threshold), and can grow higher than the growth potential.
             if (sapling.IsSprout)
@@ -446,7 +443,7 @@ namespace iLand.World
             {
                 sapling.StressYears = 0; // reset stress counter
             }
-            Debug.WriteLineIf(delta_h_pot * heightGrowthFactor < 0.0F || (!sapling.IsSprout && delta_h_pot * heightGrowthFactor > 2.0), "Sapling::growSapling", "implausible height growth.");
+            // Debug.WriteLineIf(delta_h_pot * heightGrowthFactor < 0.0F || (!sapling.IsSprout && delta_h_pot * heightGrowthFactor > 2.0), "Sapling::growSapling", "implausible height growth.");
 
             // grow
             sapling.Height += (delta_h_pot * heightGrowthFactor);

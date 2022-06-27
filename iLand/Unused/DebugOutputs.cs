@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     // fine grained debug outputs
     // defines available debug output types.

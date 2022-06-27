@@ -40,6 +40,11 @@ namespace iLand.Tree
 
         public Snags(Project projectFile, EnvironmentReader environmentReader, ResourceUnit ru)
         {
+            if (environmentReader.CurrentEnvironment == null)
+            {
+                throw new ArgumentOutOfRangeException(nameof(environmentReader));
+            }
+
             // class size of snag classes
             // swdDBHClass12: class break between classes 1 and 2 for standing snags (DBH, cm)
             // swdDBHClass23: class break between classes 2 and 3 for standing snags (DBH, cm)
@@ -113,16 +118,16 @@ namespace iLand.Tree
 
             // Inital values from XML file
             // put carbon of snags to the middle size class
-            this.StandingWoodyDebrisByClass[1].C = environmentReader.CurrentSnagStemCarbon;
-            this.StandingWoodyDebrisByClass[1].N = this.StandingWoodyDebrisByClass[1].C / environmentReader.CurrentSnagStemCNRatio;
-            this.StandingWoodyDebrisByClass[1].DecompositionRate = environmentReader.CurrentSnagStemDecompositionRate;
-            this.StemDecompositionRateByClass[1] = environmentReader.CurrentSnagStemDecompositionRate;
-            this.NumberOfSnagsByClass[1] = environmentReader.CurrentSnagsPerResourceUnit;
-            this.HalfLifeByClass[1] = environmentReader.CurrentSnagHalfLife;
+            this.StandingWoodyDebrisByClass[1].C = environmentReader.CurrentEnvironment.SnagStemCarbon;
+            this.StandingWoodyDebrisByClass[1].N = this.StandingWoodyDebrisByClass[1].C / environmentReader.CurrentEnvironment.SnagStemCNRatio;
+            this.StandingWoodyDebrisByClass[1].DecompositionRate = environmentReader.CurrentEnvironment.SnagStemDecompositionRate;
+            this.StemDecompositionRateByClass[1] = environmentReader.CurrentEnvironment.SnagStemDecompositionRate;
+            this.NumberOfSnagsByClass[1] = environmentReader.CurrentEnvironment.SnagsPerResourceUnit;
+            this.HalfLifeByClass[1] = environmentReader.CurrentEnvironment.SnagHalfLife;
             // and for the Branch/coarse root pools: split the init value into five chunks
-            CarbonNitrogenPool branches = new(environmentReader.CurrentSnagBranchRootCarbon,
-                                              environmentReader.CurrentSnagBranchRootCarbon / environmentReader.CurrentSnagBranchRootCNRatio,
-                                              environmentReader.CurrentSnagBranchRootDecompositionRate);
+            CarbonNitrogenPool branches = new(environmentReader.CurrentEnvironment.SnagBranchRootCarbon,
+                                              environmentReader.CurrentEnvironment.SnagBranchRootCarbon / environmentReader.CurrentEnvironment.SnagBranchRootCNRatio,
+                                              environmentReader.CurrentEnvironment.SnagBranchRootDecompositionRate);
             this.StandingAndDebrisCarbon = branches.C + this.StandingWoodyDebrisByClass[1].C;
 
             branches *= 1.0F / this.BranchesAndCoarseRootsByYear.Length;
@@ -376,13 +381,13 @@ namespace iLand.Tree
         {
             this.LabileFlux.AddBiomass(litterFoliage, species.CNRatioFoliage, species.LitterDecompositionRate);
             this.LabileFlux.AddBiomass(litterFineroot, species.CNRatioFineRoot, species.LitterDecompositionRate);
-            Debug.WriteLineIf(Single.IsNaN(this.LabileFlux.C), "Labile carbon NaN.");
+            // Debug.WriteLineIf(Single.IsNaN(this.LabileFlux.C), "Labile carbon NaN.");
         }
 
         public void AddTurnoverWood(float woodyBiomass, TreeSpecies species)
         {
             this.RefractoryFlux.AddBiomass(woodyBiomass, species.CNRatioWood, species.CoarseWoodyDebrisDecompositionRate);
-            Debug.WriteLineIf(Single.IsNaN(this.RefractoryFlux.C), "addTurnoverWood: NaN");
+            // Debug.WriteLineIf(Single.IsNaN(this.RefractoryFlux.C), "addTurnoverWood: NaN");
         }
 
         /** process the remnants of a single tree.

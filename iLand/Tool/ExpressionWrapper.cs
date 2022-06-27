@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     /** @class ExpressionWrapper
       The base class for objects that can be used within Expressions.

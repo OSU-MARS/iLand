@@ -1,10 +1,11 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Tools;
+using iLand.Tool;
 using iLand.Tree;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.Drawing;
 using System.IO;
 
@@ -15,7 +16,6 @@ namespace iLand.World
         public RectangleF Extent { get; private init; } // extent of the model, not including surrounding light buffer cells
         public float TotalStockableHectares { get; private set; } // total stockable area of the landscape (ha)
 
-        public DEM? Dem { get; private init; }
         public Input.EnvironmentReader Environment { get; private init; }
         public GrassCover GrassCover { get; private init; }
         public List<ResourceUnit> ResourceUnits { get; private init; }
@@ -27,7 +27,6 @@ namespace iLand.World
 
         public Landscape(Project projectFile)
         {
-            this.Dem = null;
             this.GrassCover = new GrassCover();
             this.ResourceUnits = new List<ResourceUnit>();
             this.ResourceUnitGrid = new Grid<ResourceUnit>();
@@ -58,15 +57,7 @@ namespace iLand.World
             this.ResourceUnitGrid.Setup(new RectangleF(0.0F, 0.0F, worldWidth, worldHeight), 100.0F); // Grid, that holds positions of resource units
             this.ResourceUnitGrid.FillDefault();
 
-            // setup of the digital elevation map if present
-            // Performs bounds tests against height grid, so DEM must be created after grids.
-            string? demFileName = projectFile.World.DemFile;
-            if (String.IsNullOrEmpty(demFileName) == false)
-            {
-                this.Dem = new DEM(this, projectFile.GetFilePath(ProjectDirectory.Home, demFileName)); // TODO: stop requiring gis\ prefix in project file
-            }
-
-            // load environment (multiple climates, speciesSets, ...
+            // load environment (multiple climates, speciesSets, ...)
             this.Environment = new Input.EnvironmentReader();
 
             // setup the spatial location of the project area
@@ -88,7 +79,7 @@ namespace iLand.World
             string? gridFileName = projectFile.World.EnvironmentGridFile;
             if (gridFileName != null)
             {
-                string gridFilePath = projectFile.GetFilePath(ProjectDirectory.Home, gridFileName);
+                string gridFilePath = projectFile.GetFilePath(ProjectDirectory.Gis, gridFileName);
                 this.Environment.SetGridMode(gridFilePath);
             }
 
@@ -97,7 +88,7 @@ namespace iLand.World
             bool hasStandGrid = String.IsNullOrEmpty(projectFile.World.StandGrid.FileName) == false;
             if (hasStandGrid)
             {
-                string filePath = projectFile.GetFilePath(ProjectDirectory.Home, projectFile.World.StandGrid.FileName);
+                string filePath = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.World.StandGrid.FileName);
                 this.StandGrid = new MapGrid(this, filePath); // create stand grid index later
                 if (this.StandGrid.IsValid() == false)
                 {
@@ -134,7 +125,7 @@ namespace iLand.World
                 {
                     // create resource units for valid positions only
                     RectangleF ruExtent = this.ResourceUnitGrid.GetCellExtent(this.ResourceUnitGrid.GetCellPosition(ruGridIndex));
-                    this.Environment.SetPosition(projectFile, ruExtent.Center()); // if environment is 'disabled' default values from the project file are used.
+                    this.Environment.SetPosition(ruExtent.Center()); // if environment is 'disabled' default values from the project file are used.
                     if ((this.Environment.CurrentClimate == null) || (this.Environment.CurrentSpeciesSet == null))
                     {
                         throw new NotSupportedException("Climate or species parameterizations not found for resource unit " + ruGridIndex + ".");
@@ -178,7 +169,10 @@ namespace iLand.World
             //        for (p=mRUmap.begin();p!=mRUmap.end(); ++p) {
             //            *p = mRU.value(ru_index++);
             //        }
-            Debug.WriteLine("Created grid of " + this.ResourceUnits.Count + " resource units in " + this.ResourceUnitGrid.Count + " map cells.");
+            if (projectFile.Output.Logging.LogLevel >= EventLevel.Informational)
+            {
+                Trace.TraceInformation("Created grid of " + this.ResourceUnits.Count + " resource units in " + this.ResourceUnitGrid.Count + " map cells.");
+            }
             this.CalculateStockableArea();
 
             // setup of the project area mask
@@ -193,7 +187,7 @@ namespace iLand.World
                 {
                     this.HeightGrid[index].SetInWorld(worldMask[index] > 0.99);
                 }
-                Debug.WriteLine("loaded project area mask from" + areaMaskFileName);
+                // Debug.WriteLine("loaded project area mask from" + areaMaskFileName);
             }
             if (this.ResourceUnits.Count == 0)
             {

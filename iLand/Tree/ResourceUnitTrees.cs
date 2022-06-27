@@ -110,10 +110,10 @@ namespace iLand.Tree
         private void AverageAging()
         {
             this.AverageLeafAreaWeightedAgingFactor = this.TotalLeafArea > 0.0F ? this.AverageLeafAreaWeightedAgingFactor / this.TotalLeafArea : 0.0F; // calculate aging value (calls to addAverageAging() by individual trees)
-            if (this.AverageLeafAreaWeightedAgingFactor < 0.00001F)
-            {
-                Debug.WriteLine("RU-index " + this.ru.ResourceUnitGridIndex + " average aging < 0.00001. Suspiciously low.");
-            }
+            // if (this.AverageLeafAreaWeightedAgingFactor < 0.00001F)
+            // {
+            //     Debug.WriteLine("RU-index " + this.ru.ResourceUnitGridIndex + " average aging < 0.00001. Suspiciously low.");
+            // }
             if ((this.AverageLeafAreaWeightedAgingFactor < 0.0F) || (this.AverageLeafAreaWeightedAgingFactor > 1.0F))
             {
                 throw new ArithmeticException("Average aging invalid: RU-index " + this.ru.ResourceUnitGridIndex + ", LAI " + this.StatisticsForAllSpeciesAndStands.LeafAreaIndex);
@@ -300,13 +300,13 @@ namespace iLand.Tree
                     {
                         if (((float)treesOfSpecies.Count / (float)treesOfSpecies.Capacity) < 0.2F)
                         {
-                            //int target_size = mTrees.Count*2;
-                            //Debug.WriteLine("reduce size from "+mTrees.Capacity + "to" + target_size;
-                            //mTrees.reserve(qMax(target_size, 100));
-                            //if (GlobalSettings.Instance.LogDebug())
-                            //{
-                            //    Debug.WriteLine("reduce tree storage of RU " + Index + " from " + Trees.Capacity + " to " + Trees.Count);
-                            //}
+                            // int target_size = 2*mTrees.Count;
+                            // Debug.WriteLine("reduce size from " + mTrees.Capacity + " to " + target_size);
+                            // mTrees.reserve(qMax(target_size, 100));
+                            // if (GlobalSettings.Instance.LogDebug())
+                            // {
+                            //     Debug.WriteLine("reduce tree storage of RU " + Index + " from " + Trees.Capacity + " to " + Trees.Count);
+                            // }
                             treesOfSpecies.Capacity = treesOfSpecies.Count;
                         }
                     }

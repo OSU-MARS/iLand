@@ -1,5 +1,5 @@
 ﻿using iLand.Simulation;
-using iLand.Tools;
+using iLand.Tool;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -47,7 +47,7 @@ namespace iLand.World
                         return this.ResourceUnit.Soil.PlantAvailableNitrogen;
                     }
                     return -1.0;
-                case 3: return this.ResourceUnit.WaterCycle.SoilDepth;
+                case 3: return this.ResourceUnit.WaterCycle.SoilDepthInMM;
                 case 4: return this.ResourceUnit.AreaWithTrees;
                 case 5: return this.ResourceUnit.AreaInLandscape;
                 case 6: return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.TreeCount;

@@ -1,5 +1,5 @@
 ﻿using iLand.Simulation;
-using iLand.Tools;
+using iLand.Tool;
 using iLand.Tree;
 using System;
 using System.Collections.Generic;
@@ -18,20 +18,12 @@ namespace iLand.World
       */
     public class MapGrid
     {
-        // private static readonly MapGridRULock mapGridLock;
-
         private readonly Dictionary<int, MutableTuple<RectangleF, float>> mBoundingBoxByStandID; // holds the extent and area for each map-id
         private readonly Dictionary<int, List<MutableTuple<ResourceUnit, float>>> mResourceUnitsByStandID; // holds a list of resource units + areas per map-id
         private readonly Dictionary<int, List<int>> mNeighborListByStandID; // a list of neighboring polygons; for each ID all neighboring IDs are stored.
 
+        public string? FileName { get; private set; }
         public Grid<int> Grid { get; private init; }
-        // file name of the grid
-        public string? Name { get; private set; }
-
-        //static MapGrid()
-        //{
-        //    mapGridLock = new MapGridRULock();
-        //}
 
         public MapGrid()
         {
@@ -39,13 +31,8 @@ namespace iLand.World
             this.mNeighborListByStandID = new Dictionary<int, List<int>>();
             this.mResourceUnitsByStandID = new Dictionary<int, List<MutableTuple<ResourceUnit, float>>>();
 
+            this.FileName = null;
             this.Grid = new Grid<int>();
-        }
-
-        public MapGrid(Landscape landscape, GisGrid sourceGrid)
-            : this()
-        {
-            this.LoadFromGrid(landscape, sourceGrid);
         }
 
         public MapGrid(Landscape landscape, string? fileName)
@@ -180,12 +167,12 @@ namespace iLand.World
             GisGrid gisGrid = new();
             if (gisGrid.LoadFromFile(fileName))
             {
-                this.Name = fileName;
+                this.FileName = fileName;
                 return this.LoadFromGrid(landscape, gisGrid, createIndex: false);
             }
             else
             {
-                this.Name = "invalid";
+                this.FileName = "invalid";
             }
             return false;
         }

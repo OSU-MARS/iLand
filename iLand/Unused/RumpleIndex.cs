@@ -2,7 +2,7 @@
 using iLand.World;
 using System;
 
-namespace iLand.Tools
+namespace iLand.Tool
 {
     internal class RumpleIndex
     {
