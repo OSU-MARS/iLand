@@ -17,8 +17,8 @@ namespace iLand.World
 
         public GridWindowEnumerator(Grid<T> grid, RectangleF physicalExtentToRun)
         {
-            Point topLeft = grid.GetCellIndex(physicalExtentToRun.Left, physicalExtentToRun.Top);
-            Point bottomRight = grid.GetCellIndex(physicalExtentToRun.Right, physicalExtentToRun.Bottom);
+            Point topLeft = grid.GetCellXYIndex(physicalExtentToRun.Left, physicalExtentToRun.Top);
+            Point bottomRight = grid.GetCellXYIndex(physicalExtentToRun.Right, physicalExtentToRun.Bottom);
             
             Rectangle cellExtentToRun = new(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
             Point upperLeftCellInWindow = new(cellExtentToRun.Left, cellExtentToRun.Top);
@@ -36,9 +36,6 @@ namespace iLand.World
 
             this.CurrentIndex = firstIndex - 1; // point to first element -1
             this.currentColumnInWindow = -1;
-            //    qDebug() << "GridRunner: rectangle:" << rectangle
-            //             << "upper_left:" << target_grid.cellCenterPoint(target_grid.indexOf(mCurrent))
-            //             << "lower_right:" << target_grid.cellCenterPoint(target_grid.indexOf(mLast));
         }
 
         public T Current
@@ -48,9 +45,9 @@ namespace iLand.World
         }
 
         /// return the coordinates of the cell center point of the current position in the grid.
-        public PointF GetPhysicalPosition() { return this.grid.GetCellCenterPosition(this.grid.GetCellPosition(this.CurrentIndex)); }
+        public PointF GetPhysicalPosition() { return this.grid.GetCellCentroid(this.grid.GetCellXYIndex(this.CurrentIndex)); }
         /// return the (index) - coordinates of the current position in the grid
-        public Point GetCellPosition() { return this.grid.GetCellPosition(this.CurrentIndex); }
+        public Point GetCellPosition() { return this.grid.GetCellXYIndex(this.CurrentIndex); }
 
         /// checks if the state of the GridRunner is valid, returns false if out of scope
         public bool IsValid() { return CurrentIndex >= firstIndex && CurrentIndex <= lastIndex; }

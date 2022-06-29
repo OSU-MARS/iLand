@@ -63,7 +63,6 @@ namespace iLand.Tool
                         case RandomGeneratorType.MersenneTwister:
                             {
                                 Random mersenne = MT64Random.Create(mBuffer[RandomByteBufferSize + 4]);
-                                // qDebug() << "refill random numbers. seed" <<mBuffer[RANDOMGENERATORSIZE+4];
                                 for (int i = 0; i < RandomByteBufferSize + 5; ++i)
                                 {
                                     mBuffer[i] = mersenne.Next();

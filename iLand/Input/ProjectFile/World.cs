@@ -6,9 +6,7 @@ namespace iLand.Input.ProjectFile
     public class World : XmlSerializable
 	{
 		public string? EnvironmentFile { get; private set; }
-		public string? EnvironmentGridFile { get; private set; }
 
-		public AreaMask AreaMask { get; private init; }
 		public Browsing Browsing { get; private init; }
 		public Climate Climate { get; private init; }
 		public WorldDebug Debug { get; private init; }
@@ -21,9 +19,6 @@ namespace iLand.Input.ProjectFile
 
 		public World()
         {
-			this.EnvironmentGridFile = null;
-
-			this.AreaMask = new AreaMask();
 			this.Browsing = new Browsing();
 			this.Climate = new Climate();
 			this.Debug = new WorldDebug();
@@ -39,11 +34,7 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				if (String.Equals(reader.Name, "areaMask", StringComparison.Ordinal))
-				{
-					this.AreaMask.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "browsing", StringComparison.Ordinal))
+				if (String.Equals(reader.Name, "browsing", StringComparison.Ordinal))
 				{
 					this.Browsing.ReadXml(reader);
 				}
@@ -71,10 +62,6 @@ namespace iLand.Input.ProjectFile
 			else if (String.Equals(reader.Name, "defaultSoil", StringComparison.Ordinal))
 			{
 				this.DefaultSoil.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "environmentGrid", StringComparison.Ordinal))
-			{
-				this.EnvironmentGridFile = reader.ReadElementContentAsString().Trim();
 			}
 			else if (String.Equals(reader.Name, "environmentFile", StringComparison.Ordinal))
 			{

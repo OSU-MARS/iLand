@@ -16,19 +16,15 @@ namespace iLand.Input.ProjectFile
 		// latitude of project site in degrees
 		public float Latitude { get; private set; }
 
-		public ModelOrigin? ModelOrigin { get; private set; }
-
 		public WorldGeometry()
 		{
 			// default to a single resource unit
 			this.Buffer = 0.6F * Constant.RUSize;
-			this.LightCellSize = Constant.LightSize;
+			this.LightCellSize = Constant.LightCellSizeInM;
 			this.Height = Constant.RUSize;
 			this.Latitude = 48.0F;
 			this.IsTorus = false;
 			this.Width = Constant.RUSize;
-
-			this.ModelOrigin = null;
 		}
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -85,12 +81,6 @@ namespace iLand.Input.ProjectFile
 				{
 					throw new XmlException("Latitude is not between -90 and 90°.");
 				}
-			}
-			else if (String.Equals(reader.Name, "modelOrigin", StringComparison.Ordinal))
-			{
-				Debug.Assert(this.ModelOrigin == null);
-				this.ModelOrigin = new ModelOrigin();
-				this.ModelOrigin.ReadXml(reader);
 			}
 			else
 			{

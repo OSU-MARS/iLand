@@ -125,7 +125,6 @@ namespace iLand.Output
                 }
             }
 
-            //using DebugTimer dt = model.DebugTimers.Create("DynamicStandOutput.LogYear()");
             bool perSpecies = model.Project.Output.Annual.DynamicStand.BySpecies;
             bool perRU = model.Project.Output.Annual.DynamicStand.ByResourceUnit;
             if (perRU)

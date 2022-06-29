@@ -69,7 +69,6 @@ namespace iLand.Tree
             if (this.LaiFraction > 0.0F || fromEstablishment == true)
             {
                 // assumes the water cycle is already updated for the current year
-                //using DebugTimer rst = model.DebugTimers.Create("ResourceUnitSpecies.Calculate(Response + BiomassGrowth)");
                 this.Response.CalculateUtilizableRadiation(this.RU.Climate);// calculate environmental responses per species (vpd, temperature, ...)
                 this.BiomassGrowth.CalculateGppForYear(projectFile);// production of NPP
             }

@@ -123,13 +123,13 @@ namespace iLand.Tree
         public PointF GetCellCenterPoint(int treeIndex) 
         { 
             Debug.Assert(this.lightGrid != null);
-            return this.lightGrid.GetCellCenterPosition(this.LightCellPosition[treeIndex]); 
+            return this.lightGrid.GetCellCentroid(this.LightCellPosition[treeIndex]); 
         }
 
         public void SetLightCellIndex(int treeIndex, PointF pos) 
         { 
             Debug.Assert(this.lightGrid != null); 
-            this.LightCellPosition[treeIndex] = this.lightGrid.GetCellIndex(pos); 
+            this.LightCellPosition[treeIndex] = this.lightGrid.GetCellXYIndex(pos); 
         }
 
         // private bool IsDebugging() { return this.flags[treeIndex].HasFlag(TreeFlags.Debugging); }
@@ -293,7 +293,7 @@ namespace iLand.Tree
         public void ApplyLightIntensityPatternTorus(int treeIndex)
         {
             Debug.Assert(this.lightGrid != null && this.Stamp != null && this.RU != null);
-            int lightBufferWidth = this.lightGrid.GetCellIndex(new PointF(0.0F, 0.0F)).X; // offset of buffer
+            int lightBufferWidth = this.lightGrid.GetCellXYIndex(new PointF(0.0F, 0.0F)).X; // offset of buffer
             Point treePositionInRU = new((this.LightCellPosition[treeIndex].X - lightBufferWidth) % Constant.LightCellsPerRUsize + lightBufferWidth,
                                          (this.LightCellPosition[treeIndex].Y - lightBufferWidth) % Constant.LightCellsPerRUsize + lightBufferWidth); // offset within the ha
             Point ruOffset = new(this.LightCellPosition[treeIndex].X - treePositionInRU.X, this.LightCellPosition[treeIndex].Y - treePositionInRU.Y); // offset of the corner of the resource index
@@ -413,7 +413,7 @@ namespace iLand.Tree
         {
             // height of Z*
             Point heightCellPosition = new(this.LightCellPosition[treeIndex].X / Constant.LightCellsPerHeightSize, this.LightCellPosition[treeIndex].Y / Constant.LightCellsPerHeightSize); // pos of tree on height grid
-            int bufferOffset = this.heightGrid.GetCellIndex(new PointF(0.0F, 0.0F)).X; // offset of buffer (i.e.: size of buffer in height-pixels)
+            int bufferOffset = this.heightGrid.GetCellXYIndex(new PointF(0.0F, 0.0F)).X; // offset of buffer (i.e.: size of buffer in height-pixels)
             heightCellPosition.X = (heightCellPosition.X - bufferOffset) % Constant.HeightSizePerRU + bufferOffset; // 10: 10 x 10m pixeln in 100m
             heightCellPosition.Y = (heightCellPosition.Y - bufferOffset) % Constant.HeightSizePerRU + bufferOffset;
 
@@ -606,7 +606,7 @@ namespace iLand.Tree
         public void ReadLightInfluenceFieldTorus(int treeIndex)
         {
             LightStamp reader = this.Stamp[treeIndex]!.Reader!;
-            int bufferOffset = this.lightGrid.GetCellIndex(new PointF(0.0F, 0.0F)).X; // offset of buffer
+            int bufferOffset = this.lightGrid.GetCellXYIndex(new PointF(0.0F, 0.0F)).X; // offset of buffer
 
             Point treePositionInRU = new((this.LightCellPosition[treeIndex].X - bufferOffset) % Constant.LightCellsPerRUsize + bufferOffset,
                                          (this.LightCellPosition[treeIndex].Y - bufferOffset) % Constant.LightCellsPerRUsize + bufferOffset); // offset within the ha

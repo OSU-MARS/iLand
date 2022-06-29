@@ -10,12 +10,12 @@ namespace iLand.Output
     public class TreeRemovedAnnualOutput : AnnualOutput
     {
         private readonly Expression treeFilter;
-        private readonly Dictionary<ResourceUnit, MutableTuple<Trees, List<MortalityCause>>> removedTreesByResourceUnit;
+        private readonly Dictionary<ResourceUnit, (Trees Trees, List<MortalityCause> Removals)> removedTreesByResourceUnit;
 
         public TreeRemovedAnnualOutput()
         {
             this.treeFilter = new Expression();
-            this.removedTreesByResourceUnit = new Dictionary<ResourceUnit, MutableTuple<Trees, List<MortalityCause>>>();
+            this.removedTreesByResourceUnit = new Dictionary<ResourceUnit, (Trees, List<MortalityCause>)>();
 
             this.Name = "Tree Removed Output";
             this.TableName = "treeRemoved";
@@ -61,23 +61,22 @@ namespace iLand.Output
                 }
             }
 
-            if (this.removedTreesByResourceUnit.TryGetValue(trees.RU, out MutableTuple<Trees, List<MortalityCause>>? removedTreesOfSpecies) == false)
+            if (this.removedTreesByResourceUnit.TryGetValue(trees.RU, out (Trees Trees, List<MortalityCause> Removals) removedTreesOfSpecies) == false)
             {
-                removedTreesOfSpecies = new MutableTuple<Trees, List<MortalityCause>>(new Trees(model.Landscape, trees.RU, trees.Species),
-                                                                                      new List<MortalityCause>());
+                removedTreesOfSpecies = new(new Trees(model.Landscape, trees.RU, trees.Species), new List<MortalityCause>());
                 this.removedTreesByResourceUnit.Add(trees.RU, removedTreesOfSpecies);
             }
 
-            removedTreesOfSpecies.Item1.Add(trees, treeIndex);
-            removedTreesOfSpecies.Item2.Add(reason);
+            removedTreesOfSpecies.Trees.Add(trees, treeIndex);
+            removedTreesOfSpecies.Removals.Add(reason);
             return true;
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            foreach (MutableTuple<Trees, List<MortalityCause>> removedTreesOfSpecies in this.removedTreesByResourceUnit.Values)
+            foreach ((Trees Trees, List<MortalityCause> Removals) removedTreesOfSpecies in this.removedTreesByResourceUnit.Values)
             {
-                Trees trees = removedTreesOfSpecies.Item1;
+                Trees trees = removedTreesOfSpecies.Trees;
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
                     insertRow.Parameters[0].Value = model.CurrentYear;
@@ -85,7 +84,7 @@ namespace iLand.Output
                     insertRow.Parameters[2].Value = trees.RU.EnvironmentID;
                     insertRow.Parameters[3].Value = trees.Species.ID;
                     insertRow.Parameters[4].Value = trees.Tag[treeIndex];
-                    insertRow.Parameters[5].Value = (int)removedTreesOfSpecies.Item2[treeIndex];
+                    insertRow.Parameters[5].Value = (int)removedTreesOfSpecies.Removals[treeIndex];
                     insertRow.Parameters[6].Value = trees.GetCellCenterPoint(treeIndex).X;
                     insertRow.Parameters[7].Value = trees.GetCellCenterPoint(treeIndex).Y;
                     insertRow.Parameters[8].Value = trees.Dbh[treeIndex];

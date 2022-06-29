@@ -157,18 +157,6 @@ namespace iLand.Output
             outputTableCreationTransaction.Commit();
         }
 
-        //public Output Find(string tableName)
-        //{
-        //    foreach (Output output in mOutputs)
-        //    {
-        //        if (output.TableName == tableName)
-        //        {
-        //            return output;
-        //        }
-        //    }
-        //    return null;
-        //}
-
         public void LogYear(Model model)
         {
             if (this.enabledOutputs.Count == 0)
@@ -176,7 +164,6 @@ namespace iLand.Output
                 return; // nothing to do as no outputs are enabled
             }
 
-            //using DebugTimer timer = model.DebugTimers.Create("OutputManager.LogYear()");
             if (this.loggingTransaction == null)
             {
                 if (this.database == null)

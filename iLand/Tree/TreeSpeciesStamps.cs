@@ -162,11 +162,11 @@ namespace iLand.Tree
                 {
                     if (TreeSpeciesStamps.DistanceGrid.SizeX < maxStampSize)
                     {
-                        float lightCellSize = Constant.LightSize;
+                        float lightCellSize = Constant.LightCellSizeInM;
                         TreeSpeciesStamps.DistanceGrid.Setup(maxStampSize, maxStampSize, lightCellSize);
                         for (int index = 0; index < TreeSpeciesStamps.DistanceGrid.Count; ++index)
                         {
-                            Point cellPosition = TreeSpeciesStamps.DistanceGrid.GetCellPosition(index);
+                            Point cellPosition = TreeSpeciesStamps.DistanceGrid.GetCellXYIndex(index);
                             TreeSpeciesStamps.DistanceGrid[index] = lightCellSize * MathF.Sqrt(cellPosition.X * cellPosition.X + cellPosition.Y * cellPosition.Y);
                         }
                     }
@@ -469,7 +469,7 @@ namespace iLand.Tree
             {
                 if (lightStampsByDbhAndHDRatio[s] != null)
                 {
-                    stampString.AppendFormat("P: x/y: {0}/{1}{2}", lightStampsByDbhAndHDRatio.GetCellPosition(s).X, lightStampsByDbhAndHDRatio.GetCellPosition(s).Y, System.Environment.NewLine);
+                    stampString.AppendFormat("P: x/y: {0}/{1}{2}", lightStampsByDbhAndHDRatio.GetCellXYIndex(s).X, lightStampsByDbhAndHDRatio.GetCellXYIndex(s).Y, System.Environment.NewLine);
                 }
             }
             stampString.AppendLine(lightStampsByDbhAndHDRatio.ToString());

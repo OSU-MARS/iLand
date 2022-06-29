@@ -138,13 +138,6 @@
       <!-- only 2.0 m is currently supported -->
       <lightCellSize>2</lightCellSize>
       <!-- location of the model's origin (0, 0 point) in GIS inputs, used to transform GIS grids to model coordinates -->
-      <modelOrigin>
-        <!-- TODO: unclear why z and rotation are supported here -->
-        <!--<x></x>
-        <y></y>
-        <z></z>
-        <rotation></rotation>-->
-      </modelOrigin>
     </geometry>
     <grass enabled="true">
       <!-- 'pixel' or 'continuous' -->

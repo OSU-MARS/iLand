@@ -186,8 +186,6 @@ namespace iLand.Test
                     Assert.IsTrue((meanLight > minLight) && (meanLight < maxLight));
                     Assert.IsTrue(maxLight == 1.0F);
                 }
-
-                //kalkalpen.DebugTimers.WriteTimers();
             }
 
             //RumpleIndex rumpleIndex = new RumpleIndex();
@@ -451,7 +449,7 @@ namespace iLand.Test
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.PhysicalExtent.Y == 0.0);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.SizeX == 1);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.SizeY == 2);
-            Assert.IsTrue(model.Landscape.StandGrid == null);
+            Assert.IsTrue(model.Landscape.StandGrid.IsSetup() == false);
             Assert.IsTrue(model.Project.Model.Settings.Multithreading == false);
         }
 

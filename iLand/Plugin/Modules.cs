@@ -101,8 +101,6 @@ namespace iLand.Plugin
 
         public void RunYear()
         {
-            //using DebugTimer t = model.DebugTimers.Create("Modules.Run()");
-
             // *** run in fixed order ***
             foreach (IDisturbanceInterface module in mModules)
             {

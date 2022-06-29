@@ -125,7 +125,6 @@ namespace iLand.Tree
          */
         public void CalculateAbioticEnvironment(Project projectFile)
         {
-            //DebugTimer t("est_abiotic"); t.setSilent();
             // make sure that required calculations (e.g. watercycle are already performed)
             this.mRUspecies.CalculateBiomassGrowthForYear(projectFile, fromEstablishment: true); // calculate the 3-PG module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
 

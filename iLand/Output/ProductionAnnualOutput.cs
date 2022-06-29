@@ -30,7 +30,6 @@ namespace iLand.Output
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            //using DebugTimer t = model.DebugTimers.Create("ProductionOutput.LogYear()");
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 if (ru.EnvironmentID == -1)

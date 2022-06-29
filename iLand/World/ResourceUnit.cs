@@ -54,7 +54,7 @@ namespace iLand.World
             this.WaterCycle = new WaterCycle(projectFile, this);
         }
 
-        public float GetAreaWithinLandscape() { return Constant.HeightPixelArea * this.heightCellsOnLandscape; } // get the on-landscape part of resource unit's area in m2
+        public float GetAreaWithinLandscape() { return Constant.HeightCellAreaInM2 * this.heightCellsOnLandscape; } // get the on-landscape part of resource unit's area in m2
         // TODO: why does this variant of LAI calculation use stockable area instead of stocked area?
         public float GetLeafAreaIndex() { return this.AreaInLandscape != 0.0F ? this.Trees.TotalLeafArea / this.AreaInLandscape : 0.0F; }
 
@@ -159,7 +159,7 @@ namespace iLand.World
             float crownArea = MathF.PI * crownRadius * crownRadius; //m2
             // calculate how many cells on the ground are covered by the crown (this is a rather rough estimate)
             // n_cells: in addition to the original cell
-            int lightCellsInCrown = (int)Math.Round(crownArea / (Constant.LightSize * Constant.LightSize) - 1.0);
+            int lightCellsInCrown = (int)Math.Round(crownArea / (Constant.LightCellSizeInM * Constant.LightCellSizeInM) - 1.0);
             if (lightCellsInCrown > 0)
             {
                 int[] offsetsX = new int[] { 1, 1, 0, -1, -1, -1, 0, 1 };
@@ -472,7 +472,7 @@ namespace iLand.World
                 {
                     int treeIndex = this.Trees.AddTree(model.Landscape, species.ID);
                     Trees treesOfSpecies = this.Trees.TreesBySpeciesID[species.ID];
-                    treesOfSpecies.LightCellPosition[treeIndex] = model.Landscape.LightGrid.GetCellPosition(lightIndex);
+                    treesOfSpecies.LightCellPosition[treeIndex] = model.Landscape.LightGrid.GetCellXYIndex(lightIndex);
                     // add variation: add +/-N% to dbh and *independently* to height.
                     treesOfSpecies.Dbh[treeIndex] = dbh * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
                     treesOfSpecies.SetHeight(treeIndex, sapling.Height * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation));
@@ -568,7 +568,7 @@ namespace iLand.World
             else
             {
                 // height pixels are counted during the height-grid-calculations
-                this.AreaWithTrees = Constant.HeightSize * Constant.HeightSize * this.heightCellsWithTrees; // m2 (1 height grid pixel = 10x10m)
+                this.AreaWithTrees = Constant.HeightCellSizeInM * Constant.HeightCellSizeInM * this.heightCellsWithTrees; // m2 (1 height grid pixel = 10x10m)
                 float laiBasedOnRUAreaWithinLandscape = this.GetLeafAreaIndex();
                 if (laiBasedOnRUAreaWithinLandscape < 3.0F)
                 {

@@ -22,18 +22,18 @@ namespace iLand.World
 
         public Grid<float> LightGrid { get; private init; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
         public Grid<HeightCell> HeightGrid { get; private init; } // stores maximum heights of trees and some flags (currently 10x10m)
-        public Grid<ResourceUnit> ResourceUnitGrid { get; private init; }
-        public MapGrid? StandGrid { get; private init; } // retrieve the spatial grid that defines the stands (10m resolution)
+        public Grid<ResourceUnit?> ResourceUnitGrid { get; private init; }
+        public GridRaster10m StandGrid { get; private init; } // retrieve the spatial grid that defines the stands (10m resolution)
 
         public Landscape(Project projectFile)
         {
-            this.GrassCover = new GrassCover();
-            this.ResourceUnits = new List<ResourceUnit>();
-            this.ResourceUnitGrid = new Grid<ResourceUnit>();
-            this.StandGrid = null;
+            this.GrassCover = new();
+            this.ResourceUnits = new();
+            this.ResourceUnitGrid = new();
+            this.StandGrid = new();
 
             float lightCellSize = projectFile.World.Geometry.LightCellSize;
-            if (lightCellSize != Constant.LightSize)
+            if (lightCellSize != Constant.LightCellSizeInM)
             {
                 throw new NotSupportedException("Light cell size " + lightCellSize.ToString("0.000") + "m is not supported.");
             }
@@ -55,33 +55,10 @@ namespace iLand.World
             }
 
             this.ResourceUnitGrid.Setup(new RectangleF(0.0F, 0.0F, worldWidth, worldHeight), 100.0F); // Grid, that holds positions of resource units
-            this.ResourceUnitGrid.FillDefault();
+            this.ResourceUnitGrid.Fill(null);
 
             // load environment (multiple climates, speciesSets, ...)
             this.Environment = new Input.EnvironmentReader();
-
-            // setup the spatial location of the project area
-            if (projectFile.World.Geometry.ModelOrigin != null)
-            {
-                // setup of spatial location
-                float worldOriginX = projectFile.World.Geometry.ModelOrigin.X;
-                float worldOriginY = projectFile.World.Geometry.ModelOrigin.Y;
-                float worldOriginZ = projectFile.World.Geometry.ModelOrigin.Z;
-                float worldRotation = projectFile.World.Geometry.ModelOrigin.Rotation;
-                this.Environment.GisGrid.SetupTransformation(worldOriginX, worldOriginY, worldOriginZ, worldRotation);
-                // Debug.WriteLine("Setup of spatial location: " + worldOriginX + "," + worldOriginY + "," + worldOriginZ + " rotation " + worldRotation);
-            }
-            else
-            {
-                this.Environment.GisGrid.SetupTransformation(0.0F, 0.0F, 0.0F, 0.0F);
-            }
-
-            string? gridFileName = projectFile.World.EnvironmentGridFile;
-            if (gridFileName != null)
-            {
-                string gridFilePath = projectFile.GetFilePath(ProjectDirectory.Gis, gridFileName);
-                this.Environment.SetGridMode(gridFilePath);
-            }
 
             this.Environment.LoadFromProjectAndEnvironmentFile(projectFile);
 
@@ -89,8 +66,8 @@ namespace iLand.World
             if (hasStandGrid)
             {
                 string filePath = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.World.StandGrid.FileName);
-                this.StandGrid = new MapGrid(this, filePath); // create stand grid index later
-                if (this.StandGrid.IsValid() == false)
+                this.StandGrid.LoadFromFile(this, filePath); // create stand grid index later
+                if (this.StandGrid.IsSetup() == false)
                 {
                     throw new NotSupportedException();
                 }
@@ -100,7 +77,6 @@ namespace iLand.World
                     int standID = this.StandGrid.Grid[standIndex];
                     this.HeightGrid[standIndex].SetInWorld(standID > -1);
                 }
-                hasStandGrid = true;
             }
             else
             {
@@ -110,7 +86,7 @@ namespace iLand.World
                     // we assume a forest outside
                     for (int heightIndex = 0; heightIndex < this.HeightGrid.Count; ++heightIndex)
                     {
-                        PointF heightPosition = this.HeightGrid.GetCellCenterPosition(heightIndex);
+                        PointF heightPosition = this.HeightGrid.GetCellCentroid(heightIndex);
                         if (heightPosition.X < 0.0F || heightPosition.X > worldWidth || heightPosition.Y < 0.0F || heightPosition.Y > worldHeight)
                         {
                             this.HeightGrid[heightIndex].SetInWorld(false);
@@ -119,13 +95,13 @@ namespace iLand.World
                 }
             }
 
-            if (this.StandGrid == null || this.StandGrid.IsValid() == false)
+            if (this.StandGrid.IsSetup() == false)
             {
                 for (int ruGridIndex = 0; ruGridIndex < this.ResourceUnitGrid.Count; ++ruGridIndex)
                 {
                     // create resource units for valid positions only
-                    RectangleF ruExtent = this.ResourceUnitGrid.GetCellExtent(this.ResourceUnitGrid.GetCellPosition(ruGridIndex));
-                    this.Environment.SetPosition(ruExtent.Center()); // if environment is 'disabled' default values from the project file are used.
+                    RectangleF ruExtent = this.ResourceUnitGrid.GetCellExtent(this.ResourceUnitGrid.GetCellXYIndex(ruGridIndex));
+                    this.Environment.MoveTo(ruExtent.Center()); // if environment is 'disabled' default values from the project file are used.
                     if ((this.Environment.CurrentClimate == null) || (this.Environment.CurrentSpeciesSet == null))
                     {
                         throw new NotSupportedException("Climate or species parameterizations not found for resource unit " + ruGridIndex + ".");
@@ -134,61 +110,25 @@ namespace iLand.World
                     {
                         BoundingBox = ruExtent,
                         EnvironmentID = this.Environment.CurrentResourceUnitID, // set id of resource unit in grid mode
-                        TopLeftLightPosition = this.LightGrid.GetCellIndex(ruExtent.TopLeft())
+                        TopLeftLightPosition = this.LightGrid.GetCellXYIndex(ruExtent.TopLeft())
                     };
                     newRU.Setup(projectFile, this.Environment);
                     this.ResourceUnits.Add(newRU);
                     this.ResourceUnitGrid[ruGridIndex] = newRU; // save in the RUmap grid
                 }
             }
-            //if (Environment != null)
-            //{
-            //    StringBuilder climateFiles = new StringBuilder();
-            //    for (int i = 0, c = 0; i < Climates.Count; ++i)
-            //    {
-            //        climateFiles.Append(Climates[i].Name + ", ");
-            //        if (++c > 5)
-            //        {
-            //            climateFiles.Append("...");
-            //            break;
-            //        }
-            //    }
-            //    Debug.WriteLine("Setup of climates: #loaded: " + Climates.Count + " tables: " + climateFiles);
-            //}
-            // Debug.WriteLine("Setup of " + this.Environment.ClimatesByName.Count + " climate(s) performed.");
-
-            if (this.StandGrid != null && this.StandGrid.IsValid())
+            else
             {
                 this.StandGrid.CreateIndex(this);
             }
 
             // now store the pointers in the grid.
-            // Important: This has to be done after the mRU-QList is complete - otherwise pointers would
-            // point to invalid memory when QList's memory is reorganized (expanding)
-            //        ru_index = 0;
-            //        for (p=mRUmap.begin();p!=mRUmap.end(); ++p) {
-            //            *p = mRU.value(ru_index++);
-            //        }
             if (projectFile.Output.Logging.LogLevel >= EventLevel.Informational)
             {
                 Trace.TraceInformation("Created grid of " + this.ResourceUnits.Count + " resource units in " + this.ResourceUnitGrid.Count + " map cells.");
             }
             this.CalculateStockableArea();
 
-            // setup of the project area mask
-            if ((hasStandGrid == false) && projectFile.World.AreaMask.Enabled && (String.IsNullOrEmpty(projectFile.World.AreaMask.ImageFile) == false))
-            {
-                // to be extended!!! e.g. to load ESRI-style text files....
-                // setup a grid with the same size as the height grid...
-                Grid<float> worldMask = new(this.HeightGrid.SizeX, this.HeightGrid.SizeY, this.HeightGrid.CellSize);
-                string areaMaskFileName = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.World.AreaMask.ImageFile);
-                Grid.LoadGridFromImage(areaMaskFileName, worldMask); // fetch from image
-                for (int index = 0; index < worldMask.Count; ++index)
-                {
-                    this.HeightGrid[index].SetInWorld(worldMask[index] > 0.99);
-                }
-                // Debug.WriteLine("loaded project area mask from" + areaMaskFileName);
-            }
             if (this.ResourceUnits.Count == 0)
             {
                 throw new NotSupportedException("Setup of Model: no resource units present!");
@@ -202,7 +142,7 @@ namespace iLand.World
                 GridWindowEnumerator<float> lightRunner = new(this.LightGrid, this.ResourceUnitGrid.PhysicalExtent);
                 while (lightRunner.MoveNext())
                 {
-                    SaplingCell? saplingCell = this.GetSaplingCell(this.LightGrid.GetCellPosition(lightRunner.CurrentIndex), false, out ResourceUnit _); // false: retrieve also invalid cells
+                    SaplingCell? saplingCell = this.GetSaplingCell(this.LightGrid.GetCellXYIndex(lightRunner.CurrentIndex), false, out ResourceUnit _); // false: retrieve also invalid cells
                     if (saplingCell != null)
                     {
                         if (!this.HeightGrid[this.LightGrid.Index5(lightRunner.CurrentIndex)].IsOnLandscape())
@@ -253,12 +193,12 @@ namespace iLand.World
                     throw new NotSupportedException("No height cells found in resource unit.");
                 }
 
-                ru.AreaInLandscape = Constant.HeightPixelArea * heightCellsInLandscape; // in m2
+                ru.AreaInLandscape = Constant.HeightCellAreaInM2 * heightCellsInLandscape; // in m2
                 if (ru.Snags != null)
                 {
                     ru.Snags.ScaleInitialState();
                 }
-                this.TotalStockableHectares += Constant.HeightPixelArea * heightCellsInLandscape / Constant.RUArea; // in ha
+                this.TotalStockableHectares += Constant.HeightCellAreaInM2 * heightCellsInLandscape / Constant.RUArea; // in ha
 
                 if (heightCellsInLandscape == 0 && ru.EnvironmentID > -1)
                 {
@@ -342,12 +282,17 @@ namespace iLand.World
 
         public ResourceUnit GetResourceUnit(PointF ruPosition) // resource unit at given coordinates
         {
-            if (this.ResourceUnitGrid.IsNotSetup())
+            if (this.ResourceUnitGrid.IsSetup() == false)
             {
-                // TODO: why not just populate grid with the default resource unit?
+                // TODO: why not populate a 1x1 grid with the default resource unit?
                 return this.ResourceUnits[0]; // default RU if there is only one
             }
-            return this.ResourceUnitGrid[ruPosition];
+            ResourceUnit? ru = this.ResourceUnitGrid[ruPosition];
+            if (ru == null)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ruPosition));
+            }
+            return ru;
         }
 
         /// return the SaplingCell (i.e. container for the ind. saplings) for the given 2x2m coordinates
@@ -355,7 +300,7 @@ namespace iLand.World
         /// 'rRUPtr' is a pointer to a RU-ptr: if provided, a pointer to the resource unit is stored
         public SaplingCell? GetSaplingCell(Point lightCellPosition, bool onlyValid, out ResourceUnit ru)
         {
-            ru = this.GetResourceUnit(this.LightGrid.GetCellCenterPosition(lightCellPosition));
+            ru = this.GetResourceUnit(this.LightGrid.GetCellCentroid(lightCellPosition));
             SaplingCell saplingCell = ru.GetSaplingCell(lightCellPosition);
             if ((saplingCell != null) && (!onlyValid || saplingCell.State != SaplingCellState.Invalid))
             {

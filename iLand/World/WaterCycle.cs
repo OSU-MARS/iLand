@@ -211,7 +211,6 @@ namespace iLand.World
         /// @sa http://iland-model.org/water+cycle
         public WaterCycleData RunYear(Project projectFile)
         {
-            //using DebugTimer tw = model.DebugTimers.Create("WaterCycle.Run()");
             WaterCycleData hydrologicState = new();
 
             // preparations (once a year)

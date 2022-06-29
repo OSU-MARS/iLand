@@ -32,55 +32,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<Compile Remove="Unused\Colors.cs" />
-    <Compile Remove="Unused\DEM.cs" />
-    <Compile Remove="Unused\GrassCoverLayers.cs" />
-    <Compile Remove="Unused\GridViewType.cs" />
-    <Compile Remove="Unused\LayeredGrid.cs" />
-    <Compile Remove="Unused\LayeredGridBase.cs" />
-    <Compile Remove="Unused\LayerElement.cs" />
-    <Compile Remove="Unused\MapGridWrapper.cs" />
-    <Compile Remove="Unused\ModelController.cs" />
-    <Compile Remove="Unused\RandomIndex.cs" />
-    <Compile Remove="Unused\Sapling.cs" />
-    <Compile Remove="Unused\SaplingTreeOld.cs" />
-    <Compile Remove="Unused\SettingMetaData.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>iLand.UnitTests</_Parameter1>
     </AssemblyAttribute>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Unused\DEM.cs" />
-    <None Include="Unused\GrassCoverLayers.cs" />
-    <None Include="Unused\LayeredGrid.cs" />
-    <None Include="Unused\LayeredGridBase.cs" />
-    <None Include="Unused\LayerElement.cs" />
-    <None Include="Unused\MapGridWrapper.cs" />
-    <None Include="Unused\ModelController.cs" />
-    <None Include="Unused\RandomIndex.cs" />
-    <None Include="Unused\Sapling.cs" />
-    <None Include="Unused\SaplingTreeOld.cs" />
-    <None Include="Unused\SettingMetaData.cs" />
-    <None Include="Unused\SystemStatistics.cs" />
-    <None Include="Unused\Snapshot.cs" />
-    <None Include="Unused\ClimateConverter.cs" />
-    <None Include="Unused\ColorExtensions.cs" />
-    <None Include="Unused\Colors.cs" />
-    <None Include="Unused\DebugOutputs.cs" />
-    <None Include="Unused\DebugTimer.cs" />
-    <None Include="Unused\DebugTimerCollection.cs" />
-    <None Include="Unused\Helper.cs" />
-    <None Include="Unused\MapGridRULock.cs" />
-    <None Include="Unused\RumpleIndex.cs" />
-    <None Include="Unused\SpatialAnalysis.cs" />
-    <None Include="Unused\SqlHelper.cs" />
-    <None Include="Unused\TickTack.cs" />
-    <None Include="Unused\UpdateState.cs" />
-    <None Include="Unused\Viewport.cs" />
   </ItemGroup>
 
   <ItemGroup>

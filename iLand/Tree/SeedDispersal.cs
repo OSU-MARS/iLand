@@ -101,7 +101,7 @@ namespace iLand.Tree
                 mSourceMap.Fill(0.0F);
             }
             mExternalSeedMap.Clear();
-            mIndexFactor = Constant.SeedmapSize / Constant.LightSize; // ratio seed grid / lip-grid:
+            mIndexFactor = Constant.SeedmapSize / Constant.LightCellSizeInM; // ratio seed grid / lip-grid:
 
             if ((model.Project.World.Geometry.Buffer % Constant.SeedmapSize) != 0.0)
             {
@@ -149,7 +149,7 @@ namespace iLand.Tree
                 string path = model.Project.GetFilePath(ProjectDirectory.Home, model.Project.Model.SeedDispersal.DumpSeedMapsPath);
                 File.WriteAllText(String.Format("{0}/seedkernelYes_{1}.csv", path, Species.ID), mKernelSeedYear.ToString());
                 File.WriteAllText(String.Format("{0}/seedkernelNo_{1}.csv", path, Species.ID), mKernelNonSeedYear.ToString());
-                if (this.mKernelSerotiny.IsNotSetup() == false)
+                if (this.mKernelSerotiny.IsSetup())
                 {
                     File.WriteAllText(String.Format("{0}/seedkernelSerotiny_{1}.csv", path, Species.ID), mKernelSerotiny.ToString());
                 }
@@ -246,7 +246,6 @@ namespace iLand.Tree
                 return;
             }
 
-            //using DebugTimer t = model.DebugTimers.Create("SeedDispertal.SetupExternalSeeds()");
             int seedbeltWidth = model.Project.Model.SeedDispersal.ExternalSeedBelt.WidthInM;
             // setup of sectors
             // setup of base map
@@ -411,7 +410,7 @@ namespace iLand.Tree
 
         public void SeedProductionSerotiny(Point positionIndex)
         {
-            if (this.mSeedMapSerotiny.IsNotSetup())
+            if (this.mSeedMapSerotiny.IsSetup() == false)
             {
                 throw new NotSupportedException("Tried to set a seed source for a non-serotinous species.");
             }
@@ -424,7 +423,7 @@ namespace iLand.Tree
             float maxDistance = this.TreeMigDistanceforProbability(mLddMaximumSeedlingDensity / this.Species.FecundityM2);
             float seedCellSize = this.SeedMap.CellSize;
             // e.g.: cell_size: regeneration grid (e.g. 400qm), px-size: light-grid (4qm)
-            float occupation = seedCellSize * seedCellSize / (Constant.LightSize * Constant.LightSize * mTreeMigOccupancy);
+            float occupation = seedCellSize * seedCellSize / (Constant.LightCellSizeInM * Constant.LightCellSizeInM * mTreeMigOccupancy);
 
             kernel.Clear();
             int maxCellDistance = (int)(maxDistance / seedCellSize);
@@ -436,7 +435,7 @@ namespace iLand.Tree
             Point kernelCenter = new(kernelOffset, kernelOffset);
             for (int kernelIndex = 0; kernelIndex < kernel.Count; ++kernelIndex)
             {
-                float value = kernel.GetCenterToCenterCellDistance(kernelCenter, kernel.GetCellPosition(kernelIndex));
+                float value = kernel.GetCenterToCenterCellDistance(kernelCenter, kernel.GetCellXYIndex(kernelIndex));
                 if (value == 0.0)
                 {
                     kernel[kernelIndex] = this.TreeMigCenterCell(dist_center_cell); // r is the radius of a circle with the same area as a cell
@@ -624,17 +623,6 @@ namespace iLand.Tree
             }
         }
 
-        /// debug function: loads a image of arbirtrary size...
-        public void LoadFromImage(string fileName)
-        {
-            this.SeedMap.Clear();
-            Grid.LoadGridFromImage(fileName, this.SeedMap);
-            for (int cellIndex = 0; cellIndex != this.SeedMap.Count; ++cellIndex)
-            {
-                this.SeedMap[cellIndex] = this.SeedMap[cellIndex] > 0.8F ? 1.0F : 0.0F;
-            }
-        }
-
         public void Clear(Model model)
         {
             Grid<float> seedMap = this.SeedMap;
@@ -643,7 +631,7 @@ namespace iLand.Tree
                 seedMap = this.mSourceMap;
                 this.SeedMap.Fill(0.0F);
             }
-            if (this.mExternalSeedMap.IsNotSetup() == false)
+            if (this.mExternalSeedMap.IsSetup())
             {
                 // we have a preprocessed initial value for the external seed map (see setupExternalSeeds() et al)
                 seedMap.CopyFrom(mExternalSeedMap);
@@ -715,8 +703,6 @@ namespace iLand.Tree
             }
             if (this.mProbMode)
             {
-                //using DebugTimer t = model.DebugTimers.Create("SeedDispersal.Execute()");
-
                 // (1) detect edges
                 if (SeedDispersal.DetectEdges(this.SeedMap))
                 {
@@ -746,7 +732,6 @@ namespace iLand.Tree
             }
             else
             {
-                //using DebugTimer t = model.DebugTimers.Create("SeedDispersal.DistributeSeeds()");
                 // fill seed map from source map
                 this.DistributeSeeds(model, this.mSourceMap);
             }
@@ -827,7 +812,7 @@ namespace iLand.Tree
                 if (seedmap[seedIndex] == -1.0F)
                 {
                     // edge pixel found. Now apply the kernel....
-                    Point pt = seedmap.GetCellPosition(seedIndex);
+                    Point pt = seedmap.GetCellXYIndex(seedIndex);
                     for (int y = -kernelCenter; y <= kernelCenter; ++y)
                     {
                         for (int x = -kernelCenter; x <= kernelCenter; ++x)
@@ -900,7 +885,6 @@ namespace iLand.Tree
             //    int idx=0;
             //    int offset = kernel.sizeX() / 2; // offset is the index of the center pixel
             //    //Grid<ResourceUnit*> &ru_map = GlobalSettings.instance().model().RUgrid();
-            //    DebugTimer tsink("seed_sink"); {
             //    for (float *t=mSeedMap.begin(); t!=mSeedMap.end(); ++t, ++idx) {
             //        // skip out-of-project areas
             //        //if (!ru_map.constValueAtIndex(mSeedMap.index5(idx)))
@@ -914,7 +898,6 @@ namespace iLand.Tree
             //            }
             //        }
             //    }
-            //    } // debugtimer
             //    mSeedMap.initialize(0.0F); // just for debugging...
             int kernelCenter = kernel.SizeX / 2; // offset is the index of the center pixel
             // source mode
@@ -927,7 +910,7 @@ namespace iLand.Tree
                 {
                     if (sourceMap[sourceIndex] > 0.0F)
                     {
-                        Point kernelOrigin = sourceMap.GetCellPosition(sourceIndex).Subtract(kernelCenter);
+                        Point kernelOrigin = sourceMap.GetCellXYIndex(sourceIndex).Subtract(kernelCenter);
                         int kernelX = kernelOrigin.X;
                         int kernelY = kernelOrigin.Y;
                         for (int indexY = 0; indexY < kernel.SizeY; ++indexY)
@@ -943,7 +926,7 @@ namespace iLand.Tree
                         // long distance dispersal
                         if (this.mLddSeedsByRing.Count > 0)
                         {
-                            Point sourceCellIndex = sourceMap.GetCellPosition(sourceIndex);
+                            Point sourceCellIndex = sourceMap.GetCellXYIndex(sourceIndex);
                             for (int ringIndex = 0; ringIndex < this.mLddSeedsByRing.Count; ++ringIndex)
                             {
                                 float ldd_val = this.mLddSeedlingsPerCell / fecundity; // pixels will have this probability [note: fecundity will be multiplied below]
@@ -976,13 +959,13 @@ namespace iLand.Tree
             else
             {
                 // **** seed distribution in torus mode ***
-                int seedmapOffset = sourceMap.GetCellIndex(new PointF(0.0F, 0.0F)).X; // the seed maps have x extra rows/columns
+                int seedmapOffset = sourceMap.GetCellXYIndex(new PointF(0.0F, 0.0F)).X; // the seed maps have x extra rows/columns
                 int seedCellsPerRU = (int)(Constant.RUSize / sourceMap.CellSize);
                 for (int sourceIndex = 0; sourceIndex < sourceMap.Count; ++sourceIndex)
                 {
                     if (sourceMap[sourceIndex] > 0.0F)
                     {
-                        Point sourceCellPosition = sourceMap.GetCellPosition(sourceIndex);
+                        Point sourceCellPosition = sourceMap.GetCellXYIndex(sourceIndex);
                         // get the origin of the resource unit *on* the seedmap in *seedmap-coords*:
                         Point ruOffset = new((sourceCellPosition.X - seedmapOffset) / seedCellsPerRU * seedCellsPerRU + seedmapOffset,
                                              (sourceCellPosition.Y - seedmapOffset) / seedCellsPerRU * seedCellsPerRU + seedmapOffset);  // coords RU origin

@@ -48,7 +48,6 @@ namespace iLand.Output
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             AllTreesEnumerator allTreeEnumerator = new(model.Landscape);
-            //using DebugTimer dt = model.DebugTimers.Create("TreeOutput.LogYear()");
             TreeWrapper treeWrapper = new(model);
             this.mTreeFilter.Wrapper = treeWrapper;
             while (allTreeEnumerator.MoveNext())

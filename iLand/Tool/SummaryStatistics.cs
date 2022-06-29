@@ -75,7 +75,6 @@ namespace iLand.Tool
                 Max = Math.Max(value, Max);
             }
             Mean = Sum / mData.Count;
-            //qDebug() << QString("p25: {0} Median: {1} p75: {2} min: {3] max: {4}").arg(mP25).arg(mMedian).arg(mP75).arg(mMin).arg(mMax);
         }
 
         public double CalculateStandardDeviation()

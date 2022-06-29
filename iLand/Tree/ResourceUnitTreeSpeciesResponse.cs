@@ -84,7 +84,6 @@ namespace iLand.Tree
         /// Main function that calculates monthly / annual species responses
         public void CalculateUtilizableRadiation(Climate climate)
         {
-            //using DebugTimer tpg = model.DebugTimers.Create("SpeciesResponse.Calculate()");
             this.Zero(); // reset values
 
             // calculate yearly responses

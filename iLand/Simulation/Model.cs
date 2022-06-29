@@ -69,11 +69,11 @@ namespace iLand.Simulation
             {
                 for (int ruIndex = 0; ruIndex < this.Landscape.ResourceUnitGrid.Count; ++ruIndex)
                 {
-                    ResourceUnit ru = this.Landscape.ResourceUnitGrid[ruIndex];
+                    ResourceUnit? ru = this.Landscape.ResourceUnitGrid[ruIndex];
                     if (ru != null)
                     {
                         RectangleF ruPosition = this.Landscape.ResourceUnitGrid.GetCellExtent(this.Landscape.ResourceUnitGrid.CellIndexOf(ru));
-                        this.Landscape.Environment.SetPosition(ruPosition.Center()); // if environment is 'disabled' default values from the project file are used.
+                        this.Landscape.Environment.MoveTo(ruPosition.Center()); // if environment is 'disabled' default values from the project file are used.
                         this.Modules.SetupResourceUnit(ru);
                     }
                 }
@@ -152,7 +152,6 @@ namespace iLand.Simulation
           */
         public void RunYear() // run a single year
         {
-            //using DebugTimer t = this.DebugTimers.Create("Model.RunYear()");
             //this.GlobalSettings.SystemStatistics.Reset();
             // initalization at start of year for external modules
             this.Modules.OnStartYear();
@@ -181,9 +180,7 @@ namespace iLand.Simulation
             // management classic
             if (this.Management != null)
             {
-                //using DebugTimer t2 = this.DebugTimers.Create("Management.Run()");
                 this.Management.RunYear();
-                //this.GlobalSettings.SystemStatistics.ManagementTime += t.Elapsed();
             }
 
             // if trees are dead/removed because of management, the tree lists
@@ -236,7 +233,6 @@ namespace iLand.Simulation
             if (this.ModelSettings.RegenerationEnabled)
             {
                 // seed dispersal
-                //using DebugTimer tseed = this.DebugTimers.Create("Model.RunYear(seed dispersal, establishment, sapling growth");
                 foreach (TreeSpeciesSet speciesSet in this.Landscape.Environment.SpeciesSetsByTableName.Values)
                 {
                     MaybeParallel<TreeSpecies> speciesParallel = new(speciesSet.ActiveSpecies); // initialize a thread runner object with all active species
@@ -261,17 +257,14 @@ namespace iLand.Simulation
             // calculate soil / snag dynamics
             if (this.ModelSettings.CarbonCycleEnabled)
             {
-                //using DebugTimer ccycle = this.DebugTimers.Create("Model.CarbonCycle90");
                 this.ruParallel.ForEach((ResourceUnit ru) =>
                 {
                     // (1) do calculations on snag dynamics for the resource unit
                     // (2) do the soil carbon and nitrogen dynamics calculations (ICBM/2N)
                     ru.CalculateCarbonCycle();
                 });
-                //this.GlobalSettings.SystemStatistics.CarbonCycleTime += ccycle.Elapsed();
             }
 
-            //using DebugTimer toutput = this.DebugTimers.Create("Model.RunYear(outputs)");
             foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
             {
                 // calculate statistics
@@ -280,10 +273,7 @@ namespace iLand.Simulation
             // create outputs
             this.AnnualOutputs.LogYear(this);
 
-            //this.GlobalSettings.SystemStatistics.WriteOutputTime += toutput.Elapsed();
-            //this.GlobalSettings.SystemStatistics.TotalYearTime += t.Elapsed();
             // this.GlobalSettings.SystemStatistics.AddToDebugList();
-
             ++this.CurrentYear;
         }
 
@@ -372,10 +362,10 @@ namespace iLand.Simulation
             // iterate over the whole heightgrid and count pixels for each resource unit
             for (int heightIndex = 0; heightIndex < this.Landscape.HeightGrid.Count; ++heightIndex)
             {
-                PointF centerPoint = this.Landscape.HeightGrid.GetCellCenterPosition(heightIndex);
+                PointF centerPoint = this.Landscape.HeightGrid.GetCellCentroid(heightIndex);
                 if (this.Landscape.ResourceUnitGrid.Contains(centerPoint))
                 {
-                    ResourceUnit ru = this.Landscape.ResourceUnitGrid[centerPoint];
+                    ResourceUnit? ru = this.Landscape.ResourceUnitGrid[centerPoint];
                     if (ru != null)
                     {
                         ru.CountHeightCell(this.Landscape.HeightGrid[heightIndex].TreeCount > 0);

@@ -71,7 +71,7 @@ namespace iLand.World
 
             // create the grid
             this.CoverOrOnOffGrid.Setup(landscape.LightGrid.PhysicalExtent, landscape.LightGrid.CellSize);
-            this.CoverOrOnOffGrid.FillDefault();
+            this.CoverOrOnOffGrid.Fill(0);
             // mask out out-of-project areas
             for (int lightIndex = 0; lightIndex < this.CoverOrOnOffGrid.Count; ++lightIndex)
             {
@@ -188,9 +188,7 @@ namespace iLand.World
             {
                 return;
             }
-            //using DebugTimer t = model.DebugTimers.Create("GrassCover.Execute()");
-
-            // Main function of the grass submodule
+            // main function of the grass submodule
             Grid<float> lightGrid = landscape.LightGrid;
             if (algorithm == GrassAlgorithm.ContinuousLight)
             {

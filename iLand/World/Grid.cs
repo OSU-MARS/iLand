@@ -7,69 +7,6 @@ using System.Text;
 
 namespace iLand.World
 {
-    internal class Grid
-    {
-        public static bool LoadGridFromImage(string fileName, Grid<float> rGrid)
-        {
-            throw new NotImplementedException();
-        }
-
-        //public static string ToEsriRaster<T>(Grid<T> grid, Func<T, string> valueFunction)
-        //{
-        //    Vector3D model = new Vector3D(grid.PhysicalExtent.Left, grid.PhysicalExtent.Top, 0.0);
-        //    Vector3D world = new Vector3D();
-        //    GisGrid.ModelToWorld(model, world);
-        //    string result = String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
-        //                                   grid.CellsX, grid.CellsY, world.X, world.Y, grid.CellSize, -9999, System.Environment.NewLine);
-        //    string line = Grid.ToString(grid, valueFunction, ' '); // for special grids
-        //    return result + line;
-        //}
-
-        public static string ToEsriRaster<T>(Landscape landscape, Grid<T> grid) where T : notnull
-        {
-            PointF gisGridOrigin = landscape.Environment.GisGrid.ModelToGis(grid.PhysicalExtent.TopLeft());
-            StringBuilder result = new();
-            result.Append(String.Format("ncols {0}{6}nrows {1}{6}xllcorner {2}{6}yllcorner {3}{6}cellsize {4}{6}NODATA_value {5}{6}",
-                                        grid.SizeX, grid.SizeY, gisGridOrigin.X, gisGridOrigin.Y, grid.CellSize, -9999, System.Environment.NewLine));
-            for (int y = grid.SizeY - 1; y >= 0; --y)
-            {
-                for (int x = 0; x < grid.SizeX; x++)
-                {
-                    result.Append(grid[x, y].ToString() + ' ');
-                }
-                result.Append(System.Environment.NewLine);
-            }
-            return result.ToString();
-        }
-
-        /// template version for non-float grids (see also version for Grid<float>)
-        /// @param valueFunction pointer to a function with the signature: string func(T&) : this should return a string
-        /// @param sep string separator
-        /// @param newline_after if <>-1 a newline is added after every 'newline_after' data values
-        public static string ToString<T>(Grid<T> grid, Func<T, string> valueFunction, char sep = ';', int newlineAfter = -1)
-        {
-            StringBuilder stringBuilder = new();
-
-            int newlineCounter = newlineAfter;
-            for (int y = grid.SizeY - 1; y >= 0; --y)
-            {
-                for (int x = 0; x < grid.SizeX; x++)
-                {
-                    stringBuilder.Append(valueFunction(grid[x, y]) + sep);
-
-                    if (--newlineCounter == 0)
-                    {
-                        stringBuilder.Append(System.Environment.NewLine);
-                        newlineCounter = newlineAfter;
-                    }
-                }
-                stringBuilder.Append(System.Environment.NewLine);
-            }
-
-            return stringBuilder.ToString();
-        }
-    }
-
     /** Grid class (template).
         Orientation
         The grid is oriented as typically coordinates on the northern hemisphere: higher y-values -> north, higher x-values-> east.
@@ -152,13 +89,12 @@ namespace iLand.World
             }
         }
 
-        /// access (const) using metric variables. use float.
         public T this[float x, float y]
         {
-            get { return this[this.GetCellIndex(x, y)]; }
-            set { this[this.GetCellIndex(x, y)] = value; }
+            get { return this[this.GetCellXYIndex(x, y)]; }
+            set { this[this.GetCellXYIndex(x, y)] = value; }
         }
-        /// access value of grid with a Point
+
         public T this[Point p]
         {
             get { return this[p.X, p.Y]; }
@@ -168,8 +104,8 @@ namespace iLand.World
         /// use the square bracket to access by PointF
         public T this[PointF p]
         {
-            get { return this[GetCellIndex(p)]; }
-            set { this[GetCellIndex(p)] = value; }
+            get { return this[GetCellXYIndex(p)]; }
+            set { this[GetCellXYIndex(p)] = value; }
         }
 
         public bool Contains(float x, float y)
@@ -193,16 +129,15 @@ namespace iLand.World
             return Contains(pos.X, pos.Y);
         }
 
-        /// get the (metric) centerpoint of cell with index @p pos
-        public PointF GetCellCenterPosition(Point cell) // get metric coordinates of the cells center
+        public PointF GetCellCentroid(Point cellIndex) // get metric coordinates of the cells center
         {
-            return new PointF((cell.X + 0.5F) * CellSize + PhysicalExtent.Left, (cell.Y + 0.5F) * CellSize + PhysicalExtent.Top);
+            return new PointF((cellIndex.X + 0.5F) * this.CellSize + this.PhysicalExtent.Left, (cellIndex.Y + 0.5F) * this.CellSize + this.PhysicalExtent.Top);
         }
 
         /// get the metric cell center point of the cell given by index 'index'
-        public PointF GetCellCenterPosition(int index)
+        public PointF GetCellCentroid(int cellIndex)
         {
-            return this.GetCellCenterPosition(this.GetCellPosition(index));
+            return this.GetCellCentroid(this.GetCellXYIndex(cellIndex));
         }
 
         /// get the metric rectangle of the cell with index @pos
@@ -213,12 +148,12 @@ namespace iLand.World
         }
 
         // get index of value at position pos (metric)
-        public Point GetCellIndex(PointF pos)
+        public Point GetCellXYIndex(PointF pos)
         {
-            return this.GetCellIndex(pos.X, pos.Y);
+            return this.GetCellXYIndex(pos.X, pos.Y);
         }
 
-        public Point GetCellIndex(float x, float y)
+        public Point GetCellXYIndex(float x, float y)
         {
             // C++ version incorrectly assumes integer trunction rounds towards minus infinity rather than towards zero
             int xIndex = (int)MathF.Floor((x - this.PhysicalExtent.Left) / this.CellSize);
@@ -227,12 +162,16 @@ namespace iLand.World
         }
 
         /// get index (x/y) of the (linear) index 'index' (0..count-1)
-        public Point GetCellPosition(int index)
+        public Point GetCellXYIndex(int index)
         {
-            return new Point(index % SizeX, index / SizeX);
+            return new Point(index % this.SizeX, index / this.SizeX);
         }
 
-        public bool IsNotSetup() { return this.data == null; }
+        [MemberNotNullWhen(true, nameof(Grid<T>.data))]
+        public bool IsSetup()
+        { 
+            return this.data != null; 
+        }
         
         /// returns the index of an aligned grid (with the same size and matching origin) with the doubled cell size (e.g. to scale from a 10m grid to a 20m grid)
         // public int index2(int idx) { return ((idx / mSizeX) / 2) * (mSizeX / 2) + (idx % mSizeX) / 2; }
@@ -251,9 +190,6 @@ namespace iLand.World
             cell.Y = Math.Max(Math.Min(cell.Y, this.SizeY - 1), 0);
         }
 
-        /// get the rectangle of the grid in terms of indices
-        public Rectangle GetCellExtent() { return new Rectangle(0, 0, this.SizeX, this.SizeY); }
-
         public void Clear()
         {
             // BUGBUG: what about all other fields?
@@ -262,7 +198,7 @@ namespace iLand.World
 
         public void CopyFrom(Grid<T> source)
         {
-            if ((this.IsNotSetup() == false) || (source.IsNotSetup() == false))
+            if ((this.IsSetup() == false) || (source.IsSetup() == false))
             {
                 throw new NotSupportedException("Either target or destination grid is not setup.");
             }
@@ -274,24 +210,19 @@ namespace iLand.World
             Array.Copy(source.data!, 0, this.data!, 0, source.data!.Length);
         }
 
-        public void Fill(T? value)
+        public void Fill(T value)
         {
-            if (this.IsNotSetup())
+            if (this.IsSetup() == false)
             {
                 throw new NotSupportedException();
             }
-            Array.Fill(this.data!, value);
-        }
-
-        public void FillDefault()
-        {
-            this.Fill(default);
+            Array.Fill(this.data, value);
         }
 
         public float GetCenterToCenterCellDistance(Point p1, Point p2)
         {
-            PointF fp1 = GetCellCenterPosition(p1);
-            PointF fp2 = GetCellCenterPosition(p2);
+            PointF fp1 = GetCellCentroid(p1);
+            PointF fp2 = GetCellCentroid(p2);
             float distance = MathF.Sqrt((fp1.X - fp2.X) * (fp1.X - fp2.X) + (fp1.Y - fp2.Y) * (fp1.Y - fp2.Y));
             return distance;
         }
@@ -378,7 +309,7 @@ namespace iLand.World
             {
                 for (int yIndex = 0; yIndex < this.SizeY; ++yIndex)
                 {
-                    PointF cellCenter = this.GetCellCenterPosition(new Point(xIndex, yIndex));
+                    PointF cellCenter = this.GetCellCentroid(new Point(xIndex, yIndex));
                     csvBuilder.AppendLine(cellCenter.X + "," + cellCenter.Y + "," + this[xIndex, yIndex]!.ToString());
                 }
             }

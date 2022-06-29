@@ -16,7 +16,7 @@ namespace iLand.Simulation
         */
     public class Management
     {
-        private List<MutableTuple<Trees, List<int>>> mTreesInMostRecentlyLoadedStand;
+        private List<(Trees Trees, List<int> LiveTreeIndices)> mTreesInMostRecentlyLoadedStand;
 
         // property getter & setter for removal fractions
         /// removal fraction foliage: 0: 0% will be removed, 1: 100% will be removed from the forest by management operations (i.e. calls to manage() instead of kill())
@@ -33,7 +33,7 @@ namespace iLand.Simulation
             this.mRemoveFoliage = 0.0F;
             this.mRemoveBranch = 0.0F;
             this.mRemoveStem = 1.0F;
-            this.mTreesInMostRecentlyLoadedStand = new List<MutableTuple<Trees, List<int>>>();
+            this.mTreesInMostRecentlyLoadedStand = new List<(Trees, List<int>)>();
         }
 
         // return number of trees currently in list
@@ -49,13 +49,13 @@ namespace iLand.Simulation
         //    return Load(null);
         //}
 
-        public static int KillTreesAboveRetentionThreshold(Model model, int treesToRetain)
+        public static int KillRandomTreesAboveRetentionThreshold(Model model, int treesToRetain)
         {
             AllTreesEnumerator allTreeEnumerator = new(model.Landscape);
-            List<MutableTuple<Trees, int>> livingTrees = new();
+            List<(Trees Trees, int TreeIndex)> livingTrees = new();
             while (allTreeEnumerator.MoveNextLiving())
             {
-                livingTrees.Add(new MutableTuple<Trees, int>(allTreeEnumerator.CurrentTrees, allTreeEnumerator.CurrentTreeIndex));
+                livingTrees.Add(new(allTreeEnumerator.CurrentTrees, allTreeEnumerator.CurrentTreeIndex));
             }
             int treesToKill = livingTrees.Count - treesToRetain;
             // Debug.WriteLine(livingTrees + " standing, targetsize " + treesToRetain + ", hence " + treesToKill + " trees to remove");
@@ -63,7 +63,7 @@ namespace iLand.Simulation
             {
                 // TODO: change from O(all trees in model) scaling to O(trees to kill) with data structure for more efficient removal?
                 int killIndex = model.RandomGenerator.GetRandomInteger(0, livingTrees.Count);
-                livingTrees[killIndex].Item1.Remove(model, livingTrees[killIndex].Item2);
+                livingTrees[killIndex].Trees.Remove(model, livingTrees[killIndex].TreeIndex);
                 livingTrees.RemoveAt(killIndex);
             }
             return treesToKill;
@@ -72,11 +72,11 @@ namespace iLand.Simulation
         public int KillAllInCurrentStand(Model model, bool removeBiomassFractions)
         {
             int initialTreeCount = this.mTreesInMostRecentlyLoadedStand.Count;
-            foreach (MutableTuple<Trees, List<int>> treesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
+            foreach ((Trees Trees, List<int> LiveTreeIndices) treesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
             {
                 // TODO: doesn't check IsCutDown() flag?
-                Trees trees = treesOfSpecies.Item1;
-                foreach (int treeIndex in treesOfSpecies.Item2)
+                Trees trees = treesOfSpecies.Trees;
+                foreach (int treeIndex in treesOfSpecies.LiveTreeIndices)
                 {
                     if (removeBiomassFractions)
                     {
@@ -95,10 +95,10 @@ namespace iLand.Simulation
         public int LethalDisturbanceInCurrentStand(Model model)
         {
             int treeCount = 0;
-            foreach (MutableTuple<Trees, List<int>> treesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
+            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
             {
-                Trees trees = treesOfSpecies.Item1;
-                foreach (int treeIndex in treesOfSpecies.Item2)
+                Trees trees = liveTreesOfSpecies.Trees;
+                foreach (int treeIndex in liveTreesOfSpecies.LiveTreeIndices)
                 {
                     // TODO: why 10%?
                     trees.RemoveDisturbance(model, treeIndex, 0.1F, 0.1F, 0.1F, 0.1F, 1.0F);
@@ -121,13 +121,13 @@ namespace iLand.Simulation
 
         public void CutAndDropAllTreesInStand(Model model)
         {
-            foreach (MutableTuple<Trees, List<int>> treesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
+            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
             {
-                Trees trees = treesOfSpecies.Item1;
-                foreach (int treeIndex in treesOfSpecies.Item2)
+                Trees trees = liveTreesOfSpecies.Trees;
+                foreach (int liveTreeIndex in liveTreesOfSpecies.LiveTreeIndices)
                 {
-                    trees.SetDeathReasonCutAndDrop(treeIndex); // set flag that tree is cut down
-                    trees.Die(model, treeIndex);
+                    trees.SetDeathReasonCutAndDrop(liveTreeIndex); // set flag that tree is cut down
+                    trees.Die(model, liveTreeIndex);
                 }
             }
             this.mTreesInMostRecentlyLoadedStand.Clear();
@@ -244,10 +244,10 @@ namespace iLand.Simulation
             int treesRemoved = 0;
             for (int speciesIndex = 0; speciesIndex < mTreesInMostRecentlyLoadedStand.Count; ++speciesIndex)
             {
-                Trees treesOfSpecies = mTreesInMostRecentlyLoadedStand[speciesIndex].Item1;
+                Trees treesOfSpecies = mTreesInMostRecentlyLoadedStand[speciesIndex].Trees;
                 treeWrapper.Trees = treesOfSpecies;
                 // if expression evaluates to true and if random number below threshold...
-                List<int> treeIndices = mTreesInMostRecentlyLoadedStand[speciesIndex].Item2;
+                List<int> treeIndices = mTreesInMostRecentlyLoadedStand[speciesIndex].LiveTreeIndices;
                 for (int removalIndex = 0; removalIndex < treeIndices.Count; ++removalIndex)
                 {
                     int treeIndex = treeIndices[removalIndex];
@@ -328,11 +328,11 @@ namespace iLand.Simulation
 
         public int FilterByTreeID(List<int> treeIDlist)
         {
-            List<MutableTuple<Trees, List<int>>> filteredTrees = new();
+            List<(Trees Trees, List<int>)> filteredTrees = new();
             int treesSelected = 0;
-            foreach (MutableTuple<Trees, List<int>> treesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
+            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
             {
-                Trees trees = treesOfSpecies.Item1;
+                Trees trees = liveTreesOfSpecies.Trees;
                 List<int>? treeIndicesInSpecies = null;
                 foreach (int treeID in treeIDlist)
                 {
@@ -342,7 +342,7 @@ namespace iLand.Simulation
                         if (treeIndicesInSpecies == null)
                         {
                             treeIndicesInSpecies = new List<int>();
-                            filteredTrees.Add(new MutableTuple<Trees, List<int>>(trees, treeIndicesInSpecies));
+                            filteredTrees.Add(new(trees, treeIndicesInSpecies));
                         }
 
                         treeIndicesInSpecies.Add(treeIndex);
@@ -363,8 +363,8 @@ namespace iLand.Simulation
 
             for (int treesOfSpeciesIndex = 0; treesOfSpeciesIndex < this.mTreesInMostRecentlyLoadedStand.Count; ++treesOfSpeciesIndex)
             {
-                treeWrapper.Trees = this.mTreesInMostRecentlyLoadedStand[treesOfSpeciesIndex].Item1;
-                List<int> standTreeIndices = this.mTreesInMostRecentlyLoadedStand[treesOfSpeciesIndex].Item2;
+                treeWrapper.Trees = this.mTreesInMostRecentlyLoadedStand[treesOfSpeciesIndex].Trees;
+                List<int> standTreeIndices = this.mTreesInMostRecentlyLoadedStand[treesOfSpeciesIndex].LiveTreeIndices;
                 for (int standTreeIndex = 0; standTreeIndex < standTreeIndices.Count; ++standTreeIndex)
                 {
                     treeWrapper.TreeIndex = standTreeIndices[standTreeIndex];
@@ -450,7 +450,7 @@ namespace iLand.Simulation
         //    return mTrees.Count;
         //}
 
-        public static void KillSaplings(MapGrid standGrid, Model model, int key)
+        public static void KillSaplings(GridRaster10m standGrid, Model model, int key)
         {
             //MapGridWrapper *wrap = qobject_cast<MapGridWrapper*>(map_grid_object.toQObject());
             //if (!wrap) {
@@ -478,7 +478,7 @@ namespace iLand.Simulation
         /// @param DWDfrac 0: no change, 1: remove all of downled woody debris
         /// @param litterFrac 0: no change, 1: remove all of soil litter
         /// @param soilFrac 0: no change, 1: remove all of soil organic matter
-        public static void RemoveCarbon(MapGrid standGrid, int key, float standingWoodyFraction, float downWoodFraction, float litterFraction, float soilFraction)
+        public static void RemoveCarbon(GridRaster10m standGrid, int key, float standingWoodyFraction, float downWoodFraction, float litterFraction, float soilFraction)
         {
             if ((standingWoodyFraction < 0.0F) || (standingWoodyFraction > 1.0F) || 
                 (downWoodFraction < 0.0F) || (downWoodFraction > 1.0F) || 
@@ -487,7 +487,7 @@ namespace iLand.Simulation
             {
                 throw new ArgumentException("removeSoilCarbon called with one or more invalid parameters.");
             }
-            IList<MutableTuple<ResourceUnit, float>> ruAreas = standGrid.GetResourceUnitAreaFractions(key);
+            IList<(ResourceUnit, float)> ruAreas = standGrid.GetResourceUnitAreaFractions(key);
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
@@ -521,13 +521,13 @@ namespace iLand.Simulation
           @param key ID of the polygon.
           @param slash_fraction 0: no change, 1: 100%
            */
-        public static void SlashSnags(MapGrid standGrid, int key, float slashFraction)
+        public static void SlashSnags(GridRaster10m standGrid, int key, float slashFraction)
         {
             if (slashFraction < 0.0F || slashFraction > 1.0F)
             {
                 throw new ArgumentOutOfRangeException(nameof(slashFraction));
             }
-            List<MutableTuple<ResourceUnit, float>> ruAreas = standGrid.GetResourceUnitAreaFractions(key).ToList();
+            List<(ResourceUnit, float)> ruAreas = standGrid.GetResourceUnitAreaFractions(key).ToList();
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
@@ -547,13 +547,13 @@ namespace iLand.Simulation
 
         /** loadFromMap selects trees located on pixels with value 'key' within the grid 'map_grid'.
             */
-        public void LoadFromMap(MapGrid mapGrid, int standID)
+        public void LoadFromMap(GridRaster10m mapGrid, int standID)
         {
             if (mapGrid == null)
             {
                 throw new ArgumentNullException(nameof(mapGrid));
             }
-            if (mapGrid.IsValid())
+            if (mapGrid.IsSetup())
             {
                 this.mTreesInMostRecentlyLoadedStand = mapGrid.GetLivingTreesInStand(standID);
             }

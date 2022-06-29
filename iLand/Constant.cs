@@ -8,13 +8,16 @@ namespace iLand
         public const int DaysInLeapYear = 366;
 
         public const int HeightSizePerRU = 10; // height cells per resource unit side length, used for torus positioning
-        public const float HeightPixelArea = 100.0F; // 100m2 area of a height pixel
-        public const int HeightSize = 10; // size of a height grid pixel, m
-        public const int LightSize = 2; // size of light grid, m
+        public const float HeightCellAreaInM2 = 100.0F; // 100m2 area of a height pixel
+        public const int HeightCellSizeInM = 10; // size of a height grid pixel, m
+        public const int LightCellSizeInM = 2; // size of light grid, m
         public const int LightCellsPerHectare = 2500; // pixel/ha ( 10000 / (2*2) )
         public const int LightCellsPerSeedmapSize = 20; // 20 m / 2 m
         public const int LightCellsPerHeightSize = 5; // 10 / 2 LIF pixels per height pixel
         public const int LightCellsPerRUsize = 50; // 100/2
+
+        public const int NoDataInt32 = Int32.MinValue;
+
         public const float RegenerationLayerHeight = 4.0F; // m
         public const float RUArea = 10000.0F; // area of a resource unit (m2)
         public const int RUSize = 100; // size of resource unit, m

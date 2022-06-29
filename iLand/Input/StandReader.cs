@@ -40,11 +40,11 @@ namespace iLand.Input
         private int mHeightGridTries; // maximum number of tries to land at pixel with fitting height
 
         /// set a constraining height grid (10m resolution)
-        private MapGrid initialHeightGrid; // grid with tree heights
+        private GridRaster10m initialHeightGrid; // grid with tree heights
 
         public StandReader()
         {
-            this.initialHeightGrid = new MapGrid();
+            this.initialHeightGrid = new GridRaster10m();
             this.mHeightGridResponse = null;
             this.mProbabilityDistribution = null;
             this.mTreeRowsByStandID = new Dictionary<int, List<StandInitializationFileRow>>();
@@ -89,8 +89,8 @@ namespace iLand.Input
             if (String.IsNullOrEmpty(initialHeightGridFile) == false)
             {
                 string initialHeightGridPath = projectFile.GetFilePath(ProjectDirectory.Home, initialHeightGridFile);
-                this.initialHeightGrid = new MapGrid(landscape, initialHeightGridPath);
-                if (this.initialHeightGrid.IsValid() == false)
+                this.initialHeightGrid = new GridRaster10m(landscape, initialHeightGridPath);
+                if (this.initialHeightGrid.IsSetup() == false)
                 {
                     throw new NotSupportedException(String.Format("Error when loading grid with tree heights for stand initalization: file {0} not found or not valid.", initialHeightGridPath));
                 }
@@ -110,7 +110,7 @@ namespace iLand.Input
             {
                 case ResourceUnitTreeInitializationMethod.OneFilePerStand:
                     // map-modus: load a different tree init file for each stand "polygon" in the standgrid
-                    if (landscape.StandGrid == null || landscape.StandGrid.IsValid() == false)
+                    if (landscape.StandGrid == null || landscape.StandGrid.IsSetup() == false)
                     {
                         throw new NotSupportedException("model.world.initialization.treeInitializationMethod is 'oneFilePerStand' but there is no valid stand grid defined (model.world.standGrid)");
                     }
@@ -165,7 +165,7 @@ namespace iLand.Input
                         foreach (ResourceUnit ru in landscape.ResourceUnits)
                         {
                             // set environment
-                            landscape.Environment.SetPosition(ru.BoundingBox.Center());
+                            landscape.Environment.MoveTo(ru.BoundingBox.Center());
                             // TODO: load trees once and copy them rather than reparsing init file for each RU
                             this.LoadTreeFile(projectFile, landscape, ru, randomGenerator, treeFileName, treeFileType, 0);
                         }
@@ -604,7 +604,7 @@ namespace iLand.Input
 
             // a multimap holds a list for all trees.
             // key is the index of a 10x10m pixel within the resource unit
-            Dictionary<int, MutableTuple<Trees, List<int>>> treeIndexByHeightCellIndex = new();
+            Dictionary<int, (Trees Trees, List<int> TreeIndices)> treeIndexByHeightCellIndex = new();
             int totalTreeCount = 0;
             foreach (StandInitializationFileRow standRow in this.mTreeRowsForDefaultStand)
             {
@@ -641,12 +641,12 @@ namespace iLand.Input
                     // item2: sum of target pixel
                     int heightCellIndex = Maths.Limit((int)(Constant.HeightSizePerRU * Constant.HeightSizePerRU * randomValue), 0, Constant.HeightSizePerRU * Constant.HeightSizePerRU - 1); // get from random number generator
                     // int heightCellIndex = landscape.HeightGrid.IndexOf(landscape.HeightGrid.GetCellIndex(treesOfSpecies.GetCellCenterPoint(treeIndex)));
-                    if (treeIndexByHeightCellIndex.TryGetValue(heightCellIndex, out MutableTuple<Trees, List<int>>? treesInCell) == false)
+                    if (treeIndexByHeightCellIndex.TryGetValue(heightCellIndex, out (Trees Trees, List<int> TreeIndices) treesInCell) == false)
                     {
-                        treesInCell = new MutableTuple<Trees, List<int>>(treesOfSpecies, new List<int>());
+                        treesInCell = new(treesOfSpecies, new List<int>());
                         treeIndexByHeightCellIndex.Add(heightCellIndex, treesInCell);
                     }
-                    treesInCell.Item2.Add(treesOfSpecies.Tag[treeIndex]); // store tree in map
+                    treesInCell.TreeIndices.Add(treesOfSpecies.Tag[treeIndex]); // store tree in map
 
                     //MutableTuple<int, float> resourceUnitBasalArea = resourceUnitBasalAreaByHeightCellIndex[randomHeightCellIndex];
                     //resourceUnitBasalArea.Item2 += treesOfSpecies.GetBasalArea(treeIndex); // aggregate the basal area for each 10m pixel
@@ -662,8 +662,8 @@ namespace iLand.Input
 
             for (int heightCellIndex = 0; heightCellIndex < Constant.HeightSizePerRU * Constant.HeightSizePerRU; ++heightCellIndex)
             {
-                MutableTuple<Trees, List<int>> treesInCell = treeIndexByHeightCellIndex[heightCellIndex];
-                PointF heightPixelCenter = ru.BoundingBox.TopLeft().Add(new PointF(Constant.HeightSize * (heightCellIndex / Constant.HeightSize + 0.5F), Constant.HeightSize * (heightCellIndex % Constant.HeightSize + 0.5F)));
+                (Trees Trees, List<int> TreeIndices) treesInCell = treeIndexByHeightCellIndex[heightCellIndex];
+                PointF heightPixelCenter = ru.BoundingBox.TopLeft().Add(new PointF(Constant.HeightCellSizeInM * (heightCellIndex / Constant.HeightCellSizeInM + 0.5F), Constant.HeightCellSizeInM * (heightCellIndex % Constant.HeightCellSizeInM + 0.5F)));
                 if (landscape.HeightGrid[heightPixelCenter].IsOnLandscape() == false)
                 {
                     throw new NotSupportedException("Resource unit contains trees which are outside of landscpe.");
@@ -679,17 +679,16 @@ namespace iLand.Input
                 int bits = 0;
                 int index = -1;
                 PointF offset = ru.BoundingBox.TopLeft();
-                Point offsetIdx = landscape.LightGrid.GetCellIndex(offset);
-                foreach (int treeIndex in treesInCell.Item2)
+                Point offsetIdx = landscape.LightGrid.GetCellXYIndex(offset);
+                foreach (int treeIndex in treesInCell.TreeIndices)
                 {
-                    if (treesInCell.Item2.Count > 18)
+                    if (treesInCell.TreeIndices.Count > 18)
                     {
                         index = (index + 1) % 25;
                     }
                     else
                     {
                         int stop = 1000;
-                        index = 0;
                         do
                         {
                             //r = drandom();
@@ -710,15 +709,15 @@ namespace iLand.Input
                         Maths.SetBit(ref bits, index, true); // mark position as used
                     }
                     // get position from fixed lists (one for even, one for uneven resource units)
-                    int pos = ru.ResourceUnitGridIndex % Constant.LightSize != 0 ? StandReader.EvenList[index] : StandReader.UnevenList[index];
+                    int pos = ru.ResourceUnitGridIndex % Constant.LightCellSizeInM != 0 ? StandReader.EvenList[index] : StandReader.UnevenList[index];
                     // position of resource unit + position of 10x10m pixel + position within 10x10m pixel
-                    Point lightCellIndex = new(offsetIdx.X + Constant.LightCellsPerHeightSize * (heightCellIndex / Constant.HeightSize) + pos / Constant.LightCellsPerHeightSize,
-                                               offsetIdx.Y + Constant.LightCellsPerHeightSize * (heightCellIndex % Constant.HeightSize) + pos % Constant.LightCellsPerHeightSize);
+                    Point lightCellIndex = new(offsetIdx.X + Constant.LightCellsPerHeightSize * (heightCellIndex / Constant.HeightCellSizeInM) + pos / Constant.LightCellsPerHeightSize,
+                                               offsetIdx.Y + Constant.LightCellsPerHeightSize * (heightCellIndex % Constant.HeightCellSizeInM) + pos % Constant.LightCellsPerHeightSize);
                     // if (projectFile.Output.Logging.LogLevel >= EventLevel.Informational)
                     // {
                     //     Trace.TraceInformation(tree_no++ + "to" + index);
                     // }
-                    treesInCell.Item1.LightCellPosition[treeIndex] = lightCellIndex;
+                    treesInCell.Trees.LightCellPosition[treeIndex] = lightCellIndex;
                 }
             }
         }
@@ -729,7 +728,7 @@ namespace iLand.Input
         // see http://iland-model.org/initialize+trees
         private void InitializeStand(Project projectFile, Landscape landscape, RandomGenerator randomGenerator, int standID)
         {
-            MapGrid? standGrid = landscape.StandGrid;
+            GridRaster10m? standGrid = landscape.StandGrid;
             if (standGrid == null)
             {
                 throw new NotSupportedException("Landscape does not have a stand grid.");
@@ -747,26 +746,26 @@ namespace iLand.Input
             }
             // a multiHash holds a list for all trees.
             // key is the location of the 10x10m pixel
-            Dictionary<Point, MutableTuple<Trees, List<int>>> treeIndicesByHeightCellIndex = new();
+            Dictionary<Point, (Trees Trees, List<int> TreeIndices)> treeIndicesByHeightCellIndex = new();
             List<HeightInitCell> heightCells = new(heightGridCellIndicesInStand.Count); // working list of all 10m pixels
 
             foreach (int cellIndex in heightGridCellIndicesInStand)
             {
-                Point heightCellIndex = standGrid.Grid.GetCellPosition(cellIndex);
-                ResourceUnit ru = landscape.GetResourceUnit(standGrid.Grid.GetCellCenterPosition(heightCellIndex));
+                Point heightCellIndex = standGrid.Grid.GetCellXYIndex(cellIndex);
+                ResourceUnit ru = landscape.GetResourceUnit(standGrid.Grid.GetCellCentroid(heightCellIndex));
                 HeightInitCell heightCell = new(ru)
                 {
                     GridCellIndex = heightCellIndex // index in the 10m grid
                 };
-                if (this.initialHeightGrid.IsValid())
+                if (this.initialHeightGrid.IsSetup())
                 {
                     heightCell.MaxHeight = this.initialHeightGrid.Grid[heightCell.GridCellIndex];
                 }
                 heightCells.Add(heightCell);
             }
-            float standAreaInResourceUnits = standGrid.GetArea(standID) / Constant.RUArea;
+            float standAreaInResourceUnits = standGrid.GetAreaInSquareMeters(standID) / Constant.RUArea;
 
-            if (this.initialHeightGrid.IsValid() && (this.mHeightGridResponse == null))
+            if (this.initialHeightGrid.IsSetup() && (this.mHeightGridResponse == null))
             {
                 throw new NotSupportedException("Attempt to initialize from height grid but without response function.");
             }
@@ -840,7 +839,7 @@ namespace iLand.Input
                         // key: rank of target pixel
                         key = Maths.Limit((int)(heightCells.Count * randomValue), 0, heightCells.Count - 1); // get from random number generator
 
-                        if (this.initialHeightGrid.IsValid())
+                        if (this.initialHeightGrid.IsSetup())
                         {
                             // calculate how good the selected pixel fits w.r.t. the predefined height
                             float p_value = heightCells[key].MaxHeight > 0.0F ? (float)this.mHeightGridResponse.Evaluate(init_max_height / heightCells[key].MaxHeight) : 0.0F;
@@ -882,12 +881,12 @@ namespace iLand.Input
                     ++treeCount;
 
                     // store in the multiHash the position of the pixel and the tree_idx in the resepctive resource unit
-                    if (treeIndicesByHeightCellIndex.TryGetValue(heightCells[key].GridCellIndex, out MutableTuple<Trees, List<int>>? treesInCell) == false)
+                    if (treeIndicesByHeightCellIndex.TryGetValue(heightCells[key].GridCellIndex, out (Trees Trees, List<int> TreeIndices) treesInCell) == false)
                     {
-                        treesInCell = new MutableTuple<Trees, List<int>>(trees, new List<int>());
+                        treesInCell = new(trees, new List<int>());
                         treeIndicesByHeightCellIndex.Add(heightCells[key].GridCellIndex, treesInCell);
                     }
-                    treesInCell.Item2.Add(treeIndex);
+                    treesInCell.TreeIndices.Add(treeIndex);
 
                     heightCells[key].BasalArea += trees.GetBasalArea(treeIndex); // aggregate the basal area for each 10m pixel
                     if (lastLockedSpecies != null)
@@ -905,11 +904,11 @@ namespace iLand.Input
 
             foreach (HeightInitCell heightCell in heightCells)
             {
-                MutableTuple<Trees, List<int>> treesInCell = treeIndicesByHeightCellIndex[heightCell.GridCellIndex];
+                (Trees Trees, List<int> TreeIndices) treesInCell = treeIndicesByHeightCellIndex[heightCell.GridCellIndex];
                 int index = -1;
-                foreach (int treeIndex in treesInCell.Item2)
+                foreach (int treeIndex in treesInCell.TreeIndices)
                 {
-                    if (treesInCell.Item2.Count > 18)
+                    if (treesInCell.TreeIndices.Count > 18)
                     {
                         index = (index + 1) % 25;
                     }
@@ -933,7 +932,7 @@ namespace iLand.Input
                         Maths.SetBit(ref bits, index, true); // mark position as used
                     }
                     // get position from fixed lists (one for even, one for uneven resource units)
-                    int pos = heightCell.ResourceUnit.ResourceUnitGridIndex % Constant.LightSize != 0 ? StandReader.EvenList[index] : StandReader.UnevenList[index];
+                    int pos = heightCell.ResourceUnit.ResourceUnitGridIndex % Constant.LightCellSizeInM != 0 ? StandReader.EvenList[index] : StandReader.UnevenList[index];
                     Point lightCellIndex = new(heightCell.GridCellIndex.X * Constant.LightCellsPerHeightSize + pos / Constant.LightCellsPerHeightSize, // convert to LIF index
                                                heightCell.GridCellIndex.Y * Constant.LightCellsPerHeightSize + pos % Constant.LightCellsPerHeightSize);
                     if (landscape.LightGrid.Contains(lightCellIndex) == false)
@@ -941,7 +940,7 @@ namespace iLand.Input
                         throw new NotSupportedException("Tree is positioned outside of the light grid.");
                     }
 
-                    Trees trees = treesInCell.Item1;
+                    Trees trees = treesInCell.Trees;
                     trees.LightCellPosition[treeIndex] = lightCellIndex;
                 }
             }
@@ -1048,12 +1047,12 @@ namespace iLand.Input
 
         private void LoadSaplingsLif(Model model, int standID, List<StandSaplings> saplingsInStands, int standStartIndex, int standEndIndex)
         {
-            MapGrid? standGrid = model.Landscape.StandGrid; // default
+            GridRaster10m? standGrid = model.Landscape.StandGrid; // default
             if (standGrid == null)
             {
                 throw new NotSupportedException();
             }
-            if (standGrid.IsValid(standID) == false)
+            if (standGrid.IsIndexed(standID) == false)
             {
                 throw new NotSupportedException();
             }
@@ -1073,7 +1072,7 @@ namespace iLand.Input
             Grid<float> lightGrid = model.Landscape.LightGrid;
             for (int standGridIndex = 0; standGridIndex < standGridIndices.Count; ++standGridIndex)
             {
-                Point cellOrigin = standGrid.Grid.GetCellPosition(standGridIndices[standGridIndex]);
+                Point cellOrigin = standGrid.Grid.GetCellXYIndex(standGridIndices[standGridIndex]);
                 cellOrigin.X *= Constant.LightCellsPerHeightSize; // index of 10m patch -> to lif pixel coordinates
                 cellOrigin.Y *= Constant.LightCellsPerHeightSize;
                 for (int lightY = 0; lightY < Constant.LightCellsPerHeightSize; ++lightY)
@@ -1089,7 +1088,7 @@ namespace iLand.Input
             // sort based on LIF-Value
             lightCellIndexAndValues.Sort(this.CompareLifValue); // higher: highest values first
 
-            float standAreaInHa = standGrid.GetArea(standID) / Constant.RUArea; // multiplier for grid (e.g. 2 if stand has area of 2 hectare)
+            float standAreaInHa = standGrid.GetAreaInSquareMeters(standID) / Constant.RUArea; // multiplier for grid (e.g. 2 if stand has area of 2 hectare)
 
             int grassCoverPercentage = -1;
             for (int rowIndexInStand = standStartIndex; rowIndexInStand <= standEndIndex; ++rowIndexInStand)
@@ -1137,7 +1136,7 @@ namespace iLand.Input
                         }
                     }
 
-                    Point lightCellIndex = lightGrid.GetCellPosition(lightCellIndexAndValues[randomIndex].Key);
+                    Point lightCellIndex = lightGrid.GetCellXYIndex(lightCellIndexAndValues[randomIndex].Key);
                     SaplingCell? saplingCell = model.Landscape.GetSaplingCell(lightCellIndex, true, out ResourceUnit ru);
                     if (saplingCell != null)
                     {

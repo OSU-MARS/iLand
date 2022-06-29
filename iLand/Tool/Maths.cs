@@ -5,25 +5,11 @@ namespace iLand.Tool
 {
     internal class Maths
     {
-        //typedef int TreeSpecies;
-
-        //#define MSGRETURN(x) { qDebug() << x; return; }
-        //#define WARNINGRETURN(x) { qWarning() << x; return; }
-        //#define ERRORRETURN(x) { qError() << x; return; }
-
-        // relocated from loose to GlobalSettings
-        //void dbg_helper(const char* where, const char* what,const char* file,int line);
-        //void dbg_helper_ext(const char* where, const char* what,const char* file,int line, const QString &s);
-        //bool logLevelDebug(); // true, if detailed debug information is logged
-        //bool logLevelInfo(); // true, if only important aggreate info is logged
-        //bool logLevelWarning(); // true if only severe warnings/errors are logged.
-        //void setLogLevel(int loglevel); // setter function
-
         public static int Modulo(int a, int b)
         {
             // because C modulo operation gives negative numbers for negative values, here a fix
             // that always returns positive numbers: http://www.lemoda.net/c/modulo-operator/
-            return (((a % b) + b) % b);
+            return ((a % b) + b) % b;
         }
 
         // conversions rad/degree

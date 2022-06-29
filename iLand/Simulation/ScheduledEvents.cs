@@ -7,11 +7,11 @@ namespace iLand.Simulation
 {
     public class ScheduledEvents
     {
-        private readonly Dictionary<int, List<MutableTuple<string, string>>> eventsByYear;
+        private readonly Dictionary<int, List<(string Name, string Value)>> eventsByYear;
 
         public ScheduledEvents(Project projectFile, string eventFilePath)
         {
-            this.eventsByYear = new Dictionary<int, List<MutableTuple<string, string>>>();
+            this.eventsByYear = new Dictionary<int, List<(string Name, string Value)>>();
             
             using CsvFile eventFile = new(projectFile.GetFilePath(ProjectDirectory.Home, eventFilePath));
             int yearIndex = eventFile.GetColumnIndex("year");
@@ -23,9 +23,9 @@ namespace iLand.Simulation
             eventFile.Parse((string[] row) =>
             {
                 int year = Int32.Parse(row[yearIndex]);
-                if (this.eventsByYear.TryGetValue(year, out List<MutableTuple<string, string>>? eventsOfYear) == false)
+                if (this.eventsByYear.TryGetValue(year, out List<(string Name, string Value)>? eventsOfYear) == false)
                 {
-                    eventsOfYear = new List<MutableTuple<string, string>>();
+                    eventsOfYear = new List<(string Name, string Value)>();
                     this.eventsByYear.Add(year, eventsOfYear);
                 }
 
@@ -33,7 +33,7 @@ namespace iLand.Simulation
                 {
                     if (column != yearIndex)
                     {
-                        MutableTuple<string, string> eventInYear = new(eventFile.Columns[column], row[column]);
+                        (string Name, string Value) eventInYear = new(eventFile.Columns[column], row[column]);
                         eventsOfYear.Add(eventInYear);
                     }
                 }
@@ -43,20 +43,20 @@ namespace iLand.Simulation
         public void RunYear(Model model)
         {
             int currentYear = model.CurrentYear;
-            if (eventsByYear.TryGetValue(currentYear, out List<MutableTuple<string, string>>? eventsOfYear) == false)
+            if (eventsByYear.TryGetValue(currentYear, out List<(string Name, string Value)>? eventsOfYear) == false)
             {
                 return;
             }
 
             int valuesSet = 0;
-            foreach (MutableTuple<string, string> eventInYear in eventsOfYear)
+            foreach ((string Name, string Value) eventInYear in eventsOfYear)
             {
-                string key = eventInYear.Item1; // key
+                string key = eventInYear.Name; // key
                 // special values: if (key=="xxx" ->
                 if (String.Equals(key, "script", StringComparison.OrdinalIgnoreCase) || String.Equals(key, "javascript", StringComparison.OrdinalIgnoreCase))
                 {
                     // execute as javascript expression within the management script context...
-                    if (String.IsNullOrEmpty(eventInYear.Item2.ToString()) == false)
+                    if (String.IsNullOrEmpty(eventInYear.Value.ToString()) == false)
                     {
                         throw new NotImplementedException();
                         // Debug.WriteLine("Executing JavaScript time event: " + eventInYear.Item2.ToString());
@@ -81,16 +81,16 @@ namespace iLand.Simulation
         // return a empty object if for 'year' no value is set
         public string? GetEvent(int year, string eventKey)
         {
-            if (eventsByYear.TryGetValue(year, out List<MutableTuple<string, string>>? eventsOfYear) == false)
+            if (eventsByYear.TryGetValue(year, out List<(string Name, string Value)>? eventsOfYear) == false)
             {
                 return null;
             }
 
-            foreach (MutableTuple<string, string> timeEvent in eventsOfYear)
+            foreach ((string Name, string Value) timeEvent in eventsOfYear)
             {
-                if (timeEvent.Item1 == eventKey)
+                if (timeEvent.Name == eventKey)
                 {
-                    return timeEvent.Item2;
+                    return timeEvent.Value;
                 }
             }
             return null;
