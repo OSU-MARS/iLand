@@ -2,18 +2,9 @@
 {
     public class HeightCell
     {
-        private HeightCellFlags mFlags;
+        private HeightCellFlags flags;
 
-        // dominant tree height (m)
-        public float Height { get; set; }
-
-        //public void Init(float height, int count) 
-        //{
-        //    this.mFlagsTreeCount = count;
-        //    this.Height = height; 
-        //}
-
-        // get count of trees on pixel
+        public float Height { get; set; } // tallest tree height (m)
         public int TreeCount { get; private set; }
 
         public void AddTree(float height) 
@@ -25,35 +16,42 @@
             }
         }
 
-        public bool IsOnLandscape() { return this.mFlags.HasFlag(HeightCellFlags.OnLandscape); }
-        public bool IsRadiating() { return this.mFlags.HasFlag(HeightCellFlags.Radiating); }
-
-        // set the count to 0
-        public void ResetTreeCount() 
+        public void ClearTrees()
         {
+            this.Height = Constant.RegenerationLayerHeight;
             this.TreeCount = 0;
+        }
+
+        public bool IsOnLandscape() 
+        { 
+            return this.flags.HasFlag(HeightCellFlags.OnLandscape); 
+        }
+
+        public bool IsRadiating() 
+        { 
+            return this.flags.HasFlag(HeightCellFlags.Radiating); 
         }
 
         public void SetIsRadiating() 
         {
-            this.mFlags |= HeightCellFlags.Radiating;
+            this.flags |= HeightCellFlags.Radiating;
         }
 
-        public void SetInWorld(bool isInWorld)
+        public void SetOnLandscape(bool isOnLandscape)
         { 
-            if (isInWorld)
+            if (isOnLandscape)
             {
-                this.mFlags |= HeightCellFlags.OnLandscape;
+                this.flags |= HeightCellFlags.OnLandscape;
             }
             else
             {
-                this.mFlags &= ~HeightCellFlags.OnLandscape;
+                this.flags &= ~HeightCellFlags.OnLandscape;
             }
         }
 
         public override string ToString()
         {
-            return this.Height + "," + this.TreeCount + "," + this.mFlags;
+            return this.TreeCount + " trees, " + this.Height + " m, " + this.flags;
         }
     }
 }

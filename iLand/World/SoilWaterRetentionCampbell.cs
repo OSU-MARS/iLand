@@ -12,9 +12,9 @@ namespace iLand.World
 
         public SoilWaterRetentionCampbell()
         {
-            this.saturationRatioPowerB = Single.NaN;
-            this.psiSaturated = Single.NaN;
-            this.saturatedSoilWaterContent = Single.NaN;
+            this.saturationRatioPowerB = Constant.NoDataSingle;
+            this.psiSaturated = Constant.NoDataSingle;
+            this.saturatedSoilWaterContent = Constant.NoDataSingle;
         }
 
         /// <summary>
@@ -51,13 +51,8 @@ namespace iLand.World
             return mmH20;
         }
 
-        public override float Setup(EnvironmentReader environmentReader, bool useSoilSaturation)
+        public override float Setup(ResourceUnitReader environmentReader, bool useSoilSaturation)
         {
-            if (environmentReader.CurrentEnvironment == null)
-            {
-                throw new ArgumentOutOfRangeException(nameof(environmentReader));
-            }
-
             // get values...
             float percentSand = environmentReader.CurrentEnvironment.SoilSand;
             float percentSilt = environmentReader.CurrentEnvironment.SoilSilt;

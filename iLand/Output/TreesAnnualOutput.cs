@@ -67,7 +67,7 @@ namespace iLand.Output
 
                 insertRow.Parameters[0].Value = model.CurrentYear;
                 insertRow.Parameters[1].Value = treesOfSpecies.RU.ResourceUnitGridIndex;
-                insertRow.Parameters[2].Value = treesOfSpecies.RU.EnvironmentID;
+                insertRow.Parameters[2].Value = treesOfSpecies.RU.ID;
                 insertRow.Parameters[3].Value = treesOfSpecies.Species.ID;
                 insertRow.Parameters[4].Value = treesOfSpecies.Tag[treeIndex];
                 insertRow.Parameters[5].Value = treesOfSpecies.GetCellCenterPoint(treeIndex).X;

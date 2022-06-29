@@ -135,7 +135,7 @@ namespace iLand.Output
             }
 
             // grouping
-            if (model.Landscape.Environment.SpeciesSetsByTableName.Count != 1)
+            if (model.Landscape.SpeciesSetsByTableName.Count != 1)
             {
                 throw new NotImplementedException("Generation of a unique list of species from multiple species sets is not currently supported.");
             }
@@ -143,7 +143,7 @@ namespace iLand.Output
             TreeWrapper treeWrapper = new(model);
             Expression customExpression = new();
 
-            TreeSpeciesSet treeSpeciesSet = model.Landscape.Environment.SpeciesSetsByTableName.First().Value;
+            TreeSpeciesSet treeSpeciesSet = model.Landscape.SpeciesSetsByTableName.First().Value;
             List<Trees> liveTreesOfSpecies = new();
             for (int speciesSet = 0; speciesSet < treeSpeciesSet.ActiveSpecies.Count; ++speciesSet)
             {
@@ -262,7 +262,7 @@ namespace iLand.Output
             Expression fieldExpression = new();
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.EnvironmentID == -1)
+                if (ru.ID == -1)
                 {
                     continue; // do not include if out of project area
                 }
@@ -341,7 +341,7 @@ namespace iLand.Output
                         {
                             insertRow.Parameters[0].Value = model.CurrentYear;
                             insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
-                            insertRow.Parameters[2].Value = ru.EnvironmentID;
+                            insertRow.Parameters[2].Value = ru.ID;
                             if (bySpecies)
                             {
                                 insertRow.Parameters[3].Value = ruSpecies.Species.ID;

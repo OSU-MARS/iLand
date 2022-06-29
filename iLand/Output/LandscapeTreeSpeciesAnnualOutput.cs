@@ -11,12 +11,12 @@ namespace iLand.Output
     public class LandscapeTreeSpeciesAnnualOutput : AnnualOutput
     {
         private readonly Expression filter;
-        private readonly Dictionary<string, LandscapeTreeSpeciesStatistics> treeSpeciesStatistics;
+        private readonly Dictionary<string, LandscapeTreeSpeciesStatistics> treeStatisticsBySpeciesID;
 
         public LandscapeTreeSpeciesAnnualOutput()
         {
             this.filter = new Expression();
-            this.treeSpeciesStatistics = new Dictionary<string, LandscapeTreeSpeciesStatistics>();
+            this.treeStatisticsBySpeciesID = new Dictionary<string, LandscapeTreeSpeciesStatistics>();
 
             this.Name = "Landscape aggregates per species";
             this.TableName = "landscape";
@@ -57,14 +57,14 @@ namespace iLand.Output
             }
 
             // clear landscape stats
-            foreach (KeyValuePair<string, LandscapeTreeSpeciesStatistics> speciesStatistics in this.treeSpeciesStatistics)
+            foreach ((string _, LandscapeTreeSpeciesStatistics speciesStatistics) in this.treeStatisticsBySpeciesID)
             {
-                speciesStatistics.Value.Zero();
+                speciesStatistics.Zero();
             }
 
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.EnvironmentID == -1)
+                if (ru.ID == -1)
                 {
                     continue; // do not include if out of project area
                 }
@@ -75,17 +75,17 @@ namespace iLand.Output
                     {
                         continue;
                     }
-                    if (this.treeSpeciesStatistics.TryGetValue(ruSpecies.Species.ID, out LandscapeTreeSpeciesStatistics? speciesStatistics) == false)
+                    if (this.treeStatisticsBySpeciesID.TryGetValue(ruSpecies.Species.ID, out LandscapeTreeSpeciesStatistics? speciesStatistics) == false)
                     {
                         speciesStatistics = new LandscapeTreeSpeciesStatistics();
-                        this.treeSpeciesStatistics.Add(ruSpecies.Species.ID, speciesStatistics);
+                        this.treeStatisticsBySpeciesID.Add(ruSpecies.Species.ID, speciesStatistics);
                     }
                     speciesStatistics.AddResourceUnit(ru, ruSpeciesStats);
                 }
             }
 
             // write species to output stream
-            foreach (KeyValuePair<string, LandscapeTreeSpeciesStatistics> species in this.treeSpeciesStatistics)
+            foreach (KeyValuePair<string, LandscapeTreeSpeciesStatistics> species in this.treeStatisticsBySpeciesID)
             {
                 LandscapeTreeSpeciesStatistics speciesStats = species.Value;
                 speciesStats.ConvertSumsToAreaWeightedAverages();

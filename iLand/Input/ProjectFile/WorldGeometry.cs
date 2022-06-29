@@ -1,15 +1,11 @@
-﻿using System;
-using System.Diagnostics;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
 	public class WorldGeometry : XmlSerializable
 	{
-		public float Buffer { get; private set; }
-		public float LightCellSize { get; private set; }
-		public float Width { get; private set; }
-		public float Height { get; private set; }
+		public int BufferWidth { get; private set; }
+		public int LightCellSize { get; private set; }
 
 		// special mode that treats each resource unit as a "torus" (light calculation, seed distribution)
 		public bool IsTorus { get; private set; }
@@ -19,12 +15,10 @@ namespace iLand.Input.ProjectFile
 		public WorldGeometry()
 		{
 			// default to a single resource unit
-			this.Buffer = 0.6F * Constant.RUSize;
+			this.BufferWidth = (int)(0.6F * Constant.ResourceUnitSize);
 			this.LightCellSize = Constant.LightCellSizeInM;
-			this.Height = Constant.RUSize;
 			this.Latitude = 48.0F;
 			this.IsTorus = false;
-			this.Width = Constant.RUSize;
 		}
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -34,57 +28,38 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
-			if (String.Equals(reader.Name, "geometry", StringComparison.Ordinal))
+			switch (reader.Name)
 			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "lightCellSize", StringComparison.Ordinal))
-			{
-				this.LightCellSize = reader.ReadElementContentAsFloat();
-				if (this.LightCellSize <= 0.0F)
-				{
-					throw new XmlException("Light cell size is zero or negative.");
-				}
-			}
-			else if (String.Equals(reader.Name, "torus", StringComparison.Ordinal))
-			{
-				this.IsTorus = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "width", StringComparison.Ordinal))
-			{
-				this.Width = reader.ReadElementContentAsFloat();
-				if (this.Width <= 0.0F)
-				{
-					throw new XmlException("Model width is zero or negative.");
-				}
-			}
-			else if (String.Equals(reader.Name, "height", StringComparison.Ordinal))
-			{
-				this.Height = reader.ReadElementContentAsFloat();
-				if (this.Height <= 0.0F)
-				{
-					throw new XmlException("Model height is zero or negative.");
-				}
-			}
-			else if (String.Equals(reader.Name, "buffer", StringComparison.Ordinal))
-			{
-				this.Buffer = reader.ReadElementContentAsFloat();
-				if (this.Buffer <= 0.0F)
-				{
-					throw new XmlException("Light buffer width is zero or negative.");
-				}
-			}
-			else if (String.Equals(reader.Name, "latitude", StringComparison.Ordinal))
-			{
-				this.Latitude = reader.ReadElementContentAsFloat();
-				if ((this.Latitude < -90.0F) || (this.Latitude > 90.0F))
-				{
-					throw new XmlException("Latitude is not between -90 and 90°.");
-				}
-			}
-			else
-			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				case "bufferWidth":
+					this.BufferWidth = reader.ReadElementContentAsInt();
+					if ((this.BufferWidth < Constant.LightCellSizeInM) || (this.BufferWidth % Constant.LightCellSizeInM != 0))
+					{
+						throw new XmlException("Light buffer width must be a positive,integer multiple of the light cell size (" + Constant.LightCellSizeInM + " m).");
+					}
+					break;
+				case "geometry":
+					reader.Read();
+					break;
+				case "lightCellSize":
+					this.LightCellSize = reader.ReadElementContentAsInt();
+					if (this.LightCellSize <= 0.0F)
+					{
+						throw new XmlException("Light cell size is zero or negative.");
+					}
+					break;
+				case "torus":
+					this.IsTorus = reader.ReadElementContentAsBoolean();
+					break;
+				case "latitude":
+					// TODO: large simulation areas can cover ~0.4° of longitude, resulting in ±0.2° of error from a central longitude choice
+					this.Latitude = reader.ReadElementContentAsFloat();
+					if ((this.Latitude <= -90.0F) || (this.Latitude >= 90.0F))
+					{
+						throw new XmlException("Latitude is not between -90 and 90°.");
+					}
+					break;
+				default:
+					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

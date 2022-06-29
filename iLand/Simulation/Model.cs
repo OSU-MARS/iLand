@@ -26,33 +26,31 @@ namespace iLand.Simulation
         public RandomGenerator RandomGenerator { get; private init; }
         public ScheduledEvents? ScheduledEvents { get; private init; }
 
-        public Model(Project projectFile, Landscape landscape)
+        public Model(Project projectFile)
         {
             this.isDisposed = false;
+            // if a random seed is specified in the project file, use to produce an always an equal sequence of random numbers
+            this.RandomGenerator = new(mersenneTwister: true, projectFile.Model.Settings.RandomSeed);
 
-            this.Project = projectFile;
-            this.Landscape = landscape;
-
-            this.ModelSettings = new ModelSettings();
             this.AnnualOutputs = new Output.AnnualOutputs();
-            this.RandomGenerator = new RandomGenerator();
-
+            this.CurrentYear = 0; // set to zero so outputs with initial state start logging at year 0 (first log pulse is at end of constructor)
+            this.Landscape = new(projectFile);
             this.Management = null;
+            this.ModelSettings = new ModelSettings();
+            this.Modules = new Plugin.Modules();
+            this.Project = projectFile;
             this.ScheduledEvents = null;
 
-            // random seed: if stored value is <> 0, use this as the random seed (and produce hence always an equal sequence of random numbers)
-            int? seed = this.Project.Model.Settings.RandomSeed;
-            this.RandomGenerator.Setup(RandomGenerator.RandomGeneratorType.MersenneTwister, seed); // use the MersenneTwister as default
-
-            // setup of modules
-            this.Modules = new Plugin.Modules();
+            // setup of trees
+            StandReader standReader = new();
+            standReader.SetupTrees(projectFile, this.Landscape, this.RandomGenerator);
 
             // setup the helper that does the multithreading
             // list of "valid" resource units
             List<ResourceUnit> validResourceUnits = new();
             foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
             {
-                if (ru.EnvironmentID != -1)
+                if (ru.ID != -1)
                 {
                     validResourceUnits.Add(ru);
                 }
@@ -61,7 +59,11 @@ namespace iLand.Simulation
             {
                 IsMultithreaded = this.Project.Model.Settings.Multithreading
             };
-            // Trace.TraceInformation("Multithreading enabled: " + IsMultithreaded + ", thread count: " + System.Environment.ProcessorCount);
+
+            // initialize light pattern and then saplings and grass
+            // Sapling and grass state depends on light pattern so overstory setup must complete before understory setup.
+            this.ApplyAndReadLightPattern(); // requires this.ruParallel, will run multithreaded if enabled
+            this.Landscape.SetupSaplingsAndGrass(projectFile, this.RandomGenerator);
 
             // setup of external modules
             this.Modules.SetupDisturbances();
@@ -72,8 +74,6 @@ namespace iLand.Simulation
                     ResourceUnit? ru = this.Landscape.ResourceUnitGrid[ruIndex];
                     if (ru != null)
                     {
-                        RectangleF ruPosition = this.Landscape.ResourceUnitGrid.GetCellExtent(this.Landscape.ResourceUnitGrid.CellIndexOf(ru));
-                        this.Landscape.Environment.MoveTo(ruPosition.Center()); // if environment is 'disabled' default values from the project file are used.
                         this.Modules.SetupResourceUnit(ru);
                     }
                 }
@@ -83,7 +83,7 @@ namespace iLand.Simulation
             // (3.2) setup of regeneration
             if (this.ModelSettings.RegenerationEnabled)
             {
-                foreach (TreeSpeciesSet speciesSet in this.Landscape.Environment.SpeciesSetsByTableName.Values)
+                foreach (TreeSpeciesSet speciesSet in this.Landscape.SpeciesSetsByTableName.Values)
                 {
                     speciesSet.SetupSeedDispersal(this);
                 }
@@ -103,23 +103,6 @@ namespace iLand.Simulation
                 this.ScheduledEvents = new(this.Project, this.Project.GetFilePath(ProjectDirectory.Script, scheduledEventsFileName));
             }
 
-            // TODO: is this necessary?
-            this.CurrentYear = 1;
-        }
-
-        /// beforeRun performs several steps before the models starts running.
-        /// inter alia: * setup of the stands
-        ///             * setup of the climates
-        public void Setup() // initializations
-        {
-            // initialize stands
-            // TODO: consolidate this into Landscape?
-            StandReader standReader = new();
-            standReader.Setup(this.Project, this.Landscape, this.RandomGenerator);
-            standReader.SetupSaplings(this);
-
-            this.ApplyAndReadLightPattern(); // TODO: is this needed?
-
             // calculate initial stand statistics
             this.CalculateStockedArea();
             foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
@@ -131,10 +114,9 @@ namespace iLand.Simulation
             // setup outputs
             this.AnnualOutputs.Setup(this);
 
-            // outputs to create with inital state (without any growth) are called here:
-            this.CurrentYear = 0; // set clock to "0" (for outputs with initial state)
+            // write outputs to with inital state (without any growth)
             this.AnnualOutputs.LogYear(this); // log initial state
-            this.CurrentYear = 1; // set to first year
+            this.CurrentYear = 1; // move to first year
         }
 
         /** Main model runner.
@@ -162,7 +144,7 @@ namespace iLand.Simulation
                 this.ScheduledEvents.RunYear(this);
             }
             // load the next year of the climate database
-            foreach (World.Climate climate in this.Landscape.Environment.ClimatesByID.Values)
+            foreach (World.Climate climate in this.Landscape.ClimatesByID.Values)
             {
                 climate.OnStartYear(this);
             }
@@ -173,7 +155,7 @@ namespace iLand.Simulation
                 ru.OnStartYear();
             }
 
-            foreach (TreeSpeciesSet speciesSet in this.Landscape.Environment.SpeciesSetsByTableName.Values)
+            foreach (TreeSpeciesSet speciesSet in this.Landscape.SpeciesSetsByTableName.Values)
             {
                 speciesSet.OnStartYear(this);
             }
@@ -233,7 +215,7 @@ namespace iLand.Simulation
             if (this.ModelSettings.RegenerationEnabled)
             {
                 // seed dispersal
-                foreach (TreeSpeciesSet speciesSet in this.Landscape.Environment.SpeciesSetsByTableName.Values)
+                foreach (TreeSpeciesSet speciesSet in this.Landscape.SpeciesSetsByTableName.Values)
                 {
                     MaybeParallel<TreeSpecies> speciesParallel = new(speciesSet.ActiveSpecies); // initialize a thread runner object with all active species
                     speciesParallel.ForEach((TreeSpecies species) =>
@@ -304,8 +286,7 @@ namespace iLand.Simulation
             // initialize height grid with a value of 4m. This is the height of the regeneration layer
             for (int heightIndex = 0; heightIndex < this.Landscape.HeightGrid.Count; ++heightIndex)
             {
-                this.Landscape.HeightGrid[heightIndex].ResetTreeCount(); // set count = 0, but do not touch the flags
-                this.Landscape.HeightGrid[heightIndex].Height = Constant.RegenerationLayerHeight;
+                this.Landscape.HeightGrid[heightIndex].ClearTrees(); // set count = 0, but do not touch the flags
             }
 
             this.ruParallel.ForEach((ResourceUnit ru) =>
@@ -381,7 +362,7 @@ namespace iLand.Simulation
 
             // apply special values for grid cells border regions where out-of-area cells
             // radiate into the main LIF grid.
-            int lightOffset = Constant.LightCellsPerHeightSize / 2; // for 5 px per height grid cell, the offset is 2
+            int lightOffset = Constant.LightCellsPerHeightCellWidth / 2; // for 5 px per height grid cell, the offset is 2
             int maxRadiationDistanceInHeightCells = 7;
             float stepWidth = 1.0F / maxRadiationDistanceInHeightCells;
             int borderHeightCellCount = 0;
@@ -391,17 +372,17 @@ namespace iLand.Simulation
                 if (heightCell.IsRadiating())
                 {
                     Point heightCellIndex = this.Landscape.HeightGrid.CellIndexOf(heightCell);
-                    int minLightX = heightCellIndex.X * Constant.LightCellsPerHeightSize - maxRadiationDistanceInHeightCells + lightOffset;
+                    int minLightX = heightCellIndex.X * Constant.LightCellsPerHeightCellWidth - maxRadiationDistanceInHeightCells + lightOffset;
                     int maxLightX = minLightX + 2 * maxRadiationDistanceInHeightCells + 1;
                     int centerLightX = minLightX + maxRadiationDistanceInHeightCells;
-                    int minLightY = heightCellIndex.Y * Constant.LightCellsPerHeightSize - maxRadiationDistanceInHeightCells + lightOffset;
+                    int minLightY = heightCellIndex.Y * Constant.LightCellsPerHeightCellWidth - maxRadiationDistanceInHeightCells + lightOffset;
                     int maxLightY = minLightY + 2 * maxRadiationDistanceInHeightCells + 1;
                     int centerLightY = minLightY + maxRadiationDistanceInHeightCells;
                     for (int lightY = minLightY; lightY <= maxLightY; ++lightY)
                     {
                         for (int lightX = minLightX; lightX <= maxLightX; ++lightX)
                         {
-                            if (!this.Landscape.LightGrid.Contains(lightX, lightY) || !this.Landscape.HeightGrid[lightX, lightY, Constant.LightCellsPerHeightSize].IsOnLandscape())
+                            if (!this.Landscape.LightGrid.Contains(lightX, lightY) || !this.Landscape.HeightGrid[lightX, lightY, Constant.LightCellsPerHeightCellWidth].IsOnLandscape())
                             {
                                 continue;
                             }

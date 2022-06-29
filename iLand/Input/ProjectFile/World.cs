@@ -5,8 +5,6 @@ namespace iLand.Input.ProjectFile
 {
     public class World : XmlSerializable
 	{
-		public string? EnvironmentFile { get; private set; }
-
 		public Browsing Browsing { get; private init; }
 		public Climate Climate { get; private init; }
 		public WorldDebug Debug { get; private init; }
@@ -15,7 +13,6 @@ namespace iLand.Input.ProjectFile
 		public Grass Grass { get; private init; }
 		public WorldInitialization Initialization { get; private init; }
 		public Species Species { get; private init; }
-		public StandGrid StandGrid { get; private init; }
 
 		public World()
         {
@@ -27,7 +24,6 @@ namespace iLand.Input.ProjectFile
 			this.Geometry = new WorldGeometry();
 			this.Initialization = new WorldInitialization();
 			this.Species = new Species();
-			this.StandGrid = new StandGrid();
         }
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -63,10 +59,6 @@ namespace iLand.Input.ProjectFile
 			{
 				this.DefaultSoil.ReadXml(reader);
 			}
-			else if (String.Equals(reader.Name, "environmentFile", StringComparison.Ordinal))
-			{
-				this.EnvironmentFile = reader.ReadElementContentAsString().Trim();
-			}
 			else if (String.Equals(reader.Name, "geometry", StringComparison.Ordinal))
 			{
 				this.Geometry.ReadXml(reader);
@@ -78,10 +70,6 @@ namespace iLand.Input.ProjectFile
 			else if (String.Equals(reader.Name, "species", StringComparison.Ordinal))
 			{
 				this.Species.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "standGrid", StringComparison.Ordinal))
-			{
-				this.StandGrid.ReadXml(reader);
 			}
 			else
 			{

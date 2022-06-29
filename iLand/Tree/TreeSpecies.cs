@@ -431,7 +431,7 @@ namespace iLand.Tree
             }
             // the function result (e.g. from a logistic regression model, e.g. Schoennagel 2013) is interpreted as probability
             float pSerotinous = (float)this.mSerotinyFormula.Evaluate(age);
-            return randomGenerator.GetRandomFloat() < pSerotinous;
+            return randomGenerator.GetRandomProbability() < pSerotinous;
         }
 
         /** newYear is called by the SpeciesSet at the beginning of a year before any growth occurs.
@@ -443,7 +443,7 @@ namespace iLand.Tree
             {
                 // decide whether current year is a seed year
                 // TODO: link to weather conditions and time since last seed year/
-                this.IsSeedYear = (model.RandomGenerator.GetRandomFloat() < mSeedYearProbability);
+                this.IsSeedYear = (model.RandomGenerator.GetRandomProbability() < mSeedYearProbability);
                 if (this.IsSeedYear && (model.Project.Output.Logging.LogLevel >= EventLevel.Informational))
                 {
                     Trace.TraceInformation("Seed year for " + this.ID + ".");

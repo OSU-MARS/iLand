@@ -39,7 +39,7 @@ namespace iLand.World
 
             switch (variableIndex - ExpressionWrapper.BaseVariableNames.Count)
             {
-                case 0: return this.ResourceUnit.EnvironmentID; // id from grid
+                case 0: return this.ResourceUnit.ID; // id from grid
                 case 1: return this.ResourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea;
                 case 2:
                     if (this.ResourceUnit.Soil != null)

@@ -42,7 +42,7 @@ namespace iLand.Output
         {
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.EnvironmentID == -1)
+                if (ru.ID == -1)
                 {
                     continue; // do not include if out of project area
                 }
@@ -68,7 +68,7 @@ namespace iLand.Output
                     }
                     insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = ru.EnvironmentID;
+                    insertRow.Parameters[2].Value = ru.ID;
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID; // keys
 
                     // calculate statistics based on the number of represented trees per cohort

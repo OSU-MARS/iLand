@@ -1,5 +1,4 @@
-﻿using iLand.Tool;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
@@ -7,16 +6,15 @@ using System.Text;
 
 namespace iLand.World
 {
-    /** Grid class (template).
-        Orientation
-        The grid is oriented as typically coordinates on the northern hemisphere: higher y-values -> north, higher x-values-> east.
-        The projection is reversed for drawing on screen (Viewport).
-                  N
-          (0/2) (1/2) (2/2)
-        W (0/1) (1/1) (2/1)  E
-          (0/0) (1/0) (2/0)
-                  S
-        */
+    /// <remarks>
+    /// The grid is oriented as is typical northern hemisphere projected coordinate systems: higher y values are farther north, 
+    /// higher x values are farther east.
+    ///                N
+    ///       (0, 2) (1, 2) (2, 2)
+    ///     W (0, 1) (1, 1) (2, 1)  E
+    ///       (0, 0) (1, 0) (2, 0)
+    ///                S
+    /// </remarks>
     public class Grid<T>
     {
         private T[]? data;
@@ -241,7 +239,7 @@ namespace iLand.World
             {
                 throw new ArgumentOutOfRangeException(nameof(cellSize));
             }
-            if (extent.IsEmpty)
+            if ((extent.Width <= 0.0F) || (extent.Height <= 0.0F))
             {
                 throw new ArgumentOutOfRangeException(nameof(extent));
             }

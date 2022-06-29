@@ -9,47 +9,48 @@ namespace iLand.Tree
     {
         private readonly Landscape landscape;
         private readonly int standID;
-        private readonly GridWindowEnumerator<float> standLightRunner;
+        private readonly GridWindowEnumerator<float> standLightEnumerator;
 
         public ResourceUnit? RU { get; private set; }
 
         public SaplingCellRunner(Landscape landscape, int standID)
         {
-            if (landscape.StandGrid == null)
+            if (landscape.StandRaster == null)
             {
                 throw new ArgumentException("Attempt to create a sapling runner on a landscape without stand information.", nameof(landscape));
             }
 
             this.landscape = landscape;
             this.standID = standID;
-            RectangleF standBoundingBox = landscape.StandGrid.GetBoundingBox(standID);
-            this.standLightRunner = new GridWindowEnumerator<float>(landscape.LightGrid, standBoundingBox);
+            RectangleF standBoundingBox = landscape.StandRaster.GetBoundingBox(standID);
+            this.standLightEnumerator = new GridWindowEnumerator<float>(landscape.LightGrid, standBoundingBox);
 
             this.RU = null;
         }
 
         public PointF CurrentCoordinate()
         {
-            return standLightRunner.GetPhysicalPosition();
+            return standLightEnumerator.GetPhysicalPosition();
         }
 
         // TODO: change to bool MoveNext()
         public SaplingCell? MoveNext()
         {
-            Debug.Assert(this.landscape.StandGrid != null);
-            while (this.standLightRunner.MoveNext())
+            Debug.Assert(this.landscape.StandRaster != null);
+            while (this.standLightEnumerator.MoveNext())
             {
-                float lightLevel = this.standLightRunner.Current;
+                float lightLevel = this.standLightEnumerator.Current;
                 if (lightLevel == 0.0F)
                 {
                     return null; // end of the bounding box
                 }
-                if (this.landscape.StandGrid.GetStandIDFromLightCoordinate(standLightRunner.GetCellPosition()) != standID)
+                Point cellXYIndex = this.standLightEnumerator.GetCellXYIndex();
+                if (this.landscape.StandRaster.GetPolygonIDFromLightGridIndex(cellXYIndex) != standID)
                 {
                     continue; // pixel does not belong to the target stand
                 }
-                this.RU = landscape.GetResourceUnit(standLightRunner.GetPhysicalPosition());
-                return this.RU.GetSaplingCell(standLightRunner.GetCellPosition());
+                this.RU = landscape.GetResourceUnit(this.standLightEnumerator.GetPhysicalPosition());
+                return this.RU.GetSaplingCell(cellXYIndex);
             }
             return null;
         }

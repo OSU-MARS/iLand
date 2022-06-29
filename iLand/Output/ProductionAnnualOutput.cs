@@ -32,7 +32,7 @@ namespace iLand.Output
         {
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.EnvironmentID == -1)
+                if (ru.ID == -1)
                 {
                     continue; // do not include if out of project area
                 }
@@ -44,7 +44,7 @@ namespace iLand.Output
                     {
                         insertRow.Parameters[0].Value = model.CurrentYear;
                         insertRow.Parameters[1].Value = ruSpecies.RU.ResourceUnitGridIndex;
-                        insertRow.Parameters[2].Value = ruSpecies.RU.EnvironmentID;
+                        insertRow.Parameters[2].Value = ruSpecies.RU.ID;
                         insertRow.Parameters[3].Value = ruSpecies.Species.ID;
                         insertRow.Parameters[4].Value = month + 1; // month
                                                                    // responses

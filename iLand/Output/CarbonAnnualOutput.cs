@@ -81,7 +81,7 @@ namespace iLand.Output
             float[] accumulatedValues   = new float[23]; // 8 data values
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.EnvironmentID == -1 || ru.Snags == null)
+                if (ru.ID == -1 || ru.Snags == null)
                 {
                     continue; // do not include if out of project area
                 }
@@ -93,12 +93,12 @@ namespace iLand.Output
                     throw new NotSupportedException("Attempt to log statistics which are not per hectare.");
                 }
 
-                float areaFactor = ru.AreaInLandscape / Constant.RUArea; // conversion factor from real area to per ha values
+                float areaFactor = ru.AreaInLandscape / Constant.ResourceUnitArea; // conversion factor from real area to per ha values
                 if (isRUlevel)
                 {
                     insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = ru.EnvironmentID;
+                    insertRow.Parameters[2].Value = ru.ID;
                     insertRow.Parameters[3].Value = areaFactor;
                     // biomass from trees (scaled to 1ha already)
                     insertRow.Parameters[4].Value = ruStatistics.StemCarbon;

@@ -1,5 +1,4 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.World;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
 using Model = iLand.Simulation.Model;
@@ -31,10 +30,7 @@ namespace iLand.Test
         protected static Model LoadProject(string projectFilePath)
         {
             Project projectFile = new(projectFilePath);
-            Landscape landscape = new(projectFile);
-
-            Model model = new(projectFile, landscape);
-            model.Setup();
+            Model model = new(projectFile);
             return model;
         }
     }

@@ -6,6 +6,6 @@ namespace iLand.World
     {
         public abstract float GetSoilWaterPotentialFromWaterContent(float soilDepthInMM, float soilWaterContentInMM);
         public abstract float GetSoilWaterContentFromPsi(float soilDepthInMM, float psiInKilopascals);
-        public abstract float Setup(EnvironmentReader environmentReader, bool useSoilSaturation);
+        public abstract float Setup(ResourceUnitReader environmentReader, bool useSoilSaturation);
     }
 }

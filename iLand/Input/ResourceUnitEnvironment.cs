@@ -2,7 +2,7 @@
 
 namespace iLand.Input
 {
-    public class Environment
+    public class ResourceUnitEnvironment
     {
         public float AnnualNitrogenDeposition { get; private init; }
         public float CenterX { get; private init; }
@@ -44,7 +44,7 @@ namespace iLand.Input
         public string SpeciesTableName { get; private init; }
         public bool UseDynamicAvailableNitrogen { get; private init; }
 
-        public Environment(EnvironmentHeader header, string[] environmentFileRow, Environment defaultEnvironment)
+        public ResourceUnitEnvironment(ResourceUnitHeader header, string[] environmentFileRow, ResourceUnitEnvironment defaultEnvironment)
         {
             this.AnnualNitrogenDeposition = header.AnnualNitrogenDeposition >= 0 ? Single.Parse(environmentFileRow[header.AnnualNitrogenDeposition]) : defaultEnvironment.AnnualNitrogenDeposition;
             this.CenterX = Single.Parse(environmentFileRow[header.CenterX]); // required field
@@ -86,7 +86,7 @@ namespace iLand.Input
             this.UseDynamicAvailableNitrogen = defaultEnvironment.UseDynamicAvailableNitrogen;
         }
 
-        public Environment(ProjectFile.World world)
+        public ResourceUnitEnvironment(ProjectFile.World world)
         {
             this.ClimateID = world.Climate.DefaultDatabaseTable ?? String.Empty;
             this.ResourceUnitID = -1;

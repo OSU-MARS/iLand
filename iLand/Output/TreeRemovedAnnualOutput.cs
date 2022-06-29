@@ -81,7 +81,7 @@ namespace iLand.Output
                 {
                     insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = trees.RU.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = trees.RU.EnvironmentID;
+                    insertRow.Parameters[2].Value = trees.RU.ID;
                     insertRow.Parameters[3].Value = trees.Species.ID;
                     insertRow.Parameters[4].Value = trees.Tag[treeIndex];
                     insertRow.Parameters[5].Value = (int)removedTreesOfSpecies.Removals[treeIndex];

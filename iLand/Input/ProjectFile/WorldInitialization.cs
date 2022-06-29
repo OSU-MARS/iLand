@@ -5,27 +5,26 @@ namespace iLand.Input.ProjectFile
 {
     public class WorldInitialization : XmlSerializable
     {
-        public string? StandMapFileName { get; private set; }
-		public string? RandomFunction { get; private set; }
-		public string? SaplingFile { get; private set; }
+        public string? ResourceUnitFile { get; private set; }
+        public string? SaplingsByStandFile { get; private set; }
+        public string? StandRasterFile { get; private set; }
         public string? TreeFile { get; private set; }
-        public string? TreeFileFormat { get; private set; }
-        public ResourceUnitTreeInitializationMethod TreeInitializationMethod { get; private set; }
+        public TreeInitializationMethod Trees { get; private set; }
+        public string? TreeSizeDistribution { get; private set; }
 
         public InitialHeightGrid HeightGrid { get; private init; }
         public IntitialSnags Snags { get; private init; }
 
         public WorldInitialization()
         {
-			this.TreeFile = null;
-			this.StandMapFileName = "init";
-			this.TreeInitializationMethod = ResourceUnitTreeInitializationMethod.CloneSingleResourceUnit;
-			this.RandomFunction = "1-x^2";
-			this.SaplingFile = null;
-			this.TreeFileFormat = null;
-
-			this.HeightGrid = new InitialHeightGrid();
-			this.Snags = new IntitialSnags();
+            this.HeightGrid = new InitialHeightGrid();
+            this.ResourceUnitFile = null;
+            this.Snags = new IntitialSnags();
+            this.SaplingsByStandFile = null;
+            this.StandRasterFile = null;
+            this.TreeFile = "init";
+            this.Trees = TreeInitializationMethod.SingleFile;
+            this.TreeSizeDistribution = "1-x^2";
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -35,45 +34,37 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "initialization", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "mapFileName", StringComparison.Ordinal))
-            {
-                this.StandMapFileName = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "treeInitializationMethod", StringComparison.Ordinal))
-            {
-                this.TreeInitializationMethod = Enum.Parse< ResourceUnitTreeInitializationMethod>(reader.ReadElementContentAsString(), ignoreCase: true);
-            }
-            else if (String.Equals(reader.Name, "treeFileFormat", StringComparison.Ordinal))
-            {
-                this.TreeFileFormat = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "randomFunction", StringComparison.Ordinal))
-            {
-                this.RandomFunction = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "treeFile", StringComparison.Ordinal))
-            {
-                this.TreeFile = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "saplingFile", StringComparison.Ordinal))
-            {
-                this.SaplingFile = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "snags", StringComparison.Ordinal))
-            {
-                this.Snags.ReadXml(reader);
-            }
-            else if (String.Equals(reader.Name, "heightGrid", StringComparison.Ordinal))
-            {
-                this.HeightGrid.ReadXml(reader);
-            }
-			else
-			{
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "heightGrid":
+                    this.HeightGrid.ReadXml(reader);
+                    break;
+                case "initialization":
+                    reader.Read();
+                    break;
+                case "resourceUnitFile":
+                    this.ResourceUnitFile = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "saplingsByStandFile":
+                    this.SaplingsByStandFile = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "snags":
+                    this.Snags.ReadXml(reader);
+                    break;
+                case "standRasterFile":
+                    this.StandRasterFile = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "treeFile":
+                    this.TreeFile = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "trees":
+                    this.Trees = Enum.Parse<TreeInitializationMethod>(reader.ReadElementContentAsString(), ignoreCase: true);
+                    break;
+                case "treeSizeDistribution":
+                    this.TreeSizeDistribution = reader.ReadElementContentAsString().Trim();
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

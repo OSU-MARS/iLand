@@ -1,7 +1,6 @@
 ﻿using iLand.Input;
 using iLand.Tool;
 using iLand.Tree;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -16,7 +15,7 @@ namespace iLand.World
     public class GridRaster10m
     {
         // holds the extent of each rasterized polygon and a count of occupied pixels
-        private readonly Dictionary<int, (RectangleF BoundingBox, float OccupiedAreaInM2)> boundingBoxByRasterizedPolygonID;
+        private readonly Dictionary<int, (RectangleF BoundingBox, int OccupiedAreaInM2)> boundingBoxByRasterizedPolygonID;
         // holds a list of resource units + areas per rasterized polygon ID
         private readonly Dictionary<int, List<(ResourceUnit RU, float OccupiedAreaInRU)>> resourceUnitsByRasterizedPolygonID;
 
@@ -24,16 +23,16 @@ namespace iLand.World
 
         public GridRaster10m()
         {
-            this.boundingBoxByRasterizedPolygonID = new Dictionary<int, (RectangleF, float)>();
+            this.boundingBoxByRasterizedPolygonID = new Dictionary<int, (RectangleF, int)>();
             this.resourceUnitsByRasterizedPolygonID = new Dictionary<int, List<(ResourceUnit, float)>>();
 
             this.Grid = new Grid<int>();
         }
 
-        public GridRaster10m(Landscape landscape, string filePath)
+        public GridRaster10m(string filePath)
             : this()
         {
-            this.LoadFromFile(landscape, filePath);
+            this.LoadFromFile(filePath);
         }
 
         public void CreateIndex(Landscape landscape)
@@ -53,7 +52,7 @@ namespace iLand.World
                 Point cellIndex = this.Grid.GetCellXYIndex(gridIndex);
                 RectangleF cellExtent = this.Grid.GetCellExtent(cellIndex);
                 int rasterizedPolygonID = this.Grid[gridIndex];
-                if (this.boundingBoxByRasterizedPolygonID.TryGetValue(rasterizedPolygonID, out (RectangleF BoundingBox, float OccupiedAreaInM2) data))
+                if (this.boundingBoxByRasterizedPolygonID.TryGetValue(rasterizedPolygonID, out (RectangleF BoundingBox, int OccupiedAreaInM2) data))
                 {
                     data.BoundingBox = RectangleF.Union(data.BoundingBox, cellExtent);
                     data.OccupiedAreaInM2 += Constant.HeightCellAreaInM2;
@@ -75,8 +74,8 @@ namespace iLand.World
 
                 // look for the resource unit 'ru'
                 bool ruFound = false;
-                Debug.Assert(Constant.HeightSizePerRU * Constant.HeightSizePerRU == 100); // 100 height cells per RU -> 1% RU area per height cell
-                Debug.Assert(this.Grid.CellSize == Constant.HeightSizePerRU);
+                Debug.Assert(Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth == 100); // 100 height cells per RU -> 1% RU area per height cell
+                Debug.Assert(this.Grid.CellSize == Constant.HeightCellsPerRUWidth);
                 for (int index = 0; index < resourceUnitsInStand.Count; ++index)
                 {
                     (ResourceUnit RU, float OccupiedAreaInRU) candidate = resourceUnitsInStand[index];
@@ -94,7 +93,7 @@ namespace iLand.World
             }
         }
 
-        public float GetAreaInSquareMeters(int rasterizedPolygonID)
+        public int GetAreaInSquareMeters(int rasterizedPolygonID)
         { 
             return this.boundingBoxByRasterizedPolygonID[rasterizedPolygonID].OccupiedAreaInM2; // return the area (m²) covered by the polygon
         }
@@ -104,15 +103,15 @@ namespace iLand.World
             return this.boundingBoxByRasterizedPolygonID[rasterizedPolygonID].BoundingBox;
         }
 
-        /// return the stand-ID at the coordinates *from* the LIF-Grid (i.e., 2m grid).
-        public int GetStandIDFromLightCoordinate(Point lightCoordinate)
+        /// return the grid value (stand ID, in typical use) at the coordinates *from* the LIF-Grid (i.e., 2m grid).
+        public int GetPolygonIDFromLightGridIndex(Point lightGridXYIndex)
         {
-            return this.Grid[lightCoordinate.X, lightCoordinate.Y, Constant.LightCellsPerHeightSize];
+            return this.Grid[lightGridXYIndex.X, lightGridXYIndex.Y, Constant.LightCellsPerHeightCellWidth];
         }
 
         /// returns a list with resource units and area factors per 'id'.
         /// the area is '1' if the resource unit is fully covered by the grid-value.
-        public IList<(ResourceUnit, float)> GetResourceUnitAreaFractions(int standID)
+        public IList<(ResourceUnit RU, float OccupiedAreaInRU)> GetResourceUnitAreaFractions(int standID)
         {
             return this.resourceUnitsByRasterizedPolygonID[standID]; 
         }
@@ -129,7 +128,7 @@ namespace iLand.World
                     (Trees Trees, List<int> LiveTreeIndices) livingTreesInStand = new(trees, new List<int>());
                     for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                     {
-                        if ((this.GetStandIDFromLightCoordinate(trees.LightCellPosition[treeIndex]) == standID) && (trees.IsDead(treeIndex) == false))
+                        if ((this.GetPolygonIDFromLightGridIndex(trees.LightCellPosition[treeIndex]) == standID) && (trees.IsDead(treeIndex) == false))
                         {
                             livingTreesInStand.LiveTreeIndices.Add(treeIndex);
                         }
@@ -147,15 +146,15 @@ namespace iLand.World
         public List<int> GetGridIndices(int rasterizedPolygonID)
         {
             RectangleF boundingBox = boundingBoxByRasterizedPolygonID[rasterizedPolygonID].BoundingBox;
-            GridWindowEnumerator<int> gridRunner = new(this.Grid, boundingBox);
+            GridWindowEnumerator<int> gridEnumerator10m = new(this.Grid, boundingBox);
 
             List<int> gridIndices = new();
-            while (gridRunner.MoveNext())
+            while (gridEnumerator10m.MoveNext())
             {
-                int cellStandID = gridRunner.Current;
+                int cellStandID = gridEnumerator10m.Current;
                 if (cellStandID == rasterizedPolygonID)
                 {
-                    gridIndices.Add(gridRunner.CurrentIndex);
+                    gridIndices.Add(gridEnumerator10m.CurrentIndex);
                 }
             }
             return gridIndices;
@@ -173,29 +172,22 @@ namespace iLand.World
         }
 
         // load ESRI ASCII raster
-        public void LoadFromFile(Landscape landscape, string filePath)
+        public void LoadFromFile(string filePath)
         {
-            if ((landscape.HeightGrid == null) || (landscape.HeightGrid.IsSetup() == false))
-            {
-                throw new ArgumentOutOfRangeException(nameof(landscape), "No height grid available for initializing grid size.");
-            }
-
             EsriAsciiRasterReader raster = new(filePath);
 
             // clear any existing spatial indices
             this.boundingBoxByRasterizedPolygonID.Clear();
             this.resourceUnitsByRasterizedPolygonID.Clear();
 
-            Grid<HeightCell> heightGrid = landscape.HeightGrid;
             // create a grid with the same size as the height grid
             // (height-grid: 10m size, covering the full extent)
             this.Grid.Clear();
-            this.Grid.Setup(heightGrid.PhysicalExtent, heightGrid.CellSize);
+            this.Grid.Setup(raster.GetBoundingBox(), raster.CellSize);
 
             for (int gridIndex = 0; gridIndex < this.Grid.Count; ++gridIndex)
             {
                 PointF cellCentroid = this.Grid.GetCellCentroid(this.Grid.GetCellXYIndex(gridIndex));
-                Debug.Assert(landscape.Extent.Contains(cellCentroid));
 
                 // TODO: relax assumption that raster's origin is (0, 0) in iLand's internal project coordinates
                 float cellValue = raster.GetValue(cellCentroid);

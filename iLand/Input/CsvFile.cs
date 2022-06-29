@@ -68,8 +68,6 @@ namespace iLand.Input
             Columns.AddRange(header.Split(separator, StringSplitOptions.None)); // C++ iLand removes \ characters here for an undocumented reason
         }
 
-        public int ColumnCount { get { return Columns.Count; } }
-
         public void Dispose()
         {
             Dispose(disposing: true);

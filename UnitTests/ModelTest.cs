@@ -6,7 +6,6 @@ using Microsoft.Data.Sqlite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Climate = iLand.World.Climate;
 using Model = iLand.Simulation.Model;
 
@@ -23,6 +22,7 @@ namespace iLand.Test
             for (int reliabilityIteration = 0; reliabilityIteration < 1 /* 100 */; ++reliabilityIteration)
             {
                 using Model kalkalpen = LandTest.LoadProject(LandTest.GetKalkalpenProjectPath(this.TestContext!));
+                ModelTest.VerifyKalkalpenResourceUnit(kalkalpen);
 
                 ModelTest.VerifyKalkalpenModel(kalkalpen);
                 ModelTest.VerifyNorwaySpruce(kalkalpen);
@@ -59,18 +59,19 @@ namespace iLand.Test
                         //ru.Trees;
                         //ru.Variables;
                         Assert.IsTrue(kalkalpen.Landscape.ResourceUnitGrid.PhysicalExtent.Contains(ru.BoundingBox));
-                        Assert.IsTrue((ru.BoundingBox.Height == Constant.RUSize) && (ru.BoundingBox.Width == Constant.RUSize) &&
+                        Assert.IsTrue((ru.BoundingBox.Height == Constant.ResourceUnitSize) && (ru.BoundingBox.Width == Constant.ResourceUnitSize) &&
                                       (ru.BoundingBox.X == 0.0F) && (MathF.Abs(ru.BoundingBox.Y % 100.0F) < 0.001F));
-                        Assert.IsTrue(ru.EnvironmentID >= 0);
+                        Assert.IsTrue(ru.ID >= 0);
                         Assert.IsTrue(ru.ResourceUnitGridIndex >= 0);
-                        Assert.IsTrue(ru.AreaInLandscape == Constant.RUArea);
-                        Assert.IsTrue((ru.AreaWithTrees > 0.0) && (ru.AreaWithTrees <= Constant.RUArea));
+                        Assert.IsTrue(ru.AreaInLandscape == Constant.ResourceUnitArea);
+                        Assert.IsTrue((ru.AreaWithTrees > 0.0) && (ru.AreaWithTrees <= Constant.ResourceUnitArea));
                         Assert.IsTrue((ru.Trees.AverageLeafAreaWeightedAgingFactor > 0.0) && (ru.Trees.AverageLeafAreaWeightedAgingFactor < 1.0));
                         Assert.IsTrue((ru.Trees.AverageLightRelativeIntensity > 0.0) && (ru.Trees.AverageLightRelativeIntensity <= 1.0));
-                        Assert.IsTrue((ru.Trees.PhotosyntheticallyActiveArea > 0.0) && (ru.Trees.PhotosyntheticallyActiveArea <= Constant.RUArea));
+                        Assert.IsTrue((ru.Trees.PhotosyntheticallyActiveArea > 0.0) && (ru.Trees.PhotosyntheticallyActiveArea <= Constant.ResourceUnitArea));
                         Assert.IsTrue((ru.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea > 0.0) && (ru.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea <= 1.0));
-                        Assert.IsTrue(ru.Trees.TreeStatisticsByStandID.Count == 0);
-                        Assert.IsTrue((ru.Trees.TotalLeafArea > 0.0) && (ru.Trees.TotalLeafArea < 20.0F * Constant.RUArea));
+                        Assert.IsTrue(ru.Trees.TreeStatisticsByStandID.Count == 1, "Expected tree statistics for one stand but got statistics for " + ru.Trees.TreeStatisticsByStandID.Count + " stands.");
+                        Assert.IsTrue(ru.Trees.TreeStatisticsByStandID.ContainsKey(Constant.DefaultStandID), "Expected zero tree statistics by stand ID but got " + ru.Trees.TreeStatisticsByStandID.Count + ".");
+                        Assert.IsTrue((ru.Trees.TotalLeafArea > 0.0) && (ru.Trees.TotalLeafArea < 20.0F * Constant.ResourceUnitArea));
                     }
 
                     Assert.IsTrue(kalkalpen.Landscape.ResourceUnits.Count == 2);
@@ -125,9 +126,9 @@ namespace iLand.Test
                         Assert.IsTrue(treesOfSpecies.Count == (treesOfSpecies.Species.ID == "psme" ? 2 : 1));
                     }
 
-                    int minimumTreeCount = 30 - 2 * year - 3; // TODO: wide tolerance required due to stochastic mortality
+                    int minimumTreeCount = 30 - 2 * year - 4; // TODO: wide tolerance required due to stochastic mortality
                     int resourceUnit0treeSpeciesCount = kalkalpen.Landscape.ResourceUnits[0].Trees.TreesBySpeciesID.Count;
-                    Assert.IsTrue(resourceUnit0treeSpeciesCount >= minimumTreeCount);
+                    Assert.IsTrue(resourceUnit0treeSpeciesCount >= minimumTreeCount, "Expected " + minimumTreeCount + " trees but got " + resourceUnit0treeSpeciesCount + ".");
                     Assert.IsTrue(kalkalpen.Landscape.ResourceUnits[1].Trees.TreesBySpeciesID.Count >= minimumTreeCount);
                     Assert.IsTrue(initialDiameters.Count >= minimumTreeCount);
                     Assert.IsTrue(initialHeights.Count >= minimumTreeCount);
@@ -136,12 +137,12 @@ namespace iLand.Test
 
                     float averageDiameterGrowth = 0.0F;
                     float averageHeightGrowth = 0.0F;
-                    foreach (KeyValuePair<int, float> tree in finalHeights)
+                    foreach ((int tag, float height) in finalHeights)
                     {
-                        float initialDiameter = initialDiameters[tree.Key];
-                        float initialHeight = initialHeights[tree.Key];
-                        float finalDiameter = finalDiameters[tree.Key];
-                        float finalHeight = tree.Value;
+                        float initialDiameter = initialDiameters[tag];
+                        float initialHeight = initialHeights[tag];
+                        float finalDiameter = finalDiameters[tag];
+                        float finalHeight = height;
                         averageDiameterGrowth += finalDiameter - initialDiameter;
                         averageHeightGrowth += finalHeight - initialHeight;
                         Assert.IsTrue(finalDiameter >= initialDiameter);
@@ -201,10 +202,7 @@ namespace iLand.Test
         [TestMethod]
         public void MalcolmKnapp14()
         {
-            // spacing trials
             using Model plot14 = LandTest.LoadProject(LandTest.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Plot14));
-
-            // check soil properties at initial load
             ModelTest.VerifyMalcolmKnappResourceUnit(plot14);
 
             List<float> gppByYear = new();
@@ -244,33 +242,36 @@ namespace iLand.Test
             ModelTest.VerifyMalcolmKnappDouglasFir(plot14);
 
             // regex for reformatting copy/paste of values from watch window: "\s+\[\d+]\s+(\d+.\d{1,3})\d*\s+float\r?\n" -> "$1F, "
+            // Values are relatively sensitive to stochastic mortality's influences on stand trajectory. Test should reliably pass but
+            // changes to random number generation appear likely to require expected values be updated.
             List<float> nominalGppByYear = new()
             {
                 10.331F, 11.133F, 14.020F, 11.316F, 13.527F, // 0...4
-                10.526F, 12.332F, 12.791F, 12.987F, 11.235F, // 5...9
-                11.608F, 10.062F, 11.081F,  9.992F, 12.681F, // 10...14
-                11.237F, 11.539F, 10.230F,  8.268F,  9.310F, // 15...19
-                11.888F,  8.964F, 11.145F, 10.091F, 13.221F, // 20...24
-                10.973F, 12.179F, 12.647F                    // 25...27
+                10.535F, 12.338F, 12.816F, 13.004F, 11.264F, // 5...9
+                11.676F, 10.127F, 11.144F, 10.151F, 12.801F, // 10...14
+                11.476F, 11.746F, 10.422F,  8.468F,  9.613F, // 15...19
+                12.045F,  9.233F, 11.546F, 10.244F, 13.537F, // 20...24
+                11.276F, 12.253F, 12.745F                    // 25...27
             };
             
             List<float> nominalNppByYear = new()
             {
-                13305.625F, 14514.859F, 18456.353F, 15041.932F, 18053.941F,
-                14110.686F, 16558.890F, 17210.685F, 17502.668F, 15159.530F,
-                15669.442F, 13588.600F, 14967.475F, 13497.672F, 17130.728F,
-                15179.787F, 15582.680F, 13804.854F, 11158.202F, 12561.510F,
-                16028.833F, 12079.922F, 15009.008F, 13583.033F, 17776.400F,
-                14749.142F, 16356.83F, 16963.591F
+                13305.625F, 14514.859F, 18456.353F, 15041.932F, 18053.628F,
+                14120.029F, 16564.884F, 17238.371F, 17518.640F, 15189.014F,
+                15754.683F, 13664.428F, 15035.963F, 13691.142F, 17258.496F,
+                15482.770F, 15844.175F, 14048.942F, 11417.470F, 12946.689F,
+                16218.523F, 12429.022F, 15532.238F, 13779.785F, 18188.468F,
+                15139.151F, 16453.837F, 17103.043F
             };
+
             List<float> nominalVolumeByYear = new()
             {
-                118.143F, 130.357F, 148.674F, 161.134F, 178.615F,
-                189.416F, 204.427F, 220.182F, 236.591F, 248.959F,
-                261.886F, 271.750F, 283.939F, 293.349F, 309.284F,
-                320.494F, 333.093F, 340.758F, 346.781F, 355.119F,
-                368.386F, 374.821F, 386.607F, 395.546F, 410.205F,
-                422.316F, 437.456F, 452.937F
+                118.143F, 130.357F, 148.674F, 161.134F, 178.336F,
+                189.137F, 203.280F, 219.034F, 234.979F, 245.886F,
+                257.940F, 264.996F, 275.265F, 281.050F, 292.640F,
+                304.196F, 315.772F, 322.480F, 326.298F, 331.911F,
+                343.525F, 348.805F, 357.702F, 366.552F, 379.502F,
+                386.325F, 399.594F, 413.693F
             };
 
             ResourceUnitTreeStatisticsWithPreviousYears plotStatistics = (ResourceUnitTreeStatisticsWithPreviousYears)plot14.Landscape.ResourceUnits[0].Trees.TreeStatisticsByStandID[14];
@@ -371,8 +372,6 @@ namespace iLand.Test
         public void MalcolmKnapp16()
         {
             using Model plot16 = LandTest.LoadProject(LandTest.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Plot16));
-
-            // check soil properties at initial load
             ModelTest.VerifyMalcolmKnappResourceUnit(plot16);
 
             // 2019 - 1985 + 1 = 35 years of data available
@@ -391,7 +390,9 @@ namespace iLand.Test
         {
             using Model nelder1 = LandTest.LoadProject(LandTest.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Nelder1));
             ModelTest.VerifyMalcolmKnappResourceUnit(nelder1);
-            for (int year = 0; year < 26; ++year) // age 25 to 51
+
+            // age 25 to 51
+            for (int year = 0; year < 26; ++year)
             {
                 nelder1.RunYear();
             }
@@ -429,7 +430,7 @@ namespace iLand.Test
 
         private static void VerifyKalkalpenModel(Model model)
         {
-            Assert.IsTrue(model.Landscape.Environment.ClimatesByID.Count == 1);
+            Assert.IsTrue(model.Landscape.ClimatesByID.Count == 1);
             Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.Height == 200.0F + 2.0F * 60.0F);
             Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.Width == 100.0F + 2.0F * 60.0F);
             Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.X == -60.0);
@@ -449,14 +450,75 @@ namespace iLand.Test
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.PhysicalExtent.Y == 0.0);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.SizeX == 1);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.SizeY == 2);
-            Assert.IsTrue(model.Landscape.StandGrid.IsSetup() == false);
+            Assert.IsTrue(model.Landscape.StandRaster.IsSetup() == false);
             Assert.IsTrue(model.Project.Model.Settings.Multithreading == false);
+        }
+
+        private static void VerifyKalkalpenResourceUnit(Model model)
+        {
+            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
+            {
+                // resource unit variables read from climate file which are aren't currently test accessible
+                //   ru.Snags: swdC, swdCount, swdCN, swdHalfLife, swdDecomRate, otherC, other CN
+                // resource unit variables read from project file which are aren't currently test accessible
+                //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilDepth,
+                //            mKo (decomposition rate), mH (humification rate0
+                //   ru.WaterCycle.Canopy: interceptionStorageNeedle, interceptionStorageBroadleaf, snowMeltTemperature,
+                //                         waterUseSoilSaturation, pctSand, pctSilt, pctClay
+                //   ru.SpeciesSet: nitrogenResponseClasses 1a, 1b, 2a, 2b, 3a, 3b
+                //                  CO2 baseConcentration, compensationPoint, beta0, p0
+                //                  lightResponse shadeIntolerant, shadeTolerant, LRImodifier
+                //ru.Snags.ClimateFactor;
+                //ru.Snags.FluxToAtmosphere;
+                //ru.Snags.FluxToDisturbance;
+                //ru.Snags.FluxToExtern;
+                //ru.Snags.RefractoryFlux;
+                //ru.Snags.RemoveCarbon;
+                //ru.Soil.ClimateDecompositionFactor;
+                //ru.Soil.FluxToAtmosphere;
+                //ru.Soil.FluxToDisturbance;
+                //ru.Soil.InputLabile;
+                //ru.Soil.InputRefractory;
+                AssertNullable.IsNotNull(ru.Soil);
+                Assert.IsTrue(ru.Soil.Parameters.UseDynamicAvailableNitrogen == true);
+                //Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.C - 161.086F) < 0.001F, "Soil: organic carbon");
+                //Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.N - 17.73954F) < 0.00001F, "Soil: organic nitrogen");
+                //Assert.IsTrue(MathF.Abs(ru.Soil.PlantAvailableNitrogen - 56.186F) < 0.001F, "Soil: plant available nitrogen");
+                //Assert.IsTrue(MathF.Abs(ru.Soil.YoungLabile.C - 4.8414983F) < 0.001F, "Soil: young labile carbon");
+                //Assert.IsTrue(MathF.Abs(ru.Soil.YoungLabile.N - 0.2554353F) < 0.0001F, "Soil: young labile nitrogen");
+                //Assert.IsTrue(ru.Soil.YoungLabile.DecompositionRate == 0.322F, "Soil: young labile decomposition rate");
+                //Assert.IsTrue(MathF.Abs(ru.Soil.YoungRefractory.C - 45.97414F) < 0.001F, "Soil: young refractory carbon");
+                //Assert.IsTrue(MathF.Abs(ru.Soil.YoungRefractory.N - 0.261731F) < 0.0001F, "Soil: young refractory nitrogen");
+                //Assert.IsTrue(ru.Soil.YoungRefractory.DecompositionRate == 0.1790625F, "Soil: young refractory decomposition rate");
+                //ru.Variables.CarbonToAtm;
+                //ru.Variables.CarbonUptake;
+                //ru.Variables.CumCarbonToAtm;
+                //ru.Variables.CumCarbonUptake;
+                //ru.Variables.CumNep;
+                //ru.Variables.Nep;
+                //Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
+                //Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity), "Water cycle: current water content of " + ru.WaterCycle.CurrentSoilWaterContent + " mm is negative or greater than the field capacity of " + ru.WaterCycle.FieldCapacity + " mm.");
+                //Assert.IsTrue(MathF.Abs(ru.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity");
+                //Assert.IsTrue(ru.WaterCycle.SoilWaterPotentialByDay.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
+                //foreach (float psi in ru.WaterCycle.SoilWaterPotentialByDay)
+                //{
+                //    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential");
+                //}
+                //Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0F) && (ru.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: linkt to snow days?
+                //Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0F) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear), "Water cycle: snow days");
+                //Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepthInMM - 1340.0F) < 0.001F, "Soil: depth");
+                //Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0F, "Soil: evapotranspiration"); // zero at initialization
+                //Assert.IsTrue(ru.WaterCycle.TotalRunoff == 0.0F, "Soil: runoff"); // zero at initialization
+            }
+
+            Assert.IsTrue(model.Landscape.ResourceUnits.Count == 2);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.Count == 2);
         }
 
         private static void VerifyMalcolmKnappClimate(Model model)
         {
-            Assert.IsTrue(model.Landscape.Environment.ClimatesByID.Count == 1);
-            foreach (Climate climate in model.Landscape.Environment.ClimatesByID.Values)
+            Assert.IsTrue(model.Landscape.ClimatesByID.Count == 1);
+            foreach (Climate climate in model.Landscape.ClimatesByID.Values)
             {
                 Phenology conifer = climate.GetPhenology(0);
                 // private phenology variables read from the project file
@@ -579,8 +641,6 @@ namespace iLand.Test
 
         private static void VerifyMalcolmKnappModel(Model model)
         {
-            Assert.IsTrue(model.Landscape.Environment.UseDynamicAvailableNitrogen == false);
-
             Assert.IsTrue(model.Project.Model.Ecosystem.AirDensity == 1.204F);
             Assert.IsTrue(model.Project.Model.Ecosystem.BoundaryLayerConductance == 0.2F);
             Assert.IsTrue(model.Project.Model.Ecosystem.LightUseEpsilon == 2.7F);
@@ -623,6 +683,7 @@ namespace iLand.Test
                 //ru.Soil.InputLabile;
                 //ru.Soil.InputRefractory;
                 AssertNullable.IsNotNull(ru.Soil);
+                Assert.IsTrue(ru.Soil.Parameters.UseDynamicAvailableNitrogen == false);
                 Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.C - 161.086F) < 0.001F, "Soil: organic carbon");
                 Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.N - 17.73954F) < 0.00001F, "Soil: organic nitrogen");
                 Assert.IsTrue(MathF.Abs(ru.Soil.PlantAvailableNitrogen - 56.186F) < 0.001F, "Soil: plant available nitrogen");

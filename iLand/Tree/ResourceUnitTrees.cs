@@ -237,7 +237,7 @@ namespace iLand.Tree
                     speciesOnRU.Statistics.AddToCurrentYear(treesOfSpecies, treeIndex, null, skipDead: true);
 
                     int standID = treesOfSpecies.StandID[treeIndex];
-                    if (standID >= 0)
+                    if (standID >= Constant.DefaultStandID)
                     {
                         this.TreeStatisticsByStandID[standID].AddToCurrentYear(treesOfSpecies, treeIndex, null, skipDead: true);
                     }
@@ -337,7 +337,7 @@ namespace iLand.Tree
                     speciesOnRU.Statistics.AddToCurrentYear(treesOfSpecies, treeIndex, null, skipDead: true);
 
                     int standID = treesOfSpecies.StandID[treeIndex];
-                    if (standID >= 0)
+                    if (standID >= Constant.DefaultStandID)
                     {
                         if (standID != previousStandID)
                         {

@@ -2,7 +2,7 @@
 
 namespace iLand.Input
 {
-    public class EnvironmentHeader
+    public class ResourceUnitHeader
     {
         public int AnnualNitrogenDeposition { get; private init; }
         public int ClimateID { get; private init; }
@@ -42,7 +42,7 @@ namespace iLand.Input
         public int CenterX { get; private init; }
         public int CenterY { get; private init; }
 
-        public EnvironmentHeader(CsvFile environmentFile)
+        public ResourceUnitHeader(CsvFile environmentFile)
         {
             this.AnnualNitrogenDeposition = -1;
             this.ClimateID = -1;
@@ -82,7 +82,7 @@ namespace iLand.Input
             this.CenterX = -1;
             this.CenterY = -1;
 
-            for (int columnIndex = 0; columnIndex < environmentFile.ColumnCount; ++columnIndex)
+            for (int columnIndex = 0; columnIndex < environmentFile.Columns.Count; ++columnIndex)
             {
                 switch (environmentFile.Columns[columnIndex])
                 {

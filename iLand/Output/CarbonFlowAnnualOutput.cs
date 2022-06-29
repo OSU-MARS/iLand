@@ -74,7 +74,7 @@ namespace iLand.Output
             float[] accumulatedValues = new float[10]; // 10 data values
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits) 
             {
-                if (ru.EnvironmentID == -1)
+                if (ru.ID == -1)
                 {
                     continue; // do not include if out of project area
                 }
@@ -84,17 +84,17 @@ namespace iLand.Output
                     continue;
                 }
 
-                float areaFactor = ru.AreaInLandscape / Constant.RUArea; //conversion factor
+                float areaFactor = ru.AreaInLandscape / Constant.ResourceUnitArea; //conversion factor
                 float npp = ru.Trees.StatisticsForAllSpeciesAndStands.TreeNpp * Constant.BiomassCFraction; // kg C/ha
                 npp += ru.Trees.StatisticsForAllSpeciesAndStands.SaplingNpp * Constant.BiomassCFraction; // kgC/ha
                 
                 // Snag pools are not scaled per ha (but refer to the stockable RU), soil pools and biomass statistics (NPP, ...) 
                 // are scaled.
                 float toAtmosphere = ru.Snags.FluxToAtmosphere.C / areaFactor; // from snags, kg/ha
-                toAtmosphere += 0.1F * ru.Snags.FluxToAtmosphere.C * Constant.RUArea; // soil: t/ha -> t/m2 -> kg/ha
+                toAtmosphere += 0.1F * ru.Snags.FluxToAtmosphere.C * Constant.ResourceUnitArea; // soil: t/ha -> t/m2 -> kg/ha
 
                 float toDisturbance = ru.Snags.FluxToDisturbance.C / areaFactor; // convert to kgC/ha
-                toDisturbance += 0.1F * ru.Snags.FluxToDisturbance.C * Constant.RUArea; // kgC/ha
+                toDisturbance += 0.1F * ru.Snags.FluxToDisturbance.C * Constant.ResourceUnitArea; // kgC/ha
 
                 float toHarvest = ru.Snags.FluxToExtern.C / areaFactor; // kgC/ha
 
@@ -104,7 +104,7 @@ namespace iLand.Output
                 {
                     insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = ru.EnvironmentID;
+                    insertRow.Parameters[2].Value = ru.ID;
                     insertRow.Parameters[3].Value = areaFactor;
                     insertRow.Parameters[4].Value = npp / model.Project.Model.Ecosystem.AutotrophicRespirationMultiplier; // GPP_act
                     insertRow.Parameters[5].Value = npp; // NPP

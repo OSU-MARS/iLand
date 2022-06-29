@@ -143,7 +143,7 @@ namespace iLand.World
             // Debug.WriteLine("setup of grass cover complete.");
         }
 
-        public void SetInitialValues(RandomGenerator randomGenerator, List<KeyValuePair<int, float>> lightCells, int percentGrassCover)
+        public void SetInitialValues(RandomGenerator randomGenerator, List<(int CellIndex, float LightValue)> lightCells, int percentGrassCover)
         {
             Debug.Assert((percentGrassCover >= 0) && (percentGrassCover <= 100));
             if (this.IsEnabled == false)
@@ -159,7 +159,7 @@ namespace iLand.World
                 }
                 for (int lightCell = 0; lightCell < lightCells.Count; ++lightCell)
                 {
-                    this.CoverOrOnOffGrid[lightCells[lightCell].Key] = grassValue;
+                    this.CoverOrOnOffGrid[lightCells[lightCell].CellIndex] = grassValue;
                 }
             }
             else if (algorithm == GrassAlgorithm.CellOnOff)
@@ -168,11 +168,11 @@ namespace iLand.World
                 {
                     if (percentGrassCover > randomGenerator.GetRandomInteger(0, 100))
                     {
-                        this.CoverOrOnOffGrid[lightCells[lightCell].Key] = (Int16)this.cellProbabilityDensityFunction.GetRandomValue(randomGenerator);
+                        this.CoverOrOnOffGrid[lightCells[lightCell].CellIndex] = (Int16)this.cellProbabilityDensityFunction.GetRandomValue(randomGenerator);
                     }
                     else
                     {
-                        this.CoverOrOnOffGrid[lightCells[lightCell].Key] = 0;
+                        this.CoverOrOnOffGrid[lightCells[lightCell].CellIndex] = 0;
                     }
                 }
             }

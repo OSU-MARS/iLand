@@ -24,13 +24,8 @@ namespace iLand.World
         public CarbonNitrogenPool YoungLabile { get; private set; } // young labile matter (litter) (t/ha)
         public CarbonNitrogenPool YoungRefractory { get; private set; } // young refractory (woody debris)  matter (t/ha)
 
-        public ResourceUnitSoil(EnvironmentReader environmentReader, ResourceUnit ru)
+        public ResourceUnitSoil(ResourceUnitReader resourceUnitReader, ResourceUnit ru)
         {
-            if (environmentReader.CurrentEnvironment == null)
-            {
-                throw new ArgumentOutOfRangeException(nameof(environmentReader));
-            }
-
             this.RU = ru;
 
             // see Xenakis 2008 for parameter definitions
@@ -38,17 +33,17 @@ namespace iLand.World
             //   decomposition model. Ecological Modelling 219(1–2):1-16. https://doi.org/10.1016/j.ecolmodel.2008.07.020
             this.Parameters = new SoilParameters()
             {
-                AnnualNitrogenDeposition = environmentReader.AnnualNitrogenDeposition,
-                El = environmentReader.CurrentEnvironment.SoilEl,
-                Er = environmentReader.CurrentEnvironment.SoilEr,
-                Hc = environmentReader.CurrentEnvironment.SoilHumificationRate,
-                Ko = environmentReader.CurrentEnvironment.SoilOrganicDecompositionRate,
-                Kyl = environmentReader.CurrentEnvironment.SoilYoungLabileDecompositionRate,
-                Kyr = environmentReader.CurrentEnvironment.SoilYoungRefractoryDecompositionRate,
-                Leaching = environmentReader.CurrentEnvironment.SoilLeaching,
-                Qb = environmentReader.SoilQb,
-                Qh = environmentReader.CurrentEnvironment.SoilQh,
-                UseDynamicAvailableNitrogen = environmentReader.UseDynamicAvailableNitrogen
+                AnnualNitrogenDeposition = resourceUnitReader.CurrentEnvironment.AnnualNitrogenDeposition,
+                El = resourceUnitReader.CurrentEnvironment.SoilEl,
+                Er = resourceUnitReader.CurrentEnvironment.SoilEr,
+                Hc = resourceUnitReader.CurrentEnvironment.SoilHumificationRate,
+                Ko = resourceUnitReader.CurrentEnvironment.SoilOrganicDecompositionRate,
+                Kyl = resourceUnitReader.CurrentEnvironment.SoilYoungLabileDecompositionRate,
+                Kyr = resourceUnitReader.CurrentEnvironment.SoilYoungRefractoryDecompositionRate,
+                Leaching = resourceUnitReader.CurrentEnvironment.SoilLeaching,
+                Qb = resourceUnitReader.CurrentEnvironment.SoilQb,
+                Qh = resourceUnitReader.CurrentEnvironment.SoilQh,
+                UseDynamicAvailableNitrogen = resourceUnitReader.CurrentEnvironment.UseDynamicAvailableNitrogen
             };
             if (this.Parameters.Kyl <= 0.0 || this.Parameters.Kyr <= 0.0)
             {
@@ -61,16 +56,16 @@ namespace iLand.World
             this.InputLabile = new CarbonNitrogenPool();
             this.InputRefractory = new CarbonNitrogenPool();
             // ICBM/2 "old" carbon pool: humified soil organic content
-            this.OrganicMatter = new CarbonNitrogenTuple(0.001F * environmentReader.CurrentEnvironment.SoilOrganicC, // environment values are in kg/ha, pool sizes are in t/ha
-                                                         0.001F * environmentReader.CurrentEnvironment.SoilOrganicN);
-            this.PlantAvailableNitrogen = environmentReader.CurrentEnvironment.SoilAvailableNitrogen; // TODO: gets overwritten rather than modified in NewYear()?
+            this.OrganicMatter = new CarbonNitrogenTuple(0.001F * resourceUnitReader.CurrentEnvironment.SoilOrganicC, // environment values are in kg/ha, pool sizes are in t/ha
+                                                         0.001F * resourceUnitReader.CurrentEnvironment.SoilOrganicN);
+            this.PlantAvailableNitrogen = resourceUnitReader.CurrentEnvironment.SoilAvailableNitrogen; // TODO: gets overwritten rather than modified in NewYear()?
             // ICBM/2 litter layer
-            this.YoungLabile = new CarbonNitrogenPool(0.001F * environmentReader.CurrentEnvironment.SoilYoungLabileC,
-                                                      0.001F * environmentReader.CurrentEnvironment.SoilYoungLabileN,
+            this.YoungLabile = new CarbonNitrogenPool(0.001F * resourceUnitReader.CurrentEnvironment.SoilYoungLabileC,
+                                                      0.001F * resourceUnitReader.CurrentEnvironment.SoilYoungLabileN,
                                                       this.Parameters.Kyl);
             // ICBM/2 coarse woody debris
-            this.YoungRefractory = new CarbonNitrogenPool(0.001F * environmentReader.CurrentEnvironment.SoilYoungRefractoryC,
-                                                          0.001F * environmentReader.CurrentEnvironment.SoilYoungRefractoryN,
+            this.YoungRefractory = new CarbonNitrogenPool(0.001F * resourceUnitReader.CurrentEnvironment.SoilYoungRefractoryC,
+                                                          0.001F * resourceUnitReader.CurrentEnvironment.SoilYoungRefractoryN,
                                                           this.Parameters.Kyr);
 
             if (!this.OrganicMatter.HasCarbonAndNitrogen())
@@ -100,7 +95,7 @@ namespace iLand.World
             // stockable area:
             // if the stockable area is < 1ha, then
             // scale the soil inputs to a full hectare
-            float area_ha = RU != null ? RU.AreaInLandscape / Constant.RUArea : 1.0F;
+            float area_ha = RU != null ? RU.AreaInLandscape / Constant.ResourceUnitArea : 1.0F;
             if (area_ha <= 0.0)
             {
                 throw new NotSupportedException("Resource unit's stockable area is zero or negative.");

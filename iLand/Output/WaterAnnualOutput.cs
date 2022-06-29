@@ -52,7 +52,7 @@ namespace iLand.Output
             float stockable = 0.0F, stocked = 0.0F;
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.EnvironmentID == -1)
+                if (ru.ID == -1)
                 {
                     continue; // do not include if out of project area
                 }
@@ -71,9 +71,9 @@ namespace iLand.Output
                 {
                     insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = ru.EnvironmentID;
-                    insertRow.Parameters[3].Value = ru.AreaWithTrees / Constant.RUArea;
-                    insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.RUArea;
+                    insertRow.Parameters[2].Value = ru.ID;
+                    insertRow.Parameters[3].Value = ru.AreaWithTrees / Constant.ResourceUnitArea;
+                    insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.ResourceUnitArea;
                     insertRow.Parameters[5].Value = ru.Climate.GetTotalPrecipitationInCurrentYear();
                     insertRow.Parameters[6].Value = wc.TotalEvapotranspiration;
                     insertRow.Parameters[7].Value = wc.TotalRunoff;
@@ -101,8 +101,8 @@ namespace iLand.Output
             insertRow.Parameters[0].Value = model.CurrentYear; // codes -1/-1 for landscape level
             insertRow.Parameters[1].Value = -1;
             insertRow.Parameters[2].Value = -1;
-            insertRow.Parameters[3].Value = stocked / resourceUnitCount / Constant.RUArea;
-            insertRow.Parameters[4].Value = stockable / resourceUnitCount / Constant.RUArea;
+            insertRow.Parameters[3].Value = stocked / resourceUnitCount / Constant.ResourceUnitArea;
+            insertRow.Parameters[4].Value = stockable / resourceUnitCount / Constant.ResourceUnitArea;
             insertRow.Parameters[5].Value = precip / resourceUnitCount; // mean precip
             insertRow.Parameters[6].Value = evapotranspiration / resourceUnitCount;
             insertRow.Parameters[7].Value = runoff / resourceUnitCount;

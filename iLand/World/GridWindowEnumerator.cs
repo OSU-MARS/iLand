@@ -47,7 +47,7 @@ namespace iLand.World
         /// return the coordinates of the cell center point of the current position in the grid.
         public PointF GetPhysicalPosition() { return this.grid.GetCellCentroid(this.grid.GetCellXYIndex(this.CurrentIndex)); }
         /// return the (index) - coordinates of the current position in the grid
-        public Point GetCellPosition() { return this.grid.GetCellXYIndex(this.CurrentIndex); }
+        public Point GetCellXYIndex() { return this.grid.GetCellXYIndex(this.CurrentIndex); }
 
         /// checks if the state of the GridRunner is valid, returns false if out of scope
         public bool IsValid() { return CurrentIndex >= firstIndex && CurrentIndex <= lastIndex; }

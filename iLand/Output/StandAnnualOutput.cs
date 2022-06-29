@@ -60,7 +60,7 @@ namespace iLand.Output
 
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.EnvironmentID == -1)
+                if (ru.ID == -1)
                 {
                     continue; // do not include if out of project area
                 }
@@ -73,9 +73,9 @@ namespace iLand.Output
                     }
                     insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = ru.EnvironmentID;
+                    insertRow.Parameters[2].Value = ru.ID;
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID;
-                    insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.RUArea; // keys
+                    insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.ResourceUnitArea; // keys
                     // insertRow.Parameters[4].Value = ru.boundingBox().center().x() << ru.boundingBox().center().y();  // temp
                     insertRow.Parameters[5].Value = speciesStats.TreeCount;
                     insertRow.Parameters[6].Value = speciesStats.AverageDbh;

@@ -226,7 +226,12 @@ namespace iLand.Input
         
         public float EstablishmentParametersPsiMin()
         {
-            return reader.IsDBNull(this.establishmentParametersPsiMin) ? Single.NaN : -MathF.Abs(reader.GetFloat(this.establishmentParametersPsiMin)); // force negative value
+            if (reader.IsDBNull(this.establishmentParametersPsiMin))
+            {
+                return Single.NaN;
+            }
+            
+            return -MathF.Abs(reader.GetFloat(this.establishmentParametersPsiMin)); // force negative value
         }
         
         public string SaplingGrowthParametersHeightGrowthPotential() { return reader.GetString(this.saplingGrowthParametersHeightGrowthPotential); }
@@ -238,8 +243,13 @@ namespace iLand.Input
         public float SaplingGrowthParametersBrowsingProbability() { return reader.GetFloat(this.saplingGrowthParametersBrowsingProbability); }
         
         public float SaplingGrowthParametersSproutGrowth() 
-        { 
-            return reader.IsDBNull(this.saplingGrowthParametersSproutGrowth) ? Single.NaN : reader.GetFloat(this.saplingGrowthParametersSproutGrowth); 
+        {
+            if (reader.IsDBNull(this.saplingGrowthParametersSproutGrowth))
+            {
+                return Single.NaN;
+            }
+
+            return reader.GetFloat(this.saplingGrowthParametersSproutGrowth); 
         }
 
         public void Dispose()

@@ -66,13 +66,8 @@ namespace iLand.World
             this.snowPack.WaterEquivalentInMM = snowWaterEquivalentInMM; 
         }
 
-        public void Setup(Project projectFile, EnvironmentReader environmentReader)
+        public void Setup(Project projectFile, ResourceUnitReader environmentReader)
         {
-            if (environmentReader.CurrentEnvironment == null)
-            {
-                throw new ArgumentOutOfRangeException(nameof(environmentReader));
-            }
-
             // get values...
             this.SoilDepthInMM = 10.0F * environmentReader.CurrentEnvironment.SoilDepthInCM; // convert from cm to mm TODO: zero is not a realistic default
             

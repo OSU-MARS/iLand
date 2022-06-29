@@ -252,7 +252,7 @@ namespace iLand.Simulation
                 {
                     int treeIndex = treeIndices[removalIndex];
                     treeWrapper.TreeIndex = treeIndex;
-                    if (selectionExpression.Evaluate(treeWrapper) != 0.0 && model.RandomGenerator.GetRandomFloat() <= removalProbabilityIfSelected)
+                    if (selectionExpression.Evaluate(treeWrapper) != 0.0 && model.RandomGenerator.GetRandomProbability() <= removalProbabilityIfSelected)
                     {
                         if (management)
                         {
@@ -374,7 +374,7 @@ namespace iLand.Simulation
                     // if value is >0 (i.e. not "false"), then draw a random number
                     if (!keep && value > 0.0)
                     {
-                        keep = model.RandomGenerator.GetRandomFloat() < value;
+                        keep = model.RandomGenerator.GetRandomProbability() < value;
                     }
                     if (keep == false)
                     {
@@ -450,28 +450,29 @@ namespace iLand.Simulation
         //    return mTrees.Count;
         //}
 
-        public static void KillSaplings(GridRaster10m standGrid, Model model, int key)
-        {
-            //MapGridWrapper *wrap = qobject_cast<MapGridWrapper*>(map_grid_object.toQObject());
-            //if (!wrap) {
-            //    context().throwError("loadFromMap called with invalid map object!");
-            //    return;
-            //}
-            //loadFromMap(wrap.map(), key);
-            RectangleF boundingBox = standGrid.GetBoundingBox(key);
-            GridWindowEnumerator<float> runner = new(model.Landscape.LightGrid, boundingBox);
-            while (runner.MoveNext())
-            {
-                if (standGrid.GetStandIDFromLightCoordinate(runner.GetCellPosition()) == key)
-                {
-                    SaplingCell? saplingCell = model.Landscape.GetSaplingCell(runner.GetCellPosition(), true, out ResourceUnit ru);
-                    if (saplingCell != null)
-                    {
-                        ru.ClearSaplings(saplingCell, true);
-                    }
-                }
-            }
-        }
+        //public static void KillSaplings(GridRaster10m standGrid, Model model, int key)
+        //{
+        //    //MapGridWrapper *wrap = qobject_cast<MapGridWrapper*>(map_grid_object.toQObject());
+        //    //if (!wrap) {
+        //    //    context().throwError("loadFromMap called with invalid map object!");
+        //    //    return;
+        //    //}
+        //    //loadFromMap(wrap.map(), key);
+        //    RectangleF boundingBox = standGrid.GetBoundingBox(key);
+        //    GridWindowEnumerator<float> lightGridRunner = new(model.Landscape.LightGrid, boundingBox);
+        //    while (lightGridRunner.MoveNext())
+        //    {
+        //        Point lightCellIndexXY = lightGridRunner.GetCellXYIndex();
+        //        if (standGrid.GetPolygonIDFromLightGridIndex(lightCellIndexXY) == key)
+        //        {
+        //            SaplingCell? saplingCell = model.Landscape.GetSaplingCell(lightCellIndexXY, true, out ResourceUnit ru);
+        //            if (saplingCell != null)
+        //            {
+        //                ru.ClearSaplings(saplingCell, true);
+        //            }
+        //        }
+        //    }
+        //}
 
         /// specify removal fractions
         /// @param SWDFrac 0: no change, 1: remove all of standing woody debris

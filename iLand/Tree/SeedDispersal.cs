@@ -45,7 +45,7 @@ namespace iLand.Tree
         private bool mDumpSeedMaps; // if true, seedmaps are stored as images
         private bool mHasExternalSeedInput; // if true, external seeds are modelled for the species
         private int mExternalSeedDirection; // direction of external seeds
-        private int mExternalSeedBuffer; // how many 20m pixels away from the simulation area should the seeding start?
+        private int mExternalSeedBuffer; // how many 20 m pixels away from the model area should the seeding start?
         private float mExternalSeedBackgroundInput; // background propability for this species; if set, then a certain seed availability is provided for the full area
         // external seeds
         private readonly Grid<float> mExternalSeedMap; // for more complex external seed input, this map holds that information
@@ -93,17 +93,17 @@ namespace iLand.Tree
 
             // setup of seed map
             this.SeedMap.Clear();
-            this.SeedMap.Setup(model.Landscape.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
+            this.SeedMap.Setup(model.Landscape.HeightGrid.PhysicalExtent, Constant.SeedmapCellSizeInM);
             this.SeedMap.Fill(0.0F);
-            if (mProbMode == false)
+            if (this.mProbMode == false)
             {
-                mSourceMap.Setup(SeedMap);
-                mSourceMap.Fill(0.0F);
+                this.mSourceMap.Setup(SeedMap);
+                this.mSourceMap.Fill(0.0F);
             }
-            mExternalSeedMap.Clear();
-            mIndexFactor = Constant.SeedmapSize / Constant.LightCellSizeInM; // ratio seed grid / lip-grid:
+            this.mExternalSeedMap.Clear();
+            this.mIndexFactor = Constant.SeedmapCellSizeInM / Constant.LightCellSizeInM; // ratio seed grid / lip-grid:
 
-            if ((model.Project.World.Geometry.Buffer % Constant.SeedmapSize) != 0.0)
+            if ((model.Project.World.Geometry.BufferWidth % Constant.SeedmapCellSizeInM) != 0)
             {
                 throw new NotSupportedException("SeedDispersal:setup(): The buffer (model.world.buffer) must be a integer multiple of the seed pixel size (currently 20m, e.g. 20,40,60,...)).");
             }
@@ -112,7 +112,7 @@ namespace iLand.Tree
             this.mTreeMigOccupancy = 1.0F; // is currently constant
             // copy values for the species parameters
             this.Species.GetTreeMigKernel(out this.mTreeMigAlphas1, out this.mTreeMigAlphas2, out this.mTreeMigKappas);
-            this.mTreeMigFecundityPerCell = this.Species.FecundityM2 * Constant.SeedmapSize * Constant.SeedmapSize * mTreeMigOccupancy; // scale to production for the whole cell
+            this.mTreeMigFecundityPerCell = this.Species.FecundityM2 * Constant.SeedmapCellSizeInM * Constant.SeedmapCellSizeInM * mTreeMigOccupancy; // scale to production for the whole cell
             this.mNonSeedYearFraction = this.Species.NonSeedYearFraction;
             this.mLddMaximumSeedlingDensity = model.Project.Model.SeedDispersal.LongDistanceDispersal.MinimumSeedlingDensity;
             this.mLddMinimumSeedlingDensity = model.Project.Model.SeedDispersal.LongDistanceDispersal.MaximumSeedlingDensity;
@@ -133,7 +133,7 @@ namespace iLand.Tree
             {
                 // an extra seed map is used for storing information related to post-fire seed rain
                 this.mSeedMapSerotiny.Clear();
-                this.mSeedMapSerotiny.Setup(model.Landscape.HeightGrid.PhysicalExtent, Constant.SeedmapSize);
+                this.mSeedMapSerotiny.Setup(model.Landscape.HeightGrid.PhysicalExtent, Constant.SeedmapCellSizeInM);
                 this.mSeedMapSerotiny.Fill(0.0F);
 
                 // set up the special seed kernel for post fire seed rain
@@ -603,7 +603,7 @@ namespace iLand.Tree
                             // check
                             if (this.mExternalSeedBaseMap[indexX, indexY] == 2.0F)
                             {
-                                if (model.RandomGenerator.GetRandomFloat() < p)
+                                if (model.RandomGenerator.GetRandomProbability() < p)
                                 {
                                     mExternalSeedMap[indexX, indexY] = 1.0F; // flag
                                 }
@@ -645,7 +645,7 @@ namespace iLand.Tree
             {
                 // if external seed input is enabled, the buffer area of the seed maps is
                 // "turned on", i.e. set to 1.
-                int bufferSize = (int)(model.Project.World.Geometry.Buffer / seedMap.CellSize);
+                int bufferSize = (int)(model.Project.World.Geometry.BufferWidth / seedMap.CellSize);
                 // if a special buffer is defined, reduce the size of the input
                 if (this.mExternalSeedBuffer > 0)
                 {
@@ -840,7 +840,7 @@ namespace iLand.Tree
                             {
                                 // distance and direction:
                                 float radius = model.RandomGenerator.GetRandomFloat(mLddDistance[distanceIndex], mLddDistance[distanceIndex + 1]) / seedmap.CellSize; // choose a random distance (in pixels)
-                                float phi = model.RandomGenerator.GetRandomFloat() * 2.0F * MathF.PI; // choose a random direction
+                                float phi = model.RandomGenerator.GetRandomProbability() * 2.0F * MathF.PI; // choose a random direction
                                 Point ldd = new((int)(pt.X + radius * MathF.Cos(phi)), (int)(pt.Y + radius * MathF.Sin(phi)));
                                 if (seedmap.Contains(ldd))
                                 {
@@ -933,7 +933,7 @@ namespace iLand.Tree
                                 int nSeeds;
                                 if (this.mLddSeedsByRing[ringIndex] < 1)
                                 {
-                                    nSeeds = model.RandomGenerator.GetRandomFloat() < this.mLddSeedsByRing[ringIndex] ? 1 : 0;
+                                    nSeeds = model.RandomGenerator.GetRandomProbability() < this.mLddSeedsByRing[ringIndex] ? 1 : 0;
                                 }
                                 else
                                 {
@@ -943,7 +943,7 @@ namespace iLand.Tree
                                 {
                                     // distance and direction:
                                     float radiusInCells = model.RandomGenerator.GetRandomFloat(this.mLddDistance[ringIndex], this.mLddDistance[ringIndex + 1]) / this.SeedMap.CellSize; // choose a random distance (in pixels)
-                                    float phi = 2.0F * MathF.PI * model.RandomGenerator.GetRandomFloat(); // choose a random direction
+                                    float phi = 2.0F * MathF.PI * model.RandomGenerator.GetRandomProbability(); // choose a random direction
                                     Point seedCellPosition = new(sourceCellIndex.X + (int)(radiusInCells * MathF.Cos(phi)), sourceCellIndex.Y + (int)(radiusInCells * MathF.Sin(phi)));
                                     if (this.SeedMap.Contains(seedCellPosition))
                                     {
@@ -960,7 +960,7 @@ namespace iLand.Tree
             {
                 // **** seed distribution in torus mode ***
                 int seedmapOffset = sourceMap.GetCellXYIndex(new PointF(0.0F, 0.0F)).X; // the seed maps have x extra rows/columns
-                int seedCellsPerRU = (int)(Constant.RUSize / sourceMap.CellSize);
+                int seedCellsPerRU = (int)(Constant.ResourceUnitSize / sourceMap.CellSize);
                 for (int sourceIndex = 0; sourceIndex < sourceMap.Count; ++sourceIndex)
                 {
                     if (sourceMap[sourceIndex] > 0.0F)
@@ -992,7 +992,7 @@ namespace iLand.Tree
                                 int nSeeds;
                                 if (mLddSeedsByRing[densityIndex] < 1)
                                 {
-                                    nSeeds = model.RandomGenerator.GetRandomFloat() < mLddSeedsByRing[densityIndex] ? 1 : 0;
+                                    nSeeds = model.RandomGenerator.GetRandomProbability() < mLddSeedsByRing[densityIndex] ? 1 : 0;
                                 }
                                 else
                                 {
@@ -1002,7 +1002,7 @@ namespace iLand.Tree
                                 {
                                     // distance and direction:
                                     float radius = model.RandomGenerator.GetRandomFloat(mLddDistance[densityIndex], mLddDistance[densityIndex + 1]) / SeedMap.CellSize; // choose a random distance (in pixels)
-                                    float phi = model.RandomGenerator.GetRandomFloat() * 2.0F * MathF.PI; // choose a random direction
+                                    float phi = model.RandomGenerator.GetRandomProbability() * 2.0F * MathF.PI; // choose a random direction
                                     Point ldd = new((int)(radius * MathF.Cos(phi)), (int)(radius * MathF.Sin(phi))); // destination (offset)
                                     Point torusIndex = ruOffset.Add(new Point(Maths.Modulo((offsetInRU.X + ldd.X), seedCellsPerRU), Maths.Modulo((offsetInRU.Y + ldd.Y), seedCellsPerRU)));
 

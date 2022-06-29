@@ -21,14 +21,14 @@ namespace iLand.Input
         public EsriAsciiRasterReader(string esriAsciiRasterPath)
         {
             // this.data initialized below
-            this.lowerLeftCorner = new PointF(Single.NaN, Single.NaN);
-            this.upperRightCorner = new PointF(Single.NaN, Single.NaN);
+            this.lowerLeftCorner = new PointF(Constant.NoDataSingle, Constant.NoDataSingle);
+            this.upperRightCorner = new PointF(Constant.NoDataSingle, Constant.NoDataSingle);
 
             this.CellSize = 1; // default value (for line mode)
             this.Columns = -1;
-            //this.MinValue = Single.MaxValue;
-            //this.MaxValue = Single.MinValue;
-            this.NoDataValue = Single.NaN;
+            //this.MinValue = Constant.NoDataSingle;
+            //this.MaxValue = Constant.NoDataSingle;
+            this.NoDataValue = Constant.NoDataSingle;
             this.Rows = -1;
 
             // read header
@@ -105,6 +105,11 @@ namespace iLand.Input
                     //}
                 }
             }
+        }
+
+        public RectangleF GetBoundingBox()
+        {
+            return new RectangleF(this.lowerLeftCorner.X, this.lowerLeftCorner.Y, this.upperRightCorner.X - this.lowerLeftCorner.X, this.upperRightCorner.Y - this.lowerLeftCorner.Y);
         }
 
         public float GetValue(PointF modelCoordinate)

@@ -51,12 +51,12 @@ namespace iLand.Input
             if (saplingHeader.Height >= 0)
             {
                 this.Height = Single.Parse(row[saplingHeader.Height]);
-                this.MaxHeight = Single.NaN;
-                this.MinHeight = Single.NaN;
+                this.MaxHeight = Constant.NoDataSingle;
+                this.MinHeight = Constant.NoDataSingle;
             }
             else
             {
-                this.Height = Single.NaN;
+                this.Height = Constant.NoDataSingle;
                 this.MaxHeight = Single.Parse(row[saplingHeader.HeightMax]);
                 this.MinHeight = Single.Parse(row[saplingHeader.HeightMin]);
             }

@@ -84,14 +84,14 @@ namespace iLand.Output
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            foreach (KeyValuePair<int, LandscapeRemovalData> removal in this.removalsByTypeAndSpeciesIndex)
+            foreach ((int removalKey, LandscapeRemovalData removalData) in this.removalsByTypeAndSpeciesIndex)
             {
-                if (removal.Value.Count > 0)
+                if (removalData.Count > 0)
                 {
-                    MortalityCause removalType = (MortalityCause)(removal.Key / LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier);
-                    int speciesIndex = removal.Key % LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier;
+                    MortalityCause removalType = (MortalityCause)(removalKey / LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier);
+                    int speciesIndex = removalKey % LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier;
                     insertRow.Parameters[0].Value = model.CurrentYear;
-                    insertRow.Parameters[1].Value = removal.Value.TreeSpecies.ID;
+                    insertRow.Parameters[1].Value = removalData.TreeSpecies.ID;
                     insertRow.Parameters[2].Value = removalType switch
                     {
                         MortalityCause.CutDown => "C",
@@ -101,9 +101,9 @@ namespace iLand.Output
                         MortalityCause.Salavaged => "S",
                         _ => throw new NotSupportedException("Unhandled tree removal type " + removalType + ".")
                     };
-                    insertRow.Parameters[3].Value = removal.Value.Count;
-                    insertRow.Parameters[4].Value = removal.Value.Volume;
-                    insertRow.Parameters[5].Value = removal.Value.BasalArea;
+                    insertRow.Parameters[3].Value = removalData.Count;
+                    insertRow.Parameters[4].Value = removalData.Volume;
+                    insertRow.Parameters[5].Value = removalData.BasalArea;
                     insertRow.ExecuteNonQuery();
                 }
             }

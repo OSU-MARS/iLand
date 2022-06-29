@@ -76,7 +76,6 @@
     </settings>
   </model>
   <world>
-    <environmentFile>gis\Kalkalpen environment subset.csv</environmentFile>
     <browsing enabled="false">
       <!-- scaling factor modifying the base probability (1=100% of the species specific parameter)-->
       <browsingPressure>1</browsingPressure>
@@ -130,10 +129,8 @@
       <snagMediumLargeDbhBreakpoint>100</snagMediumLargeDbhBreakpoint>
     </defaultSoil>
     <geometry>
-      <!-- must be multiple of seed map cell size, which is hard coded to 20 m, if regeneration is enabled -->
-      <buffer>60</buffer>
-      <width>100</width>
-      <height>200</height>
+      <!-- buffer width must be multiple of seed map cell size, which is hard coded to 20 m, if regeneration is enabled -->
+      <bufferWidth>60</bufferWidth>
       <torus>false</torus>
       <!-- only 2.0 m is currently supported -->
       <lightCellSize>2</lightCellSize>
@@ -152,14 +149,19 @@
       <grassEffect>polygon(0.9999*x^0.15)</grassEffect>
     </grass>
     <initialization>
-      <!-- saplingFile only supported with treeInitializationMethod = standGrid -->
-      <saplingFile />
+      <resourceUnitFile>Kalkalpen resource unit subset.csv</resourceUnitFile>
+      <!-- non-empty saplingFile only supported with resourceUnit = standRaster -->
+      <saplingsByStandFile />
       <snags />
-      <!-- assumed to be in the project's init directory -->
+      <!-- rasterized polygons with stand IDs, only used with resourceUnit = standGrid -->
+      <standRasterFile />
+      <!-- A file which either
+             1) lists individual trees on a single resource unit which are then cloned to all resource units (required if standRasterFile is not specified)
+             2) lists one tree file for each stand ID (requires standRasterFile be specified)
+             3) lists a tree size distribution for each stand
+           Format is .csv or similar delimiters with, optionally, wrapping a Picus trees element. Required to be in the project's init directory. -->
       <treeFile>one tree of each European species.picus</treeFile>
-      <!-- csvOrPicus|iLand -->
-      <treeFileFormat>csvOrPicus</treeFileFormat>
-      <treeInitializationMethod>cloneSingleResourceUnit</treeInitializationMethod>
+      <trees>singleFile</trees>
       <heightGrid>
         <!-- file specifying initial heights to generate trees from -->
         <!--<fileName>lidar_np.txt</fileName>-->
@@ -213,7 +215,6 @@
         </type>
       </phenology>
     </species>
-    <standGrid />
   </world>
   <output>
     <logging>
@@ -277,7 +278,8 @@
       </treeRemoved>
       <water enabled="true">
         <condition></condition>
-        <!--<conditionRU>in(year, 0, 50, 100, 200, 300, 400, 500, 1000)</conditionRU>--> <!-- broken by expression variable indexing bug (mostly) inherited from C++ -->
+        <!--<conditionRU>in(year, 0, 50, 100, 200, 300, 400, 500, 1000)</conditionRU>-->
+        <!-- broken by expression variable indexing bug (mostly) inherited from C++ -->
         <!-- mod(year,10)=0 -->
       </water>
     </annual>
