@@ -22,8 +22,8 @@ namespace iLand
         public const float NoDataSingle = Single.NaN;
 
         public const float RegenerationLayerHeight = 4.0F; // m
-        public const float ResourceUnitArea = 10000.0F; // area of a resource unit, m²
-        public const int ResourceUnitSize = 100; // size of resource unit, m
+        public const float ResourceUnitAreaInM2 = 10000.0F; // area of a resource unit, m²
+        public const int ResourceUnitSizeInM = 100; // size of resource unit, m
         public const int SeedmapCellSizeInM = 20; // size of seedmap cell, m
         public const int TimeStepInYears = 1;
 

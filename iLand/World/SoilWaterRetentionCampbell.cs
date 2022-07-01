@@ -51,12 +51,12 @@ namespace iLand.World
             return mmH20;
         }
 
-        public override float Setup(ResourceUnitReader environmentReader, bool useSoilSaturation)
+        public override float Setup(ResourceUnitEnvironment environment, bool useSoilSaturation)
         {
             // get values...
-            float percentSand = environmentReader.CurrentEnvironment.SoilSand;
-            float percentSilt = environmentReader.CurrentEnvironment.SoilSilt;
-            float percentClay = environmentReader.CurrentEnvironment.SoilClay;
+            float percentSand = environment.SoilSand;
+            float percentSilt = environment.SoilSilt;
+            float percentClay = environment.SoilClay;
             if (Math.Abs(100.0 - (percentSand + percentSilt + percentClay)) > 0.01)
             {
                 throw new NotSupportedException(String.Format("Setup WaterCycle: soil textures do not sum to 100% within 0.01%. Sand: {0}%, silt: {1}%, clay: {2}%. Are these values specified in /project/model/site?", percentSand, percentSilt, percentClay));

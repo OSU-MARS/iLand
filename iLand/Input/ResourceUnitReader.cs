@@ -1,10 +1,7 @@
 ﻿using iLand.Input.ProjectFile;
-using iLand.Tree;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 
 namespace iLand.Input
 {
@@ -17,21 +14,19 @@ namespace iLand.Input
     /// </remarks>
     public class ResourceUnitReader
     {
-        private ResourceUnitEnvironment? currentEnvironment;
-
         private readonly Dictionary<string, int> environmentIndexByCoordinate;
-        private readonly List<ResourceUnitEnvironment> environments;
         private PointF maximumCenterCoordinate;
         private PointF minimumCenterCoordinate;
 
+        public List<ResourceUnitEnvironment> Environments { get; private init; }
+
         public ResourceUnitReader(Project projectFile)
         {
-            this.currentEnvironment = null;
-
             this.environmentIndexByCoordinate = new Dictionary<string, int>();
-            this.environments = new();
             this.maximumCenterCoordinate = new(Single.MinValue, Single.MinValue);
             this.minimumCenterCoordinate = new(Single.MaxValue, Single.MaxValue);
+
+            this.Environments = new();
 
             string resourceUnitFilePath = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.World.Initialization.ResourceUnitFile); // TODO: stop requiring gis\ prefix in project file
             using CsvFile resourceUnitEnvironmentFile = new(resourceUnitFilePath);
@@ -51,64 +46,41 @@ namespace iLand.Input
             {
                 ResourceUnitEnvironment resourceUnitEnvironment = new(environmentHeader, row, defaultEnvironment);
 
-                environmentIndexByCoordinate[resourceUnitEnvironment.GetCentroidKey()] = this.environments.Count;
-                this.environments.Add(resourceUnitEnvironment);
+                environmentIndexByCoordinate[resourceUnitEnvironment.GetCentroidKey()] = this.Environments.Count;
+                this.Environments.Add(resourceUnitEnvironment);
 
-                if (resourceUnitEnvironment.CenterX > this.maximumCenterCoordinate.X)
+                if (resourceUnitEnvironment.GisCenterX > this.maximumCenterCoordinate.X)
                 {
-                    this.maximumCenterCoordinate.X = resourceUnitEnvironment.CenterX;
+                    this.maximumCenterCoordinate.X = resourceUnitEnvironment.GisCenterX;
                 }
-                if (resourceUnitEnvironment.CenterY > this.maximumCenterCoordinate.Y)
+                if (resourceUnitEnvironment.GisCenterY > this.maximumCenterCoordinate.Y)
                 {
-                    this.maximumCenterCoordinate.Y = resourceUnitEnvironment.CenterY;
+                    this.maximumCenterCoordinate.Y = resourceUnitEnvironment.GisCenterY;
                 }
-                if (resourceUnitEnvironment.CenterX < this.minimumCenterCoordinate.X)
+                if (resourceUnitEnvironment.GisCenterX < this.minimumCenterCoordinate.X)
                 {
-                    this.minimumCenterCoordinate.X = resourceUnitEnvironment.CenterX;
+                    this.minimumCenterCoordinate.X = resourceUnitEnvironment.GisCenterX;
                 }
-                if (resourceUnitEnvironment.CenterY < this.minimumCenterCoordinate.Y)
+                if (resourceUnitEnvironment.GisCenterY < this.minimumCenterCoordinate.Y)
                 {
-                    this.minimumCenterCoordinate.Y = resourceUnitEnvironment.CenterY;
+                    this.minimumCenterCoordinate.Y = resourceUnitEnvironment.GisCenterY;
                 }
             });
 
-            if (this.environments.Count < 1)
+            if (this.Environments.Count < 1)
             {
                 throw new NotSupportedException("Resource unit environment file '" + resourceUnitFilePath + "' is empty or has only headers.");
             }
         }
 
-        public ResourceUnitEnvironment CurrentEnvironment 
-        {
-            get 
-            {
-                Debug.Assert(this.currentEnvironment != null);
-                return this.currentEnvironment; 
-            }
-        }
-
         public RectangleF GetBoundingBox()
         {
-            float resourceUnitSize = Constant.ResourceUnitSize;
+            float resourceUnitSize = Constant.ResourceUnitSizeInM;
             float x = this.minimumCenterCoordinate.X - 0.5F * resourceUnitSize;
             float y = this.minimumCenterCoordinate.Y - 0.5F * resourceUnitSize;
             float width = this.maximumCenterCoordinate.X - this.minimumCenterCoordinate.X + resourceUnitSize;
             float height = this.maximumCenterCoordinate.Y - this.minimumCenterCoordinate.Y + resourceUnitSize;
             return new RectangleF(x, y, width, height);
-        }
-
-        /// <summary>
-        /// Moves environment enumerator to specified resource unit.
-        /// </summary>
-        public void MoveTo(PointF ruCentroid)
-        {
-            string key = (int)ruCentroid.X + "_" + (int)ruCentroid.Y;
-            if (environmentIndexByCoordinate.TryGetValue(key, out int environmentIndex) == false)
-            {
-                throw new FileLoadException("Resource unit not found at (" + (int)ruCentroid.X + ", " + (int)ruCentroid.Y + ") in environment file.");
-            }
-
-            this.currentEnvironment = this.environments[environmentIndex];
         }
     }
 }

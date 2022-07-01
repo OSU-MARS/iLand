@@ -18,8 +18,8 @@ namespace iLand.Input
         public List<string> IndividualSpeciesID { get; private init; }
         public List<int> IndividualStandID { get; private init; }
         public List<int> IndividualTag { get; private init; }
-        public List<float> IndividualX { get; private init; }
-        public List<float> IndividualY { get; private init; }
+        public List<float> IndividualGisX { get; private init; }
+        public List<float> IndividualGisY { get; private init; }
 
         public string Path { get; private init; }
 
@@ -45,8 +45,8 @@ namespace iLand.Input
             this.IndividualSpeciesID = new();
             this.IndividualStandID = new();
             this.IndividualTag = new();
-            this.IndividualX = new();
-            this.IndividualY = new();
+            this.IndividualGisX = new();
+            this.IndividualGisY = new();
 
             this.Path = treeFilePath;
 
@@ -60,8 +60,8 @@ namespace iLand.Input
                 {
                     ++treeCount;
                     this.IndividualDbhInCM.Add(Single.Parse(row[individualTreeHeader.Dbh]));
-                    this.IndividualX.Add(Single.Parse(row[individualTreeHeader.X]));
-                    this.IndividualY.Add(Single.Parse(row[individualTreeHeader.Y]));
+                    this.IndividualGisX.Add(Single.Parse(row[individualTreeHeader.X]));
+                    this.IndividualGisY.Add(Single.Parse(row[individualTreeHeader.Y]));
 
                     string speciesID = row[individualTreeHeader.Species];
                     if (Int32.TryParse(speciesID, out int picusID))
@@ -108,8 +108,8 @@ namespace iLand.Input
                              (this.IndividualAge.Count == this.IndividualSpeciesID.Count) &&
                              (this.IndividualAge.Count == this.IndividualStandID.Count) &&
                              (this.IndividualAge.Count == this.IndividualTag.Count) &&
-                             (this.IndividualAge.Count == this.IndividualX.Count) &&
-                             (this.IndividualAge.Count == this.IndividualY.Count));
+                             (this.IndividualAge.Count == this.IndividualGisX.Count) &&
+                             (this.IndividualAge.Count == this.IndividualGisY.Count));
             }
             else if (treeSizeHeader.CanBeSizeDistributionFile)
             {

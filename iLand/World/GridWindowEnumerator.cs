@@ -15,20 +15,20 @@ namespace iLand.World
 
         public int CurrentIndex { get; private set; }
 
-        public GridWindowEnumerator(Grid<T> grid, RectangleF physicalExtentToRun)
+        public GridWindowEnumerator(Grid<T> grid, RectangleF projectExtentToEnumerate)
         {
-            Point topLeft = grid.GetCellXYIndex(physicalExtentToRun.Left, physicalExtentToRun.Top);
-            Point bottomRight = grid.GetCellXYIndex(physicalExtentToRun.Right, physicalExtentToRun.Bottom);
+            Point minimumCoordinate = grid.GetCellXYIndex(projectExtentToEnumerate.X, projectExtentToEnumerate.Y);
+            Point maximumCoordinate = grid.GetCellXYIndex(projectExtentToEnumerate.X + projectExtentToEnumerate.Width, projectExtentToEnumerate.Y + projectExtentToEnumerate.Height);
             
-            Rectangle cellExtentToRun = new(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
-            Point upperLeftCellInWindow = new(cellExtentToRun.Left, cellExtentToRun.Top);
-            Point lowerRightCellInWindow = new(cellExtentToRun.Right, cellExtentToRun.Bottom);
+            Rectangle cellExtentToRun = new(minimumCoordinate.X, minimumCoordinate.Y, maximumCoordinate.X - minimumCoordinate.X, maximumCoordinate.Y - minimumCoordinate.Y);
+            Point upperLeftCellInWindow = new(cellExtentToRun.X, cellExtentToRun.Y);
+            Point lowerRightCellInWindow = new(cellExtentToRun.X + cellExtentToRun.Width, cellExtentToRun.Y + cellExtentToRun.Height);
 
             this.grid = grid;
             this.columnsInWindow = lowerRightCellInWindow.X - upperLeftCellInWindow.X;
-            this.firstIndex = grid.IndexOf(upperLeftCellInWindow.X, upperLeftCellInWindow.Y);
-            this.lastIndex = grid.IndexOf(lowerRightCellInWindow.X - 1, lowerRightCellInWindow.Y - 1);
-            if ((this.firstIndex < 0) || (this.lastIndex >= grid.Count))
+            this.firstIndex = grid.IndexXYToIndex(upperLeftCellInWindow.X, upperLeftCellInWindow.Y);
+            this.lastIndex = grid.IndexXYToIndex(lowerRightCellInWindow.X - 1, lowerRightCellInWindow.Y - 1);
+            if ((this.firstIndex < 0) || (this.lastIndex >= grid.CellCount))
             {
                 throw new ArgumentOutOfRangeException(nameof(cellExtentToRun), "Rectangle extends beyond grid.");
             }
@@ -45,7 +45,7 @@ namespace iLand.World
         }
 
         /// return the coordinates of the cell center point of the current position in the grid.
-        public PointF GetPhysicalPosition() { return this.grid.GetCellCentroid(this.grid.GetCellXYIndex(this.CurrentIndex)); }
+        public PointF GetPhysicalPosition() { return this.grid.GetCellProjectCentroid(this.grid.GetCellXYIndex(this.CurrentIndex)); }
         /// return the (index) - coordinates of the current position in the grid
         public Point GetCellXYIndex() { return this.grid.GetCellXYIndex(this.CurrentIndex); }
 
@@ -96,10 +96,10 @@ namespace iLand.World
             this.GetNeighbors4(neighborIndices);
             // north-east
             int northeastIndex = CurrentIndex + columnsInWindow + columnsNotInWindow + 1;
-            neighborIndices[4] = grid.Count > northeastIndex ? grid[northeastIndex] : default;
+            neighborIndices[4] = grid.CellCount > northeastIndex ? grid[northeastIndex] : default;
             // north-west
             int northwestIndex = CurrentIndex + columnsInWindow + columnsNotInWindow + 1;
-            neighborIndices[5] = grid.Count > northwestIndex ? grid[northwestIndex] : default;
+            neighborIndices[5] = grid.CellCount > northwestIndex ? grid[northwestIndex] : default;
             // south-east
             int southeastIndex = CurrentIndex - columnsInWindow - columnsNotInWindow + 1;
             neighborIndices[6] = southeastIndex >= 0 ? grid[southeastIndex]: default;
@@ -119,7 +119,7 @@ namespace iLand.World
         {
             if (grid.Contains(cellPosition))
             {
-                this.CurrentIndex = grid.IndexOf(cellPosition.X, cellPosition.Y);
+                this.CurrentIndex = grid.IndexXYToIndex(cellPosition.X, cellPosition.Y);
             }
             else
             {

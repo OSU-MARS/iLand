@@ -24,7 +24,7 @@ namespace iLand.World
 
         public float AreaInLandscape { get; set; } // total stockable area in m² at height grid (10 m) resolution
         public float AreaWithTrees { get; private set; } // get the stocked area in m² at height grid (10 m) resolution
-        public RectangleF BoundingBox { get; set; }
+        public RectangleF ProjectExtent { get; set; }
         public ResourceUnitCarbonFluxes CarbonCycle { get; private init; }
         public Climate Climate { get; set; } // link to the climate on this resource unit
         public Point TopLeftLightPosition { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
@@ -58,14 +58,14 @@ namespace iLand.World
         // TODO: why does this variant of LAI calculation use stockable area instead of stocked area?
         public float GetLeafAreaIndex() { return this.AreaInLandscape != 0.0F ? this.Trees.TotalLeafArea / this.AreaInLandscape : 0.0F; }
 
-        public void Setup(Project projectFile, ResourceUnitReader resourceUnitReader)
+        public void Setup(Project projectFile, ResourceUnitEnvironment environment)
         {
-            this.WaterCycle.Setup(projectFile, resourceUnitReader);
+            this.WaterCycle.Setup(projectFile, environment);
 
             if (projectFile.Model.Settings.CarbonCycleEnabled)
             {
-                this.Soil = new ResourceUnitSoil(resourceUnitReader, this);
-                this.Snags = new Snags(projectFile, resourceUnitReader, this);
+                this.Soil = new ResourceUnitSoil(this, environment);
+                this.Snags = new Snags(projectFile, this, environment);
             }
 
             if (projectFile.Model.Settings.RegenerationEnabled)
@@ -141,7 +141,7 @@ namespace iLand.World
             {
                 return;
             }
-            SaplingCell? saplingCell = model.Landscape.GetSaplingCell(trees.LightCellPosition[treeIndex], true, out ResourceUnit _);
+            SaplingCell? saplingCell = model.Landscape.GetSaplingCell(trees.LightCellIndexXY[treeIndex], true, out ResourceUnit _);
             if (saplingCell == null)
             {
                 return;
@@ -167,7 +167,7 @@ namespace iLand.World
                 int neighbor = model.RandomGenerator.GetRandomInteger(0, 8);
                 for (; lightCellsInCrown > 0; --lightCellsInCrown)
                 {
-                    saplingCell = model.Landscape.GetSaplingCell(trees.LightCellPosition[treeIndex].Add(new Point(offsetsX[neighbor], offsetsY[neighbor])), true, out ResourceUnit _);
+                    saplingCell = model.Landscape.GetSaplingCell(trees.LightCellIndexXY[treeIndex].Add(new Point(offsetsX[neighbor], offsetsY[neighbor])), true, out ResourceUnit _);
                     if (saplingCell != null)
                     {
                         this.ClearSaplings(saplingCell, false);
@@ -232,7 +232,7 @@ namespace iLand.World
                 float seeds = 0.0F;
                 for (int seedIndexY = 0; seedIndexY < Tree.SaplingCell.SaplingsPerCell; ++seedIndexY)
                 {
-                    int seedIndex = seedMap.IndexOf(seedmapOrigin.X, seedmapOrigin.Y);
+                    int seedIndex = seedMap.IndexXYToIndex(seedmapOrigin.X, seedmapOrigin.Y);
                     for (int seedIndexX = 0; seedIndexX < Tree.SaplingCell.SaplingsPerCell; ++seedIndex, ++seedIndexX)
                     {
                         seeds += seedMap[seedIndex];
@@ -256,7 +256,7 @@ namespace iLand.World
                 Grid<float> lightGrid = model.Landscape.LightGrid;
                 for (int lightIndexY = 0; lightIndexY < Constant.LightCellsPerRUWidth; ++lightIndexY)
                 {
-                    int lightIndex = lightGrid.IndexOf(ruOrigin.X, ruOrigin.Y + lightIndexY); // index on 2m cell
+                    int lightIndex = lightGrid.IndexXYToIndex(ruOrigin.X, ruOrigin.Y + lightIndexY); // index on 2m cell
                     for (int lightIndexX = 0; lightIndexX < Constant.LightCellsPerRUWidth; ++lightIndexX, ++lightIndex)
                     {
                         SaplingCell saplingCell = this.SaplingCells[lightIndexY * Constant.LightCellsPerRUWidth + lightIndexX]; // pointer to a row
@@ -325,7 +325,7 @@ namespace iLand.World
             Point ruOrigin = this.TopLeftLightPosition;
             for (int lightIndexY = 0; lightIndexY < Constant.LightCellsPerRUWidth; ++lightIndexY)
             {
-                int lightIndex = lightGrid.IndexOf(ruOrigin.X, ruOrigin.Y + lightIndexY);
+                int lightIndex = lightGrid.IndexXYToIndex(ruOrigin.X, ruOrigin.Y + lightIndexY);
                 for (int lightIndexX = 0; lightIndexX < Constant.LightCellsPerRUWidth; ++lightIndexX, ++lightIndex)
                 {
                     SaplingCell saplingCell = this.SaplingCells[lightIndexY * Constant.LightCellsPerRUWidth + lightIndexX]; // ptr to row
@@ -472,7 +472,7 @@ namespace iLand.World
                 {
                     int treeIndex = this.Trees.AddTree(model.Landscape, species.ID);
                     Trees treesOfSpecies = this.Trees.TreesBySpeciesID[species.ID];
-                    treesOfSpecies.LightCellPosition[treeIndex] = model.Landscape.LightGrid.GetCellXYIndex(lightIndex);
+                    treesOfSpecies.LightCellIndexXY[treeIndex] = model.Landscape.LightGrid.GetCellXYIndex(lightIndex);
                     // add variation: add +/-N% to dbh and *independently* to height.
                     treesOfSpecies.Dbh[treeIndex] = dbh * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
                     treesOfSpecies.SetHeight(treeIndex, sapling.Height * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation));
@@ -568,7 +568,7 @@ namespace iLand.World
             else
             {
                 // height pixels are counted during the height-grid-calculations
-                this.AreaWithTrees = Constant.HeightCellSizeInM * Constant.HeightCellSizeInM * this.heightCellsWithTrees; // m2 (1 height grid pixel = 10x10m)
+                this.AreaWithTrees = Constant.HeightCellSizeInM * Constant.HeightCellSizeInM * this.heightCellsWithTrees; // m² (1 height grid pixel = 10x10m)
                 float laiBasedOnRUAreaWithinLandscape = this.GetLeafAreaIndex();
                 if (laiBasedOnRUAreaWithinLandscape < 3.0F)
                 {
@@ -679,13 +679,13 @@ namespace iLand.World
                 this.CarbonCycle.Npp = this.Trees.StatisticsForAllSpeciesAndStands.TreeNpp * Constant.BiomassCFraction;
                 this.CarbonCycle.Npp += this.Trees.StatisticsForAllSpeciesAndStands.SaplingNpp * Constant.BiomassCFraction;
 
-                float area_factor = this.AreaInLandscape / Constant.ResourceUnitArea; //conversion factor
+                float area_factor = this.AreaInLandscape / Constant.ResourceUnitAreaInM2; //conversion factor
                 float to_atm = this.Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha
-                to_atm += 0.1F * this.Soil.FluxToAtmosphere.C * Constant.ResourceUnitArea; // soil: t/ha * 0.0001 ha/m2 * 1000 kg/ton = 0.1 kg/m2
+                to_atm += 0.1F * this.Soil.FluxToAtmosphere.C * Constant.ResourceUnitAreaInM2; // soil: t/ha * 0.0001 ha/m2 * 1000 kg/ton = 0.1 kg/m2
                 this.CarbonCycle.CarbonToAtmosphere = to_atm;
 
                 float to_dist = this.Snags.FluxToDisturbance.C / area_factor;
-                to_dist += 0.1F * this.Soil.FluxToDisturbance.C * Constant.ResourceUnitArea;
+                to_dist += 0.1F * this.Soil.FluxToDisturbance.C * Constant.ResourceUnitAreaInM2;
                 float to_harvest = this.Snags.FluxToExtern.C / area_factor;
 
                 this.CarbonCycle.Nep = this.CarbonCycle.Npp - to_atm - to_dist - to_harvest; // kgC/ha

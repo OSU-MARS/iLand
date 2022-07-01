@@ -75,7 +75,7 @@ namespace iLand.Output
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = ru.ID;
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID;
-                    insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.ResourceUnitArea; // keys
+                    insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.ResourceUnitAreaInM2; // keys
                     // insertRow.Parameters[4].Value = ru.boundingBox().center().x() << ru.boundingBox().center().y();  // temp
                     insertRow.Parameters[5].Value = speciesStats.TreeCount;
                     insertRow.Parameters[6].Value = speciesStats.AverageDbh;

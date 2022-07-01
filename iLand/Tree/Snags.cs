@@ -38,7 +38,7 @@ namespace iLand.Tree
         public CarbonNitrogenTuple TotalStanding { get; private set; } // sum of C and N in SWD pools (stems) kg/ha
         public CarbonNitrogenTuple TotalBranchesAndRoots { get; private set; } // sum of C and N in other woody pools (branches + coarse roots) kg/ha
 
-        public Snags(Project projectFile, ResourceUnitReader resourceUnitReader, ResourceUnit ru)
+        public Snags(Project projectFile, ResourceUnit ru, ResourceUnitEnvironment environment)
         {
             // class size of snag classes
             // swdDBHClass12: class break between classes 1 and 2 for standing snags (DBH, cm)
@@ -113,16 +113,16 @@ namespace iLand.Tree
 
             // Inital values from XML file
             // put carbon of snags to the middle size class
-            this.StandingWoodyDebrisByClass[1].C = resourceUnitReader.CurrentEnvironment.SnagStemCarbon;
-            this.StandingWoodyDebrisByClass[1].N = this.StandingWoodyDebrisByClass[1].C / resourceUnitReader.CurrentEnvironment.SnagStemCNRatio;
-            this.StandingWoodyDebrisByClass[1].DecompositionRate = resourceUnitReader.CurrentEnvironment.SnagStemDecompositionRate;
-            this.StemDecompositionRateByClass[1] = resourceUnitReader.CurrentEnvironment.SnagStemDecompositionRate;
-            this.NumberOfSnagsByClass[1] = resourceUnitReader.CurrentEnvironment.SnagsPerResourceUnit;
-            this.HalfLifeByClass[1] = resourceUnitReader.CurrentEnvironment.SnagHalfLife;
+            this.StandingWoodyDebrisByClass[1].C = environment.SnagStemCarbon;
+            this.StandingWoodyDebrisByClass[1].N = this.StandingWoodyDebrisByClass[1].C / environment.SnagStemCNRatio;
+            this.StandingWoodyDebrisByClass[1].DecompositionRate = environment.SnagStemDecompositionRate;
+            this.StemDecompositionRateByClass[1] = environment.SnagStemDecompositionRate;
+            this.NumberOfSnagsByClass[1] = environment.SnagsPerResourceUnit;
+            this.HalfLifeByClass[1] = environment.SnagHalfLife;
             // and for the Branch/coarse root pools: split the init value into five chunks
-            CarbonNitrogenPool branches = new(resourceUnitReader.CurrentEnvironment.SnagBranchRootCarbon,
-                                              resourceUnitReader.CurrentEnvironment.SnagBranchRootCarbon / resourceUnitReader.CurrentEnvironment.SnagBranchRootCNRatio,
-                                              resourceUnitReader.CurrentEnvironment.SnagBranchRootDecompositionRate);
+            CarbonNitrogenPool branches = new(environment.SnagBranchRootCarbon,
+                                              environment.SnagBranchRootCarbon / environment.SnagBranchRootCNRatio,
+                                              environment.SnagBranchRootDecompositionRate);
             this.StandingAndDebrisCarbon = branches.C + this.StandingWoodyDebrisByClass[1].C;
 
             branches *= 1.0F / this.BranchesAndCoarseRootsByYear.Length;
@@ -164,7 +164,7 @@ namespace iLand.Tree
 
         public void ScaleInitialState()
         {
-            float areaFactor = this.RU.AreaInLandscape / Constant.ResourceUnitArea; // fraction stockable area
+            float areaFactor = this.RU.AreaInLandscape / Constant.ResourceUnitAreaInM2; // fraction stockable area
             // avoid huge snag pools on very small resource units (see also soil.cpp)
             // area_factor = std::max(area_factor, 0.1);
             this.StandingWoodyDebrisByClass[1] *= areaFactor;

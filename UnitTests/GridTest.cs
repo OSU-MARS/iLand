@@ -11,7 +11,7 @@ namespace iLand.Test
         private static Grid<float> CreateAveragedGrid(int cellSize)
         {
             Grid<float> grid = new();
-            grid.Setup(Constant.ResourceUnitSize / cellSize, Constant.ResourceUnitSize / cellSize, cellSize);
+            grid.Setup(Constant.ResourceUnitSizeInM / cellSize, Constant.ResourceUnitSizeInM / cellSize, cellSize);
             for (int xIndex = 0; xIndex < grid.SizeX; xIndex++)
             {
                 for (int yIndex = 0; yIndex < grid.SizeY; yIndex++)
@@ -36,7 +36,7 @@ namespace iLand.Test
         {
             Grid<float> averaged = GridTest.CreateAveragedGrid(10);
             int count = 0;
-            for (int index = 0; index < averaged.Count; ++index)
+            for (int index = 0; index < averaged.CellCount; ++index)
             {
                 if (averaged[index] > 0.09)
                 {

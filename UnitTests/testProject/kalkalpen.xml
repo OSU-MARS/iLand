@@ -132,8 +132,6 @@
       <!-- buffer width must be multiple of seed map cell size, which is hard coded to 20 m, if regeneration is enabled -->
       <bufferWidth>60</bufferWidth>
       <torus>false</torus>
-      <!-- only 2.0 m is currently supported -->
-      <lightCellSize>2</lightCellSize>
       <!-- location of the model's origin (0, 0 point) in GIS inputs, used to transform GIS grids to model coordinates -->
     </geometry>
     <grass enabled="true">

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
-using System.Text;
 
 namespace iLand.World
 {
@@ -17,49 +15,48 @@ namespace iLand.World
     /// </remarks>
     public class Grid<T>
     {
-        private T[]? data;
+        private T[] data;
 
         /// get the length of one pixel of the grid
-        public float CellSize { get; private set; }
-        // returns the number of elements of the grid
-        public int Count { get; private set; } 
-        /// get the metric rectangle of the grid
-        public RectangleF PhysicalExtent { get; private set; }
+        public float CellSizeInM { get; private set; }
+        /// bounding box in project coordinates
+        public RectangleF ProjectExtent { get; private set; }
         public int SizeX { get; private set; }
         public int SizeY { get; private set; }
 
         public Grid()
         {
-            this.data = null;
-            this.CellSize = 0.0F;
+            this.data = Array.Empty<T>();
+
+            this.CellSizeInM = 0.0F;
+            this.ProjectExtent = default;
             this.SizeX = 0;
             this.SizeY = 0;
-            this.Count = 0;
-            this.PhysicalExtent = default;
-        }
-
-        public Grid(int sizeX, int sizeY, float cellSize)
-        {
-            this.data = null;
-            this.Setup(sizeX, sizeY, cellSize);
         }
 
         public Grid(RectangleF extent, float cellSize)
+            : this()
         {
             this.Setup(extent, cellSize);
         }
 
         public Grid(Grid<T> other)
+            : this()
         {
             if (other.data == null)
             {
                 throw new ArgumentOutOfRangeException(nameof(other));
             }
 
-            this.Setup(other.PhysicalExtent, other.CellSize);
+            this.Setup(other.ProjectExtent, other.CellSizeInM);
             Array.Copy(other.data, 0, this.data, 0, other.data.Length);
         }
 
+        // returns the number of elements of the grid
+        public int CellCount 
+        { 
+            get { return this.data.Length; }
+        }
 
         public T this[int index]
         {
@@ -87,75 +84,96 @@ namespace iLand.World
             }
         }
 
-        public T this[float x, float y]
+        public T this[float projectX, float projectY]
         {
-            get { return this[this.GetCellXYIndex(x, y)]; }
-            set { this[this.GetCellXYIndex(x, y)] = value; }
+            get { return this[this.GetCellXYIndex(projectX, projectY)]; }
+            set { this[this.GetCellXYIndex(projectX, projectY)] = value; }
         }
 
-        public T this[Point p]
+        public T this[Point indexXY]
         {
-            get { return this[p.X, p.Y]; }
-            set { this[p.X, p.Y] = value; }
+            get { return this[indexXY.X, indexXY.Y]; }
+            set { this[indexXY.X, indexXY.Y] = value; }
         }
 
-        /// use the square bracket to access by PointF
-        public T this[PointF p]
+        public T this[PointF projectCoordinate]
         {
-            get { return this[GetCellXYIndex(p)]; }
-            set { this[GetCellXYIndex(p)] = value; }
+            get { return this[this.GetCellXYIndex(projectCoordinate)]; }
+            set { this[this.GetCellXYIndex(projectCoordinate)] = value; }
         }
 
-        public bool Contains(float x, float y)
+        public bool Contains(float projectX, float projectY)
         {
-            return x >= this.PhysicalExtent.Left && x < this.PhysicalExtent.Right && y >= this.PhysicalExtent.Top && y < this.PhysicalExtent.Bottom;
+            return (projectX >= this.ProjectExtent.X) && 
+                   (projectY >= this.ProjectExtent.Y) &&
+                   (projectX < this.ProjectExtent.X + this.ProjectExtent.Width) && 
+                   (projectY < this.ProjectExtent.Y + this.ProjectExtent.Height);
         }
 
-        // return true, if index is within the grid
-        public bool Contains(int x, int y)
+        // return true if index is within the grid
+        public bool Contains(int indexX, int indexY)
         {
-            return (x >= 0 && x < this.SizeX && y >= 0 && y < this.SizeY);
+            return (indexX >= 0) && (indexX < this.SizeX) && (indexY >= 0) && (indexY < this.SizeY);
         }
 
-        public bool Contains(Point pos)
+        public bool Contains(Point projectCoordinate)
         {
-            return this.Contains(pos.X, pos.Y);
+            return this.Contains(projectCoordinate.X, projectCoordinate.Y);
         }
 
-        public bool Contains(PointF pos)
+        public bool Contains(PointF indexXY)
         {
-            return Contains(pos.X, pos.Y);
+            return this.Contains(indexXY.X, indexXY.Y);
         }
 
-        public PointF GetCellCentroid(Point cellIndex) // get metric coordinates of the cells center
+        public PointF GetCellProjectCentroid(Point cellIndexXY)
         {
-            return new PointF((cellIndex.X + 0.5F) * this.CellSize + this.PhysicalExtent.Left, (cellIndex.Y + 0.5F) * this.CellSize + this.PhysicalExtent.Top);
+            return new PointF((cellIndexXY.X + 0.5F) * this.CellSizeInM + this.ProjectExtent.X, 
+                              (cellIndexXY.Y + 0.5F) * this.CellSizeInM + this.ProjectExtent.Y);
         }
 
-        /// get the metric cell center point of the cell given by index 'index'
-        public PointF GetCellCentroid(int cellIndex)
+        /// <summary>
+        /// get the center point of the cell given by index in project coordinates
+        /// </summary>
+        public PointF GetCellProjectCentroid(int cellIndex)
         {
-            return this.GetCellCentroid(this.GetCellXYIndex(cellIndex));
+            return this.GetCellProjectCentroid(this.GetCellXYIndex(cellIndex));
         }
 
-        /// get the metric rectangle of the cell with index @pos
-        public RectangleF GetCellExtent(Point cell) // return coordinates of rect given by @param pos.
+        /// <summary>
+        /// get the bounding box of the cell given by index in project coordinates
+        /// </summary>
+        public RectangleF GetCellProjectExtent(Point cellIndexXY) // return coordinates of rect given by @param pos.
         {
-            RectangleF extent = new(this.PhysicalExtent.Left + this.CellSize * cell.X, this.PhysicalExtent.Top + cell.Y * this.CellSize, this.CellSize, this.CellSize);
+            RectangleF extent = new(this.ProjectExtent.X + this.CellSizeInM * cellIndexXY.X, this.ProjectExtent.Y + cellIndexXY.Y * this.CellSizeInM, this.CellSizeInM, this.CellSizeInM);
             return extent;
         }
 
         // get index of value at position pos (metric)
-        public Point GetCellXYIndex(PointF pos)
+        public Point GetCellXYIndex(PointF projectCoordinate)
         {
-            return this.GetCellXYIndex(pos.X, pos.Y);
+            return this.GetCellXYIndex(projectCoordinate.X, projectCoordinate.Y);
         }
 
-        public Point GetCellXYIndex(float x, float y)
+        public Point GetCellXYIndex(float projectX, float projectY)
         {
-            // C++ version incorrectly assumes integer trunction rounds towards minus infinity rather than towards zero
-            int xIndex = (int)MathF.Floor((x - this.PhysicalExtent.Left) / this.CellSize);
-            int yIndex = (int)MathF.Floor((y - this.PhysicalExtent.Top) / this.CellSize);
+            // The iLand 1.0 C++ code
+            // - places the project origin at the minimum corner of the resource unit rather than the (buffered) light and height grids,
+            //   which results negative xy indices for coordinates within the south and west sides of the buffer
+            // - incorrectly assumes integer trunction rounds towards minus infinity rather than towards zero, which collapses two rows'
+            //   and two columns' light stamping into one row and one column, resulting in double or (for the 0,0 cell) quadruplicate
+            //   stamping and errors in tree growth along the south and west boundaries of the project area
+            // The implementation in C++ should therefore be
+            //   int xIndex = (int)MathF.Floor((projectX - this.ProjectExtent.X) / this.CellSizeInM);
+            //   int yIndex = (int)MathF.Floor((projectY - this.ProjectExtent.Y) / this.CellSizeInM);
+            // where Floor() rounds towards minus infinity.
+            //
+            // In the C# implementation negative project coordinates do not occur as the project coordinate system's origin is placed
+            // at the light and height grids' (buffered) origin instead of the resource unit grid's origin. Integer truncation, rather
+            // than Floor(), can therefore be used.
+            Debug.Assert((projectX >= 0.0F) && (projectY >= 0.0F));
+            int xIndex = (int)((projectX - this.ProjectExtent.X) / this.CellSizeInM);
+            int yIndex = (int)((projectY - this.ProjectExtent.Y) / this.CellSizeInM);
             return new Point(xIndex, yIndex);
         }
 
@@ -165,47 +183,47 @@ namespace iLand.World
             return new Point(index % this.SizeX, index / this.SizeX);
         }
 
-        [MemberNotNullWhen(true, nameof(Grid<T>.data))]
         public bool IsSetup()
         { 
-            return this.data != null; 
+            return this.data.Length > 0; 
         }
         
-        /// returns the index of an aligned grid (with the same size and matching origin) with the doubled cell size (e.g. to scale from a 10m grid to a 20m grid)
-        // public int index2(int idx) { return ((idx / mSizeX) / 2) * (mSizeX / 2) + (idx % mSizeX) / 2; }
-        /// returns the index of an aligned grid (the same size) with the 5 times bigger cells (e.g. to scale from a 2m grid to a 10m grid)
-        public int Index5(int index) { return ((index / this.SizeX) / 5) * (this.SizeX / 5) + (index % this.SizeX) / 5; }
-        /// returns the index of an aligned grid (the same size) with the 10 times bigger cells (e.g. to scale from a 2m grid to a 20m grid)
-        public int Index10(int index) { return ((index / this.SizeX) / 10) * (this.SizeX / 10) + (index % this.SizeX) / 10; }
-
-        public int IndexOf(int indexX, int indexY) { return indexY * this.SizeX + indexX; } // get the 0-based index of the cell with indices ix and iy.
-        public int IndexOf(Point cell) { return cell.Y * this.SizeX + cell.X; } // get the 0-based index of the cell at 'pos'.
-
-        /// force @param pos to contain valid indices with respect to this grid.
-        public void Limit(Point cell) // ensure that "pos" is a valid key. if out of range, pos is set to minimum/maximum values.
-        {
-            cell.X = Math.Max(Math.Min(cell.X, this.SizeX - 1), 0);
-            cell.Y = Math.Max(Math.Min(cell.Y, this.SizeY - 1), 0);
+        /// returns the index of an aligned grid (the same size) with 5 times bigger cells (e.g. convert from a 2 m grid to a 10 m grid)
+        public int Index5(int cellIndex) 
+        { 
+            return ((cellIndex / this.SizeX) / 5) * (this.SizeX / 5) + (cellIndex % this.SizeX) / 5; 
         }
 
-        public void Clear()
-        {
-            // BUGBUG: what about all other fields?
-            this.data = null;
+        /// returns the index of an aligned grid (the same size) with 10 times bigger cells (e.g. convert from a 2 m grid to a 20 m grid)
+        public int Index10(int cellIndex) 
+        { 
+            return ((cellIndex / this.SizeX) / 10) * (this.SizeX / 10) + (cellIndex % this.SizeX) / 10; 
         }
 
-        public void CopyFrom(Grid<T> source)
+        public int IndexXYToIndex(int indexX, int indexY) 
         {
-            if ((this.IsSetup() == false) || (source.IsSetup() == false))
+            // get the 0-based index of the cell with indices ix and iy.
+            return indexY * this.SizeX + indexX; 
+        }
+
+        public int IndexXYToIndex(Point indexXY) 
+        {
+            // get the 0-based index of the cell at 'pos'.
+            return indexXY.Y * this.SizeX + indexXY.X; 
+        }
+
+        public void CopyFrom(Grid<T> other)
+        {
+            if ((this.IsSetup() == false) || (other.IsSetup() == false))
             {
                 throw new NotSupportedException("Either target or destination grid is not setup.");
             }
-            if ((this.CellSize != source.CellSize) || (this.SizeX != source.SizeX) || (this.SizeY != source.SizeY) || (source.Count != this.Count))
+            if ((this.CellSizeInM != other.CellSizeInM) || (this.SizeX != other.SizeX) || (this.SizeY != other.SizeY) || (other.CellCount != this.CellCount))
             {
-                throw new ArgumentOutOfRangeException(nameof(source));
+                throw new ArgumentOutOfRangeException(nameof(other));
             }
-            this.PhysicalExtent = source.PhysicalExtent;
-            Array.Copy(source.data!, 0, this.data!, 0, source.data!.Length);
+            this.ProjectExtent = other.ProjectExtent;
+            Array.Copy(other.data!, 0, this.data!, 0, other.data!.Length);
         }
 
         public void Fill(T value)
@@ -217,49 +235,50 @@ namespace iLand.World
             Array.Fill(this.data, value);
         }
 
-        public float GetCenterToCenterCellDistance(Point p1, Point p2)
+        public float GetCenterToCenterDistance(Point cellIndexXY1, Point cellIndexXY2)
         {
-            PointF fp1 = GetCellCentroid(p1);
-            PointF fp2 = GetCellCentroid(p2);
-            float distance = MathF.Sqrt((fp1.X - fp2.X) * (fp1.X - fp2.X) + (fp1.Y - fp2.Y) * (fp1.Y - fp2.Y));
+            PointF centroid1 = this.GetCellProjectCentroid(cellIndexXY1);
+            PointF centroid2 = this.GetCellProjectCentroid(cellIndexXY2);
+            float deltaX = centroid1.X - centroid2.X;
+            float deltaY = centroid1.Y - centroid2.Y;
+            float distance = MathF.Sqrt(deltaX * deltaX + deltaY * deltaY);
             return distance;
         }
 
-        [MemberNotNull(nameof(Grid<T>.data))]
-        public bool Setup(Grid<T> source)
+        public void Setup(Grid<T> source)
         {
-            this.Clear();
-            return this.Setup(source.PhysicalExtent, source.CellSize);
+            this.Setup(source.ProjectExtent, source.CellSizeInM);
         }
 
-        [MemberNotNull(nameof(Grid<T>.data))]
-        public bool Setup(RectangleF extent, float cellSize)
+        public void Setup(RectangleF extent, float cellSizeInM)
         {
-            if (cellSize <= 0.0F)
+            if (cellSizeInM <= 0.0F)
             {
-                throw new ArgumentOutOfRangeException(nameof(cellSize));
+                throw new ArgumentOutOfRangeException(nameof(cellSizeInM));
             }
             if ((extent.Width <= 0.0F) || (extent.Height <= 0.0F))
             {
                 throw new ArgumentOutOfRangeException(nameof(extent));
             }
 
-            this.PhysicalExtent = extent;
-            int cellsX = (int)(extent.Width / cellSize);
-            if (this.PhysicalExtent.Left + cellSize * cellsX < extent.Right)
+            this.ProjectExtent = extent;
+
+            // if needed pad for numerical error
+            int cellsX = (int)(extent.Width / cellSizeInM);
+            if (this.ProjectExtent.X + cellSizeInM * cellsX < extent.X + extent.Width)
             {
                 ++cellsX;
             }
-            int cellsY = (int)(extent.Height / cellSize);
-            if (this.PhysicalExtent.Top + cellSize * cellsY < extent.Bottom)
+            int cellsY = (int)(extent.Height / cellSizeInM);
+            if (this.ProjectExtent.Y + cellSizeInM * cellsY < extent.Y + extent.Height)
             {
                 ++cellsY;
             }
-            return this.Setup(cellsX, cellsY, cellSize);
+
+            this.Setup(cellsX, cellsY, cellSizeInM);
         }
 
-        [MemberNotNull(nameof(Grid<T>.data))]
-        public bool Setup(int cellsX, int cellsY, float cellSize)
+        public void Setup(int cellsX, int cellsY, float cellSizeInM)
         {
             if (cellsX < 1)
             {
@@ -269,49 +288,40 @@ namespace iLand.World
             {
                 throw new ArgumentOutOfRangeException(nameof(cellsY));
             }
-            if (cellSize < 0.0F)
+            if (cellSizeInM < 0.0F)
             {
-                throw new ArgumentOutOfRangeException(nameof(cellSize));
+                throw new ArgumentOutOfRangeException(nameof(cellSizeInM));
             }
 
-            if (this.data != null)
+            // reuse the data array that's already been allocated if it's large enough
+            // If needed, shrinkage of an existing data array can be supported.
+            int newCount = cellsX * cellsY;
+            if (newCount > this.CellCount)
             {
-                // reuse the data array that's already been allocated if it's large enough
-                // If needed, shrinkage of the array can be supported.
-                if (cellsX * cellsY > this.Count)
-                {
-                    this.data = null;
-                }
+                this.data = new T[newCount];
             }
 
-            this.CellSize = cellSize;
-            this.Count = cellsX * cellsY;
+            this.CellSizeInM = cellSizeInM;
             this.SizeX = cellsX;
             this.SizeY = cellsY;
-            this.PhysicalExtent = new RectangleF(this.PhysicalExtent.X, this.PhysicalExtent.Y, cellSize * cellsX, cellSize * cellsY);
-
-            if (this.data == null)
-            {
-                this.data = new T[this.Count];
-            }
-            return true;
+            this.ProjectExtent = new RectangleF(this.ProjectExtent.X, this.ProjectExtent.Y, cellSizeInM * cellsX, cellSizeInM * cellsY);
         }
 
-        /// dumps a Grid<T> to a long data CSV.
-        /// rows will be y-lines, columns x-values. (see grid.cpp)
-        public string ToCsv()
-        {
-            StringBuilder csvBuilder = new();
-            csvBuilder.AppendLine("x_m,y_m,value"); // wrong if value overrides ToString() and returns multiple values but OK for now
-            for (int xIndex = 0; xIndex < this.SizeX; ++xIndex)
-            {
-                for (int yIndex = 0; yIndex < this.SizeY; ++yIndex)
-                {
-                    PointF cellCenter = this.GetCellCentroid(new Point(xIndex, yIndex));
-                    csvBuilder.AppendLine(cellCenter.X + "," + cellCenter.Y + "," + this[xIndex, yIndex]!.ToString());
-                }
-            }
-            return csvBuilder.ToString();
-        }
+        /// dumps a Grid<T> to a wideform CSV
+        /// rows will be y-lines, columns x-values
+        //public string ToCsv()
+        //{
+        //    StringBuilder csvBuilder = new();
+        //    csvBuilder.AppendLine("x_m,y_m,value"); // wrong if value overrides ToString() and returns multiple values but OK for now
+        //    for (int xIndex = 0; xIndex < this.SizeX; ++xIndex)
+        //    {
+        //        for (int yIndex = 0; yIndex < this.SizeY; ++yIndex)
+        //        {
+        //            PointF cellCenter = this.GetCellCentroid(new Point(xIndex, yIndex));
+        //            csvBuilder.AppendLine(cellCenter.X + "," + cellCenter.Y + "," + this[xIndex, yIndex]!.ToString());
+        //        }
+        //    }
+        //    return csvBuilder.ToString();
+        //}
     }
 }

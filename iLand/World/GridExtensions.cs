@@ -16,7 +16,7 @@ namespace iLand.World
             //    Point result(-1,-1);
             if (element != null)
             {
-                for (int idx = 0; idx < grid.Count; ++idx)
+                for (int idx = 0; idx < grid.CellCount; ++idx)
                 {
                     if (grid[idx] == element)
                     {

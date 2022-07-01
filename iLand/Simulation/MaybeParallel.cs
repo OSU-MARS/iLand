@@ -21,11 +21,12 @@ namespace iLand.Simulation
             this.workUnitCollection = workUnits;
         }
 
-        /// run a given function for each species
-        public void ForEach(Action<TLocal> action, bool forceSingleThreaded = false)
+        // run an action in parallel
+        public void ForEach(Action<TLocal> action)
         {
-            if (this.IsMultithreaded && this.workUnitCollection.Count > 3 && forceSingleThreaded == false)
+            if (this.IsMultithreaded && (this.workUnitCollection.Count > 3))
             {
+                
                 Parallel.ForEach(this.workUnitCollection, (TLocal workUnit) =>
                 {
                     action.Invoke(workUnit);

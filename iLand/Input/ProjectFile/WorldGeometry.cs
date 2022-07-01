@@ -5,7 +5,6 @@ namespace iLand.Input.ProjectFile
 	public class WorldGeometry : XmlSerializable
 	{
 		public int BufferWidth { get; private set; }
-		public int LightCellSize { get; private set; }
 
 		// special mode that treats each resource unit as a "torus" (light calculation, seed distribution)
 		public bool IsTorus { get; private set; }
@@ -15,8 +14,7 @@ namespace iLand.Input.ProjectFile
 		public WorldGeometry()
 		{
 			// default to a single resource unit
-			this.BufferWidth = (int)(0.6F * Constant.ResourceUnitSize);
-			this.LightCellSize = Constant.LightCellSizeInM;
+			this.BufferWidth = (int)(0.6F * Constant.ResourceUnitSizeInM);
 			this.Latitude = 48.0F;
 			this.IsTorus = false;
 		}
@@ -39,13 +37,6 @@ namespace iLand.Input.ProjectFile
 					break;
 				case "geometry":
 					reader.Read();
-					break;
-				case "lightCellSize":
-					this.LightCellSize = reader.ReadElementContentAsInt();
-					if (this.LightCellSize <= 0.0F)
-					{
-						throw new XmlException("Light cell size is zero or negative.");
-					}
 					break;
 				case "torus":
 					this.IsTorus = reader.ReadElementContentAsBoolean();

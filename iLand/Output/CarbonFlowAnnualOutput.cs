@@ -84,17 +84,17 @@ namespace iLand.Output
                     continue;
                 }
 
-                float areaFactor = ru.AreaInLandscape / Constant.ResourceUnitArea; //conversion factor
+                float areaFactor = ru.AreaInLandscape / Constant.ResourceUnitAreaInM2; //conversion factor
                 float npp = ru.Trees.StatisticsForAllSpeciesAndStands.TreeNpp * Constant.BiomassCFraction; // kg C/ha
                 npp += ru.Trees.StatisticsForAllSpeciesAndStands.SaplingNpp * Constant.BiomassCFraction; // kgC/ha
                 
                 // Snag pools are not scaled per ha (but refer to the stockable RU), soil pools and biomass statistics (NPP, ...) 
                 // are scaled.
                 float toAtmosphere = ru.Snags.FluxToAtmosphere.C / areaFactor; // from snags, kg/ha
-                toAtmosphere += 0.1F * ru.Snags.FluxToAtmosphere.C * Constant.ResourceUnitArea; // soil: t/ha -> t/m2 -> kg/ha
+                toAtmosphere += 0.1F * ru.Snags.FluxToAtmosphere.C * Constant.ResourceUnitAreaInM2; // soil: t/ha -> t/m2 -> kg/ha
 
                 float toDisturbance = ru.Snags.FluxToDisturbance.C / areaFactor; // convert to kgC/ha
-                toDisturbance += 0.1F * ru.Snags.FluxToDisturbance.C * Constant.ResourceUnitArea; // kgC/ha
+                toDisturbance += 0.1F * ru.Snags.FluxToDisturbance.C * Constant.ResourceUnitAreaInM2; // kgC/ha
 
                 float toHarvest = ru.Snags.FluxToExtern.C / areaFactor; // kgC/ha
 

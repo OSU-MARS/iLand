@@ -62,18 +62,15 @@ namespace iLand.World
         {
             if (projectFile.World.Grass.Enabled == false)
             {
-                // clear grid
-                this.CoverOrOnOffGrid.Clear();
                 this.IsEnabled = false;
-                // Debug.WriteLine("grass module not enabled");
                 return;
             }
 
             // create the grid
-            this.CoverOrOnOffGrid.Setup(landscape.LightGrid.PhysicalExtent, landscape.LightGrid.CellSize);
+            this.CoverOrOnOffGrid.Setup(landscape.LightGrid.ProjectExtent, landscape.LightGrid.CellSizeInM);
             this.CoverOrOnOffGrid.Fill(0);
             // mask out out-of-project areas
-            for (int lightIndex = 0; lightIndex < this.CoverOrOnOffGrid.Count; ++lightIndex)
+            for (int lightIndex = 0; lightIndex < this.CoverOrOnOffGrid.CellCount; ++lightIndex)
             {
                 if (landscape.HeightGrid[this.CoverOrOnOffGrid.Index5(lightIndex)].IsOnLandscape() == false)
                 {
@@ -194,7 +191,7 @@ namespace iLand.World
             {
                 // loop over every light pixel
                 //int cellsSkipped = 0;
-                for (int lightIndex = 0; lightIndex != lightGrid.Count; ++lightIndex)
+                for (int lightIndex = 0; lightIndex != lightGrid.CellCount; ++lightIndex)
                 {
                     // calculate potential grass vegetation cover
                     if (lightGrid[lightIndex] == 1.0F && this.CoverOrOnOffGrid[lightIndex] == continuousCoverAtFullLight)
@@ -210,7 +207,7 @@ namespace iLand.World
             }
             else if (algorithm == GrassAlgorithm.CellOnOff)
             {
-                for (int lightIndex = 0; lightIndex < lightGrid.Count; ++lightIndex)
+                for (int lightIndex = 0; lightIndex < lightGrid.CellCount; ++lightIndex)
                 {
                     Debug.Assert(this.CoverOrOnOffGrid[lightIndex] >= 0);
                     if (this.CoverOrOnOffGrid[lightIndex] > 1)

@@ -66,12 +66,12 @@ namespace iLand.World
             this.snowPack.WaterEquivalentInMM = snowWaterEquivalentInMM; 
         }
 
-        public void Setup(Project projectFile, ResourceUnitReader environmentReader)
+        public void Setup(Project projectFile, ResourceUnitEnvironment environment)
         {
             // get values...
-            this.SoilDepthInMM = 10.0F * environmentReader.CurrentEnvironment.SoilDepthInCM; // convert from cm to mm TODO: zero is not a realistic default
+            this.SoilDepthInMM = 10.0F * environment.SoilDepthInCM; // convert from cm to mm TODO: zero is not a realistic default
             
-            float psiSaturation = this.soilWaterRetention.Setup(environmentReader, projectFile.Model.Settings.WaterUseSoilSaturation);
+            float psiSaturation = this.soilWaterRetention.Setup(environment, projectFile.Model.Settings.WaterUseSoilSaturation);
             this.FieldCapacity = this.soilWaterRetention.GetSoilWaterContentFromPsi(this.SoilDepthInMM, psiSaturation);
             this.residualSoilWater = this.soilWaterRetention.GetSoilWaterContentFromPsi(this.SoilDepthInMM, -4000.0F); // maximum psi is set to a constant of -4 MPa
 

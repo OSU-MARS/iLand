@@ -58,24 +58,25 @@ namespace iLand.Test
                         //ru.SpeciesSet;
                         //ru.Trees;
                         //ru.Variables;
-                        Assert.IsTrue(kalkalpen.Landscape.ResourceUnitGrid.PhysicalExtent.Contains(ru.BoundingBox));
-                        Assert.IsTrue((ru.BoundingBox.Height == Constant.ResourceUnitSize) && (ru.BoundingBox.Width == Constant.ResourceUnitSize) &&
-                                      (ru.BoundingBox.X == 0.0F) && (MathF.Abs(ru.BoundingBox.Y % 100.0F) < 0.001F));
+                        Assert.IsTrue(kalkalpen.Landscape.ResourceUnitGrid.ProjectExtent.Contains(ru.ProjectExtent));
+                        Assert.IsTrue((ru.ProjectExtent.Height == Constant.ResourceUnitSizeInM) && (ru.ProjectExtent.Width == Constant.ResourceUnitSizeInM) &&
+                                      (ru.ProjectExtent.X == kalkalpen.Project.World.Geometry.BufferWidth) && 
+                                      (MathF.Abs(ru.ProjectExtent.Y % 100.0F - kalkalpen.Project.World.Geometry.BufferWidth) < 0.001F));
                         Assert.IsTrue(ru.ID >= 0);
                         Assert.IsTrue(ru.ResourceUnitGridIndex >= 0);
-                        Assert.IsTrue(ru.AreaInLandscape == Constant.ResourceUnitArea);
-                        Assert.IsTrue((ru.AreaWithTrees > 0.0) && (ru.AreaWithTrees <= Constant.ResourceUnitArea));
+                        Assert.IsTrue(ru.AreaInLandscape == Constant.ResourceUnitAreaInM2);
+                        Assert.IsTrue((ru.AreaWithTrees > 0.0) && (ru.AreaWithTrees <= Constant.ResourceUnitAreaInM2));
                         Assert.IsTrue((ru.Trees.AverageLeafAreaWeightedAgingFactor > 0.0) && (ru.Trees.AverageLeafAreaWeightedAgingFactor < 1.0));
                         Assert.IsTrue((ru.Trees.AverageLightRelativeIntensity > 0.0) && (ru.Trees.AverageLightRelativeIntensity <= 1.0));
-                        Assert.IsTrue((ru.Trees.PhotosyntheticallyActiveArea > 0.0) && (ru.Trees.PhotosyntheticallyActiveArea <= Constant.ResourceUnitArea));
+                        Assert.IsTrue((ru.Trees.PhotosyntheticallyActiveArea > 0.0) && (ru.Trees.PhotosyntheticallyActiveArea <= Constant.ResourceUnitAreaInM2));
                         Assert.IsTrue((ru.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea > 0.0) && (ru.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea <= 1.0));
                         Assert.IsTrue(ru.Trees.TreeStatisticsByStandID.Count == 1, "Expected tree statistics for one stand but got statistics for " + ru.Trees.TreeStatisticsByStandID.Count + " stands.");
                         Assert.IsTrue(ru.Trees.TreeStatisticsByStandID.ContainsKey(Constant.DefaultStandID), "Expected zero tree statistics by stand ID but got " + ru.Trees.TreeStatisticsByStandID.Count + ".");
-                        Assert.IsTrue((ru.Trees.TotalLeafArea > 0.0) && (ru.Trees.TotalLeafArea < 20.0F * Constant.ResourceUnitArea));
+                        Assert.IsTrue((ru.Trees.TotalLeafArea > 0.0) && (ru.Trees.TotalLeafArea < 20.0F * Constant.ResourceUnitAreaInM2));
                     }
 
                     Assert.IsTrue(kalkalpen.Landscape.ResourceUnits.Count == 2);
-                    Assert.IsTrue(kalkalpen.Landscape.ResourceUnitGrid.Count == 2);
+                    Assert.IsTrue(kalkalpen.Landscape.ResourceUnitGrid.CellCount == 2);
 
                     finalDiameters.Clear();
                     finalHeights.Clear();
@@ -157,26 +158,26 @@ namespace iLand.Test
                     float maxLight = Single.MinValue;
                     float meanLight = 0.0F;
                     float minLight = Single.MaxValue;
-                    for (int lightIndex = 0; lightIndex < kalkalpen.Landscape.LightGrid.Count; ++lightIndex)
+                    for (int lightIndex = 0; lightIndex < kalkalpen.Landscape.LightGrid.CellCount; ++lightIndex)
                     {
                         float light = kalkalpen.Landscape.LightGrid[lightIndex];
                         maxLight = MathF.Max(light, maxLight);
                         meanLight += light;
                         minLight = MathF.Min(light, minLight);
                     }
-                    meanLight /= kalkalpen.Landscape.LightGrid.Count;
+                    meanLight /= kalkalpen.Landscape.LightGrid.CellCount;
 
                     float maxGridHeight = Single.MinValue;
                     float meanGridHeight = 0.0F;
                     float minGridHeight = Single.MaxValue;
-                    for (int heightIndex = 0; heightIndex < kalkalpen.Landscape.HeightGrid.Count; ++heightIndex)
+                    for (int heightIndex = 0; heightIndex < kalkalpen.Landscape.HeightGrid.CellCount; ++heightIndex)
                     {
                         float height = kalkalpen.Landscape.HeightGrid[heightIndex].Height;
                         maxGridHeight = MathF.Max(height, maxGridHeight);
                         meanGridHeight += height;
                         minGridHeight = MathF.Min(height, minGridHeight);
                     }
-                    meanGridHeight /= kalkalpen.Landscape.HeightGrid.Count;
+                    meanGridHeight /= kalkalpen.Landscape.HeightGrid.CellCount;
 
                     Assert.IsTrue(averageDiameterGrowth > MathF.Max(0.2F - 0.01F * year, 0.0F));
                     Assert.IsTrue(averageHeightGrowth > MathF.Max(0.2F - 0.01F * year, 0.0F));
@@ -246,32 +247,55 @@ namespace iLand.Test
             // changes to random number generation appear likely to require expected values be updated.
             List<float> nominalGppByYear = new()
             {
-                10.331F, 11.133F, 14.020F, 11.316F, 13.527F, // 0...4
-                10.535F, 12.338F, 12.816F, 13.004F, 11.264F, // 5...9
-                11.676F, 10.127F, 11.144F, 10.151F, 12.801F, // 10...14
-                11.476F, 11.746F, 10.422F,  8.468F,  9.613F, // 15...19
-                12.045F,  9.233F, 11.546F, 10.244F, 13.537F, // 20...24
-                11.276F, 12.253F, 12.745F                    // 25...27
-            };
-            
-            List<float> nominalNppByYear = new()
-            {
-                13305.625F, 14514.859F, 18456.353F, 15041.932F, 18053.628F,
-                14120.029F, 16564.884F, 17238.371F, 17518.640F, 15189.014F,
-                15754.683F, 13664.428F, 15035.963F, 13691.142F, 17258.496F,
-                15482.770F, 15844.175F, 14048.942F, 11417.470F, 12946.689F,
-                16218.523F, 12429.022F, 15532.238F, 13779.785F, 18188.468F,
-                15139.151F, 16453.837F, 17103.043F
+                // with input data in NAD83 / BC Albers (EPSG:3005)
+                10.331F, 11.140F, 14.037F, 11.346F, 13.562F, // 0...4
+                10.597F, 12.400F, 12.869F, 13.062F, 11.352F, // 5...9
+                11.785F, 10.259F, 11.220F, 10.374F, 12.864F, // 10...14
+                11.565F, 11.834F, 10.523F,  8.585F,  9.779F, // 15...19
+                12.118F,  9.329F, 11.742F, 10.297F, 13.683F, // 20...24
+                11.399F, 12.268F, 12.759F                    // 25...27
+                // with project coordinate system rotated clockwise to plot and resource unit origin at plot's southwest corner
+                //10.331F, 11.133F, 14.020F, 11.316F, 13.527F,
+                //10.535F, 12.338F, 12.816F, 13.004F, 11.264F,
+                //11.676F, 10.127F, 11.144F, 10.151F, 12.801F,
+                //11.476F, 11.746F, 10.422F,  8.468F,  9.613F,
+                //12.045F,  9.233F, 11.546F, 10.244F, 13.537F,
+                //11.276F, 12.253F, 12.745F
             };
 
+            List<float> nominalNppByYear = new()
+            {
+                // with input data in NAD83 / BC Albers (EPSG:3005)
+                12919.852F, 14084.399F, 17900.822F, 14593.909F, 17508.152F,
+                13731.107F, 16089.617F, 16724.943F, 16995.841F, 14786.960F,
+                15347.395F, 13359.617F, 14603.697F, 13509.484F, 16751.105F,
+                15064.177F, 15405.960F, 13695.319F, 11170.007F, 12712.915F,
+                15765.334F, 12116.159F, 15265.611F, 13371.798F, 17776.574F,
+                14805.537F, 15936.583F, 16536.265F
+                // with project coordinate system rotated clockwise to plot and resource unit origin at plot's southwest corner
+                //13305.625F, 14514.859F, 18456.353F, 15041.932F, 18053.628F,
+                //14120.029F, 16564.884F, 17238.371F, 17518.640F, 15189.014F,
+                //15754.683F, 13664.428F, 15035.963F, 13691.142F, 17258.496F,
+                //15482.770F, 15844.175F, 14048.942F, 11417.470F, 12946.689F,
+                //16218.523F, 12429.022F, 15532.238F, 13779.785F, 18188.468F,
+                //15139.151F, 16453.837F, 17103.043F
+            };
             List<float> nominalVolumeByYear = new()
             {
-                118.143F, 130.357F, 148.674F, 161.134F, 178.336F,
-                189.137F, 203.280F, 219.034F, 234.979F, 245.886F,
-                257.940F, 264.996F, 275.265F, 281.050F, 292.640F,
-                304.196F, 315.772F, 322.480F, 326.298F, 331.911F,
-                343.525F, 348.805F, 357.702F, 366.552F, 379.502F,
-                386.325F, 399.594F, 413.693F
+                // with input data in NAD83 / BC Albers (EPSG:3005)
+                117.738F, 129.517F, 147.258F, 159.411F, 175.920F,
+                186.553F, 201.121F, 215.180F, 231.040F, 242.459F,
+                252.847F, 260.549F, 267.907F, 276.121F, 290.728F,
+                301.258F, 311.455F, 318.299F, 321.742F, 326.003F,
+                338.667F, 341.236F, 353.053F, 357.628F, 372.019F,
+                382.117F, 395.792F, 400.622F
+                // with project coordinate system rotated clockwise to plot and resource unit origin at plot's southwest corner
+                //118.143F, 130.357F, 148.674F, 161.134F, 178.336F,
+                //189.137F, 203.280F, 219.034F, 234.979F, 245.886F,
+                //257.940F, 264.996F, 275.265F, 281.050F, 292.640F,
+                //304.196F, 315.772F, 322.480F, 326.298F, 331.911F,
+                //343.525F, 348.805F, 357.702F, 366.552F, 379.502F,
+                //386.325F, 399.594F, 413.693F
             };
 
             ResourceUnitTreeStatisticsWithPreviousYears plotStatistics = (ResourceUnitTreeStatisticsWithPreviousYears)plot14.Landscape.ResourceUnits[0].Trees.TreeStatisticsByStandID[14];
@@ -430,24 +454,25 @@ namespace iLand.Test
 
         private static void VerifyKalkalpenModel(Model model)
         {
+            float worldBufferWidthInM = 60.0F;
             Assert.IsTrue(model.Landscape.ClimatesByID.Count == 1);
-            Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.Height == 200.0F + 2.0F * 60.0F);
-            Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.Width == 100.0F + 2.0F * 60.0F);
-            Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.X == -60.0);
-            Assert.IsTrue(model.Landscape.HeightGrid.PhysicalExtent.Y == -60.0);
+            Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.Height == 200.0F + 2.0F * worldBufferWidthInM);
+            Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.Width == 100.0F + 2.0F * worldBufferWidthInM);
+            Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.X == 0.0);
+            Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.Y == 0.0);
             Assert.IsTrue(model.Landscape.HeightGrid.SizeX == 22);
             Assert.IsTrue(model.Landscape.HeightGrid.SizeY == 32);
-            Assert.IsTrue(model.Landscape.LightGrid.PhysicalExtent.Height == 200.0F + 2.0F * 60.0F); // 100 x 200 m world + 60 m buffering = 220 x 320 m
-            Assert.IsTrue(model.Landscape.LightGrid.PhysicalExtent.Width == 100.0F + 2.0F * 60.0F);
-            Assert.IsTrue(model.Landscape.LightGrid.PhysicalExtent.X == -60.0);
-            Assert.IsTrue(model.Landscape.LightGrid.PhysicalExtent.Y == -60.0);
+            Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.Height == 200.0F + 2.0F * worldBufferWidthInM); // 100 x 200 m world + 60 m buffering = 220 x 320 m
+            Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.Width == 100.0F + 2.0F * worldBufferWidthInM);
+            Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.X == 0.0);
+            Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.Y == 0.0);
             Assert.IsTrue(model.Landscape.LightGrid.SizeX == 110);
             Assert.IsTrue(model.Landscape.LightGrid.SizeY == 160);
             Assert.IsTrue(model.Landscape.ResourceUnits.Count == 2);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.PhysicalExtent.Height == 200.0);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.PhysicalExtent.Width == 100.0);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.PhysicalExtent.X == 0.0);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.PhysicalExtent.Y == 0.0);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.Height == 200.0);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.Width == 100.0);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.X == worldBufferWidthInM);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.Y == worldBufferWidthInM);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.SizeX == 1);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.SizeY == 2);
             Assert.IsTrue(model.Landscape.StandRaster.IsSetup() == false);
@@ -512,7 +537,7 @@ namespace iLand.Test
             }
 
             Assert.IsTrue(model.Landscape.ResourceUnits.Count == 2);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.Count == 2);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.CellCount == 2);
         }
 
         private static void VerifyMalcolmKnappClimate(Model model)
@@ -715,7 +740,7 @@ namespace iLand.Test
             }
 
             Assert.IsTrue(model.Landscape.ResourceUnits.Count == 1);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.Count == 1);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.CellCount == 1);
         }
 
         private static void VerifyNorwaySpruce(Model model)

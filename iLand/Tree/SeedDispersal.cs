@@ -92,15 +92,14 @@ namespace iLand.Tree
             this.mProbMode = false;
 
             // setup of seed map
-            this.SeedMap.Clear();
-            this.SeedMap.Setup(model.Landscape.HeightGrid.PhysicalExtent, Constant.SeedmapCellSizeInM);
+            this.SeedMap.Setup(model.Landscape.HeightGrid.ProjectExtent, Constant.SeedmapCellSizeInM);
             this.SeedMap.Fill(0.0F);
             if (this.mProbMode == false)
             {
                 this.mSourceMap.Setup(SeedMap);
                 this.mSourceMap.Fill(0.0F);
             }
-            this.mExternalSeedMap.Clear();
+            this.mExternalSeedMap.Fill(0.0F);
             this.mIndexFactor = Constant.SeedmapCellSizeInM / Constant.LightCellSizeInM; // ratio seed grid / lip-grid:
 
             if ((model.Project.World.Geometry.BufferWidth % Constant.SeedmapCellSizeInM) != 0)
@@ -132,8 +131,7 @@ namespace iLand.Tree
             if (this.Species.FecunditySerotiny > 0.0)
             {
                 // an extra seed map is used for storing information related to post-fire seed rain
-                this.mSeedMapSerotiny.Clear();
-                this.mSeedMapSerotiny.Setup(model.Landscape.HeightGrid.PhysicalExtent, Constant.SeedmapCellSizeInM);
+                this.mSeedMapSerotiny.Setup(model.Landscape.HeightGrid.ProjectExtent, Constant.SeedmapCellSizeInM);
                 this.mSeedMapSerotiny.Fill(0.0F);
 
                 // set up the special seed kernel for post fire seed rain
@@ -240,7 +238,7 @@ namespace iLand.Tree
 
         public void SetupExternalSeeds(Model model)
         {
-            this.mExternalSeedBaseMap.Clear();
+            this.mExternalSeedBaseMap.Fill(0.0F);
             if (model.Project.Model.SeedDispersal.ExternalSeedBelt.Enabled == false)
             {
                 return;
@@ -251,9 +249,9 @@ namespace iLand.Tree
             // setup of base map
             float seedmap_size = 20.0F;
             this.mExternalSeedBaseMap = new Grid<float>();
-            this.mExternalSeedBaseMap.Setup(model.Landscape.HeightGrid.PhysicalExtent, seedmap_size);
+            this.mExternalSeedBaseMap.Setup(model.Landscape.HeightGrid.ProjectExtent, seedmap_size);
             this.mExternalSeedBaseMap.Fill(0.0F);
-            if (this.mExternalSeedBaseMap.Count * 4 != model.Landscape.HeightGrid.Count)
+            if (this.mExternalSeedBaseMap.CellCount * 4 != model.Landscape.HeightGrid.CellCount)
             {
                 throw new NotSupportedException("Width and height of the project area need to be a multiple of 20m when external seeds are enabled.");
             }
@@ -421,21 +419,21 @@ namespace iLand.Tree
         public void CreateKernel(Grid<float> kernel, float maxSeed, float scaleArea)
         {
             float maxDistance = this.TreeMigDistanceforProbability(mLddMaximumSeedlingDensity / this.Species.FecundityM2);
-            float seedCellSize = this.SeedMap.CellSize;
+            float seedCellSize = this.SeedMap.CellSizeInM;
             // e.g.: cell_size: regeneration grid (e.g. 400qm), px-size: light-grid (4qm)
             float occupation = seedCellSize * seedCellSize / (Constant.LightCellSizeInM * Constant.LightCellSizeInM * mTreeMigOccupancy);
 
-            kernel.Clear();
+            kernel.Fill(0.0F);
             int maxCellDistance = (int)(maxDistance / seedCellSize);
-            kernel.Setup(2 * maxCellDistance + 1, 2 * maxCellDistance + 1, SeedMap.CellSize);
+            kernel.Setup(2 * maxCellDistance + 1, 2 * maxCellDistance + 1, this.SeedMap.CellSizeInM);
             int kernelOffset = maxCellDistance;
 
             // filling of the kernel.... use the treemig density function
             float dist_center_cell = MathF.Sqrt(seedCellSize * seedCellSize / MathF.PI);
             Point kernelCenter = new(kernelOffset, kernelOffset);
-            for (int kernelIndex = 0; kernelIndex < kernel.Count; ++kernelIndex)
+            for (int kernelIndex = 0; kernelIndex < kernel.CellCount; ++kernelIndex)
             {
-                float value = kernel.GetCenterToCenterCellDistance(kernelCenter, kernel.GetCellXYIndex(kernelIndex));
+                float value = kernel.GetCenterToCenterDistance(kernelCenter, kernel.GetCellXYIndex(kernelIndex));
                 if (value == 0.0)
                 {
                     kernel[kernelIndex] = this.TreeMigCenterCell(dist_center_cell); // r is the radius of a circle with the same area as a cell
@@ -463,7 +461,7 @@ namespace iLand.Tree
                 float fecundityFactor = maxSeed / occupation;
                 kernel.Multiply(fecundityFactor);
                 // all cells that get more seeds than the occupancy criterion are considered to have no seed limitation for regeneration
-                for (int kernelIndex = 0; kernelIndex < kernel.Count; ++kernelIndex)
+                for (int kernelIndex = 0; kernelIndex < kernel.CellCount; ++kernelIndex)
                 {
                     // TODO: why isn't this a call to kernel.limit(0, 1)?
                     kernel[kernelIndex] = Math.Min(kernel[kernelIndex], 1.0F);
@@ -616,9 +614,9 @@ namespace iLand.Tree
             if (!mProbMode)
             {
                 // scale external seed values to have pixels with LAI=3
-                for (int p = 0; p < mExternalSeedMap.Count; ++p)
+                for (int p = 0; p < mExternalSeedMap.CellCount; ++p)
                 {
-                    mExternalSeedMap[p] *= 3.0F * mExternalSeedMap.CellSize * mExternalSeedMap.CellSize;
+                    mExternalSeedMap[p] *= 3.0F * mExternalSeedMap.CellSizeInM * mExternalSeedMap.CellSizeInM;
                 }
             }
         }
@@ -645,7 +643,7 @@ namespace iLand.Tree
             {
                 // if external seed input is enabled, the buffer area of the seed maps is
                 // "turned on", i.e. set to 1.
-                int bufferSize = (int)(model.Project.World.Geometry.BufferWidth / seedMap.CellSize);
+                int bufferSize = (int)(model.Project.World.Geometry.BufferWidth / seedMap.CellSizeInM);
                 // if a special buffer is defined, reduce the size of the input
                 if (this.mExternalSeedBuffer > 0)
                 {
@@ -719,7 +717,7 @@ namespace iLand.Tree
                         this.DistributeSeedProbability(model, this.mSeedMapSerotiny, this.mKernelSerotiny);
                     }
                     // copy back data
-                    for (int seedIndex = 0; seedIndex < this.SeedMap.Count; ++seedIndex)
+                    for (int seedIndex = 0; seedIndex < this.SeedMap.CellCount; ++seedIndex)
                     {
                         this.SeedMap[seedIndex] = MathF.Max(this.SeedMap[seedIndex], this.mSeedMapSerotiny[seedIndex]);
                     }
@@ -746,7 +744,7 @@ namespace iLand.Tree
             int n_gaps_filled = 0;
             for (int y = 1; y < seedMap.SizeY - 1; ++y)
             {
-                int p = seedMap.IndexOf(1, y);
+                int p = seedMap.IndexXYToIndex(1, y);
                 int p_above = p - seedMap.SizeX; // one line above
                 int p_below = p + seedMap.SizeX; // one line below
                 for (int x = 1; x < seedMap.SizeX - 1; ++x, ++p, ++p_below, ++p_above)
@@ -769,7 +767,7 @@ namespace iLand.Tree
             int edgeCount = 0;
             for (int y = 1; y < seedMap.SizeY - 1; ++y)
             {
-                int p = seedMap.IndexOf(1, y);
+                int p = seedMap.IndexXYToIndex(1, y);
                 int p_above = p - seedMap.SizeX; // one line above
                 int p_below = p + seedMap.SizeX; // one line below
                 for (int x = 1; x < seedMap.SizeX - 1; ++x, ++p, ++p_below, ++p_above)
@@ -807,7 +805,7 @@ namespace iLand.Tree
         private void DistributeSeedProbability(Model model, Grid<float> seedmap, Grid<float> kernel)
         {
             int kernelCenter = kernel.SizeX / 2; // offset is the index of the center pixel
-            for (int seedIndex = 0; seedIndex < seedmap.Count; ++seedIndex)
+            for (int seedIndex = 0; seedIndex < seedmap.CellCount; ++seedIndex)
             {
                 if (seedmap[seedIndex] == -1.0F)
                 {
@@ -839,7 +837,7 @@ namespace iLand.Tree
                             for (int cell = 0; cell < nCells; ++cell)
                             {
                                 // distance and direction:
-                                float radius = model.RandomGenerator.GetRandomFloat(mLddDistance[distanceIndex], mLddDistance[distanceIndex + 1]) / seedmap.CellSize; // choose a random distance (in pixels)
+                                float radius = model.RandomGenerator.GetRandomFloat(mLddDistance[distanceIndex], mLddDistance[distanceIndex + 1]) / seedmap.CellSizeInM; // choose a random distance (in pixels)
                                 float phi = model.RandomGenerator.GetRandomProbability() * 2.0F * MathF.PI; // choose a random direction
                                 Point ldd = new((int)(pt.X + radius * MathF.Cos(phi)), (int)(pt.Y + radius * MathF.Sin(phi)));
                                 if (seedmap.Contains(ldd))
@@ -871,12 +869,12 @@ namespace iLand.Tree
             {
                 fecundity *= mNonSeedYearFraction;
             }
-            for (int sourceIndex = 0; sourceIndex < sourceMap.Count; ++sourceIndex)
+            for (int sourceIndex = 0; sourceIndex < sourceMap.CellCount; ++sourceIndex)
             {
                 if (sourceMap[sourceIndex] != 0.0F)
                 {
                     // if LAI  >3, then full potential is assumed, below LAI=3 a linear ramp is used
-                    sourceMap[sourceIndex] = Math.Min(sourceMap[sourceIndex] / (sourceMap.CellSize * sourceMap.CellSize) / 3.0F, 3.0F);
+                    sourceMap[sourceIndex] = Math.Min(sourceMap[sourceIndex] / (sourceMap.CellSizeInM * sourceMap.CellSizeInM) / 3.0F, 3.0F);
                 }
             }
 
@@ -906,7 +904,7 @@ namespace iLand.Tree
             if (model.Project.World.Geometry.IsTorus == false)
             {
                 // ** standard case (no torus) **
-                for (int sourceIndex = 0; sourceIndex < sourceMap.Count; ++sourceIndex)
+                for (int sourceIndex = 0; sourceIndex < sourceMap.CellCount; ++sourceIndex)
                 {
                     if (sourceMap[sourceIndex] > 0.0F)
                     {
@@ -942,7 +940,7 @@ namespace iLand.Tree
                                 for (int seedIndex = 0; seedIndex < nSeeds; ++seedIndex)
                                 {
                                     // distance and direction:
-                                    float radiusInCells = model.RandomGenerator.GetRandomFloat(this.mLddDistance[ringIndex], this.mLddDistance[ringIndex + 1]) / this.SeedMap.CellSize; // choose a random distance (in pixels)
+                                    float radiusInCells = model.RandomGenerator.GetRandomFloat(this.mLddDistance[ringIndex], this.mLddDistance[ringIndex + 1]) / this.SeedMap.CellSizeInM; // choose a random distance (in pixels)
                                     float phi = 2.0F * MathF.PI * model.RandomGenerator.GetRandomProbability(); // choose a random direction
                                     Point seedCellPosition = new(sourceCellIndex.X + (int)(radiusInCells * MathF.Cos(phi)), sourceCellIndex.Y + (int)(radiusInCells * MathF.Sin(phi)));
                                     if (this.SeedMap.Contains(seedCellPosition))
@@ -960,8 +958,8 @@ namespace iLand.Tree
             {
                 // **** seed distribution in torus mode ***
                 int seedmapOffset = sourceMap.GetCellXYIndex(new PointF(0.0F, 0.0F)).X; // the seed maps have x extra rows/columns
-                int seedCellsPerRU = (int)(Constant.ResourceUnitSize / sourceMap.CellSize);
-                for (int sourceIndex = 0; sourceIndex < sourceMap.Count; ++sourceIndex)
+                int seedCellsPerRU = (int)(Constant.ResourceUnitSizeInM / sourceMap.CellSizeInM);
+                for (int sourceIndex = 0; sourceIndex < sourceMap.CellCount; ++sourceIndex)
                 {
                     if (sourceMap[sourceIndex] > 0.0F)
                     {
@@ -1001,7 +999,7 @@ namespace iLand.Tree
                                 for (int seed = 0; seed < nSeeds; ++seed)
                                 {
                                     // distance and direction:
-                                    float radius = model.RandomGenerator.GetRandomFloat(mLddDistance[densityIndex], mLddDistance[densityIndex + 1]) / SeedMap.CellSize; // choose a random distance (in pixels)
+                                    float radius = model.RandomGenerator.GetRandomFloat(mLddDistance[densityIndex], mLddDistance[densityIndex + 1]) / SeedMap.CellSizeInM; // choose a random distance (in pixels)
                                     float phi = model.RandomGenerator.GetRandomProbability() * 2.0F * MathF.PI; // choose a random direction
                                     Point ldd = new((int)(radius * MathF.Cos(phi)), (int)(radius * MathF.Sin(phi))); // destination (offset)
                                     Point torusIndex = ruOffset.Add(new Point(Maths.Modulo((offsetInRU.X + ldd.X), seedCellsPerRU), Maths.Modulo((offsetInRU.Y + ldd.Y), seedCellsPerRU)));
@@ -1023,7 +1021,7 @@ namespace iLand.Tree
             // The number of (potential) seedlings per m2 on each cell is: cell * fecundity[m2]
             // We assume that the availability of 10 potential seedlings/m2 is enough for unconstrained establishment;
             const float nUnlimited = 100.0F;
-            for (int seedIndex = 0; seedIndex < this.SeedMap.Count; ++seedIndex)
+            for (int seedIndex = 0; seedIndex < this.SeedMap.CellCount; ++seedIndex)
             {
                 if (this.SeedMap[seedIndex] > 0.0F)
                 {

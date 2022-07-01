@@ -164,7 +164,7 @@ namespace iLand.Tree
                     {
                         float lightCellSize = Constant.LightCellSizeInM;
                         TreeSpeciesStamps.DistanceGrid.Setup(maxStampSize, maxStampSize, lightCellSize);
-                        for (int index = 0; index < TreeSpeciesStamps.DistanceGrid.Count; ++index)
+                        for (int index = 0; index < TreeSpeciesStamps.DistanceGrid.CellCount; ++index)
                         {
                             Point cellPosition = TreeSpeciesStamps.DistanceGrid.GetCellXYIndex(index);
                             TreeSpeciesStamps.DistanceGrid[index] = lightCellSize * MathF.Sqrt(cellPosition.X * cellPosition.X + cellPosition.Y * cellPosition.Y);
@@ -465,7 +465,7 @@ namespace iLand.Tree
                 stampString.AppendLine("==============================================");
             }
             stampString.AppendLine("Dump of lookup map" + System.Environment.NewLine + "=====================");
-            for (int s = 0; s < lightStampsByDbhAndHDRatio.Count; ++s)
+            for (int s = 0; s < lightStampsByDbhAndHDRatio.CellCount; ++s)
             {
                 if (lightStampsByDbhAndHDRatio[s] != null)
                 {

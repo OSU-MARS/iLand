@@ -1,5 +1,4 @@
-﻿using iLand.Input;
-using iLand.Input.ProjectFile;
+﻿using iLand.Input.ProjectFile;
 using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
@@ -41,8 +40,13 @@ namespace iLand.Simulation
             this.Project = projectFile;
             this.ScheduledEvents = null;
 
+            if ((this.Landscape.ResourceUnits.Count != 1) && projectFile.World.Geometry.IsTorus)
+            {
+                throw new NotSupportedException("Toroidal light field indexing currently assumes only a single resource unit is present.");
+            }
+
             // setup of trees
-            StandReader standReader = new();
+            TreePopulator standReader = new();
             standReader.SetupTrees(projectFile, this.Landscape, this.RandomGenerator);
 
             // setup the helper that does the multithreading
@@ -69,7 +73,7 @@ namespace iLand.Simulation
             this.Modules.SetupDisturbances();
             if (this.Modules.HasSetupResourceUnits())
             {
-                for (int ruIndex = 0; ruIndex < this.Landscape.ResourceUnitGrid.Count; ++ruIndex)
+                for (int ruIndex = 0; ruIndex < this.Landscape.ResourceUnitGrid.CellCount; ++ruIndex)
                 {
                     ResourceUnit? ru = this.Landscape.ResourceUnitGrid[ruIndex];
                     if (ru != null)
@@ -284,39 +288,62 @@ namespace iLand.Simulation
             this.InitializeLightGrid();
 
             // initialize height grid with a value of 4m. This is the height of the regeneration layer
-            for (int heightIndex = 0; heightIndex < this.Landscape.HeightGrid.Count; ++heightIndex)
+            for (int heightIndex = 0; heightIndex < this.Landscape.HeightGrid.CellCount; ++heightIndex)
             {
                 this.Landscape.HeightGrid[heightIndex].ClearTrees(); // set count = 0, but do not touch the flags
             }
 
+            // current limitations of parallel resource unit evaluation:
+            //
+            // - Toroid indexing functions called below currently treat each resource unit as an individual torus and calculate height
+            //   and light using only the (0, 0) resource area. This is problematic both for toroidal world size and thread safety. It
+            //   can be addressed by changing the modulus calculations in Trees.*Torus().
+            // - Light stamping does not lock light grid areas and race conditions therefore exist between threads stamping adjacent
+            //   resource units.
+            //
             this.ruParallel.ForEach((ResourceUnit ru) =>
             {
                 foreach (Trees treesOfSpecies in ru.Trees.TreesBySpeciesID.Values)
                 {
-                    Action<int> calculateDominantHeightField = treesOfSpecies.CalculateDominantHeightField;
-                    Action<int> applyLightIntensityPattern = treesOfSpecies.ApplyLightIntensityPattern;
-                    Action<int> readLightInfluenceField = treesOfSpecies.ReadLightInfluenceField;
                     if (this.Project.World.Geometry.IsTorus)
                     {
-                        calculateDominantHeightField = treesOfSpecies.CalculateDominantHeightFieldTorus;
-                        applyLightIntensityPattern = treesOfSpecies.ApplyLightIntensityPatternTorus;
-                        readLightInfluenceField = treesOfSpecies.ReadLightInfluenceFieldTorus;
-                    }
+                        // apply toroidal light pattern
+                        int worldBufferWidth = this.Project.World.Geometry.BufferWidth;
+                        int heightBufferTranslationInCells = worldBufferWidth / Constant.HeightCellSizeInM;
+                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                        {
+                            treesOfSpecies.CalculateDominantHeightFieldTorus(treeIndex, heightBufferTranslationInCells);
+                        }
 
-                    // apply light pattern
-                    for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
-                    {
-                        calculateDominantHeightField.Invoke(treeIndex);
-                    }
-                    for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
-                    {
-                        applyLightIntensityPattern.Invoke(treeIndex);
-                    }
+                        int lightBufferTranslationInCells = worldBufferWidth / Constant.LightCellSizeInM;
+                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                        {
+                            treesOfSpecies.ApplyLightIntensityPatternTorus(treeIndex, lightBufferTranslationInCells);
+                        }
 
-                    // read pattern: LIP value calculation
-                    for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                        // read toroidal pattern: LIP value calculation
+                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                        {
+                            treesOfSpecies.ReadLightInfluenceFieldTorus(treeIndex, lightBufferTranslationInCells); // multiplicative approach
+                        }
+                    }
+                    else
                     {
-                        readLightInfluenceField.Invoke(treeIndex); // multiplicative approach
+                        // apply light pattern
+                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                        {
+                            treesOfSpecies.CalculateDominantHeightField(treeIndex);
+                        }
+                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                        {
+                            treesOfSpecies.ApplyLightIntensityPattern(treeIndex);
+                        }
+
+                        // read pattern: LIP value calculation
+                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                        {
+                            treesOfSpecies.ReadLightInfluenceField(treeIndex); // multiplicative approach
+                        }
                     }
                 }
             });
@@ -341,9 +368,9 @@ namespace iLand.Simulation
         private void CalculateStockedArea() // calculate area stocked with trees for each RU
         {
             // iterate over the whole heightgrid and count pixels for each resource unit
-            for (int heightIndex = 0; heightIndex < this.Landscape.HeightGrid.Count; ++heightIndex)
+            for (int heightIndex = 0; heightIndex < this.Landscape.HeightGrid.CellCount; ++heightIndex)
             {
-                PointF centerPoint = this.Landscape.HeightGrid.GetCellCentroid(heightIndex);
+                PointF centerPoint = this.Landscape.HeightGrid.GetCellProjectCentroid(heightIndex);
                 if (this.Landscape.ResourceUnitGrid.Contains(centerPoint))
                 {
                     ResourceUnit? ru = this.Landscape.ResourceUnitGrid[centerPoint];
@@ -366,7 +393,7 @@ namespace iLand.Simulation
             int maxRadiationDistanceInHeightCells = 7;
             float stepWidth = 1.0F / maxRadiationDistanceInHeightCells;
             int borderHeightCellCount = 0;
-            for (int index = 0; index < this.Landscape.HeightGrid.Count; ++index)
+            for (int index = 0; index < this.Landscape.HeightGrid.CellCount; ++index)
             {
                 HeightCell heightCell = this.Landscape.HeightGrid[index];
                 if (heightCell.IsRadiating())

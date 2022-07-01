@@ -5,9 +5,10 @@ namespace iLand.Input
     public class ResourceUnitEnvironment
     {
         public float AnnualNitrogenDeposition { get; private init; }
-        public float CenterX { get; private init; }
-        public float CenterY { get; private init; }
         public string ClimateID { get; private init; }
+        // resource unit's centroid in GIS projected coordinate system
+        public float GisCenterX { get; private init; }
+        public float GisCenterY { get; private init; }
         public int ResourceUnitID { get; private init; }
 
         // parameters which obtain defaults from the project file but can be overridden in the environment file
@@ -47,9 +48,9 @@ namespace iLand.Input
         public ResourceUnitEnvironment(ResourceUnitHeader header, string[] environmentFileRow, ResourceUnitEnvironment defaultEnvironment)
         {
             this.AnnualNitrogenDeposition = header.AnnualNitrogenDeposition >= 0 ? Single.Parse(environmentFileRow[header.AnnualNitrogenDeposition]) : defaultEnvironment.AnnualNitrogenDeposition;
-            this.CenterX = Single.Parse(environmentFileRow[header.CenterX]); // required field
-            this.CenterY = Single.Parse(environmentFileRow[header.CenterY]); // required field
             this.ClimateID = header.ClimateID >= 0 ? environmentFileRow[header.ClimateID] : defaultEnvironment.ClimateID;
+            this.GisCenterX = Single.Parse(environmentFileRow[header.CenterX]); // required field
+            this.GisCenterY = Single.Parse(environmentFileRow[header.CenterY]); // required field
             this.ResourceUnitID = Int32.Parse(environmentFileRow[header.ResourceUnitID]); // required field
 
             this.SnagBranchRootCarbon = header.SnagBranchRootCarbon >= 0 ? Single.Parse(environmentFileRow[header.SnagBranchRootCarbon]) : defaultEnvironment.SnagBranchRootCarbon;
@@ -136,7 +137,7 @@ namespace iLand.Input
 
         public string GetCentroidKey()
         {
-            return (int)this.CenterX + "_" + (int)this.CenterY;
+            return (int)this.GisCenterX + "_" + (int)this.GisCenterY;
         }
     }
 }

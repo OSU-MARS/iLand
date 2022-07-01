@@ -93,7 +93,7 @@ namespace iLand.Output
                     throw new NotSupportedException("Attempt to log statistics which are not per hectare.");
                 }
 
-                float areaFactor = ru.AreaInLandscape / Constant.ResourceUnitArea; // conversion factor from real area to per ha values
+                float areaFactor = ru.AreaInLandscape / Constant.ResourceUnitAreaInM2; // conversion factor from real area to per ha values
                 if (isRUlevel)
                 {
                     insertRow.Parameters[0].Value = model.CurrentYear;

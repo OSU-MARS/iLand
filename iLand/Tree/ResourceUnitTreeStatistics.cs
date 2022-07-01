@@ -229,7 +229,7 @@ namespace iLand.Tree
             // note: do this only on species-level (avoid double scaling)
             if (this.requiresPerHectareConversion)
             {              
-                float ruExpansionFactor = Constant.ResourceUnitArea / this.ru.AreaInLandscape;
+                float ruExpansionFactor = Constant.ResourceUnitAreaInM2 / this.ru.AreaInLandscape;
                 if (ruExpansionFactor != 1.0F)
                 {
                     this.sumDbh *= ruExpansionFactor; // probably not strictly necessary
