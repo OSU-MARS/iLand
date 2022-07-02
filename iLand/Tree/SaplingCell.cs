@@ -31,7 +31,7 @@ namespace iLand.Tree
             for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
                 // locked for all species if a sapling of one species >1.3m
-                if (this.Saplings[slotIndex].Height > 1.3F)
+                if (this.Saplings[slotIndex].HeightInM > 1.3F)
                 {
                     this.State = SaplingCellState.Full;
                     return;
@@ -91,7 +91,7 @@ namespace iLand.Tree
             float tallestSapling = 0.0F;
             for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
-                tallestSapling = Math.Max(this.Saplings[slotIndex].Height, tallestSapling);
+                tallestSapling = Math.Max(this.Saplings[slotIndex].HeightInM, tallestSapling);
             }
             return tallestSapling;
         }

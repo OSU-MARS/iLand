@@ -75,7 +75,7 @@ namespace iLand.Tree
                 float nSaplings = this.LivingSaplings; // total number of saplings (>0.05m)
 
                 // woody parts: stem, branchse and coarse roots
-                float woodyBiomass = species.GetBiomassStem(averageDbh) + species.GetBiomassBranch(averageDbh) + species.GetBiomassRoot(averageDbh);
+                float woodyBiomass = species.GetBiomassStem(averageDbh) + species.GetBiomassBranch(averageDbh) + species.GetBiomassCoarseRoot(averageDbh);
                 float foliage = species.GetBiomassFoliage(averageDbh);
                 float fineRoot = foliage * species.FinerootFoliageRatio;
 
@@ -112,7 +112,7 @@ namespace iLand.Tree
                 float n = this.DeadSaplings * species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(avg_dbh_dead);
                 // woody parts: stem, branchse and coarse roots
 
-                deadWood.AddBiomass((species.GetBiomassStem(avg_dbh_dead) + species.GetBiomassBranch(avg_dbh_dead) + species.GetBiomassRoot(avg_dbh_dead)) * n, species.CNRatioWood);
+                deadWood.AddBiomass((species.GetBiomassStem(avg_dbh_dead) + species.GetBiomassBranch(avg_dbh_dead) + species.GetBiomassCoarseRoot(avg_dbh_dead)) * n, species.CNRatioWood);
                 float foliage = species.GetBiomassFoliage(avg_dbh_dead) * n;
 
                 deadFine.AddBiomass(foliage, species.CNRatioFoliage);

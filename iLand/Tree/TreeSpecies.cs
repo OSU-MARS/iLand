@@ -125,7 +125,7 @@ namespace iLand.Tree
         public float GetBarkThickness(float dbh) { return dbh * this.mBarkThicknessFactor; }
         public float GetBiomassFoliage(float dbh) { return this.mFoliageA * MathF.Pow(dbh, this.mFoliageB); }
         public float GetBiomassStem(float dbh) { return this.mWoodyA * MathF.Pow(dbh, this.mWoodyB); }
-        public float GetBiomassRoot(float dbh) { return this.mRootA * MathF.Pow(dbh, this.mRootB); }
+        public float GetBiomassCoarseRoot(float dbh) { return this.mRootA * MathF.Pow(dbh, this.mRootB); }
         public float GetBiomassBranch(float dbh) { return this.mBranchA * MathF.Pow(dbh, this.mBranchB); }
         public float GetStemFoliageRatio() { return this.mWoodyB / this.mFoliageB; } // Duursma et al. 2007 eq 20
 

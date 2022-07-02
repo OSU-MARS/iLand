@@ -3,12 +3,12 @@ using iLand.World;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 
 namespace iLand.Tree
 {
     public class ResourceUnitTrees
     {
-        private int nextDefaultTreeID;
         private readonly bool retainStandStatisticsInMemory;
         private readonly ResourceUnit ru;
 
@@ -28,7 +28,6 @@ namespace iLand.Tree
 
         public ResourceUnitTrees(Project projectFile, ResourceUnit ru, TreeSpeciesSet treeSpeciesSet)
         {
-            this.nextDefaultTreeID = 0;
             this.retainStandStatisticsInMemory = projectFile.Output.Memory.StandStatistics.Enabled;
             this.ru = ru;
 
@@ -71,9 +70,14 @@ namespace iLand.Tree
             this.AggregatedLightWeightedLeafArea += leafArea * lightResponse; 
         }
 
-        public int AddTree(Landscape landscape, string speciesID)
+        public int AddTree(Project projectFile, Landscape landscape, string speciesID, float dbhInCm, float heightInM, Point lightCellIndexXY, int ageInYears, out Trees treesOfSpecies)
         {
-            if (this.TreesBySpeciesID.TryGetValue(speciesID, out Trees? treesOfSpecies) == false)
+            // get or create tree's species
+            if (this.TreesBySpeciesID.TryGetValue(speciesID, out Trees? nullableTreesOfSpecies))
+            {
+                treesOfSpecies = nullableTreesOfSpecies;
+            }
+            else
             {
                 int speciesIndex = -1;
                 foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
@@ -94,9 +98,10 @@ namespace iLand.Tree
             }
             Debug.Assert(String.Equals(treesOfSpecies.Species.ID, speciesID, StringComparison.OrdinalIgnoreCase));
 
+            // create tree
+            float lightStampBeerLambertK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
             int treeIndex = treesOfSpecies.Count;
-            treesOfSpecies.Add();
-            treesOfSpecies.Tag[treeIndex] = this.nextDefaultTreeID++; // doesn't guarantee unique tree ID when tree lists are combined with regeneration
+            treesOfSpecies.Add(dbhInCm, heightInM, ageInYears, lightCellIndexXY, lightStampBeerLambertK);
             return treeIndex;
         }
 

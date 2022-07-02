@@ -12,7 +12,7 @@ namespace iLand.Input
         private static readonly ReadOnlyCollection<string> iLandSpeciesIDs = new List<string>() { "piab", "piab", "fasy" }.AsReadOnly();
         private static readonly ReadOnlyCollection<int> PicusSpeciesIDs = new List<int>() { 0, 1, 17 }.AsReadOnly();
 
-        public List<int> IndividualAge { get; private init; }
+        public List<int> IndividualAgeInYears { get; private init; }
         public List<float> IndividualDbhInCM { get; private init; }
         public List<float> IndividualHeightInM { get; private init; }
         public List<string> IndividualSpeciesID { get; private init; }
@@ -39,7 +39,7 @@ namespace iLand.Input
                 throw new NotSupportedException("Unable to autodetect format of tree file '" + treeFilePath + "'. Known formats are 1) individual trees (required columns are x, y, bhdfrom or dbh, species, and treeheight or height), 2) tree size distribution (columns are count, species, dbhFrom, dbhTo, hdRatio, and age), and 3) a list of other tree files by stand ID (columns are 'standID' and 'fileName').");
             }
 
-            this.IndividualAge = new();
+            this.IndividualAgeInYears = new();
             this.IndividualDbhInCM = new();
             this.IndividualHeightInM = new();
             this.IndividualSpeciesID = new();
@@ -93,7 +93,7 @@ namespace iLand.Input
                     {
                         age = Int32.Parse(row[individualTreeHeader.Age]);
                     }
-                    this.IndividualAge.Add(age);
+                    this.IndividualAgeInYears.Add(age);
 
                     int standID = Constant.DefaultStandID;
                     if (individualTreeHeader.StandID >= 0)
@@ -103,13 +103,13 @@ namespace iLand.Input
                     this.IndividualStandID.Add(standID);
                 });
 
-                Debug.Assert((this.IndividualAge.Count == this.IndividualDbhInCM.Count) &&
-                             (this.IndividualAge.Count == this.IndividualHeightInM.Count) &&
-                             (this.IndividualAge.Count == this.IndividualSpeciesID.Count) &&
-                             (this.IndividualAge.Count == this.IndividualStandID.Count) &&
-                             (this.IndividualAge.Count == this.IndividualTag.Count) &&
-                             (this.IndividualAge.Count == this.IndividualGisX.Count) &&
-                             (this.IndividualAge.Count == this.IndividualGisY.Count));
+                Debug.Assert((this.IndividualAgeInYears.Count == this.IndividualDbhInCM.Count) &&
+                             (this.IndividualAgeInYears.Count == this.IndividualHeightInM.Count) &&
+                             (this.IndividualAgeInYears.Count == this.IndividualSpeciesID.Count) &&
+                             (this.IndividualAgeInYears.Count == this.IndividualStandID.Count) &&
+                             (this.IndividualAgeInYears.Count == this.IndividualTag.Count) &&
+                             (this.IndividualAgeInYears.Count == this.IndividualGisX.Count) &&
+                             (this.IndividualAgeInYears.Count == this.IndividualGisY.Count));
             }
             else if (treeSizeHeader.CanBeSizeDistributionFile)
             {

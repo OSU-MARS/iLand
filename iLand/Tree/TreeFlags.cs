@@ -6,6 +6,7 @@ namespace iLand.Tree
     [Flags]
     internal enum TreeFlags
     {
+        None = 0,
         Dead = 1,
         Debugging = 2,
         DeadFromBarkBeetles = 16,

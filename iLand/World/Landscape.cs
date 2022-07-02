@@ -454,7 +454,7 @@ namespace iLand.World
                         Sapling? sapling = saplingCell.AddSaplingIfSlotFree(height, age, species.Index);
                         if (sapling != null)
                         {
-                            fractionallyOccupiedCellCount += Math.Max(1.0F, species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(sapling.Height));
+                            fractionallyOccupiedCellCount += Math.Max(1.0F, species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(sapling.HeightInM));
                         }
                         else
                         {
