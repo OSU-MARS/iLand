@@ -20,30 +20,31 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				if (String.Equals(reader.Name, "fire", StringComparison.Ordinal))
+				switch (reader.Name)
 				{
-					this.Fire.ReadXml(reader);
+					case "fire":
+						this.Fire.ReadXml(reader);
+						break;
+					case "wind":
+						this.Wind.ReadXml(reader);
+						break;
+					case "barkBeetle":
+						this.BarkBeetle.ReadXml(reader);
+						break;
+					default:
+						throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 				}
-				else if (String.Equals(reader.Name, "wind", StringComparison.Ordinal))
-				{
-					this.Wind.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "barkBeetle", StringComparison.Ordinal))
-				{
-					this.BarkBeetle.ReadXml(reader);
-				}
-				else
-				{
-					throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
-				}
-			}
-			else if (String.Equals(reader.Name, "modules", StringComparison.Ordinal))
-			{
-				reader.Read();
 			}
 			else
 			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				switch (reader.Name)
+				{
+					case "modules":
+						reader.Read();
+						break;
+					default:
+						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				}
 			}
 		}
 	}

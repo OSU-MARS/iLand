@@ -51,63 +51,6 @@ namespace iLand
             public const float MinimumHeight = 0.05F; // m
         }
 
-        public static class Setting
-        {
-            public const string ID = "id";
-            public const string SpeciesTable = "model.species.source";
-            public const string CenterX = "centerX";
-            public const string CenterY = "centerY";
-
-            public static class Climate
-            {
-                public const string CarbonDioxidePpm = "model.climate.co2concentration";
-                public const string Name = "model.climate.tableName";
-                public const string PrecipitationMultiplier = "precipitationShift";
-                public const string TemperatureShift = "temperatureShift";
-                public const string YearsPerLoad = "batchYears";
-            }
-
-            public static class Snag
-            {
-                public const string OtherC = "model.initialization.snags.otherC";
-                public const string OtherCN = "model.initialization.snags.otherCN";
-                public const string StandingWoodyCarbon = "model.initialization.snags.swdC";
-                public const string StandingWoodyCNRatio = "model.initialization.snags.swdCN";
-                public const string StandingWoodyCount = "model.initialization.snags.swdCount";
-                public const string StandingWoodyDecompositionRate = "model.initialization.snags.swdDecompRate";
-                public const string StandingWoodyHalfLife = "model.initialization.snags.swdHalfLife";
-            }
-
-            public static class Soil
-            {
-                public const string AnnualNitrogenDeposition = "model.settings.soil.nitrogenDeposition";
-                public const string AvailableNitrogen = "model.site.availableNitrogen";
-                public const string Depth = "model.site.soilDepth";
-                public const string El = "model.settings.soil.el";
-                public const string Er = "model.settings.soil.er";
-                public const string Leaching = "model.settings.soil.leaching";
-                public const string HumificationRate = "model.site.soilHumificationRate";
-                public const string OrganicMatterC = "model.site.somC";
-                public const string OrganicMatterDecompositionRate = "model.site.somDecompRate";
-                public const string OrganincMatterN = "model.site.somN";
-                public const string PercentClay = "model.site.pctClay";
-                public const string PercentSand = "model.site.pctSand";
-                public const string PercentSilt = "model.site.pctSilt";
-                public const string Qb = "model.settings.soil.qb";
-                public const string Qh = "model.settings.soil.qh";
-
-                public const string SwhDbhClass12 = "model.settings.soil.swdDBHClass12";
-                public const string SwhDbhClass23 = "model.settings.soil.swdDBHClass23";
-                public const string UseDynamicAvailableNitrogen = "model.settings.soil.useDynamicAvailableNitrogen";
-                public const string YoungLabileC = "model.site.youngLabileC";
-                public const string YoungLabileDecompositionRate = "model.site.youngLabileDecompRate";
-                public const string YoungLabileN = "model.site.youngLabileN";
-                public const string YoungRefractoryC = "model.site.youngRefractoryC";
-                public const string YoungRefractoryDecompositionRate = "model.site.youngRefractoryDecompRate";
-                public const string YoungRefractoryN = "model.site.youngRefractoryN";
-            }
-        }
-
         public static class Simd128x4
         {
             public const int Width = 4;

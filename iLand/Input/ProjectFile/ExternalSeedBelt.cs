@@ -36,33 +36,34 @@ namespace iLand.Input.ProjectFile
                     this.ReadEnabled(reader);
                 }
             }
-            else if (String.Equals(reader.Name, "width", StringComparison.Ordinal))
-            {
-                this.WidthInM = reader.ReadElementContentAsInt();
-                if (this.WidthInM < 0)
-                {
-                    throw new XmlException("Seed belt width is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "sectorsX", StringComparison.Ordinal))
-            {
-                this.SectorsX = reader.ReadElementContentAsInt();
-                if (this.SectorsX < 0)
-                {
-                    throw new XmlException("Seed belt size in x direction is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "sectorsY", StringComparison.Ordinal))
-            {
-                this.SectorsY = reader.ReadElementContentAsInt();
-                if (this.SectorsY < 0)
-                {
-                    throw new XmlException("Seed belt size in y direction is negative.");
-                }
-            }
             else
             {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                switch (reader.Name)
+                {
+                    case "width":
+                        this.WidthInM = reader.ReadElementContentAsInt();
+                        if (this.WidthInM < 0)
+                        {
+                            throw new XmlException("Seed belt width is negative.");
+                        }
+                        break;
+                    case "sectorsX":
+                        this.SectorsX = reader.ReadElementContentAsInt();
+                        if (this.SectorsX < 0)
+                        {
+                            throw new XmlException("Seed belt size in x direction is negative.");
+                        }
+                        break;
+                    case "sectorsY":
+                        this.SectorsY = reader.ReadElementContentAsInt();
+                        if (this.SectorsY < 0)
+                        {
+                            throw new XmlException("Seed belt size in y direction is negative.");
+                        }
+                        break;
+                    default:
+                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                }
             }
         }
     }

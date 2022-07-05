@@ -33,58 +33,53 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				if (String.Equals(reader.Name, "externalSeedBelt", StringComparison.Ordinal))
+				switch (reader.Name)
 				{
-					this.ExternalSeedBelt.ReadXml(reader);
+					case "externalSeedBelt":
+						this.ExternalSeedBelt.ReadXml(reader);
+						break;
+					default:
+						throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 				}
-				else
-				{
-					throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
-				}
-			}
-			else if (String.Equals(reader.Name, "seedDispersal", StringComparison.Ordinal))
-			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "dumpSeedMapsPath", StringComparison.Ordinal))
-			{
-				this.DumpSeedMapsPath = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "externalSeedBackgroundInput", StringComparison.Ordinal))
-			{
-				this.ExternalSeedBackgroundInput = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "externalSeedEnabled", StringComparison.Ordinal))
-			{
-				this.ExternalSeedEnabled = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "externalSeedSource", StringComparison.Ordinal))
-			{
-				this.ExternalSeedDirection = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "externalSeedSpecies", StringComparison.Ordinal))
-			{
-				this.ExternalSeedSpecies = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "externalSeedBuffer", StringComparison.Ordinal))
-			{
-				this.ExternalSeedBuffer = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "recruitmentDimensionVariation", StringComparison.Ordinal))
-			{
-				this.RecruitmentDimensionVariation = reader.ReadElementContentAsFloat();
-				if (this.RecruitmentDimensionVariation < 0.0)
-                {
-					throw new XmlException("Variation in sapling recruitment dimensions is negative.");
-                }
-			}
-			else if (String.Equals(reader.Name, "longDistanceDispersal", StringComparison.Ordinal))
-			{
-				this.LongDistanceDispersal.ReadXml(reader);
 			}
 			else
 			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				switch (reader.Name)
+				{
+					case "seedDispersal":
+						reader.Read();
+						break;
+					case "dumpSeedMapsPath":
+						this.DumpSeedMapsPath = reader.ReadElementContentAsString().Trim();
+						break;
+					case "externalSeedBackgroundInput":
+						this.ExternalSeedBackgroundInput = reader.ReadElementContentAsString().Trim();
+						break;
+					case "externalSeedEnabled":
+						this.ExternalSeedEnabled = reader.ReadElementContentAsBoolean();
+						break;
+					case "externalSeedSource":
+						this.ExternalSeedDirection = reader.ReadElementContentAsString().Trim();
+						break;
+					case "externalSeedSpecies":
+						this.ExternalSeedSpecies = reader.ReadElementContentAsString().Trim();
+						break;
+					case "externalSeedBuffer":
+						this.ExternalSeedBuffer = reader.ReadElementContentAsString().Trim();
+						break;
+					case "recruitmentDimensionVariation":
+						this.RecruitmentDimensionVariation = reader.ReadElementContentAsFloat();
+						if (this.RecruitmentDimensionVariation < 0.0)
+						{
+							throw new XmlException("Variation in sapling recruitment dimensions is negative.");
+						}
+						break;
+					case "longDistanceDispersal":
+						this.LongDistanceDispersal.ReadXml(reader);
+						break;
+					default:
+						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				}
 			}
 		}
 	}

@@ -16,22 +16,25 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				if (String.Equals(reader.Name, "standStatistics", StringComparison.Ordinal))
+				switch (reader.Name)
 				{
-					this.StandStatistics.ReadXml(reader);
+					case "standStatistics":
+						this.StandStatistics.ReadXml(reader);
+						break;
+					default:
+						throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 				}
-				else
-				{
-					throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
-				}
-			}
-			else if (String.Equals(reader.Name, "memory", StringComparison.Ordinal))
-			{
-				reader.Read();
 			}
 			else
 			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				switch (reader.Name)
+				{
+					case "memory":
+						reader.Read();
+						break;
+					default:
+						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				}
 			}
 		}
 	}

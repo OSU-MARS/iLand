@@ -12,68 +12,69 @@ namespace iLand.Input.ProjectFile
 		public WorldGeometry Geometry { get; private init; }
 		public Grass Grass { get; private init; }
 		public WorldInitialization Initialization { get; private init; }
+		public Snag Snag { get; private init; }
 		public Species Species { get; private init; }
 
 		public World()
         {
-			this.Browsing = new Browsing();
-			this.Climate = new Climate();
-			this.Debug = new WorldDebug();
-			this.DefaultSoil = new DefaultSoil();
-			this.Grass = new Grass();
-			this.Geometry = new WorldGeometry();
-			this.Initialization = new WorldInitialization();
-			this.Species = new Species();
+			this.Browsing = new();
+			this.Climate = new();
+			this.Debug = new();
+			this.DefaultSoil = new();
+			this.Grass = new();
+			this.Geometry = new();
+			this.Initialization = new();
+			this.Snag = new();
+			this.Species = new();
         }
 
 		protected override void ReadStartElement(XmlReader reader)
 		{
 			if (reader.AttributeCount != 0)
 			{
-				if (String.Equals(reader.Name, "browsing", StringComparison.Ordinal))
+				switch (reader.Name)
 				{
-					this.Browsing.ReadXml(reader);
+					case "browsing":
+						this.Browsing.ReadXml(reader);
+						break;
+					case "grass":
+						this.Grass.ReadXml(reader);
+						break;
+					default:
+						throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 				}
-				else if (String.Equals(reader.Name, "grass", StringComparison.Ordinal))
-				{
-					this.Grass.ReadXml(reader);
-				}
-				else
-				{
-					throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
-				}
-			}
-			else if (String.Equals(reader.Name, "world", StringComparison.Ordinal))
-			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "climate", StringComparison.Ordinal))
-			{
-				this.Climate.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "debug", StringComparison.Ordinal))
-			{
-				this.Debug.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "defaultSoil", StringComparison.Ordinal))
-			{
-				this.DefaultSoil.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "geometry", StringComparison.Ordinal))
-			{
-				this.Geometry.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "initialization", StringComparison.Ordinal))
-			{
-				this.Initialization.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "species", StringComparison.Ordinal))
-			{
-				this.Species.ReadXml(reader);
 			}
 			else
 			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				switch (reader.Name)
+				{
+					case "world":
+						reader.Read();
+						break;
+					case "climate":
+						this.Climate.ReadXml(reader);
+						break;
+					case "debug":
+						this.Debug.ReadXml(reader);
+						break;
+					case "defaultSoil":
+						this.DefaultSoil.ReadXml(reader);
+						break;
+					case "geometry":
+						this.Geometry.ReadXml(reader);
+						break;
+					case "initialization":
+						this.Initialization.ReadXml(reader);
+						break;
+					case "snag":
+						this.Snag.ReadXml(reader);
+						break;
+					case "species":
+						this.Species.ReadXml(reader);
+						break;
+					default:
+						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				}
 			}
 		}
 	}

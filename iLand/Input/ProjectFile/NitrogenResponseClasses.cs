@@ -30,62 +30,56 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
-			if (String.Equals(reader.Name, "nitrogenResponseClasses", StringComparison.Ordinal))
-			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "class1k", StringComparison.Ordinal))
-			{
-				this.Class1K = reader.ReadElementContentAsFloat();
-                if (this.Class1K >= 0.0F)
-                {
-                    throw new XmlException("Class 1 nitrogen response: a is zero or positive.");
-                }
-			}
-            else if (String.Equals(reader.Name, "class1minimum", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                this.Class1Minimum = reader.ReadElementContentAsFloat();
-                if (this.Class1Minimum <= 0.0F)
-                {
-                    throw new XmlException("Class 1 nitrogen response: b is zero or negative.");
-                }
+                case "nitrogenResponseClasses":
+                    reader.Read();
+                    break;
+                case "class1k":
+                    this.Class1K = reader.ReadElementContentAsFloat();
+                    if (this.Class1K >= 0.0F)
+                    {
+                        throw new XmlException("Class 1 nitrogen response: a is zero or positive.");
+                    }
+                    break;
+                case "class1minimum":
+                    this.Class1Minimum = reader.ReadElementContentAsFloat();
+                    if (this.Class1Minimum <= 0.0F)
+                    {
+                        throw new XmlException("Class 1 nitrogen response: b is zero or negative.");
+                    }
+                    break;
+                case "class2k":
+                    this.Class2K = reader.ReadElementContentAsFloat();
+                    if (this.Class2K >= 0.0F)
+                    {
+                        throw new XmlException("Class 2 nitrogen response: a is zero or positive.");
+                    }
+                    break;
+                case "class2minimum":
+                    this.Class2Minimum = reader.ReadElementContentAsFloat();
+                    if (this.Class2Minimum <= 0.0F)
+                    {
+                        throw new XmlException("Class 2 nitrogen response: b is zero or negative.");
+                    }
+                    break;
+                case "class3k":
+                    this.Class3K = reader.ReadElementContentAsFloat();
+                    if (this.Class3K >= 0.0F)
+                    {
+                        throw new XmlException("Class 3 nitrogen response: a is zero or positive.");
+                    }
+                    break;
+                case "class3minimum":
+                    this.Class3Minimum = reader.ReadElementContentAsFloat();
+                    if (this.Class3Minimum <= 0.0F)
+                    {
+                        throw new XmlException("Class 3 nitrogen response: b is zero or negative.");
+                    }
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
-            else if (String.Equals(reader.Name, "class2k", StringComparison.Ordinal))
-            {
-                this.Class2K = reader.ReadElementContentAsFloat();
-                if (this.Class2K >= 0.0F)
-                {
-                    throw new XmlException("Class 2 nitrogen response: a is zero or positive.");
-                }
-            }
-            else if (String.Equals(reader.Name, "class2minimum", StringComparison.Ordinal))
-            {
-                this.Class2Minimum = reader.ReadElementContentAsFloat();
-                if (this.Class2Minimum <= 0.0F)
-                {
-                    throw new XmlException("Class 2 nitrogen response: b is zero or negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "class3k", StringComparison.Ordinal))
-            {
-                this.Class3K = reader.ReadElementContentAsFloat();
-                if (this.Class3K >= 0.0F)
-                {
-                    throw new XmlException("Class 3 nitrogen response: a is zero or positive.");
-                }
-            }
-            else if (String.Equals(reader.Name, "class3minimum", StringComparison.Ordinal))
-            {
-                this.Class3Minimum = reader.ReadElementContentAsFloat();
-                if (this.Class3Minimum <= 0.0F)
-                {
-                    throw new XmlException("Class 3 nitrogen response: b is zero or negative.");
-                }
-            }
-            else
-            {
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
-			}
 		}
 	}
 }

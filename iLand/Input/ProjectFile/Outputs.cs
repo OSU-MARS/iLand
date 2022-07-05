@@ -23,25 +23,22 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
-			if (String.Equals(reader.Name, "output", StringComparison.Ordinal))
+			switch (reader.Name)
 			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "annual", StringComparison.Ordinal))
-			{
-				this.Annual.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "logging", StringComparison.Ordinal))
-			{
-				this.Logging.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "memory", StringComparison.Ordinal))
-			{
-				this.Memory.ReadXml(reader);
-			}
-			else
-			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				case "output":
+					reader.Read();
+					break;
+				case "annual":
+					this.Annual.ReadXml(reader);
+					break;
+				case "logging":
+					this.Logging.ReadXml(reader);
+					break;
+				case "memory":
+					this.Memory.ReadXml(reader);
+					break;
+				default:
+					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

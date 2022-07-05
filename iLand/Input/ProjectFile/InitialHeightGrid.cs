@@ -23,29 +23,26 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "heightGrid", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "fileName", StringComparison.Ordinal))
-            {
-                this.FileName = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "maxTries", StringComparison.Ordinal))
-            {
-                this.MaxTries = reader.ReadElementContentAsInt();
-                if (this.MaxTries < 1)
-                {
-                    throw new XmlException("Maximum height tries is zero or negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "fitFormula", StringComparison.Ordinal))
-            {
-                this.FitFormula = reader.ReadElementContentAsString().Trim();
-            }
-            else
-            {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "heightGrid":
+                    reader.Read();
+                    break;
+                case "fileName":
+                    this.FileName = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "maxTries":
+                    this.MaxTries = reader.ReadElementContentAsInt();
+                    if (this.MaxTries < 1)
+                    {
+                        throw new XmlException("Maximum height tries is zero or negative.");
+                    }
+                    break;
+                case "fitFormula":
+                    this.FitFormula = reader.ReadElementContentAsString().Trim();
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

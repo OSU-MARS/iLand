@@ -15,25 +15,23 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "user", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "code", StringComparison.Ordinal))
-            {
-                this.Code = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "windspeedFactor", StringComparison.Ordinal))
-            {
-                this.WindspeedFactor = reader.ReadElementContentAsFloat();
-                if (this.WindspeedFactor < 0.0F)
-                {
-                    throw new XmlException("Windspeed factor is negative.");
-                }
-            }
-            else
-            {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "user":
+                    reader.Read();
+                    break;
+                case "code":
+                    this.Code = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "windspeedFactor":
+                    this.WindspeedFactor = reader.ReadElementContentAsFloat();
+                    if (this.WindspeedFactor < 0.0F)
+                    {
+                        throw new XmlException("Windspeed factor is negative.");
+                    }
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

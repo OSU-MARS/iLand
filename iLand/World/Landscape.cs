@@ -1,5 +1,6 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
+using iLand.Input.Tree;
 using iLand.Tool;
 using iLand.Tree;
 using Microsoft.Data.Sqlite;
@@ -326,17 +327,14 @@ namespace iLand.World
             return connection;
         }
 
-        public ResourceUnit GetResourceUnit(PointF ruPosition) // resource unit at given coordinates
+        public ResourceUnit GetResourceUnit(PointF projectCoordinate) // resource unit at given project coordinates
         {
-            if (this.ResourceUnitGrid.IsSetup() == false)
-            {
-                // TODO: why not populate a 1x1 grid with the default resource unit?
-                return this.ResourceUnits[0]; // default RU if there is only one
-            }
-            ResourceUnit? ru = this.ResourceUnitGrid[ruPosition];
+            float resourceUnitGridCoordinateX = projectCoordinate.X - this.ResourceUnitGrid.ProjectExtent.X;
+            float resourceUnitGridCoordinateY = projectCoordinate.Y - this.ResourceUnitGrid.ProjectExtent.Y;
+            ResourceUnit? ru = this.ResourceUnitGrid[resourceUnitGridCoordinateX, resourceUnitGridCoordinateY];
             if (ru == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(ruPosition));
+                throw new ArgumentOutOfRangeException(nameof(projectCoordinate));
             }
             return ru;
         }

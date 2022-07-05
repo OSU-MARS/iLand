@@ -1,5 +1,4 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -19,14 +18,17 @@ namespace iLand.Input.ProjectFile
             {
                 this.ReadEnabled(reader);
             }
-            else if (String.Equals(reader.Name, "browsingPressure", StringComparison.Ordinal))
-            {
-                this.BrowsingPressure = reader.ReadElementContentAsFloat();
-                // no clear restriction on range of value
-            }
             else
             {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                switch (reader.Name)
+                {
+                    case "browsingPressure":
+                        this.BrowsingPressure = reader.ReadElementContentAsFloat();
+                        // no clear restriction on range of value
+                        break;
+                    default:
+                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                }
             }
         }
     }

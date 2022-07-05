@@ -1,5 +1,4 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -38,59 +37,50 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "climate", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "co2concentration", StringComparison.Ordinal))
-            {
-                this.CO2ConcentrationInPpm = reader.ReadElementContentAsFloat();
-                if ((this.CO2ConcentrationInPpm < 0.0F) || (this.CO2ConcentrationInPpm > 1E6F))
-                {
-                    throw new XmlException("CO₂ concentration is negative or greater than 100%.");
-                }
-            }
-            else if (String.Equals(reader.Name, "databaseFile", StringComparison.Ordinal))
-            {
-                this.DatabaseFile = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "databaseQueryFilter", StringComparison.Ordinal))
-            {
-                this.DatabaseQueryFilter = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "defaultDatabaseTable", StringComparison.Ordinal))
-            {
-                this.DefaultDatabaseTable = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "batchYears", StringComparison.Ordinal))
-            {
-                this.BatchYears = reader.ReadElementContentAsInt();
-                if (this.BatchYears < 1)
-                {
-                    throw new XmlException("Maximum number of years to load per climate table read (batchYears) is zero or negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "temperatureShift", StringComparison.Ordinal))
-            {
-                this.TemperatureShift = reader.ReadElementContentAsFloat();
-                // no restriction on value range
-            }
-            else if (String.Equals(reader.Name, "precipitationShift", StringComparison.Ordinal))
-            {
-                this.PrecipitationMultiplier = reader.ReadElementContentAsFloat();
-                // no restriction on value range
-            }
-            else if (String.Equals(reader.Name, "randomSamplingEnabled", StringComparison.Ordinal))
-            {
-                this.RandomSamplingEnabled = reader.ReadElementContentAsBoolean();
-            }
-            else if (String.Equals(reader.Name, "randomSamplingList", StringComparison.Ordinal))
-            {
-                this.RandomSamplingList = reader.ReadElementContentAsString().Trim();
-            }
-            else
-            {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "climate":
+                    reader.Read();
+                    break;
+                case "co2concentration":
+                    this.CO2ConcentrationInPpm = reader.ReadElementContentAsFloat();
+                    if ((this.CO2ConcentrationInPpm < 0.0F) || (this.CO2ConcentrationInPpm > 1E6F))
+                    {
+                        throw new XmlException("CO₂ concentration is negative or greater than 100%.");
+                    }
+                    break;
+                case "databaseFile":
+                    this.DatabaseFile = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "databaseQueryFilter":
+                    this.DatabaseQueryFilter = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "defaultDatabaseTable":
+                    this.DefaultDatabaseTable = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "batchYears":
+                    this.BatchYears = reader.ReadElementContentAsInt();
+                    if (this.BatchYears < 1)
+                    {
+                        throw new XmlException("Maximum number of years to load per climate table read (batchYears) is zero or negative.");
+                    }
+                    break;
+                case "temperatureShift":
+                    this.TemperatureShift = reader.ReadElementContentAsFloat();
+                    // no restriction on value range
+                    break;
+                case "precipitationShift":
+                    this.PrecipitationMultiplier = reader.ReadElementContentAsFloat();
+                    // no restriction on value range
+                    break;
+                case "randomSamplingEnabled":
+                    this.RandomSamplingEnabled = reader.ReadElementContentAsBoolean();
+                    break;
+                case "randomSamplingList":
+                    this.RandomSamplingList = reader.ReadElementContentAsString().Trim();
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

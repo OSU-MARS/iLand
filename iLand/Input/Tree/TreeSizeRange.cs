@@ -1,4 +1,4 @@
-﻿namespace iLand.Input
+﻿namespace iLand.Input.Tree
 {
     internal class TreeSizeRange
     {
@@ -12,7 +12,7 @@
 
         public TreeSizeRange(string treeSpecies)
         {
-            this.TreeSpecies = treeSpecies;
+            TreeSpecies = treeSpecies;
         }
     }
 }

@@ -25,29 +25,25 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "model", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "ecosystem", StringComparison.Ordinal))
-            {
-                this.Ecosystem.ReadXml(reader);
-            }
-            else if (String.Equals(reader.Name, "management", StringComparison.Ordinal))
-            {
-                this.Management.ReadXml(reader);
-            }
-            else if (String.Equals(reader.Name, "seedDispersal", StringComparison.Ordinal))
-            {
-                this.SeedDispersal.ReadXml(reader);
-            }
-            else if (String.Equals(reader.Name, "settings", StringComparison.Ordinal))
-            {
-                this.Settings.ReadXml(reader);
-            }
-            else
-            {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "model":
+                    reader.Read();
+                    break;
+                case "ecosystem":
+                    this.Ecosystem.ReadXml(reader);
+                    break;
+                case "management":
+                    this.Management.ReadXml(reader);
+                    break;
+                case "seedDispersal":
+                    this.SeedDispersal.ReadXml(reader);
+                    break;
+                case "settings":
+                    this.Settings.ReadXml(reader);
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

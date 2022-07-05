@@ -34,71 +34,64 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
-			if (String.Equals(reader.Name, "species", StringComparison.Ordinal))
-			{
-				reader.Read();
-			}
-            else if (String.Equals(reader.Name, "databaseFile", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                this.DatabaseFile = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "databaseTable", StringComparison.Ordinal))
-			{
-				this.DatabaseTable = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "reader", StringComparison.Ordinal))
-			{
-				this.ReaderStampFile = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "nitrogenResponseClasses", StringComparison.Ordinal))
-			{
-				this.NitrogenResponseClasses.ReadXml(reader);
-			}
-            else if (String.Equals(reader.Name, "co2response", StringComparison.Ordinal))
-            {
-                this.CO2Response.ReadXml(reader);
-            }
-            else if (String.Equals(reader.Name, "lightResponse", StringComparison.Ordinal))
-            {
-                this.LightResponse.ReadXml(reader);
-            }
-            else if (String.Equals(reader.Name, "phenology", StringComparison.Ordinal))
-            {
-                XmlReader phenologyReader = reader.ReadSubtree();
-                phenologyReader.MoveToContent();
-                while (phenologyReader.EOF == false)
-                {
-                    if (phenologyReader.IsStartElement())
+                case "species":
+                    reader.Read();
+                    break;
+                case "databaseFile":
+                    this.DatabaseFile = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "databaseTable":
+                    this.DatabaseTable = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "reader":
+                    this.ReaderStampFile = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "nitrogenResponseClasses":
+                    this.NitrogenResponseClasses.ReadXml(reader);
+                    break;
+                case "co2response":
+                    this.CO2Response.ReadXml(reader);
+                    break;
+                case "lightResponse":
+                    this.LightResponse.ReadXml(reader);
+                    break;
+                case "phenology":
+                    XmlReader phenologyReader = reader.ReadSubtree();
+                    phenologyReader.MoveToContent();
+                    while (phenologyReader.EOF == false)
                     {
-                        if (phenologyReader.IsStartElement("phenology"))
+                        if (phenologyReader.IsStartElement())
                         {
-                            if (reader.AttributeCount != 0)
+                            if (phenologyReader.IsStartElement("phenology"))
                             {
-                                throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+                                if (reader.AttributeCount != 0)
+                                {
+                                    throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+                                }
+                                phenologyReader.Read();
                             }
-                            phenologyReader.Read();
-                        }
-                        else if (phenologyReader.IsStartElement("type"))
-                        {
-                            PhenologyType phenology = new();
-                            phenology.ReadXml(phenologyReader);
-                            this.Phenology.Add(phenology);
+                            else if (phenologyReader.IsStartElement("type"))
+                            {
+                                PhenologyType phenology = new();
+                                phenology.ReadXml(phenologyReader);
+                                this.Phenology.Add(phenology);
+                            }
+                            else
+                            {
+                                throw new XmlException("Encountered unknown element '" + phenologyReader.Name + "'.");
+                            }
                         }
                         else
                         {
-                            throw new XmlException("Encountered unknown element '" + phenologyReader.Name + "'.");
+                            phenologyReader.Read();
                         }
                     }
-                    else
-                    {
-                        phenologyReader.Read();
-                    }
-                }
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
-            else
-            {
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
-			}
 		}
 	}
 }

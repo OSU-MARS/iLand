@@ -41,54 +41,45 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "paths", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "home", StringComparison.Ordinal))
-            {
-                // interpret an empty <home> element as an indication to continue defaulting to the project directory
-                string candidateHomePath = reader.ReadElementContentAsString().Trim();
-                if (String.IsNullOrEmpty(candidateHomePath) == false)
-                {
-                    this.Home = candidateHomePath;
-                }
-            }
-            else if (String.Equals(reader.Name, "database", StringComparison.Ordinal))
-            {
-                this.Database = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "gis", StringComparison.Ordinal))
-            {
-                this.Gis = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "lip", StringComparison.Ordinal))
-            {
-                this.LightIntensityProfile = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "log", StringComparison.Ordinal))
-            {
-                this.Log = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "temp", StringComparison.Ordinal))
-            {
-                this.Temp = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "script", StringComparison.Ordinal))
-            {
-                this.Script = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "init", StringComparison.Ordinal))
-            {
-                this.Init = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "output", StringComparison.Ordinal))
-            {
-                this.Output = reader.ReadElementContentAsString().Trim();
-            }
-            else
-            {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "paths":
+                    reader.Read();
+                    break;
+                case "home":
+                    // interpret an empty <home> element as an indication to continue defaulting to the project directory
+                    string candidateHomePath = reader.ReadElementContentAsString().Trim();
+                    if (String.IsNullOrEmpty(candidateHomePath) == false)
+                    {
+                        this.Home = candidateHomePath;
+                    }
+                    break;
+                case "database":
+                    this.Database = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "gis":
+                    this.Gis = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "lip":
+                    this.LightIntensityProfile = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "log":
+                    this.Log = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "temp":
+                    this.Temp = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "script":
+                    this.Script = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "init":
+                    this.Init = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "output":
+                    this.Output = reader.ReadElementContentAsString().Trim();
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

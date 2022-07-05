@@ -21,17 +21,19 @@ namespace iLand.Input.ProjectFile
             {
                 this.ReadEnabled(reader);
             }
-            else if (String.Equals(reader.Name, "includeHarvest", StringComparison.Ordinal))
-            {
-                this.IncludeHarvest = reader.ReadElementContentAsBoolean();
-            }
-            else if (String.Equals(reader.Name, "includeNatural", StringComparison.Ordinal))
-            {
-                this.IncludeNatural = reader.ReadElementContentAsBoolean();
-            }
             else
             {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                switch (reader.Name)
+                {
+                    case "includeHarvest":
+                        this.IncludeHarvest = reader.ReadElementContentAsBoolean();
+                        break;
+                    case "includeNatural":
+                        this.IncludeNatural = reader.ReadElementContentAsBoolean();
+                        break;
+                    default:
+                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                }
             }
         }
     }

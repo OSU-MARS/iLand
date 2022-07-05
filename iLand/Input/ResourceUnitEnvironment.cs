@@ -21,20 +21,28 @@ namespace iLand.Input
         public float SnagStemDecompositionRate { get; private init; }
         public float SnagHalfLife { get; private init; }
 
-        public float SoilAvailableNitrogen { get; private init; }
         public float SoilDepthInCM { get; private init; } // cm
-        public float SoilEr { get; private init; }
-        public float SoilEl { get; private init; }
+        // van Genuchten water retention parameters
+        public float SoilThetaR { get; private init; }
+        public float SoilThetaS { get; private init; }
+        public float SoilVanGenuchtenAlpha { get; private init; }
+        public float SoilVanGenuchtenN { get; private init; }
+        // soil textures for estimation of Campbell (or other) water retention curve via pedotransfer regression
+        public float SoilSand { get; private init; }
+        public float SoilSilt { get; private init; }
+        public float SoilClay { get; private init; }
+
+        // ICBM2/N parameters for decomposition and flow among carbon and nitrogen pools
+        public float SoilAvailableNitrogen { get; private init; }
+        public float SoilEr { get; private init; } // microbial refractory efficiency
+        public float SoilEl { get; private init; } // microbial labial efficiency
         public float SoilLeaching { get; private init; }
         public float SoilHumificationRate { get; private init; }
         public float SoilOrganicC { get; private init; }
         public float SoilOrganicDecompositionRate { get; private init; }
         public float SoilOrganicN { get; private init; }
-        public float SoilQb { get; private init; }
-        public float SoilQh { get; private init; }
-        public float SoilSand { get; private init; }
-        public float SoilSilt { get; private init; }
-        public float SoilClay { get; private init; }
+        public float SoilQb { get; private init; } // soil microbe CN ratio
+        public float SoilQh { get; private init; } // soil organic matter CN ratio
         public float SoilYoungLabileC { get; private init; }
         public float SoilYoungLabileDecompositionRate { get; private init; }
         public float SoilYoungLabileN { get; private init; }
@@ -61,18 +69,25 @@ namespace iLand.Input
             this.SnagHalfLife = header.SnagHalfLife >= 0 ? Single.Parse(environmentFileRow[header.SnagHalfLife]) : defaultEnvironment.SnagsPerResourceUnit;
             this.SnagsPerResourceUnit = header.SnagsPerResourceUnit >= 0 ? Single.Parse(environmentFileRow[header.SnagsPerResourceUnit]) : defaultEnvironment.SnagsPerResourceUnit;
 
-            this.SoilAvailableNitrogen = header.SoilAvailableNitrogen >= 0 ? Single.Parse(environmentFileRow[header.SoilAvailableNitrogen]) : defaultEnvironment.SoilAvailableNitrogen;
             this.SoilDepthInCM = header.SoilDepthInCM >= 0 ? Single.Parse(environmentFileRow[header.SoilDepthInCM]) : defaultEnvironment.SoilDepthInCM;
+
+            this.SoilThetaR = header.SoilThetaR >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaR]) : defaultEnvironment.SoilThetaR;
+            this.SoilThetaS = header.SoilThetaS >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaS]) : defaultEnvironment.SoilThetaS;
+            this.SoilVanGenuchtenAlpha = header.SoilVanGenuchtenAlpha >= 0 ? Single.Parse(environmentFileRow[header.SoilVanGenuchtenAlpha]) : defaultEnvironment.SoilVanGenuchtenAlpha;
+            this.SoilVanGenuchtenN = header.SoilVanGenuchtenN >= 0 ? Single.Parse(environmentFileRow[header.SoilVanGenuchtenN]) : defaultEnvironment.SoilVanGenuchtenN;
+
+            this.SoilClay = header.SoilClayPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilClayPercentage]) : defaultEnvironment.SoilClay;
+            this.SoilSand = header.SoilSandPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilSandPercentage]) : defaultEnvironment.SoilSand;
+            this.SoilSilt = header.SoilSiltPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilSiltPercentage]) : defaultEnvironment.SoilSilt;
+
+            this.SoilAvailableNitrogen = header.SoilAvailableNitrogen >= 0 ? Single.Parse(environmentFileRow[header.SoilAvailableNitrogen]) : defaultEnvironment.SoilAvailableNitrogen;
             this.SoilEl = header.SoilEl >= 0 ? Single.Parse(environmentFileRow[header.SoilEl]) : defaultEnvironment.SoilEl;
             this.SoilEr = header.SoilEr >= 0 ? Single.Parse(environmentFileRow[header.SoilEr]) : defaultEnvironment.SoilEr;
             this.SoilLeaching = header.SoilLeaching >= 0 ? Single.Parse(environmentFileRow[header.SoilLeaching]) : defaultEnvironment.SoilLeaching;
             this.SoilHumificationRate = header.SoilHumificationRate >= 0 ? Single.Parse(environmentFileRow[header.SoilHumificationRate]) : defaultEnvironment.SoilHumificationRate;
-            this.SoilOrganicC = header.SoilOrganicC >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicC]) : defaultEnvironment.SoilOrganicC;
-            this.SoilOrganicDecompositionRate = header.SoilOrganicDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicDecompositionRate]) : defaultEnvironment.SoilOrganicDecompositionRate;
-            this.SoilOrganicN = header.SoilOrganicN >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicN]) : defaultEnvironment.SoilOrganicN;
-            this.SoilClay = header.SoilClayPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilClayPercentage]) : defaultEnvironment.SoilClay;
-            this.SoilSand = header.SoilSandPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilSandPercentage]) : defaultEnvironment.SoilSand;
-            this.SoilSilt = header.SoilSiltPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilSiltPercentage]) : defaultEnvironment.SoilSilt;
+            this.SoilOrganicC = header.SoilOrganicMatterC >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterC]) : defaultEnvironment.SoilOrganicC;
+            this.SoilOrganicDecompositionRate = header.SoilOrganicMatterDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterDecompositionRate]) : defaultEnvironment.SoilOrganicDecompositionRate;
+            this.SoilOrganicN = header.SoilOrganicMatterN >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterN]) : defaultEnvironment.SoilOrganicN;
             this.SoilQh = header.SoilQh >= 0 ? Single.Parse(environmentFileRow[header.SoilQh]) : defaultEnvironment.SoilQh;
             this.SoilYoungLabileC = header.SoilYoungLabileC >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileC]) : defaultEnvironment.SoilYoungLabileC;
             this.SoilYoungLabileDecompositionRate = header.SoilYoungLabileDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileDecompositionRate]) : defaultEnvironment.SoilYoungLabileDecompositionRate;
@@ -103,34 +118,42 @@ namespace iLand.Input
             this.SnagStemCNRatio = world.Initialization.Snags.StemCarbonNitrogenRatio;
 
             // soil parameters not currently supported in environment file
-            this.SoilQb = world.DefaultSoil.SoilMicrobeCarbonNitrogenRatio;
+            this.SoilQb = world.DefaultSoil.MicrobeCarbonNitrogenRatio;
             this.UseDynamicAvailableNitrogen = world.DefaultSoil.UseDynamicAvailableNitrogen;
 
             // default soil parameters which can be overridden in environment file
-            this.AnnualNitrogenDeposition = world.DefaultSoil.NitrogenDeposition;
+            this.AnnualNitrogenDeposition = world.DefaultSoil.AnnualNitrogenDeposition;
             this.SoilEl = world.DefaultSoil.MicrobialLabileEfficiency;
             this.SoilEr = world.DefaultSoil.MicrobialRefractoryEfficiency;
             this.SoilLeaching = world.DefaultSoil.NitrogenLeachingFraction;
 
             // default soil parameters specified in <site> rather than in <defaultSoil>
-            // parameters used by resource unit soil
+            this.SoilDepthInCM = world.DefaultSoil.Depth;
+
+            // van Genuchten water retention curve
+            this.SoilThetaR = world.DefaultSoil.ThetaR;
+            this.SoilThetaS = world.DefaultSoil.ThetaS;
+            this.SoilVanGenuchtenAlpha = world.DefaultSoil.VanGenuchtenAlpha;
+            this.SoilVanGenuchtenN = world.DefaultSoil.VanGenuchtenN;
+
+            // soil texture for Campbell or other water retention curve
+            this.SoilSand = world.DefaultSoil.PercentSand;
+            this.SoilSilt = world.DefaultSoil.PercentSilt;
+            this.SoilClay = world.DefaultSoil.PercentClay;
+
+            // ICBM2/N parameters
             this.SoilAvailableNitrogen = world.DefaultSoil.AvailableNitrogen;
-            this.SoilDepthInCM = world.DefaultSoil.SoilDepth;
-            this.SoilHumificationRate = world.DefaultSoil.SoilHumificationRate;
-            this.SoilOrganicC = world.DefaultSoil.SoilOrganicMatterCarbon;
-            this.SoilOrganicDecompositionRate = world.DefaultSoil.SoilOrganicMatterDecompositionRate;
-            this.SoilOrganicN = world.DefaultSoil.SoilOrganicMatterNitrogen;
-            this.SoilQh = world.DefaultSoil.SoilOrganicMatterCarbonNitrogenRatio;
+            this.SoilHumificationRate = world.DefaultSoil.HumificationRate;
+            this.SoilOrganicC = world.DefaultSoil.OrganicMatterCarbon;
+            this.SoilOrganicDecompositionRate = world.DefaultSoil.OrganicMatterDecompositionRate;
+            this.SoilOrganicN = world.DefaultSoil.OrganicMatterNitrogen;
+            this.SoilQh = world.DefaultSoil.OrganicMatterCarbonNitrogenRatio;
             this.SoilYoungLabileC = world.DefaultSoil.YoungLabileCarbon;
             this.SoilYoungLabileDecompositionRate = world.DefaultSoil.YoungLabileDecompositionRate; // also in species table
             this.SoilYoungLabileN = world.DefaultSoil.YoungLabileNitrogen;
             this.SoilYoungRefractoryC = world.DefaultSoil.YoungRefractoryCarbon;
             this.SoilYoungRefractoryDecompositionRate = world.DefaultSoil.YoungRefractoryDecompositionRate; // also in species table
             this.SoilYoungRefractoryN = world.DefaultSoil.YoungRefractoryNitrogen;
-            // parameters used by resource unit water cycle
-            this.SoilSand = world.DefaultSoil.PercentSand;
-            this.SoilSilt = world.DefaultSoil.PercentSilt;
-            this.SoilClay = world.DefaultSoil.PercentClay;
 
             this.SpeciesTableName = world.Species.DatabaseTable ?? String.Empty;
         }

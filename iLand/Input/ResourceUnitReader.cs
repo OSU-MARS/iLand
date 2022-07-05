@@ -35,11 +35,11 @@ namespace iLand.Input
             ResourceUnitEnvironment defaultEnvironment = new(projectFile.World);
             if (String.IsNullOrEmpty(defaultEnvironment.ClimateID) && (environmentHeader.ClimateID < 0))
             {
-                throw new NotSupportedException("Environment file must have a '" + Constant.Setting.Climate.Name + "' column if '" + Constant.Setting.Climate.Name + "' is not specified in the project file.");
+                throw new NotSupportedException("Environment file must have a climate ID column if model.world.climate.defaultDatabaseTable is not specified in the project file.");
             }
             if (String.IsNullOrEmpty(defaultEnvironment.SpeciesTableName) && (environmentHeader.SpeciesTableName < 0))
             {
-                throw new NotSupportedException("Environment file must have a '" + Constant.Setting.SpeciesTable + "' column if '" + Constant.Setting.SpeciesTable + "' is not specified in the project file.");
+                throw new NotSupportedException("Environment file must have a species table column if model. is not specified in the project file.");
             }
 
             resourceUnitEnvironmentFile.Parse((string[] row) =>

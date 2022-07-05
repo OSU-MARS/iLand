@@ -1,5 +1,4 @@
-﻿using iLand.Input;
-using iLand.Input.ProjectFile;
+﻿using iLand.Input.ProjectFile;
 using iLand.World;
 using iLand.Tool;
 using Microsoft.Data.Sqlite;
@@ -8,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Xml;
 using Model = iLand.Simulation.Model;
+using iLand.Input.Tree;
 
 namespace iLand.Tree
 {
@@ -89,7 +89,7 @@ namespace iLand.Tree
             using SqliteConnection speciesDatabase = Landscape.GetDatabaseConnection(speciesDatabaseFilePath, openReadOnly: true);
             using SqliteCommand speciesSelect = new(String.Format("select * from {0}", this.SqlTableName), speciesDatabase);
             // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");
-            using SpeciesReader speciesReader = new(speciesSelect.ExecuteReader());
+            using TreeSpeciesReader speciesReader = new(speciesSelect.ExecuteReader());
             while (speciesReader.Read())
             {
                 bool isActive = speciesReader.Active();

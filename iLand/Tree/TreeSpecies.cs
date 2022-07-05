@@ -1,5 +1,5 @@
-﻿using iLand.Input;
-using iLand.Input.ProjectFile;
+﻿using iLand.Input.ProjectFile;
+using iLand.Input.Tree;
 using iLand.Tool;
 using Microsoft.Data.Sqlite;
 using System;
@@ -155,7 +155,7 @@ namespace iLand.Tree
             Data is fetched from the open query (or file, ...) in the parent SpeciesSet using xyzVar() functions.
             This is called
             */
-        public static TreeSpecies Load(Project projectFile, SpeciesReader reader, TreeSpeciesSet speciesSet)
+        public static TreeSpecies Load(Project projectFile, TreeSpeciesReader reader, TreeSpeciesSet speciesSet)
         {
             TreeSpecies species = new(speciesSet, reader.ID(), reader.Name())
             {

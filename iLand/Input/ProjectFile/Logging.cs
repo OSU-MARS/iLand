@@ -28,44 +28,41 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
-			if (String.Equals(reader.Name, "logging", StringComparison.Ordinal))
+			switch (reader.Name)
 			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "flush", StringComparison.Ordinal))
-			{
-				this.Flush = reader.ReadElementContentAsBoolean();
-				if (Trace.AutoFlush != this.Flush)
-				{
-					throw new NotImplementedException("Project's logging flush setting does not match System.Diagnostics.Trace.Autoflush but coordinated configuration of this setting is not shared across projects.");
-				}
-			}
-			else if (String.Equals(reader.Name, "logFile", StringComparison.Ordinal))
-			{
-				this.LogFile = reader.ReadElementContentAsString().Trim();
-				if (String.IsNullOrEmpty(this.LogFile) == false)
-				{
-					// Trace.Listeners.Add();
-					throw new NotImplementedException("Attachment of trace file listeners is not currently supported. As a workaround, consider specifying a listener in app.config.");
-				}
-			}
-			else if (String.Equals(reader.Name, "logLevel", StringComparison.Ordinal))
-			{
-				string logLevelAsString = reader.ReadElementContentAsString().Trim();
-				this.LogLevel = logLevelAsString switch
-				{
-					"critical" => EventLevel.Critical,
-					"error" => EventLevel.Error,
-					"informational" => EventLevel.Informational,
-					"logAlways" => EventLevel.LogAlways,
-					"verbose" => EventLevel.Verbose,
-					"warning" => EventLevel.Warning,
-					_ => throw new NotSupportedException("Unhandled log level '" + logLevelAsString + "'.")
-				};
-			}
-			else
-			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				case "logging":
+					reader.Read();
+					break;
+				case "flush":
+					this.Flush = reader.ReadElementContentAsBoolean();
+					if (Trace.AutoFlush != this.Flush)
+					{
+						throw new NotImplementedException("Project's logging flush setting does not match System.Diagnostics.Trace.Autoflush but coordinated configuration of this setting is not shared across projects.");
+					}
+					break;
+				case "logFile":
+					this.LogFile = reader.ReadElementContentAsString().Trim();
+					if (String.IsNullOrEmpty(this.LogFile) == false)
+					{
+						// Trace.Listeners.Add();
+						throw new NotImplementedException("Attachment of trace file listeners is not currently supported. As a workaround, consider specifying a listener in app.config.");
+					}
+					break;
+				case "logLevel":
+					string logLevelAsString = reader.ReadElementContentAsString().Trim();
+					this.LogLevel = logLevelAsString switch
+					{
+						"critical" => EventLevel.Critical,
+						"error" => EventLevel.Error,
+						"informational" => EventLevel.Informational,
+						"logAlways" => EventLevel.LogAlways,
+						"verbose" => EventLevel.Verbose,
+						"warning" => EventLevel.Warning,
+						_ => throw new NotSupportedException("Unhandled log level '" + logLevelAsString + "'.")
+					};
+					break;
+				default:
+					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

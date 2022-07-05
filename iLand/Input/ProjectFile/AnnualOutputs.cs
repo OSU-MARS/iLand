@@ -1,5 +1,4 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -54,98 +53,76 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				if (String.Equals(reader.Name, "barkBeetle", StringComparison.Ordinal))
+				switch (reader.Name)
 				{
-					this.BarkBeetle.ReadXml(reader);
+					case "barkBeetle":
+						this.BarkBeetle.ReadXml(reader);
+						break;
+					case "carbon":
+						this.Carbon.ReadXml(reader);
+						break;
+					case "carbonFlow":
+						this.CarbonFlow.ReadXml(reader);
+						break;
+					case "dynamicStand":
+						this.DynamicStand.ReadXml(reader);
+						break;
+					case "fire":
+						this.Fire.ReadXml(reader);
+						break;
+					case "landscape":
+						this.Landscape.ReadXml(reader);
+						break;
+					case "landscapeRemoved":
+						this.LandscapeRemoved.ReadXml(reader);
+						break;
+					case "productionMonth":
+						this.ProductionMonth.ReadXml(reader);
+						break;
+					case "management":
+						this.Management.ReadXml(reader);
+						break;
+					case "sapling":
+						this.Sapling.ReadXml(reader);
+						break;
+					case "saplingDetail":
+						this.SaplingDetail.ReadXml(reader);
+						break;
+					case "stand":
+						this.Stand.ReadXml(reader);
+						break;
+					case "standDead":
+						this.StandDead.ReadXml(reader);
+						break;
+					case "tree":
+						this.Tree.ReadXml(reader);
+						break;
+					case "treeRemoved":
+						this.TreeRemoved.ReadXml(reader);
+						break;
+					case "water":
+						this.Water.ReadXml(reader);
+						break;
+					case "wind":
+						this.Wind.ReadXml(reader);
+						break;
+					default:
+						throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 				}
-				else if (String.Equals(reader.Name, "carbon", StringComparison.Ordinal))
-				{
-					this.Carbon.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "carbonFlow", StringComparison.Ordinal))
-				{
-					this.CarbonFlow.ReadXml(reader);
-				}
-				//if (String.Equals(reader.Name, "debugOutput", StringComparison.Ordinal))
-				//{
-				//	this.DebugOutput = reader.ReadElementContentAsBoolean();
-				//}
-				//else if (String.Equals(reader.Name, "debugOutputAutoSave", StringComparison.Ordinal))
-				//{
-				//	this.DebugOutputAutoSave = reader.ReadElementContentAsBoolean();
-				//}
-				else if (String.Equals(reader.Name, "dynamicStand", StringComparison.Ordinal))
-				{
-					this.DynamicStand.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "fire", StringComparison.Ordinal))
-				{
-					this.Fire.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "landscape", StringComparison.Ordinal))
-				{
-					this.Landscape.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "landscapeRemoved", StringComparison.Ordinal))
-				{
-					this.LandscapeRemoved.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "productionMonth", StringComparison.Ordinal))
-				{
-					this.ProductionMonth.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "management", StringComparison.Ordinal))
-				{
-					this.Management.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "sapling", StringComparison.Ordinal))
-				{
-					this.Sapling.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "saplingDetail", StringComparison.Ordinal))
-				{
-					this.SaplingDetail.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "stand", StringComparison.Ordinal))
-				{
-					this.Stand.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "standDead", StringComparison.Ordinal))
-				{
-					this.StandDead.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "tree", StringComparison.Ordinal))
-				{
-					this.Tree.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "treeRemoved", StringComparison.Ordinal))
-				{
-					this.TreeRemoved.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "water", StringComparison.Ordinal))
-				{
-					this.Water.ReadXml(reader);
-				}
-				else if (String.Equals(reader.Name, "wind", StringComparison.Ordinal))
-				{
-					this.Wind.ReadXml(reader);
-				}
-				else
-				{
-					throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
-				}
-			}
-			else if (String.Equals(reader.Name, "annual", StringComparison.Ordinal))
-			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "databaseFile", StringComparison.Ordinal))
-			{
-				this.DatabaseFile = reader.ReadElementContentAsString().Trim();
 			}
 			else
 			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				switch (reader.Name)
+				{
+					case "annual":
+						reader.Read();
+						break;
+					case "databaseFile":
+						this.DatabaseFile = reader.ReadElementContentAsString().Trim();
+						break;
+					default:
+						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				}
 			}
 		}
 	}

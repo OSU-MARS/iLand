@@ -43,8 +43,8 @@ namespace iLand.Tree
             // class size of snag classes
             // swdDBHClass12: class break between classes 1 and 2 for standing snags (DBH, cm)
             // swdDBHClass23: class break between classes 2 and 3 for standing snags (DBH, cm)
-            float lowerDbhBreak = projectFile.World.DefaultSoil.SnagDbhBreakpointSmallMedium;
-            float upperDbhBreak = projectFile.World.DefaultSoil.SnagDdhBreakpointMediumLarge;
+            float lowerDbhBreak = projectFile.World.Snag.DbhBreakpointSmallMedium;
+            float upperDbhBreak = projectFile.World.Snag.DdhBreakpointMediumLarge;
             if ((lowerDbhBreak < 0.0F) || (lowerDbhBreak >= upperDbhBreak))
             {
                 throw new ArgumentOutOfRangeException(nameof(projectFile), "Lower diameter class break in ProjectFile.Model.Settings.Soil is either negative or above the upper diameter class break.");

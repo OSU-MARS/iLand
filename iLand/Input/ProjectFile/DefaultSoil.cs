@@ -7,49 +7,68 @@ namespace iLand.Input.ProjectFile
     {
         public float AvailableNitrogen { get; private set; }
         public float NitrogenLeachingFraction { get; private set; }
-        public float NitrogenDeposition { get; private set; }
+        public float AnnualNitrogenDeposition { get; private set; }
         public bool UseDynamicAvailableNitrogen { get; private set; }
 
-        public float MicrobialLabileEfficiency { get; private set; }
-        public float MicrobialRefractoryEfficiency { get; private set; }
-        public float SoilMicrobeCarbonNitrogenRatio { get; private set; }
-        public float SoilOrganicMatterCarbonNitrogenRatio { get; private set; }
+        public float Depth { get; private set; }
+
+        public float ThetaR { get; private set; }
+        public float ThetaS { get; private set; }
+        public float VanGenuchtenAlpha { get; private set; }
+        public float VanGenuchtenN { get; private set; }
 
         public float PercentSand { get; private set; }
         public float PercentSilt { get; private set; }
         public float PercentClay { get; private set; }
-        public float SoilDepth { get; private set; }
 
+        public float HumificationRate { get; private set; }
+        public float MicrobialLabileEfficiency { get; private set; }
+        public float MicrobialRefractoryEfficiency { get; private set; }
+        public float MicrobeCarbonNitrogenRatio { get; private set; }
+        public float OrganicMatterCarbonNitrogenRatio { get; private set; }
+        public float OrganicMatterCarbon { get; private set; }
+        public float OrganicMatterNitrogen { get; private set; }
+        public float OrganicMatterDecompositionRate { get; private set; }
         public float YoungLabileCarbon { get; private set; }
         public float YoungLabileNitrogen { get; private set; }
         public float YoungLabileDecompositionRate { get; private set; }
         public float YoungRefractoryCarbon { get; private set; }
         public float YoungRefractoryNitrogen { get; private set; }
         public float YoungRefractoryDecompositionRate { get; private set; }
-        public float SoilOrganicMatterCarbon { get; private set; }
-        public float SoilOrganicMatterNitrogen { get; private set; }
-        public float SoilOrganicMatterDecompositionRate { get; private set; }
-        public float SoilHumificationRate { get; private set; }
-
-        public float SnagDbhBreakpointSmallMedium { get; private set; }
-        public float SnagDdhBreakpointMediumLarge { get; private set; }
 
         public DefaultSoil()
         {
+            this.AvailableNitrogen = Single.NaN;
+            this.AnnualNitrogenDeposition = 0.0F;
             this.NitrogenLeachingFraction = 0.0015F;
-            this.NitrogenDeposition = 0.0F;
             this.UseDynamicAvailableNitrogen = false;
 
+            this.Depth = Single.NaN;
+
+            this.PercentClay = Single.NaN;
+            this.PercentSand = Single.NaN;
+            this.PercentSilt = Single.NaN;
+
+            this.ThetaR = Single.NaN;
+            this.ThetaS = Single.NaN;
+            this.VanGenuchtenAlpha = Single.NaN;
+            this.VanGenuchtenN = Single.NaN;
+
+            this.HumificationRate = 0.3F;
+            this.MicrobeCarbonNitrogenRatio = 5.0F;
             this.MicrobialLabileEfficiency = 0.0577F;
             this.MicrobialRefractoryEfficiency = 0.073F;
-            this.SoilMicrobeCarbonNitrogenRatio = 5.0F;
-            this.SoilOrganicMatterCarbonNitrogenRatio = 25.0F;
+            this.OrganicMatterCarbon = Single.NaN;
+            this.OrganicMatterCarbonNitrogenRatio = 25.0F;
+            this.OrganicMatterDecompositionRate = 0.02F;
+            this.OrganicMatterNitrogen = Single.NaN;
 
-            this.SnagDbhBreakpointSmallMedium = 20.0F;
-            this.SnagDdhBreakpointMediumLarge = 100.0F;
-            this.SoilHumificationRate = 0.3F;
-            this.SoilOrganicMatterDecompositionRate = 0.02F;
+            this.YoungLabileCarbon = Single.NaN;
+            this.YoungLabileDecompositionRate = Single.NaN;
+            this.YoungLabileNitrogen = Single.NaN;
+            this.YoungRefractoryCarbon = Single.NaN;
             this.YoungRefractoryDecompositionRate = -1.0F;
+            this.YoungRefractoryNitrogen = Single.NaN;
         }
 
         protected override void ReadStartElement(XmlReader reader)
@@ -59,201 +78,163 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "defaultSoil", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "availableNitrogen", StringComparison.Ordinal))
-            {
-                this.AvailableNitrogen = reader.ReadElementContentAsFloat();
-                if (this.AvailableNitrogen < 0.0F)
-                {
-                    throw new XmlException("Available nitrogen is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "soilDepth", StringComparison.Ordinal))
-            {
-                this.SoilDepth = reader.ReadElementContentAsFloat();
-                if (this.SoilDepth <= 0.0F)
-                {
-                    throw new XmlException("Soil depth is zero or negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "percentSand", StringComparison.Ordinal))
-            {
-                this.PercentSand = reader.ReadElementContentAsFloat();
-                if ((this.PercentSand < 0.0F) || (this.PercentSand > 100.0F))
-                {
-                    throw new XmlException("Soil sand content is negative or greater than 100%.");
-                }
-            }
-            else if (String.Equals(reader.Name, "percentSilt", StringComparison.Ordinal))
-            {
-                this.PercentSilt = reader.ReadElementContentAsFloat();
-                if ((this.PercentSilt < 0.0F) || (this.PercentSilt > 100.0F))
-                {
-                    throw new XmlException("Soil silt content is negative or greater than 100%.");
-                }
-            }
-            else if (String.Equals(reader.Name, "percentClay", StringComparison.Ordinal))
-            {
-                this.PercentClay = reader.ReadElementContentAsFloat();
-                if ((this.PercentClay < 0.0F) || (this.PercentClay > 100.0F))
-                {
-                    throw new XmlException("Soil clay content is negative or greater than 100%.");
-                }
-            }
-            else if (String.Equals(reader.Name, "youngLabileC", StringComparison.Ordinal))
-            {
-                this.YoungLabileCarbon = reader.ReadElementContentAsFloat();
-                if (this.YoungLabileCarbon < 0.0F)
-                {
-                    throw new XmlException("Young labile carbon is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "youngLabileN", StringComparison.Ordinal))
-            {
-                this.YoungLabileNitrogen = reader.ReadElementContentAsFloat();
-                if (this.YoungLabileNitrogen < 0.0F)
-                {
-                    throw new XmlException("Young labile nitrogen is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "youngLabileDecompRate", StringComparison.Ordinal))
-            {
-                this.YoungLabileDecompositionRate = reader.ReadElementContentAsFloat();
-                if (this.YoungLabileDecompositionRate < 0.0F)
-                {
-                    throw new XmlException("Young labile decomposition rate is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "youngRefractoryC", StringComparison.Ordinal))
-            {
-                this.YoungRefractoryCarbon = reader.ReadElementContentAsFloat();
-                if (this.YoungRefractoryCarbon < 0.0F)
-                {
-                    throw new XmlException("Young refractory carbon is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "youngRefractoryN", StringComparison.Ordinal))
-            {
-                this.YoungRefractoryNitrogen = reader.ReadElementContentAsFloat();
-                if (this.YoungRefractoryNitrogen < 0.0F)
-                {
-                    throw new XmlException("Young refractory nitrogen is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "youngRefractoryDecompRate", StringComparison.Ordinal))
-            {
-                this.YoungRefractoryDecompositionRate = reader.ReadElementContentAsFloat();
-                if (this.YoungRefractoryDecompositionRate < 0.0F)
-                {
-                    throw new XmlException("Young refractory decomposition rate is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "soilOrganicMatterC", StringComparison.Ordinal))
-            {
-                this.SoilOrganicMatterCarbon = reader.ReadElementContentAsFloat();
-                if (this.SoilOrganicMatterCarbon < 0.0F)
-                {
-                    throw new XmlException("Soil organic matter carbon is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "soilOrganicMatterN", StringComparison.Ordinal))
-            {
-                this.SoilOrganicMatterNitrogen = reader.ReadElementContentAsFloat();
-                if (this.SoilOrganicMatterNitrogen < 0.0F)
-                {
-                    throw new XmlException("Soil organic matter nitrogen is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "soilOrganicMatterDecompRate", StringComparison.Ordinal))
-            {
-                this.SoilOrganicMatterDecompositionRate = reader.ReadElementContentAsFloat();
-                if (this.SoilOrganicMatterDecompositionRate < 0.0F)
-                {
-                    throw new XmlException("Soil organic matter decomposition rate is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "soilHumificationRate", StringComparison.Ordinal))
-            {
-                this.SoilHumificationRate = reader.ReadElementContentAsFloat();
-                if (this.SoilHumificationRate < 0.0F)
-                {
-                    throw new XmlException("Soil humification rate is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "el", StringComparison.Ordinal))
-            {
-                this.MicrobialLabileEfficiency = reader.ReadElementContentAsFloat();
-                if (this.MicrobialLabileEfficiency < 0.0F)
-                {
-                    throw new XmlException("El is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "er", StringComparison.Ordinal))
-            {
-                this.MicrobialRefractoryEfficiency = reader.ReadElementContentAsFloat();
-                if (this.MicrobialRefractoryEfficiency < 0.0F)
-                {
-                    throw new XmlException("Er is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "qb", StringComparison.Ordinal))
-            {
-                this.SoilMicrobeCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
-                if (this.SoilMicrobeCarbonNitrogenRatio < 0.0F)
-                {
-                    throw new XmlException("Qb is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "qh", StringComparison.Ordinal))
-            {
-                this.SoilOrganicMatterCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
-                if (this.SoilOrganicMatterCarbonNitrogenRatio < 0.0F)
-                {
-                    throw new XmlException("Qh is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "snagSmallMediumDbhBreakpoint", StringComparison.Ordinal))
-            {
-                this.SnagDbhBreakpointSmallMedium = reader.ReadElementContentAsFloat();
-                if (this.SnagDbhBreakpointSmallMedium < 0.0F)
-                {
-                    throw new XmlException("Breakpoint between DBH classes 1 and 2 is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "snagMediumLargeDbhBreakpoint", StringComparison.Ordinal))
-            {
-                this.SnagDdhBreakpointMediumLarge = reader.ReadElementContentAsFloat();
-                if (this.SnagDdhBreakpointMediumLarge < 0.0F)
-                {
-                    throw new XmlException("Breakpoint between DBH classes 2 and 3 is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "useDynamicAvailableNitrogen", StringComparison.Ordinal))
-            {
-                this.UseDynamicAvailableNitrogen = reader.ReadElementContentAsBoolean();
-            }
-            else if (String.Equals(reader.Name, "nitrogenLeachingFraction", StringComparison.Ordinal))
-            {
-                this.NitrogenLeachingFraction = reader.ReadElementContentAsFloat();
-                if ((this.NitrogenLeachingFraction < 0.0F || this.NitrogenLeachingFraction > 1.0))
-                {
-                    throw new XmlException("Fraction of nitrogen in soil humus lost to annual leaching is negative or greater than 1.0.");
-                }
-            }
-            else if (String.Equals(reader.Name, "nitrogenDeposition", StringComparison.Ordinal))
-            {
-                this.NitrogenDeposition = reader.ReadElementContentAsFloat();
-                if (this.NitrogenDeposition < 0.0F)
-                {
-                    throw new XmlException("Nitrogen deposition rate is negative.");
-                }
-            }
-            else
-            {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "defaultSoil":
+                    reader.Read();
+                    break;
+                case "annualNitrogenDeposition":
+                    this.AnnualNitrogenDeposition = reader.ReadElementContentAsFloat();
+                    if (this.AnnualNitrogenDeposition < 0.0F)
+                    {
+                        throw new XmlException("Nitrogen deposition rate is negative.");
+                    }
+                    break;
+                case "availableNitrogen":
+                    this.AvailableNitrogen = reader.ReadElementContentAsFloat();
+                    if (this.AvailableNitrogen < 0.0F)
+                    {
+                        throw new XmlException("Available nitrogen is negative.");
+                    }
+                    break;
+                case "depth":
+                    this.Depth = reader.ReadElementContentAsFloat();
+                    if (this.Depth <= 0.0F)
+                    {
+                        throw new XmlException("Soil depth is zero or negative.");
+                    }
+                    break;
+                case "el":
+                    this.MicrobialLabileEfficiency = reader.ReadElementContentAsFloat();
+                    if (this.MicrobialLabileEfficiency < 0.0F)
+                    {
+                        throw new XmlException("El is negative.");
+                    }
+                    break;
+                case "er":
+                    this.MicrobialRefractoryEfficiency = reader.ReadElementContentAsFloat();
+                    if (this.MicrobialRefractoryEfficiency < 0.0F)
+                    {
+                        throw new XmlException("Er is negative.");
+                    }
+                    break;
+                case "humificationRate":
+                    this.HumificationRate = reader.ReadElementContentAsFloat();
+                    if (this.HumificationRate < 0.0F)
+                    {
+                        throw new XmlException("Soil humification rate is negative.");
+                    }
+                    break;
+                case "nitrogenLeachingFraction":
+                    this.NitrogenLeachingFraction = reader.ReadElementContentAsFloat();
+                    if ((this.NitrogenLeachingFraction < 0.0F || this.NitrogenLeachingFraction > 1.0))
+                    {
+                        throw new XmlException("Fraction of nitrogen in soil humus lost to annual leaching is negative or greater than 1.0.");
+                    }
+                    break;
+                case "organicMatterC":
+                    this.OrganicMatterCarbon = reader.ReadElementContentAsFloat();
+                    if (this.OrganicMatterCarbon < 0.0F)
+                    {
+                        throw new XmlException("Soil organic matter carbon is negative.");
+                    }
+                    break;
+                case "organicMatterN":
+                    this.OrganicMatterNitrogen = reader.ReadElementContentAsFloat();
+                    if (this.OrganicMatterNitrogen < 0.0F)
+                    {
+                        throw new XmlException("Soil organic matter nitrogen is negative.");
+                    }
+                    break;
+                case "organicMatterDecompRate":
+                    this.OrganicMatterDecompositionRate = reader.ReadElementContentAsFloat();
+                    if (this.OrganicMatterDecompositionRate < 0.0F)
+                    {
+                        throw new XmlException("Soil organic matter decomposition rate is negative.");
+                    }
+                    break;
+                case "percentSand":
+                    this.PercentSand = reader.ReadElementContentAsFloat();
+                    if ((this.PercentSand < 0.0F) || (this.PercentSand > 100.0F))
+                    {
+                        throw new XmlException("Soil sand content is negative or greater than 100%.");
+                    }
+                    break;
+                case "percentSilt":
+                    this.PercentSilt = reader.ReadElementContentAsFloat();
+                    if ((this.PercentSilt < 0.0F) || (this.PercentSilt > 100.0F))
+                    {
+                        throw new XmlException("Soil silt content is negative or greater than 100%.");
+                    }
+                    break;
+                case "percentClay":
+                    this.PercentClay = reader.ReadElementContentAsFloat();
+                    if ((this.PercentClay < 0.0F) || (this.PercentClay > 100.0F))
+                    {
+                        throw new XmlException("Soil clay content is negative or greater than 100%.");
+                    }
+                    break;
+                case "qb":
+                    this.MicrobeCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+                    if (this.MicrobeCarbonNitrogenRatio < 0.0F)
+                    {
+                        throw new XmlException("Qb is negative.");
+                    }
+                    break;
+                case "qh":
+                    this.OrganicMatterCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+                    if (this.OrganicMatterCarbonNitrogenRatio < 0.0F)
+                    {
+                        throw new XmlException("Qh is negative.");
+                    }
+                    break;
+                case "youngLabileC":
+                    this.YoungLabileCarbon = reader.ReadElementContentAsFloat();
+                    if (this.YoungLabileCarbon < 0.0F)
+                    {
+                        throw new XmlException("Young labile carbon is negative.");
+                    }
+                    break;
+                case "youngLabileN":
+                    this.YoungLabileNitrogen = reader.ReadElementContentAsFloat();
+                    if (this.YoungLabileNitrogen < 0.0F)
+                    {
+                        throw new XmlException("Young labile nitrogen is negative.");
+                    }
+                    break;
+                case "youngLabileDecompRate":
+                    this.YoungLabileDecompositionRate = reader.ReadElementContentAsFloat();
+                    if (this.YoungLabileDecompositionRate < 0.0F)
+                    {
+                        throw new XmlException("Young labile decomposition rate is negative.");
+                    }
+                    break;
+                case "youngRefractoryC":
+                    this.YoungRefractoryCarbon = reader.ReadElementContentAsFloat();
+                    if (this.YoungRefractoryCarbon < 0.0F)
+                    {
+                        throw new XmlException("Young refractory carbon is negative.");
+                    }
+                    break;
+                case "youngRefractoryN":
+                    this.YoungRefractoryNitrogen = reader.ReadElementContentAsFloat();
+                    if (this.YoungRefractoryNitrogen < 0.0F)
+                    {
+                        throw new XmlException("Young refractory nitrogen is negative.");
+                    }
+                    break;
+                case "youngRefractoryDecompRate":
+                    this.YoungRefractoryDecompositionRate = reader.ReadElementContentAsFloat();
+                    if (this.YoungRefractoryDecompositionRate < 0.0F)
+                    {
+                        throw new XmlException("Young refractory decomposition rate is negative.");
+                    }
+                    break;
+                case "useDynamicAvailableNitrogen":
+                    this.UseDynamicAvailableNitrogen = reader.ReadElementContentAsBoolean();
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

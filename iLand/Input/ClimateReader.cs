@@ -14,7 +14,7 @@ namespace iLand.Input
         private readonly float defaultTemperatureAddition; // offset of daily temp
         private readonly float mDefaultPrecipitationMultiplier; // daily precipitation scaling factor
 
-        public string ClimateName { get; private init; } // database table to load this climate from
+        public string ClimateTableName { get; private init; } // database table to load this climate from
 
         public ClimateReader(Project projectFile, string name)
         {
@@ -23,7 +23,7 @@ namespace iLand.Input
             this.mDefaultPrecipitationMultiplier = projectFile.World.Climate.PrecipitationMultiplier;
             this.nextYearToLoad = 0;
 
-            this.ClimateName = name;
+            this.ClimateTableName = name;
         }
 
         public void LoadGroupOfYears(Project projectFile, int yearsToLoad, List<ClimateDay> climateDays, List<int> monthDayIndices)
@@ -43,7 +43,7 @@ namespace iLand.Input
                 // this.mCurrentDataYear = this.mNextYearToLoad;
                 throw new NotImplementedException("Tracking of years loaded is not currently implemented. Consider specifying a larger climate batch size as a workaround.");
             }
-            string query = "select year,month,day,min_temp,max_temp,prec,rad,vpd from " + this.ClimateName + " " + climateTableQueryFilter + " order by year, month, day";
+            string query = "select year,month,day,min_temp,max_temp,prec,rad,vpd from " + this.ClimateTableName + " " + climateTableQueryFilter + " order by year, month, day";
 
             // if available, retain last day of previous
             ClimateDay? lastDayOfPreviousYear = null;
@@ -125,7 +125,7 @@ namespace iLand.Input
                     // sanity checks
                     if (day.Month < 1 || day.DayOfMonth < 1 || day.Month > Constant.MonthsInYear || day.DayOfMonth > DateTime.DaysInMonth(day.Year, day.Month))
                     {
-                        throw new SqliteException(String.Format("Invalid dates in climate table {0}: year {1} month {2} day {3}!", this.ClimateName, day.Year, day.Month, day.DayOfMonth), (int)SqliteErrorCode.DataTypeMismatch);
+                        throw new SqliteException(String.Format("Invalid dates in climate table {0}: year {1} month {2} day {3}!", this.ClimateTableName, day.Year, day.Month, day.DayOfMonth), (int)SqliteErrorCode.DataTypeMismatch);
                     }
                     // Debug.WriteLineIf(day.Month < 1 || day.DayOfMonth < 1 || day.Month > Constant.MonthsInYear || day.DayOfMonth > 31, "Climate:load", "invalid dates");
                     // Debug.WriteLineIf(day.MeanDaytimeTemperature < -70 || day.MeanDaytimeTemperature > 50, "Climate:load", "temperature out of range (-70..+50 degree C)");

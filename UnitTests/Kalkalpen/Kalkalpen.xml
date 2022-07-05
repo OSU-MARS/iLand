@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- More details on iland.boku.ac.at/ProjectFile -->
+<!-- More details on iland-model.org/ProjectFile -->
 <project>
   <system>
     <paths>
       <home></home>
       <database>database</database>
       <init>init</init>
-      <lip>lip-europe</lip>
+      <lip>lip</lip>
       <output>..\..\TestResults</output>
-      <script>scripts</script>
+      <script>script</script>
       <temp>temp</temp>
     </paths>
     <!-- not supported in this iLand version -->
@@ -95,14 +95,16 @@
       <dumpStamps>false</dumpStamps>
     </debug>
     <defaultSoil>
-      <!-- plant accessible nitrogen and deposition, kg/ha-yr, and fraction of O layer nitrogen removed by annual leaching -->
+      <!-- plant accessible nitrogen and deposition, kg/ha-yr -->
       <!-- derived from Zöbelboden-data. Hülber et al. reported values a bit lower than that for the same area: http://onlinelibrary.wiley.com/doi/10.3170/2008-7-18489/pdf -->
+      <annualNitrogenDeposition>21.8</annualNitrogenDeposition>
       <availableNitrogen>84</availableNitrogen>
-      <nitrogenDeposition>21.8</nitrogenDeposition>
+      <!-- fraction of O layer nitrogen removed by annual leaching -->
       <nitrogenLeachingFraction>0.0047</nitrogenLeachingFraction>
       <useDynamicAvailableNitrogen>true</useDynamicAvailableNitrogen>
-      <!-- soil depth, cm, and texture percentages -->
-      <soilDepth>38</soilDepth>
+      <!-- soil depth, cm -->
+      <depth>38</depth>
+      <!-- texture percentages for estimation of Campbell soil water retention curve -->
       <percentSand>9</percentSand>
       <percentSilt>53</percentSilt>
       <percentClay>38</percentClay>
@@ -113,10 +115,10 @@
       <youngRefractoryC>33832</youngRefractoryC>
       <youngRefractoryN>121.2</youngRefractoryN>
       <youngRefractoryDecompRate>0.071</youngRefractoryDecompRate>
-      <soilOrganicMatterC>128666</soilOrganicMatterC>
-      <soilOrganicMatterN>83.68</soilOrganicMatterN>
-      <soilOrganicMatterDecompRate>0.011656</soilOrganicMatterDecompRate>
-      <soilHumificationRate>0.2992</soilHumificationRate>
+      <organicMatterC>128666</organicMatterC>
+      <organicMatterN>83.68</organicMatterN>
+      <organicMatterDecompRate>0.011656</organicMatterDecompRate>
+      <humificationRate>0.2992</humificationRate>
       <!-- carbon-nitrogen ratio of soil microbes -->
       <qb>5</qb>
       <!-- microbal efficiency in the labile pool, auxiliary parameter -->
@@ -125,8 +127,6 @@
       <er>0.319</er>
       <!-- carbon-nitrogen ratio of soil organic matter -->
       <qh>14.5</qh>
-      <snagSmallMediumDbhBreakpoint>20</snagSmallMediumDbhBreakpoint>
-      <snagMediumLargeDbhBreakpoint>100</snagMediumLargeDbhBreakpoint>
     </defaultSoil>
     <geometry>
       <!-- buffer width must be multiple of seed map cell size, which is hard coded to 20 m, if regeneration is enabled -->
@@ -158,8 +158,8 @@
              2) lists one tree file for each stand ID (requires standRasterFile be specified)
              3) lists a tree size distribution for each stand
            Format is .csv or similar delimiters with, optionally, wrapping a Picus trees element. Required to be in the project's init directory. -->
+      <cloneIndividualTreesToEachResourceUnit>true</cloneIndividualTreesToEachResourceUnit>
       <treeFile>one tree of each European species.picus</treeFile>
-      <trees>singleFile</trees>
       <heightGrid>
         <!-- file specifying initial heights to generate trees from -->
         <!--<fileName>lidar_np.txt</fileName>-->
@@ -169,6 +169,10 @@
         <maxTries>10</maxTries>
       </heightGrid>
     </initialization>
+    <snag>
+      <smallMediumDbhBreakpoint>20</smallMediumDbhBreakpoint>
+      <mediumLargeDbhBreakpoint>100</mediumLargeDbhBreakpoint>
+    </snag>
     <species>
       <databaseFile>species_param_europe.sqlite</databaseFile>
       <databaseTable>species</databaseTable>

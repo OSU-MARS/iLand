@@ -1,5 +1,4 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -19,13 +18,16 @@ namespace iLand.Input.ProjectFile
             {
                 this.ReadEnabled(reader);
             }
-            else if (String.Equals(reader.Name, "filter", StringComparison.Ordinal))
-            {
-                this.Filter = reader.ReadElementContentAsString().Trim();
-            }
             else
             {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                switch (reader.Name)
+                {
+                    case "filter":
+                        this.Filter = reader.ReadElementContentAsString().Trim();
+                        break;
+                    default:
+                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                }
             }
         }
     }

@@ -33,77 +33,69 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "snags", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "stemC", StringComparison.Ordinal))
-            {
-                this.StemCarbon = reader.ReadElementContentAsFloat();
-                if (this.StemCarbon < 0.0F)
-                {
-                    throw new XmlException("Standing woody debris carbon is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "stemCN", StringComparison.Ordinal))
-            {
-                this.StemCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
-                if (this.StemCarbonNitrogenRatio < 0.0F)
-                {
-                    throw new XmlException("Standing woody debris carbon:nitrogen ratio is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "snagsPerRU", StringComparison.Ordinal))
-            {
-                this.SnagsPerResourceUnit = reader.ReadElementContentAsFloat();
-                if (this.SnagsPerResourceUnit < 0.0F)
-                {
-                    throw new XmlException("Negative numner of snags per resource unit.");
-                }
-            }
-            else if (String.Equals(reader.Name, "branchRootC", StringComparison.Ordinal))
-            {
-                this.BranchRootCarbon = reader.ReadElementContentAsFloat();
-                if (this.BranchRootCarbon < 0.0F)
-                {
-                    throw new XmlException("Branch and root carbon is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "branchRootCN", StringComparison.Ordinal))
-            {
-                this.BranchRootCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
-                if (this.BranchRootCarbonNitrogenRatio < 0.0F)
-                {
-                    throw new XmlException("Branch and root biomass carbon:nitrogen ratio is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "stemDecompRate", StringComparison.Ordinal))
-            {
-                this.StemDecompositionRate = reader.ReadElementContentAsFloat();
-                if (this.StemDecompositionRate < 0.0F)
-                {
-                    throw new XmlException("Standing woody debris decomposition rate is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "branchRootDecompRate", StringComparison.Ordinal))
-            {
-                this.BranchRootDecompositionRate = reader.ReadElementContentAsFloat();
-                if (this.BranchRootDecompositionRate < 0.0F)
-                {
-                    throw new XmlException("Wood decomposition rate is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "snagHalfLife", StringComparison.Ordinal))
-            {
-                this.SnagHalfLife = reader.ReadElementContentAsFloat();
-                if (this.SnagHalfLife < 0.0F)
-                {
-                    throw new XmlException("Half life of standing woody debris is negative.");
-                }
-            }
-            else
-			{
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "snags":
+                    reader.Read();
+                    break;
+                case "stemC":
+                    this.StemCarbon = reader.ReadElementContentAsFloat();
+                    if (this.StemCarbon < 0.0F)
+                    {
+                        throw new XmlException("Standing woody debris carbon is negative.");
+                    }
+                    break;
+                case "stemCN":
+                    this.StemCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+                    if (this.StemCarbonNitrogenRatio < 0.0F)
+                    {
+                        throw new XmlException("Standing woody debris carbon:nitrogen ratio is negative.");
+                    }
+                    break;
+                case "snagsPerRU":
+                    this.SnagsPerResourceUnit = reader.ReadElementContentAsFloat();
+                    if (this.SnagsPerResourceUnit < 0.0F)
+                    {
+                        throw new XmlException("Negative numner of snags per resource unit.");
+                    }
+                    break;
+                case "branchRootC":
+                    this.BranchRootCarbon = reader.ReadElementContentAsFloat();
+                    if (this.BranchRootCarbon < 0.0F)
+                    {
+                        throw new XmlException("Branch and root carbon is negative.");
+                    }
+                    break;
+                case "branchRootCN":
+                    this.BranchRootCarbonNitrogenRatio = reader.ReadElementContentAsFloat();
+                    if (this.BranchRootCarbonNitrogenRatio < 0.0F)
+                    {
+                        throw new XmlException("Branch and root biomass carbon:nitrogen ratio is negative.");
+                    }
+                    break;
+                case "stemDecompRate":
+                    this.StemDecompositionRate = reader.ReadElementContentAsFloat();
+                    if (this.StemDecompositionRate < 0.0F)
+                    {
+                        throw new XmlException("Standing woody debris decomposition rate is negative.");
+                    }
+                    break;
+                case "branchRootDecompRate":
+                    this.BranchRootDecompositionRate = reader.ReadElementContentAsFloat();
+                    if (this.BranchRootDecompositionRate < 0.0F)
+                    {
+                        throw new XmlException("Wood decomposition rate is negative.");
+                    }
+                    break;
+                case "snagHalfLife":
+                    this.SnagHalfLife = reader.ReadElementContentAsFloat();
+                    if (this.SnagHalfLife < 0.0F)
+                    {
+                        throw new XmlException("Half life of standing woody debris is negative.");
+                    }
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

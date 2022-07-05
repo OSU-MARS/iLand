@@ -25,42 +25,38 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "longDistanceDispersal", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "rings", StringComparison.Ordinal))
-            {
-                this.Rings = reader.ReadElementContentAsInt();
-                if (this.Rings < 0)
-                {
-                    throw new XmlException("Number of long distance dispersal rings is negative."); // possibly more desirable to check for zero or negative
-                }
-            }
-            else if (String.Equals(reader.Name, "minSeedlingDensity", StringComparison.Ordinal))
-            {
-                this.MinimumSeedlingDensity = reader.ReadElementContentAsFloat();
-                if (this.MinimumSeedlingDensity < 0.0F)
-                {
-                    throw new XmlException("Long distance dispersal minimum seedling density is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "maxSeedlingDensity", StringComparison.Ordinal))
-            {
-                this.MaximumSeedlingDensity = reader.ReadElementContentAsFloat();
-                if (this.MaximumSeedlingDensity < 0.0F)
-                {
-                    throw new XmlException("Long distance dispersal maximum seedling density is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "lddSeedlingsPerCell", StringComparison.Ordinal))
-            {
-                this.SeedlingsPerCell = reader.ReadElementContentAsFloat();
-                // range of values is unclear from iLand documentation
-            }
-            else
-            {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "longDistanceDispersal":
+                    reader.Read();
+                    break;
+                case "rings":
+                    this.Rings = reader.ReadElementContentAsInt();
+                    if (this.Rings < 0)
+                    {
+                        throw new XmlException("Number of long distance dispersal rings is negative."); // possibly more desirable to check for zero or negative
+                    }
+                    break;
+                case "minSeedlingDensity":
+                    this.MinimumSeedlingDensity = reader.ReadElementContentAsFloat();
+                    if (this.MinimumSeedlingDensity < 0.0F)
+                    {
+                        throw new XmlException("Long distance dispersal minimum seedling density is negative.");
+                    }
+                    break;
+                case "maxSeedlingDensity":
+                    this.MaximumSeedlingDensity = reader.ReadElementContentAsFloat();
+                    if (this.MaximumSeedlingDensity < 0.0F)
+                    {
+                        throw new XmlException("Long distance dispersal maximum seedling density is negative.");
+                    }
+                    break;
+                case "lddSeedlingsPerCell":
+                    this.SeedlingsPerCell = reader.ReadElementContentAsFloat();
+                    // range of values is unclear from iLand documentation
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

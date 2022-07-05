@@ -21,29 +21,26 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "management", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "fileName", StringComparison.Ordinal))
-            {
-                this.FileName = reader.ReadElementContentAsString().Trim();
-                if (String.IsNullOrEmpty(this.FileName) == false)
-                {
-                    throw new NotImplementedException("Management files are not currently read.");
-                }
-            }
-            else if (String.Equals(reader.Name, "abeEnabled", StringComparison.Ordinal))
-            {
-                this.AbeEnabled = reader.ReadElementContentAsBoolean();
-            }
-            else if (String.Equals(reader.Name, "abe", StringComparison.Ordinal))
-            {
-                this.Abe.ReadXml(reader);
-            }
-            else
-            {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "management":
+                    reader.Read();
+                    break;
+                case "fileName":
+                    this.FileName = reader.ReadElementContentAsString().Trim();
+                    if (String.IsNullOrEmpty(this.FileName) == false)
+                    {
+                        throw new NotImplementedException("Management files are not currently read.");
+                    }
+                    break;
+                case "abeEnabled":
+                    this.AbeEnabled = reader.ReadElementContentAsBoolean();
+                    break;
+                case "abe":
+                    this.Abe.ReadXml(reader);
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

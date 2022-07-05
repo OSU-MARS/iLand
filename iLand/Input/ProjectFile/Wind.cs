@@ -37,131 +37,115 @@ namespace iLand.Input.ProjectFile
             {
                 this.ReadEnabled(reader);
             }
-            else if (String.Equals(reader.Name, "speciesParameter", StringComparison.Ordinal))
-            {
-                this.SpeciesParameter = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "soilFreezeMode", StringComparison.Ordinal))
-            {
-                this.SoilFreezeMode = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "triggeredByTimeEvent", StringComparison.Ordinal))
-            {
-                this.TriggeredByTimeEvent = reader.ReadElementContentAsBoolean();
-            }
-            else if (String.Equals(reader.Name, "durationPerIteration", StringComparison.Ordinal))
-            {
-                this.DurationPerIteration = reader.ReadElementContentAsInt();
-                if (this.DurationPerIteration < 0)
-                {
-                    throw new XmlException("Wind event duration is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "gustModifier", StringComparison.Ordinal))
-            {
-                this.GustModifier = reader.ReadElementContentAsFloat();
-                if (this.GustModifier < 0)
-                {
-                    throw new XmlException("Gust multiplier is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "topoModifier", StringComparison.Ordinal))
-            {
-                this.TopoModifier = reader.ReadElementContentAsFloat();
-                if (this.TopoModifier < 0)
-                {
-                    throw new XmlException("Topographic windspeed multiplier is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "directionVariation", StringComparison.Ordinal))
-            {
-                this.DirectionVariation = reader.ReadElementContentAsFloat();
-                // no clear range of values from iLand documentation
-            }
-            else if (String.Equals(reader.Name, "direction", StringComparison.Ordinal))
-            {
-                this.Direction = reader.ReadElementContentAsFloat();
-                // no meaningful restriction from iLand documentation
-            }
-            else if (String.Equals(reader.Name, "dayOfYear", StringComparison.Ordinal))
-            {
-                this.DayOfYear = reader.ReadElementContentAsInt();
-                if ((this.DayOfYear < 0) || (this.DayOfYear > Constant.DaysInLeapYear))
-                {
-                    throw new XmlException("Day of year on which windstorm occurs is negative or greater than the number of days in a leap year.");
-                }
-            }
-            else if (String.Equals(reader.Name, "speed", StringComparison.Ordinal))
-            {
-                this.Speed = reader.ReadElementContentAsFloat();
-                if (this.Speed < 0.0F)
-                {
-                    throw new XmlException("Storm windspeed is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "duration", StringComparison.Ordinal))
-            {
-                this.Duration = reader.ReadElementContentAsFloat();
-                if (this.Duration < 0.0F)
-                {
-                    throw new XmlException("Storm duration is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "topoGridFile", StringComparison.Ordinal))
-            {
-                this.TopoGridFile = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "factorEdge", StringComparison.Ordinal))
-            {
-                this.FactorEdge = reader.ReadElementContentAsFloat();
-                if (this.FactorEdge < 0.0F)
-                {
-                    throw new XmlException("Edge widspeed factor is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "edgeDetectionThreshold", StringComparison.Ordinal))
-            {
-                this.EdgeDetectionThreshold = reader.ReadElementContentAsFloat();
-                if (this.EdgeDetectionThreshold < 0.0F)
-                {
-                    throw new XmlException("Height difference threshold for wind edge effects is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "topexModifierType", StringComparison.Ordinal))
-            {
-                this.TopexModifierType = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "LRITransferFunction", StringComparison.Ordinal))
-            {
-                this.LriTransferFunction = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "edgeProbability", StringComparison.Ordinal))
-            {
-                this.EdgeProbability = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "edgeAgeBaseValue", StringComparison.Ordinal))
-            {
-                this.EdgeAgeBaseValue = reader.ReadElementContentAsInt();
-                if (this.EdgeAgeBaseValue < 0)
-                {
-                    throw new XmlException("Edge age is negative.");
-                }
-            }
-            else if (String.Equals(reader.Name, "edgeBackgroundProbability", StringComparison.Ordinal))
-            {
-                this.EdgeBackgroundProbability = reader.ReadElementContentAsFloat();
-                if ((this.EdgeBackgroundProbability < 0.0F) || (this.EdgeBackgroundProbability > 1.0F))
-                {
-                    throw new XmlException("Edge background probability is negative or greater than 1.0.");
-                }
-            }
-            else if (String.Equals(reader.Name, "onAfterWind", StringComparison.Ordinal))
-            {
-                this.OnAfterWind = reader.ReadElementContentAsString().Trim();
-            }
             else
             {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                switch (reader.Name)
+                {
+                    case "speciesParameter":
+                        this.SpeciesParameter = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "soilFreezeMode":
+                        this.SoilFreezeMode = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "triggeredByTimeEvent":
+                        this.TriggeredByTimeEvent = reader.ReadElementContentAsBoolean();
+                        break;
+                    case "durationPerIteration":
+                        this.DurationPerIteration = reader.ReadElementContentAsInt();
+                        if (this.DurationPerIteration < 0)
+                        {
+                            throw new XmlException("Wind event duration is negative.");
+                        }
+                        break;
+                    case "gustModifier":
+                        this.GustModifier = reader.ReadElementContentAsFloat();
+                        if (this.GustModifier < 0)
+                        {
+                            throw new XmlException("Gust multiplier is negative.");
+                        }
+                        break;
+                    case "topoModifier":
+                        this.TopoModifier = reader.ReadElementContentAsFloat();
+                        if (this.TopoModifier < 0)
+                        {
+                            throw new XmlException("Topographic windspeed multiplier is negative.");
+                        }
+                        break;
+                    case "directionVariation":
+                        this.DirectionVariation = reader.ReadElementContentAsFloat();
+                        // no clear range of values from iLand documentation
+                        break;
+                    case "direction":
+                        this.Direction = reader.ReadElementContentAsFloat();
+                        // no meaningful restriction from iLand documentation
+                        break;
+                    case "dayOfYear":
+                        this.DayOfYear = reader.ReadElementContentAsInt();
+                        if ((this.DayOfYear < 0) || (this.DayOfYear > Constant.DaysInLeapYear))
+                        {
+                            throw new XmlException("Day of year on which windstorm occurs is negative or greater than the number of days in a leap year.");
+                        }
+                        break;
+                    case "speed":
+                        this.Speed = reader.ReadElementContentAsFloat();
+                        if (this.Speed < 0.0F)
+                        {
+                            throw new XmlException("Storm windspeed is negative.");
+                        }
+                        break;
+                    case "duration":
+                        this.Duration = reader.ReadElementContentAsFloat();
+                        if (this.Duration < 0.0F)
+                        {
+                            throw new XmlException("Storm duration is negative.");
+                        }
+                        break;
+                    case "topoGridFile":
+                        this.TopoGridFile = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "factorEdge":
+                        this.FactorEdge = reader.ReadElementContentAsFloat();
+                        if (this.FactorEdge < 0.0F)
+                        {
+                            throw new XmlException("Edge widspeed factor is negative.");
+                        }
+                        break;
+                    case "edgeDetectionThreshold":
+                        this.EdgeDetectionThreshold = reader.ReadElementContentAsFloat();
+                        if (this.EdgeDetectionThreshold < 0.0F)
+                        {
+                            throw new XmlException("Height difference threshold for wind edge effects is negative.");
+                        }
+                        break;
+                    case "topexModifierType":
+                        this.TopexModifierType = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "LRITransferFunction":
+                        this.LriTransferFunction = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "edgeProbability":
+                        this.EdgeProbability = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "edgeAgeBaseValue":
+                        this.EdgeAgeBaseValue = reader.ReadElementContentAsInt();
+                        if (this.EdgeAgeBaseValue < 0)
+                        {
+                            throw new XmlException("Edge age is negative.");
+                        }
+                        break;
+                    case "edgeBackgroundProbability":
+                        this.EdgeBackgroundProbability = reader.ReadElementContentAsFloat();
+                        if ((this.EdgeBackgroundProbability < 0.0F) || (this.EdgeBackgroundProbability > 1.0F))
+                        {
+                            throw new XmlException("Edge background probability is negative or greater than 1.0.");
+                        }
+                        break;
+                    case "onAfterWind":
+                        this.OnAfterWind = reader.ReadElementContentAsString().Trim();
+                        break;
+                    default:
+                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                }
             }
         }
     }

@@ -61,37 +61,31 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
-			if (String.Equals(reader.Name, "project", StringComparison.Ordinal))
+			switch (reader.Name)
 			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "system", StringComparison.Ordinal))
-			{
-				this.System.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "model", StringComparison.Ordinal))
-			{
-				this.Model.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "output", StringComparison.Ordinal))
-			{
-				this.Output.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "modules", StringComparison.Ordinal))
-			{
-				this.Modules.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "user", StringComparison.Ordinal))
-			{
-				this.User.ReadXml(reader);
-			}
-			else if (String.Equals(reader.Name, "world", StringComparison.Ordinal))
-			{
-				this.World.ReadXml(reader);
-			}
-			else
-			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				case "project":
+					reader.Read();
+					break;
+				case "system":
+					this.System.ReadXml(reader);
+					break;
+				case "model":
+					this.Model.ReadXml(reader);
+					break;
+				case "output":
+					this.Output.ReadXml(reader);
+					break;
+				case "modules":
+					this.Modules.ReadXml(reader);
+					break;
+				case "user":
+					this.User.ReadXml(reader);
+					break;
+				case "world":
+					this.World.ReadXml(reader);
+					break;
+				default:
+					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

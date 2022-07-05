@@ -1,5 +1,4 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -16,37 +15,34 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
-			if (String.Equals(reader.Name, "wind", StringComparison.Ordinal))
+			switch (reader.Name)
 			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "speedMin", StringComparison.Ordinal))
-			{
-				this.SpeedMin = reader.ReadElementContentAsFloat();
-				if (this.SpeedMin < 0.0F)
-                {
-					throw new XmlException("Minimum wind speed is negative.");
-                }
-			}
-			else if (String.Equals(reader.Name, "speedMax", StringComparison.Ordinal))
-			{
-				this.SpeedMax = reader.ReadElementContentAsFloat();
-				if (this.SpeedMax < 0.0F)
-				{
-					throw new XmlException("Maximum wind speed is negative.");
-				}
-			}
-			else if (String.Equals(reader.Name, "direction", StringComparison.Ordinal))
-			{
-				this.Direction = reader.ReadElementContentAsFloat();
-				if ((this.Direction < 0.0F) || (this.Direction > 360.0F))
-				{
-					throw new XmlException("Default wind direction is not between 0 and 360°, inclusive.");
-				}
-			}
-			else
-			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				case "wind":
+					reader.Read();
+					break;
+				case "speedMin":
+					this.SpeedMin = reader.ReadElementContentAsFloat();
+					if (this.SpeedMin < 0.0F)
+					{
+						throw new XmlException("Minimum wind speed is negative.");
+					}
+					break;
+				case "speedMax":
+					this.SpeedMax = reader.ReadElementContentAsFloat();
+					if (this.SpeedMax < 0.0F)
+					{
+						throw new XmlException("Maximum wind speed is negative.");
+					}
+					break;
+				case "direction":
+					this.Direction = reader.ReadElementContentAsFloat();
+					if ((this.Direction < 0.0F) || (this.Direction > 360.0F))
+					{
+						throw new XmlException("Default wind direction is not between 0 and 360°, inclusive.");
+					}
+					break;
+				default:
+					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
-namespace iLand.Input
+namespace iLand.Input.Tree
 {
     internal class StampReaderBigEndian : BinaryReader
     {
@@ -67,16 +67,16 @@ namespace iLand.Input
             // untested!
             // An int[] buffer could be allocated and cached to avoid calling new twice but no Span<int> path seems to be available?
             int[] quadword = new int[4];
-            quadword[4] = this.ReadInt32();
-            quadword[3] = this.ReadInt32();
-            quadword[2] = this.ReadInt32();
-            quadword[1] = this.ReadInt32();
+            quadword[4] = ReadInt32();
+            quadword[3] = ReadInt32();
+            quadword[2] = ReadInt32();
+            quadword[1] = ReadInt32();
             return new decimal(quadword);
         }
 
         public override double ReadDouble()
         {
-            return BitConverter.Int64BitsToDouble(this.ReadInt64());
+            return BitConverter.Int64BitsToDouble(ReadInt64());
         }
 
         public override short ReadInt16()
@@ -96,17 +96,17 @@ namespace iLand.Input
 
         public override float ReadSingle()
         {
-            return BitConverter.Int32BitsToSingle(this.ReadInt32());
+            return BitConverter.Int32BitsToSingle(ReadInt32());
         }
 
         public override string ReadString()
         {
-            int lengthInBytes = this.ReadInt32();
+            int lengthInBytes = ReadInt32();
             if (lengthInBytes < 0)
             {
-                throw new NotSupportedException("Strings longer than " + Int32.MaxValue + " characters are not supported by this implementation.");
+                throw new NotSupportedException("Strings longer than " + int.MaxValue + " characters are not supported by this implementation.");
             }
-            return new string(this.ReadChars(lengthInBytes / 2));
+            return new string(ReadChars(lengthInBytes / 2));
         }
 
         public override ushort ReadUInt16()

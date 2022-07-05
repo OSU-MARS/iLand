@@ -1,5 +1,4 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -16,26 +15,22 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
-			if (String.Equals(reader.Name, "referenceClimate", StringComparison.Ordinal))
+			switch (reader.Name)
 			{
-				reader.Read();
-				return;
-			}
-			else if (String.Equals(reader.Name, "tableName", StringComparison.Ordinal))
-			{
-				this.TableName = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "seasonalPrecipSum", StringComparison.Ordinal))
-			{
-				this.SeasonalPrecipSum = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "seasonalTemperatureAverage", StringComparison.Ordinal))
-			{
-				this.SeasonalTemperatureAverage = reader.ReadElementContentAsString().Trim();
-			}
-			else
-			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				case "referenceClimate":
+					reader.Read();
+					break;
+				case "tableName":
+					this.TableName = reader.ReadElementContentAsString().Trim();
+					break;
+				case "seasonalPrecipSum":
+					this.SeasonalPrecipSum = reader.ReadElementContentAsString().Trim();
+					break;
+				case "seasonalTemperatureAverage":
+					this.SeasonalTemperatureAverage = reader.ReadElementContentAsString().Trim();
+					break;
+				default:
+					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

@@ -30,48 +30,46 @@ namespace iLand.Input.ProjectFile
 			{
 				this.ReadEnabled(reader);
 			}
-			else if (String.Equals(reader.Name, "type", StringComparison.Ordinal))
-            {
-				string grassAlgorithmAsString = reader.ReadElementContentAsString().Trim();
-				this.Algorithm = grassAlgorithmAsString switch
-				{
-					"continuous" => GrassAlgorithm.ContinuousLight,
-					"pixel" => GrassAlgorithm.CellOnOff,
-					_ => throw new XmlException("Unknown grass algorithm type '" + grassAlgorithmAsString + "'.")
-				};
-            }
-			else if (String.Equals(reader.Name, "grassDuration", StringComparison.Ordinal))
+			else
 			{
-				this.PixelDuration = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "lifThreshold", StringComparison.Ordinal))
-			{
-				this.PixelLifThreshold = reader.ReadElementContentAsFloat();
-				if ((this.PixelLifThreshold < 0.0F) || (this.PixelLifThreshold > 1.0F))
+				switch (reader.Name)
 				{
-					throw new XmlException("Grass LIF threshold is negative or greater than 1.0.");
+					case "type":
+						string grassAlgorithmAsString = reader.ReadElementContentAsString().Trim();
+						this.Algorithm = grassAlgorithmAsString switch
+						{
+							"continuous" => GrassAlgorithm.ContinuousLight,
+							"pixel" => GrassAlgorithm.CellOnOff,
+							_ => throw new XmlException("Unknown grass algorithm type '" + grassAlgorithmAsString + "'.")
+						};
+						break;
+					case "grassDuration":
+						this.PixelDuration = reader.ReadElementContentAsString().Trim();
+						break;
+					case "lifThreshold":
+						this.PixelLifThreshold = reader.ReadElementContentAsFloat();
+						if ((this.PixelLifThreshold < 0.0F) || (this.PixelLifThreshold > 1.0F))
+						{
+							throw new XmlException("Grass LIF threshold is negative or greater than 1.0.");
+						}
+						break;
+					case "grassPotential":
+						this.ContinuousCover = reader.ReadElementContentAsString().Trim();
+						break;
+					case "maxTimeLag":
+						this.ContinuousYearsToFullCover = reader.ReadElementContentAsInt();
+						if (this.ContinuousYearsToFullCover < 0)
+						{
+							throw new XmlException("Maxium grass time lag is negative.");
+						}
+						break;
+					case "grassEffect":
+						this.ContinuousRegenerationEffect = reader.ReadElementContentAsString().Trim();
+						break;
+					default:
+						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 				}
 			}
-			else if (String.Equals(reader.Name, "grassPotential", StringComparison.Ordinal))
-			{
-				this.ContinuousCover = reader.ReadElementContentAsString().Trim();
-			}
-			else if (String.Equals(reader.Name, "maxTimeLag", StringComparison.Ordinal))
-			{
-				this.ContinuousYearsToFullCover = reader.ReadElementContentAsInt();
-				if (this.ContinuousYearsToFullCover < 0)
-                {
-					throw new XmlException("Maxium grass time lag is negative.");
-                }
-			}
-			else if (String.Equals(reader.Name, "grassEffect", StringComparison.Ordinal))
-			{
-				this.ContinuousRegenerationEffect = reader.ReadElementContentAsString().Trim();
-			}
-            else
-            {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
-            }
         }
     }
 }

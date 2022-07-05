@@ -1,5 +1,4 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -28,33 +27,31 @@ namespace iLand.Input.ProjectFile
             {
                 this.ReadEnabled(reader);
             }
-            else if (String.Equals(reader.Name, "bySpecies", StringComparison.Ordinal))
-            {
-                this.BySpecies = reader.ReadElementContentAsBoolean();
-            }
-            else if (String.Equals(reader.Name, "byResourceUnit", StringComparison.Ordinal))
-            {
-                this.ByResourceUnit = reader.ReadElementContentAsBoolean();
-            }
-            else if (String.Equals(reader.Name, "columns", StringComparison.Ordinal))
-            {
-                this.Columns = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "condition", StringComparison.Ordinal))
-            {
-                this.Condition = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "ruFilter", StringComparison.Ordinal))
-            {
-                this.ResourceUnitFilter = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "treeFilter", StringComparison.Ordinal))
-            {
-                this.TreeFilter = reader.ReadElementContentAsString().Trim();
-            }
             else
             {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                switch (reader.Name)
+                {
+                    case "bySpecies":
+                        this.BySpecies = reader.ReadElementContentAsBoolean();
+                        break;
+                    case "byResourceUnit":
+                        this.ByResourceUnit = reader.ReadElementContentAsBoolean();
+                        break;
+                    case "columns":
+                        this.Columns = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "condition":
+                        this.Condition = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "ruFilter":
+                        this.ResourceUnitFilter = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "treeFilter":
+                        this.TreeFilter = reader.ReadElementContentAsString().Trim();
+                        break;
+                    default:
+                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                }
             }
         }
     }

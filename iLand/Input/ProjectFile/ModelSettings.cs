@@ -54,66 +54,51 @@ namespace iLand.Input.ProjectFile
 				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
 			}
 
-			if (String.Equals(reader.Name, "settings", StringComparison.Ordinal))
+			switch (reader.Name)
 			{
-				reader.Read();
-			}
-			else if (String.Equals(reader.Name, "regenerationEnabled", StringComparison.Ordinal))
-			{
-				this.RegenerationEnabled = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "mortalityEnabled", StringComparison.Ordinal))
-			{
-				this.MortalityEnabled = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "growthEnabled", StringComparison.Ordinal))
-			{
-				this.GrowthEnabled = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "carbonCycleEnabled", StringComparison.Ordinal))
-			{
-				this.CarbonCycleEnabled = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "regenerationEnabled", StringComparison.Ordinal))
-			{
-				this.RegenerationEnabled = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "waterUseSoilSaturation", StringComparison.Ordinal))
-			{
-				this.WaterUseSoilSaturation = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "usePARFractionBelowGroundAllocation", StringComparison.Ordinal))
-			{
-				this.UseParFractionBelowGroundAllocation = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "multithreading", StringComparison.Ordinal))
-			{
-				this.Multithreading = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "randomSeed", StringComparison.Ordinal))
-			{
-				this.RandomSeed = reader.ReadElementContentAsInt();
-				// no restriction on range of values
-			}
-			else if (String.Equals(reader.Name, "expressionLinearizationEnabled", StringComparison.Ordinal))
-			{
-				this.ExpressionLinearizationEnabled = reader.ReadElementContentAsBoolean();
-			}
-			else if (String.Equals(reader.Name, "overrideGppPerYear", StringComparison.Ordinal))
-			{
-				this.OverrideGppPerYear = reader.ReadElementContentAsFloat();
-				if (this.OverrideGppPerYear < 0.0F)
-				{
-					throw new XmlException("Fixed annual GPP override is negative.");
-				}
-			}
-			else if (String.Equals(reader.Name, "scheduledEventsFileName", StringComparison.Ordinal))
-			{
-				this.ScheduledEventsFileName = reader.ReadElementContentAsString().Trim();
-			}
-			else
-			{
-				throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+				case "settings":
+					reader.Read();
+					break;
+				case "mortalityEnabled":
+					this.MortalityEnabled = reader.ReadElementContentAsBoolean();
+					break;
+				case "growthEnabled":
+					this.GrowthEnabled = reader.ReadElementContentAsBoolean();
+					break;
+				case "carbonCycleEnabled":
+					this.CarbonCycleEnabled = reader.ReadElementContentAsBoolean();
+					break;
+				case "regenerationEnabled":
+					this.RegenerationEnabled = reader.ReadElementContentAsBoolean();
+					break;
+				case "waterUseSoilSaturation":
+					this.WaterUseSoilSaturation = reader.ReadElementContentAsBoolean();
+					break;
+				case "usePARFractionBelowGroundAllocation":
+					this.UseParFractionBelowGroundAllocation = reader.ReadElementContentAsBoolean();
+					break;
+				case "multithreading":
+					this.Multithreading = reader.ReadElementContentAsBoolean();
+					break;
+				case "randomSeed":
+					this.RandomSeed = reader.ReadElementContentAsInt();
+					// no restriction on range of values
+					break;
+				case "expressionLinearizationEnabled":
+					this.ExpressionLinearizationEnabled = reader.ReadElementContentAsBoolean();
+					break;
+				case "overrideGppPerYear":
+					this.OverrideGppPerYear = reader.ReadElementContentAsFloat();
+					if (this.OverrideGppPerYear < 0.0F)
+					{
+						throw new XmlException("Fixed annual GPP override is negative.");
+					}
+					break;
+				case "scheduledEventsFileName":
+					this.ScheduledEventsFileName = reader.ReadElementContentAsString().Trim();
+					break;
+				default:
+					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

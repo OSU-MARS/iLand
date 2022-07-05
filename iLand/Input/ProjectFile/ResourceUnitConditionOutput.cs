@@ -19,17 +19,19 @@ namespace iLand.Input.ProjectFile
             {
                 this.ReadEnabled(reader);
             }
-            else if (String.Equals(reader.Name, "condition", StringComparison.Ordinal))
-            {
-                this.Condition = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "conditionRU", StringComparison.Ordinal))
-            {
-                this.ConditionRU = reader.ReadElementContentAsString().Trim();
-            }
             else
             {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                switch (reader.Name)
+                {
+                    case "condition":
+                        this.Condition = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "conditionRU":
+                        this.ConditionRU = reader.ReadElementContentAsString().Trim();
+                        break;
+                    default:
+                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                }
             }
         }
     }

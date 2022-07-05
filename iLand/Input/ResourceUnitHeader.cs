@@ -19,19 +19,26 @@ namespace iLand.Input
 
         public int SpeciesTableName { get; private init; }
 
-        public int SoilAvailableNitrogen { get; private init; }
         public int SoilDepthInCM { get; private init; } // cm
+
+        public int SoilSandPercentage { get; private init; }
+        public int SoilSiltPercentage { get; private init; }
+        public int SoilClayPercentage { get; private init; }
+
+        public int SoilThetaR { get; private init; }
+        public int SoilThetaS { get; private init; }
+        public int SoilVanGenuchtenAlpha { get; private init; }
+        public int SoilVanGenuchtenN { get; private init; }
+
+        public int SoilAvailableNitrogen { get; private init; }
         public int SoilEr { get; private init; }
         public int SoilEl { get; private init; }
         public int SoilLeaching { get; private init; }
         public int SoilHumificationRate { get; private init; }
-        public int SoilOrganicC { get; private init; }
-        public int SoilOrganicDecompositionRate { get; private init; }
-        public int SoilOrganicN { get; private init; }
+        public int SoilOrganicMatterC { get; private init; }
+        public int SoilOrganicMatterDecompositionRate { get; private init; }
+        public int SoilOrganicMatterN { get; private init; }
         public int SoilQh { get; private init; }
-        public int SoilSandPercentage { get; private init; }
-        public int SoilSiltPercentage { get; private init; }
-        public int SoilClayPercentage { get; private init; }
         public int SoilYoungLabileC { get; private init; }
         public int SoilYoungLabileDecompositionRate { get; private init; }
         public int SoilYoungLabileN { get; private init; }
@@ -59,19 +66,26 @@ namespace iLand.Input
 
             this.SpeciesTableName = -1;
 
-            this.SoilAvailableNitrogen = -1;
             this.SoilDepthInCM = -1; // cm
+
+            this.SoilThetaR = -1;
+            this.SoilThetaS = -1;
+            this.SoilVanGenuchtenAlpha = -1;
+            this.SoilVanGenuchtenN = -1;
+
+            this.SoilSandPercentage = -1;
+            this.SoilSiltPercentage = -1;
+            this.SoilClayPercentage = -1;
+
+            this.SoilAvailableNitrogen = -1;
             this.SoilEr = -1;
             this.SoilEl = -1;
             this.SoilLeaching = -1;
             this.SoilHumificationRate = -1;
-            this.SoilOrganicC = -1;
-            this.SoilOrganicDecompositionRate = -1;
-            this.SoilOrganicN = -1;
+            this.SoilOrganicMatterC = -1;
+            this.SoilOrganicMatterDecompositionRate = -1;
+            this.SoilOrganicMatterN = -1;
             this.SoilQh = -1;
-            this.SoilSandPercentage = -1;
-            this.SoilSiltPercentage = -1;
-            this.SoilClayPercentage = -1;
             this.SoilYoungLabileC = -1;
             this.SoilYoungLabileDecompositionRate = -1;
             this.SoilYoungLabileN = -1;
@@ -86,100 +100,112 @@ namespace iLand.Input
             {
                 switch (environmentFile.Columns[columnIndex])
                 {
-                    case Constant.Setting.ID:
+                    case "id":
                         this.ResourceUnitID = columnIndex;
                         break;
-                    case Constant.Setting.SpeciesTable:
+                    case "speciesTable":
                         this.SpeciesTableName = columnIndex;
                         break;
-                    case Constant.Setting.CenterX:
+                    case "centerX":
                         this.CenterX = columnIndex;
                         break;
-                    case Constant.Setting.CenterY:
+                    case "centerY":
                         this.CenterY = columnIndex;
                         break;
-                    case Constant.Setting.Climate.Name:
+                    case "climateID":
                         this.ClimateID = columnIndex;
                         break;
-                    case Constant.Setting.Snag.OtherC:
+                    case "snagBranchRootC":
                         this.SnagBranchRootCarbon = columnIndex;
                         break;
-                    case Constant.Setting.Snag.OtherCN:
+                    case "snagBranchRootCN":
                         this.SnagBranchRootCNRatio = columnIndex;
                         break;
-                    case Constant.Setting.Snag.StandingWoodyCarbon:
+                    case "snagCarbon":
                         this.SnagStemCarbon = columnIndex;
                         break;
-                    case Constant.Setting.Snag.StandingWoodyCNRatio:
+                    case "snagCNRatio":
                         this.SnagStemCNRatio = columnIndex;
                         break;
-                    case Constant.Setting.Snag.StandingWoodyDecompositionRate:
+                    case "snagDecompositionRate":
                         this.SnagStemDecompositionRate = columnIndex;
                         break;
-                    case Constant.Setting.Snag.StandingWoodyHalfLife:
+                    case "snagHalfLife":
                         this.SnagHalfLife = columnIndex;
                         break;
-                    case Constant.Setting.Snag.StandingWoodyCount:
+                    case "snagCount":
                         this.SnagsPerResourceUnit = columnIndex;
                         break;
-                    case Constant.Setting.Soil.AnnualNitrogenDeposition:
+                    case "soilAnnualNitrogenDeposition":
                         this.AnnualNitrogenDeposition = columnIndex;
                         break;
-                    case Constant.Setting.Soil.AvailableNitrogen:
+                    case "soilAvailableNitrogen":
                         this.SoilAvailableNitrogen = columnIndex;
                         break;
-                    case Constant.Setting.Soil.Depth:
+                    case "soilDepth":
                         this.SoilDepthInCM = columnIndex;
                         break;
-                    case Constant.Setting.Soil.El:
+                    case "soilEl":
                         this.SoilEl = columnIndex;
                         break;
-                    case Constant.Setting.Soil.Er:
+                    case "soilEr":
                         this.SoilEr = columnIndex;
                         break;
-                    case Constant.Setting.Soil.Leaching:
+                    case "soilLeaching":
                         this.SoilLeaching = columnIndex;
                         break;
-                    case Constant.Setting.Soil.HumificationRate:
+                    case "soilHumificationRate":
                         this.SoilHumificationRate = columnIndex;
                         break;
-                    case Constant.Setting.Soil.OrganicMatterC:
-                        this.SoilOrganicC = columnIndex;
+                    case "soilOrganicC":
+                        this.SoilOrganicMatterC = columnIndex;
                         break;
-                    case Constant.Setting.Soil.OrganicMatterDecompositionRate:
-                        this.SoilOrganicDecompositionRate = columnIndex;
+                    case "soilOrganicDecompositionRate":
+                        this.SoilOrganicMatterDecompositionRate = columnIndex;
                         break;
-                    case Constant.Setting.Soil.OrganincMatterN:
-                        this.SoilOrganicN = columnIndex;
+                    case "soilOrganicN":
+                        this.SoilOrganicMatterN = columnIndex;
                         break;
-                    case Constant.Setting.Soil.PercentClay:
+                    case "soilClayPercent":
                         this.SoilClayPercentage = columnIndex;
                         break;
-                    case Constant.Setting.Soil.PercentSand:
+                    case "soilSandPercent":
                         this.SoilSandPercentage = columnIndex;
                         break;
-                    case Constant.Setting.Soil.PercentSilt:
+                    case "soilSiltPercent":
                         this.SoilSiltPercentage = columnIndex;
                         break;
-                    case Constant.Setting.Soil.Qh:
+                    case "soilQh":
                         this.SoilQh = columnIndex;
                         break;
-                    case Constant.Setting.Soil.YoungLabileC:
+                    case "soilThetaR":
+                        this.SoilThetaR = columnIndex;
+                        break;
+                    case "soilThetaS":
+                        this.SoilThetaS = columnIndex;
+                        break;
+                    case "soilVanGenuchtenAlpha":
+                        this.SoilVanGenuchtenAlpha = columnIndex;
+                        break;
+                    case "soilVanGenuchtenN":
+                        this.SoilVanGenuchtenN = columnIndex;
+                        break;
+                    case "soilYoungLabileC":
                         this.SoilYoungLabileC = columnIndex;
                         break;
-                    case Constant.Setting.Soil.YoungLabileDecompositionRate:
+                    case "soilYoungLabileDecompositionRate":
                         this.SoilYoungLabileDecompositionRate = columnIndex;
                         break;
-                    case Constant.Setting.Soil.YoungLabileN:
+                    case "soilYoungLabileN":
                         this.SoilYoungLabileN = columnIndex;
                         break;
-                    case Constant.Setting.Soil.YoungRefractoryC:
+                    case "soilYoungRefractoryC":
                         this.SoilYoungRefractoryC = columnIndex;
                         break;
-                    case Constant.Setting.Soil.YoungRefractoryDecompositionRate:
+                    case "soilYoungRefractoryDecompositionRate":
                         this.SoilYoungRefractoryDecompositionRate = columnIndex;
                         break;
-                    case Constant.Setting.Soil.YoungRefractoryN:
+                    case "soilYoungRefractoryN":
                         this.SoilYoungRefractoryN = columnIndex;
                         break;
                     default:

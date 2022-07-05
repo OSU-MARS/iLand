@@ -25,25 +25,22 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
             }
 
-            if (String.Equals(reader.Name, "lightResponse", StringComparison.Ordinal))
+            switch (reader.Name)
             {
-                reader.Read();
-            }
-            else if (String.Equals(reader.Name, "shadeIntolerant", StringComparison.Ordinal))
-            {
-                this.ShadeIntolerant = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "shadeTolerant", StringComparison.Ordinal))
-            {
-                this.ShadeTolerant = reader.ReadElementContentAsString().Trim();
-            }
-            else if (String.Equals(reader.Name, "relativeHeightLriModifier", StringComparison.Ordinal))
-            {
-                this.RelativeHeightLriModifier = reader.ReadElementContentAsString().Trim();
-            }
-            else
-            {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                case "lightResponse":
+                    reader.Read();
+                    break;
+                case "shadeIntolerant":
+                    this.ShadeIntolerant = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "shadeTolerant":
+                    this.ShadeTolerant = reader.ReadElementContentAsString().Trim();
+                    break;
+                case "relativeHeightLriModifier":
+                    this.RelativeHeightLriModifier = reader.ReadElementContentAsString().Trim();
+                    break;
+                default:
+                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

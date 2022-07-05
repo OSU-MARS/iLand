@@ -7,14 +7,14 @@ namespace iLand.Test
 {
     public class LandTest
     {
-        private static string GetTestProjectDirectoryPath(TestContext testContext)
+        private static string GetUnitTestDirectoryPath(TestContext testContext)
         {
-            return Path.Combine(testContext.TestDir, "..", "..", "UnitTests", "testProject");
+            return Path.Combine(testContext.TestDir, "..", "..", "UnitTests");
         }
 
         protected static string GetKalkalpenProjectPath(TestContext testContext)
         {
-            return Path.Combine(LandTest.GetTestProjectDirectoryPath(testContext), "kalkalpen.xml");
+            return Path.Combine(LandTest.GetUnitTestDirectoryPath(testContext), "Kalkalpen", "Kalkalpen.xml");
         }
 
         protected static string GetMalcolmKnappProjectPath(string projectFileName)
@@ -24,7 +24,7 @@ namespace iLand.Test
 
         protected static string GetPacificNorthwestProjectPath(TestContext testContext)
         {
-            return Path.Combine(LandTest.GetTestProjectDirectoryPath(testContext), "pacificNorthwest.xml");
+            return Path.Combine(LandTest.GetUnitTestDirectoryPath(testContext), "Elliott", "Elliott.xml");
         }
 
         protected static Model LoadProject(string projectFilePath)
