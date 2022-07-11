@@ -2,7 +2,7 @@
 
 namespace iLand.Input.Tree
 {
-    internal class StandSaplingsHeader
+    internal class StandSaplingsDataIndex
     {
         public int Age { get; private init; }
         public int Count { get; private init; }
@@ -17,33 +17,33 @@ namespace iLand.Input.Tree
         public int StandID { get; private init; }
         public int AgeAt4m { get; private init; }
 
-        public StandSaplingsHeader(CsvFile saplingFile)
+        public StandSaplingsDataIndex(CsvFile saplingFile)
         {
-            Count = saplingFile.GetColumnIndex("count");
-            Species = saplingFile.GetColumnIndex("species");
-            if (Species < 0 || Count < 0)
+            this.Count = saplingFile.GetColumnIndex("count");
+            this.Species = saplingFile.GetColumnIndex("species");
+            if (this.Species < 0 || Count < 0)
             {
                 throw new FileLoadException("Sapling files must have 'species' and 'count' columns.");
             }
 
-            StandID = saplingFile.GetColumnIndex("stand_id");
-            if (StandID < 0)
+            this.StandID = saplingFile.GetColumnIndex("stand_id");
+            if (this.StandID < 0)
             {
                 throw new FileLoadException("The sapling file contains no 'stand_id' column (required in 'standgrid' mode).");
             }
 
-            Height = saplingFile.GetColumnIndex("height");
-            HeightMin = saplingFile.GetColumnIndex("height_from");
-            HeightMax = saplingFile.GetColumnIndex("height_to");
-            if (Height < 0 && HeightMin < 0 ^ HeightMax < 0)
+            this.Height = saplingFile.GetColumnIndex("height");
+            this.HeightMin = saplingFile.GetColumnIndex("height_from");
+            this.HeightMax = saplingFile.GetColumnIndex("height_to");
+            if (this.Height < 0 && this.HeightMin < 0 ^ this.HeightMax < 0)
             {
                 throw new FileLoadException("Height not correctly provided. Use either 'height' or both 'height_from' and 'height_to'.");
             }
 
-            Age = saplingFile.GetColumnIndex("age");
-            GrassCover = saplingFile.GetColumnIndex("grass_cover");
-            MinLightIntensity = saplingFile.GetColumnIndex("min_lif");
-            AgeAt4m = saplingFile.GetColumnIndex("age4m");
+            this.Age = saplingFile.GetColumnIndex("age");
+            this.GrassCover = saplingFile.GetColumnIndex("grass_cover");
+            this.MinLightIntensity = saplingFile.GetColumnIndex("min_lif");
+            this.AgeAt4m = saplingFile.GetColumnIndex("age4m");
         }
     }
 }

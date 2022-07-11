@@ -7,9 +7,9 @@ namespace iLand.Test
 {
     public class LandTest
     {
-        private static string GetUnitTestDirectoryPath(TestContext testContext)
+        protected static string GetElliottProjectPath(TestContext testContext)
         {
-            return Path.Combine(testContext.TestDir, "..", "..", "UnitTests");
+            return Path.Combine(LandTest.GetUnitTestDirectoryPath(testContext), "Elliott", "Elliott.xml");
         }
 
         protected static string GetKalkalpenProjectPath(TestContext testContext)
@@ -22,9 +22,9 @@ namespace iLand.Test
             return Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "OSU", "iLand", "Malcolm Knapp", projectFileName);
         }
 
-        protected static string GetPacificNorthwestProjectPath(TestContext testContext)
+        private static string GetUnitTestDirectoryPath(TestContext testContext)
         {
-            return Path.Combine(LandTest.GetUnitTestDirectoryPath(testContext), "Elliott", "Elliott.xml");
+            return Path.Combine(testContext.TestDir, "..", "..", "UnitTests");
         }
 
         protected static Model LoadProject(string projectFilePath)

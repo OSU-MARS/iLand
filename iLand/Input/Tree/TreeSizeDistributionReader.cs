@@ -7,15 +7,11 @@ namespace iLand.Input.Tree
     {
         public List<TreeSizeRange> TreeSizeDistribution { get; private init; }
 
-        public TreeSizeDistributionReader(string treeFilePath)
+        public TreeSizeDistributionReader(string treeFilePath, TreeSizeDistributionDataIndex treeSizeHeader, CsvFile treeFile)
             : base(treeFilePath)
         {
-            TreeSizeDistribution = new();
-        }
+            this.TreeSizeDistribution = new();
 
-        public TreeSizeDistributionReader(string treeFilePath, TreeSizeDistributionHeader treeSizeHeader, CsvFile treeFile)
-            : this(treeFilePath)
-        {
             int lineNumber = 0;
             treeFile.Parse((row) =>
             {
@@ -67,7 +63,7 @@ namespace iLand.Input.Tree
                     throw new NotSupportedException("Missing species in file '" + treeFilePath + ", line " + lineNumber + ".");
                 }
 
-                TreeSizeDistribution.Add(sizeRange);
+                this.TreeSizeDistribution.Add(sizeRange);
             });
         }
     }

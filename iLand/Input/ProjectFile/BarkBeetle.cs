@@ -15,7 +15,7 @@ namespace iLand.Input.ProjectFile
 		public int CohortsPerSisterbrood { get; private set; }
 		public string? ColonizeProbabilityFormula { get; private set; }
 		public float DeadTreeSelectivity { get; private set; }
-		public string? OutbreakClimateSensitivityFormula { get; private set; }
+		public string? OutbreakWeatherSensitivityFormula { get; private set; }
 		public int OutbreakDurationMin { get; private set; }
 		public int OutbreakDurationMax { get; private set; }
 		public string? OutbreakDurationMortalityFormula { get; private set; }
@@ -104,8 +104,8 @@ namespace iLand.Input.ProjectFile
 							throw new XmlException("Dead tree selectivity is negative or greater than 1.0.");
 						}
 						break;
-					case "outbreakClimateSensitivityFormula":
-						this.OutbreakClimateSensitivityFormula = reader.ReadElementContentAsString().Trim();
+					case "outbreakWeatherSensitivityFormula":
+						this.OutbreakWeatherSensitivityFormula = reader.ReadElementContentAsString().Trim();
 						break;
 					case "outbreakDurationMin":
 						this.OutbreakDurationMin = reader.ReadElementContentAsInt();

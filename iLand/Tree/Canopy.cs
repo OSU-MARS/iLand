@@ -1,5 +1,5 @@
-﻿using iLand.Input.ProjectFile;
-using iLand.World;
+﻿using iLand.Input;
+using iLand.Input.ProjectFile;
 using System;
 
 namespace iLand.Tree
@@ -105,12 +105,12 @@ namespace iLand.Tree
         }
 
         // returns the total sum of evaporation+transpiration in mm of the day
-        public float FlowDayEvapotranspiration3PG(Project projectFile, ClimateDay day, float dayLengthInHours, float soilAtmosphereResponse)
+        public float FlowDayEvapotranspiration3PG(Project projectFile, WeatherTimeSeriesDaily dailyWeather, int dayIndex, float dayLengthInHours, float soilAtmosphereResponse)
         {
-            float vpdInMillibar = 10.0F * day.Vpd; // convert from kPa to mbar
-            float meanDaytimeTemperature = day.MeanDaytimeTemperature; // average temperature of the day (degree C)
+            float vpdInMillibar = 10.0F * dailyWeather.VpdMeanInKPa[dayIndex]; // convert from kPa to mbar
+            float meanDaytimeTemperature = dailyWeather.TemperatureDaytimeMean[dayIndex]; // average temperature of the day (degree C)
             float dayLengthInSeconds = 3600.0F * dayLengthInHours; // daylength in seconds (convert from length in hours)
-            float rad = 1000.0F * 1000.0F * day.Radiation / dayLengthInSeconds; //convert from MJ/m2 (day sum) to average radiation flow W/m2 [MJ=MWs . /s * 1,000,000
+            float rad = 1000.0F * 1000.0F * dailyWeather.SolarRadiationTotal[dayIndex] / dayLengthInSeconds; //convert from MJ/m2 (day sum) to average radiation flow W/m2 [MJ=MWs . /s * 1,000,000
 
             // the radiation: based on linear empirical function
             const float qa = -90.0F;
@@ -147,10 +147,10 @@ namespace iLand.Tree
             const float psychrometricConstant = 0.0672718682328237F; // kPa/degC
             const float windspeed = 2.0F; // m/s
             float net_rad_mj_day = net_rad * dayLengthInSeconds / 1000000.0F; // convert W/m2 again to MJ/m2*day
-            float et0_day = 0.408F * svp_slope * net_rad_mj_day + psychrometricConstant * 900.0F / (meanDaytimeTemperature + 273.15F) * windspeed * day.Vpd;
+            float et0_day = 0.408F * svp_slope * net_rad_mj_day + psychrometricConstant * 900.0F / (meanDaytimeTemperature + 273.15F) * windspeed * dailyWeather.VpdMeanInKPa[dayIndex];
             float et0_div = svp_slope + psychrometricConstant * (1.0F + 0.34F * windspeed);
             et0_day /= et0_div;
-            this.ReferenceEvapotranspirationByMonth[day.Month - 1] += et0_day;
+            this.ReferenceEvapotranspirationByMonth[dailyWeather.Month[dayIndex] - 1] += et0_day;
 
             if (this.StoredWaterInMM > 0.0F)
             {

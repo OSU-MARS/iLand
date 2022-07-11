@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿using iLand.Input;
+using iLand.Input.ProjectFile;
 using iLand.Tool;
 using iLand.World;
 using System;
@@ -10,7 +11,7 @@ namespace iLand.Tree
         http://iland-model.org/establishment
         Prerequisites for establishment are:
         the availability of seeds: derived from the seed-maps per Species (@sa SeedDispersal)
-        the quality of the abiotic environment (TACA-model): calculations are performend here, based on climate and species responses
+        the quality of the abiotic environment (TACA-model): calculations are performend here, based on weather and species responses
         the quality of the biotic environment, mainly light: based on the LIF-values
 
         TACA (tree and climate assessment) model:
@@ -19,31 +20,30 @@ namespace iLand.Tree
         */
     public class Establishment
     {
-        private readonly World.Climate mClimate; // link to the current climate
-        private readonly ResourceUnitTreeSpecies mRUspecies; // link to the resource unit species (links to production data and species respones)
-        private float mSumLifValue;
-        private int mLifCount;
+        private float sumLifValue;
+        private int lifCount;
 
-        public float MeanSeedDensity { get; private set; } // average seed density on the RU
-        public float AbioticEnvironment { get; private set; } // integrated value of abiotic environment (i.e.: TACA-climate + total iLand environment)
-        public int NumberEstablished { get; private set; } // return number of newly established trees in the current year
         // TACA switches
-        public bool TacaMinTemp { get; private set; } // TACA flag for minimum temperature
-        public bool TacaChill { get; private set; } // TACA flag chilling requirement
-        public bool TacaGdd { get; private set; } // TACA flag for growing degree days
-        public bool TacaFrostFree { get; private set; } // TACA flag for number of frost free days
-        public int TacaFrostDaysAfterBudBurst { get; private set; } // number of frost days after bud birst
-        public float WaterLimitation { get; private set; } // scalar value between 0 and 1 (1: no limitation, 0: no establishment)
+        private bool tacaChill; // TACA flag chilling requirement
+        private int tacaFrostDaysAfterBudBurst; // number of frost days after bud birst
+        private bool tacaFrostFree; // TACA flag for number of frost free days
+        private bool tacaGdd; // TACA flag for growing degree days
+        private bool tacaMinTemp; // TACA flag for minimum temperature
+        private float waterLimitation; // scalar value between 0 and 1 (1: no limitation, 0: no establishment)
 
-        public Establishment(World.Climate climate, ResourceUnitTreeSpecies ruSpecies)
+        public float AbioticEnvironment { get; private set; } // integrated value of abiotic environment (i.e.: TACA-climate + total iLand environment)
+        public float MeanSeedDensity { get; private set; } // average seed density on the RU
+        public int NumberEstablished { get; private set; } // return number of newly established trees in the current year
+
+        public Establishment()
         {
-            if (ruSpecies == null || ruSpecies.Species == null || ruSpecies.RU == null)
-            {
-                throw new ArgumentException("Species or resource unit is null");
-            }
+            this.tacaChill = false;
+            this.tacaFrostDaysAfterBudBurst = 0;
+            this.tacaFrostFree = false;
+            this.tacaGdd = false;
+            this.tacaFrostDaysAfterBudBurst = 0;
+            this.waterLimitation = 0.0F;
 
-            this.mClimate = climate ?? throw new ArgumentNullException(nameof(climate), "No valid climate for a resource unit.");
-            this.mRUspecies = ruSpecies;
             this.AbioticEnvironment = 0.0F;
             this.MeanSeedDensity = 0.0F;
             this.NumberEstablished = 0;
@@ -52,35 +52,35 @@ namespace iLand.Tree
         // average LIF value of LIF pixels where establishment is tested
         public float GetMeanLifValue() 
         { 
-            return this.mLifCount > 0 ? this.mSumLifValue / this.mLifCount : 0.0F; 
+            return this.lifCount > 0 ? this.sumLifValue / this.lifCount : 0.0F; 
         }
 
         public void Clear()
         {
-            this.mLifCount = 0;
-            this.mSumLifValue = 0.0F;
+            this.lifCount = 0;
+            this.sumLifValue = 0.0F;
 
             this.AbioticEnvironment = 0.0F;
             this.NumberEstablished = 0;
             this.MeanSeedDensity = 0.0F;
-            this.TacaMinTemp = false;
-            this.TacaChill = false;
-            this.TacaGdd = false;
-            this.TacaFrostFree = false;
-            this.TacaFrostDaysAfterBudBurst = 0;
-            this.WaterLimitation = 0.0F;
+            this.tacaMinTemp = false;
+            this.tacaChill = false;
+            this.tacaGdd = false;
+            this.tacaFrostFree = false;
+            this.tacaFrostDaysAfterBudBurst = 0;
+            this.waterLimitation = 0.0F;
         }
 
-        private float CalculateWaterLimitation(int leafOnStart, int leafOnEnd)
+        private static float CalculateWaterLimitation(ResourceUnitTreeSpecies ruSpecies, int leafOnStart, int leafOnEnd)
         {
             // return 1 if effect is disabled
-            if (mRUspecies.Species.EstablishmentParameters.PsiMin >= 0.0F)
+            if (ruSpecies.Species.EstablishmentParameters.PsiMin >= 0.0F)
             {
                 return 1.0F;
             }
 
-            float minimumPsiMPa = mRUspecies.Species.EstablishmentParameters.PsiMin;
-            WaterCycle water = mRUspecies.RU.WaterCycle;
+            float minimumPsiMPa = ruSpecies.Species.EstablishmentParameters.PsiMin;
+            WaterCycle water = ruSpecies.RU.WaterCycle;
 
             // two week (14 days) running average of actual psi-values on the resource unit
             const int daysToAverage = 14;
@@ -88,7 +88,7 @@ namespace iLand.Tree
             float currentPsiSum = 0.0F;
             
             float miniumumMovingAverage = Single.MaxValue;
-            int daysInYear = mRUspecies.RU.Climate.GetDaysInYear();
+            int daysInYear = ruSpecies.RU.Weather.GetDaysInYear();
             for (int dayOfYear = 0, averageIndex = 0; dayOfYear < daysInYear; ++dayOfYear)
             {
                 // running average: remove oldest item, add new item in a ringbuffer
@@ -123,48 +123,52 @@ namespace iLand.Tree
          more details: http://iland-model.org/establishment#abiotic_environment
          a model mockup in R: script_establishment.r
          */
-        public void CalculateAbioticEnvironment(Project projectFile)
+        public void CalculateAbioticEnvironment(Project projectFile, WeatherDaily weather, ResourceUnitTreeSpecies ruSpecies)
         {
             // make sure that required calculations (e.g. watercycle are already performed)
-            this.mRUspecies.CalculateBiomassGrowthForYear(projectFile, fromEstablishment: true); // calculate the 3-PG module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
+            // TODO: why is CalculateBiomassGrowthForYear() called from three places?
+            ruSpecies.CalculateBiomassGrowthForYear(projectFile, fromSaplingEstablishmentOrGrowth: true); // calculate the 3-PG module and run the water cycle (this is done only if that did not happen up to now); true: call comes from regeneration
 
-            EstablishmentParameters establishment = mRUspecies.Species.EstablishmentParameters;
-            Phenology pheno = mClimate.GetPhenology(mRUspecies.Species.PhenologyClass);
+            EstablishmentParameters establishment = ruSpecies.Species.EstablishmentParameters;
+            Phenology phenonology = weather.GetPhenology(ruSpecies.Species.PhenologyClass);
 
-            this.TacaMinTemp = true; // minimum temperature threshold
-            this.TacaChill = false;  // (total) chilling requirement
-            this.TacaGdd = false;   // gdd-thresholds
-            this.TacaFrostFree = false; // frost free days in vegetation period
-            this.TacaFrostDaysAfterBudBurst = 0; // frost days after bud burst
+            this.tacaMinTemp = true; // minimum temperature threshold
+            this.tacaChill = false;  // (total) chilling requirement
+            this.tacaGdd = false;   // gdd-thresholds
+            this.tacaFrostFree = false; // frost free days in vegetation period
+            this.tacaFrostDaysAfterBudBurst = 0; // frost days after bud burst
 
-            int doy = 0;
+            int dayOfyear = 0;
             float growingDegreeDays = 0.0F;
             float growingDegreeDaysBudBurst = 0.0F;
-            int chillingDays = pheno.ChillingDaysAfterLeafOffInPreviousYear; // chilling days of the last autumn
+            int chillingDays = phenonology.ChillingDaysAfterLeafOffInPreviousYear; // chilling days of the last autumn
             int frostFreeDays = 0;
-            this.TacaFrostDaysAfterBudBurst = 0;
+            this.tacaFrostDaysAfterBudBurst = 0;
             bool chillRequirementSatisfied = false;
             bool budsHaveBurst = false;
-            int veg_period_end = pheno.LeafOnEnd;
-            if (veg_period_end >= 365)
+            int leafOnEndDay = phenonology.LeafOnEnd;
+            if (leafOnEndDay >= 365)
             {
-                veg_period_end = this.mClimate.Sun.LastDayLongerThan10_5Hours;
+                leafOnEndDay = weather.Sun.LastDayLongerThan10_5Hours;
             }
-            for (int index = this.mClimate.CurrentJanuary1; index != this.mClimate.NextJanuary1; ++index, ++doy)
+
+            WeatherTimeSeriesDaily dailyWeather = weather.TimeSeries;
+            for (int dayIndex = weather.CurrentJanuary1; dayIndex != weather.NextJanuary1; ++dayIndex, ++dayOfyear)
             {
-                ClimateDay day = this.mClimate[index];
                 // minimum temperature: if temp too low . set prob. to zero
-                if (day.MinTemperature < establishment.MinTemp)
+                if (dailyWeather.TemperatureMin[dayIndex] < establishment.MinTemp)
                 {
-                    this.TacaMinTemp = false;
+                    this.tacaMinTemp = false;
                 }
                 // count frost free days
-                if (day.MinTemperature > 0.0)
+                float minTemperature = dailyWeather.TemperatureMin[dayIndex];
+                if (minTemperature > 0.0F)
                 {
                     ++frostFreeDays;
                 }
-                // chilling requirement, GDD, bud birst
-                if (day.MeanDaytimeTemperature >= -5.0 && day.MeanDaytimeTemperature < 5.0)
+                // chilling requirement, GDD, bud burst
+                float daytimeMeanTemperature = dailyWeather.TemperatureDaytimeMean[dayIndex];
+                if (daytimeMeanTemperature >= -5.0F && daytimeMeanTemperature < 5.0F)
                 {
                     ++chillingDays;
                 }
@@ -174,16 +178,16 @@ namespace iLand.Tree
                 }
                 // GDDs above the base temperature are counted if beginning from the day where the chilling requirements are met
                 // up to a fixed day ending the veg period
-                if (doy <= veg_period_end)
+                if (dayOfyear <= leafOnEndDay)
                 {
                     // accumulate growing degree days
-                    if (chillRequirementSatisfied && day.MeanDaytimeTemperature > establishment.GrowingDegreeDaysBaseTemperature)
+                    if (chillRequirementSatisfied && daytimeMeanTemperature > establishment.GrowingDegreeDaysBaseTemperature)
                     {
-                        growingDegreeDays += day.MeanDaytimeTemperature - establishment.GrowingDegreeDaysBaseTemperature;
-                        growingDegreeDaysBudBurst += day.MeanDaytimeTemperature - establishment.GrowingDegreeDaysBaseTemperature;
+                        growingDegreeDays += daytimeMeanTemperature - establishment.GrowingDegreeDaysBaseTemperature;
+                        growingDegreeDaysBudBurst += daytimeMeanTemperature - establishment.GrowingDegreeDaysBaseTemperature;
                     }
                     // if day-frost occurs, the GDD counter for bud burst is reset
-                    if (day.MeanDaytimeTemperature <= 0.0)
+                    if (daytimeMeanTemperature <= 0.0F)
                     {
                         growingDegreeDaysBudBurst = 0.0F;
                     }
@@ -191,43 +195,43 @@ namespace iLand.Tree
                     {
                         budsHaveBurst = true;
                     }
-                    if (doy < veg_period_end && budsHaveBurst && day.MinTemperature <= 0.0)
+                    if ((dayOfyear < leafOnEndDay) && budsHaveBurst && (minTemperature <= 0.0F))
                     {
-                        ++this.TacaFrostDaysAfterBudBurst;
+                        ++this.tacaFrostDaysAfterBudBurst;
                     }
                 }
             }
             // chilling requirement
             if (chillRequirementSatisfied)
             {
-                this.TacaChill = true;
+                this.tacaChill = true;
             }
 
             // GDD requirements
             if (growingDegreeDays > establishment.MinimumGrowingDegreeDays && growingDegreeDays < establishment.MaximumGrowingDegreeDays)
             {
-                this.TacaGdd = true;
+                this.tacaGdd = true;
             }
 
             // frost free days in the vegetation period
             if (frostFreeDays > establishment.MinimumFrostFreeDays)
             {
-                this.TacaFrostFree = true;
+                this.tacaFrostFree = true;
             }
 
             // if all requirements are met:
-            if (this.TacaChill && this.TacaMinTemp && this.TacaGdd && this.TacaFrostFree)
+            if (this.tacaChill && this.tacaMinTemp && this.tacaGdd && this.tacaFrostFree)
             {
                 // negative effect of frost events after bud birst
                 float frostEffect = 1.0F;
-                if (this.TacaFrostDaysAfterBudBurst > 0)
+                if (this.tacaFrostDaysAfterBudBurst > 0)
                 {
-                    frostEffect = MathF.Pow(establishment.FrostTolerance, MathF.Sqrt(this.TacaFrostDaysAfterBudBurst));
+                    frostEffect = MathF.Pow(establishment.FrostTolerance, MathF.Sqrt(this.tacaFrostDaysAfterBudBurst));
                 }
                 // negative effect due to water limitation on establishment [1: no effect]
-                this.WaterLimitation = this.CalculateWaterLimitation(pheno.LeafOnStart, pheno.GetLeafOnDurationInDays());
+                this.waterLimitation = Establishment.CalculateWaterLimitation(ruSpecies, phenonology.LeafOnStart, phenonology.GetLeafOnDurationInDays());
                 // combine drought and frost effect multiplicatively
-                this.AbioticEnvironment = frostEffect * this.WaterLimitation;
+                this.AbioticEnvironment = frostEffect * this.waterLimitation;
             }
             else
             {

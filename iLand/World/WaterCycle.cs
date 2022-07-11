@@ -21,16 +21,15 @@ namespace iLand.World
         private float laiNeedle;
         private float residualSoilWater; // bucket "height" of PWP (is fixed to -4MPa) (mm)
         private readonly ResourceUnit ru; // resource unit to which this watercycle is connected
-        private readonly SoilWaterRetention soilWaterRetention;
+        private SoilWaterRetention? soilWaterRetention;
         private readonly SnowPack snowPack; // object representing the snow cover (aggregation, melting)
 
         public Canopy Canopy { get; private init; } // object representing the forest canopy (interception, evaporation)
         // TODO: should conductance move to Canopy class?
         public float CanopyConductance { get; private set; } // current canopy conductance (LAI weighted CC of available tree species) (m/s)
         
-        public float CurrentSoilWaterContent { get; private set; } // current water content in mm water column of the soil
+        public float CurrentSoilWater { get; private set; } // current water content in mm water column of the soil
         public float FieldCapacity { get; private set; } //  bucket height of field-capacity (eq. -15kPa) (mm)
-        public float SoilDepthInMM { get; private set; } // soil depth (without rocks) in mm
         public float[] SoilWaterPotentialByDay { get; private init; } // soil water potential for each day of year in kPa, needed for soil water modifier
 
         public float SnowDayRadiation { get; set; } // sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
@@ -44,12 +43,11 @@ namespace iLand.World
             this.laiNeedle = Single.NaN;
             this.residualSoilWater = Single.NaN;
             this.ru = ru;
-            this.soilWaterRetention = new SoilWaterRetentionCampbell();
+            this.soilWaterRetention = null;
             this.snowPack = new();
 
             this.Canopy = new Canopy(projectFile.Model.Ecosystem.AirDensity);
             this.FieldCapacity = Single.NaN;
-            this.SoilDepthInMM = Single.NaN;
             this.SoilWaterPotentialByDay = new float[Constant.DaysInLeapYear];
 
             this.SnowDayRadiation = Single.NaN;
@@ -62,30 +60,30 @@ namespace iLand.World
         
         public void SetContent(float soilWaterInMM, float snowWaterEquivalentInMM)
         { 
-            this.CurrentSoilWaterContent = soilWaterInMM; 
+            this.CurrentSoilWater = soilWaterInMM; 
             this.snowPack.WaterEquivalentInMM = snowWaterEquivalentInMM; 
         }
 
         public void Setup(Project projectFile, ResourceUnitEnvironment environment)
         {
-            // get values...
-            this.SoilDepthInMM = 10.0F * environment.SoilDepthInCM; // convert from cm to mm TODO: zero is not a realistic default
-            
-            float psiSaturation = this.soilWaterRetention.Setup(environment, projectFile.Model.Settings.WaterUseSoilSaturation);
-            this.FieldCapacity = this.soilWaterRetention.GetSoilWaterContentFromPsi(this.SoilDepthInMM, psiSaturation);
-            this.residualSoilWater = this.soilWaterRetention.GetSoilWaterContentFromPsi(this.SoilDepthInMM, -4000.0F); // maximum psi is set to a constant of -4 MPa
-
-            if (projectFile.Model.Settings.WaterUseSoilSaturation == false) // TODO: should be on ModelSettings, why does this default to false?
+            // soil water
+            this.soilWaterRetention = SoilWaterRetention.Create(environment);
+            float psiSaturation = projectFile.Model.Settings.SoilSaturationPotentialInKPa; // kPa
+            if (Single.IsNaN(psiSaturation))
             {
-                if (this.FieldCapacity < this.residualSoilWater)
-                {
-                    throw new NotSupportedException("Field capacity is below permanent wilting point. Consider setting useSoilSaturation = true.");
-                }
+                psiSaturation = this.soilWaterRetention.SaturationPotentialInKPa;
+            }
+            this.FieldCapacity = this.soilWaterRetention.GetSoilWaterFromPotential(psiSaturation);
+            this.residualSoilWater = this.soilWaterRetention.GetSoilWaterFromPotential(projectFile.Model.Settings.SoilPermanentWiltPotentialInKPA);
+
+            if (this.FieldCapacity < this.residualSoilWater)
+            {
+                throw new NotSupportedException("Field capacity is below permanent wilting point. This indicates an internal error in the soil water retention curve or, if the soil saturation potential is specified in the project file (model.settings.soilSaturationPotential), that the saturation potential is too negative.");
             }
 
             // start with full soil water content (in the middle of winter)
             // BUGBUG: depends on whether soils on site ever reach saturation and, if so, whether simulation starts at a time when soils are saturated
-            this.CurrentSoilWaterContent = this.FieldCapacity;
+            this.CurrentSoilWater = this.FieldCapacity;
             //if (model.Files.LogDebug())
             //{
             //    Debug.WriteLine("setup of water: Psi_sat (kPa) " + mPsi_sat + " Theta_sat " + mTheta_sat + " coeff. b " + mPsi_koeff_b);
@@ -206,6 +204,11 @@ namespace iLand.World
         /// @sa http://iland-model.org/water+cycle
         public WaterCycleData RunYear(Project projectFile)
         {
+            if (this.soilWaterRetention == null)
+            {
+                throw new NotSupportedException(nameof(this.Setup) + "() must be called before calling " + nameof(this.RunYear) + "().");
+            }
+
             WaterCycleData hydrologicState = new();
 
             // preparations (once a year)
@@ -217,43 +220,43 @@ namespace iLand.World
             this.SnowDays = 0;
             this.TotalEvapotranspiration = 0.0F;
             this.TotalRunoff = 0.0F;
-            for (int dayIndex = this.ru.Climate.CurrentJanuary1, dayOfYear = 0; dayIndex < this.ru.Climate.NextJanuary1; ++dayIndex, ++dayOfYear)
+            for (int dayIndex = this.ru.Weather.CurrentJanuary1, dayOfYear = 0; dayIndex < this.ru.Weather.NextJanuary1; ++dayIndex, ++dayOfYear)
             {
-                ClimateDay day = this.ru.Climate[dayIndex];
+                WeatherTimeSeriesDaily dailyWeather = this.ru.Weather.TimeSeries;
                 // (2) interception by the crown
-                float throughfallInMM = this.Canopy.FlowDayToStorage(day.Preciptitation);
+                float throughfallInMM = this.Canopy.FlowDayToStorage(dailyWeather.PrecipitationTotalInMM[dayIndex]);
                 // (3) storage in the snow pack
-                float infiltrationInMM = this.snowPack.FlowDay(throughfallInMM, day.MeanDaytimeTemperature);
+                float infiltrationInMM = this.snowPack.FlowDay(throughfallInMM, dailyWeather.TemperatureDaytimeMean[dayIndex]);
                 // save extra data (used by e.g. fire module)
                 hydrologicState.WaterReachingGround[dayOfYear] = infiltrationInMM;
                 hydrologicState.SnowCover[dayOfYear] = this.snowPack.WaterEquivalentInMM;
                 if (this.snowPack.WaterEquivalentInMM > 0.0)
                 {
-                    this.SnowDayRadiation += day.Radiation;
+                    this.SnowDayRadiation += dailyWeather.SolarRadiationTotal[dayIndex];
                     ++this.SnowDays;
                 }
 
                 // (4) add rest to soil
-                this.CurrentSoilWaterContent += infiltrationInMM;
+                this.CurrentSoilWater += infiltrationInMM;
 
-                if (this.CurrentSoilWaterContent > this.FieldCapacity)
+                if (this.CurrentSoilWater > this.FieldCapacity)
                 {
                     // excess water runoff
-                    float runoffInMM = this.CurrentSoilWaterContent - this.FieldCapacity;
+                    float runoffInMM = this.CurrentSoilWater - this.FieldCapacity;
                     this.TotalRunoff += runoffInMM;
-                    this.CurrentSoilWaterContent = this.FieldCapacity;
+                    this.CurrentSoilWater = this.FieldCapacity;
                 }
 
-                float currentPsi = this.soilWaterRetention.GetSoilWaterPotentialFromWaterContent(this.SoilDepthInMM, this.CurrentSoilWaterContent);
+                float currentPsi = this.soilWaterRetention.GetSoilWaterPotentialFromWater(this.CurrentSoilWater);
                 this.SoilWaterPotentialByDay[dayOfYear] = currentPsi;
 
                 // (5) transpiration of the vegetation and of water intercepted in canopy
                 // implicit assumption: water does not remain in canopy between days
                 // calculate the LAI-weighted response values for soil water and vpd:
                 float interceptionBeforeTranspiration = this.Canopy.StoredWaterInMM;
-                float soilAtmosphereResponse = this.GetSoilAtmosphereModifier(currentPsi, day.Vpd);
-                float dayLengthInHours = this.ru.Climate.Sun.GetDayLengthInHours(dayOfYear);
-                float evapotranspirationInMM = this.Canopy.FlowDayEvapotranspiration3PG(projectFile, day, dayLengthInHours, soilAtmosphereResponse);
+                float soilAtmosphereResponse = this.GetSoilAtmosphereModifier(currentPsi, dailyWeather.VpdMeanInKPa[dayIndex]);
+                float dayLengthInHours = this.ru.Weather.Sun.GetDayLengthInHours(dayOfYear);
+                float evapotranspirationInMM = this.Canopy.FlowDayEvapotranspiration3PG(projectFile, dailyWeather, dayIndex, dayLengthInHours, soilAtmosphereResponse);
                 // if there is some flow from intercepted water to the ground -> add to "water_to_the_ground"
                 if (this.Canopy.StoredWaterInMM < interceptionBeforeTranspiration)
                 {
@@ -261,15 +264,15 @@ namespace iLand.World
                     hydrologicState.WaterReachingGround[dayOfYear] += stemflow;
                 }
 
-                this.CurrentSoilWaterContent -= evapotranspirationInMM; // reduce content (transpiration)
+                this.CurrentSoilWater -= evapotranspirationInMM; // reduce content (transpiration)
                 // add intercepted water (that is *not* evaporated) again to the soil (or add to snow if temp too low -> call to snowpack)
-                this.CurrentSoilWaterContent += this.snowPack.AddSnowWaterEquivalent(this.Canopy.StoredWaterInMM, day.MeanDaytimeTemperature);
+                this.CurrentSoilWater += this.snowPack.AddSnowWaterEquivalent(this.Canopy.StoredWaterInMM, dailyWeather.TemperatureDaytimeMean[dayIndex]);
 
                 // do not remove water below the PWP (fixed value)
-                if (this.CurrentSoilWaterContent < this.residualSoilWater)
+                if (this.CurrentSoilWater < this.residualSoilWater)
                 {
-                    evapotranspirationInMM -= this.residualSoilWater - this.CurrentSoilWaterContent; // reduce et (for bookkeeping)
-                    this.CurrentSoilWaterContent = this.residualSoilWater;
+                    evapotranspirationInMM -= this.residualSoilWater - this.CurrentSoilWater; // reduce et (for bookkeeping)
+                    this.CurrentSoilWater = this.residualSoilWater;
                 }
 
                 this.TotalEvapotranspiration += evapotranspirationInMM;

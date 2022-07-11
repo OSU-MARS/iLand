@@ -34,7 +34,7 @@ namespace iLand.Output
             this.Columns.Add(new SqlColumn("et_mm", "Evapotranspiration (mm)", SqliteType.Real));
             this.Columns.Add(new SqlColumn("excess_mm", "annual sum of water loss due to lateral outflow/groundwater flow (mm)", SqliteType.Real));
             this.Columns.Add(new SqlColumn("snowcover_days", "days with snowcover >0mm", SqliteType.Integer));
-            this.Columns.Add(new SqlColumn("total_radiation", "total incoming radiation over the year (MJ/m2), sum of data in climate input)", SqliteType.Real));
+            this.Columns.Add(new SqlColumn("total_radiation", "total incoming radiation over the year (MJ/m2), sum of data in weather input)", SqliteType.Real));
             this.Columns.Add(new SqlColumn("radiation_snowcover", "sum of radiation input (MJ/m2) for days with snow cover", SqliteType.Integer));
         }
 
@@ -74,22 +74,22 @@ namespace iLand.Output
                     insertRow.Parameters[2].Value = ru.ID;
                     insertRow.Parameters[3].Value = ru.AreaWithTrees / Constant.ResourceUnitAreaInM2;
                     insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.ResourceUnitAreaInM2;
-                    insertRow.Parameters[5].Value = ru.Climate.GetTotalPrecipitationInCurrentYear();
+                    insertRow.Parameters[5].Value = ru.Weather.GetTotalPrecipitationInCurrentYear();
                     insertRow.Parameters[6].Value = wc.TotalEvapotranspiration;
                     insertRow.Parameters[7].Value = wc.TotalRunoff;
                     insertRow.Parameters[8].Value = wc.SnowDays;
-                    insertRow.Parameters[9].Value = ru.Climate.TotalAnnualRadiation;
+                    insertRow.Parameters[9].Value = ru.Weather.TotalAnnualRadiation;
                     insertRow.Parameters[10].Value = wc.SnowDayRadiation;
                     insertRow.ExecuteNonQuery();
                 }
                 ++resourceUnitCount;
                 stockable += ru.AreaInLandscape; 
                 stocked += ru.AreaWithTrees;
-                precip += ru.Climate.GetTotalPrecipitationInCurrentYear();
+                precip += ru.Weather.GetTotalPrecipitationInCurrentYear();
                 evapotranspiration += wc.TotalEvapotranspiration;
                 runoff += wc.TotalRunoff; 
                 snowDays += (int)wc.SnowDays;
-                rad += ru.Climate.TotalAnnualRadiation;
+                rad += ru.Weather.TotalAnnualRadiation;
                 snowRad += wc.SnowDayRadiation;
             }
 

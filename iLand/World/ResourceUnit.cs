@@ -9,13 +9,11 @@ using Snags = iLand.Tree.Snags;
 
 namespace iLand.World
 {
-    /** @class ResourceUnit
-        ResourceUnit is the spatial unit that encapsulates a forest stand and links to several environmental components
-        (Climate, Soil, Water, ...).
-        A resource unit has a size of (currently) 100x100m. Many processes in iLand operate on the level of a ResourceUnit.
-        Each resource unit has the same Climate and other properties (e.g. available nitrogen).
+    /** ResourceUnit is the spatial unit that encapsulates a forest stand and links to several environmental components
+        (weather, soil, water, ...).
+        A resource unit has a size of (currently) 100x100m. Many processes in iLand operate on the level of a resource unit.
         Proceses on this level are, inter alia, NPP Production (see Production3-PG), water calculations (WaterCycle), the modeling
-        of dead trees (Snag) and soil processes (Soil).
+        of dead trees (Snags) and soil processes (Soil).
         */
     public class ResourceUnit
     {
@@ -26,17 +24,17 @@ namespace iLand.World
         public float AreaWithTrees { get; private set; } // get the stocked area in m² at height grid (10 m) resolution
         public RectangleF ProjectExtent { get; set; }
         public ResourceUnitCarbonFluxes CarbonCycle { get; private init; }
-        public Climate Climate { get; set; } // link to the climate on this resource unit
-        public Point TopLeftLightPosition { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
+        public WeatherDaily Weather { get; set; } // link to the weather on this resource unit
         public int ID { get; set; }
         public int ResourceUnitGridIndex { get; private init; }
         public Snags? Snags { get; private set; } // access the snag object
         public ResourceUnitSoil? Soil { get; private set; } // access the soil model
         public SaplingCell[]? SaplingCells { get; private set; } // access the array of sapling-cells
+        public Point TopLeftLightIndexXY { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
         public ResourceUnitTrees Trees { get; private init; }
         public WaterCycle WaterCycle { get; private init; } // water model of the unit
 
-        public ResourceUnit(Project projectFile, Climate climate, TreeSpeciesSet speciesSet, int ruGridIndex)
+        public ResourceUnit(Project projectFile, WeatherDaily weather, TreeSpeciesSet speciesSet, int ruGridIndex)
         {
             this.heightCellsOnLandscape = 0;
             this.heightCellsWithTrees = 0;
@@ -44,7 +42,7 @@ namespace iLand.World
             this.AreaInLandscape = 0.0F;
             this.AreaWithTrees = 0.0F;
             this.CarbonCycle = new ResourceUnitCarbonFluxes();
-            this.Climate = climate;
+            this.Weather = weather;
             this.ID = 0;
             this.ResourceUnitGridIndex = ruGridIndex;
             this.SaplingCells = null;
@@ -216,7 +214,7 @@ namespace iLand.World
             float[] lightCorrection = new float[Constant.LightCellsPerHectare];
             Array.Fill(lightCorrection, -1.0F);
 
-            Point ruOrigin = this.TopLeftLightPosition; // offset on LIF/saplings grid
+            Point ruOrigin = this.TopLeftLightIndexXY; // offset on LIF/saplings grid
             Point seedmapOrigin = new(ruOrigin.X / Constant.LightCellsPerSeedmapCellWidth, ruOrigin.Y / Constant.LightCellsPerSeedmapCellWidth); // seed-map has 20m resolution, LIF 2m . factor 10
             this.Trees.TreeSpeciesSet.GetRandomSpeciesSampleIndices(model.RandomGenerator, out int sampleBegin, out int sampleEnd);
             for (int sampleIndex = sampleBegin; sampleIndex != sampleEnd; ++sampleIndex)
@@ -245,7 +243,7 @@ namespace iLand.World
                 }
 
                 // calculate the abiotic environment (TACA)
-                ruSpecies.Establishment.CalculateAbioticEnvironment(model.Project);
+                ruSpecies.Establishment.CalculateAbioticEnvironment(model.Project, this.Weather, ruSpecies);
                 if (ruSpecies.Establishment.AbioticEnvironment == 0.0)
                 {
                     // rus.Establishment.WriteDebugOutputs();
@@ -322,7 +320,7 @@ namespace iLand.World
             Grid<HeightCell> heightGrid = model.Landscape.HeightGrid;
             Grid<float> lightGrid = model.Landscape.LightGrid;
 
-            Point ruOrigin = this.TopLeftLightPosition;
+            Point ruOrigin = this.TopLeftLightIndexXY;
             for (int lightIndexY = 0; lightIndexY < Constant.LightCellsPerRUWidth; ++lightIndexY)
             {
                 int lightIndex = lightGrid.IndexXYToIndex(ruOrigin.X, ruOrigin.Y + lightIndexY);
@@ -401,7 +399,7 @@ namespace iLand.World
             float lriCorrection = species.SpeciesSet.GetLriCorrection(lif_value, relativeHeight); // correction based on height
             float lightResponse = species.GetLightResponse(lriCorrection); // species specific light response (LUI, light utilization index)
 
-            ruSpecies.CalculateBiomassGrowthForYear(model.Project, fromEstablishment: true); // calculate the 3-PG module (this is done only once per RU); true: call comes from regeneration
+            ruSpecies.CalculateBiomassGrowthForYear(model.Project, fromSaplingEstablishmentOrGrowth: true); // calculate the 3-PG module (this is done only once per RU); true: call comes from regeneration
             float siteEnvironmentHeightMultiplier = ruSpecies.BiomassGrowth.SiteEnvironmentSaplingHeightGrowthMultiplier;
             float heightGrowthFactor = siteEnvironmentHeightMultiplier * lightResponse; // relative growth
 
@@ -649,7 +647,7 @@ namespace iLand.World
             // invoke species specific calculation (3-PG)
             for (int speciesIndex = 0; speciesIndex < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++speciesIndex)
             {
-                this.Trees.SpeciesAvailableOnResourceUnit[speciesIndex].CalculateBiomassGrowthForYear(model.Project, fromEstablishment: false); // CALCULATE 3-PG
+                this.Trees.SpeciesAvailableOnResourceUnit[speciesIndex].CalculateBiomassGrowthForYear(model.Project, fromSaplingEstablishmentOrGrowth: false); // CALCULATE 3-PG
 
                 // debug output related to production
                 //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.StandGpp) && Species[speciesIndex].LaiFraction > 0.0)
@@ -707,7 +705,7 @@ namespace iLand.World
             {
                 Debug.Assert(this.Snags != null);
 
-                this.Soil.ClimateDecompositionFactor = this.Snags.ClimateFactor; // the climate factor is only calculated once
+                this.Soil.ClimateDecompositionFactor = this.Snags.WeatherFactor; // the climate factor is only calculated once
                 this.Soil.SetSoilInput(this.Snags.LabileFlux, this.Snags.RefractoryFlux);
                 this.Soil.CalculateYear(); // update the ICBM/2N model
             }

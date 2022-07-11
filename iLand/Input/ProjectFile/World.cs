@@ -1,12 +1,10 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class World : XmlSerializable
 	{
 		public Browsing Browsing { get; private init; }
-		public Climate Climate { get; private init; }
 		public WorldDebug Debug { get; private init; }
 		public DefaultSoil DefaultSoil { get; private init; }
 		public WorldGeometry Geometry { get; private init; }
@@ -14,11 +12,11 @@ namespace iLand.Input.ProjectFile
 		public WorldInitialization Initialization { get; private init; }
 		public Snag Snag { get; private init; }
 		public Species Species { get; private init; }
+		public Weather Weather { get; private init; }
 
 		public World()
         {
 			this.Browsing = new();
-			this.Climate = new();
 			this.Debug = new();
 			this.DefaultSoil = new();
 			this.Grass = new();
@@ -26,7 +24,8 @@ namespace iLand.Input.ProjectFile
 			this.Initialization = new();
 			this.Snag = new();
 			this.Species = new();
-        }
+			this.Weather = new();
+		}
 
 		protected override void ReadStartElement(XmlReader reader)
 		{
@@ -51,9 +50,6 @@ namespace iLand.Input.ProjectFile
 					case "world":
 						reader.Read();
 						break;
-					case "climate":
-						this.Climate.ReadXml(reader);
-						break;
 					case "debug":
 						this.Debug.ReadXml(reader);
 						break;
@@ -71,6 +67,9 @@ namespace iLand.Input.ProjectFile
 						break;
 					case "species":
 						this.Species.ReadXml(reader);
+						break;
+					case "weather":
+						this.Weather.ReadXml(reader);
 						break;
 					default:
 						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");

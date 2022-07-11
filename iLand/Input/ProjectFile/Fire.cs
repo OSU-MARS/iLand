@@ -8,7 +8,7 @@ namespace iLand.Input.ProjectFile
 		public float KbdIref { get; private set; }
 		public float FireSuppression { get; private set; }
 		public float Land { get; private set; }
-		// TODO: obtain from climate?
+		// TODO: obtain from weather?
 		public float MeanAnnualPrecipitation { get; private set; }
 		public float AverageFireSize { get; private set; }
 		public float FireSizeSigma { get; private set; }

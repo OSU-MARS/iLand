@@ -125,7 +125,7 @@ namespace iLand.Simulation
 
         /** Main model runner.
           The sequence of actions is as follows:
-          (1) Load the climate of the new year
+          (1) Load the weather of the new year
           (2) Reset statistics for resource unit as well as for dead/managed trees
           (3) Invoke Management.
           (4) *after* that, calculate Light patterns
@@ -147,10 +147,10 @@ namespace iLand.Simulation
             {
                 this.ScheduledEvents.RunYear(this);
             }
-            // load the next year of the climate database
-            foreach (World.Climate climate in this.Landscape.ClimatesByID.Values)
+            // load the next year of the weather database
+            foreach (World.Weather weather in this.Landscape.WeatherByID.Values)
             {
-                climate.OnStartYear(this);
+                weather.OnStartYear(this);
             }
 
             // reset statistics
@@ -189,7 +189,7 @@ namespace iLand.Simulation
 
             this.ruParallel.ForEach((ResourceUnit ru) =>
             {
-                // 3-PG production of biomass
+                // 3-PG tree growth
                 ru.CalculateWaterAndBiomassGrowthForYear(this);
 
                 ru.Trees.BeforeTreeGrowth(); // reset aging

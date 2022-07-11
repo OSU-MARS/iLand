@@ -93,12 +93,12 @@ namespace iLand.Tree
             // the factor f_ref: parameter that scales response values to the range 0..1 (1 for best growth conditions) (species parameter)
             float siteEnvironmentHeightDivisor = this.SpeciesResponse.Species.SaplingGrowthParameters.ReferenceRatio;
             // f_env,yr=(uapar*epsilon_eff) / (APAR * epsilon_0 * fref)
-            this.SiteEnvironmentSaplingHeightGrowthMultiplier = f_sum / (projectFile.Model.Ecosystem.LightUseEpsilon * this.SpeciesResponse.RadiationForYear * siteEnvironmentHeightDivisor);
+            this.SiteEnvironmentSaplingHeightGrowthMultiplier = f_sum / (projectFile.Model.Ecosystem.LightUseEpsilon * this.SpeciesResponse.TotalRadiationForYear * siteEnvironmentHeightDivisor);
             if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.0F)
             {
                 if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.5F) // error on large deviations TODO: why 1.5F instead of ~1.000001F?
                 {
-                    throw new NotSupportedException("fEnvYear > 1 for " + this.SpeciesResponse.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Ecosystem.LightUseEpsilon + this.SpeciesResponse.RadiationForYear + siteEnvironmentHeightDivisor
+                    throw new NotSupportedException("fEnvYear > 1 for " + this.SpeciesResponse.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Ecosystem.LightUseEpsilon + this.SpeciesResponse.TotalRadiationForYear + siteEnvironmentHeightDivisor
                              + " check calibration of the sapReferenceRatio (fref) for this species!");
                 }
                 this.SiteEnvironmentSaplingHeightGrowthMultiplier = 1.0F;
@@ -110,7 +110,7 @@ namespace iLand.Tree
             {
                 // the Landsberg & Waring formulation takes into account the fraction of utilizeable to total radiation (but more complicated)
                 // we originally used only nitrogen and added the U_utilized/U_radiation
-                utilizedRadiationFraction = this.SpeciesResponse.UtilizableRadiationForYear / this.SpeciesResponse.RadiationForYear;
+                utilizedRadiationFraction = this.SpeciesResponse.UtilizableRadiationForYear / this.SpeciesResponse.TotalRadiationForYear;
             }
             float abovegroundFraction = 1.0F - 0.8F / (1.0F + 2.5F * this.SpeciesResponse.NitrogenResponseForYear * utilizedRadiationFraction);
             this.RootFraction = 1.0F - abovegroundFraction;

@@ -47,7 +47,7 @@ namespace iLand.World
                         return this.ResourceUnit.Soil.PlantAvailableNitrogen;
                     }
                     return -1.0;
-                case 3: return this.ResourceUnit.WaterCycle.SoilDepthInMM;
+                // case 3: return this.ResourceUnit.WaterCycle.SoilDepthInMM; // no longer supported
                 case 4: return this.ResourceUnit.AreaWithTrees;
                 case 5: return this.ResourceUnit.AreaInLandscape;
                 case 6: return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.TreeCount;
@@ -82,18 +82,18 @@ namespace iLand.World
                     }
                     return 0.0;
                 case 20: return this.ResourceUnit.ResourceUnitGridIndex; // numeric index
-                case 21: return this.ResourceUnit.Climate.MeanAnnualTemperature; // mean temperature
+                case 21: return this.ResourceUnit.Weather.MeanAnnualTemperature; // mean temperature
                 case 22:
                     {
                         double psum = 0;
                         for (int i = 0; i < 12; ++i)
                         {
-                            psum += this.ResourceUnit.Climate.PrecipitationByMonth[i];
+                            psum += this.ResourceUnit.Weather.PrecipitationByMonth[i];
                         }
                         return psum;
                     }
                 case 23: 
-                    return this.ResourceUnit.Climate.TotalAnnualRadiation;
+                    return this.ResourceUnit.Weather.TotalAnnualRadiation;
                 default:
                     return base.GetValue(variableIndex);
             }

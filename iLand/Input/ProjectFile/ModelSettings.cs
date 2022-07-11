@@ -27,10 +27,11 @@ namespace iLand.Input.ProjectFile
 
 		public string? ScheduledEventsFileName { get; private set; }
 
+		public float SoilPermanentWiltPotentialInKPA { get; private set; } // matric potential for residual soil water, kPa
+		public float SoilSaturationPotentialInKPa { get; private set; } // matric potential, kPa
+
 		// if true, the 'correct' version of the calculation of belowground allocation is used
 		public bool UseParFractionBelowGroundAllocation { get; private set; }
-
-		public bool WaterUseSoilSaturation { get; private set; }
 
 		public ModelSettings()
         {
@@ -43,9 +44,10 @@ namespace iLand.Input.ProjectFile
 			this.RandomSeed = null;
 			this.RegenerationEnabled = false;
 			this.ScheduledEventsFileName = null;
+			this.SoilPermanentWiltPotentialInKPA = -4000.0F;
+			this.SoilSaturationPotentialInKPa = Single.NaN; // C++ uses hard coded default of -15.0F kPa plus a switch
 			this.UseParFractionBelowGroundAllocation = true;
-			this.WaterUseSoilSaturation = true;
-        }
+		}
 
 		protected override void ReadStartElement(XmlReader reader)
 		{
@@ -71,8 +73,11 @@ namespace iLand.Input.ProjectFile
 				case "regenerationEnabled":
 					this.RegenerationEnabled = reader.ReadElementContentAsBoolean();
 					break;
-				case "waterUseSoilSaturation":
-					this.WaterUseSoilSaturation = reader.ReadElementContentAsBoolean();
+				case "soilPermanentWiltPotential":
+					this.SoilPermanentWiltPotentialInKPA = reader.ReadElementContentAsFloat();
+					break;
+				case "soilSaturationPotential":
+					this.SoilSaturationPotentialInKPa = reader.ReadElementContentAsFloat();
 					break;
 				case "usePARFractionBelowGroundAllocation":
 					this.UseParFractionBelowGroundAllocation = reader.ReadElementContentAsBoolean();

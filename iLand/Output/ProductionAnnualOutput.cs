@@ -48,7 +48,7 @@ namespace iLand.Output
                         insertRow.Parameters[3].Value = ruSpecies.Species.ID;
                         insertRow.Parameters[4].Value = month + 1; // month
                                                                    // responses
-                        insertRow.Parameters[5].Value = speciesResponse.TempResponseByMonth[month];
+                        insertRow.Parameters[5].Value = speciesResponse.TemperatureResponseByMonth[month];
                         insertRow.Parameters[6].Value = speciesResponse.SoilWaterResponseByMonth[month];
                         insertRow.Parameters[7].Value = speciesResponse.VpdResponseByMonth[month];
                         insertRow.Parameters[8].Value = speciesResponse.CO2ResponseByMonth[month];

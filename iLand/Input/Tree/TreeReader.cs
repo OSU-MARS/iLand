@@ -14,9 +14,9 @@ namespace iLand.Input.Tree
         public static TreeReader Create(string treeFilePath)
         {
             CsvFile treeFile = new(treeFilePath);
-            IndividualTreeHeader individualTreeHeader = new(treeFile);
-            TreeSizeDistributionHeader treeSizeHeader = new(treeFile);
-            TreeFileByStandIDHeader treeFileIndexHeader = new(treeFile);
+            IndividualTreeDataIndex individualTreeHeader = new(treeFile);
+            TreeSizeDistributionDataIndex treeSizeHeader = new(treeFile);
+            TreeFileByStandIDDataIndex treeFileIndexHeader = new(treeFile);
 
             int eligibleFileTypes = (individualTreeHeader.CanBeIndividualTreeFile ? 1 : 0) + (treeSizeHeader.CanBeSizeDistributionFile ? 1 : 0) + (treeFileIndexHeader.CanBeIndexFile ? 1 : 0);
             if (eligibleFileTypes != 1)

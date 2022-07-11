@@ -5,6 +5,7 @@ namespace iLand
     internal static class Constant
     {
         public const float BiomassCFraction = 0.5F; // fraction of (dry) biomass which is carbon
+        public const int DaysInDecade = 3652; // integer truncation of 10 years * 365.2425 days/year, could also use 3653 for decades with three leap years
         public const int DaysInLeapYear = 366;
 
         public const int DefaultStandID = 0; // lowest valid stand ID, any negative IDs in stand raster are treated as no data or no stand
@@ -33,14 +34,26 @@ namespace iLand
         public const float QuarterPi = 0.25F * MathF.PI;
         public const float Sqrt2 = 1.4142135623731F;
 
-        public static class Database
+        public static class Data
         {
             public const string DefaultSpeciesTable = "species";
+            public const int MonthlyWeatherAllocationIncrement = 12 * 25; // 25 years
         }
 
         public static class File
         {
             public const int DefaultBufferSize = 128 * 1024; // 128 kB
+        }
+
+        public static class Limit
+        {
+            public const float DailySolarRadiation = 50.0F; // MJ/m²
+            public const float MonthlyPrecipitationInMM = 9500.0F; // mm (Cherrapunji, July 1861)
+            public const float TemperatureMax = 50.0F;
+            public const float TemperatureMin = -70.0F;
+            public const float VaporPressureDeficitInKPa = 10.0F; // kPa
+            public static readonly int YearMax = DateTime.MaxValue.Year;
+            public static readonly int YearMin = DateTime.MinValue.Year;
         }
 
         public static class Sapling

@@ -1,13 +1,13 @@
-﻿using iLand.Input;
-using iLand.Input.ProjectFile;
+﻿using iLand.Input.ProjectFile;
 using iLand.Tree;
 using iLand.World;
-using Microsoft.Data.Sqlite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using Climate = iLand.World.Climate;
+using Weather = iLand.World.Weather;
 using Model = iLand.Simulation.Model;
+using iLand.Input;
+using System.IO;
 
 namespace iLand.Test
 {
@@ -15,6 +15,53 @@ namespace iLand.Test
     public class ModelTest : LandTest
     {
         public TestContext? TestContext { get; set; }
+
+        [TestMethod]
+        public void Elliott()
+        {
+            Project elliottProject = new(LandTest.GetElliottProjectPath(this.TestContext!));
+
+            // using Model elliott = LandTest.LoadProject(elliottProject);
+
+            ResourceUnitReader ruReader = new(elliottProject);
+            Assert.IsTrue(ruReader.Environments.Count == 34494); // unbuffered resource unit count
+
+            WeatherReaderMonthlyCsv weatherCsvReader = new(elliottProject);
+            Assert.IsTrue(weatherCsvReader.MonthlyWeatherByID.Count == 81);
+            foreach (WeatherTimeSeriesMonthly monthlyWeatherTimeSeries in weatherCsvReader.MonthlyWeatherByID.Values)
+            {
+                Assert.IsTrue(monthlyWeatherTimeSeries.Count == 12 * (2100 - 2011 + 1));
+            }
+
+            string weatherFeatherFilePath = elliottProject.GetFilePath(ProjectDirectory.Database, "weather 4 km 2011-2100 13GCMssp370.feather");
+            WeatherReaderMonthlyFeather weatherFeatherReader = new(weatherFeatherFilePath);
+            Assert.IsTrue(weatherFeatherReader.MonthlyWeatherByID.Count == 81);
+            foreach (WeatherTimeSeriesMonthly monthlyWeatherTimeSeries in weatherFeatherReader.MonthlyWeatherByID.Values)
+            {
+                Assert.IsTrue(monthlyWeatherTimeSeries.Count == 12 * (2100 - 2011 + 1));
+            }
+
+            // verify Pacific Northwest tree species loading
+            TreeSpeciesSet pnwSpecies = new(Constant.Data.DefaultSpeciesTable);
+            pnwSpecies.Setup(elliottProject);
+
+            TreeSpecies abam = pnwSpecies["abam"];
+            TreeSpecies abgr = pnwSpecies["abgr"];
+            TreeSpecies abpr = pnwSpecies["abpr"];
+            TreeSpecies acma = pnwSpecies["acma"];
+            TreeSpecies alru = pnwSpecies["alru"];
+            TreeSpecies pisi = pnwSpecies["pisi"];
+            TreeSpecies pipo = pnwSpecies["pipo"]; // TODO: what ecoregion are parameters for?
+            TreeSpecies psme = pnwSpecies["psme"];
+            TreeSpecies tshe = pnwSpecies["tshe"];
+            TreeSpecies tsme = pnwSpecies["tsme"];
+            TreeSpecies thpl = pnwSpecies["thpl"];
+
+            Assert.IsTrue(pnwSpecies.ActiveSpecies.Count == 11);
+            Assert.IsTrue(pnwSpecies.Count == 11);
+            Assert.IsTrue((abam != null) && (abgr != null) && (abpr != null) && (acma != null) && (alru != null) && (pisi != null) &&
+                          (pipo != null) && (psme != null) && (tshe != null) && (tsme != null) && (thpl != null));
+        }
 
         [TestMethod]
         public void Kalkalpen()
@@ -238,7 +285,7 @@ namespace iLand.Test
                 Assert.IsTrue(plot14.Landscape.ResourceUnits[0].Trees.TreeStatisticsByStandID.ContainsKey(14));
             }
 
-            ModelTest.VerifyMalcolmKnappClimate(plot14);
+            ModelTest.VerifyMalcolmKnappWeather(plot14);
             ModelTest.VerifyMalcolmKnappModel(plot14);
             ModelTest.VerifyMalcolmKnappDouglasFir(plot14);
 
@@ -404,7 +451,7 @@ namespace iLand.Test
                 plot16.RunYear();
             }
 
-            ModelTest.VerifyMalcolmKnappClimate(plot16);
+            ModelTest.VerifyMalcolmKnappWeather(plot16);
             ModelTest.VerifyMalcolmKnappModel(plot16);
             ModelTest.VerifyMalcolmKnappDouglasFir(plot16);
         }
@@ -421,41 +468,15 @@ namespace iLand.Test
                 nelder1.RunYear();
             }
 
-            ModelTest.VerifyMalcolmKnappClimate(nelder1);
+            ModelTest.VerifyMalcolmKnappWeather(nelder1);
             ModelTest.VerifyMalcolmKnappModel(nelder1);
             ModelTest.VerifyMalcolmKnappDouglasFir(nelder1);
-        }
-
-        [TestMethod]
-        public void PacificNorthwestSpecies()
-        {
-            Project pnwProject = new(LandTest.GetPacificNorthwestProjectPath(this.TestContext!));
-
-            TreeSpeciesSet pnwSpecies = new(Constant.Database.DefaultSpeciesTable);
-            pnwSpecies.Setup(pnwProject);
-
-            TreeSpecies abam = pnwSpecies["abam"];
-            TreeSpecies abgr = pnwSpecies["abgr"];
-            TreeSpecies abpr = pnwSpecies["abpr"];
-            TreeSpecies acma = pnwSpecies["acma"];
-            TreeSpecies alru = pnwSpecies["alru"];
-            TreeSpecies pisi = pnwSpecies["pisi"];
-            TreeSpecies pipo = pnwSpecies["pipo"]; // TODO: what ecoregion are parameters for?
-            TreeSpecies psme = pnwSpecies["psme"];
-            TreeSpecies tshe = pnwSpecies["tshe"];
-            TreeSpecies tsme = pnwSpecies["tsme"];
-            TreeSpecies thpl = pnwSpecies["thpl"];
-
-            Assert.IsTrue(pnwSpecies.ActiveSpecies.Count == 11);
-            Assert.IsTrue(pnwSpecies.Count == 11);
-            Assert.IsTrue((abam != null) && (abgr != null) && (abpr != null) && (acma != null) && (alru != null) && (pisi != null) &&
-                          (pipo != null) && (psme != null) && (tshe != null) && (tsme != null) && (thpl != null));
         }
 
         private static void VerifyKalkalpenModel(Model model)
         {
             float worldBufferWidthInM = 60.0F;
-            Assert.IsTrue(model.Landscape.ClimatesByID.Count == 1);
+            Assert.IsTrue(model.Landscape.WeatherByID.Count == 1);
             Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.Height == 200.0F + 2.0F * worldBufferWidthInM);
             Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.Width == 100.0F + 2.0F * worldBufferWidthInM);
             Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.X == 0.0);
@@ -483,7 +504,7 @@ namespace iLand.Test
         {
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                // resource unit variables read from climate file which are aren't currently test accessible
+                // resource unit variables read from weather file which are aren't currently test accessible
                 //   ru.Snags: swdC, swdCount, swdCN, swdHalfLife, swdDecomRate, otherC, other CN
                 // resource unit variables read from project file which are aren't currently test accessible
                 //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilDepth,
@@ -540,12 +561,12 @@ namespace iLand.Test
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.CellCount == 2);
         }
 
-        private static void VerifyMalcolmKnappClimate(Model model)
+        private static void VerifyMalcolmKnappWeather(Model model)
         {
-            Assert.IsTrue(model.Landscape.ClimatesByID.Count == 1);
-            foreach (Climate climate in model.Landscape.ClimatesByID.Values)
+            Assert.IsTrue(model.Landscape.WeatherByID.Count == 1);
+            foreach (Weather weather in model.Landscape.WeatherByID.Values)
             {
-                Phenology conifer = climate.GetPhenology(0);
+                Phenology conifer = weather.GetPhenology(0);
                 // private phenology variables read from the project file
                 //   vpdMin, vpdMax, dayLengthMin, dayLengthMax, tempMintempMax
                 //conifer.ChillingDaysLastYear;
@@ -553,24 +574,24 @@ namespace iLand.Test
                 //conifer.LeafOnEnd;
                 //conifer.LeafOnFraction;
                 //conifer.LeafOnStart;
-                Phenology broadleaf = climate.GetPhenology(1);
-                Phenology deciduousConifer = climate.GetPhenology(2);
+                Phenology broadleaf = weather.GetPhenology(1);
+                Phenology deciduousConifer = weather.GetPhenology(2);
 
                 // private climate variables
                 //   tableName, batchYears, temperatureShift, precipitationShift, randomSamplingEnabled, randomSamplingList, filter
-                Assert.IsTrue(climate.CarbonDioxidePpm == 360.0);
-                Assert.IsTrue((climate.MeanAnnualTemperature > 0.0) && (climate.MeanAnnualTemperature < 30.0));
+                Assert.IsTrue(weather.AtmosphericCO2ConcentrationInPpm == 360.0);
+                Assert.IsTrue((weather.MeanAnnualTemperature > 0.0) && (weather.MeanAnnualTemperature < 30.0));
                 // Assert.IsTrue(String.Equals(climate.ClimateTableName, "HaneyUBC", StringComparison.OrdinalIgnoreCase));
                 Assert.IsTrue(conifer.LeafType == 0);
                 Assert.IsTrue(broadleaf.LeafType == 1);
                 Assert.IsTrue(deciduousConifer.LeafType == 2);
                 // climate.PrecipitationMonth;
-                Assert.IsTrue((climate.Sun.LastDayLongerThan10_5Hours > 0) && (climate.Sun.LastDayLongerThan10_5Hours < 365));
-                Assert.IsTrue((climate.Sun.LastDayLongerThan14_5Hours > 0) && (climate.Sun.LastDayLongerThan14_5Hours < 365));
-                Assert.IsTrue(climate.Sun.LongestDay == 172);
-                Assert.IsTrue(climate.Sun.IsNorthernHemisphere());
+                Assert.IsTrue((weather.Sun.LastDayLongerThan10_5Hours > 0) && (weather.Sun.LastDayLongerThan10_5Hours < 365));
+                Assert.IsTrue((weather.Sun.LastDayLongerThan14_5Hours > 0) && (weather.Sun.LastDayLongerThan14_5Hours < 365));
+                Assert.IsTrue(weather.Sun.LongestDay == 172);
+                Assert.IsTrue(weather.Sun.IsNorthernHemisphere());
                 // climate.TemperatureMonth;
-                Assert.IsTrue((climate.TotalAnnualRadiation > 4000.0) && (climate.TotalAnnualRadiation < 5000.0));
+                Assert.IsTrue((weather.TotalAnnualRadiation > 4000.0) && (weather.TotalAnnualRadiation < 5000.0));
             }
         }
 
@@ -672,7 +693,7 @@ namespace iLand.Test
             Assert.IsTrue(model.Project.Model.Ecosystem.LaiThresholdForConstantStandConductance == 3.0F);
             Assert.IsTrue(model.Project.Model.Ecosystem.ResourceUnitLightExtinctionCoefficient == 0.6F);
             Assert.IsTrue(model.Project.Model.Ecosystem.TreeLightStampExtinctionCoefficient == 0.6F);
-            Assert.IsTrue(model.Project.Model.Ecosystem.TemperatureAveragingTau == 6.0F);
+            Assert.IsTrue(model.Project.Model.Ecosystem.TemperatureMA1tau == 6.0F);
             Assert.IsTrue(model.Project.Model.Settings.RegenerationEnabled == false);
             Assert.IsTrue(model.Project.Model.Settings.MortalityEnabled == true);
             Assert.IsTrue(model.Project.Model.Settings.GrowthEnabled == true);
@@ -686,7 +707,7 @@ namespace iLand.Test
         {
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                // resource unit variables read from climate file which are aren't currently test accessible
+                // resource unit variables read from weather file which are aren't currently test accessible
                 //   ru.Snags: swdC, swdCount, swdCN, swdHalfLife, swdDecomRate, otherC, other CN
                 // resource unit variables read from project file which are aren't currently test accessible
                 //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilDepth,
@@ -725,8 +746,8 @@ namespace iLand.Test
                 //ru.Variables.CumNep;
                 //ru.Variables.Nep;
                 Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
-                Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity), "Water cycle: current water content of " + ru.WaterCycle.CurrentSoilWaterContent + " mm is negative or greater than the field capacity of " + ru.WaterCycle.FieldCapacity + " mm.");
-                Assert.IsTrue(MathF.Abs(ru.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity");
+                Assert.IsTrue((ru.WaterCycle.CurrentSoilWater >= 0.0) && (ru.WaterCycle.CurrentSoilWater <= ru.WaterCycle.FieldCapacity), "Water cycle: current water content of " + ru.WaterCycle.CurrentSoilWater + " mm is negative or greater than the field capacity of " + ru.WaterCycle.FieldCapacity + " mm.");
+                Assert.IsTrue(MathF.Abs(ru.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity is " + ru.WaterCycle.FieldCapacity + " mm.");
                 Assert.IsTrue(ru.WaterCycle.SoilWaterPotentialByDay.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
                 foreach (float psi in ru.WaterCycle.SoilWaterPotentialByDay)
                 {
@@ -734,7 +755,6 @@ namespace iLand.Test
                 }
                 Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0F) && (ru.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: linkt to snow days?
                 Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0F) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear), "Water cycle: snow days");
-                Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepthInMM - 1340.0F) < 0.001F, "Soil: depth");
                 Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0F, "Soil: evapotranspiration"); // zero at initialization
                 Assert.IsTrue(ru.WaterCycle.TotalRunoff == 0.0F, "Soil: runoff"); // zero at initialization
             }

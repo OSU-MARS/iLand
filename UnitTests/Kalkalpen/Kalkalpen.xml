@@ -31,7 +31,7 @@
       <lightExtinctionCoefficientOpacity>0.6</lightExtinctionCoefficientOpacity>
       <snowMeltTemperature>0</snowMeltTemperature>
       <!-- time constant of Mäkelä 2008's MA(1) process -->
-      <temperatureAveragingTau>6</temperatureAveragingTau>
+      <temperatureMA1tau>6</temperatureMA1tau>
     </ecosystem>
     <management>
       <fileName></fileName>
@@ -68,7 +68,10 @@
       <mortalityEnabled>true</mortalityEnabled>
       <multithreading>false</multithreading>
       <regenerationEnabled>true</regenerationEnabled>
-      <waterUseSoilSaturation>true</waterUseSoilSaturation>
+      <!-- the default soil permanent wilt potential is -4000 kPa -->
+      <!--<soilPermanentWiltPotential>-4000.0</soilPermanentWiltPotential>-->
+      <!-- default is to query the soil water curve for the soil saturation potential but it can be overridden here -->
+      <!--<soilSaturationPotential>-15.0</soilSaturationPotential>--> <!-- specified in kPa -->
       <usePARFractionBelowGroundAllocation>true</usePARFractionBelowGroundAllocation>
       <overrideGppPerYear>0</overrideGppPerYear>
       <randomSeed>0</randomSeed>
@@ -80,16 +83,6 @@
       <!-- scaling factor modifying the base probability (1=100% of the species specific parameter)-->
       <browsingPressure>1</browsingPressure>
     </browsing>
-    <climate>
-      <co2concentration>380</co2concentration>
-      <databaseFile>Kalkalpen subset.sqlite</databaseFile>
-      <databaseQueryFilter></databaseQueryFilter>
-      <defaultDatabaseTable>climate1</defaultDatabaseTable>
-      <batchYears>100</batchYears>
-      <temperatureShift>0</temperatureShift>
-      <precipitationShift>1</precipitationShift>
-      <randomSamplingEnabled>false</randomSamplingEnabled>
-    </climate>
     <debug>
       <debugTree />
       <dumpStamps>false</dumpStamps>
@@ -217,6 +210,16 @@
         </type>
       </phenology>
     </species>
+    <weather>
+      <co2concentration>380</co2concentration>
+      <file>Kalkalpen subset.sqlite</file>
+      <databaseQueryFilter></databaseQueryFilter>
+      <defaultDatabaseTable>climate1</defaultDatabaseTable>
+      <batchYears>100</batchYears>
+      <temperatureShift>0</temperatureShift>
+      <precipitationShift>1</precipitationShift>
+      <randomSamplingEnabled>false</randomSamplingEnabled>
+    </weather>
   </world>
   <output>
     <logging>
@@ -388,7 +391,7 @@
       <colonizeProbabilityFormula>0.85*x+0.15</colonizeProbabilityFormula>
       <!-- based on Kautz et al. (2014), assuming a linear relationship between tree defense (x) and the number of beetles necessary to overcome it-->
       <deadTreeSelectivity>1</deadTreeSelectivity>
-      <outbreakClimateSensitivityFormula>Psummer^-0.9609</outbreakClimateSensitivityFormula>
+      <outbreakWeatherSensitivityFormula>Psummer^-0.9609</outbreakWeatherSensitivityFormula>
       <!-- based on a reanalysis of the data of Seidl et al. (2015) - a 50% reduction of summer precip gives an almost 2-fold increase in the odds for BB outbreaks, while a 50% increase in summer precip gives a reduction by 33% -->
       <outbreakDurationMin>5</outbreakDurationMin>
       <outbreakDurationMax>6</outbreakDurationMax>

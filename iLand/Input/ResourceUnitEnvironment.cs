@@ -5,7 +5,7 @@ namespace iLand.Input
     public class ResourceUnitEnvironment
     {
         public float AnnualNitrogenDeposition { get; private init; }
-        public string ClimateID { get; private init; }
+        public string WeatherID { get; private init; }
         // resource unit's centroid in GIS projected coordinate system
         public float GisCenterX { get; private init; }
         public float GisCenterY { get; private init; }
@@ -21,16 +21,16 @@ namespace iLand.Input
         public float SnagStemDecompositionRate { get; private init; }
         public float SnagHalfLife { get; private init; }
 
-        public float SoilDepthInCM { get; private init; } // cm
-        // van Genuchten water retention parameters
-        public float SoilThetaR { get; private init; }
-        public float SoilThetaS { get; private init; }
-        public float SoilVanGenuchtenAlpha { get; private init; }
-        public float SoilVanGenuchtenN { get; private init; }
+        public float SoilDepthInCm { get; private init; } // cm
+        // Mualem-van Genuchten water retention parameters
+        public float SoilThetaR { get; private init; } // residual soil water content, m³/m³
+        public float SoilThetaS { get; private init; } // saturated soil water content, m³/m³
+        public float SoilVanGenuchtenAlpha { get; private init; } // MPa, not log₁₀ transformed
+        public float SoilVanGenuchtenN { get; private init; } // dimensionless
         // soil textures for estimation of Campbell (or other) water retention curve via pedotransfer regression
-        public float SoilSand { get; private init; }
-        public float SoilSilt { get; private init; }
-        public float SoilClay { get; private init; }
+        public float SoilSand { get; private init; } // %
+        public float SoilSilt { get; private init; } // %
+        public float SoilClay { get; private init; } // %
 
         // ICBM2/N parameters for decomposition and flow among carbon and nitrogen pools
         public float SoilAvailableNitrogen { get; private init; }
@@ -56,7 +56,7 @@ namespace iLand.Input
         public ResourceUnitEnvironment(ResourceUnitHeader header, string[] environmentFileRow, ResourceUnitEnvironment defaultEnvironment)
         {
             this.AnnualNitrogenDeposition = header.AnnualNitrogenDeposition >= 0 ? Single.Parse(environmentFileRow[header.AnnualNitrogenDeposition]) : defaultEnvironment.AnnualNitrogenDeposition;
-            this.ClimateID = header.ClimateID >= 0 ? environmentFileRow[header.ClimateID] : defaultEnvironment.ClimateID;
+            this.WeatherID = header.WeatherID >= 0 ? environmentFileRow[header.WeatherID] : defaultEnvironment.WeatherID;
             this.GisCenterX = Single.Parse(environmentFileRow[header.CenterX]); // required field
             this.GisCenterY = Single.Parse(environmentFileRow[header.CenterY]); // required field
             this.ResourceUnitID = Int32.Parse(environmentFileRow[header.ResourceUnitID]); // required field
@@ -69,7 +69,7 @@ namespace iLand.Input
             this.SnagHalfLife = header.SnagHalfLife >= 0 ? Single.Parse(environmentFileRow[header.SnagHalfLife]) : defaultEnvironment.SnagsPerResourceUnit;
             this.SnagsPerResourceUnit = header.SnagsPerResourceUnit >= 0 ? Single.Parse(environmentFileRow[header.SnagsPerResourceUnit]) : defaultEnvironment.SnagsPerResourceUnit;
 
-            this.SoilDepthInCM = header.SoilDepthInCM >= 0 ? Single.Parse(environmentFileRow[header.SoilDepthInCM]) : defaultEnvironment.SoilDepthInCM;
+            this.SoilDepthInCm = header.SoilDepthInCM >= 0 ? Single.Parse(environmentFileRow[header.SoilDepthInCM]) : defaultEnvironment.SoilDepthInCm;
 
             this.SoilThetaR = header.SoilThetaR >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaR]) : defaultEnvironment.SoilThetaR;
             this.SoilThetaS = header.SoilThetaS >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaS]) : defaultEnvironment.SoilThetaS;
@@ -104,7 +104,7 @@ namespace iLand.Input
 
         public ResourceUnitEnvironment(ProjectFile.World world)
         {
-            this.ClimateID = world.Climate.DefaultDatabaseTable ?? String.Empty;
+            this.WeatherID = world.Weather.DefaultDatabaseTable ?? String.Empty;
             this.ResourceUnitID = -1;
 
             // default snag parameters which can be overridden in environment file
@@ -128,7 +128,7 @@ namespace iLand.Input
             this.SoilLeaching = world.DefaultSoil.NitrogenLeachingFraction;
 
             // default soil parameters specified in <site> rather than in <defaultSoil>
-            this.SoilDepthInCM = world.DefaultSoil.Depth;
+            this.SoilDepthInCm = world.DefaultSoil.Depth;
 
             // van Genuchten water retention curve
             this.SoilThetaR = world.DefaultSoil.ThetaR;

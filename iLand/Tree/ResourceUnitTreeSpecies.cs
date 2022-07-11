@@ -40,7 +40,7 @@ namespace iLand.Tree
 
             ResourceUnitTreeSpeciesResponse speciesResponse = new(ru, this); // requires this.Species be set
             this.BiomassGrowth = new ResourceUnitTreeSpeciesGrowth(speciesResponse);
-            this.Establishment = new Establishment(ru.Climate, this); // requires this.Species and this.RU be set
+            this.Establishment = new Establishment();
             this.RemovedStemVolume = 0.0F;
             this.Response = speciesResponse;
             this.SaplingStats = new SaplingProperties();
@@ -58,24 +58,24 @@ namespace iLand.Tree
             this.LaiFraction = laiFraction;
         }
 
-        public void CalculateBiomassGrowthForYear(Project projectFile, bool fromEstablishment = false)
+        public void CalculateBiomassGrowthForYear(Project projectFile, bool fromSaplingEstablishmentOrGrowth = false)
         {
             // if *not* called from establishment, clear the species-level-stats
-            if (fromEstablishment == false)
+            if (fromSaplingEstablishmentOrGrowth == false)
             {
                 this.Statistics.Zero();
             }
 
-            if (this.LaiFraction > 0.0F || fromEstablishment == true)
+            if ((this.LaiFraction > 0.0F) || (fromSaplingEstablishmentOrGrowth == true))
             {
                 // assumes the water cycle is already updated for the current year
-                this.Response.CalculateUtilizableRadiation(this.RU.Climate);// calculate environmental responses per species (vpd, temperature, ...)
+                this.Response.CalculateMonthlyGrowthModifiers(this.RU.Weather);// calculate environmental responses per species (vpd, temperature, ...)
                 this.BiomassGrowth.CalculateGppForYear(projectFile);// production of NPP
             }
             else
             {
-                // if no leaf area is present, then just clear the respones.
-                this.Response.Zero();
+                // if no leaf area is present, then just clear the respones
+                this.Response.ClearMonthlyGrowthModifiers();
                 this.BiomassGrowth.Zero();
             }
         }

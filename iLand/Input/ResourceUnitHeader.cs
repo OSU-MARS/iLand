@@ -5,7 +5,8 @@ namespace iLand.Input
     public class ResourceUnitHeader
     {
         public int AnnualNitrogenDeposition { get; private init; }
-        public int ClimateID { get; private init; }
+        public int CenterX { get; private init; }
+        public int CenterY { get; private init; }
         public int ResourceUnitID { get; private init; }
 
         public int SnagBranchRootCarbon { get; private init; }
@@ -46,13 +47,13 @@ namespace iLand.Input
         public int SoilYoungRefractoryDecompositionRate { get; private init; }
         public int SoilYoungRefractoryN { get; private init; }
 
-        public int CenterX { get; private init; }
-        public int CenterY { get; private init; }
+        public int WeatherID { get; private init; }
 
         public ResourceUnitHeader(CsvFile environmentFile)
         {
             this.AnnualNitrogenDeposition = -1;
-            this.ClimateID = -1;
+            this.CenterX = -1;
+            this.CenterY = -1;
             this.ResourceUnitID = -1;
 
             this.SnagBranchRootCarbon = -1;
@@ -93,8 +94,7 @@ namespace iLand.Input
             this.SoilYoungRefractoryDecompositionRate = -1;
             this.SoilYoungRefractoryN = -1;
 
-            this.CenterX = -1;
-            this.CenterY = -1;
+            this.WeatherID = -1;
 
             for (int columnIndex = 0; columnIndex < environmentFile.Columns.Count; ++columnIndex)
             {
@@ -111,9 +111,6 @@ namespace iLand.Input
                         break;
                     case "centerY":
                         this.CenterY = columnIndex;
-                        break;
-                    case "climateID":
-                        this.ClimateID = columnIndex;
                         break;
                     case "snagBranchRootC":
                         this.SnagBranchRootCarbon = columnIndex;
@@ -207,6 +204,9 @@ namespace iLand.Input
                         break;
                     case "soilYoungRefractoryN":
                         this.SoilYoungRefractoryN = columnIndex;
+                        break;
+                    case "weatherID":
+                        this.WeatherID = columnIndex;
                         break;
                     default:
                         throw new NotSupportedException("Unhandled environment column '" + environmentFile.Columns[columnIndex] + "'.");

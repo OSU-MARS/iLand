@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Xml;
 
 namespace iLand.Input.ProjectFile
@@ -18,7 +17,7 @@ namespace iLand.Input.ProjectFile
         public Species()
         {
             this.DatabaseFile = null;
-            this.DatabaseTable = null;
+            this.DatabaseTable = Constant.Data.DefaultSpeciesTable;
             this.ReaderStampFile = "readerstamp.bin";
 
             this.CO2Response = new CO2Response();

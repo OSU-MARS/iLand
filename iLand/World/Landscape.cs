@@ -14,7 +14,7 @@ namespace iLand.World
 {
     public class Landscape
     {
-        public Dictionary<string, World.Climate> ClimatesByID { get; private init; }
+        public Dictionary<string, WeatherDaily> WeatherByID { get; private init; }
 
         public GrassCover GrassCover { get; private init; }
         public Grid<float> LightGrid { get; private init; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
@@ -40,7 +40,7 @@ namespace iLand.World
                 throw new NotSupportedException("World buffer width (model.world.geometry.bufferWidth) of " + projectFile.World.Geometry.BufferWidth + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.HeightCellSizeInM + " m).");
             }
 
-            this.ClimatesByID = new();
+            this.WeatherByID = new();
             // this.Extent is set below
             this.GrassCover = new();
             // this.LightGrid is set below
@@ -128,11 +128,11 @@ namespace iLand.World
             {
                 ResourceUnitEnvironment environment = resourceUnitReader.Environments[resourceUnitIndex];
 
-                if (this.ClimatesByID.TryGetValue(environment.ClimateID, out World.Climate? climate) == false)
+                if (this.WeatherByID.TryGetValue(environment.WeatherID, out WeatherDaily? weather) == false)
                 {
                     // create only those climate sets that are really used in the current landscape
-                    climate = new World.Climate(projectFile, environment.ClimateID);
-                    this.ClimatesByID.Add(environment.ClimateID, climate);
+                    weather = new WeatherDaily(projectFile, environment.WeatherID);
+                    this.WeatherByID.Add(environment.WeatherID, weather);
                 }
                 if (this.SpeciesSetsByTableName.TryGetValue(environment.SpeciesTableName, out TreeSpeciesSet? treeSpeciesSet) == false)
                 {
@@ -151,11 +151,11 @@ namespace iLand.World
                 float ruMinProjectX = ruProjectCentroidX - 0.5F * Constant.ResourceUnitSizeInM;
                 float ruMaxProjectY = ruProjectCentroidY + 0.5F * Constant.ResourceUnitSizeInM;
                 float ruMinProjectY = ruProjectCentroidY - 0.5F * Constant.ResourceUnitSizeInM;
-                ResourceUnit newRU = new(projectFile, climate, treeSpeciesSet, ruGridIndex)
+                ResourceUnit newRU = new(projectFile, weather, treeSpeciesSet, ruGridIndex)
                 {
                     ProjectExtent = new RectangleF(ruMinProjectX, ruMinProjectY, Constant.ResourceUnitSizeInM, Constant.ResourceUnitSizeInM),
                     ID = environment.ResourceUnitID,
-                    TopLeftLightPosition = this.LightGrid.GetCellXYIndex(ruMinProjectX, ruMaxProjectY)
+                    TopLeftLightIndexXY = this.LightGrid.GetCellXYIndex(ruMinProjectX, ruMaxProjectY)
                 };
                 newRU.Setup(projectFile, environment);
                 this.ResourceUnits.Add(newRU);
@@ -498,7 +498,7 @@ namespace iLand.World
             // load a file with saplings per stand
             string saplingFilePath = projectFile.GetFilePath(ProjectDirectory.Init, saplingFileName);
             using CsvFile saplingFile = new(saplingFilePath);
-            StandSaplingsHeader saplingHeader = new(saplingFile);
+            StandSaplingsDataIndex saplingHeader = new(saplingFile);
 
             // TODO: should this be sorted by stand ID?
             List<StandSaplings> saplingsInStands = new();

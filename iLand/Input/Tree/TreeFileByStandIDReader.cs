@@ -7,15 +7,11 @@ namespace iLand.Input.Tree
     {
         public List<(int StandID, string TreeFileName)> TreeFileNameByStandID { get; private init; }
 
-        protected TreeFileByStandIDReader(string treeFilePath)
+        public TreeFileByStandIDReader(string treeFilePath, TreeFileByStandIDDataIndex treeFileIndexHeader, CsvFile treeFile)
             : base(treeFilePath)
         {
-            TreeFileNameByStandID = new();
-        }
+            this.TreeFileNameByStandID = new();
 
-        public TreeFileByStandIDReader(string treeFilePath, TreeFileByStandIDHeader treeFileIndexHeader, CsvFile treeFile)
-            : this(treeFilePath)
-        {
             int lineNumber = 0;
             treeFile.Parse((row) =>
             {
@@ -27,9 +23,9 @@ namespace iLand.Input.Tree
                 }
 
                 string treeFileName = row[treeFileIndexHeader.TreeFileName];
-                if (string.IsNullOrWhiteSpace(treeFileName) == false)
+                if (String.IsNullOrWhiteSpace(treeFileName) == false)
                 {
-                    TreeFileNameByStandID.Add((standID, treeFileName));
+                    this.TreeFileNameByStandID.Add((standID, treeFileName));
                 }
             });
         }

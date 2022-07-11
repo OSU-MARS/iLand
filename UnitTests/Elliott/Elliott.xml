@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project>
+  <model>
+    <settings>
+      <randomSeed>0</randomSeed>
+    </settings>
+  </model>
   <world>
+    <geometry>
+      <latitude>43.57</latitude>
+    </geometry>
+    <initialization>
+      <resourceUnitFile>resource units unbuffered 4 km weather.csv</resourceUnitFile>
+    </initialization>
     <species>
       <databaseFile>species_param_pnw.sqlite</databaseFile>
       <co2response>
@@ -23,5 +34,8 @@
         <class3minimum>40</class3minimum>
       </nitrogenResponseClasses>
     </species>
+    <weather>
+      <file>weather 4 km 2011-2100 13GCMssp370.csv</file>
+    </weather>
   </world>
 </project>

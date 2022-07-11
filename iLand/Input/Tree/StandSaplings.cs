@@ -15,7 +15,7 @@ namespace iLand.Input.Tree
         public int StandID { get; private init; }
         public string Species { get; private init; }
 
-        public StandSaplings(StandSaplingsHeader saplingHeader, string[] row)
+        public StandSaplings(StandSaplingsDataIndex saplingHeader, string[] row)
         {
             // required fields
             StandID = int.Parse(row[saplingHeader.StandID]); // no restrictions

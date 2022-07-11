@@ -8,13 +8,13 @@ namespace iLand.Tree
 {
     public class Snags
     {
-        private readonly float mDbhLowerBreak; // diameter thresholds used to classify to SWD-Pools
-        private readonly float mDbhHigherBreak;
-        private readonly float[] mCarbonThresholdByClass; // carbon content thresholds that are used to decide if the SWD-pool should be emptied
-        private readonly float[] mCurrentDecayRateByClass; // swd decay rate (average for trees of the current year)
-        private readonly CarbonNitrogenPool[] mToStandingWoodyByClass; // transfer pool; input of the year is collected here (for each size class)
-        private readonly CarbonNitrogenTuple mTotalSnagInput; // total input to the snag state (i.e. mortality/harvest and litter)
-        private CarbonNitrogenTuple mStandingWoodyToSoil; // total flux from standing dead wood (book-keeping) -> soil (kg/ha)
+        private readonly float dbhLowerBreak; // diameter thresholds used to classify to SWD-Pools
+        private readonly float dbhHigherBreak;
+        private readonly float[] carbonThresholdByClass; // carbon content thresholds that are used to decide if the SWD-pool should be emptied
+        private readonly float[] currentDecayRateByClass; // swd decay rate (average for trees of the current year)
+        private readonly CarbonNitrogenPool[] toStandingWoodyByClass; // transfer pool; input of the year is collected here (for each size class)
+        private readonly CarbonNitrogenTuple totalSnagInput; // total input to the snag state (i.e. mortality/harvest and litter)
+        private CarbonNitrogenTuple standingWoodyToSoil; // total flux from standing dead wood (book-keeping) -> soil (kg/ha)
 
         public ResourceUnit RU { get; private init; } // link to resource unit
         public CarbonNitrogenPool[] StandingWoodyDebrisByClass { get; private init; } // standing woody debris pool (0: smallest dimater class, e.g. <10cm, 1: medium, 2: largest class (e.g. >30cm)) kg/ha
@@ -28,7 +28,6 @@ namespace iLand.Tree
         public CarbonNitrogenPool[] BranchesAndCoarseRootsByYear { get; private init; } // pool for branch biomass and coarse root biomass
         public int BranchCounter { get; set; } // index which of the branch pools should be emptied
 
-        public float ClimateFactor { get; set; } // the 're' climate factor to modify decay rates (also used in ICBM/2N model)
         public CarbonNitrogenTuple FluxToAtmosphere { get; private init; } // total kg/ha heterotrophic respiration / flux to atm
         public CarbonNitrogenTuple FluxToDisturbance { get; private set; } // total kg/ha due to disturbance (e.g. fire)
         public CarbonNitrogenTuple FluxToExtern { get; private init; } // total kg/ha harvests
@@ -37,6 +36,7 @@ namespace iLand.Tree
         public float StandingAndDebrisCarbon { get; private set; } // sum of carbon content in all snag compartments (kg/ha)
         public CarbonNitrogenTuple TotalStanding { get; private set; } // sum of C and N in SWD pools (stems) kg/ha
         public CarbonNitrogenTuple TotalBranchesAndRoots { get; private set; } // sum of C and N in other woody pools (branches + coarse roots) kg/ha
+        public float WeatherFactor { get; set; } // the 're' climate factor to modify decay rates (also used in ICBM/2N model)
 
         public Snags(Project projectFile, ResourceUnit ru, ResourceUnitEnvironment environment)
         {
@@ -50,13 +50,13 @@ namespace iLand.Tree
                 throw new ArgumentOutOfRangeException(nameof(projectFile), "Lower diameter class break in ProjectFile.Model.Settings.Soil is either negative or above the upper diameter class break.");
             }
 
-            this.mCarbonThresholdByClass = new float[3];
-            this.mCurrentDecayRateByClass = new float[3];
-            this.mDbhLowerBreak = lowerDbhBreak;
-            this.mDbhHigherBreak = upperDbhBreak;
-            this.mStandingWoodyToSoil = new CarbonNitrogenTuple();
-            this.mToStandingWoodyByClass = new CarbonNitrogenPool[3] { new CarbonNitrogenPool(), new CarbonNitrogenPool(), new CarbonNitrogenPool() };
-            this.mTotalSnagInput = new CarbonNitrogenTuple();
+            this.carbonThresholdByClass = new float[3];
+            this.currentDecayRateByClass = new float[3];
+            this.dbhLowerBreak = lowerDbhBreak;
+            this.dbhHigherBreak = upperDbhBreak;
+            this.standingWoodyToSoil = new CarbonNitrogenTuple();
+            this.toStandingWoodyByClass = new CarbonNitrogenPool[3] { new CarbonNitrogenPool(), new CarbonNitrogenPool(), new CarbonNitrogenPool() };
+            this.totalSnagInput = new CarbonNitrogenTuple();
 
             this.AverageDbhByClass = new float[3];
             this.AverageHeightByClass = new float[3];
@@ -80,21 +80,21 @@ namespace iLand.Tree
             // threshold levels for emptying out the dbh-snag-classes
             // derived from PSME woody allometry, converted to C, with a threshold level set to 10%
             // values in kg!
-            this.mCarbonThresholdByClass[0] = 0.5F * lowerDbhBreak;
-            this.mCarbonThresholdByClass[1] = lowerDbhBreak + 0.5F * (upperDbhBreak - lowerDbhBreak);
-            this.mCarbonThresholdByClass[2] = upperDbhBreak + 0.5F * (upperDbhBreak - lowerDbhBreak);
+            this.carbonThresholdByClass[0] = 0.5F * lowerDbhBreak;
+            this.carbonThresholdByClass[1] = lowerDbhBreak + 0.5F * (upperDbhBreak - lowerDbhBreak);
+            this.carbonThresholdByClass[2] = upperDbhBreak + 0.5F * (upperDbhBreak - lowerDbhBreak);
             for (int diameterClass = 0; diameterClass < 3; ++diameterClass)
             {
-                this.mCarbonThresholdByClass[diameterClass] = 0.10568F * MathF.Pow(this.mCarbonThresholdByClass[diameterClass], 2.4247F) * 0.5F * 0.1F;
+                this.carbonThresholdByClass[diameterClass] = 0.10568F * MathF.Pow(this.carbonThresholdByClass[diameterClass], 2.4247F) * 0.5F * 0.1F;
             }
 
             this.RU = ru;
-            this.ClimateFactor = 0.0F;
+            this.WeatherFactor = 0.0F;
             // branches
             this.BranchCounter = 0;
-            for (int diameterClass = 0; diameterClass < this.mCurrentDecayRateByClass.Length; ++diameterClass)
+            for (int diameterClass = 0; diameterClass < this.currentDecayRateByClass.Length; ++diameterClass)
             {
-                this.mCurrentDecayRateByClass[diameterClass] = 0.0F;
+                this.currentDecayRateByClass[diameterClass] = 0.0F;
 
                 this.AverageDbhByClass[diameterClass] = 0.0F;
                 this.AverageHeightByClass[diameterClass] = 0.0F;
@@ -106,7 +106,7 @@ namespace iLand.Tree
             }
 
             this.StandingAndDebrisCarbon = 0.0F;
-            if (this.mDbhLowerBreak <= 0.0)
+            if (this.dbhLowerBreak <= 0.0)
             {
                 throw new NotSupportedException("SetupThresholds() not called or called with invalid parameters.");
             }
@@ -151,11 +151,11 @@ namespace iLand.Tree
 
         private int GetDiameterClassIndex(float dbh)
         {
-            if (dbh < this.mDbhLowerBreak)
+            if (dbh < this.dbhLowerBreak)
             {
                 return 0;
             }
-            if (dbh > this.mDbhHigherBreak)
+            if (dbh > this.dbhHigherBreak)
             {
                 return 2;
             }
@@ -211,14 +211,14 @@ namespace iLand.Tree
 
         public void OnStartYear()
         {
-            for (int classIndex = 0; classIndex < this.mToStandingWoodyByClass.Length; ++classIndex)
+            for (int classIndex = 0; classIndex < this.toStandingWoodyByClass.Length; ++classIndex)
             {
-                mToStandingWoodyByClass[classIndex].Zero(); // clear transfer pools to standing-woody-debris
-                mCurrentDecayRateByClass[classIndex] = 0.0F;
+                toStandingWoodyByClass[classIndex].Zero(); // clear transfer pools to standing-woody-debris
+                currentDecayRateByClass[classIndex] = 0.0F;
             }
 
-            mStandingWoodyToSoil.Zero();
-            mTotalSnagInput.Zero();
+            standingWoodyToSoil.Zero();
+            totalSnagInput.Zero();
 
             FluxToAtmosphere.Zero();
             FluxToExtern.Zero();
@@ -228,13 +228,13 @@ namespace iLand.Tree
         }
 
         /// <summary>
-        /// Calculate the dynamic climate factor for decomposition 're'.
+        /// Calculate the dynamic weather factor for decomposition 're'.
         /// </summary>
         /// <remarks>
         /// Decomposition rates are calculated per ResourceUnit because this is the granularity of water cycle tracking. It is assumed this function is called
         /// once per annual time step after the RU's water cycle has been updated for the year.
         /// </remarks>
-        public void CalculateClimateFactors()
+        public void CalculateWeatherFactors()
         {
             // calculate the water-factor for each month (see Adair et al 2008)
             float[] waterFactorByMonth = new float[Constant.MonthsInYear];
@@ -243,39 +243,39 @@ namespace iLand.Tree
                 float ratio;
                 if (this.RU.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[month] > 0.0F)
                 {
-                    ratio = this.RU.Climate.PrecipitationByMonth[month] / this.RU.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[month];
+                    ratio = this.RU.Weather.PrecipitationByMonth[month] / this.RU.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[month];
                 }
                 else
                 {
                     ratio = 0.0F;
                 }
                 waterFactorByMonth[month] = 1.0F / (1.0F + 30.0F * MathF.Exp(-8.5F * ratio));
-                // Debug.WriteLine("month " + month + " PET " + this.RU.WaterCycle.ReferenceEvapotranspiration()[month] + " prec " + this.RU.Climate.PrecipitationByMonth[month]);
+                // Debug.WriteLine("month " + month + " PET " + this.RU.WaterCycle.ReferenceEvapotranspiration()[month] + " prec " + this.RU.Weather.PrecipitationByMonth[month]);
             }
 
-            // the calculation of climate factors requires calculated evapotranspiration. In cases without vegetation (trees or saplings)
-            float meanDailyClimateFactor = 0.0F;
-            for (int dayIndex = this.RU.Climate.CurrentJanuary1, dayOfYear = 0; dayIndex != this.RU.Climate.NextJanuary1; ++dayIndex, ++dayOfYear)
+            // the calculation of weather factors requires calculated evapotranspiration. In cases without vegetation (trees or saplings)
+            WeatherTimeSeriesDaily dailyWeather = this.RU.Weather.TimeSeries;
+            float meanDailyWeatherFactor = 0.0F;
+            for (int dayIndex = this.RU.Weather.CurrentJanuary1, dayOfYear = 0; dayIndex != this.RU.Weather.NextJanuary1; ++dayIndex, ++dayOfYear)
             {
-                ClimateDay day = this.RU.Climate[dayIndex];
-                float ft = MathF.Exp(308.56F * (1.0F / 56.02F - 1.0F / (273.15F + day.MeanDaytimeTemperature - 227.13F)));  // empirical variable Q10 model of Lloyd and Taylor (1994), see also Adair et al. (2008)
-                float fw = waterFactorByMonth[day.Month - 1];
+                float ft = MathF.Exp(308.56F * (1.0F / 56.02F - 1.0F / (273.15F + dailyWeather.TemperatureDaytimeMean[dayIndex] - 227.13F)));  // empirical variable Q10 model of Lloyd and Taylor (1994), see also Adair et al. (2008)
+                float fw = waterFactorByMonth[dailyWeather.Month[dayIndex] - 1];
 
-                meanDailyClimateFactor += ft * fw;
+                meanDailyWeatherFactor += ft * fw;
             }
             // the climate factor is defined as the arithmentic annual mean value
-            this.ClimateFactor = meanDailyClimateFactor / this.RU.Climate.GetDaysInYear();
+            this.WeatherFactor = meanDailyWeatherFactor / this.RU.Weather.GetDaysInYear();
         }
 
         /// do the yearly calculation
         /// see http://iland-model.org/snag+dynamics
         public void RunYear()
         {
-            this.mStandingWoodyToSoil.Zero();
+            this.standingWoodyToSoil.Zero();
 
             // calculate anyway, because also the soil module needs it (and currently one can have Snag and Soil only as a couple)
-            this.CalculateClimateFactors();
-            float climate_factor_re = this.ClimateFactor;
+            this.CalculateWeatherFactors();
+            float weatherFactor = this.WeatherFactor;
             if (this.HasNoCarbon()) // nothing to do
             {
                 return;
@@ -290,7 +290,7 @@ namespace iLand.Tree
             {
                 if (this.BranchesAndCoarseRootsByYear[year].C > 0.0F)
                 {
-                    float survive_rate = MathF.Exp(-climate_factor_re * this.BranchesAndCoarseRootsByYear[year].DecompositionRate); // parameter: the "kyr" value...
+                    float survive_rate = MathF.Exp(-weatherFactor * this.BranchesAndCoarseRootsByYear[year].DecompositionRate); // parameter: the "kyr" value...
                     this.FluxToAtmosphere.C += this.BranchesAndCoarseRootsByYear[year].C * (1.0F - survive_rate); // flux to atmosphere (decayed carbon)
                     this.BranchesAndCoarseRootsByYear[year].C *= survive_rate;
                 }
@@ -298,22 +298,22 @@ namespace iLand.Tree
 
             // process standing snags.
             // the input of the current year is in the mToSWD-Pools
-            for (int diameterClass = 0; diameterClass < this.mToStandingWoodyByClass.Length; ++diameterClass)
+            for (int diameterClass = 0; diameterClass < this.toStandingWoodyByClass.Length; ++diameterClass)
             {
                 // update the swd-pool with this years' input
-                if (this.mToStandingWoodyByClass[diameterClass].HasNoCarbon() == false)
+                if (this.toStandingWoodyByClass[diameterClass].HasNoCarbon() == false)
                 {
                     // update decay rate (apply average yearly input to the state parameters)
-                    this.StemDecompositionRateByClass[diameterClass] = this.StemDecompositionRateByClass[diameterClass] * (this.StandingWoodyDebrisByClass[diameterClass].C / (this.StandingWoodyDebrisByClass[diameterClass].C + mToStandingWoodyByClass[diameterClass].C)) + mCurrentDecayRateByClass[diameterClass] * (this.mToStandingWoodyByClass[diameterClass].C / (this.StandingWoodyDebrisByClass[diameterClass].C + this.mToStandingWoodyByClass[diameterClass].C));
+                    this.StemDecompositionRateByClass[diameterClass] = this.StemDecompositionRateByClass[diameterClass] * (this.StandingWoodyDebrisByClass[diameterClass].C / (this.StandingWoodyDebrisByClass[diameterClass].C + toStandingWoodyByClass[diameterClass].C)) + currentDecayRateByClass[diameterClass] * (this.toStandingWoodyByClass[diameterClass].C / (this.StandingWoodyDebrisByClass[diameterClass].C + this.toStandingWoodyByClass[diameterClass].C));
                     //move content to the SWD pool
-                    this.StandingWoodyDebrisByClass[diameterClass] += this.mToStandingWoodyByClass[diameterClass];
+                    this.StandingWoodyDebrisByClass[diameterClass] += this.toStandingWoodyByClass[diameterClass];
                 }
 
                 if (this.StandingWoodyDebrisByClass[diameterClass].C > 0.0F)
                 {
                     // reduce the Carbon (note: the N stays, thus the CN ratio changes)
                     // use the decay rate that is derived as a weighted average of all standing woody debris
-                    float survive_rate = MathF.Exp(-this.StemDecompositionRateByClass[diameterClass] * climate_factor_re); // 1: timestep
+                    float survive_rate = MathF.Exp(-this.StemDecompositionRateByClass[diameterClass] * weatherFactor); // 1: timestep
                     this.FluxToAtmosphere.C += this.StandingWoodyDebrisByClass[diameterClass].C * (1.0F - survive_rate);
                     this.StandingWoodyDebrisByClass[diameterClass].C *= survive_rate;
 
@@ -327,7 +327,7 @@ namespace iLand.Tree
                     // needs to be calculated, followed by a weighted update of the previous swd.hl.
                     // As weights here we use stem number, as the processes here pertain individual snags
                     // calculate the transition probability of SWD to downed dead wood
-                    float halfLife = this.HalfLifeByClass[diameterClass] / climate_factor_re;
+                    float halfLife = this.HalfLifeByClass[diameterClass] / weatherFactor;
                     float rate = -Constant.Ln2 / halfLife; // M_LN2: math. constant
 
                     // higher decay rate for the class with smallest diameters
@@ -338,7 +338,7 @@ namespace iLand.Tree
                     float transfer = 1.0F - MathF.Exp(rate);
 
                     // calculate flow to soil pool...
-                    this.mStandingWoodyToSoil += this.StandingWoodyDebrisByClass[diameterClass] * transfer;
+                    this.standingWoodyToSoil += this.StandingWoodyDebrisByClass[diameterClass] * transfer;
                     this.RefractoryFlux += this.StandingWoodyDebrisByClass[diameterClass] * transfer;
                     this.StandingWoodyDebrisByClass[diameterClass] *= (1.0F - transfer); // reduce pool
                     // calculate the stem number of remaining snags
@@ -348,17 +348,17 @@ namespace iLand.Tree
                     // if stems<0.5, empty the whole cohort into DWD, i.e. release the last bit of C and N and clear the stats
                     // also, if the Carbon of an average snag is less than 10% of the original average tree
                     // (derived from allometries for the three diameter classes), the whole cohort is emptied out to DWD
-                    if (this.NumberOfSnagsByClass[diameterClass] < 0.5 || this.StandingWoodyDebrisByClass[diameterClass].C / this.NumberOfSnagsByClass[diameterClass] < mCarbonThresholdByClass[diameterClass])
+                    if (this.NumberOfSnagsByClass[diameterClass] < 0.5 || this.StandingWoodyDebrisByClass[diameterClass].C / this.NumberOfSnagsByClass[diameterClass] < carbonThresholdByClass[diameterClass])
                     {
                         // clear the pool: add the rest to the soil, clear statistics of the pool
                         this.RefractoryFlux += this.StandingWoodyDebrisByClass[diameterClass];
-                        this.mStandingWoodyToSoil += this.StandingWoodyDebrisByClass[diameterClass];
+                        this.standingWoodyToSoil += this.StandingWoodyDebrisByClass[diameterClass];
                         this.StandingWoodyDebrisByClass[diameterClass].Zero();
                         this.AverageDbhByClass[diameterClass] = 0.0F;
                         this.AverageHeightByClass[diameterClass] = 0.0F;
                         this.AverageVolumeByClass[diameterClass] = 0.0F;
                         this.StemDecompositionRateByClass[diameterClass] = 0.0F;
-                        this.mCurrentDecayRateByClass[diameterClass] = 0.0F;
+                        this.currentDecayRateByClass[diameterClass] = 0.0F;
                         this.HalfLifeByClass[diameterClass] = 0.0F;
                         this.TimeSinceDeathByClass[diameterClass] = 0.0F;
                     }
@@ -419,7 +419,7 @@ namespace iLand.Tree
             this.RefractoryFlux.AddBiomass(tree.StemMass[treeIndex] * stemToSoil, species.CNRatioWood, species.CoarseWoodyDebrisDecompositionRate);
 
             // just for book-keeping: keep track of all inputs of branches / roots / swd into the "snag" pools
-            this.mTotalSnagInput.AddBiomass(branchBiomass * branchToSnag + tree.CoarseRootMass[0] + tree.StemMass[0] * stemToSnag, species.CNRatioWood);
+            this.totalSnagInput.AddBiomass(branchBiomass * branchToSnag + tree.CoarseRootMass[0] + tree.StemMass[0] * stemToSnag, species.CNRatioWood);
             // stem biomass is transferred to the standing woody debris pool (SWD), increase stem number of pool
             int poolIndex = this.GetDiameterClassIndex(tree.Dbh[treeIndex]); // get right transfer pool
 
@@ -437,14 +437,14 @@ namespace iLand.Tree
 
                 // average the decay rate (ksw); this is done based on the carbon content
                 // aggregate all trees that die in the current year (and save weighted decay rates to CurrentKSW)
-                p_old = mToStandingWoodyByClass[poolIndex].C / (mToStandingWoodyByClass[poolIndex].C + tree.StemMass[treeIndex] * Constant.BiomassCFraction);
-                p_new = tree.StemMass[treeIndex] * Constant.BiomassCFraction / (mToStandingWoodyByClass[poolIndex].C + tree.StemMass[treeIndex] * Constant.BiomassCFraction);
-                this.mCurrentDecayRateByClass[poolIndex] = mCurrentDecayRateByClass[poolIndex] * p_old + species.SnagDecompositionRate * p_new;
+                p_old = toStandingWoodyByClass[poolIndex].C / (toStandingWoodyByClass[poolIndex].C + tree.StemMass[treeIndex] * Constant.BiomassCFraction);
+                p_new = tree.StemMass[treeIndex] * Constant.BiomassCFraction / (toStandingWoodyByClass[poolIndex].C + tree.StemMass[treeIndex] * Constant.BiomassCFraction);
+                this.currentDecayRateByClass[poolIndex] = currentDecayRateByClass[poolIndex] * p_old + species.SnagDecompositionRate * p_new;
                 this.NumberOfSnagsByClass[poolIndex]++;
             }
 
             // finally add the biomass of the stem to the standing snag pool
-            CarbonNitrogenPool toStandingWoody = mToStandingWoodyByClass[poolIndex];
+            CarbonNitrogenPool toStandingWoody = toStandingWoodyByClass[poolIndex];
             toStandingWoody.AddBiomass(tree.StemMass[treeIndex] * stemToSnag, species.CNRatioWood, species.CoarseWoodyDebrisDecompositionRate);
 
             // the biomass that is not routed to snags or directly to the soil
@@ -547,9 +547,9 @@ namespace iLand.Tree
             // during (previous) management operations of the current year
             for (int diameterClass = 0; diameterClass < this.StandingWoodyDebrisByClass.Length; diameterClass++)
             {
-                this.FluxToDisturbance += (this.StandingWoodyDebrisByClass[diameterClass] + mToStandingWoodyByClass[diameterClass]) * factor;
+                this.FluxToDisturbance += (this.StandingWoodyDebrisByClass[diameterClass] + toStandingWoodyByClass[diameterClass]) * factor;
                 this.StandingWoodyDebrisByClass[diameterClass] *= 1.0F - factor;
-                this.mToStandingWoodyByClass[diameterClass] *= 1.0F - factor;
+                this.toStandingWoodyByClass[diameterClass] *= 1.0F - factor;
             }
 
             for (int year = 0; year < this.BranchesAndCoarseRootsByYear.Length; ++year)
@@ -570,7 +570,7 @@ namespace iLand.Tree
             // swd pools
             for (int diameterClass = 0; diameterClass < this.StandingWoodyDebrisByClass.Length; diameterClass++)
             {
-                this.mStandingWoodyToSoil += this.StandingWoodyDebrisByClass[diameterClass] * fraction;
+                this.standingWoodyToSoil += this.StandingWoodyDebrisByClass[diameterClass] * fraction;
                 this.RefractoryFlux += this.StandingWoodyDebrisByClass[diameterClass] * fraction;
                 this.StandingWoodyDebrisByClass[diameterClass] *= 1.0F - fraction;
                 //mSWDtoSoil += mToSWD[i] * factor;

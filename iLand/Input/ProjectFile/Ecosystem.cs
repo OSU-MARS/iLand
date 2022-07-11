@@ -34,7 +34,7 @@ namespace iLand.Input.ProjectFile
 		// tau-value for trailing average temperature calculation: τ = number of days included in average
 		// Mäkelä A, Pulkkinen M, Kolari P, et al. 2008. Developing an empirical model of stand GPP with the LUE approach: analysis of eddy covariance 
 		// data at five contrasting conifer sites in Europe. Global Change Biology 14(1):92-108. https://doi.org/10.1111/j.1365-2486.2007.01463.x
-		public float TemperatureAveragingTau { get; private set; }
+		public float TemperatureMA1tau { get; private set; }
 
 		public Ecosystem()
         {
@@ -48,7 +48,7 @@ namespace iLand.Input.ProjectFile
 			this.TreeLightStampExtinctionCoefficient = 0.5F;
 			this.LightUseEpsilon = 2.8F; // max light use efficiency (aka alpha_c), gC/MJ
 			this.SnowmeltTemperature = 0.0F;
-			this.TemperatureAveragingTau = 5.0F;
+			this.TemperatureMA1tau = 5.0F;
 		}
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -91,9 +91,9 @@ namespace iLand.Input.ProjectFile
 						throw new XmlException("Light extinction opacity is negative.");
 					}
 					break;
-				case "temperatureAveragingTau":
-					this.TemperatureAveragingTau = reader.ReadElementContentAsFloat();
-					if (this.TemperatureAveragingTau < 0.0F)
+				case "temperatureMA1tau":
+					this.TemperatureMA1tau = reader.ReadElementContentAsFloat();
+					if (this.TemperatureMA1tau < 0.0F)
 					{
 						throw new XmlException("Number of days' temperature to average (τ) is negative.");
 					}
