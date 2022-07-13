@@ -30,7 +30,6 @@ namespace iLand.Input
                     monthlyWeather.Resize(monthlyWeather.Capacity + Constant.Data.MonthlyWeatherAllocationIncrement);
                 }
 
-                // TODO: differentiate between mean and mean daytime temperature
                 // TODO: calculate VPD
                 int year = Int32.Parse(row[weatherHeader.Year]);
                 // January
@@ -40,9 +39,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation01]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow01]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation01]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean01]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax01]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin01]);
+                float maxTemp = Single.Parse(row[weatherHeader.TemperatureMax01]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                float minTemp = Single.Parse(row[weatherHeader.TemperatureMin01]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean01]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // February
                 ++monthIndex;
@@ -51,9 +52,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation02]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow02]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation02]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean02]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax02]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin02]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax02]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin02]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean02]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // March
                 ++monthIndex;
@@ -62,9 +65,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation03]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow03]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation03]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean03]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax03]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin03]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax03]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin03]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean03]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // April
                 ++monthIndex;
@@ -73,9 +78,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation04]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow04]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation04]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean04]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax04]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin04]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax04]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin04]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean04]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // May
                 ++monthIndex;
@@ -84,9 +91,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation05]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow05]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation05]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean05]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax05]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin05]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax05]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin05]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean05]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // June
                 ++monthIndex;
@@ -95,9 +104,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation06]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow06]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation06]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean06]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax06]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin06]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax06]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin06]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean06]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // July
                 ++monthIndex;
@@ -106,9 +117,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation07]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow07]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation07]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean07]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax07]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin07]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax07]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin07]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean07]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // August
                 ++monthIndex;
@@ -117,9 +130,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation08]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow08]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation08]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean08]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax08]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin08]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax08]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin08]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean08]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // September
                 ++monthIndex;
@@ -128,9 +143,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation09]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow09]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation09]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean09]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax09]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin09]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax09]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin09]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean09]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // October
                 ++monthIndex;
@@ -139,9 +156,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation10]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow10]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation10]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean10]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax10]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin10]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax10]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin10]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean10]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // Novemeber
                 ++monthIndex;
@@ -150,9 +169,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation11]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow11]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation11]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean11]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax11]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin11]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax11]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin11]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean11]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
                 // Decemeber
                 ++monthIndex;
@@ -161,9 +182,11 @@ namespace iLand.Input
                 monthlyWeather.PrecipitationTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Precipitation12]);
                 monthlyWeather.SnowTotalInMM[monthIndex] = Single.Parse(row[weatherHeader.Snow12]);
                 monthlyWeather.SolarRadiationTotal[monthIndex] = Single.Parse(row[weatherHeader.SolarRadiation12]);
-                monthlyWeather.TemperatureDaytimeMean[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMean12]);
-                monthlyWeather.TemperatureMax[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMax12]);
-                monthlyWeather.TemperatureMin[monthIndex] = Single.Parse(row[weatherHeader.TemperatureMin12]);
+                maxTemp = Single.Parse(row[weatherHeader.TemperatureMax12]);
+                monthlyWeather.TemperatureMax[monthIndex] = maxTemp;
+                minTemp = Single.Parse(row[weatherHeader.TemperatureMin12]);
+                monthlyWeather.TemperatureMin[monthIndex] = minTemp;
+                monthlyWeather.TemperatureDaytimeMean[monthIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, Single.Parse(row[weatherHeader.TemperatureMean12]), maxTemp);
                 monthlyWeather.Validate(monthIndex);
 
                 monthlyWeather.Count += 12;

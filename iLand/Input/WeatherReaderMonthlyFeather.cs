@@ -11,7 +11,7 @@ namespace iLand.Input
     {
         public WeatherReaderMonthlyFeather(string weatherFilePath)
         {
-            // only works with uncompressed feather files in Arrow 8.0.0: https://issues.apache.org/jira/browse/ARROW-17062
+            // Arrow 8.0.0 supports only uncompressed feather: https://issues.apache.org/jira/browse/ARROW-17062
             using FileStream weatherStream = new(weatherFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, Constant.File.DefaultBufferSize);
             using ArrowFileReader weatherFile = new(weatherStream); // ArrowFileReader.IsFileValid is false until a batch is read
 
@@ -122,9 +122,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipJanuary.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowJanuary.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationJanuary.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanJanuary.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxJanuary.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinJanuary.Values[sourceIndex];
+                    float maxTemp = tempMaxJanuary.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    float minTemp = tempMinJanuary.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanJanuary.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -135,9 +137,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipFebruary.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowFebruary.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationFebruary.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanFebruary.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxFebruary.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinFebruary.Values[sourceIndex];
+                    maxTemp = tempMaxFebruary.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinFebruary.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanFebruary.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -148,9 +152,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipMarch.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowMarch.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationMarch.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanMarch.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxMarch.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinMarch.Values[sourceIndex];
+                    maxTemp = tempMaxMarch.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinMarch.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanMarch.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -161,9 +167,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipApril.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowApril.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationApril.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanApril.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxApril.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinApril.Values[sourceIndex];
+                    maxTemp = tempMaxApril.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinApril.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanApril.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -174,9 +182,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipMay.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowMay.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationMay.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanMay.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxMay.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinMay.Values[sourceIndex];
+                    maxTemp = tempMaxMay.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinMay.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanMay.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -187,9 +197,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipJune.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowJune.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationJune.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanJune.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxJune.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinJune.Values[sourceIndex];
+                    maxTemp = tempMaxJune.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinJune.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanJune.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -200,9 +212,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipJuly.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowJuly.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationJuly.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanJuly.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxJuly.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinJuly.Values[sourceIndex];
+                    maxTemp = tempMaxJuly.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinJuly.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanJuly.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -213,9 +227,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipAugust.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowAugust.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationAugust.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanAugust.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxAugust.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinAugust.Values[sourceIndex];
+                    maxTemp = tempMaxAugust.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinAugust.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanAugust.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -226,9 +242,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipSeptember.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowSeptember.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationSeptember.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanSeptember.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxSeptember.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinSeptember.Values[sourceIndex];
+                    maxTemp = tempMaxSeptember.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinSeptember.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanSeptember.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -239,9 +257,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipOctober.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowOctober.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationOctober.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanOctober.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxOctober.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinOctober.Values[sourceIndex];
+                    maxTemp = tempMaxOctober.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinOctober.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanOctober.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -252,9 +272,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipNovember.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowNovember.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationNovember.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanNovember.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxNovember.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinNovember.Values[sourceIndex];
+                    maxTemp = tempMaxNovember.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinNovember.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanNovember.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
@@ -265,9 +287,11 @@ namespace iLand.Input
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = precipDecember.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = snowDecember.Values[sourceIndex];
                     monthlyWeather.SolarRadiationTotal[destinationIndex] = solarRadiationDecember.Values[sourceIndex];
-                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = tempMeanDecember.Values[sourceIndex];
-                    monthlyWeather.TemperatureMax[destinationIndex] = tempMaxDecember.Values[sourceIndex];
-                    monthlyWeather.TemperatureMin[destinationIndex] = tempMinDecember.Values[sourceIndex];
+                    maxTemp = tempMaxDecember.Values[sourceIndex];
+                    monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
+                    minTemp = tempMinDecember.Values[sourceIndex];
+                    monthlyWeather.TemperatureMin[destinationIndex] = minTemp;
+                    monthlyWeather.TemperatureDaytimeMean[destinationIndex] = WeatherReaderMonthly.EstimateDaytimeMeanAirTemperature(minTemp, tempMeanDecember.Values[sourceIndex], maxTemp);
                     // monthlyWeather.VpdMeanInKPa[destinationIndex] = 
                     monthlyWeather.Year[destinationIndex] = year.Values[sourceIndex];
                     monthlyWeather.Validate(destinationIndex);
