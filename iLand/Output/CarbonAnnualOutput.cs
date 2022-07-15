@@ -78,7 +78,7 @@ namespace iLand.Output
                 isRUlevel = false;
             }
 
-            float[] accumulatedValues   = new float[23]; // 8 data values
+            Span<float> accumulatedValues = stackalloc float[23]; // 8 data values
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
                 if (ru.ID == -1 || ru.Snags == null)

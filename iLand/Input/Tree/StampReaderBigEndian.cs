@@ -65,12 +65,11 @@ namespace iLand.Input.Tree
         public override decimal ReadDecimal()
         {
             // untested!
-            // An int[] buffer could be allocated and cached to avoid calling new twice but no Span<int> path seems to be available?
-            int[] quadword = new int[4];
-            quadword[4] = ReadInt32();
-            quadword[3] = ReadInt32();
-            quadword[2] = ReadInt32();
-            quadword[1] = ReadInt32();
+            Span<int> quadword = stackalloc int[4];
+            quadword[4] = this.ReadInt32();
+            quadword[3] = this.ReadInt32();
+            quadword[2] = this.ReadInt32();
+            quadword[1] = this.ReadInt32();
             return new decimal(quadword);
         }
 

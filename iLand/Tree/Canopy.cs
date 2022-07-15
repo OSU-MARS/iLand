@@ -12,7 +12,7 @@ namespace iLand.Tree
     public class Canopy
     {
         // Penman-Monteith parameters
-        private readonly float mAirDensity; // density of air, kg/m³
+        private readonly float airDensity; // density of air, kg/m³
 
         private float mLaiNeedle; // leaf area index of coniferous species
         private float mLaiBroadleaf; // leaf area index of broadlevaed species
@@ -34,11 +34,11 @@ namespace iLand.Tree
 
         public float EvaporationFromCanopy { get; private set; } // evaporation from canopy (mm)
         public float StoredWaterInMM { get; private set; } // mm water that is intercepted by the crown
-        public float[] ReferenceEvapotranspirationByMonth { get; private init; } // monthly reference ET (see Adair et al 2008)
+        public float[] ReferenceEvapotranspirationByMonth { get; private init; } // mm/day
 
         public Canopy(float airDensity)
         {
-            this.mAirDensity = airDensity; // kg / m3
+            this.airDensity = airDensity; // kg/m³
 
             this.ReferenceEvapotranspirationByMonth = new float[Constant.MonthsInYear];
         }
@@ -91,7 +91,7 @@ namespace iLand.Tree
             return precipitationInMM - this.StoredWaterInMM;
         }
 
-        public void SetStandParameters(float laiNeedle, float laiBroadleaf, float meanMaxCanopyConductance)
+        public void OnStartYear(float laiNeedle, float laiBroadleaf, float meanMaxCanopyConductance)
         {
             this.mLaiNeedle = laiNeedle;
             this.mLaiBroadleaf = laiBroadleaf;
@@ -108,17 +108,15 @@ namespace iLand.Tree
         public float FlowDayEvapotranspiration3PG(Project projectFile, WeatherTimeSeriesDaily dailyWeather, int dayIndex, float dayLengthInHours, float soilAtmosphereResponse)
         {
             float vpdInMillibar = 10.0F * dailyWeather.VpdMeanInKPa[dayIndex]; // convert from kPa to mbar
-            float meanDaytimeTemperature = dailyWeather.TemperatureDaytimeMean[dayIndex]; // average temperature of the day (degree C)
+            float meanDaytimeTemperature = dailyWeather.TemperatureDaytimeMean[dayIndex]; // average air temperature of the day (°C at 2 m height)
             float dayLengthInSeconds = 3600.0F * dayLengthInHours; // daylength in seconds (convert from length in hours)
-            float rad = 1000.0F * 1000.0F * dailyWeather.SolarRadiationTotal[dayIndex] / dayLengthInSeconds; //convert from MJ/m2 (day sum) to average radiation flow W/m2 [MJ=MWs . /s * 1,000,000
+            float meanRadiationPower = 1000.0F * 1000.0F * dailyWeather.SolarRadiationTotal[dayIndex] / dayLengthInSeconds; //convert from MJ/m² (day sum) to average radiation flow W/m² [MJ = MWs . /s * 1,000,000
 
             // the radiation: based on linear empirical function
-            const float qa = -90.0F;
-            const float qb = 0.8F;
-            float net_rad = qa + qb * rad;
+            float netRadiation = -90.0F + 0.8F * meanRadiationPower; // qa + qb * radiation
 
             // Landsberg original: float e20 = 2.2;  // rate of change of saturated VP with T at 20C
-            const float vpdToSaturationDeficit = 0.000622F; // convert VPD to saturation deficit = 18/29/1000 = molecular weight of H2O/molecular weight of air
+            const float vpdToSaturationDeficit = 0.000622F; // convert VPD to saturation deficit = 18/29/1000 = molecular weight of H₂O/molecular weight of air
             const float latentHeatOfVaporization = 2460000.0F; // Latent heat of vaporization. Energy required per unit mass of water vaporized [J kg-1]
             float boundaryLayerConductance = projectFile.Model.Ecosystem.BoundaryLayerConductance; // gA, m/s
 
@@ -128,35 +126,48 @@ namespace iLand.Tree
             // current response: see calculateSoilAtmosphereModifier(). This is basically a weighted average of min(water_response, vpd_response) for
             // each species.
             float gC = this.meanMaxCanopyConductance * soilAtmosphereResponse;
-            float defTerm = this.mAirDensity * latentHeatOfVaporization * (vpdInMillibar * vpdToSaturationDeficit) * boundaryLayerConductance;
+            float defTerm = this.airDensity * latentHeatOfVaporization * (vpdInMillibar * vpdToSaturationDeficit) * boundaryLayerConductance;
 
-            // with temperature-dependent slope of vapor pressure saturation curve
+            // with temperature-dependent slope of the saturated vapor pressure curve
             // (following  Allen et al. (1998), http://www.fao.org/docrep/x0490e/x0490e07.htm#atmospheric%20parameters)
-            // svp_slope in mbar.
-            //float svp_slope = 4098. * (6.1078 * exp(17.269 * temperature / (temperature + 237.3))) / ((237.3+temperature)*(237.3+temperature));
+            // svp_slope in kPa/°C
+            //float svpSlope = 4098.0F * (0.6108F * MathF.Exp(17.269F * meanTemp / (meanTemp + 237.3F))) / ((237.3F + meanTemp) * (237.3F + meanTemp));
 
-            // alternatively: very simple variant (following here the original 3-PG code). This
-            // keeps yields +- same results for summer, but slightly lower values in winter (2011/03/16)
-            const float svp_slope = 2.2F;
+            // alternatively, following Landsberg and Sands 2010 §7.2.1 (https://github.com/trotsiuk/r3PG/issues/84)
+            const float svpSlope = 0.145F; // FAO56 saturation vapor pressure slope at 20° C
+            // divide saturated vapor pressure slope by the approximate psychrometric constant for actively ventilated psychrometers to match 3-PGmix
+            // Psychrometric constant is higher for other psychrometer types and is elevation dependent since it varies with air pressure
+            // (https://www.fao.org/3/x0490e/x0490e07.htm#calculation%20procedures).
+            const float s = svpSlope / 0.066F;
 
-            float evapotranspiration = (svp_slope * net_rad + defTerm) / (1.0F + svp_slope + boundaryLayerConductance / gC);
+            float evapotranspiration = (s * netRadiation + defTerm) / (1.0F + s + boundaryLayerConductance / gC);
             float canopyTranspiration = evapotranspiration / latentHeatOfVaporization * dayLengthInSeconds;
 
-            // calculate reference evapotranspiration
-            // see Adair et al 2008
-            const float psychrometricConstant = 0.0672718682328237F; // kPa/degC
-            const float windspeed = 2.0F; // m/s
-            float net_rad_mj_day = net_rad * dayLengthInSeconds / 1000000.0F; // convert W/m2 again to MJ/m2*day
-            float et0_day = 0.408F * svp_slope * net_rad_mj_day + psychrometricConstant * 900.0F / (meanDaytimeTemperature + 273.15F) * windspeed * dailyWeather.VpdMeanInKPa[dayIndex];
-            float et0_div = svp_slope + psychrometricConstant * (1.0F + 0.34F * windspeed);
-            et0_day /= et0_div;
+            // calculate reference evapotranspiration (et0 for 12 cm tall grass field, 1-9 mm/day increasing with temperature, decreasing with humidity)
+            // Code here follows the de facto FAO56 Penman-Monteith standard as other 3-PG variants do.
+            // Allen RG, Pereira LS, Raes D, Smith M. 1998. Crop evapotranspiration - Guidelines for computing crop water requirements - FAO
+            //   Irrigation and drainage paper 56. Food and Agriculture Organization of the United Nations.
+            //   Chapter 4 - Determination of ETo https://www.fao.org/3/x0490e/x0490e08.htm
+            // FAO definition of saturation vapor pressure slope = 4098 * 0.6108 * exp(17.27 * Tmean / (Tmean + 237.3)) / (Tmean + 237.3)^2 kPa/°C
+            // TODO: FAO definition yields slopes from near zero to 0.5 kPa/°C from -20 to +45 °C, so why the hardcoded value of 2.2 above?
+            //
+            // However, numerous studies of other evapotranspiration methods exist and, as FAO56 is oriented to field crops, other approaches
+            // may be more effective for forest simulation. See, for example,
+            // Ershadi A, McCabe FA, Evans JP, Wood EF. 2015. Impact of model structure and parameterization on Penman–Monteith type evaporation
+            //   models. Journal of Hydrology 525:521-535. https://doi.org/10.1016/j.jhydrol.2015.04.008
+            const float psychrometricConstant = 0.0672718682328237F; // kPa/°C
+            const float windSpeed = 2.0F; // wind speed at 2 m height, m/s
+            float net_rad_mj_day = netRadiation * dayLengthInSeconds / 1000000.0F; // convert W/m² again to MJ/m²-day
+            float et0_numerator = 0.408F * s * net_rad_mj_day + psychrometricConstant * 900.0F / (meanDaytimeTemperature + 273.15F) * windSpeed * dailyWeather.VpdMeanInKPa[dayIndex];
+            float et0_denominator = s + psychrometricConstant * (1.0F + 0.34F * windSpeed);
+            float et0_day = et0_numerator / et0_denominator; // FAO56, Chapter 2
             this.ReferenceEvapotranspirationByMonth[dailyWeather.Month[dayIndex] - 1] += et0_day;
 
             if (this.StoredWaterInMM > 0.0F)
             {
                 // we assume that for evaporation from leaf surface gBL/gC -> 0
-                float div_evap = 1.0F + svp_slope;
-                float potentialCanopyEvaporation = (svp_slope * net_rad + defTerm) / div_evap / latentHeatOfVaporization * dayLengthInSeconds;
+                float div_evap = 1.0F + s;
+                float potentialCanopyEvaporation = (s * netRadiation + defTerm) / div_evap / latentHeatOfVaporization * dayLengthInSeconds;
                 // reduce the amount of transpiration on a wet day based on the approach of
                 // Wigmosta et al (1994). See http://iland-model.org/water+cycle#transpiration_and_canopy_conductance
 

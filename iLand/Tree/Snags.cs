@@ -236,20 +236,22 @@ namespace iLand.Tree
         /// </remarks>
         public void CalculateWeatherFactors()
         {
-            // calculate the water-factor for each month (see Adair et al 2008)
-            float[] waterFactorByMonth = new float[Constant.MonthsInYear];
+            // calculate the water-factor for each month
+            // Adair CE, Parton WJ, del Grosso SL, et al. 2008. Simple three-pool model accurately describes patterns of long-term litter
+            //   decomposition in diverse climates. Global Change Biology 14(11):2636-2660. https://doi.org/10.1111/j.1365-2486.2008.01674.x
+            Span<float> waterFactorByMonth = stackalloc float[Constant.MonthsInYear];
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
-                float ratio;
+                float precipET0ratio;
                 if (this.RU.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[month] > 0.0F)
                 {
-                    ratio = this.RU.Weather.PrecipitationByMonth[month] / this.RU.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[month];
+                    precipET0ratio = this.RU.Weather.PrecipitationByMonth[month] / this.RU.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[month];
                 }
                 else
                 {
-                    ratio = 0.0F;
+                    precipET0ratio = 0.0F;
                 }
-                waterFactorByMonth[month] = 1.0F / (1.0F + 30.0F * MathF.Exp(-8.5F * ratio));
+                waterFactorByMonth[month] = 1.0F / (1.0F + 30.0F * MathF.Exp(-8.5F * precipET0ratio));
                 // Debug.WriteLine("month " + month + " PET " + this.RU.WaterCycle.ReferenceEvapotranspiration()[month] + " prec " + this.RU.Weather.PrecipitationByMonth[month]);
             }
 
@@ -258,7 +260,8 @@ namespace iLand.Tree
             float meanDailyWeatherFactor = 0.0F;
             for (int dayIndex = this.RU.Weather.CurrentJanuary1, dayOfYear = 0; dayIndex != this.RU.Weather.NextJanuary1; ++dayIndex, ++dayOfYear)
             {
-                float ft = MathF.Exp(308.56F * (1.0F / 56.02F - 1.0F / (273.15F + dailyWeather.TemperatureDaytimeMean[dayIndex] - 227.13F)));  // empirical variable Q10 model of Lloyd and Taylor (1994), see also Adair et al. (2008)
+                // empirical variable Q10 model of Lloyd and Taylor (1994), see also Adair et al. (2008)
+                float ft = MathF.Exp(308.56F * (1.0F / 56.02F - 1.0F / (273.15F + dailyWeather.TemperatureDaytimeMean[dayIndex] - 227.13F)));
                 float fw = waterFactorByMonth[dailyWeather.Month[dayIndex] - 1];
 
                 meanDailyWeatherFactor += ft * fw;

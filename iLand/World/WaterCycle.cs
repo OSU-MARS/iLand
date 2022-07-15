@@ -17,8 +17,6 @@ namespace iLand.World
         */
     public class WaterCycle
     {
-        private float laiBroadleaved;
-        private float laiNeedle;
         private float residualSoilWater; // bucket "height" of PWP (is fixed to -4MPa) (mm)
         private readonly ResourceUnit ru; // resource unit to which this watercycle is connected
         private SoilWaterRetention? soilWaterRetention;
@@ -39,8 +37,6 @@ namespace iLand.World
 
         public WaterCycle(Project projectFile, ResourceUnit ru)
         {
-            this.laiBroadleaved = Single.NaN;
-            this.laiNeedle = Single.NaN;
             this.residualSoilWater = Single.NaN;
             this.ru = ru;
             this.soilWaterRetention = null;
@@ -98,28 +94,27 @@ namespace iLand.World
             this.TotalEvapotranspiration = this.TotalRunoff = this.SnowDayRadiation = 0.0F;
         }
 
-        /// get canopy characteristics of the resource unit.
-        /// It is important, that species-statistics are valid when this function is called (LAI)!
-        private void GetStandValues(Project projectFile)
+        // get canopy characteristics of the resource unit.
+        // It is important species statistics are valid when this function is called (LAI)!
+        private (float laiConifer, float laiBroadleaf, float laiWeightedCanopyConductance) OnStartYear(Project projectFile)
         {
-            this.laiNeedle = 0.0F;
-            this.laiBroadleaved = 0.0F;
-            this.CanopyConductance = 0.0F;
-            const float groundVegetationCC = 0.02F;
+            float laiConifer = 0.0F;
+            float laiBroadleaf = 0.0F;
+            float laiWeightedCanopyConductance = 0.0F;
             foreach (ResourceUnitTreeSpecies ruSpecies in this.ru.Trees.SpeciesAvailableOnResourceUnit) 
             {
                 float lai = ruSpecies.Statistics.LeafAreaIndex; // use previous year's LAI as this year's hasn't yet been computed
                 if (ruSpecies.Species.IsConiferous)
                 {
-                    laiNeedle += lai;
+                    laiConifer += lai;
                 }
                 else
                 {
-                    laiBroadleaved += lai;
+                    laiBroadleaf += lai;
                 }
-                this.CanopyConductance += ruSpecies.Species.MaxCanopyConductance * lai; // weigh with LAI
+                laiWeightedCanopyConductance += ruSpecies.Species.MaxCanopyConductance * lai; // weigh with LAI
             }
-            float totalLai = laiBroadleaved + laiNeedle;
+            float totalLai = laiBroadleaf + laiConifer;
 
             // handle cases with LAI < 1 (use generic "ground cover characteristics" instead)
             /* The LAI used here is derived from the "stockable" area (and not the stocked area).
@@ -129,17 +124,20 @@ namespace iLand.World
             */
             if (totalLai < 1.0F)
             {
-                this.CanopyConductance += groundVegetationCC * (1.0F - totalLai);
+                const float groundVegetationCC = 0.02F;
+                laiWeightedCanopyConductance += groundVegetationCC * (1.0F - totalLai);
                 totalLai = 1.0F;
             }
-            this.CanopyConductance /= totalLai;
+            laiWeightedCanopyConductance /= totalLai;
 
             if (totalLai < projectFile.Model.Ecosystem.LaiThresholdForConstantStandConductance)
             {
-                // following Landsberg and Waring: when LAI is < 3 (default for laiThresholdForClosedStands), a linear "ramp" from 0 to 3 is assumed
+                // following Landsberg and Waring: when LAI is < 3 (default for laiThresholdForClosedStands) a linear ramp from 0 to 3 is assumed
                 // http://iland-model.org/water+cycle#transpiration_and_canopy_conductance
-                this.CanopyConductance *= totalLai / projectFile.Model.Ecosystem.LaiThresholdForConstantStandConductance;
+                laiWeightedCanopyConductance *= totalLai / projectFile.Model.Ecosystem.LaiThresholdForConstantStandConductance;
             }
+
+            return (laiConifer, laiBroadleaf, laiWeightedCanopyConductance);
         }
 
         /// calculate responses for ground vegetation, i.e. for "unstocked" areas.
@@ -212,8 +210,9 @@ namespace iLand.World
             WaterCycleData hydrologicState = new();
 
             // preparations (once a year)
-            this.GetStandValues(projectFile); // fetch canopy characteristics from iLand (including weighted average for mCanopyConductance)
-            this.Canopy.SetStandParameters(this.laiNeedle, this.laiBroadleaved, this.CanopyConductance);
+            // fetch canopy characteristics from iLand, including LAI weighted average for canopy conductance
+            (float laiNeedle, float laiBroadleaved, this.CanopyConductance) = this.OnStartYear(projectFile);
+            this.Canopy.OnStartYear(laiNeedle, laiBroadleaved, this.CanopyConductance);
 
             // main loop over all days of the year
             this.SnowDayRadiation = 0.0F;

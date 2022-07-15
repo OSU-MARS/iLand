@@ -84,7 +84,7 @@ namespace iLand.Tree
 
             // two week (14 days) running average of actual psi-values on the resource unit
             const int daysToAverage = 14;
-            float[] soilWaterPotentialsInAverage = new float[daysToAverage];
+            Span<float> soilWaterPotentialsInAverage = stackalloc float[daysToAverage];
             float currentPsiSum = 0.0F;
             
             float miniumumMovingAverage = Single.MaxValue;

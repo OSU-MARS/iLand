@@ -17,6 +17,18 @@ namespace iLand.Input
         public int Precipitation10 { get; private init; }
         public int Precipitation11 { get; private init; }
         public int Precipitation12 { get; private init; }
+        public int RelativeHumidityMean01 { get; private init; }
+        public int RelativeHumidityMean02 { get; private init; }
+        public int RelativeHumidityMean03 { get; private init; }
+        public int RelativeHumidityMean04 { get; private init; }
+        public int RelativeHumidityMean05 { get; private init; }
+        public int RelativeHumidityMean06 { get; private init; }
+        public int RelativeHumidityMean07 { get; private init; }
+        public int RelativeHumidityMean08 { get; private init; }
+        public int RelativeHumidityMean09 { get; private init; }
+        public int RelativeHumidityMean10 { get; private init; }
+        public int RelativeHumidityMean11 { get; private init; }
+        public int RelativeHumidityMean12 { get; private init; }
         public int Snow01 { get; private init; }
         public int Snow02 { get; private init; }
         public int Snow03 { get; private init; }
@@ -94,6 +106,18 @@ namespace iLand.Input
             this.Precipitation10 = weatherFile.GetColumnIndex("PPT10");
             this.Precipitation11 = weatherFile.GetColumnIndex("PPT11");
             this.Precipitation12 = weatherFile.GetColumnIndex("PPT12");
+            this.RelativeHumidityMean01 = weatherFile.GetColumnIndex("RH01");
+            this.RelativeHumidityMean02 = weatherFile.GetColumnIndex("RH02");
+            this.RelativeHumidityMean03 = weatherFile.GetColumnIndex("RH03");
+            this.RelativeHumidityMean04 = weatherFile.GetColumnIndex("RH04");
+            this.RelativeHumidityMean05 = weatherFile.GetColumnIndex("RH05");
+            this.RelativeHumidityMean06 = weatherFile.GetColumnIndex("RH06");
+            this.RelativeHumidityMean07 = weatherFile.GetColumnIndex("RH07");
+            this.RelativeHumidityMean08 = weatherFile.GetColumnIndex("RH08");
+            this.RelativeHumidityMean09 = weatherFile.GetColumnIndex("RH09");
+            this.RelativeHumidityMean10 = weatherFile.GetColumnIndex("RH10");
+            this.RelativeHumidityMean11 = weatherFile.GetColumnIndex("RH11");
+            this.RelativeHumidityMean12 = weatherFile.GetColumnIndex("RH12");
             this.Snow01 = weatherFile.GetColumnIndex("PAS01");
             this.Snow02 = weatherFile.GetColumnIndex("PAS02");
             this.Snow03 = weatherFile.GetColumnIndex("PAS03");
@@ -174,6 +198,18 @@ namespace iLand.Input
             this.Precipitation10 = schema.GetFieldIndex("PPT10");
             this.Precipitation11 = schema.GetFieldIndex("PPT11");
             this.Precipitation12 = schema.GetFieldIndex("PPT12");
+            this.RelativeHumidityMean01 = schema.GetFieldIndex("RH01");
+            this.RelativeHumidityMean02 = schema.GetFieldIndex("RH02");
+            this.RelativeHumidityMean03 = schema.GetFieldIndex("RH03");
+            this.RelativeHumidityMean04 = schema.GetFieldIndex("RH04");
+            this.RelativeHumidityMean05 = schema.GetFieldIndex("RH05");
+            this.RelativeHumidityMean06 = schema.GetFieldIndex("RH06");
+            this.RelativeHumidityMean07 = schema.GetFieldIndex("RH07");
+            this.RelativeHumidityMean08 = schema.GetFieldIndex("RH08");
+            this.RelativeHumidityMean09 = schema.GetFieldIndex("RH09");
+            this.RelativeHumidityMean10 = schema.GetFieldIndex("RH10");
+            this.RelativeHumidityMean11 = schema.GetFieldIndex("RH11");
+            this.RelativeHumidityMean12 = schema.GetFieldIndex("RH12");
             this.Snow01 = schema.GetFieldIndex("PAS01");
             this.Snow02 = schema.GetFieldIndex("PAS02");
             this.Snow03 = schema.GetFieldIndex("PAS03");

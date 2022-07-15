@@ -2,6 +2,7 @@
 using iLand.Tool;
 using iLand.World;
 using Microsoft.Data.Sqlite;
+using System;
 using System.Diagnostics;
 
 namespace iLand.Output
@@ -71,7 +72,7 @@ namespace iLand.Output
                 logIndividualResourceUnits = false;
             }
 
-            float[] accumulatedValues = new float[10]; // 10 data values
+            Span<float> accumulatedValues = stackalloc float[10]; // 10 data values
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits) 
             {
                 if (ru.ID == -1)

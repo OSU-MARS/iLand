@@ -243,7 +243,7 @@ namespace iLand.Test
             //Assert.IsTrue(Math.Abs(index - 0.0) < 0.001);
 
             // check calculation: numbers for Jenness paper
-            //float[] hs = new float[] { 165, 170, 145, 160, 183, 155, 122, 175, 190 };
+            //ReadOnlySpan<float> hs = stackalloc float[] { 165, 170, 145, 160, 183, 155, 122, 175, 190 };
             //float area = rumpleIndex.CalculateSurfaceArea(hs, 100);
         }
 
