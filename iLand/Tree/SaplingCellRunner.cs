@@ -33,7 +33,7 @@ namespace iLand.Tree
             return standLightEnumerator.GetPhysicalPosition();
         }
 
-        // TODO: change to bool MoveNext()
+        // TODO: change to bool MoveNext()?
         public SaplingCell? MoveNext()
         {
             Debug.Assert(this.landscape.StandRaster != null);

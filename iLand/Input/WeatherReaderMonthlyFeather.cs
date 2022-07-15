@@ -1,6 +1,5 @@
 ﻿using Apache.Arrow;
 using Apache.Arrow.Ipc;
-using iLand.Tool;
 using System;
 using System.IO;
 using System.Linq;
@@ -117,7 +116,7 @@ namespace iLand.Input
                         if (this.MonthlyWeatherByID.TryGetValue(weatherID, out monthlyWeather) == false)
                         {
                             // don't number of series in batch isn't known until last row, so can't estimate series length a priori
-                            monthlyWeather = new WeatherTimeSeriesMonthly(Timestep.Monthly, Constant.Data.MonthlyWeatherAllocationIncrement);
+                            monthlyWeather = new(Timestep.Monthly, Constant.Data.MonthlyWeatherAllocationIncrement);
                             this.MonthlyWeatherByID.Add(weatherID, monthlyWeather);
                         }
 

@@ -8,7 +8,7 @@ namespace iLand.Input.Tree
     internal class IndividualTreeReader : TreeReader
     {
         // when reading .csv files, support conversion from Picus numeric species IDs to iLand USDA Plants codes
-        // TODO: if needed, expand Picus species support or make translation specific to files with the Picus <trees> element
+        // if needed, 1) Picus species support can be expanded and 2) translation made specific to files with the Picus <trees> element
         private static readonly ReadOnlyCollection<string> iLandSpeciesIDs = new List<string>() { "piab", "piab", "fasy" }.AsReadOnly();
         private static readonly ReadOnlyCollection<int> PicusSpeciesIDs = new List<int>() { 0, 1, 17 }.AsReadOnly();
 

@@ -7,8 +7,10 @@ namespace iLand
         public const float BiomassCFraction = 0.5F; // fraction of (dry) biomass which is carbon
         public const int DaysInDecade = 3652; // integer truncation of 10 years * 365.2425 days/year, could also use 3653 for decades with three leap years
         public const int DaysInLeapYear = 366;
+        public const int DaysInYear = 365;
 
         public const int DefaultStandID = 0; // lowest valid stand ID, any negative IDs in stand raster are treated as no data or no stand
+        public const int EvergreenLeafPhenologyID = 0;
 
         public const int HeightCellsPerRUWidth = 10; // height cells per resource unit side length, used for torus positioning
         public const int HeightCellAreaInM2 = 100; // 100 m² area of a height pixel
@@ -28,7 +30,6 @@ namespace iLand
         public const int SeedmapCellSizeInM = 20; // size of seedmap cell, m
         public const int TimeStepInYears = 1;
 
-        public const float HalfPi = 0.5F * MathF.PI;
         public const float Ln2 = 0.693147180559945F;
         public const int MonthsInYear = 12;
         public const float QuarterPi = 0.25F * MathF.PI;

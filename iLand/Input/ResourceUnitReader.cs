@@ -28,7 +28,7 @@ namespace iLand.Input
 
             this.Environments = new();
 
-            string resourceUnitFilePath = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.World.Initialization.ResourceUnitFile); // TODO: stop requiring gis\ prefix in project file
+            string resourceUnitFilePath = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.World.Initialization.ResourceUnitFile);
             using CsvFile resourceUnitEnvironmentFile = new(resourceUnitFilePath);
             ResourceUnitHeader environmentHeader = new(resourceUnitEnvironmentFile);
 

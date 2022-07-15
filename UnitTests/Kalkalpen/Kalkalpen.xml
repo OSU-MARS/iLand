@@ -190,6 +190,7 @@
         <class3minimum>40</class3minimum>
       </nitrogenResponseClasses>
       <phenology>
+        <!-- id 0 is evergreen and populated by default -->
         <type id="1">
           <!-- deciduous broadleaved -->
           <vpdMin>0.9</vpdMin>

@@ -5,17 +5,9 @@ namespace iLand.Tool
 {
     internal class Maths
     {
-        public static int Modulo(int a, int b)
+        public static bool IsBitSet(int value, int bit)
         {
-            // because C modulo operation gives negative numbers for negative values, here a fix
-            // that always returns positive numbers: http://www.lemoda.net/c/modulo-operator/
-            return ((a % b) + b) % b;
-        }
-
-        // conversions rad/degree
-        public static float ToRadians(float degrees)
-        {
-            return MathF.PI / 180.0F * degrees;
+            return (value & (1 << bit)) != 0;
         }
 
         public static float Limit(float value, float min, float max)
@@ -72,9 +64,17 @@ namespace iLand.Tool
             }
         }
 
-        public static bool IsBitSet(int value, int bit)
+        public static int Modulo(int a, int b)
         {
-            return (value & (1 << bit)) != 0;
+            // because C modulo operation gives negative numbers for negative values, here a fix
+            // that always returns positive numbers: http://www.lemoda.net/c/modulo-operator/
+            return ((a % b) + b) % b;
+        }
+
+        // conversions rad/degree
+        public static float ToRadians(float degrees)
+        {
+            return MathF.PI / 180.0F * degrees;
         }
     }
 }

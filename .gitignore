@@ -4,5 +4,7 @@ obj/
 PerformanceResults/
 TestResults/
 
-# Visual Studio cache/options directory
+# RStudio and Visual Studio user data
+.Rhistory
+.Rproj.user/
 .vs/

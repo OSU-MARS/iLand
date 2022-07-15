@@ -226,8 +226,8 @@ namespace iLand.Test
                     }
                     meanGridHeight /= kalkalpen.Landscape.HeightGrid.CellCount;
 
-                    Assert.IsTrue(averageDiameterGrowth > MathF.Max(0.2F - 0.01F * year, 0.0F));
-                    Assert.IsTrue(averageHeightGrowth > MathF.Max(0.2F - 0.01F * year, 0.0F));
+                    Assert.IsTrue(averageDiameterGrowth > MathF.Max(0.2F - 0.01F * year, 0.0F), "Average diameter growth is " + averageDiameterGrowth + " cm.");
+                    Assert.IsTrue(averageHeightGrowth > MathF.Max(0.2F - 0.01F * year, 0.0F), "Average height growth is " + averageHeightGrowth + " m.");
                     Assert.IsTrue(minGridHeight >= 0.0F);
                     Assert.IsTrue((meanGridHeight > minGridHeight) && (meanGridHeight < maxGridHeight));
                     Assert.IsTrue(maxGridHeight < 45.0F + 0.1F * year);
@@ -550,7 +550,7 @@ namespace iLand.Test
                 //{
                 //    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential");
                 //}
-                //Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0F) && (ru.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: linkt to snow days?
+                //Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0F) && (ru.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
                 //Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0F) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear), "Water cycle: snow days");
                 //Assert.IsTrue(Math.Abs(ru.WaterCycle.SoilDepthInMM - 1340.0F) < 0.001F, "Soil: depth");
                 //Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0F, "Soil: evapotranspiration"); // zero at initialization
@@ -566,7 +566,7 @@ namespace iLand.Test
             Assert.IsTrue(model.Landscape.WeatherByID.Count == 1);
             foreach (Weather weather in model.Landscape.WeatherByID.Values)
             {
-                Phenology conifer = weather.GetPhenology(0);
+                Tree.LeafPhenology conifer = weather.GetPhenology(0);
                 // private phenology variables read from the project file
                 //   vpdMin, vpdMax, dayLengthMin, dayLengthMax, tempMintempMax
                 //conifer.ChillingDaysLastYear;
@@ -574,22 +574,22 @@ namespace iLand.Test
                 //conifer.LeafOnEnd;
                 //conifer.LeafOnFraction;
                 //conifer.LeafOnStart;
-                Phenology broadleaf = weather.GetPhenology(1);
-                Phenology deciduousConifer = weather.GetPhenology(2);
+                Tree.LeafPhenology broadleaf = weather.GetPhenology(1);
+                Tree.LeafPhenology deciduousConifer = weather.GetPhenology(2);
 
                 // private climate variables
                 //   tableName, batchYears, temperatureShift, precipitationShift, randomSamplingEnabled, randomSamplingList, filter
                 Assert.IsTrue(weather.AtmosphericCO2ConcentrationInPpm == 360.0);
                 Assert.IsTrue((weather.MeanAnnualTemperature > 0.0) && (weather.MeanAnnualTemperature < 30.0));
                 // Assert.IsTrue(String.Equals(climate.ClimateTableName, "HaneyUBC", StringComparison.OrdinalIgnoreCase));
-                Assert.IsTrue(conifer.LeafType == 0);
-                Assert.IsTrue(broadleaf.LeafType == 1);
-                Assert.IsTrue(deciduousConifer.LeafType == 2);
+                Assert.IsTrue(conifer.ID == 0);
+                Assert.IsTrue(broadleaf.ID == 1);
+                Assert.IsTrue(deciduousConifer.ID == 2);
                 // climate.PrecipitationMonth;
                 Assert.IsTrue((weather.Sun.LastDayLongerThan10_5Hours > 0) && (weather.Sun.LastDayLongerThan10_5Hours < 365));
                 Assert.IsTrue((weather.Sun.LastDayLongerThan14_5Hours > 0) && (weather.Sun.LastDayLongerThan14_5Hours < 365));
-                Assert.IsTrue(weather.Sun.LongestDay == 172);
-                Assert.IsTrue(weather.Sun.IsNorthernHemisphere());
+                Assert.IsTrue(weather.Sun.LongestDayIndex == 172);
+                Assert.IsTrue(weather.Sun.IsNorthernHemisphere, "Sun.IsNorthernHemisphere = " + weather.Sun.IsNorthernHemisphere + ".");
                 // climate.TemperatureMonth;
                 Assert.IsTrue((weather.TotalAnnualRadiation > 4000.0) && (weather.TotalAnnualRadiation < 5000.0));
             }
@@ -618,15 +618,15 @@ namespace iLand.Test
             Assert.IsTrue(MathF.Abs(douglasFir.DeathProbabilityFixed - 0.00355005264F) < 0.000001F); // transformed from 0.67
             // probStress  6.9
             // displayColor D6F288
-            Assert.IsTrue(douglasFir.EstablishmentParameters.ChillRequirement == 30);
-            Assert.IsTrue(MathF.Abs(douglasFir.EstablishmentParameters.FrostTolerance - 0.5F) < 0.001);
-            Assert.IsTrue(MathF.Abs(douglasFir.EstablishmentParameters.GrowingDegreeDaysBaseTemperature - 3.4F) < 0.001F);
-            Assert.IsTrue(douglasFir.EstablishmentParameters.GddBudBurst == 255);
-            Assert.IsTrue(douglasFir.EstablishmentParameters.MaximumGrowingDegreeDays == 3261);
-            Assert.IsTrue(douglasFir.EstablishmentParameters.MinimumGrowingDegreeDays == 177);
-            Assert.IsTrue(douglasFir.EstablishmentParameters.MinimumFrostFreeDays == 65);
-            Assert.IsTrue(MathF.Abs(douglasFir.EstablishmentParameters.MinTemp + 37.0F) < 0.001F);
-            Assert.IsTrue(Single.IsNaN(douglasFir.EstablishmentParameters.PsiMin));
+            Assert.IsTrue(douglasFir.SaplingEstablishment.ChillRequirement == 30);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingEstablishment.FrostTolerance - 0.5F) < 0.001);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingEstablishment.GrowingDegreeDaysBaseTemperature - 3.4F) < 0.001F);
+            Assert.IsTrue(douglasFir.SaplingEstablishment.GrowingDegreeDaysBudBurst == 255);
+            Assert.IsTrue(douglasFir.SaplingEstablishment.MaximumGrowingDegreeDays == 3261);
+            Assert.IsTrue(douglasFir.SaplingEstablishment.MinimumGrowingDegreeDays == 177);
+            Assert.IsTrue(douglasFir.SaplingEstablishment.MinimumFrostFreeDays == 65);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingEstablishment.ColdFatalityTemperature + 37.0F) < 0.001F);
+            Assert.IsTrue(Single.IsNaN(douglasFir.SaplingEstablishment.DroughtMortalityPsiInMPa));
             Assert.IsTrue(MathF.Abs(douglasFir.FecundityM2 - 20.0F) < 0.001F);
             Assert.IsTrue(MathF.Abs(douglasFir.FecunditySerotiny - 0.0F) < 0.001F);
             Assert.IsTrue(MathF.Abs(douglasFir.FinerootFoliageRatio - 1.0F) < 0.001F);
@@ -636,33 +636,33 @@ namespace iLand.Test
             Assert.IsTrue(douglasFir.Index == 0);
             Assert.IsTrue(douglasFir.IsConiferous == true);
             Assert.IsTrue(douglasFir.IsEvergreen == true);
-            Assert.IsTrue(douglasFir.IsSeedYear == false);
+            Assert.IsTrue(douglasFir.IsMastYear == false);
             Assert.IsTrue(douglasFir.IsTreeSerotinousRandom(model.RandomGenerator, 40) == false);
             // lightResponseClass  2.78
             Assert.IsTrue(Math.Abs(douglasFir.MaxCanopyConductance - 0.017) < 0.001);
             Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menziesii", StringComparison.OrdinalIgnoreCase));
-            Assert.IsTrue(Math.Abs(douglasFir.NonSeedYearFraction - 0.25) < 0.001);
-            Assert.IsTrue(douglasFir.PhenologyClass == 0);
+            Assert.IsTrue(Math.Abs(douglasFir.NonMastYearFraction - 0.25) < 0.001);
+            Assert.IsTrue(douglasFir.LeafPhenologyID == 0);
             Assert.IsTrue(Math.Abs(douglasFir.MinimumSoilWaterPotential + 1.234) < 0.001);
             // respNitrogenClass   2
             // respTempMax 20
             // respTempMin 0
             // respVpdExponent - 0.6
             // maturityYears   14
-            // seedYearInterval    5
-            // nonSeedYearFraction 0.25
+            // mastYearInterval    5
+            // nonMastYearFraction 0.25
             // seedKernel_as1  30
             // seedKernel_as2  200
             // seedKernel_ks0  0.2
-            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowthParameters.BrowsingProbability - 0.5F) < 0.001F);
-            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowthParameters.HeightDiameterRatio - 112.0F) < 0.001F);
-            Assert.IsTrue(String.Equals(douglasFir.SaplingGrowthParameters.HeightGrowthPotential.ExpressionString, "1.2*72.2*(1-(1-(h/72.2)^(1/3))*exp(-0.0427))^3", StringComparison.OrdinalIgnoreCase));
-            Assert.IsTrue(douglasFir.SaplingGrowthParameters.MaxStressYears == 2);
-            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowthParameters.ReferenceRatio - 0.503F) < 0.001F);
-            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowthParameters.ReinekeR - 164.0F) < 0.001F);
-            Assert.IsTrue(douglasFir.SaplingGrowthParameters.RepresentedClasses.Count == 41);
-            Assert.IsTrue(Single.IsNaN(douglasFir.SaplingGrowthParameters.SproutGrowth));
-            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowthParameters.StressThreshold - 0.1F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.BrowsingProbability - 0.5F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.HeightDiameterRatio - 112.0F) < 0.001F);
+            Assert.IsTrue(String.Equals(douglasFir.SaplingGrowth.HeightGrowthPotential.ExpressionString, "1.2*72.2*(1-(1-(h/72.2)^(1/3))*exp(-0.0427))^3", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(douglasFir.SaplingGrowth.MaxStressYears == 2);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.ReferenceRatio - 0.503F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.ReinekeR - 164.0F) < 0.001F);
+            Assert.IsTrue(douglasFir.SaplingGrowth.RepresentedClasses.Count == 41);
+            Assert.IsTrue(Single.IsNaN(douglasFir.SaplingGrowth.SproutGrowth));
+            Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.StressThreshold - 0.1F) < 0.001F);
             Assert.IsTrue(douglasFir.SeedDispersal == null);
             // Assert.IsTrue(String.Equals(douglasFir.SeedDispersal.DumpNextYearFileName, null, StringComparison.OrdinalIgnoreCase));
             // Assert.IsTrue(douglasFir.SeedDispersal.SeedMap == null);
@@ -748,12 +748,12 @@ namespace iLand.Test
                 Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
                 Assert.IsTrue((ru.WaterCycle.CurrentSoilWater >= 0.0) && (ru.WaterCycle.CurrentSoilWater <= ru.WaterCycle.FieldCapacity), "Water cycle: current water content of " + ru.WaterCycle.CurrentSoilWater + " mm is negative or greater than the field capacity of " + ru.WaterCycle.FieldCapacity + " mm.");
                 Assert.IsTrue(MathF.Abs(ru.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity is " + ru.WaterCycle.FieldCapacity + " mm.");
-                Assert.IsTrue(ru.WaterCycle.SoilWaterPotentialByDay.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
-                foreach (float psi in ru.WaterCycle.SoilWaterPotentialByDay)
+                Assert.IsTrue(ru.WaterCycle.SoilWaterPotentialByWeatherTimestep.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
+                foreach (float psi in ru.WaterCycle.SoilWaterPotentialByWeatherTimestep)
                 {
                     Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential");
                 }
-                Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0F) && (ru.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: linkt to snow days?
+                Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0F) && (ru.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
                 Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0F) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear), "Water cycle: snow days");
                 Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0F, "Soil: evapotranspiration"); // zero at initialization
                 Assert.IsTrue(ru.WaterCycle.TotalRunoff == 0.0F, "Soil: runoff"); // zero at initialization
@@ -801,9 +801,9 @@ namespace iLand.Test
 
             // PIAB: 44.7*(1-(1-(h/44.7)^(1/3))*exp(-0.044))^3
             // round(44.7*(1-(1-(c(0.25, 1, 4.5)/44.7)^(1/3))*exp(-0.044))^3, 3)
-            double shortPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(0.25);
-            double mediumPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(1);
-            double tallPotential = species.SaplingGrowthParameters.HeightGrowthPotential.Evaluate(4.5);
+            double shortPotential = species.SaplingGrowth.HeightGrowthPotential.Evaluate(0.25);
+            double mediumPotential = species.SaplingGrowth.HeightGrowthPotential.Evaluate(1);
+            double tallPotential = species.SaplingGrowth.HeightGrowthPotential.Evaluate(4.5);
 
             Assert.IsTrue(Math.Abs(shortPotential - 0.431) < 0.01);
             Assert.IsTrue(Math.Abs(mediumPotential - 1.367) < 0.01);

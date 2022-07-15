@@ -14,7 +14,7 @@ namespace iLand.World
 {
     public class Landscape
     {
-        public Dictionary<string, WeatherDaily> WeatherByID { get; private init; }
+        public Dictionary<string, Weather> WeatherByID { get; private init; }
 
         public GrassCover GrassCover { get; private init; }
         public Grid<float> LightGrid { get; private init; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
@@ -128,10 +128,10 @@ namespace iLand.World
             {
                 ResourceUnitEnvironment environment = resourceUnitReader.Environments[resourceUnitIndex];
 
-                if (this.WeatherByID.TryGetValue(environment.WeatherID, out WeatherDaily? weather) == false)
+                if (this.WeatherByID.TryGetValue(environment.WeatherID, out Weather? weather) == false)
                 {
                     // create only those climate sets that are really used in the current landscape
-                    weather = new WeatherDaily(projectFile, environment.WeatherID);
+                    weather = Weather.Create(projectFile, environment.WeatherID);
                     this.WeatherByID.Add(environment.WeatherID, weather);
                 }
                 if (this.SpeciesSetsByTableName.TryGetValue(environment.SpeciesTableName, out TreeSpeciesSet? treeSpeciesSet) == false)
@@ -452,7 +452,7 @@ namespace iLand.World
                         Sapling? sapling = saplingCell.AddSaplingIfSlotFree(height, age, species.Index);
                         if (sapling != null)
                         {
-                            fractionallyOccupiedCellCount += Math.Max(1.0F, species.SaplingGrowthParameters.RepresentedStemNumberFromHeight(sapling.HeightInM));
+                            fractionallyOccupiedCellCount += Math.Max(1.0F, species.SaplingGrowth.RepresentedStemNumberFromHeight(sapling.HeightInM));
                         }
                         else
                         {

@@ -70,7 +70,7 @@ namespace iLand.Tree
             if (this.LivingCohorts > 0)
             {
                 // calculate the avg dbh and number of stems
-                float averageDbh = 100.0F * this.AverageHeight / species.SaplingGrowthParameters.HeightDiameterRatio;
+                float averageDbh = 100.0F * this.AverageHeight / species.SaplingGrowth.HeightDiameterRatio;
                 // the number of "real" stems is given by the Reineke formula
                 float nSaplings = this.LivingSaplings; // total number of saplings (>0.05m)
 
@@ -95,8 +95,8 @@ namespace iLand.Tree
                 //
                 if (averageDbh > 1.0F)
                 {
-                    float previousAverageDbh = 100.0F * (AverageHeight - AverageDeltaHRealized) / species.SaplingGrowthParameters.HeightDiameterRatio;
-                    float nPreviousSaplings = this.LivingCohorts * species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(MathF.Max(1.0F, previousAverageDbh));
+                    float previousAverageDbh = 100.0F * (AverageHeight - AverageDeltaHRealized) / species.SaplingGrowth.HeightDiameterRatio;
+                    float nPreviousSaplings = this.LivingCohorts * species.SaplingGrowth.RepresentedStemNumberFromDiameter(MathF.Max(1.0F, previousAverageDbh));
                     if (nSaplings < nPreviousSaplings)
                     {
                         deadWood.AddBiomass(woodyBiomass * (nPreviousSaplings - nSaplings), species.CNRatioWood);
@@ -109,7 +109,7 @@ namespace iLand.Tree
             if (this.DeadSaplings != 0)
             {
                 float avg_dbh_dead = mSumDbhDied / this.DeadSaplings;
-                float n = this.DeadSaplings * species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(avg_dbh_dead);
+                float n = this.DeadSaplings * species.SaplingGrowth.RepresentedStemNumberFromDiameter(avg_dbh_dead);
                 // woody parts: stem, branchse and coarse roots
 
                 deadWood.AddBiomass((species.GetBiomassStem(avg_dbh_dead) + species.GetBiomassBranch(avg_dbh_dead) + species.GetBiomassCoarseRoot(avg_dbh_dead)) * n, species.CNRatioWood);
@@ -154,9 +154,9 @@ namespace iLand.Tree
         public float GetLivingStemNumber(TreeSpecies species, out float averageDbh, out float averageHeight, out float averageAge)
         {
             averageHeight = this.AverageHeight;
-            averageDbh = 100.0F * averageHeight / species.SaplingGrowthParameters.HeightDiameterRatio;
+            averageDbh = 100.0F * averageHeight / species.SaplingGrowth.HeightDiameterRatio;
             averageAge = this.AverageAge;
-            float nSaplings = species.SaplingGrowthParameters.RepresentedStemNumberFromDiameter(averageDbh);
+            float nSaplings = species.SaplingGrowth.RepresentedStemNumberFromDiameter(averageDbh);
             return nSaplings;
             // *** old code (sapling.cpp) ***
             //    float total = 0.0;

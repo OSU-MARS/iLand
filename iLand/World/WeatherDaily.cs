@@ -9,40 +9,17 @@ using Model = iLand.Simulation.Model;
 
 namespace iLand.World
 {
-    public class WeatherDaily : Weather
+    public class WeatherDaily : Weather<WeatherTimeSeriesDaily>
     {
         private readonly List<int> monthDayIndices; // store indices for month / years within store
         private readonly WeatherReaderDailySql weatherReader;
 
-        public int CurrentJanuary1 { get; private set; } // index of the first day of the current year (simulation timestep)
-        public int NextJanuary1 { get; private set; } // index of the first day of the next year; stop index for external iterations over days in eyar
-        public WeatherTimeSeriesDaily TimeSeries { get; private init; } // storage of weather data
-
-        public WeatherDaily(Project projectFile, string weatherTableName)
-            : base(projectFile)
+        public WeatherDaily(string weatherDatabaseFilePath, string weatherTableName, Project projectFile)
+            : base(projectFile, new(Timestep.Daily, Constant.DaysInLeapYear)) // one year minimum capacity
         {
-            if (String.IsNullOrEmpty(weatherTableName))
-            {
-                throw new ArgumentOutOfRangeException(nameof(weatherTableName));
-            }
-
-            this.TimeSeries = new(Timestep.Daily, Constant.DaysInLeapYear); // one year minimum capacity
             this.monthDayIndices = new(Constant.MonthsInYear + 1); // one year minimum capacity
-            this.weatherReader = new(projectFile, weatherTableName);
+            this.weatherReader = new(weatherDatabaseFilePath, weatherTableName, projectFile);
             this.weatherReader.LoadGroupOfYears(this.YearsToLoad, this.TimeSeries, this.monthDayIndices);
-        }
-
-        // returns number of days of given month (0..11)
-        public int GetDaysInMonth(int month)
-        {
-            return this.monthDayIndices[this.CurrentDataYear * Constant.MonthsInYear + month + 1] - this.monthDayIndices[this.CurrentDataYear * Constant.MonthsInYear + month];
-        }
-
-        // returns number of days of current year.
-        public int GetDaysInYear()
-        {
-            Debug.Assert(this.NextJanuary1 > this.CurrentJanuary1);
-            return this.NextJanuary1 - this.CurrentJanuary1;
         }
 
         public override void OnStartYear(Model model)
@@ -107,8 +84,8 @@ namespace iLand.World
             {
                 throw new NotSupportedException("Weather data is not available for simulation year " + this.CurrentDataYear + ".");
             }
-            this.CurrentJanuary1 = this.monthDayIndices[this.CurrentDataYear * Constant.MonthsInYear];
-            this.NextJanuary1 = this.monthDayIndices[(this.CurrentDataYear + 1) * Constant.MonthsInYear];
+            this.TimeSeries.CurrentYearStartIndex = this.monthDayIndices[this.CurrentDataYear * Constant.MonthsInYear];
+            this.TimeSeries.NextYearStartIndex = this.monthDayIndices[(this.CurrentDataYear + 1) * Constant.MonthsInYear];
 
             // some aggregates:
             // calculate radiation sum of the year and monthly precipitation
@@ -120,7 +97,7 @@ namespace iLand.World
                 this.TemperatureByMonth[monthIndex] = 0.0F;
             }
 
-            for (int dayIndex = this.CurrentJanuary1; dayIndex < this.NextJanuary1; ++dayIndex)
+            for (int dayIndex = this.TimeSeries.CurrentYearStartIndex; dayIndex < this.TimeSeries.NextYearStartIndex; ++dayIndex)
             {
                 int monthIndex = this.TimeSeries.Month[dayIndex] - 1;
                 this.PrecipitationByMonth[monthIndex] += this.TimeSeries.PrecipitationTotalInMM[dayIndex];
@@ -130,25 +107,19 @@ namespace iLand.World
                 this.MeanAnnualTemperature += daytimeMeanTemperature;
                 this.TotalAnnualRadiation += this.TimeSeries.SolarRadiationTotal[dayIndex];
             }
+
+            bool isLeapYear = this.TimeSeries.IsCurrentlyLeapYear();
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
-                this.TemperatureByMonth[month] /= this.GetDaysInMonth(month);
+                this.TemperatureByMonth[month] /= (float)DateTimeExtensions.DaysInMonth(month, isLeapYear);
             }
-            this.MeanAnnualTemperature /= this.GetDaysInYear();
+            this.MeanAnnualTemperature /= (float)DateTimeExtensions.DaysInYear(isLeapYear);
 
-            // calculate phenology
+            // calculate leaf on-off phenology for deciduous species
             for (int index = 0; index < this.TreeSpeciesPhenology.Count; ++index)
             {
-                this.TreeSpeciesPhenology[index].RunYear();
+                this.TreeSpeciesPhenology[index].GetLeafOnAndOffDatesForCurrentYear();
             }
-        }
-
-        // decode "yearday" to the actual year, month, day if provided
-        public void ToZeroBasedDate(int dayOfYear, out int zeroBasedDay, out int zeroBasedMonth)
-        {
-            int dayIndex = this.CurrentJanuary1 + dayOfYear;
-            zeroBasedDay = this.TimeSeries.DayOfMonth[dayIndex] - 1;
-            zeroBasedMonth = this.TimeSeries.Month[dayIndex] - 1;
         }
     }
 }

@@ -9,13 +9,13 @@ namespace iLand.Input
     public class WeatherTimeSeriesDaily : WeatherTimeSeries
     {
         public int[] DayOfMonth { get; private set; } // day of the month (1..31)
-        public float[] MeanDaytimeTemperatureMA1 { get; private set; } // temperature delayed (after Mäkelä 2008) for response calculations
+        public float[] TemperatureDaytimeMeanMA1 { get; private set; } // temperature delayed (after Mäkelä 2008) for response calculations
 
         public WeatherTimeSeriesDaily(Timestep timestep, int capacity)
             : base(timestep, capacity)
         {
             this.DayOfMonth = new int[capacity];
-            this.MeanDaytimeTemperatureMA1 = new float[capacity];
+            this.TemperatureDaytimeMeanMA1 = new float[capacity];
         }
 
         public override void Resize(int newSize)
@@ -23,14 +23,14 @@ namespace iLand.Input
             base.Resize(newSize);
 
             this.DayOfMonth = this.DayOfMonth.Resize(newSize);
-            this.MeanDaytimeTemperatureMA1 = this.MeanDaytimeTemperatureMA1.Resize(newSize);
+            this.TemperatureDaytimeMeanMA1 = this.TemperatureDaytimeMeanMA1.Resize(newSize);
         }
 
         public override void Validate(int dayIndex)
         {
             base.Validate(dayIndex);
 
-            float meanDaytimeTemperatureMA1 = this.MeanDaytimeTemperatureMA1[dayIndex];
+            float meanDaytimeTemperatureMA1 = this.TemperatureDaytimeMeanMA1[dayIndex];
             if (Single.IsNaN(meanDaytimeTemperatureMA1) || (meanDaytimeTemperatureMA1 < Constant.Limit.TemperatureMin) || (meanDaytimeTemperatureMA1 > Constant.Limit.TemperatureMax))
             {
                 // can't reliably check against the day's min and max since strong weather systems might put the moving average outside

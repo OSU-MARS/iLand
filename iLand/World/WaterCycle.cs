@@ -6,8 +6,7 @@ using System;
 
 namespace iLand.World
 {
-    /** @class WaterCycle
-        simulates the water cycle on a ResourceUnit.
+    /** simulates the water cycle on a ResourceUnit.
         The WaterCycle is simulated with a daily time step on the spatial level of a ResourceUnit. Related are
         the snow module (SnowPack), and Canopy module that simulates the interception (and evaporation) of precipitation and the
         transpiration from the canopy.
@@ -28,10 +27,10 @@ namespace iLand.World
         
         public float CurrentSoilWater { get; private set; } // current water content in mm water column of the soil
         public float FieldCapacity { get; private set; } //  bucket height of field-capacity (eq. -15kPa) (mm)
-        public float[] SoilWaterPotentialByDay { get; private init; } // soil water potential for each day of year in kPa, needed for soil water modifier
+        public float[] SoilWaterPotentialByWeatherTimestep { get; private init; } // soil water potential for each day of year in kPa, needed for soil water modifier
 
         public float SnowDayRadiation { get; set; } // sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
-        public float SnowDays { get; set; } // # of days with snowcover >0
+        public float SnowDays { get; set; } // number of days with snowcover > 0
         public float TotalEvapotranspiration { get; set; } // annual sum of evapotranspiration (mm)
         public float TotalRunoff { get; set; } // annual sum of water loss due to lateral outflow/groundwater flow (mm)
 
@@ -44,7 +43,7 @@ namespace iLand.World
 
             this.Canopy = new Canopy(projectFile.Model.Ecosystem.AirDensity);
             this.FieldCapacity = Single.NaN;
-            this.SoilWaterPotentialByDay = new float[Constant.DaysInLeapYear];
+            this.SoilWaterPotentialByWeatherTimestep = new float[Constant.DaysInLeapYear]; // TODO: be able to allocate monthly length for monthly weather series
 
             this.SnowDayRadiation = Single.NaN;
             this.SnowDays = Single.NaN;
@@ -52,7 +51,11 @@ namespace iLand.World
             this.TotalRunoff = Single.NaN;
         }
 
-        public float CurrentSnowWaterEquivalent() { return snowPack.WaterEquivalentInMM; } // current water stored as snow (mm water)
+        public float CurrentSnowWaterEquivalent() 
+        {
+            // current water stored as snow (mm water)
+            return snowPack.WaterEquivalentInMM; 
+        }
         
         public void SetContent(float soilWaterInMM, float snowWaterEquivalentInMM)
         { 
@@ -219,25 +222,45 @@ namespace iLand.World
             this.SnowDays = 0;
             this.TotalEvapotranspiration = 0.0F;
             this.TotalRunoff = 0.0F;
-            for (int dayIndex = this.ru.Weather.CurrentJanuary1, dayOfYear = 0; dayIndex < this.ru.Weather.NextJanuary1; ++dayIndex, ++dayOfYear)
+            float daysInTimestep = 1.0F;
+            WeatherTimeSeries weatherTimeSeries = this.ru.Weather.TimeSeries;
+            bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
+            for (int weatherTimestepIndex = weatherTimeSeries.CurrentYearStartIndex, timestepInYearIndex = 0; weatherTimestepIndex < weatherTimeSeries.NextYearStartIndex; ++weatherTimestepIndex, ++timestepInYearIndex)
             {
-                WeatherTimeSeriesDaily dailyWeather = this.ru.Weather.TimeSeries;
-                // (2) interception by the crown
-                float throughfallInMM = this.Canopy.FlowDayToStorage(dailyWeather.PrecipitationTotalInMM[dayIndex]);
-                // (3) storage in the snow pack
-                float infiltrationInMM = this.snowPack.FlowDay(throughfallInMM, dailyWeather.TemperatureDaytimeMean[dayIndex]);
+                int dayOfYearIndex = timestepInYearIndex;
+                if (weatherTimeSeries.Timestep == Timestep.Monthly)
+                {
+                    dayOfYearIndex = DateTimeExtensions.MidmonthDayIndex(timestepInYearIndex, isLeapYear);
+                    daysInTimestep = DateTimeExtensions.DaysInMonth(timestepInYearIndex, isLeapYear);
+                }
+
+                // interception by the crown
+                float throughfallInMM = this.Canopy.FlowPrecipitationTimestep(weatherTimeSeries.PrecipitationTotalInMM[weatherTimestepIndex], daysInTimestep);
+                // storage in the snow pack
+                // TODO: make daily mean temperature available here rather than relying on daytime mean temperature
+                float infiltrationInMM = this.snowPack.FlowPrecipitationTimestep(throughfallInMM, weatherTimeSeries.TemperatureDaytimeMean[weatherTimestepIndex]);
                 // save extra data (used by e.g. fire module)
-                hydrologicState.WaterReachingGround[dayOfYear] = infiltrationInMM;
-                hydrologicState.SnowCover[dayOfYear] = this.snowPack.WaterEquivalentInMM;
+                hydrologicState.WaterReachingSoilByWeatherTimestep[timestepInYearIndex] = infiltrationInMM;
+                hydrologicState.SnowCover[timestepInYearIndex] = this.snowPack.WaterEquivalentInMM;
                 if (this.snowPack.WaterEquivalentInMM > 0.0)
                 {
-                    this.SnowDayRadiation += dailyWeather.SolarRadiationTotal[dayIndex];
+                    this.SnowDayRadiation += weatherTimeSeries.SolarRadiationTotal[weatherTimestepIndex];
                     ++this.SnowDays;
                 }
 
-                // (4) add rest to soil
+                // fill soil to capacity under stream assumption with any excess becoming runoff (percolation or overland) which disappears
+                // from the model
+                // This is problematic: 
+                // - the steeper the terrain and the deeper the soils the more likely percolation transports significant soil moisture from
+                //   resource unit with low topographic wetness indices to ones with high wetness indices
+                // - soils need not be saturated for percolation to occur, so runoff here is either overland excess flow (which is uncommon)
+                //   or a likely overestimate of the resource unit's net contribution to streamflow (which may be zero in upland units lacking
+                //   stream channels)
+                // - dropping runoff from the model is guaranteed to be structurally correct only for single resource unit models and, for
+                //   any large model, likely violates conservation of mass
+                // - the longer the weather timestep, the more evapotranspiration which occurs and the more likely it is runoff and soil water
+                //   potential will be overestimated
                 this.CurrentSoilWater += infiltrationInMM;
-
                 if (this.CurrentSoilWater > this.FieldCapacity)
                 {
                     // excess water runoff
@@ -247,56 +270,37 @@ namespace iLand.World
                 }
 
                 float currentPsi = this.soilWaterRetention.GetSoilWaterPotentialFromWater(this.CurrentSoilWater);
-                this.SoilWaterPotentialByDay[dayOfYear] = currentPsi;
+                this.SoilWaterPotentialByWeatherTimestep[timestepInYearIndex] = currentPsi;
 
-                // (5) transpiration of the vegetation and of water intercepted in canopy
+                // transpiration of the vegetation and of water intercepted in canopy
                 // implicit assumption: water does not remain in canopy between days
                 // calculate the LAI-weighted response values for soil water and vpd:
-                float interceptionBeforeTranspiration = this.Canopy.StoredWaterInMM;
-                float soilAtmosphereResponse = this.GetSoilAtmosphereModifier(currentPsi, dailyWeather.VpdMeanInKPa[dayIndex]);
-                float dayLengthInHours = this.ru.Weather.Sun.GetDayLengthInHours(dayOfYear);
-                float evapotranspirationInMM = this.Canopy.FlowDayEvapotranspiration3PG(projectFile, dailyWeather, dayIndex, dayLengthInHours, soilAtmosphereResponse);
+                float interceptionBeforeTranspiration = this.Canopy.TotalInterceptedWaterInMM;
+                float soilAtmosphereResponse = this.GetSoilAtmosphereModifier(currentPsi, weatherTimeSeries.VpdMeanInKPa[weatherTimestepIndex]);
+                float dayLengthInHours = this.ru.Weather.Sun.GetDayLengthInHours(dayOfYearIndex);
+                float evapotranspirationInMM = this.Canopy.FlowDayEvapotranspiration3PG(projectFile, (WeatherTimeSeriesDaily)weatherTimeSeries, weatherTimestepIndex, dayLengthInHours, soilAtmosphereResponse);
                 // if there is some flow from intercepted water to the ground -> add to "water_to_the_ground"
-                if (this.Canopy.StoredWaterInMM < interceptionBeforeTranspiration)
+                if (this.Canopy.TotalInterceptedWaterInMM < interceptionBeforeTranspiration)
                 {
-                    float stemflow = interceptionBeforeTranspiration - this.Canopy.StoredWaterInMM;
-                    hydrologicState.WaterReachingGround[dayOfYear] += stemflow;
+                    // for now, stemflow remains liquid and does not freeze to trees or within any snowpack which might be present
+                    float stemflow = interceptionBeforeTranspiration - this.Canopy.TotalInterceptedWaterInMM;
+                    hydrologicState.WaterReachingSoilByWeatherTimestep[timestepInYearIndex] += stemflow;
                 }
 
                 this.CurrentSoilWater -= evapotranspirationInMM; // reduce content (transpiration)
                 // add intercepted water (that is *not* evaporated) again to the soil (or add to snow if temp too low -> call to snowpack)
-                this.CurrentSoilWater += this.snowPack.AddSnowWaterEquivalent(this.Canopy.StoredWaterInMM, dailyWeather.TemperatureDaytimeMean[dayIndex]);
+                this.CurrentSoilWater += this.snowPack.AddSnowWaterEquivalent(this.Canopy.TotalInterceptedWaterInMM, weatherTimeSeries.TemperatureDaytimeMean[weatherTimestepIndex]);
 
-                // do not remove water below the PWP (fixed value)
+                // do not evapotranspirate water below the permanent wilt potential (approximated elsewhere as a fixed, species independent potential)
+                // This is not entirely correct as evaporation, especially from upper soil layers, isn't subject to roots' water extraction
+                // limits and can approach oven dryness given sufficiently hot surface temperatures.
                 if (this.CurrentSoilWater < this.residualSoilWater)
                 {
-                    evapotranspirationInMM -= this.residualSoilWater - this.CurrentSoilWater; // reduce et (for bookkeeping)
+                    evapotranspirationInMM -= this.residualSoilWater - this.CurrentSoilWater;
                     this.CurrentSoilWater = this.residualSoilWater;
                 }
 
                 this.TotalEvapotranspiration += evapotranspirationInMM;
-
-                //DBGMODE(
-                //if (model.GlobalSettings.IsDebugEnabled(DebugOutputs.WaterCycle))
-                //{
-                //    List<object> output = model.GlobalSettings.DebugList(day.ID(), DebugOutputs.WaterCycle);
-                //    // climatic variables
-                //    output.AddRange(new object[] { day.ID(), mRU.Index, mRU.ID, day.MeanDaytimeTemperature, day.Vpd, day.Preciptitation, day.Radiation });
-                //    output.Add(combined_response); // combined response of all species on RU (min(water, vpd))
-                //                                   // fluxes
-                //    output.AddRange(new object[] { throughfallInMM, infiltrationInMM, et, mCanopy.EvaporationCanopy, CurrentSoilWaterContent, Psi[dayOfYear], runoffInMM });
-                //    // other states
-                //    output.Add(mSnowPack.WaterEquivalent);
-                //    //special sanity check:
-                //    if (infiltrationInMM > 0.0 && mCanopy.Interception > 0.0)
-                //    {
-                //        if (mSnowPack.WaterEquivalent == 0.0 && day.Preciptitation == 0)
-                //        {
-                //            Debug.WriteLine("watercontent increase without precipititation");
-                //        }
-                //    }
-                //}
-                //); // DBGMODE()
             }
 
             return hydrologicState;

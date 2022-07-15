@@ -4,7 +4,8 @@ namespace iLand.Tree
 {
     public class SaplingCell
     {
-        public const int SaplingsPerCell = 5; // TODO: 5 slots per cell -> max of 5 saplings per 2 x 2 m cell -> upper limit of only 8000 TPH regen?
+        // 5 slots per cell = max of 5 saplings per 2 x 2 m cell => maximum of 8000 saplings per hectare
+        public const int SaplingsPerCell = 5;
 
         public Sapling[] Saplings { get; private init; }
         public SaplingCellState State { get; set; }
@@ -15,7 +16,7 @@ namespace iLand.Tree
             this.Saplings = new Sapling[SaplingCell.SaplingsPerCell];
             for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
-                // BUGBUG: SoA
+                // TODO: change storage to SoA instead of AoS
                 this.Saplings[slotIndex] = new Sapling();
             }
         }

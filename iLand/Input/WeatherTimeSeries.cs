@@ -10,6 +10,11 @@ namespace iLand.Input
         public int Capacity { get; private set; }
         public Timestep Timestep { get; private init; }
 
+        // index of the first day or month (depending on whether the series is daily or monthly) of the current year (simulation timestep)
+        public int CurrentYearStartIndex { get; set; }
+        // index of the first day or month the subsequent year; stop index for external iterations over days in year
+        public int NextYearStartIndex { get; set; }
+
         // Gregorian calendar year, CE
         public int[] Year { get; private set; }
         // month (1..12)
@@ -36,6 +41,9 @@ namespace iLand.Input
             this.Count = 0;
             this.Timestep = timestep;
 
+            this.CurrentYearStartIndex = -1;
+            this.NextYearStartIndex = -1;
+
             this.Month = new int[capacity];
             this.PrecipitationTotalInMM = new float[capacity];
             this.SolarRadiationTotal = new float[capacity];
@@ -44,6 +52,11 @@ namespace iLand.Input
             this.TemperatureMin = new float[capacity];
             this.VpdMeanInKPa = new float[capacity];
             this.Year = new int[capacity]; // can be shortened to one element per year if needed
+        }
+
+        public bool IsCurrentlyLeapYear()
+        {
+            return DateTime.IsLeapYear(this.Year[this.CurrentYearStartIndex]);
         }
 
         public virtual void Resize(int newSize)

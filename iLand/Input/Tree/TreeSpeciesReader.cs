@@ -51,13 +51,13 @@ namespace iLand.Input.Tree
         private readonly int maxCanopyConductance;
         private readonly int psiMin;
         private readonly int lightResponseClass;
-        private readonly int seedYearInterval;
+        private readonly int mastYearInterval;
         private readonly int maturityYears;
         private readonly int seedKernelAs1;
         private readonly int seedKernelAs2;
         private readonly int seedKernelKs0;
         private readonly int fecundityM2;
-        private readonly int nonSeedYearFraction;
+        private readonly int nonMastYearFraction;
         private readonly int serotinyFormula;
         private readonly int fecunditySerotiny;
         private readonly int establishmentParametersMinTemp;
@@ -126,13 +126,13 @@ namespace iLand.Input.Tree
             this.maxCanopyConductance = reader.GetOrdinal("maxCanopyConductance");
             this.psiMin = reader.GetOrdinal("psiMin");
             this.lightResponseClass = reader.GetOrdinal("lightResponseClass");
-            this.seedYearInterval = reader.GetOrdinal("seedYearInterval");
+            this.mastYearInterval = reader.GetOrdinal("seedYearInterval");
             this.maturityYears = reader.GetOrdinal("maturityYears");
             this.seedKernelAs1 = reader.GetOrdinal("seedKernel_as1");
             this.seedKernelAs2 = reader.GetOrdinal("seedKernel_as2");
             this.seedKernelKs0 = reader.GetOrdinal("seedKernel_ks0");
             this.fecundityM2 = reader.GetOrdinal("fecundity_m2");
-            this.nonSeedYearFraction = reader.GetOrdinal("nonSeedYearFraction");
+            this.nonMastYearFraction = reader.GetOrdinal("nonSeedYearFraction");
             this.serotinyFormula = reader.GetOrdinal("serotinyFormula");
             this.fecunditySerotiny = reader.GetOrdinal("serotinyFecundity");
             this.establishmentParametersMinTemp = reader.GetOrdinal("estMinTemp");
@@ -197,13 +197,13 @@ namespace iLand.Input.Tree
         public float MaxCanopyConductance() { return reader.GetFloat(this.maxCanopyConductance); }
         public float PsiMin() { return -Math.Abs(reader.GetFloat(this.psiMin)); } // force a negative value
         public float LightResponseClass() { return reader.GetFloat(this.lightResponseClass); }
-        public int SeedYearInterval() { return reader.GetInt32(this.seedYearInterval); }
+        public int MastYearInterval() { return reader.GetInt32(this.mastYearInterval); }
         public int MaturityYears() { return reader.GetInt32(this.maturityYears); }
         public float SeedKernelAs1() { return reader.GetFloat(this.seedKernelAs1); }
         public float SeedKernelAs2() { return reader.GetFloat(this.seedKernelAs2); }
         public float SeedKernelKs0() { return reader.GetFloat(this.seedKernelKs0); }
         public float FecundityM2() { return reader.GetFloat(this.fecundityM2); }
-        public float NonSeedYearFraction() { return reader.GetFloat(this.nonSeedYearFraction); }
+        public float NonMastYearFraction() { return reader.GetFloat(this.nonMastYearFraction); }
 
         public string? SerotinyFormula()
         {
@@ -217,10 +217,10 @@ namespace iLand.Input.Tree
 
         public float EstablishmentParametersMinTemp() { return reader.GetFloat(this.establishmentParametersMinTemp); }
         public int EstablishmentParametersChillRequirement() { return reader.GetInt32(this.establishmentParametersChillRequirement); }
-        public int EstablishmentParametersGddMin() { return reader.GetInt32(this.establishmentParametersGddMin); }
-        public int EstablishmentParametersGddMax() { return reader.GetInt32(this.establishmentParametersGddMax); }
-        public float EstablishmentParametersGddBaseTemperature() { return reader.GetFloat(this.establishmentParametersGddBaseTemperature); }
-        public int EstablishmentParametersGddBudBurst() { return reader.GetInt32(this.establishmentParametersGddBudBurst); }
+        public int EstablishmentParametersGrowingDegreeDaysMin() { return reader.GetInt32(this.establishmentParametersGddMin); }
+        public int EstablishmentParametersGrowingDegreeDaysMax() { return reader.GetInt32(this.establishmentParametersGddMax); }
+        public float EstablishmentParametersGrowingDegreeDaysBaseTemperature() { return reader.GetFloat(this.establishmentParametersGddBaseTemperature); }
+        public int EstablishmentParametersGrowingDegreeDaysBudBurst() { return reader.GetInt32(this.establishmentParametersGddBudBurst); }
         public int EstablishmentParametersMinFrostFree() { return reader.GetInt32(this.establishmentParametersMinFrostFree); }
         public float EstablishmentParametersFrostTolerance() { return reader.GetFloat(this.establishmentParametersFrostTolerance); }
 

@@ -1,15 +1,20 @@
-﻿using iLand.Input.ProjectFile;
+﻿using iLand.Input;
+using iLand.Input.ProjectFile;
 using iLand.Tool;
+using iLand.Tree;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
+using LeafPhenology = iLand.Tree.LeafPhenology;
 using Model = iLand.Simulation.Model;
 
 namespace iLand.World
 {
-    // Handles weather input data and performs some basic related calculations on that data.
+    // A weather input time series and calculations on that weather data. May be 1:1 with resource units or may be 1 weather:many resource units
+    // (leaf on-off phenology is therefore a Weather member rather than kept at the resource unit level).
     // http://iland-model.org/ClimateData
     public abstract class Weather
     {
@@ -18,7 +23,7 @@ namespace iLand.World
         protected int RandomListIndex { get; set; } // current index of the randomYearList for random sampling
         protected List<int> RandomYearList { get; private init; } // for random sampling of years
         protected List<int> SampledYears { get; private init; } // list of sampled years to use
-        protected List<Phenology> TreeSpeciesPhenology { get; private init; } // phenology calculations
+        protected List<LeafPhenology> TreeSpeciesPhenology { get; private init; } // phenology calculations
         protected int YearsToLoad { get; private init; } // number of years to load from database
 
         public float AtmosphericCO2ConcentrationInPpm { get; protected set; }
@@ -28,7 +33,7 @@ namespace iLand.World
         public float[] TemperatureByMonth { get; private init; } // °C
         public float TotalAnnualRadiation { get; protected set; } // return radiation sum (MJ/m²) of the whole year
 
-        public Weather(Project projectFile)
+        protected Weather(Project projectFile)
         {
             this.CurrentDataYear = -1; // start with -1 as the first call to NextYear() will go to year 0
             this.DoRandomSampling = projectFile.World.Weather.RandomSamplingEnabled;
@@ -39,8 +44,7 @@ namespace iLand.World
             this.YearsToLoad = projectFile.World.Weather.BatchYears;
 
             this.PrecipitationByMonth = new float[Constant.MonthsInYear];
-            this.Sun = new Sun();
-            this.Sun.Setup(Maths.ToRadians(projectFile.World.Geometry.Latitude));
+            this.Sun = new Sun(projectFile.World.Geometry.Latitude);
             this.TemperatureByMonth = new float[Constant.MonthsInYear];
 
             if (this.DoRandomSampling)
@@ -63,8 +67,23 @@ namespace iLand.World
                     }
                 }
             }
+        }
 
-            this.SetupTreePhenology(projectFile);
+        public abstract WeatherTimeSeries TimeSeries
+        {
+            get;
+        }
+
+        public static Weather Create(Project projectFile, string weatherID)
+        {
+            string weatherFile = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.File);
+            string? weatherFileExtension = Path.GetExtension(weatherFile);
+            return weatherFileExtension switch
+            {
+                // for now, assume all weather tables in SQLite databases are daily
+                ".sqlite" => new WeatherDaily(weatherFile, weatherID, projectFile),
+                _ => throw new NotSupportedException("Unhandled weather file type '" + weatherFileExtension + "'.")
+            };
         }
 
         /// annual precipitation sum (mm)
@@ -81,15 +100,15 @@ namespace iLand.World
         public abstract void OnStartYear(Model model);
 
         // phenology class of given type
-        public Phenology GetPhenology(int phenologyIndex)
+        public Tree.LeafPhenology GetPhenology(int phenologyID)
         {
-            if (phenologyIndex >= this.TreeSpeciesPhenology.Count)
+            if (phenologyID >= this.TreeSpeciesPhenology.Count)
             {
-                throw new ArgumentOutOfRangeException(nameof(phenologyIndex), "Phenology group " + phenologyIndex + "not present. Is /project/model/species/phenology missing elements?");
+                throw new ArgumentOutOfRangeException(nameof(phenologyID), "Phenology group " + phenologyID + "not present. Is /project/model/species/phenology missing elements?");
             }
 
-            Phenology phenology = this.TreeSpeciesPhenology[phenologyIndex];
-            if (phenology.LeafType == phenologyIndex)
+            Tree.LeafPhenology phenology = this.TreeSpeciesPhenology[phenologyID];
+            if (phenology.ID == phenologyID)
             {
                 return phenology;
             }
@@ -97,38 +116,41 @@ namespace iLand.World
             // search...
             for (int index = 0; index < this.TreeSpeciesPhenology.Count; index++)
             {
-                phenology = this.TreeSpeciesPhenology[phenologyIndex];
-                if (phenology.LeafType == phenologyIndex)
+                phenology = this.TreeSpeciesPhenology[phenologyID];
+                if (phenology.ID == phenologyID)
                 {
                     return phenology;
                 }
             }
-            throw new ArgumentOutOfRangeException(nameof(phenologyIndex), String.Format("Error at SpeciesSet::phenology(): invalid group: {0}", phenologyIndex));
+            throw new ArgumentOutOfRangeException(nameof(phenologyID), String.Format("Error at SpeciesSet::phenology(): invalid group: {0}", phenologyID));
+        }
+    }
+
+    public abstract class Weather<TWeatherTimeSeries> : Weather where TWeatherTimeSeries : WeatherTimeSeries
+    {
+        private readonly TWeatherTimeSeries timeSeries;
+
+        protected Weather(Project projectFile, TWeatherTimeSeries timeSeries) 
+            : base(projectFile)
+        {
+            this.timeSeries = timeSeries;
+
+            // populate leaf phenology groups
+            this.TreeSpeciesPhenology.Add(LeafPhenology<TWeatherTimeSeries>.CreateEvergreen(this));
+            foreach (Input.ProjectFile.LeafPhenology phenology in projectFile.World.Species.Phenology)
+            {
+                if (phenology.ID < 1)
+                {
+                    throw new XmlException("Invalid phenology ID " + phenology.ID + " (ID 0 is reserved for evergreen leaves retained year round).");
+                }
+                LeafPhenology<TWeatherTimeSeries> phenologyForSpecies = new(this, phenology);
+                this.TreeSpeciesPhenology.Add(phenologyForSpecies);
+            }
         }
 
-        // setup of phenology groups
-        private void SetupTreePhenology(Project project)
+        public override TWeatherTimeSeries TimeSeries
         {
-            this.TreeSpeciesPhenology.Clear();
-            this.TreeSpeciesPhenology.Add(new Phenology((WeatherDaily)this)); // id=0
-
-            // TODO: remove PhenologyType and make Phenology XML serializable
-            foreach (PhenologyType phenology in project.World.Species.Phenology)
-            {
-                if (phenology.ID < 0)
-                {
-                    throw new XmlException("Invalid leaf type ID " + phenology.ID + ".");
-                }
-                Phenology phenologyForSpecies = new(phenology.ID,
-                                                    (WeatherDaily)this, 
-                                                    phenology.VpdMin,
-                                                    phenology.VpdMax,
-                                                    phenology.DayLengthMin,
-                                                    phenology.DayLengthMax,
-                                                    phenology.TempMin,
-                                                    phenology.TempMax);
-                this.TreeSpeciesPhenology.Add(phenologyForSpecies);
-            } 
+            get { return this.timeSeries; }
         }
     }
 }

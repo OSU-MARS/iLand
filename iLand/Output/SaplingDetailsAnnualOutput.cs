@@ -67,13 +67,13 @@ namespace iLand.Output
                                 {
                                     ResourceUnitTreeSpecies ruSpecies = saplingCell.Saplings[index].GetResourceUnitSpecies(ru);
                                     TreeSpecies treeSpecies = ruSpecies.Species;
-                                    float dbh = 100.0F * saplingCell.Saplings[index].HeightInM / treeSpecies.SaplingGrowthParameters.HeightDiameterRatio;
+                                    float dbh = 100.0F * saplingCell.Saplings[index].HeightInM / treeSpecies.SaplingGrowth.HeightDiameterRatio;
                                     // check minimum dbh
                                     if (dbh < this.mMinDbh)
                                     {
                                         continue;
                                     }
-                                    float n_repr = treeSpecies.SaplingGrowthParameters.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].HeightInM) / n_on_px;
+                                    float n_repr = treeSpecies.SaplingGrowth.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].HeightInM) / n_on_px;
 
                                     insertRow.Parameters[0].Value = model.CurrentYear;
                                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;

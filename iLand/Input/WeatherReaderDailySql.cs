@@ -16,13 +16,18 @@ namespace iLand.Input
         private readonly string weatherTableName; // database table to load this daily weather time series from
         private readonly string? weatherTableQueryFilter;
 
-        public WeatherReaderDailySql(Project projectFile, string weatherTableName)
+        public WeatherReaderDailySql(string weatherDatabaseFilePath, string weatherTableName, Project projectFile)
         {
+            if (String.IsNullOrEmpty(weatherTableName))
+            {
+                throw new ArgumentOutOfRangeException(nameof(weatherTableName));
+            }
+
             this.nextYearToLoad = 0;
             this.precipitationMultiplier = projectFile.World.Weather.PrecipitationMultiplier;
             this.temperatureShift = projectFile.World.Weather.TemperatureShift;
             this.temperatureTau = projectFile.Model.Ecosystem.TemperatureMA1tau;
-            this.weatherDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.File);
+            this.weatherDatabaseFilePath = weatherDatabaseFilePath;
             this.weatherTableName = weatherTableName;
             this.weatherTableQueryFilter = projectFile.World.Weather.DatabaseQueryFilter;
         }
@@ -50,7 +55,7 @@ namespace iLand.Input
             float previousMeanDaytimeTemperatureMA1 = Single.NaN;
             if (dailyWeather.Count > 0)
             {
-                previousMeanDaytimeTemperatureMA1 = dailyWeather.MeanDaytimeTemperatureMA1[dailyWeather.Count - 1];
+                previousMeanDaytimeTemperatureMA1 = dailyWeather.TemperatureDaytimeMeanMA1[dailyWeather.Count - 1];
             }
 
             using SqliteConnection weatherDatabase = Landscape.GetDatabaseConnection(weatherDatabaseFilePath, openReadOnly: true);
@@ -162,14 +167,14 @@ namespace iLand.Input
 
             // first order dynamic delayed model of Mäkelä 2008
             // handle first day: use tissue temperature of the last day of the previous year if available
-            dailyWeather.MeanDaytimeTemperatureMA1[0] = dailyWeather.TemperatureDaytimeMean[0];
+            dailyWeather.TemperatureDaytimeMeanMA1[0] = dailyWeather.TemperatureDaytimeMean[0];
             if (Single.IsNaN(previousMeanDaytimeTemperatureMA1) == false)
             {
-                dailyWeather.MeanDaytimeTemperatureMA1[0] = previousMeanDaytimeTemperatureMA1 + 1.0F / this.temperatureTau * (dailyWeather.TemperatureDaytimeMean[0] - previousMeanDaytimeTemperatureMA1);
+                dailyWeather.TemperatureDaytimeMeanMA1[0] = previousMeanDaytimeTemperatureMA1 + 1.0F / this.temperatureTau * (dailyWeather.TemperatureDaytimeMean[0] - previousMeanDaytimeTemperatureMA1);
             }
             for (int ma1index = 1; ma1index < dailyWeather.Count; ++ma1index)
             {
-                dailyWeather.MeanDaytimeTemperatureMA1[ma1index] = dailyWeather.MeanDaytimeTemperatureMA1[ma1index - 1] + 1.0F / this.temperatureTau * (dailyWeather.TemperatureDaytimeMean[ma1index] - dailyWeather.MeanDaytimeTemperatureMA1[ma1index - 1]);
+                dailyWeather.TemperatureDaytimeMeanMA1[ma1index] = dailyWeather.TemperatureDaytimeMeanMA1[ma1index - 1] + 1.0F / this.temperatureTau * (dailyWeather.TemperatureDaytimeMean[ma1index] - dailyWeather.TemperatureDaytimeMeanMA1[ma1index - 1]);
             }
         }
     }

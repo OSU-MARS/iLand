@@ -4,15 +4,14 @@ using System.Diagnostics;
 
 namespace iLand.Tree
 {
-    /** @class StandStatistics
-      Collects information on stand level for each tree species.
-      Call clear() to clear the statistics, then call add() for each tree and finally calculate().
-      To aggregate on a higher level, use add() for each StandStatistics object to include, and then
-      calculate() on the higher level.
-      Todo-List for new items:
-      - add a member variable and a getter
-      - add to "add(Tree)" and "calculate()"
-      - add to "add(StandStatistics)" as well!
+    /** Collects information on stand level for each tree species.
+        Call clear() to clear the statistics, then call add() for each tree and finally calculate().
+        To aggregate on a higher level, use add() for each StandStatistics object to include, and then
+        calculate() on the higher level.
+        Todo-List for new items:
+        - add a member variable and a getter
+        - add to "add(Tree)" and "calculate()"
+        - add to "add(StandStatistics)" as well!
       */
     public class ResourceUnitTreeStatistics
     {

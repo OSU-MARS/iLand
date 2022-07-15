@@ -1,5 +1,6 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
+using iLand.Tool;
 using iLand.World;
 using System;
 using System.Diagnostics;
@@ -240,34 +241,41 @@ namespace iLand.Tree
             // Adair CE, Parton WJ, del Grosso SL, et al. 2008. Simple three-pool model accurately describes patterns of long-term litter
             //   decomposition in diverse climates. Global Change Biology 14(11):2636-2660. https://doi.org/10.1111/j.1365-2486.2008.01674.x
             Span<float> waterFactorByMonth = stackalloc float[Constant.MonthsInYear];
-            for (int month = 0; month < Constant.MonthsInYear; ++month)
+            for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
             {
                 float precipET0ratio;
-                if (this.RU.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[month] > 0.0F)
+                if (this.RU.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[monthIndex] > 0.0F)
                 {
-                    precipET0ratio = this.RU.Weather.PrecipitationByMonth[month] / this.RU.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[month];
+                    precipET0ratio = this.RU.Weather.PrecipitationByMonth[monthIndex] / this.RU.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[monthIndex];
                 }
                 else
                 {
                     precipET0ratio = 0.0F;
                 }
-                waterFactorByMonth[month] = 1.0F / (1.0F + 30.0F * MathF.Exp(-8.5F * precipET0ratio));
+                waterFactorByMonth[monthIndex] = 1.0F / (1.0F + 30.0F * MathF.Exp(-8.5F * precipET0ratio));
                 // Debug.WriteLine("month " + month + " PET " + this.RU.WaterCycle.ReferenceEvapotranspiration()[month] + " prec " + this.RU.Weather.PrecipitationByMonth[month]);
             }
 
             // the calculation of weather factors requires calculated evapotranspiration. In cases without vegetation (trees or saplings)
-            WeatherTimeSeriesDaily dailyWeather = this.RU.Weather.TimeSeries;
-            float meanDailyWeatherFactor = 0.0F;
-            for (int dayIndex = this.RU.Weather.CurrentJanuary1, dayOfYear = 0; dayIndex != this.RU.Weather.NextJanuary1; ++dayIndex, ++dayOfYear)
+            float weatherFactorSumForYear = 0.0F;
+            WeatherTimeSeries weatherTimeSeries = this.RU.Weather.TimeSeries;
+            for (int weatherTimestepIndex = weatherTimeSeries.CurrentYearStartIndex, dayOfYear = 0; weatherTimestepIndex != weatherTimeSeries.NextYearStartIndex; ++weatherTimestepIndex, ++dayOfYear)
             {
                 // empirical variable Q10 model of Lloyd and Taylor (1994), see also Adair et al. (2008)
-                float ft = MathF.Exp(308.56F * (1.0F / 56.02F - 1.0F / (273.15F + dailyWeather.TemperatureDaytimeMean[dayIndex] - 227.13F)));
-                float fw = waterFactorByMonth[dailyWeather.Month[dayIndex] - 1];
+                float ft = MathF.Exp(308.56F * (1.0F / 56.02F - 1.0F / (273.15F + weatherTimeSeries.TemperatureDaytimeMean[weatherTimestepIndex] - 227.13F)));
+                float fw = waterFactorByMonth[weatherTimeSeries.Month[weatherTimestepIndex] - 1];
 
-                meanDailyWeatherFactor += ft * fw;
+                weatherFactorSumForYear += ft * fw;
             }
-            // the climate factor is defined as the arithmentic annual mean value
-            this.WeatherFactor = meanDailyWeatherFactor / this.RU.Weather.GetDaysInYear();
+
+            // the weather factor is defined as the arithmentic annual mean value
+            float weatherTimestepsInYear = weatherTimeSeries.Timestep switch
+            {
+                Timestep.Daily => DateTimeExtensions.DaysInYear(this.RU.Weather.TimeSeries.IsCurrentlyLeapYear()),
+                Timestep.Monthly => Constant.MonthsInYear,
+                _ => throw new NotSupportedException("Unhandled weather timestep " + weatherTimeSeries.Timestep + ".")
+            };
+            this.WeatherFactor = weatherFactorSumForYear / weatherTimestepsInYear;
         }
 
         /// do the yearly calculation

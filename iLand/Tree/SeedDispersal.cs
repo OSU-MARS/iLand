@@ -3,7 +3,6 @@ using iLand.Tool;
 using iLand.World;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -29,12 +28,12 @@ namespace iLand.Tree
         private float mTreeMigAlphas1, mTreeMigAlphas2, mTreeMigKappas; // seed dispersal parameters (treemig)
         private float mTreeMigFecundityPerCell; // maximum seeds per source cell
         private float mTreeMigOccupancy; // seeds required per destination regeneration pixel
-        private float mNonSeedYearFraction; // fraction of the seed production in non-seed-years
+        private float mNonMastYearFraction; // fraction of the seed production in non-seed-years
         private float mLddMaximumSeedlingDensity, mLddMinimumSeedlingDensity; // value of the kernel function that is the threhold for full coverage and LDD, respectively
         private int mIndexFactor; // multiplier between light-pixel-size and seed-pixel-size
         private readonly Grid<float> mSourceMap; // (large) seedmap used to denote the sources
-        private readonly Grid<float> mKernelSeedYear; // species specific "seed kernel" (small) for seed years
-        private readonly Grid<float> mKernelNonSeedYear; // species specific "seed kernel" (small) for non-seed-years
+        private readonly Grid<float> mKernelMastYear; // species specific "seed kernel" (small) for seed years
+        private readonly Grid<float> mKernelNonMastYear; // species specific "seed kernel" (small) for non-seed-years
         private readonly Grid<float> mKernelSerotiny; // seed kernel for extra seed rain
         private readonly Grid<float> mSeedMapSerotiny; // seed map that keeps track of serotiny events
         private readonly List<float> mLddDistance; // long distance dispersal distances (e.g. the "rings")
@@ -59,8 +58,8 @@ namespace iLand.Tree
             this.mExtSeedData = new Dictionary<string, List<float>>();
             this.mExternalSeedMap = new Grid<float>();
             this.mIndexFactor = 10;
-            this.mKernelSeedYear = new Grid<float>(); // species specific "seed kernel" (small) for seed years
-            this.mKernelNonSeedYear = new Grid<float>(); // species specific "seed kernel" (small) for non-seed-years
+            this.mKernelMastYear = new Grid<float>(); // species specific "seed kernel" (small) for seed years
+            this.mKernelNonMastYear = new Grid<float>(); // species specific "seed kernel" (small) for non-seed-years
             this.mKernelSerotiny = new Grid<float>(); // seed kernel for extra seed rain
             this.mLddDistance = new List<float>(); // long distance dispersal distances (e.g. the "rings")
             this.mLddSeedsByRing = new List<float>();  // long distance dispersal # of cells that should be affected in each "ring"
@@ -112,7 +111,7 @@ namespace iLand.Tree
             // copy values for the species parameters
             this.Species.GetTreeMigKernel(out this.mTreeMigAlphas1, out this.mTreeMigAlphas2, out this.mTreeMigKappas);
             this.mTreeMigFecundityPerCell = this.Species.FecundityM2 * Constant.SeedmapCellSizeInM * Constant.SeedmapCellSizeInM * mTreeMigOccupancy; // scale to production for the whole cell
-            this.mNonSeedYearFraction = this.Species.NonSeedYearFraction;
+            this.mNonMastYearFraction = this.Species.NonMastYearFraction;
             this.mLddMaximumSeedlingDensity = model.Project.Model.SeedDispersal.LongDistanceDispersal.MinimumSeedlingDensity;
             this.mLddMinimumSeedlingDensity = model.Project.Model.SeedDispersal.LongDistanceDispersal.MaximumSeedlingDensity;
             this.mLddRings = model.Project.Model.SeedDispersal.LongDistanceDispersal.Rings;
@@ -121,12 +120,12 @@ namespace iLand.Tree
 
             // long distance dispersal
             float ldd_area = this.SetupLongDistanceDispersal();
-            this.CreateKernel(mKernelSeedYear, mTreeMigFecundityPerCell, 1.0F - ldd_area);
+            this.CreateKernel(mKernelMastYear, mTreeMigFecundityPerCell, 1.0F - ldd_area);
 
             // the kernel for non seed years looks similar, but is simply linearly scaled down
-            // using the species parameter NonSeedYearFraction.
+            // using the species parameter NonMastYearFraction.
             // the central pixel still gets the value of 1 (i.e. 100% probability)
-            this.CreateKernel(mKernelNonSeedYear, mTreeMigFecundityPerCell * mNonSeedYearFraction, 1.0F - ldd_area);
+            this.CreateKernel(mKernelNonMastYear, mTreeMigFecundityPerCell * mNonMastYearFraction, 1.0F - ldd_area);
 
             if (this.Species.FecunditySerotiny > 0.0)
             {
@@ -145,8 +144,8 @@ namespace iLand.Tree
             if (this.mDumpSeedMaps)
             {
                 string path = model.Project.GetFilePath(ProjectDirectory.Home, model.Project.Model.SeedDispersal.DumpSeedMapsPath);
-                File.WriteAllText(String.Format("{0}/seedkernelYes_{1}.csv", path, Species.ID), mKernelSeedYear.ToString());
-                File.WriteAllText(String.Format("{0}/seedkernelNo_{1}.csv", path, Species.ID), mKernelNonSeedYear.ToString());
+                File.WriteAllText(String.Format("{0}/seedkernelYes_{1}.csv", path, Species.ID), mKernelMastYear.ToString());
+                File.WriteAllText(String.Format("{0}/seedkernelNo_{1}.csv", path, Species.ID), mKernelNonMastYear.ToString());
                 if (this.mKernelSerotiny.IsSetup())
                 {
                     File.WriteAllText(String.Format("{0}/seedkernelSerotiny_{1}.csv", path, Species.ID), mKernelSerotiny.ToString());
@@ -705,7 +704,7 @@ namespace iLand.Tree
                 if (SeedDispersal.DetectEdges(this.SeedMap))
                 {
                     // (2) distribute seed probabilites from edges
-                    this.DistributeSeedProbability(model, this.SeedMap, this.Species.IsSeedYear ? mKernelSeedYear : mKernelNonSeedYear);
+                    this.DistributeSeedProbability(model, this.SeedMap, this.Species.IsMastYear ? mKernelMastYear : mKernelNonMastYear);
                 }
 
                 // special case serotiny
@@ -829,7 +828,7 @@ namespace iLand.Tree
                     // long distance dispersal
                     if (this.mLddSeedsByRing.Count != 0)
                     {
-                        float yearScaling = this.Species.IsSeedYear ? 1.0F : mNonSeedYearFraction;
+                        float yearScaling = this.Species.IsMastYear ? 1.0F : this.mNonMastYearFraction;
                         for (int distanceIndex = 0; distanceIndex < this.mLddSeedsByRing.Count; ++distanceIndex)
                         {
                             float lddProbability = this.mLddSeedlingsPerCell; // pixels will have this probability
@@ -859,15 +858,15 @@ namespace iLand.Tree
 
         private void DistributeSeeds(Model model, Grid<float> sourceMap)
         {
-            Grid<float> kernel = mKernelSeedYear;
+            Grid<float> kernel = this.mKernelMastYear;
 
             // *** estimate seed production (based on leaf area) ***
             // calculate number of seeds; the source map holds now m2 leaf area on 20x20m pixels
             // after this step, each source cell has a value between 0 (no source) and 1 (fully covered cell)
             float fecundity = this.Species.FecundityM2;
-            if (this.Species.IsSeedYear == false)
+            if (this.Species.IsMastYear == false)
             {
-                fecundity *= mNonSeedYearFraction;
+                fecundity *= this.mNonMastYearFraction;
             }
             for (int sourceIndex = 0; sourceIndex < sourceMap.CellCount; ++sourceIndex)
             {

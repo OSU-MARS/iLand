@@ -12,7 +12,7 @@ namespace iLand.Input.ProjectFile
         public NitrogenResponseClasses NitrogenResponseClasses { get; private init; }
         public CO2Response CO2Response { get; private init; }
         public LightResponse LightResponse { get; private init; }
-        public List<PhenologyType> Phenology { get; private init; }
+        public List<LeafPhenology> Phenology { get; private init; }
 
         public Species()
         {
@@ -23,7 +23,7 @@ namespace iLand.Input.ProjectFile
             this.CO2Response = new CO2Response();
             this.LightResponse = new LightResponse();
             this.NitrogenResponseClasses = new NitrogenResponseClasses();
-            this.Phenology = new List<PhenologyType>();
+            this.Phenology = new List<LeafPhenology>();
         }
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -73,7 +73,7 @@ namespace iLand.Input.ProjectFile
                             }
                             else if (phenologyReader.IsStartElement("type"))
                             {
-                                PhenologyType phenology = new();
+                                LeafPhenology phenology = new();
                                 phenology.ReadXml(phenologyReader);
                                 this.Phenology.Add(phenology);
                             }

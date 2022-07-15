@@ -1,4 +1,4 @@
-﻿namespace iLand.Tool
+﻿namespace iLand.Input
 {
     public enum Timestep
     {

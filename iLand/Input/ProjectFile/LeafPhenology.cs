@@ -3,7 +3,7 @@ using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class PhenologyType : XmlSerializable
+    public class LeafPhenology : XmlSerializable
     {
         public int ID { get; private set; }
         public float VpdMin { get; private set; }
@@ -13,7 +13,7 @@ namespace iLand.Input.ProjectFile
         public float TempMin { get; private set; }
         public float TempMax { get; private set; }
 
-        public PhenologyType()
+        public LeafPhenology()
         {
             // no default in C++
             // this.ID;

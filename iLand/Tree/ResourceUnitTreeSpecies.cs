@@ -4,8 +4,7 @@ using System;
 
 namespace iLand.Tree
 {
-    /** @class ResourceUnitSpecies
-        The class contains data available at ResourceUnit x Species scale.
+    /** The class contains data available at ResourceUnit x Species scale.
         Data stored is either statistical (i.e. number of trees per species) or used
         within the model (e.g. fraction of utilizable Radiation).
         Important submodules are:
@@ -17,12 +16,12 @@ namespace iLand.Tree
     public class ResourceUnitTreeSpecies
     {
         public ResourceUnitTreeSpeciesGrowth BiomassGrowth { get; private init; } // the 3-PG production model of this species x resourceunit
-        public Establishment Establishment { get; private init; } // establishment submodel
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
         public float LaiFraction { get; private set; }
         public float RemovedStemVolume { get; private set; } // sum of volume with was remvoved because of death/management (m3/ha)
         public ResourceUnitTreeSpeciesResponse Response { get; private init; }
         public ResourceUnit RU { get; private init; } // return pointer to resource unit
+        public SaplingEstablishment SaplingEstablishment { get; private init; } // establishment submodel
         public SaplingProperties SaplingStats { get; private init; } // statistics for the sapling sub module
         public TreeSpecies Species { get; private init; } // return pointer to species
         public ResourceUnitTreeStatistics Statistics { get; private init; } // statistics of this species on the resource unit
@@ -40,9 +39,9 @@ namespace iLand.Tree
 
             ResourceUnitTreeSpeciesResponse speciesResponse = new(ru, this); // requires this.Species be set
             this.BiomassGrowth = new ResourceUnitTreeSpeciesGrowth(speciesResponse);
-            this.Establishment = new Establishment();
             this.RemovedStemVolume = 0.0F;
             this.Response = speciesResponse;
+            this.SaplingEstablishment = new SaplingEstablishment();
             this.SaplingStats = new SaplingProperties();
             this.Statistics = new ResourceUnitTreeStatistics(ru, this);
             this.StatisticsDead = new ResourceUnitTreeStatistics(ru, this);
