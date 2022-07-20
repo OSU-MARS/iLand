@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace iLand.Input.Tree
 {
@@ -16,7 +17,7 @@ namespace iLand.Input.Tree
             treeFile.Parse((row) =>
             {
                 ++lineNumber;
-                int standID = int.Parse(row[treeFileIndexHeader.StandID]);
+                int standID = Int32.Parse(row[treeFileIndexHeader.StandID], CultureInfo.InvariantCulture);
                 if (standID < Constant.DefaultStandID)
                 {
                     throw new NotSupportedException("Stand IDs must be zero or greater (ID " + standID + " in line " + lineNumber + " of '" + treeFilePath + "').");

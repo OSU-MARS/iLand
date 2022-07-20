@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Xml;
 
 namespace iLand.Input.ProjectFile
@@ -43,7 +44,7 @@ namespace iLand.Input.ProjectFile
                         {
                             throw new XmlException("id attribute of phenology type is missing.");
                         }
-                        this.ID = Int32.Parse(idAsString);
+                        this.ID = Int32.Parse(idAsString, CultureInfo.InvariantCulture);
                         reader.ReadStartElement();
                         break;
                     default:

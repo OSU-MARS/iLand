@@ -80,11 +80,11 @@ namespace iLand.Input
                 //    string precipitationMultiplierAsString = model.ScheduledEvents.GetEvent(model.CurrentYear + yearLoadIndex, "model.world.weather.precipitationShift");
                 //    if (temperatureAdditionAsString != null)
                 //    {
-                //        temperatureAddition = Single.Parse(temperatureAdditionAsString);
+                //        temperatureAddition = Single.Parse(temperatureAdditionAsString, CultureInfo.InvariantCulture);
                 //    }
                 //    if (precipitationMultiplierAsString != null)
                 //    {
-                //        precipitationMultiplier = Single.Parse(precipitationMultiplierAsString);
+                //        precipitationMultiplier = Single.Parse(precipitationMultiplierAsString, CultureInfo.InvariantCulture);
                 //    }
 
                 //    if (temperatureAddition != 0.0 || precipitationMultiplier != 1.0)

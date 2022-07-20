@@ -38,8 +38,8 @@ namespace iLand.Output
                 }
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeSpeciesGrowth growth = ruSpecies.BiomassGrowth;
-                    ResourceUnitTreeSpeciesResponse speciesResponse = growth.SpeciesResponse;
+                    ResourceUnitTreeSpeciesGrowth growth = ruSpecies.TreeGrowth;
+                    ResourceUnitTreeSpeciesGrowthModifiers speciesResponse = growth.Modifiers;
                     for (int month = 0; month < Constant.MonthsInYear; ++month)
                     {
                         insertRow.Parameters[0].Value = model.CurrentYear;
@@ -48,11 +48,11 @@ namespace iLand.Output
                         insertRow.Parameters[3].Value = ruSpecies.Species.ID;
                         insertRow.Parameters[4].Value = month + 1; // month
                                                                    // responses
-                        insertRow.Parameters[5].Value = speciesResponse.TemperatureResponseByMonth[month];
-                        insertRow.Parameters[6].Value = speciesResponse.SoilWaterResponseByMonth[month];
-                        insertRow.Parameters[7].Value = speciesResponse.VpdResponseByMonth[month];
-                        insertRow.Parameters[8].Value = speciesResponse.CO2ResponseByMonth[month];
-                        insertRow.Parameters[9].Value = speciesResponse.NitrogenResponseForYear;
+                        insertRow.Parameters[5].Value = speciesResponse.TemperatureModifierByMonth[month];
+                        insertRow.Parameters[6].Value = speciesResponse.SoilWaterModifierByMonth[month];
+                        insertRow.Parameters[7].Value = speciesResponse.VpdModifierByMonth[month];
+                        insertRow.Parameters[8].Value = speciesResponse.CO2ModifierByMonth[month];
+                        insertRow.Parameters[9].Value = speciesResponse.NitrogenModifierForYear;
                         insertRow.Parameters[10].Value = speciesResponse.GlobalRadiationByMonth[month];
                         insertRow.Parameters[11].Value = growth.UtilizablePar[month];
                         insertRow.Parameters[12].Value = growth.MonthlyGpp[month];

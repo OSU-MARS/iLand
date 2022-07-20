@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 
 namespace iLand.Input
@@ -56,22 +57,22 @@ namespace iLand.Input
                     switch (key)
                     {
                         case "ncols":
-                            Columns = Int32.Parse(valueAsString);
+                            this.Columns = Int32.Parse(valueAsString, CultureInfo.InvariantCulture);
                             break;
                         case "nrows":
-                            Rows = Int32.Parse(valueAsString);
+                            this.Rows = Int32.Parse(valueAsString, CultureInfo.InvariantCulture);
                             break;
                         case "xllcorner":
-                            this.lowerLeftCorner.X = Single.Parse(valueAsString);
+                            this.lowerLeftCorner.X = Single.Parse(valueAsString, CultureInfo.InvariantCulture);
                             break;
                         case "yllcorner":
-                            this.lowerLeftCorner.Y = Single.Parse(valueAsString);
+                            this.lowerLeftCorner.Y = Single.Parse(valueAsString, CultureInfo.InvariantCulture);
                             break;
                         case "cellsize":
-                            this.CellSize = Single.Parse(valueAsString);
+                            this.CellSize = Single.Parse(valueAsString, CultureInfo.InvariantCulture);
                             break;
                         case "nodata_value":
-                            this.NoDataValue = Int32.Parse(valueAsString);
+                            this.NoDataValue = Int32.Parse(valueAsString, CultureInfo.InvariantCulture);
                             break;
                         default:
                             throw new NotSupportedException("Unknown header field '" + key + "'.");
@@ -95,7 +96,7 @@ namespace iLand.Input
                 string[] values = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 for (int columnIndex = 0; columnIndex < values.Length; ++columnIndex)
                 {
-                    float value = Single.Parse(values[columnIndex]);
+                    float value = Single.Parse(values[columnIndex], CultureInfo.InvariantCulture);
                     this.data[rowIndex * Columns + columnIndex] = value;
 
                     //if (value != this.NoDataValue)

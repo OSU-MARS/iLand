@@ -400,7 +400,7 @@ namespace iLand.World
             float lightResponse = species.GetLightResponse(lriCorrection); // species specific light response (LUI, light utilization index)
 
             ruSpecies.CalculateBiomassGrowthForYear(model.Project, fromSaplingEstablishmentOrGrowth: true); // calculate the 3-PG module (this is done only once per RU); true: call comes from regeneration
-            float siteEnvironmentHeightMultiplier = ruSpecies.BiomassGrowth.SiteEnvironmentSaplingHeightGrowthMultiplier;
+            float siteEnvironmentHeightMultiplier = ruSpecies.TreeGrowth.SiteEnvironmentSaplingHeightGrowthMultiplier;
             float heightGrowthFactor = siteEnvironmentHeightMultiplier * lightResponse; // relative growth
 
             Debug.Assert((h_pot >= 0.0F) && (delta_h_pot >= 0.0F) && (lriCorrection >= 0.0F) && (lriCorrection <= 1.0F) && (heightGrowthFactor >= 0.0F) && (heightGrowthFactor <= 1.0F), "Sapling growth out of range.");

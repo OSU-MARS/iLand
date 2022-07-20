@@ -2,6 +2,7 @@
 <project>
   <model>
     <settings>
+      <maxThreads>16</maxThreads>
       <randomSeed>0</randomSeed>
     </settings>
   </model>
@@ -11,6 +12,7 @@
     </geometry>
     <initialization>
       <resourceUnitFile>resource units unbuffered 4 km weather.csv</resourceUnitFile>
+      <treeFile>TSegD_H10Cr20h10A50MD7_s04110w07020.csv</treeFile>
     </initialization>
     <species>
       <databaseFile>species_param_pnw.sqlite</databaseFile>
@@ -35,7 +37,7 @@
       </nitrogenResponseClasses>
     </species>
     <weather>
-      <file>weather 4 km 2011-2100 13GCMssp370.csv</file>
+      <file>weather 4 km 2011-2100 13GCMssp370.feather</file>
     </weather>
   </world>
 </project>

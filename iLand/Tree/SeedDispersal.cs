@@ -4,6 +4,7 @@ using iLand.World;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -189,7 +190,7 @@ namespace iLand.Tree
                     int index = buffer_list.IndexOf(this.Species.ID);
                     if (index >= 0)
                     {
-                        this.mExternalSeedBuffer = Int32.Parse(buffer_list[index + 1]);
+                        this.mExternalSeedBuffer = Int32.Parse(buffer_list[index + 1], CultureInfo.InvariantCulture);
                         // Debug.WriteLine("enabled special buffer for species " + Species.ID + ": distance of " + mExternalSeedBuffer + " pixels = " + mExternalSeedBuffer * 20.0 + " m");
                     }
 
@@ -198,7 +199,7 @@ namespace iLand.Tree
                     index = background_input_list.IndexOf(this.Species.ID);
                     if (index >= 0)
                     {
-                        this.mExternalSeedBackgroundInput = Single.Parse(background_input_list[index + 1]);
+                        this.mExternalSeedBackgroundInput = Single.Parse(background_input_list[index + 1], CultureInfo.InvariantCulture);
                         // Debug.WriteLine("enabled background seed input (for full area) for species " + Species.ID + ": p=" + mExternalSeedBackgroundInput);
                     }
 
@@ -396,7 +397,7 @@ namespace iLand.Tree
                     {
                         space.Capacity = sectorsX * sectorsY; // are initialized to 0s
                     }
-                    float fraction = Single.Parse(speciesIDs[++speciesIndex]);
+                    float fraction = Single.Parse(speciesIDs[++speciesIndex], CultureInfo.InvariantCulture);
                     space.Add(fraction);
                 }
             }

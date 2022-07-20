@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 
 namespace iLand.Input
 {
@@ -55,46 +56,46 @@ namespace iLand.Input
 
         public ResourceUnitEnvironment(ResourceUnitHeader header, string[] environmentFileRow, ResourceUnitEnvironment defaultEnvironment)
         {
-            this.AnnualNitrogenDeposition = header.AnnualNitrogenDeposition >= 0 ? Single.Parse(environmentFileRow[header.AnnualNitrogenDeposition]) : defaultEnvironment.AnnualNitrogenDeposition;
+            this.AnnualNitrogenDeposition = header.AnnualNitrogenDeposition >= 0 ? Single.Parse(environmentFileRow[header.AnnualNitrogenDeposition], CultureInfo.InvariantCulture) : defaultEnvironment.AnnualNitrogenDeposition;
             this.WeatherID = header.WeatherID >= 0 ? environmentFileRow[header.WeatherID] : defaultEnvironment.WeatherID;
-            this.GisCenterX = Single.Parse(environmentFileRow[header.CenterX]); // required field
-            this.GisCenterY = Single.Parse(environmentFileRow[header.CenterY]); // required field
-            this.ResourceUnitID = Int32.Parse(environmentFileRow[header.ResourceUnitID]); // required field
+            this.GisCenterX = Single.Parse(environmentFileRow[header.CenterX], CultureInfo.InvariantCulture); // required field
+            this.GisCenterY = Single.Parse(environmentFileRow[header.CenterY], CultureInfo.InvariantCulture); // required field
+            this.ResourceUnitID = Int32.Parse(environmentFileRow[header.ResourceUnitID], CultureInfo.InvariantCulture); // required field
 
-            this.SnagBranchRootCarbon = header.SnagBranchRootCarbon >= 0 ? Single.Parse(environmentFileRow[header.SnagBranchRootCarbon]) : defaultEnvironment.SnagBranchRootCarbon;
-            this.SnagBranchRootCNRatio = header.SnagBranchRootCNRatio >= 0 ? Single.Parse(environmentFileRow[header.SnagBranchRootCNRatio]) : defaultEnvironment.SnagBranchRootCNRatio;
-            this.SnagStemCarbon = header.SnagStemCarbon >= 0 ? Single.Parse(environmentFileRow[header.SnagStemCarbon]) : defaultEnvironment.SnagStemCarbon;
-            this.SnagStemCNRatio = header.SnagStemCNRatio >= 0 ? Single.Parse(environmentFileRow[header.SnagStemCNRatio]) : defaultEnvironment.SnagStemCNRatio;
-            this.SnagStemDecompositionRate = header.SnagStemDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SnagStemDecompositionRate]) : defaultEnvironment.SnagStemDecompositionRate;
-            this.SnagHalfLife = header.SnagHalfLife >= 0 ? Single.Parse(environmentFileRow[header.SnagHalfLife]) : defaultEnvironment.SnagsPerResourceUnit;
-            this.SnagsPerResourceUnit = header.SnagsPerResourceUnit >= 0 ? Single.Parse(environmentFileRow[header.SnagsPerResourceUnit]) : defaultEnvironment.SnagsPerResourceUnit;
+            this.SnagBranchRootCarbon = header.SnagBranchRootCarbon >= 0 ? Single.Parse(environmentFileRow[header.SnagBranchRootCarbon], CultureInfo.InvariantCulture) : defaultEnvironment.SnagBranchRootCarbon;
+            this.SnagBranchRootCNRatio = header.SnagBranchRootCNRatio >= 0 ? Single.Parse(environmentFileRow[header.SnagBranchRootCNRatio], CultureInfo.InvariantCulture) : defaultEnvironment.SnagBranchRootCNRatio;
+            this.SnagStemCarbon = header.SnagStemCarbon >= 0 ? Single.Parse(environmentFileRow[header.SnagStemCarbon], CultureInfo.InvariantCulture) : defaultEnvironment.SnagStemCarbon;
+            this.SnagStemCNRatio = header.SnagStemCNRatio >= 0 ? Single.Parse(environmentFileRow[header.SnagStemCNRatio], CultureInfo.InvariantCulture) : defaultEnvironment.SnagStemCNRatio;
+            this.SnagStemDecompositionRate = header.SnagStemDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SnagStemDecompositionRate], CultureInfo.InvariantCulture) : defaultEnvironment.SnagStemDecompositionRate;
+            this.SnagHalfLife = header.SnagHalfLife >= 0 ? Single.Parse(environmentFileRow[header.SnagHalfLife], CultureInfo.InvariantCulture) : defaultEnvironment.SnagsPerResourceUnit;
+            this.SnagsPerResourceUnit = header.SnagsPerResourceUnit >= 0 ? Single.Parse(environmentFileRow[header.SnagsPerResourceUnit], CultureInfo.InvariantCulture) : defaultEnvironment.SnagsPerResourceUnit;
 
-            this.SoilDepthInCm = header.SoilDepthInCM >= 0 ? Single.Parse(environmentFileRow[header.SoilDepthInCM]) : defaultEnvironment.SoilDepthInCm;
+            this.SoilDepthInCm = header.SoilDepthInCM >= 0 ? Single.Parse(environmentFileRow[header.SoilDepthInCM], CultureInfo.InvariantCulture) : defaultEnvironment.SoilDepthInCm;
 
-            this.SoilThetaR = header.SoilThetaR >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaR]) : defaultEnvironment.SoilThetaR;
-            this.SoilThetaS = header.SoilThetaS >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaS]) : defaultEnvironment.SoilThetaS;
-            this.SoilVanGenuchtenAlpha = header.SoilVanGenuchtenAlpha >= 0 ? Single.Parse(environmentFileRow[header.SoilVanGenuchtenAlpha]) : defaultEnvironment.SoilVanGenuchtenAlpha;
-            this.SoilVanGenuchtenN = header.SoilVanGenuchtenN >= 0 ? Single.Parse(environmentFileRow[header.SoilVanGenuchtenN]) : defaultEnvironment.SoilVanGenuchtenN;
+            this.SoilThetaR = header.SoilThetaR >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaR], CultureInfo.InvariantCulture) : defaultEnvironment.SoilThetaR;
+            this.SoilThetaS = header.SoilThetaS >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaS], CultureInfo.InvariantCulture) : defaultEnvironment.SoilThetaS;
+            this.SoilVanGenuchtenAlpha = header.SoilVanGenuchtenAlpha >= 0 ? Single.Parse(environmentFileRow[header.SoilVanGenuchtenAlpha], CultureInfo.InvariantCulture) : defaultEnvironment.SoilVanGenuchtenAlpha;
+            this.SoilVanGenuchtenN = header.SoilVanGenuchtenN >= 0 ? Single.Parse(environmentFileRow[header.SoilVanGenuchtenN], CultureInfo.InvariantCulture) : defaultEnvironment.SoilVanGenuchtenN;
 
-            this.SoilClay = header.SoilClayPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilClayPercentage]) : defaultEnvironment.SoilClay;
-            this.SoilSand = header.SoilSandPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilSandPercentage]) : defaultEnvironment.SoilSand;
-            this.SoilSilt = header.SoilSiltPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilSiltPercentage]) : defaultEnvironment.SoilSilt;
+            this.SoilClay = header.SoilClayPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilClayPercentage], CultureInfo.InvariantCulture) : defaultEnvironment.SoilClay;
+            this.SoilSand = header.SoilSandPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilSandPercentage], CultureInfo.InvariantCulture) : defaultEnvironment.SoilSand;
+            this.SoilSilt = header.SoilSiltPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilSiltPercentage], CultureInfo.InvariantCulture) : defaultEnvironment.SoilSilt;
 
-            this.SoilAvailableNitrogen = header.SoilAvailableNitrogen >= 0 ? Single.Parse(environmentFileRow[header.SoilAvailableNitrogen]) : defaultEnvironment.SoilAvailableNitrogen;
-            this.SoilEl = header.SoilEl >= 0 ? Single.Parse(environmentFileRow[header.SoilEl]) : defaultEnvironment.SoilEl;
-            this.SoilEr = header.SoilEr >= 0 ? Single.Parse(environmentFileRow[header.SoilEr]) : defaultEnvironment.SoilEr;
-            this.SoilLeaching = header.SoilLeaching >= 0 ? Single.Parse(environmentFileRow[header.SoilLeaching]) : defaultEnvironment.SoilLeaching;
-            this.SoilHumificationRate = header.SoilHumificationRate >= 0 ? Single.Parse(environmentFileRow[header.SoilHumificationRate]) : defaultEnvironment.SoilHumificationRate;
-            this.SoilOrganicC = header.SoilOrganicMatterC >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterC]) : defaultEnvironment.SoilOrganicC;
-            this.SoilOrganicDecompositionRate = header.SoilOrganicMatterDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterDecompositionRate]) : defaultEnvironment.SoilOrganicDecompositionRate;
-            this.SoilOrganicN = header.SoilOrganicMatterN >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterN]) : defaultEnvironment.SoilOrganicN;
-            this.SoilQh = header.SoilQh >= 0 ? Single.Parse(environmentFileRow[header.SoilQh]) : defaultEnvironment.SoilQh;
-            this.SoilYoungLabileC = header.SoilYoungLabileC >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileC]) : defaultEnvironment.SoilYoungLabileC;
-            this.SoilYoungLabileDecompositionRate = header.SoilYoungLabileDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileDecompositionRate]) : defaultEnvironment.SoilYoungLabileDecompositionRate;
-            this.SoilYoungLabileN = header.SoilYoungLabileN >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileN]) : defaultEnvironment.SoilYoungLabileN;
-            this.SoilYoungRefractoryC = header.SoilYoungRefractoryC >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryC]) : defaultEnvironment.SoilYoungRefractoryC;
-            this.SoilYoungRefractoryDecompositionRate = header.SoilYoungRefractoryDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryDecompositionRate]) : defaultEnvironment.SoilYoungRefractoryDecompositionRate;
-            this.SoilYoungRefractoryN = header.SoilYoungRefractoryN >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryN]) : defaultEnvironment.SoilYoungRefractoryN;
+            this.SoilAvailableNitrogen = header.SoilAvailableNitrogen >= 0 ? Single.Parse(environmentFileRow[header.SoilAvailableNitrogen], CultureInfo.InvariantCulture) : defaultEnvironment.SoilAvailableNitrogen;
+            this.SoilEl = header.SoilEl >= 0 ? Single.Parse(environmentFileRow[header.SoilEl], CultureInfo.InvariantCulture) : defaultEnvironment.SoilEl;
+            this.SoilEr = header.SoilEr >= 0 ? Single.Parse(environmentFileRow[header.SoilEr], CultureInfo.InvariantCulture) : defaultEnvironment.SoilEr;
+            this.SoilLeaching = header.SoilLeaching >= 0 ? Single.Parse(environmentFileRow[header.SoilLeaching], CultureInfo.InvariantCulture) : defaultEnvironment.SoilLeaching;
+            this.SoilHumificationRate = header.SoilHumificationRate >= 0 ? Single.Parse(environmentFileRow[header.SoilHumificationRate], CultureInfo.InvariantCulture) : defaultEnvironment.SoilHumificationRate;
+            this.SoilOrganicC = header.SoilOrganicMatterC >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterC], CultureInfo.InvariantCulture) : defaultEnvironment.SoilOrganicC;
+            this.SoilOrganicDecompositionRate = header.SoilOrganicMatterDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterDecompositionRate], CultureInfo.InvariantCulture) : defaultEnvironment.SoilOrganicDecompositionRate;
+            this.SoilOrganicN = header.SoilOrganicMatterN >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterN], CultureInfo.InvariantCulture) : defaultEnvironment.SoilOrganicN;
+            this.SoilQh = header.SoilQh >= 0 ? Single.Parse(environmentFileRow[header.SoilQh], CultureInfo.InvariantCulture) : defaultEnvironment.SoilQh;
+            this.SoilYoungLabileC = header.SoilYoungLabileC >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileC], CultureInfo.InvariantCulture) : defaultEnvironment.SoilYoungLabileC;
+            this.SoilYoungLabileDecompositionRate = header.SoilYoungLabileDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileDecompositionRate], CultureInfo.InvariantCulture) : defaultEnvironment.SoilYoungLabileDecompositionRate;
+            this.SoilYoungLabileN = header.SoilYoungLabileN >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileN], CultureInfo.InvariantCulture) : defaultEnvironment.SoilYoungLabileN;
+            this.SoilYoungRefractoryC = header.SoilYoungRefractoryC >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryC], CultureInfo.InvariantCulture) : defaultEnvironment.SoilYoungRefractoryC;
+            this.SoilYoungRefractoryDecompositionRate = header.SoilYoungRefractoryDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryDecompositionRate], CultureInfo.InvariantCulture) : defaultEnvironment.SoilYoungRefractoryDecompositionRate;
+            this.SoilYoungRefractoryN = header.SoilYoungRefractoryN >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryN], CultureInfo.InvariantCulture) : defaultEnvironment.SoilYoungRefractoryN;
 
             this.SpeciesTableName = header.SpeciesTableName >= 0 ? environmentFileRow[header.SpeciesTableName] : defaultEnvironment.SpeciesTableName;
 

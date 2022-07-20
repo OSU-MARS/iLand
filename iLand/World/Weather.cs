@@ -1,10 +1,9 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
-using iLand.Tool;
 using iLand.Tree;
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -30,7 +29,7 @@ namespace iLand.World
         public float MeanAnnualTemperature { get; protected set; } // °C
         public float[] PrecipitationByMonth { get; private init; } // mm
         public Sun Sun { get; private init; } // solar radiation class
-        public float[] TemperatureByMonth { get; private init; } // °C
+        public float[] DaytimeMeanTemperatureByMonth { get; private init; } // °C
         public float TotalAnnualRadiation { get; protected set; } // return radiation sum (MJ/m²) of the whole year
 
         protected Weather(Project projectFile)
@@ -45,7 +44,7 @@ namespace iLand.World
 
             this.PrecipitationByMonth = new float[Constant.MonthsInYear];
             this.Sun = new Sun(projectFile.World.Geometry.Latitude);
-            this.TemperatureByMonth = new float[Constant.MonthsInYear];
+            this.DaytimeMeanTemperatureByMonth = new float[Constant.MonthsInYear];
 
             if (this.DoRandomSampling)
             {
@@ -55,7 +54,7 @@ namespace iLand.World
                     List<string> strlist = Regex.Split(list, "\\W+").ToList();
                     foreach (string s in strlist)
                     {
-                        this.RandomYearList.Add(Int32.Parse(s));
+                        this.RandomYearList.Add(Int32.Parse(s, CultureInfo.InvariantCulture));
                     }
                     // check for validity
                     foreach (int year in this.RandomYearList)
@@ -72,18 +71,6 @@ namespace iLand.World
         public abstract WeatherTimeSeries TimeSeries
         {
             get;
-        }
-
-        public static Weather Create(Project projectFile, string weatherID)
-        {
-            string weatherFile = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.File);
-            string? weatherFileExtension = Path.GetExtension(weatherFile);
-            return weatherFileExtension switch
-            {
-                // for now, assume all weather tables in SQLite databases are daily
-                ".sqlite" => new WeatherDaily(weatherFile, weatherID, projectFile),
-                _ => throw new NotSupportedException("Unhandled weather file type '" + weatherFileExtension + "'.")
-            };
         }
 
         /// annual precipitation sum (mm)

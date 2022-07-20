@@ -16,7 +16,7 @@ namespace iLand.Tree
     /// <remarks>
     /// Inputs for sapling establishment are:
     /// - availability of seeds: derived from the seed-maps per species <see cref="SeedDispersal"/>
-    /// - quality of the abiotic environment (TACA model): calculations are performed here, based on weather and species responses
+    /// - quality of the abiotic environment (TACA model): calculations are performed here, based on weather and establishment modifiers
     /// - quality of the biotic environment, mainly light from LIF-values
     /// http://iland-model.org/establishment
     ///    
@@ -380,9 +380,9 @@ namespace iLand.Tree
             // calculate the response of the species to this value of psi (see also Species.GetSoilWaterModifier())
             float minimumEstablishmentPsiMPa = ruSpecies.Species.SaplingEstablishment.DroughtMortalityPsiInMPa;
             float minimumLeafOnMovingAveragePsiInMPa = 0.001F * miniumumLeafOnMovingAveragePsiInKPa; // convert to MPa
-            float waterResponse = Maths.Limit((minimumLeafOnMovingAveragePsiInMPa - minimumEstablishmentPsiMPa) / (-0.015F - minimumEstablishmentPsiMPa), 0.0F, 1.0F);
+            float waterModifier = Maths.Limit((minimumLeafOnMovingAveragePsiInMPa - minimumEstablishmentPsiMPa) / (-0.015F - minimumEstablishmentPsiMPa), 0.0F, 1.0F);
 
-            return waterResponse;
+            return waterModifier;
         }
 
         private static bool IsChillingDay(float daytimeMeanTemperature)

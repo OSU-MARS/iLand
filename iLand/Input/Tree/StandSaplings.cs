@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 
 namespace iLand.Input.Tree
 {
@@ -18,7 +19,7 @@ namespace iLand.Input.Tree
         public StandSaplings(StandSaplingsDataIndex saplingHeader, string[] row)
         {
             // required fields
-            this.StandID = int.Parse(row[saplingHeader.StandID]); // no restrictions
+            this.StandID = Int32.Parse(row[saplingHeader.StandID], CultureInfo.InvariantCulture); // no restrictions
             this.Species = row[saplingHeader.Species];
             if (string.IsNullOrWhiteSpace(Species))
             {
@@ -29,19 +30,19 @@ namespace iLand.Input.Tree
             this.Age = 1;
             if (saplingHeader.Age >= 0)
             {
-                this.Age = int.Parse(row[saplingHeader.Age]);
+                this.Age = Int32.Parse(row[saplingHeader.Age], CultureInfo.InvariantCulture);
                 if (this.Age <= 0)
                 {
                     throw new NotSupportedException("Sapling age (column 'age') for stand '" + StandID + "' is zero or negative. The minimum age is one year.");
                 }
             }
 
-            this.AgeAt4m = saplingHeader.AgeAt4m >= 0 ? float.Parse(row[saplingHeader.AgeAt4m]) : 10.0F;
-            this.Count = int.Parse(row[saplingHeader.Count]); // reqiured field
+            this.AgeAt4m = saplingHeader.AgeAt4m >= 0 ? Single.Parse(row[saplingHeader.AgeAt4m], CultureInfo.InvariantCulture) : 10.0F;
+            this.Count = Int32.Parse(row[saplingHeader.Count], CultureInfo.InvariantCulture); // reqiured field
             this.GrassCoverPercentage = -1;
             if (saplingHeader.GrassCover >= 0)
             {
-                this.GrassCoverPercentage = int.Parse(row[saplingHeader.GrassCover]);
+                this.GrassCoverPercentage = Int32.Parse(row[saplingHeader.GrassCover], CultureInfo.InvariantCulture);
                 if ((this.GrassCoverPercentage < 0) || (this.GrassCoverPercentage > 100))
                 {
                     throw new NotSupportedException("The grass cover percentage (column 'grass_cover') for stand '" + this.StandID + "' is '" + this.GrassCoverPercentage + "' is invalid.");
@@ -50,18 +51,18 @@ namespace iLand.Input.Tree
 
             if (saplingHeader.Height >= 0)
             {
-                this.Height = float.Parse(row[saplingHeader.Height]);
+                this.Height = Single.Parse(row[saplingHeader.Height], CultureInfo.InvariantCulture);
                 this.MaxHeight = Constant.NoDataSingle;
                 this.MinHeight = Constant.NoDataSingle;
             }
             else
             {
                 this.Height = Constant.NoDataSingle;
-                this.MaxHeight = float.Parse(row[saplingHeader.HeightMax]);
-                this.MinHeight = float.Parse(row[saplingHeader.HeightMin]);
+                this.MaxHeight = Single.Parse(row[saplingHeader.HeightMax], CultureInfo.InvariantCulture);
+                this.MinHeight = Single.Parse(row[saplingHeader.HeightMin], CultureInfo.InvariantCulture);
             }
 
-            this.MinLightIntensity = saplingHeader.MinLightIntensity >= 0 ? float.Parse(row[saplingHeader.MinLightIntensity]) : 1.0F;
+            this.MinLightIntensity = saplingHeader.MinLightIntensity >= 0 ? Single.Parse(row[saplingHeader.MinLightIntensity], CultureInfo.InvariantCulture) : 1.0F;
         }
     }
 }

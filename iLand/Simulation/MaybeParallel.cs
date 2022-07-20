@@ -12,22 +12,25 @@ namespace iLand.Simulation
         */
     public class MaybeParallel<TLocal>
     {
-        private readonly List<TLocal> workUnitCollection;
+        private readonly List<TLocal> parallelizableItems;
 
-        public bool IsMultithreaded { get; set; }
+        public int MaximumThreads { get; set; }
 
-        public MaybeParallel(List<TLocal> workUnits)
+        public MaybeParallel(List<TLocal> parallelizableItems)
         {
-            this.workUnitCollection = workUnits;
+            this.parallelizableItems = parallelizableItems;
         }
 
         // run an action in parallel
         public void ForEach(Action<TLocal> action)
         {
-            if (this.IsMultithreaded && (this.workUnitCollection.Count > 3))
+            if ((this.MaximumThreads > 1) && (this.parallelizableItems.Count > 3))
             {
-                
-                Parallel.ForEach(this.workUnitCollection, (TLocal workUnit) =>
+                ParallelOptions parallelOptions = new()
+                {
+                    MaxDegreeOfParallelism = this.MaximumThreads
+                };
+                Parallel.ForEach(this.parallelizableItems, parallelOptions, (TLocal workUnit) =>
                 {
                     action.Invoke(workUnit);
                 });
@@ -35,7 +38,7 @@ namespace iLand.Simulation
             else
             {
                 // single threaded operation
-                foreach (TLocal workUnit in this.workUnitCollection)
+                foreach (TLocal workUnit in this.parallelizableItems)
                 {
                     action.Invoke(workUnit);
                 }

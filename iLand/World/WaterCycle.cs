@@ -143,35 +143,18 @@ namespace iLand.World
             return (laiConifer, laiBroadleaf, laiWeightedCanopyConductance);
         }
 
-        /// calculate responses for ground vegetation, i.e. for "unstocked" areas.
-        /// this duplicates calculations done in Species.
-        /// @return Minimum of vpd and soilwater response for default
-        private static float GetLimitingWaterVpdModifier(float psiInKilopascals, float vpdInKilopascals)
-        {
-            // constant parameters used for ground vegetation:
-            const float mPsiMin = 1.5F; // MPa
-            const float mRespVpdExponent = -0.6F;
-            // see TreeSpecies.GetSoilWaterModifier() and ResourceUnitTreeSpeciesResponse.GetLimitingSoilWaterOrVpdModifier()
-            float psiMPa = 0.001F * psiInKilopascals; // convert to MPa
-            float waterModifier = Maths.Limit(1.0F - psiMPa / mPsiMin, 0.0F, 1.0F);
-            // see Species.GetVpdModifier()
-
-            float vpdModifier = MathF.Exp(mRespVpdExponent * vpdInKilopascals);
-            return Math.Min(waterModifier, vpdModifier);
-        }
-
         /// Calculate combined VPD and soil water response for all species on the RU. This is used for calculation of the transpiration.
         private float GetSoilAtmosphereModifier(float psiInKilopascals, float vpdInKilopascals)
         {
-            float soilAtmosphereModifier = 0.0F; // LAI weighted minimum response for all speices on the RU
+            float soilAtmosphereModifier = 0.0F; // LAI weighted minimum modifier for all species on the RU
             float totalLaiFactor = 0.0F;
             foreach (ResourceUnitTreeSpecies ruSpecies in this.ru.Trees.SpeciesAvailableOnResourceUnit)
             {
                 if (ruSpecies.LaiFraction > 0.0F)
                 {
-                    // retrieve the minimum of VPD / soil water response for that species
-                    ruSpecies.Response.GetLimitingSoilWaterOrVpdModifier(psiInKilopascals, vpdInKilopascals, out float limitingResponse);
-                    soilAtmosphereModifier += limitingResponse * ruSpecies.LaiFraction;
+                    // retrieve the minimum of VPD and soil water modifier for species
+                    float limitingModifier = ruSpecies.TreeGrowth.Modifiers.GetMostLimitingSoilWaterOrVpdModifier(psiInKilopascals, vpdInKilopascals);
+                    soilAtmosphereModifier += limitingModifier * ruSpecies.LaiFraction;
                     totalLaiFactor += ruSpecies.LaiFraction;
                 }
             }
@@ -179,11 +162,11 @@ namespace iLand.World
             if (totalLaiFactor < 1.0F)
             {
                 // the LAI is below 1: the rest is considered as "ground vegetation"
-                soilAtmosphereModifier += WaterCycle.GetLimitingWaterVpdModifier(psiInKilopascals, vpdInKilopascals) * (1.0F - totalLaiFactor);
+                soilAtmosphereModifier += WaterCycle.GetUnderstoryLimitingWaterVpdModifier(psiInKilopascals, vpdInKilopascals) * (1.0F - totalLaiFactor);
             }
 
-            // add an aging factor to the total response (averageAging: leaf area weighted mean aging value):
-            // conceptually: response = min(vpd_response, water_response)*aging
+            // add an aging factor to the total growth modifier (averageAging: leaf area weighted mean aging value):
+            // conceptually: totalModifier = agingModifier * min(vpdModifier, waterModifier)
             if (totalLaiFactor == 1.0F)
             {
                 soilAtmosphereModifier *= ru.Trees.AverageLeafAreaWeightedAgingFactor; // no ground cover: use aging value for all LA
@@ -195,9 +178,24 @@ namespace iLand.World
 
             if (this.ru.Trees.AverageLeafAreaWeightedAgingFactor > 1.0F || this.ru.Trees.AverageLeafAreaWeightedAgingFactor < 0.0F || soilAtmosphereModifier < 0.0F || soilAtmosphereModifier > 1.0F)
             {
-                throw new NotSupportedException("Average aging or soil atmosphere response invalid. Aging: " + ru.Trees.AverageLeafAreaWeightedAgingFactor + ", soil-atmosphere response " + soilAtmosphereModifier + ", total LAI factor: " + totalLaiFactor + ".");
+                throw new NotSupportedException("Average aging or soil atmosphere modifier invalid. Aging: " + ru.Trees.AverageLeafAreaWeightedAgingFactor + ", soil-atmosphere response " + soilAtmosphereModifier + ", total LAI factor: " + totalLaiFactor + ".");
             }
             return soilAtmosphereModifier;
+        }
+
+        /// calculate responses for ground vegetation, i.e. for "unstocked" areas.
+        /// Same as tree species calculations but different limiting matric potential.
+        /// @return Minimum of vpd and soil water modifer
+        private static float GetUnderstoryLimitingWaterVpdModifier(float psiInKilopascals, float vpdInKilopascals)
+        {
+            // constant parameters used for ground vegetation:
+            // see TreeSpecies.GetSoilWaterModifier() and ResourceUnitTreeSpeciesResponse.GetLimitingSoilWaterOrVpdModifier()
+            float psiMPa = 0.001F * psiInKilopascals; // convert to MPa
+            float waterModifier = Maths.Limit(1.0F - psiMPa / 1.5F, 0.0F, 1.0F);
+            // see Species.GetVpdModifier()
+
+            float vpdModifier = MathF.Exp(-0.6F * vpdInKilopascals);
+            return Math.Min(waterModifier, vpdModifier);
         }
 
         /// Main Water Cycle function. This function triggers all water related tasks for
@@ -274,11 +272,11 @@ namespace iLand.World
 
                 // transpiration of the vegetation and of water intercepted in canopy
                 // implicit assumption: water does not remain in canopy between days
-                // calculate the LAI-weighted response values for soil water and vpd:
+                // calculate the LAI-weighted growth modifiers for soil water and VPD
                 float interceptionBeforeTranspiration = this.Canopy.TotalInterceptedWaterInMM;
-                float soilAtmosphereResponse = this.GetSoilAtmosphereModifier(currentPsi, weatherTimeSeries.VpdMeanInKPa[weatherTimestepIndex]);
+                float soilAtmosphereModifier = this.GetSoilAtmosphereModifier(currentPsi, weatherTimeSeries.VpdMeanInKPa[weatherTimestepIndex]);
                 float dayLengthInHours = this.ru.Weather.Sun.GetDayLengthInHours(dayOfYearIndex);
-                float evapotranspirationInMM = this.Canopy.FlowDayEvapotranspiration3PG(projectFile, (WeatherTimeSeriesDaily)weatherTimeSeries, weatherTimestepIndex, dayLengthInHours, soilAtmosphereResponse);
+                float evapotranspirationInMM = this.Canopy.FlowEvapotranspirationTimestep3PG(projectFile, weatherTimeSeries, weatherTimestepIndex, dayLengthInHours, soilAtmosphereModifier);
                 // if there is some flow from intercepted water to the ground -> add to "water_to_the_ground"
                 if (this.Canopy.TotalInterceptedWaterInMM < interceptionBeforeTranspiration)
                 {

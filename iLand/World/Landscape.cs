@@ -124,20 +124,38 @@ namespace iLand.World
             }
 
             // instantiate resource units only where defined in resource unit file
+            string weatherFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.File);
+            string? weatherFileExtension = Path.GetExtension(weatherFilePath);
+            WeatherReaderMonthly? monthlyWeatherReader = weatherFileExtension switch
+            {
+                // for now, assume .csv and .feather weather is monthly and all weather tables in SQLite databases are daily
+                ".csv" => new WeatherReaderMonthlyCsv(weatherFilePath),
+                ".feather" => new WeatherReaderMonthlyFeather(weatherFilePath),
+                ".sqlite" => null,
+                _ => throw new NotSupportedException("Unhandled weather file type '" + weatherFileExtension + "'.")
+            };
+
             for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitReader.Environments.Count; ++resourceUnitIndex)
             {
                 ResourceUnitEnvironment environment = resourceUnitReader.Environments[resourceUnitIndex];
 
-                if (this.WeatherByID.TryGetValue(environment.WeatherID, out Weather? weather) == false)
+                string weatherID = environment.WeatherID;
+                if (this.WeatherByID.TryGetValue(weatherID, out Weather? weather) == false)
                 {
                     // create only those climate sets that are really used in the current landscape
-                    weather = Weather.Create(projectFile, environment.WeatherID);
-                    this.WeatherByID.Add(environment.WeatherID, weather);
+                    if (monthlyWeatherReader != null)
+                    {
+                        weather = new WeatherMonthly(projectFile, monthlyWeatherReader.MonthlyWeatherByID[weatherID]);
+                    }
+                    else
+                    {
+                        weather = new WeatherDaily(weatherFilePath, weatherID, projectFile);
+                    }
+                    this.WeatherByID.Add(weatherID, weather);
                 }
                 if (this.SpeciesSetsByTableName.TryGetValue(environment.SpeciesTableName, out TreeSpeciesSet? treeSpeciesSet) == false)
                 {
-                    treeSpeciesSet = new(environment.SpeciesTableName);
-                    treeSpeciesSet.Setup(projectFile);
+                    treeSpeciesSet = new(projectFile, environment.SpeciesTableName);
                     this.SpeciesSetsByTableName.Add(environment.SpeciesTableName, treeSpeciesSet);
                 }
 

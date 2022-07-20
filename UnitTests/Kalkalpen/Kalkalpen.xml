@@ -65,8 +65,9 @@
       <carbonCycleEnabled>true</carbonCycleEnabled>
       <expressionLinearizationEnabled>true</expressionLinearizationEnabled>
       <growthEnabled>true</growthEnabled>
+      <!-- maximum number of compute threads to run in parallel when timestepping, default is half the number of threads supported by the processor -->
+      <maxThreads>1</maxThreads>
       <mortalityEnabled>true</mortalityEnabled>
-      <multithreading>false</multithreading>
       <regenerationEnabled>true</regenerationEnabled>
       <!-- the default soil permanent wilt potential is -4000 kPa -->
       <!--<soilPermanentWiltPotential>-4000.0</soilPermanentWiltPotential>-->

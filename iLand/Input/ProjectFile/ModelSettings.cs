@@ -15,10 +15,11 @@ namespace iLand.Input.ProjectFile
 		// if false, trees will apply/read light patterns, but do not grow
 		public bool GrowthEnabled { get; private set; }
 
+		public int MaxThreads { get; private set; }
+
 		// if false, no natural (intrinsic+stress) mortality occurs
 		public bool MortalityEnabled { get; private set; }
 
-		public bool Multithreading { get; private set; }
 		public float OverrideGppPerYear { get; private set; }
 		public int? RandomSeed { get; private set; }
 
@@ -39,7 +40,7 @@ namespace iLand.Input.ProjectFile
 			this.ExpressionLinearizationEnabled = false;
 			this.GrowthEnabled = true;
 			this.MortalityEnabled = true;
-			this.Multithreading = false;
+			this.MaxThreads = Environment.ProcessorCount / 2; // one thread per core, assuming a hyperthreaded processor with only p-cores
 			this.OverrideGppPerYear = 0.0F;
 			this.RandomSeed = null;
 			this.RegenerationEnabled = false;
@@ -82,8 +83,8 @@ namespace iLand.Input.ProjectFile
 				case "usePARFractionBelowGroundAllocation":
 					this.UseParFractionBelowGroundAllocation = reader.ReadElementContentAsBoolean();
 					break;
-				case "multithreading":
-					this.Multithreading = reader.ReadElementContentAsBoolean();
+				case "maxThreads":
+					this.MaxThreads = reader.ReadElementContentAsInt();
 					break;
 				case "randomSeed":
 					this.RandomSeed = reader.ReadElementContentAsInt();

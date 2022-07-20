@@ -24,103 +24,105 @@ namespace iLand.Tree
         //public static int TreesCreated { get; set; }
 
         // various flags
-        private readonly List<TreeFlags> flags;
+        private TreeFlags[] flags;
 
-        public List<int> Age { get; private init; } // the tree age (years)
-        public List<float> Dbh { get; private init; } // diameter at breast height in cm
-        public List<float> DbhDelta { get; private init; } // diameter growth [cm]
-        public List<float> Height { get; private init; } // tree height in m
-        public List<float> LeafArea { get; private init; } // leaf area (m2) of the tree
-        public List<Point> LightCellIndexXY { get; private init; } // index of the trees position on the basic LIF grid
-        public List<float> LightResourceIndex { get; private init; } // LRI of the tree (updated during readStamp())
-        public List<float> LightResponse { get; private init; } // light response used for distribution of biomass on RU level
-        public List<float> NppReserve { get; private init; } // NPP reserve pool [kg] - stores a part of assimilates for use in less favorable years
-        public List<float> Opacity { get; private init; } // multiplier on LIP weights, depending on leaf area status (opacity of the crown)
-        public ResourceUnit RU { get; private init; } // pointer to the ressource unit the tree belongs to.
-        public TreeSpecies Species { get; private init; } // pointer to the tree species of the tree.
-        public List<LightStamp> Stamp { get; private init; }
-        public List<int> StandID { get; private init; }
-        public List<int> Tag { get; private init; } // (usually) numerical unique ID of the tree
+        public int Count { get; private set; }
+
+        public int[] Age { get; private set; } // the tree age (years)
+        public float[] Dbh { get; private set; } // diameter at breast height in cm
+        public float[] DbhDelta { get; private set; } // diameter growth [cm]
+        public float[] Height { get; private set; } // tree height in m
+        public float[] LeafArea { get; private set; } // leaf area (m2) of the tree
+        public Point[] LightCellIndexXY { get; private set; } // index of the trees position on the basic LIF grid
+        public float[] LightResourceIndex { get; private set; } // LRI of the tree (updated during readStamp())
+        public float[] LightResponse { get; private set; } // light response used for distribution of biomass on RU level
+        public float[] NppReserve { get; private set; } // NPP reserve pool [kg] - stores a part of assimilates for use in less favorable years
+        public float[] Opacity { get; private set; } // multiplier on LIP weights, depending on leaf area status (opacity of the crown)
+        public ResourceUnit RU { get; private set; } // pointer to the ressource unit the tree belongs to.
+        public TreeSpecies Species { get; private set; } // pointer to the tree species of the tree.
+        public LightStamp[] Stamp { get; private set; }
+        public int[] StandID { get; private set; }
+        public int[] Tag { get; private set; } // (usually) numerical unique ID of the tree
 
         // biomass properties
-        public List<float> CoarseRootMass { get; private init; } // mass (kg) of coarse roots
-        public List<float> FineRootMass { get; private init; } // mass (kg) of fine roots
-        public List<float> FoliageMass { get; private init; } // mass (kg) of foliage
-        public List<float> StemMass { get; private init; } // mass (kg) of stem
-        public List<float> StressIndex { get; private init; } // the scalar stress rating (0..1), used for mortality
+        public float[] CoarseRootMass { get; private set; } // mass (kg) of coarse roots
+        public float[] FineRootMass { get; private set; } // mass (kg) of fine roots
+        public float[] FoliageMass { get; private set; } // mass (kg) of foliage
+        public float[] StemMass { get; private set; } // mass (kg) of stem
+        public float[] StressIndex { get; private set; } // the scalar stress rating (0..1), used for mortality
 
         public Trees(Landscape landscape, ResourceUnit resourceUnit, TreeSpecies species)
         {
             this.heightGrid = landscape.HeightGrid;
             this.lightGrid = landscape.LightGrid;
-            this.flags = new(Constant.Simd128x4.Width);
-            
-            this.Age = new(Constant.Simd128x4.Width);
-            this.CoarseRootMass = new(Constant.Simd128x4.Width);
-            this.Dbh = new(Constant.Simd128x4.Width);
-            this.DbhDelta = new(Constant.Simd128x4.Width);
-            this.FineRootMass = new(Constant.Simd128x4.Width);
-            this.FoliageMass = new(Constant.Simd128x4.Width);
-            this.Height = new(Constant.Simd128x4.Width);
-            this.LeafArea = new(Constant.Simd128x4.Width);
-            this.LightCellIndexXY = new(Constant.Simd128x4.Width);
-            this.LightResourceIndex = new(Constant.Simd128x4.Width);
-            this.LightResponse = new(Constant.Simd128x4.Width);
-            this.NppReserve = new(Constant.Simd128x4.Width);
-            this.Opacity = new(Constant.Simd128x4.Width);
+            this.flags = new TreeFlags[Constant.Simd128x4.Width];
+
+            this.Count = 0;
+
+            this.Age = new int[Constant.Simd128x4.Width];
+            this.CoarseRootMass = new float[Constant.Simd128x4.Width];
+            this.Dbh = new float[Constant.Simd128x4.Width];
+            this.DbhDelta = new float[Constant.Simd128x4.Width];
+            this.FineRootMass = new float[Constant.Simd128x4.Width];
+            this.FoliageMass = new float[Constant.Simd128x4.Width];
+            this.Height = new float[Constant.Simd128x4.Width];
+            this.LeafArea = new float[Constant.Simd128x4.Width];
+            this.LightCellIndexXY = new Point[Constant.Simd128x4.Width];
+            this.LightResourceIndex = new float[Constant.Simd128x4.Width];
+            this.LightResponse = new float[Constant.Simd128x4.Width];
+            this.NppReserve = new float[Constant.Simd128x4.Width];
+            this.Opacity = new float[Constant.Simd128x4.Width];
             this.RU = resourceUnit;
             this.Species = species;
-            this.Stamp = new(Constant.Simd128x4.Width);
-            this.StandID = new(Constant.Simd128x4.Width);
-            this.StemMass = new(Constant.Simd128x4.Width);
-            this.StressIndex = new(Constant.Simd128x4.Width);
-            this.Tag = new(Constant.Simd128x4.Width);
+            this.Stamp = new LightStamp[Constant.Simd128x4.Width];
+            this.StandID = new int[Constant.Simd128x4.Width];
+            this.StemMass = new float[Constant.Simd128x4.Width];
+            this.StressIndex = new float[Constant.Simd128x4.Width];
+            this.Tag = new int[Constant.Simd128x4.Width];
         }
 
         public int Capacity 
         { 
-            get { return this.Height.Capacity; }
-            set
-            {
-                if (value % Constant.Simd128x4.Width != 0)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(value), "Capacity is not an integer multiple of SIMD width.");
-                }
-
-                this.flags.Capacity = value;
-
-                this.Age.Capacity = value;
-                this.CoarseRootMass.Capacity = value;
-                this.Dbh.Capacity = value;
-                this.DbhDelta.Capacity = value;
-                this.FineRootMass.Capacity = value;
-                this.FoliageMass.Capacity = value;
-                this.Height.Capacity = value;
-                this.Tag.Capacity = value;
-                this.LeafArea.Capacity = value;
-                this.LightCellIndexXY.Capacity = value;
-                this.LightResourceIndex.Capacity = value;
-                this.LightResponse.Capacity = value;
-                this.NppReserve.Capacity = value;
-                this.Opacity.Capacity = value;
-                this.Stamp.Capacity = value;
-                this.StandID.Capacity = value;
-                this.StemMass.Capacity = value;
-                this.StressIndex.Capacity = value;
-            }
+            get { return this.Height.Length; }
         }
         
-        public int Count 
-        { 
-            get { return this.Height.Count; }
-        }
-
         /// @property position The tree does not store the floating point coordinates but only the index of pixel on the LIF grid
         /// TODO: store input coordinates of tree
         public PointF GetCellCenterPoint(int treeIndex) 
         { 
             Debug.Assert(this.lightGrid != null);
             return this.lightGrid.GetCellProjectCentroid(this.LightCellIndexXY[treeIndex]); 
+        }
+
+        public void Resize(int newSize)
+        {
+            if ((newSize < this.Count) || (newSize % Constant.Simd128x4.Width != 0)) // enforces positive size (unless a bug allows Count to become negative)
+            {
+                throw new ArgumentOutOfRangeException(nameof(newSize), "New size of " + newSize + " is smaller than the current number of live trees (" + this.Count + ") or is not an integer multiple of SIMD width.");
+            }
+
+            this.flags = this.flags.Resize(newSize);
+
+            this.Age = this.Age.Resize(newSize);
+            this.CoarseRootMass = this.CoarseRootMass.Resize(newSize);
+            this.Dbh = this.Dbh.Resize(newSize);
+            this.DbhDelta = this.DbhDelta.Resize(newSize);
+            this.FineRootMass = this.FineRootMass.Resize(newSize);
+            this.FoliageMass = this.FoliageMass.Resize(newSize);
+            this.Height = this.Height.Resize(newSize); // updates this.Capacity
+            this.LeafArea = this.LeafArea.Resize(newSize);
+            this.LightCellIndexXY = this.LightCellIndexXY.Resize(newSize);
+            this.LightResourceIndex = this.LightResourceIndex.Resize(newSize);
+            this.LightResponse = this.LightResponse.Resize(newSize);
+            this.NppReserve = this.NppReserve.Resize(newSize);
+            this.Opacity = this.Opacity.Resize(newSize);
+            // this.RU is scalar
+            // this.Species is scalar
+            this.Stamp = this.Stamp.Resize(newSize);
+            this.StandID = this.StandID.Resize(newSize);
+            this.StemMass = this.StemMass.Resize(newSize);
+            this.StressIndex = this.StressIndex.Resize(newSize);
+            this.Tag = this.Tag.Resize(newSize);
         }
 
         public void SetLightCellIndex(int treeIndex, PointF pos) 
@@ -130,7 +132,7 @@ namespace iLand.Tree
         }
 
         // private bool IsDebugging() { return this.flags[treeIndex].HasFlag(TreeFlags.Debugging); }
-        public void SetDebugging(int treeIndex, bool enable = true) { this.SetFlag(treeIndex, TreeFlags.Debugging, enable); }
+        public void SetDebugging(int treeIndex) { this.SetOrClearFlag(treeIndex, TreeFlags.Debugging, true); }
 
         // death reasons
         public bool IsCutDown(int treeIndex) { return this.flags[treeIndex].HasFlag(TreeFlags.DeadCutAndDrop); }
@@ -140,11 +142,11 @@ namespace iLand.Tree
         public bool IsDeadWind(int treeIndex) { return this.flags[treeIndex].HasFlag(TreeFlags.DeadFromWind); }
         public bool IsHarvested(int treeIndex) { return this.flags[treeIndex].HasFlag(TreeFlags.Harvested); }
 
-        public void SetDeathReasonBarkBeetle(int treeIndex) { this.SetFlag(treeIndex, TreeFlags.DeadFromBarkBeetles, true); }
-        public void SetDeathReasonCutAndDrop(int treeIndex) { this.SetFlag(treeIndex, TreeFlags.DeadCutAndDrop, true); }
-        public void SetDeathReasonFire(int treeIndex) { this.SetFlag(treeIndex, TreeFlags.DeadFromFire, true); }
-        public void SetDeathReasonHarvested(int treeIndex) { this.SetFlag(treeIndex, TreeFlags.Harvested, true); }
-        public void SetDeathReasonWind(int treeIndex) { this.SetFlag(treeIndex, TreeFlags.DeadFromWind, true); }
+        public void SetDeathReasonBarkBeetle(int treeIndex) { this.SetOrClearFlag(treeIndex, TreeFlags.DeadFromBarkBeetles, true); }
+        public void SetDeathReasonCutAndDrop(int treeIndex) { this.SetOrClearFlag(treeIndex, TreeFlags.DeadCutAndDrop, true); }
+        public void SetDeathReasonFire(int treeIndex) { this.SetOrClearFlag(treeIndex, TreeFlags.DeadFromFire, true); }
+        public void SetDeathReasonHarvested(int treeIndex) { this.SetOrClearFlag(treeIndex, TreeFlags.Harvested, true); }
+        public void SetDeathReasonWind(int treeIndex) { this.SetOrClearFlag(treeIndex, TreeFlags.DeadFromWind, true); }
 
         // management flags (used by ABE management system)
         public bool IsMarkedForHarvest(int treeIndex) { return this.flags[treeIndex].HasFlag(TreeFlags.MarkedForHarvest); }
@@ -152,13 +154,13 @@ namespace iLand.Tree
         public bool IsMarkedAsCropTree(int treeIndex) { return this.flags[treeIndex].HasFlag(TreeFlags.CropTree); }
         public bool IsMarkedAsCropCompetitor(int treeIndex) { return this.flags[treeIndex].HasFlag(TreeFlags.CropCompetitor); }
 
-        public void SetMarkForHarvest(int treeIndex, bool mark) { this.SetFlag(treeIndex, TreeFlags.MarkedForHarvest, mark); }
-        public void SetMarkForCut(int treeIndex, bool mark) { this.SetFlag(treeIndex, TreeFlags.MarkedForCut, mark); }
-        public void SetMarkAsCropTree(int treeIndex, bool mark) { this.SetFlag(treeIndex, TreeFlags.CropTree, mark); }
-        public void SetMarkAsCropCompetitor(int treeIndex, bool mark) { this.SetFlag(treeIndex, TreeFlags.CropCompetitor, mark); }
+        public void SetOrClearCropCompetitor(int treeIndex, bool isCompetitor) { this.SetOrClearFlag(treeIndex, TreeFlags.CropCompetitor, isCompetitor); }
+        public void SetOrClearCropTree(int treeIndex, bool isCropTree) { this.SetOrClearFlag(treeIndex, TreeFlags.CropTree, isCropTree); }
+        public void SetOrClearForCut(int treeIndex, bool isForCut) { this.SetOrClearFlag(treeIndex, TreeFlags.MarkedForCut, isForCut); }
+        public void SetOrClearForHarvest(int treeIndex, bool isForHarvest) { this.SetOrClearFlag(treeIndex, TreeFlags.MarkedForHarvest, isForHarvest); }
 
         /// set a Flag 'flag' to the value 'value'.
-        private void SetFlag(int treeIndex, TreeFlags flag, bool value)
+        private void SetOrClearFlag(int treeIndex, TreeFlags flag, bool value)
         {
             if (value)
             {
@@ -195,64 +197,79 @@ namespace iLand.Tree
                 throw new ArgumentOutOfRangeException(nameof(lightCellIndexXY));
             }
 
-            this.flags.Add(TreeFlags.None);
+            if (this.Count == this.Capacity)
+            {
+                this.Resize(2 * this.Capacity); // for now, default to same size doubling as List<T>
+            }
 
-            this.Age.Add(ageInYears);
-            this.CoarseRootMass.Add(this.Species.GetBiomassCoarseRoot(dbhInCm));
-            this.Dbh.Add(dbhInCm);
-            this.DbhDelta.Add(0.1F); // initial value: used in growth() to estimate diameter increment
+            this.flags[this.Count] = TreeFlags.None;
+
+            this.Age[this.Count] = ageInYears;
+            this.CoarseRootMass[this.Count] = this.Species.GetBiomassCoarseRoot(dbhInCm);
+            this.Dbh[this.Count] = dbhInCm;
+            this.DbhDelta[this.Count] = 0.1F; // initial value: used in growth() to estimate diameter increment
 
             float foliageBiomass = this.Species.GetBiomassFoliage(dbhInCm);
-            this.FineRootMass.Add(this.Species.FinerootFoliageRatio * foliageBiomass);
-            this.FoliageMass.Add(foliageBiomass);
-            this.Height.Add(heightInM);
+            this.FineRootMass[this.Count] = this.Species.FinerootFoliageRatio * foliageBiomass;
+            this.FoliageMass[this.Count] = foliageBiomass;
+            this.Height[this.Count] = heightInM;
 
             float leafAreaInM2 = this.Species.SpecificLeafArea * foliageBiomass; // leafArea [m²] = specificLeafArea [m²/kg] * leafMass [kg]
-            this.LeafArea.Add(leafAreaInM2);
+            this.LeafArea[this.Count] = leafAreaInM2;
 
-            this.LightCellIndexXY.Add(lightCellIndexXY);
-            this.LightResourceIndex.Add(0.0F);
-            this.LightResponse.Add(0.0F);
+            this.LightCellIndexXY[this.Count] = lightCellIndexXY;
+            this.LightResourceIndex[this.Count] = 0.0F;
+            this.LightResponse[this.Count] = 0.0F;
 
             float nppReserve = (1.0F + this.Species.FinerootFoliageRatio) * foliageBiomass; // initial value
-            this.NppReserve.Add(nppReserve);
+            this.NppReserve[this.Count] = nppReserve;
 
             LightStamp stamp = this.Species.GetStamp(dbhInCm, heightInM);
             float opacity = 1.0F - MathF.Exp(-lightStampBeerLambertK * leafAreaInM2 / stamp.CrownArea);
-            this.Opacity.Add(opacity);
+            this.Opacity[this.Count] = opacity;
             
-            this.Stamp.Add(stamp);
-            this.StandID.Add(Constant.DefaultStandID); // TODO: how not to add all regeneration to the default stand?
-            this.StemMass.Add(this.Species.GetBiomassStem(dbhInCm));
-            this.StressIndex.Add(0.0F);
+            this.Stamp[this.Count] = stamp;
+            this.StandID[this.Count] = Constant.DefaultStandID; // TODO: how not to add all regeneration to the default stand?
+            this.StemMass[this.Count] = this.Species.GetBiomassStem(dbhInCm);
+            this.StressIndex[this.Count] = 0.0F;
 
             // best effort default: doesn't guarantee unique tree ID when tree lists are combined with regeneration or if tags are
-            // partially specified in individual tree input
-            this.Tag.Add(this.Tag.Count);
+            // partially specified in individual tree input but does at least provide unique IDs during initial resource unit
+            // population
+            this.Tag[this.Count] = this.Count;
+
+            ++this.Count;
         }
 
         public void Add(Trees other, int otherTreeIndex)
         {
-            this.flags.Add(other.flags[otherTreeIndex]);
+            if (this.Count == this.Capacity)
+            {
+                this.Resize(2 * this.Capacity); // for now, default to same size doubling as List<T>
+            }
 
-            this.Age.Add(other.Age[otherTreeIndex]);
-            this.CoarseRootMass.Add(other.CoarseRootMass[otherTreeIndex]);
-            this.Dbh.Add(other.Dbh[otherTreeIndex]);
-            this.DbhDelta.Add(other.DbhDelta[otherTreeIndex]);
-            this.FineRootMass.Add(other.FineRootMass[otherTreeIndex]);
-            this.FoliageMass.Add(other.FoliageMass[otherTreeIndex]);
-            this.Height.Add(other.Height[otherTreeIndex]);
-            this.Tag.Add(other.Tag[otherTreeIndex]);
-            this.LeafArea.Add(other.LeafArea[otherTreeIndex]);
-            this.LightCellIndexXY.Add(other.LightCellIndexXY[otherTreeIndex]);
-            this.LightResourceIndex.Add(other.LightResourceIndex[otherTreeIndex]);
-            this.LightResponse.Add(other.LightResponse[otherTreeIndex]);
-            this.NppReserve.Add(other.NppReserve[otherTreeIndex]);
-            this.Opacity.Add(other.Opacity[otherTreeIndex]);
-            this.Stamp.Add(other.Stamp[otherTreeIndex]);
-            this.StandID.Add(other.StandID[otherTreeIndex]);
-            this.StemMass.Add(other.StemMass[otherTreeIndex]);
-            this.StressIndex.Add(other.StressIndex[otherTreeIndex]);
+            this.flags[this.Count] = other.flags[otherTreeIndex];
+
+            this.Age[this.Count] = other.Age[otherTreeIndex];
+            this.CoarseRootMass[this.Count] = other.CoarseRootMass[otherTreeIndex];
+            this.Dbh[this.Count] = other.Dbh[otherTreeIndex];
+            this.DbhDelta[this.Count] = other.DbhDelta[otherTreeIndex];
+            this.FineRootMass[this.Count] = other.FineRootMass[otherTreeIndex];
+            this.FoliageMass[this.Count] = other.FoliageMass[otherTreeIndex];
+            this.Height[this.Count] = other.Height[otherTreeIndex];
+            this.LeafArea[this.Count] = other.LeafArea[otherTreeIndex];
+            this.LightCellIndexXY[this.Count] = other.LightCellIndexXY[otherTreeIndex];
+            this.LightResourceIndex[this.Count] = other.LightResourceIndex[otherTreeIndex];
+            this.LightResponse[this.Count] = other.LightResponse[otherTreeIndex];
+            this.NppReserve[this.Count] = other.NppReserve[otherTreeIndex];
+            this.Opacity[this.Count] = other.Opacity[otherTreeIndex];
+            this.Stamp[this.Count] = other.Stamp[otherTreeIndex];
+            this.StandID[this.Count] = other.StandID[otherTreeIndex];
+            this.StemMass[this.Count] = other.StemMass[otherTreeIndex];
+            this.StressIndex[this.Count] = other.StressIndex[otherTreeIndex];
+            this.Tag[this.Count] = other.Tag[otherTreeIndex];
+
+            ++this.Count;
         }
 
         public void Copy(int sourceIndex, int destinationIndex)
@@ -366,15 +383,13 @@ namespace iLand.Tree
             //++Tree.StampApplications;
         }
 
-        /** heightGrid()
-          This function calculates the "dominant height field". This grid is coarser as the fine-scaled light-grid.
-            */
+        // calculates the "dominant height field". This grid is coarser as the fine-scaled light-grid.
         public void CalculateDominantHeightField(int treeIndex)
         {
-            Point heightCellPosition = new(this.LightCellIndexXY[treeIndex].X / Constant.LightCellsPerHeightCellWidth, this.LightCellIndexXY[treeIndex].Y / Constant.LightCellsPerHeightCellWidth); // pos of tree on height grid
+            Point heightCellIndexXY = new(this.LightCellIndexXY[treeIndex].X / Constant.LightCellsPerHeightCellWidth, this.LightCellIndexXY[treeIndex].Y / Constant.LightCellsPerHeightCellWidth); // position of tree on height grid
 
             // count trees that are on height-grid cells (used for stockable area)
-            this.heightGrid[heightCellPosition].AddTree(this.Height[treeIndex]);
+            this.heightGrid[heightCellIndexXY].AddTree(this.Height[treeIndex]);
 
             LightStamp reader = this.Stamp[treeIndex]!.Reader!;
             int center = reader.CenterCellPosition; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
@@ -382,19 +397,19 @@ namespace iLand.Tree
             int indexNorthSouth = this.LightCellIndexXY[treeIndex].Y % Constant.LightCellsPerHeightCellWidth; // 4: northern edge, 0: southern edge
             if (indexEastWest - center < 0)
             { // east
-                this.heightGrid[heightCellPosition.X - 1, heightCellPosition.Y].Height = MathF.Max(this.heightGrid[heightCellPosition.X - 1, heightCellPosition.Y].Height, this.Height[treeIndex]);
+                this.heightGrid[heightCellIndexXY.X - 1, heightCellIndexXY.Y].Height = MathF.Max(this.heightGrid[heightCellIndexXY.X - 1, heightCellIndexXY.Y].Height, this.Height[treeIndex]);
             }
             if (indexEastWest + center >= Constant.LightCellsPerHeightCellWidth)
             {  // west
-                this.heightGrid[heightCellPosition.X + 1, heightCellPosition.Y].Height = MathF.Max(this.heightGrid[heightCellPosition.X + 1, heightCellPosition.Y].Height, this.Height[treeIndex]);
+                this.heightGrid[heightCellIndexXY.X + 1, heightCellIndexXY.Y].Height = MathF.Max(this.heightGrid[heightCellIndexXY.X + 1, heightCellIndexXY.Y].Height, this.Height[treeIndex]);
             }
             if (indexNorthSouth - center < 0)
             {  // south
-                this.heightGrid[heightCellPosition.X, heightCellPosition.Y - 1].Height = MathF.Max(this.heightGrid[heightCellPosition.X, heightCellPosition.Y - 1].Height, this.Height[treeIndex]);
+                this.heightGrid[heightCellIndexXY.X, heightCellIndexXY.Y - 1].Height = MathF.Max(this.heightGrid[heightCellIndexXY.X, heightCellIndexXY.Y - 1].Height, this.Height[treeIndex]);
             }
             if (indexNorthSouth + center >= Constant.LightCellsPerHeightCellWidth)
             {  // north
-                this.heightGrid[heightCellPosition.X, heightCellPosition.Y + 1].Height = MathF.Max(this.heightGrid[heightCellPosition.X, heightCellPosition.Y + 1].Height, this.Height[treeIndex]);
+                this.heightGrid[heightCellIndexXY.X, heightCellIndexXY.Y + 1].Height = MathF.Max(this.heightGrid[heightCellIndexXY.X, heightCellIndexXY.Y + 1].Height, this.Height[treeIndex]);
             }
 
             // without spread of the height grid
@@ -529,22 +544,14 @@ namespace iLand.Tree
             //    } // for (y)
         }
 
-        /** This function is called if a tree dies.
-            @sa ResourceUnit::cleanTreeList(), remove() */
-        public void Die(Model model, int treeIndex)
+        public void DropLastNTrees(int n)
         {
-            this.SetFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
-            this.RU.Trees.OnTreeDied();
-            
-            ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
-            ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null, skipDead: false); // add tree to statistics
-            
-            this.OnTreeRemoved(model, treeIndex, MortalityCause.Stress);
-            
-            if (this.RU.Snags != null)
+            if ((n < 1) || (n > this.Count))
             {
-                this.RU.Snags.AddMortality(this, treeIndex);
+                throw new ArgumentOutOfRangeException(nameof(n));
             }
+
+            this.Count -= n;
         }
 
         /// dumps some core variables of a tree to a string.
@@ -710,30 +717,6 @@ namespace iLand.Tree
             this.RU.Trees.AddWeightedLeafArea(this.LeafArea[treeIndex], this.LightResourceIndex[treeIndex]);
         }
 
-        public void RemoveRange(int index, int count)
-        {
-            this.flags.RemoveRange(index, count);
-
-            this.Age.RemoveRange(index, count);
-            this.CoarseRootMass.RemoveRange(index, count);
-            this.Dbh.RemoveRange(index, count);
-            this.DbhDelta.RemoveRange(index, count);
-            this.FineRootMass.RemoveRange(index, count);
-            this.FoliageMass.RemoveRange(index, count);
-            this.Height.RemoveRange(index, count);
-            this.Tag.RemoveRange(index, count);
-            this.LeafArea.RemoveRange(index, count);
-            this.LightCellIndexXY.RemoveRange(index, count);
-            this.LightResourceIndex.RemoveRange(index, count);
-            this.LightResponse.RemoveRange(index, count);
-            this.NppReserve.RemoveRange(index, count);
-            this.Opacity.RemoveRange(index, count);
-            this.Stamp.RemoveRange(index, count);
-            this.StandID.RemoveRange(index, count);
-            this.StemMass.RemoveRange(index, count);
-            this.StressIndex.RemoveRange(index, count);
-        }
-
         //public static void ResetStatistics()
         //{
         //    Tree.StampApplications = 0;
@@ -806,7 +789,7 @@ namespace iLand.Tree
 
                 // step 2: calculate GPP of the tree based
                 // (2) GPP (without aging-effect) in kg Biomass / year
-                float treeGppBeforeAging = ruSpecies.BiomassGrowth.AnnualGpp * effectiveTreeArea;
+                float treeGppBeforeAging = ruSpecies.TreeGrowth.AnnualGpp * effectiveTreeArea;
                 float treeGpp = treeGppBeforeAging * agingFactor;
                 Debug.Assert(treeGpp >= 0.0F);
                 treeGrowthData.NppAboveground = 0.0F;
@@ -870,7 +853,7 @@ namespace iLand.Tree
             float reserveAllocation = MathF.Min(reserveSize, (1.0F + this.Species.FinerootFoliageRatio) * this.FoliageMass[treeIndex]); // not always try to refill reserve 100%
 
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
-            float rootFraction = ruSpecies.BiomassGrowth.RootFraction;
+            float rootFraction = ruSpecies.TreeGrowth.RootFraction;
             growthData.NppAboveground = growthData.NppTotal * (1.0F - rootFraction); // aboveground: total NPP - fraction to roots
             float woodFoliageRatio = this.Species.GetStemFoliageRatio(); // ratio of allometric exponents (b_woody / b_foliage)
 
@@ -1110,7 +1093,7 @@ namespace iLand.Tree
         /// remove a tree (most likely due to harvest) from the system.
         public void Remove(Model model, int treeIndex, float removeFoliage = 0.0F, float removeBranch = 0.0F, float removeStem = 0.0F)
         {
-            this.SetFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
+            this.SetOrClearFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
             this.SetDeathReasonHarvested(treeIndex);
             this.RU.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(Species);
@@ -1129,7 +1112,7 @@ namespace iLand.Tree
         // TODO: when would branch to snag fraction be greater than zero?
         public void RemoveDisturbance(Model model, int treeIndex, float stemToSoilFraction, float stemToSnagFraction, float branchToSoilFraction, float branchToSnagFraction, float foliageToSoilFraction)
         {
-            this.SetFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
+            this.SetOrClearFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
             this.RU.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
             ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null, skipDead: false);
@@ -1154,17 +1137,36 @@ namespace iLand.Tree
             // death if leaf area is near zero
             if (this.FoliageMass[treeIndex] < 0.00001F)
             {
-                this.Die(model, treeIndex);
+                this.MarkTreeAsDead(model, treeIndex);
+                return;
             }
 
             float pFixed = this.Species.DeathProbabilityFixed;
-            float pStress = this.Species.GetDeathProbabilityForStress(growthData.StressIndex);
+            float pStress = this.Species.GetMortalityProbability(growthData.StressIndex);
             float pMortality = pFixed + pStress;
             float random = model.RandomGenerator.GetRandomProbability(); // 0..1
             if (random < pMortality)
             {
                 // die...
-                this.Die(model, treeIndex);
+                this.MarkTreeAsDead(model, treeIndex);
+            }
+        }
+
+        /** called if a tree dies
+            @sa ResourceUnit::cleanTreeList(), remove() */
+        public void MarkTreeAsDead(Model model, int treeIndex)
+        {
+            this.SetOrClearFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
+            this.RU.Trees.OnTreeDied();
+
+            ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
+            ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null, skipDead: false); // add tree to statistics
+
+            this.OnTreeRemoved(model, treeIndex, MortalityCause.Stress);
+
+            if (this.RU.Snags != null)
+            {
+                this.RU.Snags.AddMortality(this, treeIndex);
             }
         }
 

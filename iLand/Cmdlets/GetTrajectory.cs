@@ -24,7 +24,7 @@ namespace iLand.Cmdlets
         {
             Project projectFile = new(this.Project!);
             using Model model = new(projectFile);
-            for (int year = 0; year < Years; ++year)
+            for (int simulationYear = 0; simulationYear < Years; ++simulationYear)
             {
                 model.RunYear();
             }

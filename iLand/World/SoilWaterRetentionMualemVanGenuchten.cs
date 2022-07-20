@@ -34,7 +34,12 @@ namespace iLand.World
             float plantRelativeSaturation = this.plantAccessibleWater / (soilWaterContent - this.thetaR);
             float alphaAbsPsi = MathF.Pow(MathF.Pow(plantRelativeSaturation, 1.0F / (1.0F - 1.0F / this.n)), 1.0F / this.n) - 1.0F;
             float psiInKPa = -alphaAbsPsi / this.alpha;
-            Debug.Assert(psiInKPa <= this.SaturationPotentialInKPa);
+            if (psiInKPa > this.SaturationPotentialInKPa)
+            {
+                // clamp matric potential if numerical error places it slightly above saturation potential
+                Debug.Assert(psiInKPa - this.SaturationPotentialInKPa < 1E-6F);
+                psiInKPa = this.SaturationPotentialInKPa;
+            }
             return psiInKPa;
         }
 
@@ -42,7 +47,7 @@ namespace iLand.World
         {
             float soilWaterContent = this.thetaR + this.plantAccessibleWater / MathF.Pow(1.0F + MathF.Pow(-this.alpha * psiInKilopascals, this.n), 1.0F - 1.0F / this.n);
             float soilWater = this.soilDepthInMM * soilWaterContent;
-            Debug.Assert((psiInKilopascals <= 0.0F) && (soilWater >= this.thetaR) && (soilWater <= this.thetaR + this.plantAccessibleWater));
+            Debug.Assert((psiInKilopascals <= 0.0F) && (soilWaterContent >= this.thetaR) && (soilWaterContent <= this.thetaR + this.plantAccessibleWater));
             return soilWater;
         }
     }

@@ -15,11 +15,9 @@ namespace iLand.Tree
       */
     public class ResourceUnitTreeSpecies
     {
-        public ResourceUnitTreeSpeciesGrowth BiomassGrowth { get; private init; } // the 3-PG production model of this species x resourceunit
         /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
         public float LaiFraction { get; private set; }
         public float RemovedStemVolume { get; private set; } // sum of volume with was remvoved because of death/management (m3/ha)
-        public ResourceUnitTreeSpeciesResponse Response { get; private init; }
         public ResourceUnit RU { get; private init; } // return pointer to resource unit
         public SaplingEstablishment SaplingEstablishment { get; private init; } // establishment submodel
         public SaplingProperties SaplingStats { get; private init; } // statistics for the sapling sub module
@@ -27,7 +25,8 @@ namespace iLand.Tree
         public ResourceUnitTreeStatistics Statistics { get; private init; } // statistics of this species on the resource unit
         public ResourceUnitTreeStatistics StatisticsDead { get; private init; } // statistics of trees that have died
         public ResourceUnitTreeStatistics StatisticsManagement { get; private init; } // statistics of removed trees
-        
+        public ResourceUnitTreeSpeciesGrowth TreeGrowth { get; private init; } // the 3-PG production model of this species on this resource unit
+
         public ResourceUnitTreeSpecies(TreeSpecies treeSpecies, ResourceUnit ru)
         {
             if ((treeSpecies.Index < 0) || (treeSpecies.Index > 1000))
@@ -37,15 +36,13 @@ namespace iLand.Tree
             this.RU = ru;
             this.Species = treeSpecies;
 
-            ResourceUnitTreeSpeciesResponse speciesResponse = new(ru, this); // requires this.Species be set
-            this.BiomassGrowth = new ResourceUnitTreeSpeciesGrowth(speciesResponse);
             this.RemovedStemVolume = 0.0F;
-            this.Response = speciesResponse;
             this.SaplingEstablishment = new SaplingEstablishment();
             this.SaplingStats = new SaplingProperties();
             this.Statistics = new ResourceUnitTreeStatistics(ru, this);
             this.StatisticsDead = new ResourceUnitTreeStatistics(ru, this);
             this.StatisticsManagement = new ResourceUnitTreeStatistics(ru, this);
+            this.TreeGrowth = new ResourceUnitTreeSpeciesGrowth(ru, this); // requires this.Species be set
         }
 
         public void SetRULaiFraction(float laiFraction)
@@ -68,14 +65,14 @@ namespace iLand.Tree
             if ((this.LaiFraction > 0.0F) || (fromSaplingEstablishmentOrGrowth == true))
             {
                 // assumes the water cycle is already updated for the current year
-                this.Response.CalculateMonthlyGrowthModifiers(this.RU.Weather);// calculate environmental responses per species (vpd, temperature, ...)
-                this.BiomassGrowth.CalculateGppForYear(projectFile);// production of NPP
+                this.TreeGrowth.Modifiers.CalculateMonthlyGrowthModifiers(this.RU.Weather);// calculate environmental responses per species (vpd, temperature, ...)
+                this.TreeGrowth.CalculateGppForYear(projectFile);// production of NPP
             }
             else
             {
                 // if no leaf area is present, then just clear the respones
-                this.Response.ClearMonthlyGrowthModifiers();
-                this.BiomassGrowth.Zero();
+                this.TreeGrowth.Modifiers.ZeroMonthlyAndAnnualModifiers();
+                this.TreeGrowth.ZeroMonthlyAndAnnualValues();
             }
         }
 

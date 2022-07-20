@@ -127,7 +127,7 @@ namespace iLand.Simulation
                 foreach (int liveTreeIndex in liveTreesOfSpecies.LiveTreeIndices)
                 {
                     trees.SetDeathReasonCutAndDrop(liveTreeIndex); // set flag that tree is cut down
-                    trees.Die(model, liveTreeIndex);
+                    trees.MarkTreeAsDead(model, liveTreeIndex);
                 }
             }
             this.mTreesInMostRecentlyLoadedStand.Clear();
@@ -336,17 +336,20 @@ namespace iLand.Simulation
                 List<int>? treeIndicesInSpecies = null;
                 foreach (int treeID in treeIDlist)
                 {
-                    int treeIndex = trees.Tag.IndexOf(treeID);
-                    if (treeIndex > -1)
-                    {
-                        if (treeIndicesInSpecies == null)
+                    // O(N) search required; trees aren't sorted or indexed by tag and multiple trees may have the same tag number
+                    for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+                    {                        
+                        if (trees.Tag[treeIndex] == treeID)
                         {
-                            treeIndicesInSpecies = new List<int>();
-                            filteredTrees.Add(new(trees, treeIndicesInSpecies));
-                        }
+                            if (treeIndicesInSpecies == null)
+                            {
+                                treeIndicesInSpecies = new List<int>();
+                                filteredTrees.Add(new(trees, treeIndicesInSpecies));
+                            }
 
-                        treeIndicesInSpecies.Add(treeIndex);
-                        ++treesSelected;
+                            treeIndicesInSpecies.Add(treeIndex);
+                            ++treesSelected;
+                        }
                     }
                 }
             }

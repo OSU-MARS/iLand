@@ -275,6 +275,7 @@ namespace iLand.Tree
                 int lastLiveTreeIndex;
                 for (lastLiveTreeIndex = treesOfSpecies.Count - 1; lastLiveTreeIndex >= 0 && treesOfSpecies.IsDead(lastLiveTreeIndex); --lastLiveTreeIndex)
                 {
+                    // no loop body, just finding index of last live tree 
                 }
 
                 int overwriteIndex = 0;
@@ -291,28 +292,36 @@ namespace iLand.Tree
                     }
                     ++overwriteIndex;
                 }
-                ++lastLiveTreeIndex; // last points now to the first dead tree
+                ++lastLiveTreeIndex; // now index of the first dead tree or, if the last tree is alive, one past the end of the array
 
-                // free resources
                 if (lastLiveTreeIndex != treesOfSpecies.Count)
                 {
-                    treesOfSpecies.RemoveRange(lastLiveTreeIndex, treesOfSpecies.Count - lastLiveTreeIndex); // BUGBUG: assumes dead trees are at end of list
-                    if (treesOfSpecies.Count == 0)
+                    // since live trees have been the end of the tree array now contains only dead trees which can be dropped
+                    int treesToDrop = treesOfSpecies.Count - lastLiveTreeIndex;
+                    if (treesToDrop == treesOfSpecies.Count)
                     {
+                        // all trees of this species have died, so drop species
                         this.TreesBySpeciesID.Remove(treesOfSpecies.Species.ID);
                     }
-                    else if (treesOfSpecies.Capacity > 100)
+                    else
                     {
-                        if (((float)treesOfSpecies.Count / (float)treesOfSpecies.Capacity) < 0.2F)
+                        treesOfSpecies.DropLastNTrees(treesToDrop);
+                        // release memory at ends of arrays if a meaningful amount can be freed
+                        if (treesOfSpecies.Capacity > 100)
                         {
-                            // int target_size = 2*mTrees.Count;
-                            // Debug.WriteLine("reduce size from " + mTrees.Capacity + " to " + target_size);
-                            // mTrees.reserve(qMax(target_size, 100));
-                            // if (GlobalSettings.Instance.LogDebug())
-                            // {
-                            //     Debug.WriteLine("reduce tree storage of RU " + Index + " from " + Trees.Capacity + " to " + Trees.Count);
-                            // }
-                            treesOfSpecies.Capacity = treesOfSpecies.Count;
+                            if (((float)treesOfSpecies.Count / (float)treesOfSpecies.Capacity) < 0.2F)
+                            {
+                                // int target_size = 2*mTrees.Count;
+                                // Debug.WriteLine("reduce size from " + mTrees.Capacity + " to " + target_size);
+                                // mTrees.reserve(qMax(target_size, 100));
+                                // if (GlobalSettings.Instance.LogDebug())
+                                // {
+                                //     Debug.WriteLine("reduce tree storage of RU " + Index + " from " + Trees.Capacity + " to " + Trees.Count);
+                                // }
+
+                                int simdCompatibleTreeCapacity = Constant.Simd128x4.Width * (treesOfSpecies.Count / Constant.Simd128x4.Width);
+                                treesOfSpecies.Resize(simdCompatibleTreeCapacity);
+                            }
                         }
                     }
                 }

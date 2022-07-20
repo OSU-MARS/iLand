@@ -2,6 +2,7 @@
 using iLand.Input.ProjectFile;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace iLand.Simulation
 {
@@ -22,7 +23,7 @@ namespace iLand.Simulation
 
             eventFile.Parse((string[] row) =>
             {
-                int year = Int32.Parse(row[yearIndex]);
+                int year = Int32.Parse(row[yearIndex], CultureInfo.InvariantCulture);
                 if (this.eventsByYear.TryGetValue(year, out List<(string Name, string Value)>? eventsOfYear) == false)
                 {
                     eventsOfYear = new List<(string Name, string Value)>();

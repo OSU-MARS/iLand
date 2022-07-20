@@ -302,7 +302,7 @@ namespace iLand.Tree
             species.DeathProbabilityFixed = 1.0F - MathF.Pow(fixedMortalityBase, 1.0F / species.maximumAgeInYears);
             species.stressMortalityCoefficient = stressMortalityCoefficient;
 
-            // envirionmental responses
+            // environmental responses
             species.modifierVpdK = reader.RespVpdExponent();
             species.modifierTempMin = reader.RespTempMin();
             species.modifierTempMax = reader.RespTempMax();
@@ -488,17 +488,28 @@ namespace iLand.Tree
             hdRatioUpperBound = (float)heightDiameterRatioUpperBound.Evaluate(dbh);
         }
 
-        /** vpdResponse calculates response on vapor pressure deficit.
-            Input: vpd [kPa]*/
-        public float GetVpdModifier(float vpdInKiloPascals)
+        // calculate probabilty of death based on the current stress index
+        public float GetMortalityProbability(float stressIndex)
         {
-            return MathF.Exp(this.modifierVpdK * vpdInKiloPascals);
+            if (stressIndex <= 0.0F)
+            {
+                return 0.0F;
+            }
+            float probability = 1.0F - MathF.Exp(-this.stressMortalityCoefficient * stressIndex);
+            return probability;
         }
 
-        /** temperatureResponse calculates response on delayed daily temperature.
-            Input: average temperature [C]
-            Note: slightly different from Mäkelä 2008: the maximum parameter (Sk) in iLand is interpreted as the absolute
-                  temperature yielding a response of 1; in Mäkelä 2008, Sk is the width of the range (relative to the lower threshold)
+        // iLand specific model chosen from Hanson 2004: http://iland-model.org/soil+water+response
+        public float GetSoilWaterModifier(float psiInKilopascals)
+        {
+            float psiInMPa = 0.001F * psiInKilopascals; // convert to MPa
+            float waterModifier = Maths.Limit((psiInMPa - this.MinimumSoilWaterPotential) / (-0.015F - this.MinimumSoilWaterPotential), 0.0F, 1.0F);
+            return waterModifier;
+        }
+
+        /** Input: average temperature, °C
+            Slightly different from Mäkelä 2008 with daily weather series. The maximum parameter (Sk) in iLand is interpreted as the absolute
+            temperature yielding a response of 1; in Mäkelä 2008, Sk is the width of the range (relative to the lower threshold)
             */
         public float GetTemperatureModifier(float dailyMA1orMonthlyTemperature)
         {
@@ -507,24 +518,9 @@ namespace iLand.Tree
             return modifier;
         }
 
-        // soilwaterResponse is a function of the current matric potential of the soil.
-        // iLand specific model chosen from Hanson 2004: http://iland-model.org/soil+water+response
-        public float GetSoilWaterModifier(float psiInKilopascals)
+        public float GetVpdModifier(float vpdInKiloPascals)
         {
-            float psiInMPa = 0.001F * psiInKilopascals; // convert to MPa
-            float waterResponse = Maths.Limit((psiInMPa - this.MinimumSoilWaterPotential) / (-0.015F - this.MinimumSoilWaterPotential), 0.0F, 1.0F);
-            return waterResponse;
-        }
-
-        /** calculate probabilty of death based on the current stress index. */
-        public float GetDeathProbabilityForStress(float stressIndex)
-        {
-            if (stressIndex <= 0.0F)
-            {
-                return 0.0F;
-            }
-            float probability = 1.0F - MathF.Exp(-this.stressMortalityCoefficient * stressIndex);
-            return probability;
+            return MathF.Exp(this.modifierVpdK * vpdInKiloPascals);
         }
     }
 }

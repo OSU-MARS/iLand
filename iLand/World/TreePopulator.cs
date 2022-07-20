@@ -237,14 +237,14 @@ namespace iLand.World
         //    int total = 0;
         //    for (int row = 0; row < init.RowCount; ++row)
         //    {
-        //        int pxcount = (int)Math.Round(Double.Parse(init[countIndex, row)) * area_factor + 0.5); // no. of pixels that should be filled (sapling grid is the same resolution as the lif-grid)
-        //        TreeSpecies species = set.GetSpecies(init[speciesIndex, row));
+        //        int pxcount = (int)Math.Round(Double.Parse(init[countIndex, row], CultureInfo.InvariantCulture) * area_factor + 0.5); // no. of pixels that should be filled (sapling grid is the same resolution as the lif-grid)
+        //        TreeSpecies species = set.GetSpecies(init[speciesIndex, row]);
         //        if (species == null)
         //        {
         //            throw new NotSupportedException(String.Format("Error while loading saplings: invalid species '{0}'.", init[speciesIndex, row)));
         //        }
-        //        float height = heightIndex == -1 ? Constant.Sapling.MinimumHeight : Single.Parse(init[heightIndex, row));
-        //        int age = ageIndex == -1 ? 1 : Int32.Parse(init[ageIndex, row));
+        //        float height = heightIndex == -1 ? Constant.Sapling.MinimumHeight : Single.Parse(init[heightIndex, row], CultureInfo.InvariantCulture);
+        //        int age = ageIndex == -1 ? 1 : Int32.Parse(init[ageIndex, row], CultureInfo.InvariantCulture);
 
         //        int misses = 0;
         //        int hits = 0;

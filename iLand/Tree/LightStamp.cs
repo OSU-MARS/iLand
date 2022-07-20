@@ -123,7 +123,7 @@ namespace iLand.Tree
         //        }
         //        for (int i = 0; i < cols.Count; i++)
         //        {
-        //            this[i, l] = Single.Parse(cols[i]);
+        //            this[i, l] = Single.Parse(cols[i], CultureInfo.InvariantCulture);
         //        }
         //        l++;
         //    }

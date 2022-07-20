@@ -87,31 +87,31 @@ namespace iLand.World
             this.TimeSeries.CurrentYearStartIndex = this.monthDayIndices[this.CurrentDataYear * Constant.MonthsInYear];
             this.TimeSeries.NextYearStartIndex = this.monthDayIndices[(this.CurrentDataYear + 1) * Constant.MonthsInYear];
 
-            // some aggregates:
+            // some aggregates
             // calculate radiation sum of the year and monthly precipitation
             this.TotalAnnualRadiation = 0.0F;
             this.MeanAnnualTemperature = 0.0F;
             for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
             {
                 this.PrecipitationByMonth[monthIndex] = 0.0F;
-                this.TemperatureByMonth[monthIndex] = 0.0F;
+                this.DaytimeMeanTemperatureByMonth[monthIndex] = 0.0F;
             }
 
-            for (int dayIndex = this.TimeSeries.CurrentYearStartIndex; dayIndex < this.TimeSeries.NextYearStartIndex; ++dayIndex)
+            for (int weatherDayIndex = this.TimeSeries.CurrentYearStartIndex; weatherDayIndex < this.TimeSeries.NextYearStartIndex; ++weatherDayIndex)
             {
-                int monthIndex = this.TimeSeries.Month[dayIndex] - 1;
-                this.PrecipitationByMonth[monthIndex] += this.TimeSeries.PrecipitationTotalInMM[dayIndex];
-                float daytimeMeanTemperature = this.TimeSeries.TemperatureDaytimeMean[dayIndex];
-                this.TemperatureByMonth[monthIndex] += daytimeMeanTemperature;
+                float daytimeMeanTemperature = this.TimeSeries.TemperatureDaytimeMean[weatherDayIndex];
+                int monthIndex = this.TimeSeries.Month[weatherDayIndex] - 1;
+                this.DaytimeMeanTemperatureByMonth[monthIndex] += daytimeMeanTemperature;
+                this.PrecipitationByMonth[monthIndex] += this.TimeSeries.PrecipitationTotalInMM[weatherDayIndex];
 
                 this.MeanAnnualTemperature += daytimeMeanTemperature;
-                this.TotalAnnualRadiation += this.TimeSeries.SolarRadiationTotal[dayIndex];
+                this.TotalAnnualRadiation += this.TimeSeries.SolarRadiationTotal[weatherDayIndex];
             }
 
             bool isLeapYear = this.TimeSeries.IsCurrentlyLeapYear();
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
-                this.TemperatureByMonth[month] /= (float)DateTimeExtensions.GetDaysInMonth(month, isLeapYear);
+                this.DaytimeMeanTemperatureByMonth[month] /= (float)DateTimeExtensions.GetDaysInMonth(month, isLeapYear);
             }
             this.MeanAnnualTemperature /= (float)DateTimeExtensions.GetDaysInYear(isLeapYear);
 

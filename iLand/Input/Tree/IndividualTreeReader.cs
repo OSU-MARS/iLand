@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace iLand.Input.Tree
 {
@@ -37,9 +38,9 @@ namespace iLand.Input.Tree
             treeFile.Parse((row) =>
             {
                 ++treeCount;
-                this.DbhInCM.Add(float.Parse(row[individualTreeHeader.Dbh]));
-                this.GisX.Add(float.Parse(row[individualTreeHeader.X]));
-                this.GisY.Add(float.Parse(row[individualTreeHeader.Y]));
+                this.DbhInCM.Add(Single.Parse(row[individualTreeHeader.Dbh], CultureInfo.InvariantCulture));
+                this.GisX.Add(Single.Parse(row[individualTreeHeader.X], CultureInfo.InvariantCulture));
+                this.GisY.Add(Single.Parse(row[individualTreeHeader.Y], CultureInfo.InvariantCulture));
 
                 string speciesID = row[individualTreeHeader.Species];
                 if (int.TryParse(speciesID, out int picusID))
@@ -57,26 +58,38 @@ namespace iLand.Input.Tree
                 if (individualTreeHeader.Tag >= 0)
                 {
                     // override default of ID = count of trees currently on resource unit
-                    // So long as all trees are specified from a tree list and AddTree() isn't called on the resource unit later then IDs will remain unique.
-                    tag = int.Parse(row[individualTreeHeader.Tag]);
+                    // So long as all trees are uniquely tagged in the input tree list and AddTree() isn't subsequently called on the resource
+                    // unit later then IDs will remain unique.
+                    // QgsVectorFileWriter (QGIS 3.22) unnecessarily places values of integer columns in quotation marks when writing .csv files,
+                    // so check for and strip quotes.
+                    ReadOnlySpan<char> tagAsString = row[individualTreeHeader.Tag];
+                    if (tagAsString.Length < 1)
+                    {
+                        throw new NotSupportedException("Tree tag at line " + (treeCount + 1) + " is empty."); // +1 for header row
+                    }
+                    if ((tagAsString[0] == '"') && (tagAsString.Length > 1) && (tagAsString[^1] == '"'))
+                    {
+                        tagAsString = tagAsString[1..^2];
+                    }
+                    tag = Int32.Parse(tagAsString, NumberStyles.Integer, CultureInfo.InvariantCulture);
                 }
                 this.Tag.Add(tag);
 
                 // convert from Picus-cm to m if necessary
-                float height = individualTreeHeader.HeightConversionFactor * float.Parse(row[individualTreeHeader.Height]);
+                float height = individualTreeHeader.HeightConversionFactor * Single.Parse(row[individualTreeHeader.Height], CultureInfo.InvariantCulture);
                 this.HeightInM.Add(height);
 
                 int age = 0;
                 if (individualTreeHeader.Age >= 0)
                 {
-                    age = int.Parse(row[individualTreeHeader.Age]);
+                    age = Int32.Parse(row[individualTreeHeader.Age], CultureInfo.InvariantCulture);
                 }
                 this.AgeInYears.Add(age);
 
                 int standID = Constant.DefaultStandID;
                 if (individualTreeHeader.StandID >= 0)
                 {
-                    standID = int.Parse(row[individualTreeHeader.StandID]);
+                    standID = Int32.Parse(row[individualTreeHeader.StandID], CultureInfo.InvariantCulture);
                 }
                 this.StandID.Add(standID);
             });

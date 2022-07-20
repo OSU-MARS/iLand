@@ -109,12 +109,12 @@ namespace iLand.Tree
         }
 
         // returns the total sum of evaporation+transpiration in mm of the day
-        public float FlowDayEvapotranspiration3PG(Project projectFile, WeatherTimeSeriesDaily dailyWeather, int dayIndex, float dayLengthInHours, float soilAtmosphereResponse)
+        public float FlowEvapotranspirationTimestep3PG(Project projectFile, WeatherTimeSeries weatherTimeSeries, int weatherTimestepIndex, float dayLengthInHours, float soilAtmosphereModifier)
         {
-            float vpdInMillibar = 10.0F * dailyWeather.VpdMeanInKPa[dayIndex]; // convert from kPa to mbar
-            float meanDaytimeTemperature = dailyWeather.TemperatureDaytimeMean[dayIndex]; // average air temperature of the day (°C at 2 m height)
+            float vpdInMillibar = 10.0F * weatherTimeSeries.VpdMeanInKPa[weatherTimestepIndex]; // convert from kPa to mbar
+            float meanDaytimeTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherTimestepIndex]; // average air temperature of the day (°C at 2 m height)
             float dayLengthInSeconds = 3600.0F * dayLengthInHours; // daylength in seconds (convert from length in hours)
-            float meanRadiationPower = 1000.0F * 1000.0F * dailyWeather.SolarRadiationTotal[dayIndex] / dayLengthInSeconds; //convert from MJ/m² (day sum) to average radiation flow W/m² [MJ = MWs . /s * 1,000,000
+            float meanRadiationPower = 1000.0F * 1000.0F * weatherTimeSeries.SolarRadiationTotal[weatherTimestepIndex] / dayLengthInSeconds; //convert from MJ/m² (day sum) to average radiation flow W/m² [MJ = MWs . /s * 1,000,000
 
             // the radiation: based on linear empirical function
             float netRadiation = -90.0F + 0.8F * meanRadiationPower; // qa + qb * radiation
@@ -127,9 +127,9 @@ namespace iLand.Tree
             // canopy conductance.
             // The species traits are weighted by LAI on the RU.
             // maximum canopy conductance: see getStandValues()
-            // current response: see calculateSoilAtmosphereModifier(). This is basically a weighted average of min(water_response, vpd_response) for
+            // current response: see WaterCycle.RunYear(). This is basically a weighted average of min(water_response, vpd_response) for
             // each species.
-            float gC = this.meanMaxCanopyConductance * soilAtmosphereResponse;
+            float gC = this.meanMaxCanopyConductance * soilAtmosphereModifier;
             float defTerm = this.airDensity * latentHeatOfVaporization * (vpdInMillibar * vpdToSaturationDeficit) * boundaryLayerConductance;
 
             // with temperature-dependent slope of the saturated vapor pressure curve
@@ -161,10 +161,10 @@ namespace iLand.Tree
             const float psychrometricConstant = 0.0672718682328237F; // kPa/°C
             const float windSpeed = 2.0F; // wind speed at 2 m height, m/s
             float net_rad_mj_day = netRadiation * dayLengthInSeconds / 1000000.0F; // convert W/m² again to MJ/m²-day
-            float et0_numerator = 0.408F * s * net_rad_mj_day + psychrometricConstant * 900.0F / (meanDaytimeTemperature + 273.15F) * windSpeed * dailyWeather.VpdMeanInKPa[dayIndex];
+            float et0_numerator = 0.408F * s * net_rad_mj_day + psychrometricConstant * 900.0F / (meanDaytimeTemperature + 273.15F) * windSpeed * weatherTimeSeries.VpdMeanInKPa[weatherTimestepIndex];
             float et0_denominator = s + psychrometricConstant * (1.0F + 0.34F * windSpeed);
             float et0_day = et0_numerator / et0_denominator; // FAO56, Chapter 2
-            this.ReferenceEvapotranspirationByMonth[dailyWeather.Month[dayIndex] - 1] += et0_day;
+            this.ReferenceEvapotranspirationByMonth[weatherTimeSeries.Month[weatherTimestepIndex] - 1] += et0_day;
 
             if (this.TotalInterceptedWaterInMM > 0.0F)
             {

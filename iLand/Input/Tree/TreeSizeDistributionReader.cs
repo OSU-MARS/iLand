@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace iLand.Input.Tree
 {
@@ -17,10 +18,10 @@ namespace iLand.Input.Tree
             {
                 TreeSizeRange sizeRange = new(row[treeSizeHeader.Species])
                 {
-                    Count = float.Parse(row[treeSizeHeader.Count]),
-                    DbhFrom = float.Parse(row[treeSizeHeader.MinimumDbh]),
-                    DbhTo = float.Parse(row[treeSizeHeader.MaximumDbh]),
-                    HeightDiameterRatio = float.Parse(row[treeSizeHeader.HeightDiameterRatio])
+                    Count = Single.Parse(row[treeSizeHeader.Count], CultureInfo.InvariantCulture),
+                    DbhFrom = Single.Parse(row[treeSizeHeader.MinimumDbh], CultureInfo.InvariantCulture),
+                    DbhTo = Single.Parse(row[treeSizeHeader.MaximumDbh], CultureInfo.InvariantCulture),
+                    HeightDiameterRatio = Single.Parse(row[treeSizeHeader.HeightDiameterRatio], CultureInfo.InvariantCulture)
                 };
                 ++lineNumber;
 
@@ -47,7 +48,7 @@ namespace iLand.Input.Tree
 
                 if (treeSizeHeader.Density >= 0)
                 {
-                    sizeRange.Density = float.Parse(row[treeSizeHeader.Density]);
+                    sizeRange.Density = Single.Parse(row[treeSizeHeader.Density], CultureInfo.InvariantCulture);
                 }
                 else
                 {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Xml;
 
 namespace iLand.Input.ProjectFile
@@ -28,8 +29,8 @@ namespace iLand.Input.ProjectFile
                 throw new XmlException("y attribute of seed belt species is empty.");
             }
 
-            this.X = Int32.Parse(xAsString);
-            this.Y = Int32.Parse(yAsString);
+            this.X = Int32.Parse(xAsString, CultureInfo.InvariantCulture);
+            this.Y = Int32.Parse(yAsString, CultureInfo.InvariantCulture);
             // no restriction on range of x or y values
             this.SpeciesIDs = reader.ReadElementContentAsString().Trim();
         }

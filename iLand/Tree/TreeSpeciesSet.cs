@@ -19,17 +19,17 @@ namespace iLand.Tree
     {
         private const int RandomSets = 20;
 
-        private readonly Dictionary<string, TreeSpecies> mSpeciesByID;
+        private readonly Dictionary<string, TreeSpecies> treeSpeciesByID;
         // nitrogen response classes
-        private float class1K, class1minimum; // parameters of nitrogen response class 1
-        private float class2K, class2minimum; // parameters of nitrogen response class 2
-        private float class3K, class3minimum; // parameters of nitrogen response class 3
+        private readonly float class1K, class1minimum; // parameters of nitrogen response class 1
+        private readonly float class2K, class2minimum; // parameters of nitrogen response class 2
+        private readonly float class3K, class3minimum; // parameters of nitrogen response class 3
         // CO2 response
-        private float mCO2baseConcentration, mCO2compensationPoint; // CO2 concentration of measurements (base) and CO2 compensation point (comp)
-        private float mCO2p0, mCO2beta0; // p0: production multiplier, beta0: relative productivity increase
-        // Light Response classes
-        private readonly Expression mLightResponseIntolerant; // light response function for the the most shade tolerant species
-        private readonly Expression mLightResponseTolerant; // light response function for the most shade intolerant species
+        private readonly float co2baseConcentration, co2compensationPoint; // CO2 concentration of measurements (base) and CO2 compensation point (comp)
+        private readonly float co2p0, co2beta0; // p0: production multiplier, beta0: relative productivity increase
+        // light response
+        private readonly Expression lightResponseShadeIntolerant; // light response function for the the most shade tolerant species
+        private readonly Expression lightResponseShadeTolerant; // light response function for the most shade intolerant species
         private readonly Expression relativeHeightModifer; // function to modfiy LRI during read
         /// container holding the seed maps
         //private readonly List<SeedDispersal> mSeedDispersal;
@@ -39,51 +39,22 @@ namespace iLand.Tree
         public TreeSpeciesStamps ReaderStamps { get; private init; }
         public string SqlTableName { get; private init; } // table name of the species set
 
-        public TreeSpeciesSet(string sqlTableName)
+        public TreeSpeciesSet(Project projectFile, string sqlTableName)
         {
-            this.mLightResponseIntolerant = new Expression();
-            this.mLightResponseTolerant = new Expression();
+            this.lightResponseShadeIntolerant = new Expression();
+            this.lightResponseShadeTolerant = new Expression();
             this.relativeHeightModifer = new Expression();
             //this.mSeedDispersal = new List<SeedDispersal>();
-            this.mSpeciesByID = new Dictionary<string, TreeSpecies>();
+            this.treeSpeciesByID = new Dictionary<string, TreeSpecies>();
 
             this.ActiveSpecies = new List<TreeSpecies>();
             this.RandomSpeciesOrder = new List<int>(); // lazy initialization
             this.ReaderStamps = new TreeSpeciesStamps();
             this.SqlTableName = sqlTableName;
-        }
 
-        public TreeSpecies this[string speciesID]
-        {
-            get { return this.mSpeciesByID[speciesID]; }
-        }
-
-        public TreeSpecies this[int speciesIndex]
-        {
-            get { return this.ActiveSpecies[speciesIndex]; }
-        }
-
-        public int Count
-        {
-            get { return this.mSpeciesByID.Count; }
-        }
-
-        public float GetLriCorrection(float lightResourceIndex, float relativeHeight)
-        {
-            return (float)this.relativeHeightModifer.Evaluate(lightResourceIndex, relativeHeight);
-        }
-
-        /** loads active species from a database table and creates/setups the species.
-            The function uses the global database-connection.
-          */
-        public int Setup(Project projectFile)
-        {
+            // load active tree species from a database table and create/setup the species
             string readerStampFile = projectFile.GetFilePath(ProjectDirectory.LightIntensityProfile, projectFile.World.Species.ReaderStampFile);
             this.ReaderStamps.Load(readerStampFile);
-            // if (projectFile.World.Debug.DumpStamps)
-            // {
-            //     Debug.WriteLine(this.ReaderStamps.Dump());
-            // }
 
             string speciesDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Species.DatabaseFile);
             using SqliteConnection speciesDatabase = Landscape.GetDatabaseConnection(speciesDatabaseFilePath, openReadOnly: true);
@@ -100,15 +71,8 @@ namespace iLand.Tree
                 TreeSpecies species = Tree.TreeSpecies.Load(projectFile, speciesReader, this);
                 Debug.Assert(species.Active);
                 this.ActiveSpecies.Add(species);
-                this.mSpeciesByID.Add(species.ID, species);
+                this.treeSpeciesByID.Add(species.ID, species);
             }
-
-            // Debug.WriteLine("Loaded " + mSpeciesByID.Count + " active species.");
-            // Debug.WriteLine("index, id, name");
-            // foreach (Species s in this.ActiveSpecies)
-            // {
-            //     Debug.WriteLine(s.Index + " " + s.ID + " " + s.Name);
-            // }
 
             // setup nitrogen response
             this.class1K = projectFile.World.Species.NitrogenResponseClasses.Class1K;
@@ -117,7 +81,7 @@ namespace iLand.Tree
             this.class2minimum = projectFile.World.Species.NitrogenResponseClasses.Class2Minimum;
             this.class3K = projectFile.World.Species.NitrogenResponseClasses.Class3K;
             this.class3minimum = projectFile.World.Species.NitrogenResponseClasses.Class3Minimum;
-            if ((this.class1K >= 0.0) || (this.class1minimum <= 0.0) || 
+            if ((this.class1K >= 0.0) || (this.class1minimum <= 0.0) ||
                 (this.class2K >= 0.0) || (this.class2minimum <= 0.0) ||
                 (this.class3K >= 0.0) || (this.class3minimum <= 0.0))
             {
@@ -125,23 +89,23 @@ namespace iLand.Tree
             }
 
             // setup CO2 response
-            this.mCO2baseConcentration = projectFile.World.Species.CO2Response.BaseConcentration;
-            this.mCO2compensationPoint = projectFile.World.Species.CO2Response.CompensationPoint;
-            this.mCO2beta0 = projectFile.World.Species.CO2Response.Beta0;
-            this.mCO2p0 = projectFile.World.Species.CO2Response.P0;
-            if ((this.mCO2baseConcentration <= 0.0) || (this.mCO2compensationPoint <= 0.0) || (this.mCO2beta0 <= 0.0) || (this.mCO2p0 <= 0.0))
+            this.co2baseConcentration = projectFile.World.Species.CO2Response.BaseConcentration;
+            this.co2compensationPoint = projectFile.World.Species.CO2Response.CompensationPoint;
+            this.co2beta0 = projectFile.World.Species.CO2Response.Beta0;
+            this.co2p0 = projectFile.World.Species.CO2Response.P0;
+            if ((this.co2baseConcentration <= 0.0) || (this.co2compensationPoint <= 0.0) || (this.co2beta0 <= 0.0) || (this.co2p0 <= 0.0))
             {
                 throw new XmlException("At least one parameter of /project/model/species/CO2Response is missing, less than zero, or zero.");
             }
-            if (this.mCO2baseConcentration <= this.mCO2compensationPoint)
+            if (this.co2baseConcentration <= this.co2compensationPoint)
             {
                 throw new XmlException("Atmospheric CO₂ concentration is at or below the compensation point. Plants would be unable to grow and GPP would be negative.");
             }
 
             // setup light responses
-            this.mLightResponseTolerant.SetAndParse(projectFile.World.Species.LightResponse.ShadeTolerant);
-            this.mLightResponseIntolerant.SetAndParse(projectFile.World.Species.LightResponse.ShadeIntolerant);
-            if (String.IsNullOrEmpty(mLightResponseTolerant.ExpressionString) || String.IsNullOrEmpty(mLightResponseIntolerant.ExpressionString))
+            this.lightResponseShadeTolerant.SetAndParse(projectFile.World.Species.LightResponse.ShadeTolerant);
+            this.lightResponseShadeIntolerant.SetAndParse(projectFile.World.Species.LightResponse.ShadeIntolerant);
+            if (String.IsNullOrEmpty(lightResponseShadeTolerant.ExpressionString) || String.IsNullOrEmpty(lightResponseShadeIntolerant.ExpressionString))
             {
                 throw new NotSupportedException("At least one parameter of /project/model/species/lightResponse is missing.");
             }
@@ -150,13 +114,31 @@ namespace iLand.Tree
 
             if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
             {
-                this.mLightResponseTolerant.Linearize(0.0, 1.0);
-                this.mLightResponseIntolerant.Linearize(0.0, 1.0);
+                this.lightResponseShadeTolerant.Linearize(0.0, 1.0);
+                this.lightResponseShadeIntolerant.Linearize(0.0, 1.0);
                 // x: LRI, y: relative height
                 this.relativeHeightModifer.Linearize(0.0, 1.0, 0.0, 1.0);
             }
+        }
 
-            return mSpeciesByID.Count;
+        public TreeSpecies this[string speciesID]
+        {
+            get { return this.treeSpeciesByID[speciesID]; }
+        }
+
+        public TreeSpecies this[int speciesIndex]
+        {
+            get { return this.ActiveSpecies[speciesIndex]; }
+        }
+
+        public int Count
+        {
+            get { return this.treeSpeciesByID.Count; }
+        }
+
+        public float GetLriCorrection(float lightResourceIndex, float relativeHeight)
+        {
+            return (float)this.relativeHeightModifer.Evaluate(lightResourceIndex, relativeHeight);
         }
 
         public void SetupSeedDispersal(Model model)
@@ -184,16 +166,6 @@ namespace iLand.Tree
                 species.OnStartYear(model);
             }
         }
-
-        //public object GetVariable(SqliteDataReader reader, string columnName)
-        //{
-        //    int index = reader.GetOrdinal(columnName);
-        //    if (index >= 0)
-        //    {
-        //        return reader.GetValue(index);
-        //    }
-        //    throw new SqliteException("Column " + columnName + " not present.", (int)SqliteErrorCode.Error);
-        //}
 
         public void GetRandomSpeciesSampleIndices(RandomGenerator randomGenerator, out int beginIndex, out int endIndex)
         {
@@ -264,36 +236,45 @@ namespace iLand.Tree
             {
                 return 0.0F;
             }
-            float response = 1.0F - MathF.Exp(nitrogenK * (availableNitrogen - minimumNitrogen));
-            return response;
+            float nitrogenModifier = 1.0F - MathF.Exp(nitrogenK * (availableNitrogen - minimumNitrogen));
+            return nitrogenModifier;
         }
 
-        /** calculation for the CO2 response for the ambientCO2 for the water- and nitrogen responses given.
-            The calculation follows Friedlingsstein 1995 (see also links to equations in code)
-            see also: http://iland-model.org/CO2+response
-            @param ambientCO2 current CO₂ concentration (ppm)
-            @param nitrogenResponse (yearly) nitrogen response of the species
-            @param soilWaterReponse soil water response (mean value for a month)
-            */
-        public float GetCarbonDioxideResponse(float ambientCO2, float nitrogenResponse, float soilWaterResponse)
+        /// <summary>
+        /// Find the CO₂ growth modifier for the ambient CO₂, water modifier, and nitrogen modifer given.
+        /// </summary>
+        /// <param name="atmosphericCO2">atmospheric CO₂ concentration at this simulation timestep (ppm)</param>
+        /// <param name="nitrogenModifier">nitrogen response of the species (yearly)</param>
+        /// <param name="soilWaterModifier">soil water response (mean value for a month)</param>
+        /// <returns></returns>
+        /// <remarks>
+        /// Unlike other growth modifiers, when not limited by nitrogen or water, the CO₂ modifier is greater than one for
+        /// atmospheric CO₂ concentrations above the base concentration. For a 380 ppm base concentration RCP 8.5 emissions yield a 
+        /// modifier near 1.3 in year 2100.
+        /// 
+        /// Friedlingstein P, Fung I, Holland E et a. 1995. On the contribution of CO₂ fertilization to the missing biospheric sink. Global
+        ///   Biogeochemical Cycles 9(4):541-556. https://doi.org/10.1029/95GB02381
+        /// See also: http://iland-model.org/CO2+response
+        /// </remarks>
+        public float GetCarbonDioxideModifier(float atmosphericCO2, float nitrogenModifier, float soilWaterModifier)
         {
-            Debug.Assert((nitrogenResponse >= 0.0F) && (nitrogenResponse <= 1.000001F));
-            Debug.Assert((soilWaterResponse >= 0.0F) && (soilWaterResponse <= 1.000001F));
-            if (nitrogenResponse == 0.0F)
+            Debug.Assert((nitrogenModifier >= 0.0F) && (nitrogenModifier <= 1.000001F));
+            Debug.Assert((soilWaterModifier >= 0.0F) && (soilWaterModifier <= 1.000001F));
+            if (nitrogenModifier == 0.0F)
             {
                 return 0.0F;
             }
 
-            float beta = mCO2beta0 * (2.0F - soilWaterResponse) * nitrogenResponse;
+            float beta = this.co2beta0 * (2.0F - soilWaterModifier) * nitrogenModifier;
             float r = 1.0F + Constant.Ln2 * beta; // NPP increase for a doubling of atmospheric CO2 (Eq. 17)
 
-            // fertilization function (cf. Farquhar, 1980) based on Michaelis-Menten expressions
-            float deltaC =  this.mCO2baseConcentration - this.mCO2compensationPoint;
-            float k2 = (2.0F * this.mCO2baseConcentration - this.mCO2compensationPoint - r * deltaC) / ((r - 1.0F) * deltaC * (2.0F * this.mCO2baseConcentration - this.mCO2compensationPoint)); // Eq. 16
-            float k1 = (1.0F + k2 * deltaC) / deltaC;
+            // fertilization function (cf. Farquhar 1980) based on Michaelis-Menten expressions
+            float deltaCO2 =  this.co2baseConcentration - this.co2compensationPoint;
+            float k2 = (2.0F * this.co2baseConcentration - this.co2compensationPoint - r * deltaCO2) / ((r - 1.0F) * deltaCO2 * (2.0F * this.co2baseConcentration - this.co2compensationPoint)); // Eq. 16
+            float k1 = (1.0F + k2 * deltaCO2) / deltaCO2;
 
-            float response = this.mCO2p0 * k1 * (ambientCO2 - mCO2compensationPoint) / (1 + k2 * (ambientCO2 - mCO2compensationPoint)); // Eq. 16
-            return response;
+            float co2modifier = this.co2p0 * k1 * (atmosphericCO2 - this.co2compensationPoint) / (1 + k2 * (atmosphericCO2 - this.co2compensationPoint)); // Eq. 16
+            return co2modifier;
         }
 
         /** calculates the lightResponse based on a value for LRI and the species lightResponseClass.
@@ -302,8 +283,8 @@ namespace iLand.Tree
             @sa http://iland-model.org/allocation#reserve_and_allocation_to_stem_growth */
         public float GetLightResponse(float lightResourceIndex, float lightResponseClass)
         {
-            float intolerant = (float)mLightResponseIntolerant.Evaluate(lightResourceIndex);
-            float tolerant = (float)mLightResponseTolerant.Evaluate(lightResourceIndex);
+            float intolerant = (float)this.lightResponseShadeIntolerant.Evaluate(lightResourceIndex);
+            float tolerant = (float)this.lightResponseShadeTolerant.Evaluate(lightResourceIndex);
             float response = intolerant + 0.25F * (lightResponseClass - 1.0F) * (tolerant - intolerant);
             return Maths.Limit(response, 0.0F, 1.0F);
         }

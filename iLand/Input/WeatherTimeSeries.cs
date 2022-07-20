@@ -89,6 +89,42 @@ namespace iLand.Input
                 throw new NotSupportedException(month + " is not a valid month number in year " + year + " (at time series chunk index " + index + ").");
             }
 
+            if (index > 0)
+            {
+                // basic checks for sequential date ordering
+                int previousIndex = index - 1;
+                int previousYear = this.Year[previousIndex];
+                int yearChange = year - previousYear;
+                if (yearChange < 0)
+                {
+                    throw new NotSupportedException("Calendar year decreases from " + previousYear + " to " + year + " instead of monotonically increasing (at time series chunk index " + index + ").");
+                }
+                if (yearChange > 1)
+                {
+                    throw new NotSupportedException("Calendar years between " + previousYear + " and " + year + " are missing from weather data (at time series chunk index " + index + ").");
+                }
+
+                int previousMonth = this.Month[previousIndex];
+                int monthChange = month - previousMonth;
+                if (monthChange < 0)
+                {
+                    if (yearChange == 0)
+                    {
+                        throw new NotSupportedException("Month decreases from " + previousMonth + " to " + month + " in year " + year + " instead of monotonically increasing within the calendar year (at time series chunk index " + index + ").");
+                    }
+                    else if (monthChange != -11)
+                    {
+                        throw new NotSupportedException("Month skips from " + previousMonth + " to " + month + " at transition between years " + previousYear + " and " + year + " instead of moving from December to January (at time series chunk index " + index + ").");
+                    }
+                }
+                // not currently checked: in a daily time series monthChange == 0 implies a day of month increment
+                // not currently checked: in a monthly time series monthChange should always be 1 or -11
+                else if (monthChange > 1)
+                {
+                    throw new NotSupportedException("Month skips from " + previousMonth + " to " + month + " in year " + year + " (at time series chunk index " + index + ").");
+                }
+            }
+
             float maxTemperature = this.TemperatureMax[index];
             float daytimeMeanTemperature = this.TemperatureDaytimeMean[index];
             float minTemperature = this.TemperatureMin[index];

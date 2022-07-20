@@ -61,7 +61,7 @@ namespace iLand.Simulation
             }
             this.ruParallel = new MaybeParallel<ResourceUnit>(validResourceUnits)
             {
-                IsMultithreaded = this.Project.Model.Settings.Multithreading
+                MaximumThreads = this.Project.Model.Settings.MaxThreads
             };
 
             // initialize light pattern and then saplings and grass
@@ -180,7 +180,7 @@ namespace iLand.Simulation
             /** Main function for the growth of stands and trees.
                This includes several steps.
                (1) calculate the stocked area (i.e. count pixels in height grid)
-               (2) 3-PG production (including response calculation, water cycle)
+               (2) 3-PG production (including growth modifier calculation and water cycle)
                (3) single tree growth (including mortality)
                (4) cleanup of tree lists (remove dead trees)
               */
