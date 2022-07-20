@@ -20,8 +20,8 @@ namespace iLand.Tree
         public int ID { get; private init; } // identifier of this Phenology group
         // get result of phenology calculation for this year (a pointer to a array of 12 values between 0..1: 0 = no days with foliage)
         public float[] LeafOnFractionByMonth { get; private init; }
-        public int LeafOnStartDayIndex { get; protected set; } // day of year when vegetation period starts
-        public int LeafOnEndDayIndex { get; protected set; } // day of year when vegetation period stops
+        public int LeafOnStartDayOfYearIndex { get; protected set; } // day of year when vegetation period starts
+        public int LeafOnEndDayOfYearIndex { get; protected set; } // day of year when vegetation period stops
 
         protected LeafPhenology(int id, int leafOnStartDayIndex, int leafOnEndDayIndex)
         {
@@ -42,8 +42,8 @@ namespace iLand.Tree
 
             this.ID = id;
             this.LeafOnFractionByMonth = new float[Constant.MonthsInYear]; // left as 0 since populated in RunYear()
-            this.LeafOnStartDayIndex = leafOnStartDayIndex;
-            this.LeafOnEndDayIndex = leafOnEndDayIndex;
+            this.LeafOnStartDayOfYearIndex = leafOnStartDayIndex;
+            this.LeafOnEndDayOfYearIndex = leafOnEndDayIndex;
         }
 
         public bool IsEvergreen
@@ -57,7 +57,7 @@ namespace iLand.Tree
         // length of vegetation period in days, returns full length of year for evergreens
         public int GetLeafOnDurationInDays()
         {
-            int leafOnDuration = this.LeafOnEndDayIndex - this.LeafOnStartDayIndex;
+            int leafOnDuration = this.LeafOnEndDayOfYearIndex - this.LeafOnStartDayOfYearIndex;
             Debug.Assert(leafOnDuration > 0);
             return leafOnDuration;
         }
@@ -157,12 +157,12 @@ namespace iLand.Tree
             {
                 // throw IException(QString("Phenology::calculation(): was not able to determine the length of the vegetation period for group {0}. weather table: '{1}'.", id(), weather.name()));
                 // Debug.WriteLine("Phenology::calculation(): vegetation period is 0 for group " + LeafType + ", weather table: " + weather.Name);
-                leafOnStartDayIndex = DateTimeExtensions.DaysInYear(isLeapYear) - 1; // last day of the year, never reached
+                leafOnStartDayIndex = DateTimeExtensions.GetDaysInYear(isLeapYear) - 1; // last day of the year, never reached
                 leafOnEndDayIndex = leafOnStartDayIndex; // never reached
             }
 
-            this.LeafOnStartDayIndex = leafOnStartDayIndex;
-            this.LeafOnEndDayIndex = leafOnEndDayIndex;
+            this.LeafOnStartDayOfYearIndex = leafOnStartDayIndex;
+            this.LeafOnEndDayOfYearIndex = leafOnEndDayIndex;
 
             // convert day of year to dates
             (int leafOnDayOfMonthIndex, int leafOnMonthIndex) = DateTimeExtensions.DayOfYearToDayOfMonth(leafOnStartDayIndex);
@@ -181,7 +181,7 @@ namespace iLand.Tree
                 {
                     // fractions of month
                     float leafOnFraction = 1.0F;
-                    float daysInMonth = (float)DateTimeExtensions.DaysInMonth(leafOnMonthIndex, isLeapYear);
+                    float daysInMonth = (float)DateTimeExtensions.GetDaysInMonth(leafOnMonthIndex, isLeapYear);
                     if (monthIndex == leafOnMonthIndex)
                     {
                         leafOnFraction -= (leafOnDayOfMonthIndex + 1) / daysInMonth;

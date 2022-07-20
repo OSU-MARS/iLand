@@ -271,7 +271,7 @@ namespace iLand.Tree
             // the weather factor is defined as the arithmentic annual mean value
             float weatherTimestepsInYear = weatherTimeSeries.Timestep switch
             {
-                Timestep.Daily => DateTimeExtensions.DaysInYear(this.RU.Weather.TimeSeries.IsCurrentlyLeapYear()),
+                Timestep.Daily => DateTimeExtensions.GetDaysInYear(this.RU.Weather.TimeSeries.IsCurrentlyLeapYear()),
                 Timestep.Monthly => Constant.MonthsInYear,
                 _ => throw new NotSupportedException("Unhandled weather timestep " + weatherTimeSeries.Timestep + ".")
             };

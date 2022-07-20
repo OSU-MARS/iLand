@@ -355,11 +355,11 @@ namespace iLand.Tree
 
             // establishment parameters
             species.SaplingEstablishment.ColdFatalityTemperature = reader.EstablishmentParametersMinTemp();
-            species.SaplingEstablishment.ChillRequirement = reader.EstablishmentParametersChillRequirement();
+            species.SaplingEstablishment.ChillingDaysRequired = reader.EstablishmentParametersChillRequirement();
             species.SaplingEstablishment.MinimumGrowingDegreeDays = reader.EstablishmentParametersGrowingDegreeDaysMin();
             species.SaplingEstablishment.MaximumGrowingDegreeDays = reader.EstablishmentParametersGrowingDegreeDaysMax();
             species.SaplingEstablishment.GrowingDegreeDaysBaseTemperature = reader.EstablishmentParametersGrowingDegreeDaysBaseTemperature();
-            species.SaplingEstablishment.GrowingDegreeDaysBudBurst = reader.EstablishmentParametersGrowingDegreeDaysBudBurst();
+            species.SaplingEstablishment.GrowingDegreeDaysForBudburst = reader.EstablishmentParametersGrowingDegreeDaysBudBurst();
             species.SaplingEstablishment.MinimumFrostFreeDays = reader.EstablishmentParametersMinFrostFree();
             species.SaplingEstablishment.FrostTolerance = reader.EstablishmentParametersFrostTolerance();
             species.SaplingEstablishment.DroughtMortalityPsiInMPa = reader.EstablishmentParametersPsiMin();

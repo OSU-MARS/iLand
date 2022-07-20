@@ -20,6 +20,9 @@ namespace iLand.Input
         /// <param name="meanTemp">Monthly mean air temperature, °C.</param>
         /// <param name="maxTemp">Monthly mean daily maximum air temperature, °C.</param>
         /// <returns>Monthly mean daily daytime air temperature, °C.</returns>
+        /// <remarks>
+        /// Estimation here influences estimators in <see cref="iLand.Tree.SaplingEstablishment"/> which consume daily mean air temperatures.
+        /// </remarks>
         protected static float EstimateDaytimeMeanAirTemperature(float minTemp, float meanTemp, float maxTemp)
         {
             // Based on multiple linear regression of the primary and secondary meteorology stations on the HJ Andrews Research Forest, p < 0.001,

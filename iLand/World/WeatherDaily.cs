@@ -111,9 +111,9 @@ namespace iLand.World
             bool isLeapYear = this.TimeSeries.IsCurrentlyLeapYear();
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
-                this.TemperatureByMonth[month] /= (float)DateTimeExtensions.DaysInMonth(month, isLeapYear);
+                this.TemperatureByMonth[month] /= (float)DateTimeExtensions.GetDaysInMonth(month, isLeapYear);
             }
-            this.MeanAnnualTemperature /= (float)DateTimeExtensions.DaysInYear(isLeapYear);
+            this.MeanAnnualTemperature /= (float)DateTimeExtensions.GetDaysInYear(isLeapYear);
 
             // calculate leaf on-off phenology for deciduous species
             for (int index = 0; index < this.TreeSpeciesPhenology.Count; ++index)

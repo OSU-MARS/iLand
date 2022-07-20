@@ -104,8 +104,8 @@ namespace iLand.Tree
 
         private void CalculateMonthlyGrowthModifiersFromDailyWeather(WeatherTimeSeriesDaily dailyWeatherSeries, LeafPhenology leafPhenology, WaterCycle ruWaterCycle)
         {
-            int leafOnDayIndex = leafPhenology.LeafOnStartDayIndex;
-            int leafOffDayIndex = leafPhenology.LeafOnEndDayIndex;
+            int leafOnDayIndex = leafPhenology.LeafOnStartDayOfYearIndex;
+            int leafOffDayIndex = leafPhenology.LeafOnEndDayOfYearIndex;
             for (int dayOfYear = 0, weatherDayIndex = dailyWeatherSeries.CurrentYearStartIndex; weatherDayIndex < dailyWeatherSeries.NextYearStartIndex; ++weatherDayIndex, ++dayOfYear)
             {
                 int monthIndex = dailyWeatherSeries.Month[weatherDayIndex] - 1;
@@ -141,7 +141,7 @@ namespace iLand.Tree
             bool isLeapYear = dailyWeatherSeries.IsCurrentlyLeapYear();
             for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
             {
-                float daysInMonth = (float)DateTimeExtensions.DaysInMonth(monthIndex, isLeapYear);
+                float daysInMonth = (float)DateTimeExtensions.GetDaysInMonth(monthIndex, isLeapYear);
                 this.SoilWaterResponseByMonth[monthIndex] /= daysInMonth;
                 this.TemperatureResponseByMonth[monthIndex] /= daysInMonth;
                 this.VpdResponseByMonth[monthIndex] /= daysInMonth;

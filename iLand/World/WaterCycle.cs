@@ -230,8 +230,8 @@ namespace iLand.World
                 int dayOfYearIndex = timestepInYearIndex;
                 if (weatherTimeSeries.Timestep == Timestep.Monthly)
                 {
-                    dayOfYearIndex = DateTimeExtensions.MidmonthDayIndex(timestepInYearIndex, isLeapYear);
-                    daysInTimestep = DateTimeExtensions.DaysInMonth(timestepInYearIndex, isLeapYear);
+                    dayOfYearIndex = DateTimeExtensions.GetMidmonthDayIndex(timestepInYearIndex, isLeapYear);
+                    daysInTimestep = DateTimeExtensions.GetDaysInMonth(timestepInYearIndex, isLeapYear);
                 }
 
                 // interception by the crown

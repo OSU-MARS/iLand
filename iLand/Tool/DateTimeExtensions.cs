@@ -104,7 +104,7 @@
             return (dayOfMonthIndex, monthIndex);
         }
 
-        public static int DaysInMonth(int monthIndex, bool isLeapYear)
+        public static int GetDaysInMonth(int monthIndex, bool isLeapYear)
         {
             int daysInMonth = DateTimeExtensions.DaysInNonLeapYearMonth[monthIndex];
             if ((monthIndex == 1) && isLeapYear)
@@ -114,12 +114,12 @@
             return daysInMonth;
         }
 
-        public static int DaysInYear(bool isLeapYear)
+        public static int GetDaysInYear(bool isLeapYear)
         {
             return isLeapYear ? Constant.DaysInLeapYear : Constant.DaysInYear;
         }
 
-        public static int MidmonthDayIndex(int monthIndex, bool isLeapYear)
+        public static int GetMidmonthDayIndex(int monthIndex, bool isLeapYear)
         {
             int midmonthDayIndex = DateTimeExtensions.MidmonthDayIndicesNonLeapYear[monthIndex];
             if (isLeapYear && (monthIndex > 0))

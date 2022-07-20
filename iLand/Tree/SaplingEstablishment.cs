@@ -28,7 +28,7 @@ namespace iLand.Tree
     {
         // number of days that meet TACA chilling requirements (-5 to +5 °C) carried over from previous calendar year in northern hemisphere sites
         // Most likely zero in southern hemisphere sites.
-        private int chillingDaysCarriedOverFromPreviousCalendarYear;
+        private float chillingDaysCarriedOverFromPreviousCalendarYear;
 
         private readonly List<float> soilWaterPotentialCircularBuffer;
 
@@ -49,120 +49,281 @@ namespace iLand.Tree
             // TODO: why is CalculateBiomassGrowthForYear() called from three places?
             ruSpecies.CalculateBiomassGrowthForYear(projectFile, fromSaplingEstablishmentOrGrowth: true); // calculate the 3-PG module and run the water cycle (this is done only if that did not happen up to now)
 
-            // get start of fall chilling days
-            // for evergreen species: use the "bottom line" of 10.5 hrs daylength for the end of the vegetation season rather than leaf off
-            // TODO: why does vegetation season cut off at this day length for all evergreens?
+            // get start of fall chilling days: leaf off for deciduous species, 10.5 hour day length for evergreen species
+            // TODO: why is a 10.5 hour day defined as the end of the growing seasion for all evergreens?
+            // TODO: Nitshke and Innes define chilling days as beginning from the midpoint of the growing season, not from leaf off or 10.5 hours
             // TODO: support southern hemisphere sites
             LeafPhenology leafPhenology = weather.GetPhenology(ruSpecies.Species.LeafPhenologyID);
             WeatherTimeSeries weatherTimeSeries = weather.TimeSeries;
-            int leafOffTimeSeriesIndex = weatherTimeSeries.CurrentYearStartIndex + (leafPhenology.IsEvergreen ? weather.Sun.LastDayLongerThan10_5Hours : leafPhenology.LeafOnEndDayIndex);
 
-            Debug.Assert(weatherTimeSeries.Timestep == Timestep.Daily);
+            // for the first simulation year, approximate previous fall's chilling days with the current year's chilling days
             if (this.chillingDaysCarriedOverFromPreviousCalendarYear == Constant.NoDataInt32)
             {
-                // for the first simulation year, approximate previous fall's chilling days with the current year's chilling days
-                for (int weatherTimestepIndex = leafOffTimeSeriesIndex; weatherTimestepIndex < weatherTimeSeries.NextYearStartIndex; ++weatherTimestepIndex)
+                this.chillingDaysCarriedOverFromPreviousCalendarYear = 0;
+                if (weatherTimeSeries.Timestep == Timestep.Daily)
                 {
-                    float daytimeMeanTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherTimestepIndex];
-                    if (daytimeMeanTemperature >= -5.0F && daytimeMeanTemperature < 5.0F)
+                    int leafOffTimeSeriesIndex = SaplingEstablishment.GetLeafOffDailyWeatherIndex(weather, leafPhenology);
+                    for (int weatherDayIndex = leafOffTimeSeriesIndex; weatherDayIndex < weatherTimeSeries.NextYearStartIndex; ++weatherDayIndex)
                     {
-                        ++this.chillingDaysCarriedOverFromPreviousCalendarYear;
+                        float daytimeMeanTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherDayIndex];
+                        if (SaplingEstablishment.IsChillingDay(daytimeMeanTemperature))
+                        {
+                            ++this.chillingDaysCarriedOverFromPreviousCalendarYear;
+                        }
                     }
                 }
-
+                else if (weatherTimeSeries.Timestep == Timestep.Monthly)
+                {
+                    bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
+                    for (int monthIndex = 0, weatherMonthIndex = weatherTimeSeries.CurrentYearStartIndex; weatherMonthIndex < weatherTimeSeries.NextYearStartIndex; ++monthIndex, ++weatherMonthIndex)
+                    {
+                        float monthlyMeanDaytimeTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherMonthIndex];
+                        float daysInMonth = DateTimeExtensions.GetDaysInMonth(monthIndex, isLeapYear);
+                        this.chillingDaysCarriedOverFromPreviousCalendarYear += SaplingEstablishment.EstimateChillingDaysInMonth(monthlyMeanDaytimeTemperature, daysInMonth);
+                    }
+                }
+                else
+                {
+                    throw new NotSupportedException("Unhandled weather timestep " + weatherTimeSeries.Timestep + ".");
+                }
             }
-            int chillingDays = this.chillingDaysCarriedOverFromPreviousCalendarYear;
+            float chillingDays = this.chillingDaysCarriedOverFromPreviousCalendarYear;
             this.chillingDaysCarriedOverFromPreviousCalendarYear = 0;
 
             bool budsHaveBurst = false;
             SaplingEstablishmentParameters establishment = ruSpecies.Species.SaplingEstablishment;
-            int frostDaysAfterBudBurst = 0; // frost days after bud burst
-            int frostFreeDaysInYear = 0;
+            float frostDaysAfterBudburst = 0.0F; // frost days after budburst
+            float frostFreeDaysInYear = 0.0F;
             float growingDegreeDays = 0.0F;
-            float growingDegreeDaysBudBurst = 0.0F;
-            bool tacaChillingRequirementSatisfied = false;  // total chilling requirement
-            bool tacaMinimumTemperatureSatisfied = true; // minimum temperature threshold
-            for (int weatherTimestepIndex = weatherTimeSeries.CurrentYearStartIndex; weatherTimestepIndex < weatherTimeSeries.NextYearStartIndex; ++weatherTimestepIndex)
+            float growingDegreeDaysBudburst = 0.0F;
+            bool tacaChillingDaysReached = false; // total chilling requirement
+            bool tacaColdFatalityTemperatureNotReached = true; // minimum temperature threshold
+            if (weatherTimeSeries.Timestep == Timestep.Daily)
             {
-                // minimum temperature: if temp too low . set prob. to zero
-                if (weatherTimeSeries.TemperatureMin[weatherTimestepIndex] < establishment.ColdFatalityTemperature)
+                int leafOffTimeSeriesIndex = SaplingEstablishment.GetLeafOffDailyWeatherIndex(weather, leafPhenology);
+                for (int weatherDayIndex = weatherTimeSeries.CurrentYearStartIndex; weatherDayIndex < weatherTimeSeries.NextYearStartIndex; ++weatherDayIndex)
                 {
-                    tacaMinimumTemperatureSatisfied = false;
-                }
+                    // if winterkill temperature is reached seedling establishment probability becomes zero
+                    float minTemperature = weatherTimeSeries.TemperatureMin[weatherDayIndex];
+                    if (minTemperature < establishment.ColdFatalityTemperature)
+                    {
+                        tacaColdFatalityTemperatureNotReached = false;
+                        break;
+                    }
 
-                // count frost free days
-                float minTemperature = weatherTimeSeries.TemperatureMin[weatherTimestepIndex];
-                if (minTemperature > 0.0F)
-                {
-                    ++frostFreeDaysInYear;
-                }
+                    // count frost free days
+                    if (minTemperature > 0.0F)
+                    {
+                        ++frostFreeDaysInYear;
+                    }
 
-                // chilling days
-                float daytimeMeanTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherTimestepIndex];
-                if (daytimeMeanTemperature >= -5.0F && daytimeMeanTemperature < 5.0F)
-                {
-                    ++chillingDays;
-                    if (weatherTimestepIndex > leafOffTimeSeriesIndex)
+                    // chilling days
+                    float daytimeMeanTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherDayIndex];
+                    if (SaplingEstablishment.IsChillingDay(daytimeMeanTemperature))
                     {
-                        ++this.chillingDaysCarriedOverFromPreviousCalendarYear;
+                        ++chillingDays;
+                        if (weatherDayIndex > leafOffTimeSeriesIndex)
+                        {
+                            ++this.chillingDaysCarriedOverFromPreviousCalendarYear;
+                        }
                     }
-                }
-                if (chillingDays > establishment.ChillRequirement)
-                {
-                    tacaChillingRequirementSatisfied = true;
-                }
+                    if (chillingDays > establishment.ChillingDaysRequired)
+                    {
+                        tacaChillingDaysReached = true;
+                    }
 
-                // growing degree days above the base temperature are counted if beginning from the day where the chilling requirements are met
-                // up to a fixed day ending the veg period
-                if (weatherTimestepIndex <= leafOffTimeSeriesIndex)
-                {
-                    // accumulate growing degree days
-                    if (tacaChillingRequirementSatisfied && (daytimeMeanTemperature > establishment.GrowingDegreeDaysBaseTemperature))
+                    // growing degree days above the base temperature are counted beginning from the day where the chilling requirements are met
+                    // up to a fixed day ending the veg period (Nitshke and Innes 2008 Figure 1)
+                    if (weatherDayIndex <= leafOffTimeSeriesIndex)
                     {
-                        growingDegreeDays += daytimeMeanTemperature - establishment.GrowingDegreeDaysBaseTemperature;
-                        growingDegreeDaysBudBurst += daytimeMeanTemperature - establishment.GrowingDegreeDaysBaseTemperature;
-                    }
-                    // if day-frost occurs, the GDD counter for bud burst is reset
-                    if (daytimeMeanTemperature <= 0.0F)
-                    {
-                        growingDegreeDaysBudBurst = 0.0F;
-                    }
-                    if (growingDegreeDaysBudBurst > establishment.GrowingDegreeDaysBudBurst)
-                    {
-                        budsHaveBurst = true;
-                    }
-                    if ((weatherTimestepIndex < leafOffTimeSeriesIndex) && budsHaveBurst && (minTemperature <= 0.0F))
-                    {
-                        ++frostDaysAfterBudBurst;
+                        // accumulate growing degree days
+                        if (tacaChillingDaysReached && (daytimeMeanTemperature > establishment.GrowingDegreeDaysBaseTemperature))
+                        {
+                            float growingDegrees = daytimeMeanTemperature - establishment.GrowingDegreeDaysBaseTemperature;
+                            growingDegreeDays += growingDegrees;
+                            growingDegreeDaysBudburst += growingDegrees;
+                        }
+                        // if day-frost occurs, the growing degree day counter for budburst is reset
+                        if (daytimeMeanTemperature <= 0.0F)
+                        {
+                            growingDegreeDaysBudburst = 0.0F;
+                        }
+                        if (growingDegreeDaysBudburst > establishment.GrowingDegreeDaysForBudburst)
+                        {
+                            budsHaveBurst = true;
+                        }
+                        if (budsHaveBurst && (minTemperature <= 0.0F))
+                        {
+                            ++frostDaysAfterBudburst;
+                        }
                     }
                 }
             }
+            else if (weatherTimeSeries.Timestep == Timestep.Monthly)
+            {
+                bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
+                (int leafOnEndDayOfMonth, int leafOffMonthIndex) = SaplingEstablishment.GetLeafOffMonthlyWeatherIndices(weather, leafPhenology);
+                for (int monthIndex = 0, weatherMonthIndex = weatherTimeSeries.CurrentYearStartIndex; weatherMonthIndex < weatherTimeSeries.NextYearStartIndex; ++monthIndex, ++weatherMonthIndex)
+                {
+                    // if winterkill temperature is reached seedling establishment probability becomes zero
+                    float minTemperature = weatherTimeSeries.TemperatureMin[weatherMonthIndex];
+                    if (minTemperature < establishment.ColdFatalityTemperature)
+                    {
+                        tacaColdFatalityTemperatureNotReached = false;
+                        break;
+                    }
+
+                    // frost free days
+                    float daysInMonth = DateTimeExtensions.GetDaysInMonth(monthIndex, isLeapYear);
+                    float frostDaysInMonth = SaplingEstablishment.EstimateFrostDaysInMonth(minTemperature, daysInMonth);
+                    frostFreeDaysInYear += daysInMonth - frostDaysInMonth;
+
+                    // chilling days
+                    float monthlyMeanDaytimeTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherMonthIndex];
+                    float chillingDaysInMonth = SaplingEstablishment.EstimateChillingDaysInMonth(monthlyMeanDaytimeTemperature, daysInMonth);
+                    chillingDays += chillingDaysInMonth;
+                    if (chillingDays > establishment.ChillingDaysRequired)
+                    {
+                        tacaChillingDaysReached = true;
+                    }
+
+                    if (monthIndex == leafOffMonthIndex)
+                    {
+                        float monthLeafOffFraction = 1.0F - leafOnEndDayOfMonth / daysInMonth;
+                        this.chillingDaysCarriedOverFromPreviousCalendarYear += monthLeafOffFraction * chillingDaysInMonth;
+                    }
+                    else if (monthIndex > leafOffMonthIndex)
+                    {
+                        this.chillingDaysCarriedOverFromPreviousCalendarYear += chillingDaysInMonth;
+                    }
+
+                    // growing degree days above the base temperature
+                    if (monthIndex <= leafOffMonthIndex)
+                    {
+                        // accumulate growing degree days
+                        float growingDegreeDaysInMonth = 0.0F;
+                        if (tacaChillingDaysReached)
+                        {
+                            growingDegreeDaysInMonth = SaplingEstablishment.EstimateGrowingDegreeDays(monthlyMeanDaytimeTemperature, daysInMonth, establishment);
+                            float fractionOfMonthAfterChillingDaysReached = (chillingDays - establishment.ChillingDaysRequired) / chillingDaysInMonth;
+                            if (fractionOfMonthAfterChillingDaysReached < 1.0F)
+                            {
+                                growingDegreeDaysInMonth *= fractionOfMonthAfterChillingDaysReached;
+                            }
+                            growingDegreeDays += growingDegreeDaysInMonth;
+                            growingDegreeDaysBudburst += growingDegreeDaysInMonth;
+                        }
+                        // if a frost day occurs before budburst, the growing degree day counter for budburst is reset
+                        if (frostDaysInMonth >= 1.0F)
+                        {
+                            growingDegreeDaysBudburst = 0.0F;
+                        }
+                        if (growingDegreeDaysBudburst > establishment.GrowingDegreeDaysForBudburst)
+                        {
+                            budsHaveBurst = true;
+                        }
+                        if (budsHaveBurst)
+                        {
+                            Debug.Assert((growingDegreeDaysInMonth > 0.0F) && (growingDegreeDaysBudburst > establishment.GrowingDegreeDaysForBudburst));
+                            float fractionOfMonthAfterBudburstAndBeforeLeafOff = (growingDegreeDaysBudburst - establishment.GrowingDegreeDaysForBudburst) / growingDegreeDaysInMonth;
+                            if (fractionOfMonthAfterBudburstAndBeforeLeafOff > 1.0F)
+                            {
+                                fractionOfMonthAfterBudburstAndBeforeLeafOff = 1.0F; 
+                            }
+                            if (monthIndex == leafOffMonthIndex)
+                            {
+                                float monthLeafOffFraction = 1.0F - leafOnEndDayOfMonth / daysInMonth;
+                                fractionOfMonthAfterBudburstAndBeforeLeafOff -= monthLeafOffFraction;
+                            }
+                            if (fractionOfMonthAfterBudburstAndBeforeLeafOff > 0.0F)
+                            {
+                                float frostDaysInMonthAfterBudburstAndBeforeLeafOff = fractionOfMonthAfterBudburstAndBeforeLeafOff * frostDaysInMonth;
+                                frostDaysAfterBudburst += frostDaysInMonthAfterBudburstAndBeforeLeafOff;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                throw new NotSupportedException("Unhandled weather timestep " + weatherTimeSeries.Timestep + ".");
+            }
 
             float frostAndWaterModifier = 0.0F; // if any of TACA's sapling establishment requirements is not met
-            if (tacaChillingRequirementSatisfied && tacaMinimumTemperatureSatisfied)
+            if (tacaChillingDaysReached && tacaColdFatalityTemperatureNotReached)
             {
                 // frost free days in vegetation period
-                bool tacaFrostFreeDaysSatisfied = (growingDegreeDays > establishment.MinimumGrowingDegreeDays) && (growingDegreeDays < establishment.MaximumGrowingDegreeDays);
+                bool tacaFrostFreeDaysReached = frostFreeDaysInYear > establishment.MinimumFrostFreeDays;
                 // growing degree day requirement
-                bool tacaGrowingDegreeDaysSatisfied = frostFreeDaysInYear > establishment.MinimumFrostFreeDays;
+                bool tacaGrowingDegreeDaysInRange = (growingDegreeDays > establishment.MinimumGrowingDegreeDays) && (growingDegreeDays < establishment.MaximumGrowingDegreeDays);
 
-                if (tacaGrowingDegreeDaysSatisfied && tacaFrostFreeDaysSatisfied)
+                if (tacaFrostFreeDaysReached && tacaGrowingDegreeDaysInRange)
                 {
                     // negative effect of frost events after bud birst
                     float frostModifier = 1.0F;
-                    if (frostDaysAfterBudBurst > 0)
+                    if (frostDaysAfterBudburst > 0)
                     {
-                        frostModifier = MathF.Pow(establishment.FrostTolerance, MathF.Sqrt(frostDaysAfterBudBurst));
+                        frostModifier = MathF.Pow(establishment.FrostTolerance, MathF.Sqrt(frostDaysAfterBudburst));
                     }
                     // reduction in establishment due to water limitation and drought induced mortality
-                    int daysInYear = DateTimeExtensions.DaysInYear(weatherTimeSeries.IsCurrentlyLeapYear());
-                    float waterModifier = this.GetMinimumLeafOnSoilWaterModifier(ruSpecies, leafPhenology.LeafOnStartDayIndex, leafPhenology.GetLeafOnDurationInDays(), daysInYear);
+                    int daysInYear = DateTimeExtensions.GetDaysInYear(weatherTimeSeries.IsCurrentlyLeapYear());
+                    float waterModifier = this.GetMinimumLeafOnSoilWaterModifier(ruSpecies, leafPhenology.LeafOnStartDayOfYearIndex, leafPhenology.GetLeafOnDurationInDays(), daysInYear);
                     // combine water and frost effects multiplicatively
                     frostAndWaterModifier = frostModifier * waterModifier;
                 }
             }
 
             return frostAndWaterModifier;
+        }
+
+        private static float EstimateChillingDaysInMonth(float estimatedMonthlyMeanDaytimeTemperature, float daysInMonth)
+        {
+            // regression from the HJ Andrews Research Forest where the primary and secondary meteorology stations' chilling days per month
+            // are acceptably approximated by a clamped Gaussian function of the mean daytime temperature: R² = 0.972, MAE 1.59 days
+            // Since monthly mean temperatures are highly correlated (Pearson R > 0.93 on the Andrews) including other monthly temperatures
+            // has negligible effect on error as their colinearity suppresses estimation of variance within months. Other predictors may be
+            // helpful but have not been tested.
+            // To constrain error propagation, coefficients here are based on regressing estimated monthly mean daytime temperatures against
+            // actual chilling days and should be updated if monthly mean daytime temperature estimation changes.
+            float temperatureRelativeToCenter = estimatedMonthlyMeanDaytimeTemperature + 0.0717958F;
+            float chillingDays = 0.8648351F * daysInMonth * MathF.Exp(-0.0199024F * temperatureRelativeToCenter * temperatureRelativeToCenter);
+            // Debug.Assert((chillingDays >= 0.0F) && (chillingDays <= daysInMonth)); // guaranteed by model form so long as exponent is multiplied by <= 1.0F
+            return chillingDays;
+        }
+
+        private static float EstimateFrostDaysInMonth(float monthlyMeanDailyMinimumTemperature, float daysInMonth)
+        {
+            // logistic regression from the HJ Andrews Research Forest primary and secondary meteorology stations' frost days per month
+            // R² = 0.969, MAE 1.49 days
+            return 0.91946F * daysInMonth / (1.0F + MathF.Exp(0.59956F * (monthlyMeanDailyMinimumTemperature - 0.45742F)));
+        }
+
+        private static float EstimateGrowingDegreeDays(float estimatedMonthlyMeanDaytimeTemperature, float daysInMonth, SaplingEstablishmentParameters establishment)
+        {
+            // piecewise regression from the HJ Andrews Research Forest primary and secondary meteorology stations' growing degree days per month
+            // R² = 0.994, MAE 12.6 degree days at 3.4 °C baseline temperature, 12.9 at 4.0 °C
+            if (estimatedMonthlyMeanDaytimeTemperature < -2.0F)
+            {
+                return 0.0F;
+            }
+            if (estimatedMonthlyMeanDaytimeTemperature < 7.5F)
+            {
+                float shiftedTemperature = estimatedMonthlyMeanDaytimeTemperature + 1.879775F + 0.7967818F * (3.4F - establishment.GrowingDegreeDaysBaseTemperature);
+                return 0.049491F * shiftedTemperature * shiftedTemperature;
+            }
+
+            return -98.780242F + 0.986055F * daysInMonth * (estimatedMonthlyMeanDaytimeTemperature + 3.4F - establishment.GrowingDegreeDaysBaseTemperature);
+        }
+
+        private static int GetLeafOffDailyWeatherIndex(Weather weather, LeafPhenology leafPhenology)
+        {
+            return weather.TimeSeries.CurrentYearStartIndex + (leafPhenology.IsEvergreen ? weather.Sun.LastDayLongerThan10_5Hours : leafPhenology.LeafOnEndDayOfYearIndex);
+        }
+
+        private static (int leafOnEndDayOfMonth, int leafOffMonthIndex) GetLeafOffMonthlyWeatherIndices(Weather weather, LeafPhenology leafPhenology)
+        {
+            int leafOnEndDayOfYearIndex = leafPhenology.IsEvergreen ? weather.Sun.LastDayLongerThan10_5Hours : leafPhenology.LeafOnEndDayOfYearIndex;
+            return DateTimeExtensions.DayOfYearToDayOfMonth(leafOnEndDayOfYearIndex);
         }
 
         private float GetMinimumLeafOnSoilWaterModifier(ResourceUnitTreeSpecies ruSpecies, int leafOnStart, int leafOnEnd, int daysInYear)
@@ -222,6 +383,18 @@ namespace iLand.Tree
             float waterResponse = Maths.Limit((minimumLeafOnMovingAveragePsiInMPa - minimumEstablishmentPsiMPa) / (-0.015F - minimumEstablishmentPsiMPa), 0.0F, 1.0F);
 
             return waterResponse;
+        }
+
+        private static bool IsChillingDay(float daytimeMeanTemperature)
+        {
+            // Nitshke and Innes define chilling as days between ±5 °C following the midpoint of the growing seasion but do not indicate which
+            // daily temperature is used in the determination
+            // It appears plausible Nitshke and Innes meant the daily mean temperature and that, in iLand C++, this was transposed to the
+            // daytime mean temperature as iLand doesn't flow input daily mean temperatures. This suggests iLand may underestimate chilling days
+            // since daytime mean temperatures are warmer than daily mean temperatures (over the HJ Andrews this bias averages 0-4 days per
+            // month, depending on station, with the largest differences in March, April, and November and typically totals -20 to +2 days per
+            // year).
+            return (daytimeMeanTemperature >= -5.0F) && (daytimeMeanTemperature < 5.0F);
         }
     }
 }

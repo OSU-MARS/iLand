@@ -618,10 +618,10 @@ namespace iLand.Test
             Assert.IsTrue(MathF.Abs(douglasFir.DeathProbabilityFixed - 0.00355005264F) < 0.000001F); // transformed from 0.67
             // probStress  6.9
             // displayColor D6F288
-            Assert.IsTrue(douglasFir.SaplingEstablishment.ChillRequirement == 30);
+            Assert.IsTrue(douglasFir.SaplingEstablishment.ChillingDaysRequired == 30);
             Assert.IsTrue(MathF.Abs(douglasFir.SaplingEstablishment.FrostTolerance - 0.5F) < 0.001);
             Assert.IsTrue(MathF.Abs(douglasFir.SaplingEstablishment.GrowingDegreeDaysBaseTemperature - 3.4F) < 0.001F);
-            Assert.IsTrue(douglasFir.SaplingEstablishment.GrowingDegreeDaysBudBurst == 255);
+            Assert.IsTrue(douglasFir.SaplingEstablishment.GrowingDegreeDaysForBudburst == 255);
             Assert.IsTrue(douglasFir.SaplingEstablishment.MaximumGrowingDegreeDays == 3261);
             Assert.IsTrue(douglasFir.SaplingEstablishment.MinimumGrowingDegreeDays == 177);
             Assert.IsTrue(douglasFir.SaplingEstablishment.MinimumFrostFreeDays == 65);
