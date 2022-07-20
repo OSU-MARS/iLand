@@ -45,10 +45,13 @@ parameter database to the iLand 1.0 schema and separates .lip files by region. D
 and a European plantation species, so is supported on both continents with differing light intensity profiles and parameterizations.
 
 ### Known issues inherited from iLand 1.0 C++
-* The project level switch for expression linearization is not consistently translated into calls to Linearize().
 * Leaf phenology is hard coded for northern hemisphere temperate and boreal sites, preventing support for deciduous species in the southern hemisphere
 and likely inhibiting modeling on tropical sites. Chilling day calculations for establishment of evergreen species are also likely to be incorrect in
 these locations.
+* Sun angles are aren't adjusted for leap years. Angles and solstice dates therefore accumulate up to one day of error over the four year leap year cycle.
+Biases are also introduced by the use of fixed values for the Earth's axial tilt and neglect of latitudinal variation across the simulation area, though
+these effects are likely small compared to those of atmospheric refraction, terrain occultation, and slope.
+* The project level switch for expression linearization is not consistently translated into calls to Linearize().
 
 ### iLand 1.0 C++ issues fixed
 * ~50% crash probability per run reduced to negligible risk, dramatically improving useability.
@@ -58,6 +61,7 @@ to toroidal resource units).
 within the growing season on tropical and southern hemisphere sites.
 * Positioning of light grid origin at resource unit grid orientation lead integer truncation of light grid indexes to double stamp the x = 0 column and
 y = 0 row of the light grid, leading to competition overestimation and growth underestimation of trees in this row and column.
+* The last day of a leap year was a leaf off day for evergreen species, meaning no photosynthesis would occur that day.
 
 Decoupling from Qt additionally exempts iLand development from Qt licensing terms (minimum US$ 302/month, as of July 2022, or Qt code contributions in 
 kind), reducing the cost of open source software.

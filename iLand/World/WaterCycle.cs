@@ -231,7 +231,7 @@ namespace iLand.World
                 if (weatherTimeSeries.Timestep == Timestep.Monthly)
                 {
                     dayOfYearIndex = DateTimeExtensions.GetMidmonthDayIndex(timestepInYearIndex, isLeapYear);
-                    daysInTimestep = DateTimeExtensions.GetDaysInMonth(timestepInYearIndex, isLeapYear);
+                    daysInTimestep = (float)DateTimeExtensions.GetDaysInMonth(timestepInYearIndex, isLeapYear);
                 }
 
                 // interception by the crown

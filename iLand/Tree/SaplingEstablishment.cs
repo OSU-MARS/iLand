@@ -78,7 +78,7 @@ namespace iLand.Tree
                     for (int monthIndex = 0, weatherMonthIndex = weatherTimeSeries.CurrentYearStartIndex; weatherMonthIndex < weatherTimeSeries.NextYearStartIndex; ++monthIndex, ++weatherMonthIndex)
                     {
                         float monthlyMeanDaytimeTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherMonthIndex];
-                        float daysInMonth = DateTimeExtensions.GetDaysInMonth(monthIndex, isLeapYear);
+                        float daysInMonth = (float)DateTimeExtensions.GetDaysInMonth(monthIndex, isLeapYear);
                         this.chillingDaysCarriedOverFromPreviousCalendarYear += SaplingEstablishment.EstimateChillingDaysInMonth(monthlyMeanDaytimeTemperature, daysInMonth);
                     }
                 }
@@ -162,7 +162,7 @@ namespace iLand.Tree
             else if (weatherTimeSeries.Timestep == Timestep.Monthly)
             {
                 bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
-                (int leafOnEndDayOfMonth, int leafOffMonthIndex) = SaplingEstablishment.GetLeafOffMonthlyWeatherIndices(weather, leafPhenology);
+                (int leafOffMonthIndex, int leafOnEndDayOfMonth) = SaplingEstablishment.GetLeafOffMonthlyWeatherIndices(weather, leafPhenology);
                 for (int monthIndex = 0, weatherMonthIndex = weatherTimeSeries.CurrentYearStartIndex; weatherMonthIndex < weatherTimeSeries.NextYearStartIndex; ++monthIndex, ++weatherMonthIndex)
                 {
                     // if winterkill temperature is reached seedling establishment probability becomes zero
@@ -174,7 +174,7 @@ namespace iLand.Tree
                     }
 
                     // frost free days
-                    float daysInMonth = DateTimeExtensions.GetDaysInMonth(monthIndex, isLeapYear);
+                    float daysInMonth = (float)DateTimeExtensions.GetDaysInMonth(monthIndex, isLeapYear);
                     float frostDaysInMonth = SaplingEstablishment.EstimateFrostDaysInMonth(minTemperature, daysInMonth);
                     frostFreeDaysInYear += daysInMonth - frostDaysInMonth;
 
@@ -320,7 +320,7 @@ namespace iLand.Tree
             return weather.TimeSeries.CurrentYearStartIndex + (leafPhenology.IsEvergreen ? weather.Sun.LastDayLongerThan10_5Hours : leafPhenology.LeafOnEndDayOfYearIndex);
         }
 
-        private static (int leafOnEndDayOfMonth, int leafOffMonthIndex) GetLeafOffMonthlyWeatherIndices(Weather weather, LeafPhenology leafPhenology)
+        private static (int leafOffMonthIndex, int leafOnEndDayOfMonth) GetLeafOffMonthlyWeatherIndices(Weather weather, LeafPhenology leafPhenology)
         {
             int leafOnEndDayOfYearIndex = leafPhenology.IsEvergreen ? weather.Sun.LastDayLongerThan10_5Hours : leafPhenology.LeafOnEndDayOfYearIndex;
             return DateTimeExtensions.DayOfYearToDayOfMonth(leafOnEndDayOfYearIndex);

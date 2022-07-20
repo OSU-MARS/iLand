@@ -5,14 +5,13 @@ namespace iLand.World
 {
     public class Sun
     {
-        private const float J = MathF.PI / 182.625F;
-        private static readonly float Ecliptic = Maths.ToRadians(23.439F);
+        private static readonly float EarthAxialTilt = Maths.ToRadians(23.439F); // angle of Earth's axial tilt (obliquity) with respect to ecliptic
 
         private readonly float latitudeInRadians; // latitude in radians
         private readonly float[] dayLengthInHours; // daylength per day in hours
 
-        public int LastDayLongerThan10_5Hours { get; private set; } // last day of year with a day length > 10.5 hours (see Establishment)
-        public int LastDayLongerThan14_5Hours { get; private set; } // last day with at least 14.5 hours of day length
+        public int LastDayLongerThan10_5Hours { get; private set; } // index of last day of year with a day length > 10.5 hours (see Establishment)
+        public int LastDayLongerThan14_5Hours { get; private set; } // index of last day with at least 14.5 hours of day length
         public int LongestDayIndex { get; private set; } // day of year with maximum day length
 
         public Sun(float latitudeInDegrees)
@@ -23,24 +22,29 @@ namespace iLand.World
             }
 
             this.dayLengthInHours = new float[Constant.DaysInLeapYear];
-
             this.latitudeInRadians = Maths.ToRadians(latitudeInDegrees);
-            // TODO: support more accurate calcuation of summer or winter soilstice?
+
+            // calculate length of day using the approximation formulae of
+            //   Glarner H. ND. Length of Day and Twilight. http://herbert.gandraxa.com/length_of_day.aspx
+            //   Weins T. 2015. Day Length. https://www.mathworks.com/matlabcentral/fileexchange/20390-day-length (MATLAB implementation of Glarner)
+            // TODO: support more accurate calcuation of summer and winter solstices?
+            // TODO: support leap years by adding 0.25 for each year in within four year leap year cycle (see Glarner)
             if (this.latitudeInRadians > 0.0F)
             {
-                this.LongestDayIndex = 182 - 10; // June 21, non-leap years
+                this.LongestDayIndex = 182 - 10; // approximate northern hemisphere summer solstice as June 21
             }
             else
             {
-                this.LongestDayIndex = 365 - 10; // southern hemisphere, non-leap years
+                this.LongestDayIndex = 365 - 10; // approximate sourthern hemisphere summer solstice as December 21
             }
 
-            // calculate length of day using the approximation formulae of: http://herbert.gandraxa.com/length_of_day.aspx
-            for (int dayOfYear = 0; dayOfYear < this.dayLengthInHours.Length; ++dayOfYear)
+            for (int dayOfCalendarYearIndex = 0; dayOfCalendarYearIndex < this.dayLengthInHours.Length; ++dayOfCalendarYearIndex)
             {
-                float m = 1.0F - MathF.Tan(latitudeInRadians) * MathF.Tan(Sun.Ecliptic * MathF.Cos(Sun.J * (dayOfYear + 10))); // day=0: winter solstice => subtract 10 days
+                // day 0 of solar year is winter solstice => add 10 days to calendar year index to get solar year index
+                int dayOfSolarYearIndex = dayOfCalendarYearIndex + 10;
+                float m = 1.0F - MathF.Tan(latitudeInRadians) * MathF.Tan(Sun.EarthAxialTilt * MathF.Cos(MathF.PI / 182.625F * dayOfSolarYearIndex)); // 182.625 = 0.5 * 365.25
                 m = Maths.Limit(m, 0.0F, 2.0F);
-                dayLengthInHours[dayOfYear] = 24.0F / MathF.PI * MathF.Acos(1.0F - m); // result in hours [0..24]
+                this.dayLengthInHours[dayOfCalendarYearIndex] = 24.0F / MathF.PI * MathF.Acos(1.0F - m); // result in hours [0..24]
             }
             this.LastDayLongerThan10_5Hours = 0;
             for (int day = this.LongestDayIndex; day < this.dayLengthInHours.Length; day++)

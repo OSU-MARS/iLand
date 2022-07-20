@@ -17,33 +17,32 @@ namespace iLand.Tree
     /// </remarks>
     public abstract class LeafPhenology
     {
-        public int ID { get; private init; } // identifier of this Phenology group
+        // TODO: change ID to string? (or enum?)
+        public int ID { get; private init; } // identifier of this phenology group
         // get result of phenology calculation for this year (a pointer to a array of 12 values between 0..1: 0 = no days with foliage)
         public float[] LeafOnFractionByMonth { get; private init; }
-        public int LeafOnStartDayOfYearIndex { get; protected set; } // day of year when vegetation period starts
-        public int LeafOnEndDayOfYearIndex { get; protected set; } // day of year when vegetation period stops
 
-        protected LeafPhenology(int id, int leafOnStartDayIndex, int leafOnEndDayIndex)
+        // northern hemisphere: leafOnStartDayIndex < leafOnEndDayIndex
+        // southern hemisphere: leafOnStartDayIndex > leafOnEndDayIndex
+        public int LeafOnStartDayOfYearIndex { get; protected set; } // day of year when leaf on period starts
+        public int LeafOnEndDayOfYearIndex { get; protected set; } // day of year when leaf on period stops
+
+        protected LeafPhenology(int id)
         {
             if (id < Constant.EvergreenLeafPhenologyID)
             {
                 throw new ArgumentOutOfRangeException(nameof(id));
             }
-            if ((leafOnStartDayIndex < 0) || (leafOnStartDayIndex > Constant.DaysInLeapYear))
-            {
-                throw new ArgumentOutOfRangeException(nameof(leafOnStartDayIndex));
-            }
-            if ((leafOnEndDayIndex < 0) || (leafOnEndDayIndex > Constant.DaysInLeapYear))
-            {
-                throw new ArgumentOutOfRangeException(nameof(leafOnEndDayIndex));
-            }
-            // northern hemisphere: leafOnStartDayIndex < leafOnEndDayIndex
-            // southern hemisphere: leafOnStartDayIndex > leafOnEndDayIndex
 
             this.ID = id;
             this.LeafOnFractionByMonth = new float[Constant.MonthsInYear]; // left as 0 since populated in RunYear()
-            this.LeafOnStartDayOfYearIndex = leafOnStartDayIndex;
-            this.LeafOnEndDayOfYearIndex = leafOnEndDayIndex;
+            this.LeafOnStartDayOfYearIndex = 0; // default to leaf on at start of year
+            this.LeafOnEndDayOfYearIndex = Constant.DaysInYear; // updated in RunYear() for leap years
+
+            if (id == Constant.EvergreenLeafPhenologyID)
+            {
+                Array.Fill(this.LeafOnFractionByMonth, 1.0F); // never changes, so set once here
+            }
         }
 
         public bool IsEvergreen
@@ -74,7 +73,7 @@ namespace iLand.Tree
         private readonly Weather<TWeatherTimeSeries> weather; // link to relevant weather driving leaf on and off dates
 
         protected LeafPhenology(Weather<TWeatherTimeSeries> weather, int id, float minVpd, float maxVpd, float minDayLength, float maxDayLength, float minTemp, float maxTemp)
-            : base(id, 0, Constant.DaysInLeapYear) // default to leaves always on
+            : base(id)
         {
             this.minVpd = minVpd;
             this.maxVpd = maxVpd;
@@ -92,94 +91,144 @@ namespace iLand.Tree
 
         public static LeafPhenology<TWeatherTimeSeries> CreateEvergreen(Weather<TWeatherTimeSeries> weather)
         {
-            return new(weather, Constant.EvergreenLeafPhenologyID, float.NaN, float.NaN, float.NaN, float.NaN, float.NaN, float.NaN);
+            return new(weather, Constant.EvergreenLeafPhenologyID, Single.NaN, Single.NaN, Single.NaN, Single.NaN, Single.NaN, Single.NaN);
         }
 
         public override void GetLeafOnAndOffDatesForCurrentYear()
         {
-            // TODO: change ID to string? (or enum?)
+            TWeatherTimeSeries weatherTimeSeries = this.weather.TimeSeries;
+            bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
+            // special case for evergreen phenology: start index and leaf on fractions don't change so only update needed is for end of year
             if (this.ID == Constant.EvergreenLeafPhenologyID)
             {
-                // special case default evergreen phenology: nothing to do since leaves are always on
+                this.LeafOnEndDayOfYearIndex = DateTimeExtensions.GetDaysInYear(isLeapYear);
                 return;
             }
 
             // find deciduous species' start and end of leaf on period in this year
             // TODO: support southern hemisphere sites
-            TWeatherTimeSeries weatherTimeSeries = this.weather.TimeSeries;
-            Debug.Assert(weatherTimeSeries.Timestep == Timestep.Daily);
             // for now, assume January 1 is aways leaf off in the northern hemisphere and leaf on in the southern hemisphere
             // TODO: how fragile are this assumption and the assumption about skipping to the longest day of the year?
             bool inLeafOnPeriod = !this.weather.Sun.IsNorthernHemisphere;
             int leafOnStartDayIndex = -1;
             int leafOnEndDayIndex = -1;
             int longestDayOfYearIndex = -1;
-            for (int weatherTimestepIndex = 0, dayIndex = weatherTimeSeries.CurrentYearStartIndex; dayIndex != weatherTimeSeries.NextYearStartIndex; ++weatherTimestepIndex, ++dayIndex)
+            if (weatherTimeSeries.Timestep == Timestep.Daily)
             {
-                if ((longestDayOfYearIndex >= 0) && (weatherTimestepIndex < longestDayOfYearIndex))
+                for (int dayOfYearIndex = 0, weatherDayIndex = weatherTimeSeries.CurrentYearStartIndex; weatherDayIndex != weatherTimeSeries.NextYearStartIndex; ++dayOfYearIndex, ++weatherDayIndex)
                 {
-                    continue;
+                    if ((longestDayOfYearIndex >= 0) && (dayOfYearIndex < longestDayOfYearIndex))
+                    {
+                        continue;
+                    }
+
+                    float vpdModifier = 1.0F - LeafPhenology<TWeatherTimeSeries>.GetRelativePositionInRange(weatherTimeSeries.VpdMeanInKPa[weatherDayIndex], this.minVpd, this.maxVpd); // high value for low vpd
+                    float temperatureModifier = LeafPhenology<TWeatherTimeSeries>.GetRelativePositionInRange(weatherTimeSeries.TemperatureMin[weatherDayIndex], this.minTemp, this.maxTemp);
+                    float dayLengthModifier = LeafPhenology<TWeatherTimeSeries>.GetRelativePositionInRange(weather.Sun.GetDayLengthInHours(dayOfYearIndex), this.minDayLength, this.maxDayLength);
+                    float leafOnModifier = vpdModifier * temperatureModifier * dayLengthModifier; // Jolly et al. 2005 GSI (growing season index): combined factor of effect of vpd, temperature and day length
+
+                    if ((inLeafOnPeriod == false) && (leafOnModifier > 0.5F))
+                    {
+                        // switch from leaf off to leaf on
+                        inLeafOnPeriod = true;
+                        leafOnStartDayIndex = dayOfYearIndex;
+                        if (leafOnEndDayIndex != -1)
+                        {
+                            break; // finished: found both leaf on and leaf off dates
+                        }
+                        longestDayOfYearIndex = weather.Sun.LongestDayIndex;
+                    }
+                    else if (inLeafOnPeriod && (leafOnModifier < 0.5))
+                    {
+                        // switch from leaf on to leaf off
+                        leafOnEndDayIndex = dayOfYearIndex;
+                        if (leafOnStartDayIndex != -1)
+                        {
+                            break; // finished: found both leaf on and leaf off dates
+                        }
+                        longestDayOfYearIndex = weather.Sun.LongestDayIndex;
+                        inLeafOnPeriod = false;
+                    }
                 }
 
-                float vpdModifier = 1.0F - LeafPhenology<TWeatherTimeSeries>.GetRelativePositionInRange(weatherTimeSeries.VpdMeanInKPa[dayIndex], this.minVpd, this.maxVpd); // high value for low vpd
-                float temperatureModifier = LeafPhenology<TWeatherTimeSeries>.GetRelativePositionInRange(weatherTimeSeries.TemperatureMin[dayIndex], this.minTemp, this.maxTemp);
-                float dayLengthModifier = LeafPhenology<TWeatherTimeSeries>.GetRelativePositionInRange(weather.Sun.GetDayLengthInHours(weatherTimestepIndex), this.minDayLength, this.maxDayLength);
-                float establishmentModifier = vpdModifier * temperatureModifier * dayLengthModifier; // Jolly et al. 2005 GSI (growing season index): combined factor of effect of vpd, temperature and day length
-                
-                if (!inLeafOnPeriod && (establishmentModifier > 0.5F))
+                leafOnStartDayIndex -= 10; // three-week-floating average: subtract 10 days
+                leafOnEndDayIndex -= 10;
+                if ((leafOnStartDayIndex < -1) || (leafOnEndDayIndex < -1))
                 {
-                    // switch from leaf off to leaf on
-                    inLeafOnPeriod = true;
-                    leafOnStartDayIndex = weatherTimestepIndex;
-                    if (leafOnEndDayIndex != -1)
-                    {
-                        break; // finished: found both leaf on and leaf off dates
-                    }
-                    longestDayOfYearIndex = weather.Sun.LongestDayIndex;
-                }
-                else if (inLeafOnPeriod && (establishmentModifier < 0.5))
-                {
-                    // switch from leaf on to leaf off
-                    leafOnEndDayIndex = weatherTimestepIndex;
-                    if (leafOnStartDayIndex != -1)
-                    {
-                        break; // finished: found both leaf on and leaf off dates
-                    }
-                    longestDayOfYearIndex = weather.Sun.LongestDayIndex;
-                    inLeafOnPeriod = false;
+                    // throw IException(QString("Phenology::calculation(): was not able to determine the length of the vegetation period for group {0}. weather table: '{1}'.", id(), weather.name()));
+                    // Debug.WriteLine("Phenology::calculation(): vegetation period is 0 for group " + LeafType + ", weather table: " + weather.Name);
+                    leafOnStartDayIndex = DateTimeExtensions.GetDaysInYear(isLeapYear) - 1; // last day of the year, never reached
+                    leafOnEndDayIndex = leafOnStartDayIndex; // never reached
                 }
             }
-
-            bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
-            leafOnStartDayIndex -= 10; // three-week-floating average: subtract 10 days
-            leafOnEndDayIndex -= 10;
-            if (leafOnStartDayIndex < -1 || leafOnEndDayIndex < -1)
+            else if (weatherTimeSeries.Timestep == Timestep.Monthly)
             {
-                // throw IException(QString("Phenology::calculation(): was not able to determine the length of the vegetation period for group {0}. weather table: '{1}'.", id(), weather.name()));
-                // Debug.WriteLine("Phenology::calculation(): vegetation period is 0 for group " + LeafType + ", weather table: " + weather.Name);
-                leafOnStartDayIndex = DateTimeExtensions.GetDaysInYear(isLeapYear) - 1; // last day of the year, never reached
-                leafOnEndDayIndex = leafOnStartDayIndex; // never reached
+                (int summerSolsticeMonthIndex, int _) = DateTimeExtensions.DayOfYearToDayOfMonth(weather.Sun.LongestDayIndex);
+                for (int monthOfYearIndex = 0, weatherMonthIndex = weatherTimeSeries.CurrentYearStartIndex; weatherMonthIndex != weatherTimeSeries.NextYearStartIndex; ++monthOfYearIndex, ++weatherMonthIndex)
+                {
+                    if ((longestDayOfYearIndex >= 0) && (weatherMonthIndex < summerSolsticeMonthIndex))
+                    {
+                        continue;
+                    }
+
+                    float vpdModifier = 1.0F - LeafPhenology<TWeatherTimeSeries>.GetRelativePositionInRange(weatherTimeSeries.VpdMeanInKPa[weatherMonthIndex], this.minVpd, this.maxVpd); // high value for low vpd
+                    float temperatureModifier = LeafPhenology<TWeatherTimeSeries>.GetRelativePositionInRange(weatherTimeSeries.TemperatureMin[weatherMonthIndex], this.minTemp, this.maxTemp);
+                    int midMonthIndex = DateTimeExtensions.GetMidmonthDayIndex(monthOfYearIndex, isLeapYear);
+                    float dayLengthModifier = LeafPhenology<TWeatherTimeSeries>.GetRelativePositionInRange(weather.Sun.GetDayLengthInHours(midMonthIndex), this.minDayLength, this.maxDayLength);
+                    float leafOnModifier = vpdModifier * temperatureModifier * dayLengthModifier; // Jolly et al. 2005 GSI (growing season index): combined factor of effect of vpd, temperature and day length
+
+                    if ((inLeafOnPeriod == false) && (leafOnModifier > 0.5F))
+                    {
+                        // switch from leaf off to leaf on
+                        // TODO: how to interpolate leaf on start day within month?
+                        inLeafOnPeriod = true;
+                        leafOnStartDayIndex = midMonthIndex;
+                        if (leafOnEndDayIndex != -1)
+                        {
+                            break; // finished: found both leaf on and leaf off dates
+                        }
+                        longestDayOfYearIndex = weather.Sun.LongestDayIndex;
+                    }
+                    else if (inLeafOnPeriod && (leafOnModifier < 0.5))
+                    {
+                        // switch from leaf on to leaf off
+                        // TODO: how to interpolate leaf on start day within month?
+                        leafOnEndDayIndex = midMonthIndex;
+                        if (leafOnStartDayIndex != -1)
+                        {
+                            break; // finished: found both leaf on and leaf off dates
+                        }
+                        longestDayOfYearIndex = weather.Sun.LongestDayIndex;
+                        inLeafOnPeriod = false;
+                    }
+                }
+            }
+            else
+            {
+                throw new NotSupportedException("Unhandled weather timestep " + weatherTimeSeries.Timestep + ".");
             }
 
             this.LeafOnStartDayOfYearIndex = leafOnStartDayIndex;
             this.LeafOnEndDayOfYearIndex = leafOnEndDayIndex;
 
-            // convert day of year to dates
-            (int leafOnDayOfMonthIndex, int leafOnMonthIndex) = DateTimeExtensions.DayOfYearToDayOfMonth(leafOnStartDayIndex);
-            (int leafOffDayOfMonthIndex, int leafOffMonthIndex) = DateTimeExtensions.DayOfYearToDayOfMonth(leafOnEndDayIndex);
+            // set leaf on fractions
+            (int leafOnMonthIndex, int leafOnDayOfMonthIndex) = DateTimeExtensions.DayOfYearToDayOfMonth(leafOnStartDayIndex);
+            (int leafOffMonthIndex, int leafOffDayOfMonthIndex) = DateTimeExtensions.DayOfYearToDayOfMonth(leafOnEndDayIndex);
             for (int monthIndex = 0; monthIndex < 12; ++monthIndex)
             {
-                if (monthIndex < leafOnMonthIndex || monthIndex > leafOffMonthIndex)
+                if ((monthIndex < leafOnMonthIndex) || (monthIndex > leafOffMonthIndex))
                 {
-                    this.LeafOnFractionByMonth[monthIndex] = 0.0F; // whole month is leaf off
+                    // whole month is leaf off
+                    this.LeafOnFractionByMonth[monthIndex] = 0.0F;
                 }
-                else if (monthIndex > leafOnMonthIndex && monthIndex < leafOffMonthIndex)
+                else if ((monthIndex > leafOnMonthIndex) && (monthIndex < leafOffMonthIndex))
                 {
-                    this.LeafOnFractionByMonth[monthIndex] = 1.0F; // whole month is leaf on
+                    // whole month is leaf on
+                    this.LeafOnFractionByMonth[monthIndex] = 1.0F;
                 }
                 else
                 {
-                    // fractions of month
+                    // leaves on or off during this month
                     float leafOnFraction = 1.0F;
                     float daysInMonth = (float)DateTimeExtensions.GetDaysInMonth(leafOnMonthIndex, isLeapYear);
                     if (monthIndex == leafOnMonthIndex)
