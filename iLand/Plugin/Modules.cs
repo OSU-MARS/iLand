@@ -7,59 +7,67 @@ namespace iLand.Plugin
 {
     public class Modules
     {
-        private readonly List<IDisturbanceInterface> mModules; // the list stores only the active modules
-        private readonly List<ISetupResourceUnitInterface> mSetupRUs;
-        private readonly List<ITreeDeathInterface> mTreeDeath;
-        private readonly List<IWaterInterface> mWater;
+        private readonly List<IDisturbanceInterface> disturbanceModules; // the list stores only the active modules
+        private readonly List<ITreeDeathInterface> mortalityModules;
+        private readonly List<ISetupResourceUnitInterface> resourceUnitSetupModules;
+        private readonly List<IWaterInterface> waterModules;
 
         public Modules()
         {
-            this.mModules = new List<IDisturbanceInterface>();
-            this.mSetupRUs = new List<ISetupResourceUnitInterface>();
-            this.mTreeDeath = new List<ITreeDeathInterface>();
-            this.mWater = new List<IWaterInterface>();
+            this.disturbanceModules = new List<IDisturbanceInterface>();
+            this.mortalityModules = new List<ITreeDeathInterface>();
+            this.resourceUnitSetupModules = new List<ISetupResourceUnitInterface>();
+            this.waterModules = new List<IWaterInterface>();
 
             foreach (IDisturbanceInterface modules in PluginLoader.StaticInstances)
             {
                 // plugin is enabled: store in list of active modules
-                mModules.Add(modules);
+                this.disturbanceModules.Add(modules);
                 // check for other interfaces
                 if (modules is ISetupResourceUnitInterface setupResourceUnit)
                 {
-                    mSetupRUs.Add(setupResourceUnit);
+                    this.resourceUnitSetupModules.Add(setupResourceUnit);
                 }
                 if (modules is IWaterInterface water)
                 {
-                    mWater.Add(water);
+                    this.waterModules.Add(water);
                 }
                 if (modules is ITreeDeathInterface treeDeath)
                 {
-                    mTreeDeath.Add(treeDeath);
+                    this.mortalityModules.Add(treeDeath);
                 }
             }
 
-            // fix the order of modules: make sure that "barkbeetle" is after "wind"
-            IDisturbanceInterface? wind = this.GetModule("wind");
-            IDisturbanceInterface? beetles = this.GetModule("barkbeetle");
-            if (wind != null && beetles != null)
+            // ensure order of disturbance modules: make sure bark beetles follow wind
+            // TODO: this should probably throw instead of silently repairing project file
+            IDisturbanceInterface? wind = this.GetDisturbanceModule("wind");
+            IDisturbanceInterface? beetles = this.GetDisturbanceModule("barkbeetle");
+            if ((wind != null) && (beetles != null))
             {
-                int windIndex = mModules.IndexOf(wind);
-                int beetleIndex = mModules.IndexOf(beetles);
+                int windIndex = this.disturbanceModules.IndexOf(wind);
+                int beetleIndex = this.disturbanceModules.IndexOf(beetles);
                 if (beetleIndex < windIndex)
                 {
                     // swap
-                    (mModules[windIndex], mModules[beetleIndex]) = (mModules[beetleIndex], mModules[windIndex]);
+                    (disturbanceModules[windIndex], disturbanceModules[beetleIndex]) = (disturbanceModules[beetleIndex], disturbanceModules[windIndex]);
                 }
             }
         }
 
-        public bool HasSetupResourceUnits() { return mSetupRUs.Count != 0; }
-
-        public IDisturbanceInterface? GetModule(string moduleName)
+        public void CalculateWater(ResourceUnit resourceUnit)
         {
-            foreach (IDisturbanceInterface module in mModules)
+            for (int waterIndex = 0; waterIndex < this.waterModules.Count; ++waterIndex)
             {
-                if (String.Equals(module.Name(), moduleName, StringComparison.Ordinal))
+                this.waterModules[waterIndex].CalculateWater(resourceUnit);
+            }
+        }
+
+        private IDisturbanceInterface? GetDisturbanceModule(string moduleName)
+        {
+            for (int disturbanceIndex = 0; disturbanceIndex < this.disturbanceModules.Count; ++disturbanceIndex)
+            {
+                IDisturbanceInterface module = this.disturbanceModules[disturbanceIndex];
+                if (String.Equals(module.Name, moduleName, StringComparison.Ordinal))
                 {
                     return module;
                 }
@@ -67,44 +75,41 @@ namespace iLand.Plugin
             return null;
         }
 
-        public void SetupResourceUnit(ResourceUnit ru)
+        public bool HasResourceUnitSetup()
         {
-            foreach (ISetupResourceUnitInterface setupResourceUnit in this.mSetupRUs)
+            return this.resourceUnitSetupModules.Count != 0;
+        }
+
+        public void OnTreeDeath(Trees tree, MortalityCause mortalityCause)
+        {
+            for (int mortalityIndex = 0; mortalityIndex < mortalityModules.Count; ++mortalityIndex)
             {
-                setupResourceUnit.SetupResourceUnit(ru);
+                this.mortalityModules[mortalityIndex].OnTreeDeath(tree, mortalityCause);
             }
         }
 
         public void SetupDisturbances()
         {
-            foreach (IDisturbanceInterface module in this.mModules)
+            for (int disturbanceIndex = 0; disturbanceIndex < this.disturbanceModules.Count; ++disturbanceIndex)
             {
-                module.Setup();
+                this.disturbanceModules[disturbanceIndex].Setup();
             }
         }
 
-        public void CalculateWater(ResourceUnit resourceUnit, WaterCycleData waterData)
+        public void SetupResourceUnit(ResourceUnit ru)
         {
-            foreach (IWaterInterface water in mWater)
+            for (int resourceSetupIndex = 0; resourceSetupIndex < this.resourceUnitSetupModules.Count; ++resourceSetupIndex)
             {
-                water.CalculateWater(resourceUnit, waterData);
-            }
-        }
-
-        public void TreeDeath(Trees tree, MortalityCause mortalityCause)
-        {
-            for (int index = 0; index < mTreeDeath.Count; ++index)
-            {
-                mTreeDeath[index].TreeDeath(tree, mortalityCause);
+                this.resourceUnitSetupModules[resourceSetupIndex].SetupResourceUnit(ru);
             }
         }
 
         public void RunYear()
         {
             // *** run in fixed order ***
-            foreach (IDisturbanceInterface module in mModules)
+            for (int disturbanceIndex = 0; disturbanceIndex < this.disturbanceModules.Count; ++disturbanceIndex)
             {
-                module.Run();
+                this.disturbanceModules[disturbanceIndex].Run();
 
                 // *** run in random order ****
                 //    List<DisturbanceInterface> run_list = mInterfaces;
@@ -131,9 +136,9 @@ namespace iLand.Plugin
 
         public void OnStartYear()
         {
-            foreach (IDisturbanceInterface module in mModules)
+            for (int disturbanceIndex = 0; disturbanceIndex < this.disturbanceModules.Count; ++disturbanceIndex)
             {
-                module.YearBegin();
+                this.disturbanceModules[disturbanceIndex].OnStartYear();
             }
         }
     }

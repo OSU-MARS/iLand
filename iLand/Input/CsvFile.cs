@@ -24,11 +24,11 @@ namespace iLand.Input
             // get header line
             // Skip <trees> at beginning of Picus tree files.
             string? header = reader.ReadLine();
-            if (string.IsNullOrWhiteSpace(header))
+            if (String.IsNullOrWhiteSpace(header))
             {
                 throw new FileLoadException("File '" + filePath + "' is empty.");
             }
-            if (string.Equals(header, "<trees>", StringComparison.Ordinal))
+            if (String.Equals(header, "<trees>", StringComparison.Ordinal))
             {
                 header = reader.ReadLine();
                 if (header == null)
@@ -101,7 +101,7 @@ namespace iLand.Input
                 //   empty lines
                 //   comments (lines beginning with '#')
                 //   Picus closing </trees>
-                if (string.IsNullOrWhiteSpace(line) || line[0] == '#' || string.Equals(line, "</trees>", StringComparison.OrdinalIgnoreCase))
+                if (String.IsNullOrWhiteSpace(line) || line[0] == '#' || String.Equals(line, "</trees>", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }

@@ -2,7 +2,7 @@
 
 namespace iLand.Input.Tree
 {
-    internal class StandSaplingsDataIndex
+    internal class StandSaplingsCsvHeader
     {
         public int Age { get; private init; }
         public int Count { get; private init; }
@@ -17,7 +17,7 @@ namespace iLand.Input.Tree
         public int StandID { get; private init; }
         public int AgeAt4m { get; private init; }
 
-        public StandSaplingsDataIndex(CsvFile saplingFile)
+        public StandSaplingsCsvHeader(CsvFile saplingFile)
         {
             this.Count = saplingFile.GetColumnIndex("count");
             this.Species = saplingFile.GetColumnIndex("species");

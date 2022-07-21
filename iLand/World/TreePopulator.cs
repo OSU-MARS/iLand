@@ -42,7 +42,7 @@ namespace iLand.World
             {
                 TreePopulator.PopulateResourceUnitWithIndividualTrees(projectFile, landscape, ru, individualTreeReader);
             }
-            else if (treeReader is TreeSizeDistributionReader sizeDistributionReader)
+            else if (treeReader is TreeSizeDistributionReaderCsv sizeDistributionReader)
             {
                 if (standID > Constant.DefaultStandID)
                 {
@@ -58,7 +58,7 @@ namespace iLand.World
             }
             else
             {
-                throw new NotSupportedException("Unhandled tree file format in '" + treeReader.Path + "'. Expected either a list of individual trees or a tree size distribution. Does a tree file list used with a stand raster unexpectedly point to another tree file list?");
+                throw new NotSupportedException("Unhandled tree file format in '" + treeReader.FilePath + "'. Expected either a list of individual trees or a tree size distribution. Does a tree file list used with a stand raster unexpectedly point to another tree file list?");
             }
         }
 
@@ -119,7 +119,7 @@ namespace iLand.World
             string? isDebugTreeExpressionString = projectFile.World.Debug.DebugTree;
             if (string.IsNullOrEmpty(isDebugTreeExpressionString) == false)
             {
-                if (string.Equals(isDebugTreeExpressionString, "debugstamp", StringComparison.OrdinalIgnoreCase))
+                if (String.Equals(isDebugTreeExpressionString, "debugstamp", StringComparison.OrdinalIgnoreCase))
                 {
                     // check for trees which aren't correctly placed
                     AllTreesEnumerator treeIterator = new(landscape);
@@ -201,6 +201,7 @@ namespace iLand.World
             Point ruLightIndexXY = landscape.LightGrid.GetCellXYIndex(ruGridOriginInProjectCoordinates);
             Point lightCellIndexXY = new(ruLightIndexXY.X + Constant.LightCellsPerHeightCellWidth * (heightCellIndex / Constant.HeightCellSizeInM) + lightCellIndexWithinHeightCell / Constant.LightCellsPerHeightCellWidth,
                                          ruLightIndexXY.Y + Constant.LightCellsPerHeightCellWidth * (heightCellIndex % Constant.HeightCellSizeInM) + lightCellIndexWithinHeightCell % Constant.LightCellsPerHeightCellWidth);
+            Debug.Assert(ru.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
             return (lightCellIndexXY, heightCellIndex);
         }
@@ -292,7 +293,7 @@ namespace iLand.World
 
         private static void PopulateResourceUnitsWithIndividualTrees(Project projectFile, Landscape landscape, IndividualTreeReader individualTreeReader)
         {
-            for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.DbhInCM.Count; ++treeIndexInFile)
+            for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.DbhInCm.Count; ++treeIndexInFile)
             {
                 //if (dbh<5.)
                 //    continue;
@@ -302,10 +303,11 @@ namespace iLand.World
                 float treeProjectY = individualTreeReader.GisY[treeIndexInFile] - landscape.ProjectOriginInGisCoordinates.Y;
                 ResourceUnit ru = landscape.GetResourceUnit(new PointF(treeProjectX, treeProjectY));
                 Point lightCellIndexXY = landscape.LightGrid.GetCellXYIndex(treeProjectX, treeProjectY);
+                Debug.Assert(ru.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
                 // add tree
                 string speciesID = individualTreeReader.SpeciesID[treeIndexInFile];
-                float dbhInCm = individualTreeReader.DbhInCM[treeIndexInFile];
+                float dbhInCm = individualTreeReader.DbhInCm[treeIndexInFile];
                 float heightInM = individualTreeReader.HeightInM[treeIndexInFile];
                 int ageInYears = individualTreeReader.AgeInYears[treeIndexInFile];
                 int treeIndexInResourceUnitTreeList = ru.Trees.AddTree(projectFile, landscape, speciesID, dbhInCm, heightInM, lightCellIndexXY, ageInYears, out Trees treesOfSpecies);
@@ -338,6 +340,8 @@ namespace iLand.World
                     float dbhInCm = randomGenerator.GetRandomFloat(sizeRange.DbhFrom, sizeRange.DbhTo);
                     float heightInM = 0.01F * dbhInCm * sizeRange.HeightDiameterRatio; // dbh from cm->m, *hd-ratio -> meter height
                     (Point lightCellIndexXY, int heightCellIndex) = this.FindLightCellIndexXYForNewTree(landscape, ru, treeIndexByHeightCellIndex, sizeRange, ref treePlacementState, randomGenerator);
+                    Debug.Assert(ru.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
+
                     int treeIndex = ru.Trees.AddTree(projectFile, landscape, treeSpecies.ID, dbhInCm, heightInM, lightCellIndexXY, sizeRange.Age, out Trees treesOfSpecies);
                     //++totalTreeCount;
 
@@ -385,7 +389,7 @@ namespace iLand.World
             Point ruPositionInResourceUnitGrid = landscape.ResourceUnitGrid.GetCellXYIndex(ru.ResourceUnitGridIndex);
             PointF translationToPlaceTreeOnResourceUnit = new(Constant.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.X, Constant.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.Y);
 
-            for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.DbhInCM.Count; ++treeIndexInFile)
+            for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.DbhInCm.Count; ++treeIndexInFile)
             {
                 //if (dbh<5.)
                 //    continue;
@@ -398,10 +402,11 @@ namespace iLand.World
                     throw new NotSupportedException("Individual tree " + individualTreeReader.Tag[treeIndexInFile] + " (line " + (treeIndexInFile + 1) + ") is not located in project simulation area after being displaced to resource unit " + ru.ID + ". Tree coordinates are (" + treeProjectX + ", " + treeProjectY + ")");
                 }
                 Point lightCellIndexXY = landscape.LightGrid.GetCellXYIndex(treeProjectX, treeProjectY);
+                Debug.Assert(ru.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
                 // add tree
                 string speciesID = individualTreeReader.SpeciesID[treeIndexInFile];
-                float dbhInCm = individualTreeReader.DbhInCM[treeIndexInFile];
+                float dbhInCm = individualTreeReader.DbhInCm[treeIndexInFile];
                 float heightInM = individualTreeReader.HeightInM[treeIndexInFile];
                 int ageInYears = individualTreeReader.AgeInYears[treeIndexInFile];
                 int treeIndexInResourceUnitTreeList = ru.Trees.AddTree(projectFile, landscape, speciesID, dbhInCm, heightInM, lightCellIndexXY, ageInYears, out Trees treesOfSpecies);
@@ -485,7 +490,7 @@ namespace iLand.World
                         }
                     }
 
-                    if (string.Equals(treeSizeRange.TreeSpecies, previousSpecies, StringComparison.OrdinalIgnoreCase) == false)
+                    if (String.Equals(treeSizeRange.TreeSpecies, previousSpecies, StringComparison.OrdinalIgnoreCase) == false)
                     {
                         previousSpecies = treeSizeRange.TreeSpecies;
                         heightCells.Sort(TreePopulator.CompareInitPixelUnlocked);
@@ -663,7 +668,7 @@ namespace iLand.World
                     TreePopulator.PopulateResourceUnitsWithIndividualTrees(projectFile, landscape, individualTreeReader);
                 }
             }
-            else if (treeFile is TreeSizeDistributionReader treeSizeReader)
+            else if (treeFile is TreeSizeDistributionReaderCsv treeSizeReader)
             {
                 // appply a single tree size distribution to all resource units
                 string? treeSizeDistribution = projectFile.World.Initialization.TreeSizeDistribution;
@@ -681,13 +686,13 @@ namespace iLand.World
                     this.PopulateResourceUnitTreesFromSizeDistribution(projectFile, landscape, ru, treeSizeReader.TreeSizeDistribution, randomGenerator);
                 }
             }
-            else if (treeFile is TreeFileByStandIDReader treeFileByStandIDReader)
+            else if (treeFile is TreeFileByStandIDReaderCsv treeFileByStandIDReader)
             {
                 // different kinds of trees in each stand: load and apply a different tree file per stand
                 // The tree file can be either individual trees or a size distribution.
                 if (landscape.StandRaster == null || landscape.StandRaster.IsSetup() == false)
                 {
-                    throw new NotSupportedException("model.world.initialization.trees is 'standRaster' but no stand raster (model.world.initialization.standRasterFile) is present.");
+                    throw new NotSupportedException("/project/model/world/initialization/trees is 'standRaster' but no stand raster (/project/model/world/initialization/standRasterFile) is present.");
                 }
 
                 foreach ((int standID, string standTreeFileName) in treeFileByStandIDReader.TreeFileNameByStandID)
@@ -707,7 +712,7 @@ namespace iLand.World
             }
             else
             {
-                throw new NotImplementedException("model.world.initialization.treeFile '" + treeFilePath + "' is not in a recognized format.");
+                throw new NotImplementedException("/project/model/world/initialization/treeFile '" + treeFilePath + "' is not in a recognized format.");
             }
 
             TreePopulator.EvaluateDebugTrees(projectFile, landscape);

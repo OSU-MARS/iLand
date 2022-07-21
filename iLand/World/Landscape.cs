@@ -32,12 +32,12 @@ namespace iLand.World
         {
             if (String.IsNullOrWhiteSpace(projectFile.World.Initialization.ResourceUnitFile))
             {
-                throw new NotSupportedException("Project file does not specify a resource unit file (model.world.initialization.resourceUnitFile).");
+                throw new NotSupportedException("Project file does not specify a resource unit file (/project/model/world/initialization/resourceUnitFile).");
             }
             float worldBufferWidth = projectFile.World.Geometry.BufferWidth;
             if ((worldBufferWidth < Constant.HeightCellSizeInM) || (worldBufferWidth % Constant.HeightCellSizeInM != 0))
             {
-                throw new NotSupportedException("World buffer width (model.world.geometry.bufferWidth) of " + projectFile.World.Geometry.BufferWidth + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.HeightCellSizeInM + " m).");
+                throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + projectFile.World.Geometry.BufferWidth + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.HeightCellSizeInM + " m).");
             }
 
             this.WeatherByID = new();
@@ -80,13 +80,22 @@ namespace iLand.World
             // coordinates, these variables are named as such. In some cases iLand also works with resource unit coordinates, in which
             // case the origin is the resource unit coordinate with the minimum values (usually the southwest corner as this is the
             // position with the minimum easting and northing in most projected coordinate systems).
-            ResourceUnitReader resourceUnitReader = new(projectFile);
-            RectangleF resourceUnitExtent = resourceUnitReader.GetBoundingBox();
-            this.ProjectOriginInGisCoordinates = new PointF(resourceUnitExtent.X - worldBufferWidth, resourceUnitExtent.Y - worldBufferWidth);
-            this.ResourceUnitGrid.Setup(new RectangleF(worldBufferWidth, worldBufferWidth, resourceUnitExtent.Width, resourceUnitExtent.Height), Constant.ResourceUnitSizeInM);
+            ResourceUnitEnvironment defaultEnvironment = new(projectFile.World);
+            string resourceUnitFilePath = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.World.Initialization.ResourceUnitFile);
+            string? resourceUnitExtension = Path.GetExtension(resourceUnitFilePath);
+            ResourceUnitReader resourceUnitReader = resourceUnitExtension switch
+            {
+                // for now, assume .csv and .feather weather is monthly and all weather tables in SQLite databases are daily
+                Constant.File.CsvExtension => new ResourceUnitReaderCsv(resourceUnitFilePath, defaultEnvironment),
+                Constant.File.FeatherExtension => new ResourceUnitReaderFeather(resourceUnitFilePath, defaultEnvironment),
+                _ => throw new NotSupportedException("Unhandled resource unit environment file type '" + resourceUnitExtension + "'.")
+            };
+            RectangleF resourceUnitGisExtent = resourceUnitReader.GetBoundingBox();
+            this.ProjectOriginInGisCoordinates = new PointF(resourceUnitGisExtent.X - worldBufferWidth, resourceUnitGisExtent.Y - worldBufferWidth);
+            this.ResourceUnitGrid.Setup(new RectangleF(worldBufferWidth, worldBufferWidth, resourceUnitGisExtent.Width, resourceUnitGisExtent.Height), Constant.ResourceUnitSizeInM);
             // resource units are created below, so grid contains only nulls at this point
 
-            RectangleF bufferedExtent = new(0.0F, 0.0F, resourceUnitExtent.Width + 2 * worldBufferWidth, resourceUnitExtent.Height + 2 * worldBufferWidth);
+            RectangleF bufferedExtent = new(0.0F, 0.0F, resourceUnitGisExtent.Width + 2 * worldBufferWidth, resourceUnitGisExtent.Height + 2 * worldBufferWidth);
             this.HeightGrid = new Grid<HeightCell>(bufferedExtent, Constant.HeightCellSizeInM);
             for (int index = 0; index < this.HeightGrid.CellCount; ++index)
             {
@@ -115,7 +124,7 @@ namespace iLand.World
                     for (int heightGridIndex = 0; heightGridIndex < this.HeightGrid.CellCount; ++heightGridIndex)
                     {
                         PointF heightPosition = this.HeightGrid.GetCellProjectCentroid(heightGridIndex);
-                        if ((heightPosition.X < 0.0F) || (heightPosition.Y < 0.0F) || (heightPosition.X > resourceUnitExtent.Width) || (heightPosition.Y > resourceUnitExtent.Width))
+                        if ((heightPosition.X < 0.0F) || (heightPosition.Y < 0.0F) || (heightPosition.X > resourceUnitGisExtent.Width) || (heightPosition.Y > resourceUnitGisExtent.Width))
                         {
                             this.HeightGrid[heightGridIndex].SetOnLandscape(false);
                         }
@@ -129,9 +138,9 @@ namespace iLand.World
             WeatherReaderMonthly? monthlyWeatherReader = weatherFileExtension switch
             {
                 // for now, assume .csv and .feather weather is monthly and all weather tables in SQLite databases are daily
-                ".csv" => new WeatherReaderMonthlyCsv(weatherFilePath),
-                ".feather" => new WeatherReaderMonthlyFeather(weatherFilePath),
-                ".sqlite" => null,
+                Constant.File.CsvExtension => new WeatherReaderMonthlyCsv(weatherFilePath),
+                Constant.File.FeatherExtension => new WeatherReaderMonthlyFeather(weatherFilePath),
+                Constant.File.SqliteExtension => null,
                 _ => throw new NotSupportedException("Unhandled weather file type '" + weatherFileExtension + "'.")
             };
 
@@ -160,8 +169,8 @@ namespace iLand.World
                 }
 
                 // translate resource unit's position from GIS coordinates to project coordinates
-                float ruProjectCentroidX = environment.GisCenterX - resourceUnitExtent.X + worldBufferWidth;
-                float ruProjectCentroidY = environment.GisCenterY - resourceUnitExtent.Y + worldBufferWidth;
+                float ruProjectCentroidX = environment.GisCenterX - this.ProjectOriginInGisCoordinates.X;
+                float ruProjectCentroidY = environment.GisCenterY - this.ProjectOriginInGisCoordinates.Y;
                 Point ruGridIndexXY = this.ResourceUnitGrid.GetCellXYIndex(ruProjectCentroidX, ruProjectCentroidY);
                 int ruGridIndex = this.ResourceUnitGrid.IndexXYToIndex(ruGridIndexXY);
                 Debug.Assert((ruGridIndex >= 0) && (ruGridIndex < this.ResourceUnitGrid.CellCount));
@@ -195,9 +204,10 @@ namespace iLand.World
                     SaplingCell? saplingCell = this.GetSaplingCell(this.LightGrid.GetCellXYIndex(lightGridEnumerator.CurrentIndex), false, out ResourceUnit _); // false: retrieve also invalid cells
                     if (saplingCell != null)
                     {
-                        if (!this.HeightGrid[this.LightGrid.Index5(lightGridEnumerator.CurrentIndex)].IsOnLandscape())
+                        HeightCell heightCell = this.HeightGrid[this.LightGrid.LightIndexToHeightIndex(lightGridEnumerator.CurrentIndex)];
+                        if (heightCell.IsOnLandscape() == false)
                         {
-                            saplingCell.State = SaplingCellState.Invalid;
+                            saplingCell.State = SaplingCellState.NotOnLandscape;
                         }
                         else
                         {
@@ -227,18 +237,22 @@ namespace iLand.World
                 //        }
                 GridWindowEnumerator<HeightCell> ruHeightGridEnumerator = new(this.HeightGrid, ru.ProjectExtent);
                 int heightCellsInLandscape = 0;
-                int heightCellsInRU = 0;
+                int heightCellsInResourceUnit = 0;
                 while (ruHeightGridEnumerator.MoveNext())
                 {
-                    HeightCell current = ruHeightGridEnumerator.Current;
-                    if (current != null && current.IsOnLandscape())
+                    HeightCell currentHeightCell = ruHeightGridEnumerator.Current;
+                    if (currentHeightCell.IsOnLandscape())
                     {
                         ++heightCellsInLandscape;
                     }
-                    ++heightCellsInRU;
+                    ++heightCellsInResourceUnit;
                 }
 
-                if (heightCellsInRU < 1)
+                if (heightCellsInLandscape == 0)
+                {
+                    throw new NotSupportedException("Valid resource unit has no height cells in world.");
+                }
+                if (heightCellsInResourceUnit < 1)
                 {
                     // TODO: check against Constant.HeightSizePerRU * Constant.HeightSizePerRU?
                     throw new NotSupportedException("No height cells found in resource unit.");
@@ -250,23 +264,6 @@ namespace iLand.World
                     ru.Snags.ScaleInitialState();
                 }
                 this.TotalStockableHectares += Constant.HeightCellAreaInM2 * heightCellsInLandscape / Constant.ResourceUnitAreaInM2; // in ha
-
-                if (heightCellsInLandscape == 0 && ru.ID > -1)
-                {
-                    // invalidate this resource unit
-                    // ru.ID = -1;
-                    throw new NotSupportedException("Valid resource unit has no height cells in world.");
-                }
-                if (heightCellsInLandscape > 0 && ru.ID == -1)
-                {
-                    throw new NotSupportedException("Invalid resource unit " + ru.ResourceUnitGridIndex + " (" + ru.ProjectExtent + ") has height cells in world.");
-                    //ru.ID = 0;
-                    // test-code
-                    //GridRunner<HeightGridValue> runner(*mHeightGrid, ru.boundingBox());
-                    //while (runner.next()) {
-                    //    Debug.WriteLine(mHeightGrid.cellCenterPoint(mHeightGrid.indexOf( runner.current() )) + ": " + runner.current().isValid());
-                    //}
-                }
             }
 
             // mark those pixels that are at the edge of a "forest-out-of-area"
@@ -275,7 +272,8 @@ namespace iLand.World
             HeightCell[] neighbors = new HeightCell[8];
             while (heightGridEnumerator.MoveNext())
             {
-                if (heightGridEnumerator.Current.IsOnLandscape() == false)
+                HeightCell currentHeightCell = heightGridEnumerator.Current;
+                if (currentHeightCell.IsOnLandscape() == false)
                 {
                     // if the current pixel is a "radiating" border pixel,
                     // then check the neighbors and set a flag if the pixel is a neighbor of a in-project-area pixel.
@@ -284,7 +282,7 @@ namespace iLand.World
                     {
                         if (neighbors[neighborIndex] != null && neighbors[neighborIndex].IsOnLandscape())
                         {
-                            heightGridEnumerator.Current.SetIsRadiating();
+                            currentHeightCell.SetIsRadiating();
                         }
                     }
                 }
@@ -347,9 +345,7 @@ namespace iLand.World
 
         public ResourceUnit GetResourceUnit(PointF projectCoordinate) // resource unit at given project coordinates
         {
-            float resourceUnitGridCoordinateX = projectCoordinate.X - this.ResourceUnitGrid.ProjectExtent.X;
-            float resourceUnitGridCoordinateY = projectCoordinate.Y - this.ResourceUnitGrid.ProjectExtent.Y;
-            ResourceUnit? ru = this.ResourceUnitGrid[resourceUnitGridCoordinateX, resourceUnitGridCoordinateY];
+            ResourceUnit? ru = this.ResourceUnitGrid[projectCoordinate];
             if (ru == null)
             {
                 throw new ArgumentOutOfRangeException(nameof(projectCoordinate));
@@ -364,7 +360,7 @@ namespace iLand.World
         {
             ru = this.GetResourceUnit(this.LightGrid.GetCellProjectCentroid(lightCellPosition));
             SaplingCell saplingCell = ru.GetSaplingCell(lightCellPosition);
-            if ((saplingCell != null) && (!onlyValid || saplingCell.State != SaplingCellState.Invalid))
+            if ((saplingCell != null) && (!onlyValid || saplingCell.State != SaplingCellState.NotOnLandscape))
             {
                 return saplingCell;
             }
@@ -516,7 +512,7 @@ namespace iLand.World
             // load a file with saplings per stand
             string saplingFilePath = projectFile.GetFilePath(ProjectDirectory.Init, saplingFileName);
             using CsvFile saplingFile = new(saplingFilePath);
-            StandSaplingsDataIndex saplingHeader = new(saplingFile);
+            StandSaplingsCsvHeader saplingHeader = new(saplingFile);
 
             // TODO: should this be sorted by stand ID?
             List<StandSaplings> saplingsInStands = new();

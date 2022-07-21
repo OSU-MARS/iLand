@@ -76,8 +76,8 @@ namespace iLand.Input
                 // TODO: reenable support for temperature shifts and precipitation multipliers for sensitivity analysis
                 //if (model.ScheduledEvents != null)
                 //{
-                //    string temperatureAdditionAsString = model.ScheduledEvents.GetEvent(model.CurrentYear + yearLoadIndex, "model.world.weather.temperatureShift");
-                //    string precipitationMultiplierAsString = model.ScheduledEvents.GetEvent(model.CurrentYear + yearLoadIndex, "model.world.weather.precipitationShift");
+                //    string temperatureAdditionAsString = model.ScheduledEvents.GetEvent(model.CurrentYear + yearLoadIndex, "/project/model/world/weather/temperatureShift");
+                //    string precipitationMultiplierAsString = model.ScheduledEvents.GetEvent(model.CurrentYear + yearLoadIndex, "/project/model/world/weather/precipitationShift");
                 //    if (temperatureAdditionAsString != null)
                 //    {
                 //        temperatureAddition = Single.Parse(temperatureAdditionAsString, CultureInfo.InvariantCulture);

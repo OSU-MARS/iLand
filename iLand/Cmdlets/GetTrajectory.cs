@@ -1,4 +1,6 @@
 ﻿using iLand.Input.ProjectFile;
+using System;
+using System.Diagnostics;
 using System.Management.Automation;
 using Model = iLand.Simulation.Model;
 
@@ -24,9 +26,21 @@ namespace iLand.Cmdlets
         {
             Project projectFile = new(this.Project!);
             using Model model = new(projectFile);
-            for (int simulationYear = 0; simulationYear < Years; ++simulationYear)
+
+            DateTime mostRecentProgressUpdate = DateTime.UtcNow;
+            ProgressRecord progressRecord = new(0, "Simulating trajectory", "year 0/" + this.Years + "...");
+            for (int simulationYear = 0; simulationYear < this.Years; ++simulationYear)
             {
                 model.RunYear();
+
+                DateTime utcNow = DateTime.UtcNow;
+                if (utcNow - mostRecentProgressUpdate > TimeSpan.FromSeconds(5))
+                {
+                    progressRecord.PercentComplete = (int)(100.0F * (float)simulationYear / (float)this.Years);
+                    progressRecord.StatusDescription = "year " + (simulationYear + 1) + "/" + this.Years + "...";
+                    this.WriteProgress(progressRecord);
+                    mostRecentProgressUpdate = utcNow;
+                }
             }
         }
     }

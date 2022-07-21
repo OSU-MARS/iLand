@@ -14,8 +14,8 @@ namespace iLand.Output
 
         public CarbonFlowAnnualOutput()
         {
-            this.mYearFilter = new Expression();
-            this.mResourceUnitFilter = new Expression();
+            this.mYearFilter = new();
+            this.mResourceUnitFilter = new();
 
             this.Name = "Carbon fluxes per RU or landscape/yr";
             this.TableName = "carbonFlow";
@@ -75,11 +75,7 @@ namespace iLand.Output
             Span<float> accumulatedValues = stackalloc float[10]; // 10 data values
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits) 
             {
-                if (ru.ID == -1)
-                {
-                    continue; // do not include if out of project area
-                }
-                if (ru.Snags == null || ru.Snags == null)
+                if ((ru.Snags == null) || (ru.Snags == null))
                 {
                     // Debug.WriteLine("Resource unit lacks soil or snag data, no output generated.");
                     continue;

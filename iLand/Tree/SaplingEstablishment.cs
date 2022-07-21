@@ -346,7 +346,7 @@ namespace iLand.Tree
             for (int dayOfYear = 0, movingAverageIndex = 0; dayOfYear < daysInYear; ++dayOfYear)
             {
                 // running average: remove oldest item, add new item in a ringbuffer
-                float soilWaterPotentialForDay = waterCycle.SoilWaterPotentialByWeatherTimestep[dayOfYear];
+                float soilWaterPotentialForDay = waterCycle.SoilWaterPotentialByWeatherTimestepInYear[dayOfYear];
                 if (this.soilWaterPotentialCircularBuffer.Count <= movingAverageIndex)
                 {
                     this.soilWaterPotentialCircularBuffer.Add(soilWaterPotentialForDay);

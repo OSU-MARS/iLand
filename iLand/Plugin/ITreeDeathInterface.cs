@@ -4,6 +4,6 @@ namespace iLand.Plugin
 {
     internal interface ITreeDeathInterface
     {
-        void TreeDeath(Trees tree, MortalityCause mortalityCause);
+        void OnTreeDeath(Trees tree, MortalityCause mortalityCause);
     }
 }

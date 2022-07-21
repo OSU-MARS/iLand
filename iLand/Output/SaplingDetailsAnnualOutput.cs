@@ -9,12 +9,12 @@ namespace iLand.Output
 {
     public class SaplingDetailsAnnualOutput : AnnualOutput
     {
-        private readonly Expression mResourceUnitFilter;
-        private float mMinDbh;
+        private readonly Expression resourceUnitFilter;
+        private float minimumDbh;
 
         public SaplingDetailsAnnualOutput()
         {
-            this.mResourceUnitFilter = new Expression();
+            this.resourceUnitFilter = new();
 
             this.Name = "Sapling Details Output";
             this.TableName = "saplingDetail";
@@ -36,17 +36,12 @@ namespace iLand.Output
         {
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.ID == -1)
-                {
-                    continue; // do not include if out of project area
-                }
-
                 // exclude if a condition is specified and condition is not met
-                if (this.mResourceUnitFilter.IsEmpty == false)
+                if (this.resourceUnitFilter.IsEmpty == false)
                 {
-                    Debug.Assert(this.mResourceUnitFilter.Wrapper != null);
-                    ((ResourceUnitWrapper)this.mResourceUnitFilter.Wrapper).ResourceUnit = ru;
-                    if (this.mResourceUnitFilter.Execute() == 0.0)
+                    Debug.Assert(this.resourceUnitFilter.Wrapper != null);
+                    ((ResourceUnitWrapper)this.resourceUnitFilter.Wrapper).ResourceUnit = ru;
+                    if (this.resourceUnitFilter.Execute() == 0.0)
                     {
                         continue;
                     }
@@ -69,7 +64,7 @@ namespace iLand.Output
                                     TreeSpecies treeSpecies = ruSpecies.Species;
                                     float dbh = 100.0F * saplingCell.Saplings[index].HeightInM / treeSpecies.SaplingGrowth.HeightDiameterRatio;
                                     // check minimum dbh
-                                    if (dbh < this.mMinDbh)
+                                    if (dbh < this.minimumDbh)
                                     {
                                         continue;
                                     }
@@ -94,9 +89,9 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            this.mResourceUnitFilter.SetExpression(model.Project.Output.Annual.SaplingDetail.Condition);
-            this.mResourceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
-            this.mMinDbh = model.Project.Output.Annual.SaplingDetail.MinDbh;
+            this.resourceUnitFilter.SetExpression(model.Project.Output.Annual.SaplingDetail.Condition);
+            this.resourceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
+            this.minimumDbh = model.Project.Output.Annual.SaplingDetail.MinDbh;
         }
     }
 }

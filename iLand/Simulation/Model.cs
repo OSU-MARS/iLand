@@ -50,16 +50,7 @@ namespace iLand.Simulation
             standReader.SetupTrees(projectFile, this.Landscape, this.RandomGenerator);
 
             // setup the helper that does the multithreading
-            // list of "valid" resource units
-            List<ResourceUnit> validResourceUnits = new();
-            foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
-            {
-                if (ru.ID != -1)
-                {
-                    validResourceUnits.Add(ru);
-                }
-            }
-            this.ruParallel = new MaybeParallel<ResourceUnit>(validResourceUnits)
+            this.ruParallel = new MaybeParallel<ResourceUnit>(this.Landscape.ResourceUnits)
             {
                 MaximumThreads = this.Project.Model.Settings.MaxThreads
             };
@@ -71,7 +62,7 @@ namespace iLand.Simulation
 
             // setup of external modules
             this.Modules.SetupDisturbances();
-            if (this.Modules.HasSetupResourceUnits())
+            if (this.Modules.HasResourceUnitSetup())
             {
                 for (int ruIndex = 0; ruIndex < this.Landscape.ResourceUnitGrid.CellCount; ++ruIndex)
                 {
@@ -108,12 +99,12 @@ namespace iLand.Simulation
             }
 
             // calculate initial stand statistics
-            this.CalculateStockedArea();
-            foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
+            this.ruParallel.ForEach((ResourceUnit ru) =>
             {
+                ru.CountHeightCellsContainingTrees(this.Landscape);
                 ru.Trees.SetupStatistics();
                 ru.SetupSaplingStatistics();
-            }
+            });
 
             // setup outputs
             this.AnnualOutputs.Setup(this);
@@ -175,7 +166,7 @@ namespace iLand.Simulation
 
             // process a cycle of individual growth
             // create light influence patterns and readout light state of individual trees
-            this.ApplyAndReadLightPattern();
+            this.ApplyAndReadLightPattern(); // will run multithreaded if enabled
 
             /** Main function for the growth of stands and trees.
                This includes several steps.
@@ -185,10 +176,10 @@ namespace iLand.Simulation
                (4) cleanup of tree lists (remove dead trees)
               */
             // let the trees grow (growth on stand-level, tree-level, mortality)
-            this.CalculateStockedArea();
-
             this.ruParallel.ForEach((ResourceUnit ru) =>
             {
+                // stocked area
+                ru.CountHeightCellsContainingTrees(this.Landscape);
                 // 3-PG tree growth
                 ru.CalculateWaterAndBiomassGrowthForYear(this);
 
@@ -282,7 +273,7 @@ namespace iLand.Simulation
             }
         }
 
-        public void ApplyAndReadLightPattern()
+        private void ApplyAndReadLightPattern()
         {
             // intialize grids...
             this.InitializeLightGrid();
@@ -362,67 +353,48 @@ namespace iLand.Simulation
             }
         }
 
-        /** calculate for each resource unit the fraction of area which is stocked.
-          This is done by checking the pixels of the global height grid.
-          */
-        private void CalculateStockedArea() // calculate area stocked with trees for each RU
-        {
-            // iterate over the whole heightgrid and count pixels for each resource unit
-            for (int heightIndex = 0; heightIndex < this.Landscape.HeightGrid.CellCount; ++heightIndex)
-            {
-                PointF centerPoint = this.Landscape.HeightGrid.GetCellProjectCentroid(heightIndex);
-                if (this.Landscape.ResourceUnitGrid.Contains(centerPoint))
-                {
-                    ResourceUnit? ru = this.Landscape.ResourceUnitGrid[centerPoint];
-                    if (ru != null)
-                    {
-                        ru.CountHeightCell(this.Landscape.HeightGrid[heightIndex].TreeCount > 0);
-                    }
-                }
-            }
-        }
-
         private void InitializeLightGrid() // initialize the LIF grid
         {
             // fill the whole grid with a value of 1.0
             this.Landscape.LightGrid.Fill(1.0F);
 
-            // apply special values for grid cells border regions where out-of-area cells
-            // radiate into the main LIF grid.
+            // apply special values for grid cells border regions where out of area cells radiate into the main LIF grid
             int lightOffset = Constant.LightCellsPerHeightCellWidth / 2; // for 5 px per height grid cell, the offset is 2
             int maxRadiationDistanceInHeightCells = 7;
             float stepWidth = 1.0F / maxRadiationDistanceInHeightCells;
-            int borderHeightCellCount = 0;
-            for (int index = 0; index < this.Landscape.HeightGrid.CellCount; ++index)
+            // int radiatingHeightCellCount = 0; // count of border height cells, maybe useful for debugging
+            for (int heightGridIndex = 0; heightGridIndex < this.Landscape.HeightGrid.CellCount; ++heightGridIndex)
             {
-                HeightCell heightCell = this.Landscape.HeightGrid[index];
-                if (heightCell.IsRadiating())
+                HeightCell heightCell = this.Landscape.HeightGrid[heightGridIndex];
+                if (heightCell.IsRadiating() == false)
                 {
-                    Point heightCellIndex = this.Landscape.HeightGrid.CellIndexOf(heightCell);
-                    int minLightX = heightCellIndex.X * Constant.LightCellsPerHeightCellWidth - maxRadiationDistanceInHeightCells + lightOffset;
-                    int maxLightX = minLightX + 2 * maxRadiationDistanceInHeightCells + 1;
-                    int centerLightX = minLightX + maxRadiationDistanceInHeightCells;
-                    int minLightY = heightCellIndex.Y * Constant.LightCellsPerHeightCellWidth - maxRadiationDistanceInHeightCells + lightOffset;
-                    int maxLightY = minLightY + 2 * maxRadiationDistanceInHeightCells + 1;
-                    int centerLightY = minLightY + maxRadiationDistanceInHeightCells;
-                    for (int lightY = minLightY; lightY <= maxLightY; ++lightY)
+                    continue;
+                }
+
+                Point heightCellIndexXY = this.Landscape.HeightGrid.GetCellXYIndex(heightGridIndex);
+                int minLightX = heightCellIndexXY.X * Constant.LightCellsPerHeightCellWidth - maxRadiationDistanceInHeightCells + lightOffset;
+                int maxLightX = minLightX + 2 * maxRadiationDistanceInHeightCells + 1;
+                int centerLightX = minLightX + maxRadiationDistanceInHeightCells;
+                int minLightY = heightCellIndexXY.Y * Constant.LightCellsPerHeightCellWidth - maxRadiationDistanceInHeightCells + lightOffset;
+                int maxLightY = minLightY + 2 * maxRadiationDistanceInHeightCells + 1;
+                int centerLightY = minLightY + maxRadiationDistanceInHeightCells;
+                for (int lightY = minLightY; lightY <= maxLightY; ++lightY)
+                {
+                    for (int lightX = minLightX; lightX <= maxLightX; ++lightX)
                     {
-                        for (int lightX = minLightX; lightX <= maxLightX; ++lightX)
+                        if (!this.Landscape.LightGrid.Contains(lightX, lightY) || !this.Landscape.HeightGrid[lightX, lightY, Constant.LightCellsPerHeightCellWidth].IsOnLandscape())
                         {
-                            if (!this.Landscape.LightGrid.Contains(lightX, lightY) || !this.Landscape.HeightGrid[lightX, lightY, Constant.LightCellsPerHeightCellWidth].IsOnLandscape())
-                            {
-                                continue;
-                            }
-                            float candidateLightValue = MathF.Max(MathF.Abs(lightX - centerLightX), MathF.Abs(lightY - centerLightY)) * stepWidth;
-                            float currentLightValue = this.Landscape.LightGrid[lightX, lightY];
-                            if (candidateLightValue >= 0.0F && currentLightValue > candidateLightValue)
-                            {
-                                this.Landscape.LightGrid[lightX, lightY] = candidateLightValue;
-                            }
+                            continue;
+                        }
+                        float candidateLightValue = MathF.Max(MathF.Abs(lightX - centerLightX), MathF.Abs(lightY - centerLightY)) * stepWidth;
+                        float currentLightValue = this.Landscape.LightGrid[lightX, lightY];
+                        if ((candidateLightValue >= 0.0F) && (currentLightValue > candidateLightValue))
+                        {
+                            this.Landscape.LightGrid[lightX, lightY] = candidateLightValue;
                         }
                     }
-                    ++borderHeightCellCount;
                 }
+                // ++radiatingHeightCellCount;
             }
         }
 

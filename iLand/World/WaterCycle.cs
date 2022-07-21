@@ -27,12 +27,18 @@ namespace iLand.World
         
         public float CurrentSoilWater { get; private set; } // current water content in mm water column of the soil
         public float FieldCapacity { get; private set; } //  bucket height of field-capacity (eq. -15kPa) (mm)
-        public float[] SoilWaterPotentialByWeatherTimestep { get; private init; } // soil water potential for each day of year in kPa, needed for soil water modifier
+        public float[] SoilWaterPotentialByWeatherTimestepInYear { get; private init; } // soil water potential for each day of year (daily weather) or month of year (monthly weather) in kPa, needed for soil water modifier
+
+        /// height of snow cover [mm water column]
+        public float[] SnowCover { get; private init; }
 
         public float SnowDayRadiation { get; set; } // sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
         public float SnowDays { get; set; } // number of days with snowcover > 0
         public float TotalEvapotranspiration { get; set; } // annual sum of evapotranspiration (mm)
         public float TotalRunoff { get; set; } // annual sum of water loss due to lateral outflow/groundwater flow (mm)
+
+        /// daily amount of water that actually reaches the ground (i.e., after interception)
+        public float[] WaterReachingSoilByWeatherTimestep { get; private init; }
 
         public WaterCycle(Project projectFile, ResourceUnit ru)
         {
@@ -41,14 +47,19 @@ namespace iLand.World
             this.soilWaterRetention = null;
             this.snowPack = new();
 
+            int weatherTimestepsPerYear = ru.Weather.TimeSeries.GetTimestepsPerYear();
+
             this.Canopy = new Canopy(projectFile.Model.Ecosystem.AirDensity);
             this.FieldCapacity = Single.NaN;
-            this.SoilWaterPotentialByWeatherTimestep = new float[Constant.DaysInLeapYear]; // TODO: be able to allocate monthly length for monthly weather series
+            this.SoilWaterPotentialByWeatherTimestepInYear = new float[weatherTimestepsPerYear];
 
+            this.SnowCover = new float[weatherTimestepsPerYear];
             this.SnowDayRadiation = Single.NaN;
             this.SnowDays = Single.NaN;
             this.TotalEvapotranspiration = Single.NaN;
             this.TotalRunoff = Single.NaN;
+
+            this.WaterReachingSoilByWeatherTimestep = new float[weatherTimestepsPerYear];
         }
 
         public float CurrentSnowWaterEquivalent() 
@@ -201,14 +212,12 @@ namespace iLand.World
         /// Main Water Cycle function. This function triggers all water related tasks for
         /// one simulation year.
         /// @sa http://iland-model.org/water+cycle
-        public WaterCycleData RunYear(Project projectFile)
+        public void RunYear(Project projectFile)
         {
             if (this.soilWaterRetention == null)
             {
                 throw new NotSupportedException(nameof(this.Setup) + "() must be called before calling " + nameof(this.RunYear) + "().");
             }
-
-            WaterCycleData hydrologicState = new();
 
             // preparations (once a year)
             // fetch canopy characteristics from iLand, including LAI weighted average for canopy conductance
@@ -223,13 +232,13 @@ namespace iLand.World
             float daysInTimestep = 1.0F;
             WeatherTimeSeries weatherTimeSeries = this.ru.Weather.TimeSeries;
             bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
-            for (int weatherTimestepIndex = weatherTimeSeries.CurrentYearStartIndex, timestepInYearIndex = 0; weatherTimestepIndex < weatherTimeSeries.NextYearStartIndex; ++weatherTimestepIndex, ++timestepInYearIndex)
+            for (int weatherTimestepIndex = weatherTimeSeries.CurrentYearStartIndex, weatherTimestepInYearIndex = 0; weatherTimestepIndex < weatherTimeSeries.NextYearStartIndex; ++weatherTimestepIndex, ++weatherTimestepInYearIndex)
             {
-                int dayOfYearIndex = timestepInYearIndex;
+                int dayOfYearIndex = weatherTimestepInYearIndex;
                 if (weatherTimeSeries.Timestep == Timestep.Monthly)
                 {
-                    dayOfYearIndex = DateTimeExtensions.GetMidmonthDayIndex(timestepInYearIndex, isLeapYear);
-                    daysInTimestep = (float)DateTimeExtensions.GetDaysInMonth(timestepInYearIndex, isLeapYear);
+                    dayOfYearIndex = DateTimeExtensions.GetMidmonthDayIndex(weatherTimestepInYearIndex, isLeapYear);
+                    daysInTimestep = (float)DateTimeExtensions.GetDaysInMonth(weatherTimestepInYearIndex, isLeapYear);
                 }
 
                 // interception by the crown
@@ -238,8 +247,8 @@ namespace iLand.World
                 // TODO: make daily mean temperature available here rather than relying on daytime mean temperature
                 float infiltrationInMM = this.snowPack.FlowPrecipitationTimestep(throughfallInMM, weatherTimeSeries.TemperatureDaytimeMean[weatherTimestepIndex]);
                 // save extra data (used by e.g. fire module)
-                hydrologicState.WaterReachingSoilByWeatherTimestep[timestepInYearIndex] = infiltrationInMM;
-                hydrologicState.SnowCover[timestepInYearIndex] = this.snowPack.WaterEquivalentInMM;
+                this.WaterReachingSoilByWeatherTimestep[weatherTimestepInYearIndex] = infiltrationInMM;
+                this.SnowCover[weatherTimestepInYearIndex] = this.snowPack.WaterEquivalentInMM;
                 if (this.snowPack.WaterEquivalentInMM > 0.0)
                 {
                     this.SnowDayRadiation += weatherTimeSeries.SolarRadiationTotal[weatherTimestepIndex];
@@ -268,7 +277,7 @@ namespace iLand.World
                 }
 
                 float currentPsi = this.soilWaterRetention.GetSoilWaterPotentialFromWater(this.CurrentSoilWater);
-                this.SoilWaterPotentialByWeatherTimestep[timestepInYearIndex] = currentPsi;
+                this.SoilWaterPotentialByWeatherTimestepInYear[weatherTimestepInYearIndex] = currentPsi;
 
                 // transpiration of the vegetation and of water intercepted in canopy
                 // implicit assumption: water does not remain in canopy between days
@@ -282,7 +291,7 @@ namespace iLand.World
                 {
                     // for now, stemflow remains liquid and does not freeze to trees or within any snowpack which might be present
                     float stemflow = interceptionBeforeTranspiration - this.Canopy.TotalInterceptedWaterInMM;
-                    hydrologicState.WaterReachingSoilByWeatherTimestep[timestepInYearIndex] += stemflow;
+                    this.WaterReachingSoilByWeatherTimestep[weatherTimestepInYearIndex] += stemflow;
                 }
 
                 this.CurrentSoilWater -= evapotranspirationInMM; // reduce content (transpiration)
@@ -300,8 +309,6 @@ namespace iLand.World
 
                 this.TotalEvapotranspiration += evapotranspirationInMM;
             }
-
-            return hydrologicState;
         }
     }
 }

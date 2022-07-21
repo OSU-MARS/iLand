@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using Weather = iLand.World.Weather;
 using Model = iLand.Simulation.Model;
+using iLand.Input.Tree;
 
 namespace iLand.Test
 {
@@ -21,16 +22,9 @@ namespace iLand.Test
         [TestMethod]
         public void Elliott()
         {
-            using Model elliott = LandTest.LoadProject(LandTest.GetElliottProjectPath(this.TestContext!)); // ~6 seconds in debug
-            Assert.IsTrue(elliott.Landscape.ResourceUnits.Count == 34494); // unbuffered resource unit count
-
-            #if !DEBUG
-            for (int simulationYear = 0; simulationYear < 1; ++simulationYear)
-            {
-                // run at least one singlethreaded timestep as sanity: minimum test case duration ~12 seconds in debug, ~4 seconds in release
-                elliott.RunYear();
-            }
-            #endif
+            int expectedResourceUnitCount = 34494; // unbuffered resource unit count
+            using Model elliott = LandTest.LoadProject(LandTest.GetElliottProjectPath(this.TestContext!)); // ~4 seconds in debug
+            Assert.IsTrue(elliott.Landscape.ResourceUnits.Count == expectedResourceUnitCount); 
 
             // check .feather weather read from weather file path in Elliott project file
             Assert.IsTrue(elliott.Landscape.WeatherByID.Count == 37); // 81 4 km weather cells in input, 37 of which cover the unbuffered Elliott
@@ -38,6 +32,19 @@ namespace iLand.Test
             {
                 Assert.IsTrue(monthlyWeather.TimeSeries.Count == 12 * (2100 - 2011 + 1));
             }
+
+            #if !DEBUG
+            // run at least two singlethreaded timesteps as sanity: minimum test case duration ~12 seconds in debug, ~4 seconds in release
+            for (int simulationYear = 0; simulationYear < 3; ++simulationYear)
+            {
+                elliott.RunYear();
+            }
+
+            // if of interest, check larger resource unit .csv read (basic functionality is covered on Kalkalpen, Elliot project uses .feather)
+            string resourceUnitFilePath = elliott.Project.GetFilePath(ProjectDirectory.Gis, "resource units unbuffered 4 km weather.csv");
+            ResourceUnitEnvironment defaultEnvironment = new(elliott.Project.World);
+            ResourceUnitReaderCsv resourceUnitReader = new(resourceUnitFilePath, defaultEnvironment);
+            Assert.IsTrue(resourceUnitReader.Environments.Count == expectedResourceUnitCount);
 
             // check .csv weather read
             string weatherFeatherFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "weather 4 km 2011-2100 13GCMssp370.csv");
@@ -48,8 +55,14 @@ namespace iLand.Test
                 Assert.IsTrue(monthlyWeatherTimeSeries.Count == 12 * (2100 - 2011 + 1));
             }
 
+            // if of interest, check larger individual tree .csv read
+            string individualTreeTilePath = elliott.Project.GetFilePath(ProjectDirectory.Init, "TSegD_H10Cr20h10A50MD7_s04110w07020.csv");
+            IndividualTreeReader individualTreeReader = (IndividualTreeReader)TreeReader.Create(individualTreeTilePath);
+            Assert.IsTrue(individualTreeReader.HeightInM.Count == 13124);
+            #endif
+
             // verify Pacific Northwest tree species loading
-            TreeSpeciesSet pnwSpecies = new(elliott.Project, Constant.Data.DefaultSpeciesTable);
+            TreeSpeciesSet pnwSpecies = elliott.Landscape.SpeciesSetsByTableName[Constant.Data.DefaultSpeciesTable];
             TreeSpecies abam = pnwSpecies["abam"];
             TreeSpecies abgr = pnwSpecies["abgr"];
             TreeSpecies abpr = pnwSpecies["abpr"];
@@ -117,7 +130,7 @@ namespace iLand.Test
                         Assert.IsTrue((ru.ProjectExtent.Height == Constant.ResourceUnitSizeInM) && (ru.ProjectExtent.Width == Constant.ResourceUnitSizeInM) &&
                                       (ru.ProjectExtent.X == kalkalpen.Project.World.Geometry.BufferWidth) && 
                                       (MathF.Abs(ru.ProjectExtent.Y % 100.0F - kalkalpen.Project.World.Geometry.BufferWidth) < 0.001F));
-                        Assert.IsTrue(ru.ID >= 0);
+                        Assert.IsTrue((ru.ID == 1) || (ru.ID == 10));
                         Assert.IsTrue(ru.ResourceUnitGridIndex >= 0);
                         Assert.IsTrue(ru.AreaInLandscape == Constant.ResourceUnitAreaInM2);
                         Assert.IsTrue((ru.AreaWithTrees > 0.0) && (ru.AreaWithTrees <= Constant.ResourceUnitAreaInM2));
@@ -233,7 +246,7 @@ namespace iLand.Test
                     float minGridHeight = Single.MaxValue;
                     for (int heightIndex = 0; heightIndex < kalkalpen.Landscape.HeightGrid.CellCount; ++heightIndex)
                     {
-                        float height = kalkalpen.Landscape.HeightGrid[heightIndex].Height;
+                        float height = kalkalpen.Landscape.HeightGrid[heightIndex].MaximumVegetationHeightInM;
                         maxGridHeight = MathF.Max(height, maxGridHeight);
                         meanGridHeight += height;
                         minGridHeight = MathF.Min(height, minGridHeight);
@@ -309,12 +322,12 @@ namespace iLand.Test
             List<float> nominalGppByYear = new()
             {
                 // with input data in NAD83 / BC Albers (EPSG:3005)
-                10.331F, 11.140F, 14.037F, 11.346F, 13.562F, // 0...4
-                10.597F, 12.400F, 12.869F, 13.062F, 11.352F, // 5...9
-                11.785F, 10.259F, 11.220F, 10.374F, 12.864F, // 10...14
-                11.565F, 11.834F, 10.523F,  8.585F,  9.779F, // 15...19
-                12.118F,  9.329F, 11.742F, 10.297F, 13.683F, // 20...24
-                11.399F, 12.268F, 12.759F                    // 25...27
+                10.332F, 11.127F, 14.005F, 11.292F, 13.496F, // 0...4
+                10.485F, 12.297F, 12.781F, 12.988F, 11.279F, // 5...9
+                11.690F, 10.116F, 11.115F, 10.112F, 12.799F, // 10...14
+                11.464F, 11.811F, 10.483F,  8.508F,  9.667F, // 15...19
+                12.049F,  9.216F, 11.515F, 10.220F, 13.527F, // 20...24
+                11.236F, 12.239F, 12.754F                    // 25...27
                 // with project coordinate system rotated clockwise to plot and resource unit origin at plot's southwest corner
                 //10.331F, 11.133F, 14.020F, 11.316F, 13.527F,
                 //10.535F, 12.338F, 12.816F, 13.004F, 11.264F,
@@ -327,12 +340,12 @@ namespace iLand.Test
             List<float> nominalNppByYear = new()
             {
                 // with input data in NAD83 / BC Albers (EPSG:3005)
-                12919.852F, 14084.399F, 17900.822F, 14593.909F, 17508.152F,
-                13731.107F, 16089.617F, 16724.943F, 16995.841F, 14786.960F,
-                15347.395F, 13359.617F, 14603.697F, 13509.484F, 16751.105F,
-                15064.177F, 15405.960F, 13695.319F, 11170.007F, 12712.915F,
-                15765.334F, 12116.159F, 15265.611F, 13371.798F, 17776.574F,
-                14805.537F, 15936.583F, 16536.265F
+                13684.909F, 14940.376F, 19006.35F, 15488.995F, 18594.796F,
+                14517.211F, 17055.441F, 17758.947F, 18074.61F, 15708.422F,
+                16296.124F, 14108.057F, 15504.726F, 14094.856F, 17829.115F,
+                15967.047F, 16455.521F, 14609.513F, 11851.329F, 13468.226F,
+                16781.171F, 12832.481F, 16032.113F, 14214.588F, 18819.95F,
+                15629.148F, 16978.632F, 17713.238F
                 // with project coordinate system rotated clockwise to plot and resource unit origin at plot's southwest corner
                 //13305.625F, 14514.859F, 18456.353F, 15041.932F, 18053.628F,
                 //14120.029F, 16564.884F, 17238.371F, 17518.640F, 15189.014F,
@@ -344,12 +357,12 @@ namespace iLand.Test
             List<float> nominalVolumeByYear = new()
             {
                 // with input data in NAD83 / BC Albers (EPSG:3005)
-                117.738F, 129.517F, 147.258F, 159.411F, 175.920F,
-                186.553F, 201.121F, 215.180F, 231.040F, 242.459F,
-                252.847F, 260.549F, 267.907F, 276.121F, 290.728F,
-                301.258F, 311.455F, 318.299F, 321.742F, 326.003F,
-                338.667F, 341.236F, 353.053F, 357.628F, 372.019F,
-                382.117F, 395.792F, 400.622F
+                118.556F, 131.212F, 150.160F, 162.973F, 180.806F,
+                191.927F, 206.203F, 221.965F, 236.137F, 247.339F,
+                260.842F, 270.256F, 280.073F, 284.551F, 297.234F,
+                303.895F, 315.872F, 324.205F, 327.931F, 336.055F,
+                349.325F, 355.062F, 366.591F, 371.841F, 387.525F,
+                395.908F, 399.507F, 410.961F
                 // with project coordinate system rotated clockwise to plot and resource unit origin at plot's southwest corner
                 //118.143F, 130.357F, 148.674F, 161.134F, 178.336F,
                 //189.137F, 203.280F, 219.034F, 234.979F, 245.886F,
@@ -762,8 +775,8 @@ namespace iLand.Test
                 Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
                 Assert.IsTrue((ru.WaterCycle.CurrentSoilWater >= 0.0) && (ru.WaterCycle.CurrentSoilWater <= ru.WaterCycle.FieldCapacity), "Water cycle: current water content of " + ru.WaterCycle.CurrentSoilWater + " mm is negative or greater than the field capacity of " + ru.WaterCycle.FieldCapacity + " mm.");
                 Assert.IsTrue(MathF.Abs(ru.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity is " + ru.WaterCycle.FieldCapacity + " mm.");
-                Assert.IsTrue(ru.WaterCycle.SoilWaterPotentialByWeatherTimestep.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
-                foreach (float psi in ru.WaterCycle.SoilWaterPotentialByWeatherTimestep)
+                Assert.IsTrue(ru.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
+                foreach (float psi in ru.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear)
                 {
                     Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential");
                 }

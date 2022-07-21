@@ -7,11 +7,15 @@ namespace iLand.World
     /// <remarks>
     /// The grid is oriented as is typical northern hemisphere projected coordinate systems: higher y values are farther north, 
     /// higher x values are farther east.
-    ///                N
-    ///       (0, 2) (1, 2) (2, 2)
-    ///     W (0, 1) (1, 1) (2, 1)  E
-    ///       (0, 0) (1, 0) (2, 0)
-    ///                S
+    /// 
+    ///                N                        N
+    ///       (0, 2) (1, 2) (2, 2)         (6) (7) (8)
+    ///     W (0, 1) (1, 1) (2, 1)  E    W (3) (4) (5) E
+    ///       (0, 0) (1, 0) (2, 0)         (0) (1) (2)
+    ///                S                        S
+    /// 
+    /// The grid can be accessed with both (x, y) indexing and with a single index. Single indexing starts with the (0, 0) cell
+    /// and proceeds west to east and south to north following the coordinate system (single = y * SizeX + x)
     /// </remarks>
     public class Grid<T>
     {
@@ -189,15 +193,15 @@ namespace iLand.World
         }
         
         /// returns the index of an aligned grid (the same size) with 5 times bigger cells (e.g. convert from a 2 m grid to a 10 m grid)
-        public int Index5(int cellIndex) 
+        public int LightIndexToHeightIndex(int lightIndex) 
         { 
-            return ((cellIndex / this.SizeX) / 5) * (this.SizeX / 5) + (cellIndex % this.SizeX) / 5; 
+            return ((lightIndex / this.SizeX) / Constant.LightCellsPerHeightCellWidth) * (this.SizeX / Constant.LightCellsPerHeightCellWidth) + (lightIndex % this.SizeX) / Constant.LightCellsPerHeightCellWidth;
         }
 
         /// returns the index of an aligned grid (the same size) with 10 times bigger cells (e.g. convert from a 2 m grid to a 20 m grid)
-        public int Index10(int cellIndex) 
+        public int LightIndexToSeedIndex(int lightIndex) 
         { 
-            return ((cellIndex / this.SizeX) / 10) * (this.SizeX / 10) + (cellIndex % this.SizeX) / 10; 
+            return ((lightIndex / this.SizeX) / Constant.LightCellsPerSeedmapCellWidth) * (this.SizeX / Constant.LightCellsPerSeedmapCellWidth) + (lightIndex % this.SizeX) / Constant.LightCellsPerSeedmapCellWidth; 
         }
 
         public int IndexXYToIndex(int indexX, int indexY) 

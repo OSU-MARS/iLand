@@ -31,10 +31,6 @@ namespace iLand.Output
         {
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.ID == -1)
-                {
-                    continue; // do not include if out of project area
-                }
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics stat = ruSpecies.StatisticsDead;

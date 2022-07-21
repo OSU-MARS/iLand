@@ -5,28 +5,6 @@ namespace iLand.World
 {
     internal static class GridExtensions
     {
-        /** retrieve from the index from an element reversely from a pointer to that element.
-            The internal memory layout is (for dimx=6, dimy=3):
-            0  1  2  3  4  5
-            6  7  8  9  10 11
-            12 13 14 15 16 17
-            Note: north and south are reversed, thus the item with index 0 is located in the south-western edge of the grid! */
-        public static Point CellIndexOf<T>(this Grid<T> grid, T element) where T : class?
-        {
-            //    Point result(-1,-1);
-            if (element != null)
-            {
-                for (int idx = 0; idx < grid.CellCount; ++idx)
-                {
-                    if (grid[idx] == element)
-                    {
-                        return grid.GetCellXYIndex(idx);
-                    }
-                }
-            }
-            return new Point(-1, -1);
-        }
-
         public static void Limit(this Grid<int> grid, int min_value, int max_value)
         {
             for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)

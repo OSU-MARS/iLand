@@ -32,30 +32,25 @@ namespace iLand.Output
         {
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.ID == -1)
-                {
-                    continue; // do not include if out of project area
-                }
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeSpeciesGrowth growth = ruSpecies.TreeGrowth;
-                    ResourceUnitTreeSpeciesGrowthModifiers speciesResponse = growth.Modifiers;
-                    for (int month = 0; month < Constant.MonthsInYear; ++month)
+                    ResourceUnitTreeSpeciesGrowthModifiers growthModifiers = growth.Modifiers;
+                    for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
                     {
                         insertRow.Parameters[0].Value = model.CurrentYear;
                         insertRow.Parameters[1].Value = ruSpecies.RU.ResourceUnitGridIndex;
                         insertRow.Parameters[2].Value = ruSpecies.RU.ID;
                         insertRow.Parameters[3].Value = ruSpecies.Species.ID;
-                        insertRow.Parameters[4].Value = month + 1; // month
-                                                                   // responses
-                        insertRow.Parameters[5].Value = speciesResponse.TemperatureModifierByMonth[month];
-                        insertRow.Parameters[6].Value = speciesResponse.SoilWaterModifierByMonth[month];
-                        insertRow.Parameters[7].Value = speciesResponse.VpdModifierByMonth[month];
-                        insertRow.Parameters[8].Value = speciesResponse.CO2ModifierByMonth[month];
-                        insertRow.Parameters[9].Value = speciesResponse.NitrogenModifierForYear;
-                        insertRow.Parameters[10].Value = speciesResponse.GlobalRadiationByMonth[month];
-                        insertRow.Parameters[11].Value = growth.UtilizablePar[month];
-                        insertRow.Parameters[12].Value = growth.MonthlyGpp[month];
+                        insertRow.Parameters[4].Value = monthIndex + 1; // month
+                        insertRow.Parameters[5].Value = growthModifiers.TemperatureModifierByMonth[monthIndex];
+                        insertRow.Parameters[6].Value = growthModifiers.SoilWaterModifierByMonth[monthIndex];
+                        insertRow.Parameters[7].Value = growthModifiers.VpdModifierByMonth[monthIndex];
+                        insertRow.Parameters[8].Value = growthModifiers.CO2ModifierByMonth[monthIndex];
+                        insertRow.Parameters[9].Value = growthModifiers.NitrogenModifierForYear;
+                        insertRow.Parameters[10].Value = growthModifiers.GlobalRadiationByMonth[monthIndex];
+                        insertRow.Parameters[11].Value = growth.UtilizablePar[monthIndex];
+                        insertRow.Parameters[12].Value = growth.MonthlyGpp[monthIndex];
                         insertRow.ExecuteNonQuery();
                     }
                 }

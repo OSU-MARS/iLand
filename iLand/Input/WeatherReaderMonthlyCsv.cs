@@ -10,7 +10,7 @@ namespace iLand.Input
         {
             // TODO: support for temperature shifts and precipitation multipliers for sensitivity analysis
             CsvFile weatherFile = new(weatherFilePath);
-            WeatherDataIndexMonthly weatherHeader = new(weatherFile);
+            WeatherCsvHeaderMonthly weatherHeader = new(weatherFile);
 
             weatherFile.Parse((string[] row) =>
             {

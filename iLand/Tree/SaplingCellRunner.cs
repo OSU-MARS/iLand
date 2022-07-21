@@ -28,9 +28,9 @@ namespace iLand.Tree
             this.RU = null;
         }
 
-        public PointF CurrentCoordinate()
+        public PointF GetCurrentProjectCentroid()
         {
-            return standLightEnumerator.GetPhysicalPosition();
+            return this.standLightEnumerator.GetCurrentProjectCentroid();
         }
 
         // TODO: change to bool MoveNext()?
@@ -44,12 +44,12 @@ namespace iLand.Tree
                 {
                     return null; // end of the bounding box
                 }
-                Point cellXYIndex = this.standLightEnumerator.GetCellXYIndex();
+                Point cellXYIndex = this.standLightEnumerator.GetCurrentXYIndex();
                 if (this.landscape.StandRaster.GetPolygonIDFromLightGridIndex(cellXYIndex) != standID)
                 {
                     continue; // pixel does not belong to the target stand
                 }
-                this.RU = landscape.GetResourceUnit(this.standLightEnumerator.GetPhysicalPosition());
+                this.RU = landscape.GetResourceUnit(this.standLightEnumerator.GetCurrentProjectCentroid());
                 return this.RU.GetSaplingCell(cellXYIndex);
             }
             return null;

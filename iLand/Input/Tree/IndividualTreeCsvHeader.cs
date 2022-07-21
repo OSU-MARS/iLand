@@ -1,6 +1,6 @@
 ﻿namespace iLand.Input.Tree
 {
-    internal class IndividualTreeDataIndex
+    public class IndividualTreeCsvHeader
     {
         public int Age { get; private init; } // optional
         public int Dbh { get; private init; }
@@ -14,7 +14,7 @@
         public bool CanBeIndividualTreeFile { get; private init; }
         public float HeightConversionFactor { get; private init; }
 
-        public IndividualTreeDataIndex(CsvFile treeFile)
+        public IndividualTreeCsvHeader(CsvFile treeFile)
         {
             this.StandID = treeFile.GetColumnIndex("standID"); // optional
             this.Tag = treeFile.GetColumnIndex("id"); // optional

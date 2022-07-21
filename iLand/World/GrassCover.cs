@@ -72,7 +72,7 @@ namespace iLand.World
             // mask out out-of-project areas
             for (int lightIndex = 0; lightIndex < this.CoverOrOnOffGrid.CellCount; ++lightIndex)
             {
-                if (landscape.HeightGrid[this.CoverOrOnOffGrid.Index5(lightIndex)].IsOnLandscape() == false)
+                if (landscape.HeightGrid[this.CoverOrOnOffGrid.LightIndexToHeightIndex(lightIndex)].IsOnLandscape() == false)
                 {
                     this.CoverOrOnOffGrid[lightIndex] = -1;
                 }

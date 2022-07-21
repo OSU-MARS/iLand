@@ -14,8 +14,8 @@ namespace iLand.Output
 
         public TreeRemovedAnnualOutput()
         {
-            this.treeFilter = new Expression();
-            this.removedTreesByResourceUnit = new Dictionary<ResourceUnit, (Trees, List<MortalityCause>)>();
+            this.treeFilter = new();
+            this.removedTreesByResourceUnit = new();
 
             this.Name = "Tree Removed Output";
             this.TableName = "treeRemoved";

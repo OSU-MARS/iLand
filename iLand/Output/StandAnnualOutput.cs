@@ -9,11 +9,11 @@ namespace iLand.Output
     /** StandOut is basic stand level info per species and ressource unit */
     public class StandAnnualOutput : AnnualOutput
     {
-        private readonly Expression mYearFilter;
+        private readonly Expression yearFilter;
 
         public StandAnnualOutput()
         {
-            this.mYearFilter = new Expression();
+            this.yearFilter = new();
 
             this.Name = "Stand by species/RU";
             this.TableName = "stand";
@@ -45,14 +45,14 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            this.mYearFilter.SetExpression(model.Project.Output.Annual.Stand.Condition);
+            this.yearFilter.SetExpression(model.Project.Output.Annual.Stand.Condition);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            if (this.mYearFilter.IsEmpty == false)
+            if (this.yearFilter.IsEmpty == false)
             {
-                if (this.mYearFilter.Evaluate(model.CurrentYear) == 0.0)
+                if (this.yearFilter.Evaluate(model.CurrentYear) == 0.0)
                 {
                     return;
                 }
@@ -60,10 +60,6 @@ namespace iLand.Output
 
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.ID == -1)
-                {
-                    continue; // do not include if out of project area
-                }
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics speciesStats = ruSpecies.Statistics;

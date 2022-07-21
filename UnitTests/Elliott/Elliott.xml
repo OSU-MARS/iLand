@@ -11,8 +11,8 @@
       <latitude>43.57</latitude>
     </geometry>
     <initialization>
-      <resourceUnitFile>resource units unbuffered 4 km weather.csv</resourceUnitFile>
-      <treeFile>TSegD_H10Cr20h10A50MD7_s04110w07020.csv</treeFile>
+      <resourceUnitFile>resource units unbuffered 4 km weather.feather</resourceUnitFile>
+      <treeFile>TSegD_H10Cr20h10A50MD7_s04110w07020.feather</treeFile>
     </initialization>
     <species>
       <databaseFile>species_param_pnw.sqlite</databaseFile>

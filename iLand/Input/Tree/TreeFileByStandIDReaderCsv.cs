@@ -4,11 +4,11 @@ using System.Globalization;
 
 namespace iLand.Input.Tree
 {
-    internal class TreeFileByStandIDReader : TreeReader
+    internal class TreeFileByStandIDReaderCsv : TreeReader
     {
         public List<(int StandID, string TreeFileName)> TreeFileNameByStandID { get; private init; }
 
-        public TreeFileByStandIDReader(string treeFilePath, TreeFileByStandIDDataIndex treeFileIndexHeader, CsvFile treeFile)
+        public TreeFileByStandIDReaderCsv(string treeFilePath, TreeFileByStandIDCsvHeader treeFileIndexHeader, CsvFile treeFile)
             : base(treeFilePath)
         {
             this.TreeFileNameByStandID = new();

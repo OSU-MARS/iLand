@@ -115,16 +115,13 @@ namespace iLand.Tree
 
         public void ZeroMonthlyAndAnnualValues()
         {
-            for (int monthIndex = 0; monthIndex < this.MonthlyGpp.Length; ++monthIndex)
-            {
-                this.MonthlyGpp[monthIndex] = 0.0F;
-                this.UtilizablePar[monthIndex] = 0.0F;
-            }
+            Array.Fill(this.MonthlyGpp, 0.0F);
+            Array.Fill(this.UtilizablePar, 0.0F);
 
             this.AnnualGpp = 0.0F;
             this.RootFraction = 0.0F;
             this.SiteEnvironmentSaplingHeightGrowthMultiplier = 0.0F;
-            // BUGBUG: shouldn't growth modifiers also be zeroed?
+            // BUGBUG: shouldn't growth modifiers also be zeroed at this point for encapsulation?
         }
     }
 }

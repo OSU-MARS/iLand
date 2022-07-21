@@ -54,6 +54,16 @@ namespace iLand.Input
             this.Year = new int[capacity]; // can be shortened to one element per year if needed
         }
 
+        public int GetTimestepsPerYear()
+        {
+            return this.Timestep switch
+            {
+                Timestep.Daily => Constant.DaysInLeapYear,
+                Timestep.Monthly => Constant.MonthsInYear,
+                _ => throw new NotSupportedException("Unhandled weather timestep " + this.Timestep + ".")
+            };
+        }
+
         public bool IsCurrentlyLeapYear()
         {
             return DateTime.IsLeapYear(this.Year[this.CurrentYearStartIndex]);

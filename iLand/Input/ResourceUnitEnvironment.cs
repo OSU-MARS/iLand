@@ -54,7 +54,7 @@ namespace iLand.Input
         public string SpeciesTableName { get; private init; }
         public bool UseDynamicAvailableNitrogen { get; private init; }
 
-        public ResourceUnitEnvironment(ResourceUnitHeader header, string[] environmentFileRow, ResourceUnitEnvironment defaultEnvironment)
+        public ResourceUnitEnvironment(ResourceUnitCsvHeader header, string[] environmentFileRow, ResourceUnitEnvironment defaultEnvironment)
         {
             this.AnnualNitrogenDeposition = header.AnnualNitrogenDeposition >= 0 ? Single.Parse(environmentFileRow[header.AnnualNitrogenDeposition], CultureInfo.InvariantCulture) : defaultEnvironment.AnnualNitrogenDeposition;
             this.WeatherID = header.WeatherID >= 0 ? environmentFileRow[header.WeatherID] : defaultEnvironment.WeatherID;
@@ -70,7 +70,7 @@ namespace iLand.Input
             this.SnagHalfLife = header.SnagHalfLife >= 0 ? Single.Parse(environmentFileRow[header.SnagHalfLife], CultureInfo.InvariantCulture) : defaultEnvironment.SnagsPerResourceUnit;
             this.SnagsPerResourceUnit = header.SnagsPerResourceUnit >= 0 ? Single.Parse(environmentFileRow[header.SnagsPerResourceUnit], CultureInfo.InvariantCulture) : defaultEnvironment.SnagsPerResourceUnit;
 
-            this.SoilDepthInCm = header.SoilDepthInCM >= 0 ? Single.Parse(environmentFileRow[header.SoilDepthInCM], CultureInfo.InvariantCulture) : defaultEnvironment.SoilDepthInCm;
+            this.SoilDepthInCm = header.SoilDepthInCm >= 0 ? Single.Parse(environmentFileRow[header.SoilDepthInCm], CultureInfo.InvariantCulture) : defaultEnvironment.SoilDepthInCm;
 
             this.SoilThetaR = header.SoilThetaR >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaR], CultureInfo.InvariantCulture) : defaultEnvironment.SoilThetaR;
             this.SoilThetaS = header.SoilThetaS >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaS], CultureInfo.InvariantCulture) : defaultEnvironment.SoilThetaS;
@@ -98,6 +98,55 @@ namespace iLand.Input
             this.SoilYoungRefractoryN = header.SoilYoungRefractoryN >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryN], CultureInfo.InvariantCulture) : defaultEnvironment.SoilYoungRefractoryN;
 
             this.SpeciesTableName = header.SpeciesTableName >= 0 ? environmentFileRow[header.SpeciesTableName] : defaultEnvironment.SpeciesTableName;
+
+            this.SoilQb = defaultEnvironment.SoilQb;
+            this.UseDynamicAvailableNitrogen = defaultEnvironment.UseDynamicAvailableNitrogen;
+        }
+
+        public ResourceUnitEnvironment(ResourceUnitArrowBatch arrowBatch, int index, ResourceUnitEnvironment defaultEnvironment)
+        {
+            this.AnnualNitrogenDeposition = arrowBatch.AnnualNitrogenDeposition != null ? arrowBatch.AnnualNitrogenDeposition.Values[index] : defaultEnvironment.AnnualNitrogenDeposition;
+            this.WeatherID = arrowBatch.WeatherID != null ? arrowBatch.WeatherID.GetString(index) : defaultEnvironment.WeatherID;
+            this.GisCenterX = arrowBatch.CenterX.Values[index]; // required field
+            this.GisCenterY = arrowBatch.CenterY.Values[index]; // required field
+            this.ResourceUnitID = arrowBatch.ResourceUnitID.Values[index]; // required field
+
+            this.SnagBranchRootCarbon = arrowBatch.SnagBranchRootCarbon != null ? arrowBatch.SnagBranchRootCarbon.Values[index] : defaultEnvironment.SnagBranchRootCarbon;
+            this.SnagBranchRootCNRatio = arrowBatch.SnagBranchRootCNRatio != null ? arrowBatch.SnagBranchRootCNRatio.Values[index] : defaultEnvironment.SnagBranchRootCNRatio;
+            this.SnagStemCarbon = arrowBatch.SnagStemCarbon != null ? arrowBatch.SnagStemCarbon.Values[index] : defaultEnvironment.SnagStemCarbon;
+            this.SnagStemCNRatio = arrowBatch.SnagStemCNRatio != null ? arrowBatch.SnagStemCNRatio.Values[index] : defaultEnvironment.SnagStemCNRatio;
+            this.SnagStemDecompositionRate = arrowBatch.SnagStemDecompositionRate != null ? arrowBatch.SnagStemDecompositionRate.Values[index] : defaultEnvironment.SnagStemDecompositionRate;
+            this.SnagHalfLife = arrowBatch.SnagHalfLife != null ? arrowBatch.SnagHalfLife.Values[index] : defaultEnvironment.SnagsPerResourceUnit;
+            this.SnagsPerResourceUnit = arrowBatch.SnagsPerResourceUnit != null ? arrowBatch.SnagsPerResourceUnit.Values[index] : defaultEnvironment.SnagsPerResourceUnit;
+
+            this.SoilDepthInCm = arrowBatch.SoilDepthInCm != null ? arrowBatch.SoilDepthInCm.Values[index] : defaultEnvironment.SoilDepthInCm;
+
+            this.SoilThetaR = arrowBatch.SoilThetaR != null ? arrowBatch.SoilThetaR.Values[index] : defaultEnvironment.SoilThetaR;
+            this.SoilThetaS = arrowBatch.SoilThetaS != null ? arrowBatch.SoilThetaS.Values[index] : defaultEnvironment.SoilThetaS;
+            this.SoilVanGenuchtenAlpha = arrowBatch.SoilVanGenuchtenAlpha != null ? arrowBatch.SoilVanGenuchtenAlpha.Values[index] : defaultEnvironment.SoilVanGenuchtenAlpha;
+            this.SoilVanGenuchtenN = arrowBatch.SoilVanGenuchtenN != null ? arrowBatch.SoilVanGenuchtenN.Values[index] : defaultEnvironment.SoilVanGenuchtenN;
+
+            this.SoilClay = arrowBatch.SoilClayPercentage != null ? arrowBatch.SoilClayPercentage.Values[index] : defaultEnvironment.SoilClay;
+            this.SoilSand = arrowBatch.SoilSandPercentage != null ? arrowBatch.SoilSandPercentage.Values[index] : defaultEnvironment.SoilSand;
+            this.SoilSilt = arrowBatch.SoilSiltPercentage != null ? arrowBatch.SoilSiltPercentage.Values[index] : defaultEnvironment.SoilSilt;
+
+            this.SoilAvailableNitrogen = arrowBatch.SoilAvailableNitrogen != null ? arrowBatch.SoilAvailableNitrogen.Values[index] : defaultEnvironment.SoilAvailableNitrogen;
+            this.SoilEl = arrowBatch.SoilEl != null ? arrowBatch.SoilEl.Values[index] : defaultEnvironment.SoilEl;
+            this.SoilEr = arrowBatch.SoilEr != null ? arrowBatch.SoilEr.Values[index] : defaultEnvironment.SoilEr;
+            this.SoilLeaching = arrowBatch.SoilLeaching != null ? arrowBatch.SoilLeaching.Values[index] : defaultEnvironment.SoilLeaching;
+            this.SoilHumificationRate = arrowBatch.SoilHumificationRate != null ? arrowBatch.SoilHumificationRate.Values[index] : defaultEnvironment.SoilHumificationRate;
+            this.SoilOrganicC = arrowBatch.SoilOrganicMatterC != null ? arrowBatch.SoilOrganicMatterC.Values[index] : defaultEnvironment.SoilOrganicC;
+            this.SoilOrganicDecompositionRate = arrowBatch.SoilOrganicMatterDecompositionRate != null ? arrowBatch.SoilOrganicMatterDecompositionRate.Values[index] : defaultEnvironment.SoilOrganicDecompositionRate;
+            this.SoilOrganicN = arrowBatch.SoilOrganicMatterN != null ? arrowBatch.SoilOrganicMatterN.Values[index] : defaultEnvironment.SoilOrganicN;
+            this.SoilQh = arrowBatch.SoilQh != null ? arrowBatch.SoilQh.Values[index] : defaultEnvironment.SoilQh;
+            this.SoilYoungLabileC = arrowBatch.SoilYoungLabileC != null ? arrowBatch.SoilYoungLabileC.Values[index] : defaultEnvironment.SoilYoungLabileC;
+            this.SoilYoungLabileDecompositionRate = arrowBatch.SoilYoungLabileDecompositionRate != null ? arrowBatch.SoilYoungLabileDecompositionRate.Values[index] : defaultEnvironment.SoilYoungLabileDecompositionRate;
+            this.SoilYoungLabileN = arrowBatch.SoilYoungLabileN != null ? arrowBatch.SoilYoungLabileN.Values[index] : defaultEnvironment.SoilYoungLabileN;
+            this.SoilYoungRefractoryC = arrowBatch.SoilYoungRefractoryC != null ? arrowBatch.SoilYoungRefractoryC.Values[index] : defaultEnvironment.SoilYoungRefractoryC;
+            this.SoilYoungRefractoryDecompositionRate = arrowBatch.SoilYoungRefractoryDecompositionRate != null ? arrowBatch.SoilYoungRefractoryDecompositionRate.Values[index] : defaultEnvironment.SoilYoungRefractoryDecompositionRate;
+            this.SoilYoungRefractoryN = arrowBatch.SoilYoungRefractoryN != null ? arrowBatch.SoilYoungRefractoryN.Values[index] : defaultEnvironment.SoilYoungRefractoryN;
+
+            this.SpeciesTableName = arrowBatch.SpeciesTableName != null ? arrowBatch.SpeciesTableName.GetString(index) : defaultEnvironment.SpeciesTableName;
 
             this.SoilQb = defaultEnvironment.SoilQb;
             this.UseDynamicAvailableNitrogen = defaultEnvironment.UseDynamicAvailableNitrogen;

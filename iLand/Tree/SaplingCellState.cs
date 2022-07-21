@@ -2,7 +2,7 @@
 {
     public enum SaplingCellState
     {
-        Invalid = 0, 
+        NotOnLandscape = 0, 
         Free = 1, 
         Full = 2
     }

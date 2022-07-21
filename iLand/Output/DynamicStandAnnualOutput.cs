@@ -15,10 +15,10 @@ namespace iLand.Output
     {
         private static readonly ReadOnlyCollection<string> Aggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95", "sd" }.AsReadOnly();
 
-        private readonly List<DynamicOutputField> mFieldList;
-        private readonly Expression mResourceUnitfilter;
-        private readonly Expression mTreeFilter;
-        private readonly Expression mYearFilter;
+        private readonly List<DynamicOutputField> fieldList;
+        private readonly Expression resourceUnitFilter;
+        private readonly Expression treeFilter;
+        private readonly Expression yearFilter;
 
         private struct DynamicOutputField
         {
@@ -29,10 +29,10 @@ namespace iLand.Output
 
         public DynamicStandAnnualOutput()
         {
-            this.mYearFilter = new Expression();
-            this.mFieldList = new List<DynamicOutputField>();
-            this.mResourceUnitfilter = new Expression();
-            this.mTreeFilter = new Expression();
+            this.yearFilter = new();
+            this.fieldList = new();
+            this.resourceUnitFilter = new();
+            this.treeFilter = new();
 
             this.Name = "dynamic stand output by species/RU";
             this.TableName = "dynamicstand";
@@ -66,12 +66,12 @@ namespace iLand.Output
                 return;
             }
 
-            this.mResourceUnitfilter.SetExpression(model.Project.Output.Annual.DynamicStand.ResourceUnitFilter);
-            this.mTreeFilter.SetExpression(model.Project.Output.Annual.DynamicStand.TreeFilter);
-            this.mYearFilter.SetExpression(model.Project.Output.Annual.DynamicStand.Condition);
+            this.resourceUnitFilter.SetExpression(model.Project.Output.Annual.DynamicStand.ResourceUnitFilter);
+            this.treeFilter.SetExpression(model.Project.Output.Annual.DynamicStand.TreeFilter);
+            this.yearFilter.SetExpression(model.Project.Output.Annual.DynamicStand.Condition);
             // clear columns
             this.Columns.RemoveRange(4, Columns.Count - 4);
-            this.mFieldList.Clear();
+            this.fieldList.Clear();
 
             // setup fields
             // int pos = 0;
@@ -102,7 +102,7 @@ namespace iLand.Output
                     throw new NotSupportedException(String.Format("Invalid aggregate expression for dynamic output: {0}{2}allowed:{1}",
                                                                   columnVariableAggregation, String.Join(" ", Aggregations), System.Environment.NewLine));
                 }
-                this.mFieldList.Add(fieldForColumn);
+                this.fieldList.Add(fieldForColumn);
 
                 string sqlColumnName = String.Format("{0}_{1}", columnVariable, columnVariableAggregation);
                 sqlColumnName = Regex.Replace(sqlColumnName, "[\\[\\]\\,\\(\\)<>=!\\s]", "_");
@@ -113,13 +113,13 @@ namespace iLand.Output
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            if (this.mFieldList.Count == 0)
+            if (this.fieldList.Count == 0)
             {
                 return;
             }
-            if (this.mYearFilter.IsEmpty == false)
+            if (this.yearFilter.IsEmpty == false)
             {
-                if (this.mYearFilter.Evaluate(model.CurrentYear) != 0.0)
+                if (this.yearFilter.Evaluate(model.CurrentYear) != 0.0)
                 {
                     return;
                 }
@@ -167,7 +167,7 @@ namespace iLand.Output
                 // dynamic calculations
                 int columnIndex = 0;
                 SummaryStatistics fieldStatistics = new(); // statistcs helper class
-                foreach (DynamicOutputField field in this.mFieldList)
+                foreach (DynamicOutputField field in this.fieldList)
                 {
                     if (String.IsNullOrEmpty(field.Expression) == false)
                     {
@@ -248,7 +248,7 @@ namespace iLand.Output
 
         private void ExtractByResourceUnit(Model model, bool bySpecies, SqliteCommand insertRow)
         {
-            if (this.mFieldList.Count == 0)
+            if (this.fieldList.Count == 0)
             {
                 return; // nothing to do if no fields to log
             }
@@ -257,21 +257,16 @@ namespace iLand.Output
             SummaryStatistics fieldStatistics = new(); // statistcs helper class
             TreeWrapper treeWrapper = new(model);
             ResourceUnitWrapper ruWrapper = new(model);
-            this.mResourceUnitfilter.Wrapper = ruWrapper;
+            this.resourceUnitFilter.Wrapper = ruWrapper;
 
             Expression fieldExpression = new();
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.ID == -1)
-                {
-                    continue; // do not include if out of project area
-                }
-
                 // test filter
-                if (this.mResourceUnitfilter.IsEmpty == false)
+                if (this.resourceUnitFilter.IsEmpty == false)
                 {
                     ruWrapper.ResourceUnit = ru;
-                    if (this.mResourceUnitfilter.Execute() == 0.0)
+                    if (this.resourceUnitFilter.Execute() == 0.0)
                     {
                         continue;
                     }
@@ -286,7 +281,7 @@ namespace iLand.Output
 
                     // dynamic calculations
                     int columnIndex = 0;
-                    foreach (DynamicOutputField field in this.mFieldList)
+                    foreach (DynamicOutputField field in this.fieldList)
                     {
                         if (String.IsNullOrEmpty(field.Expression) == false)
                         {
@@ -311,10 +306,10 @@ namespace iLand.Output
                             treeWrapper.TreeIndex = treeIndex;
 
                             // apply tree filter
-                            if (!this.mTreeFilter.IsEmpty)
+                            if (!this.treeFilter.IsEmpty)
                             {
-                                this.mTreeFilter.Wrapper = treeWrapper;
-                                if (this.mTreeFilter.Execute() == 0.0)
+                                this.treeFilter.Wrapper = treeWrapper;
+                                if (this.treeFilter.Execute() == 0.0)
                                 {
                                     continue;
                                 }

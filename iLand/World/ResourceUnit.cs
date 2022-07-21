@@ -96,7 +96,7 @@ namespace iLand.World
             for (int lightCellIndex = 0; lightCellIndex < Constant.LightCellsPerHectare; ++lightCellIndex)
             {
                 SaplingCell saplingCell = this.SaplingCells[lightCellIndex];
-                if (saplingCell.State != SaplingCellState.Invalid)
+                if (saplingCell.State != SaplingCellState.NotOnLandscape)
                 {
                     int cohortsInCell = saplingCell.GetOccupiedSlotCount();
                     for (int saplingCellIndex = 0; saplingCellIndex < saplingCell.Saplings.Length; ++saplingCellIndex)
@@ -125,13 +125,24 @@ namespace iLand.World
         }
 
         // stocked area calculation
-        public void CountHeightCell(bool cellHasTrees) 
+        public void CountHeightCellsContainingTrees(Landscape landscape) 
         {
-            ++this.heightCellsOnLandscape;
-            if (cellHasTrees)
+            // counts are zeroed in OnStartYear()
+            GridWindowEnumerator<HeightCell> ruHeightGridEnumerator = new(landscape.HeightGrid, this.ProjectExtent);
+            while (ruHeightGridEnumerator.MoveNext())
             {
-                ++this.heightCellsWithTrees;
+                HeightCell currentHeightCell = ruHeightGridEnumerator.Current;
+                if (currentHeightCell.IsOnLandscape())
+                {
+                    ++this.heightCellsOnLandscape; // TODO: this is invariant and need not be recalculated every year
+                }
+                if (currentHeightCell.TreeCount > 0)
+                {
+                    ++this.heightCellsWithTrees;
+                }
             }
+
+            Debug.Assert((this.heightCellsOnLandscape > 0) && ((this.heightCellsWithTrees > 0) || (this.Trees.TreesBySpeciesID.Count == 0)));
         }
 
         public void AddSprout(Model model, Trees trees, int treeIndex)
@@ -280,7 +291,7 @@ namespace iLand.World
 
                             if (sapling != null)
                             {
-                                float seedMapValue = seedMap[lightGrid.Index10(lightIndex)];
+                                float seedMapValue = seedMap[lightGrid.LightIndexToSeedIndex(lightIndex)];
                                 if (seedMapValue == 0.0F)
                                 {
                                     continue;
@@ -327,7 +338,7 @@ namespace iLand.World
                 for (int lightIndexX = 0; lightIndexX < Constant.LightCellsPerRUWidth; ++lightIndexX, ++lightIndex)
                 {
                     SaplingCell saplingCell = this.SaplingCells[lightIndexY * Constant.LightCellsPerRUWidth + lightIndexX]; // ptr to row
-                    if (saplingCell.State != SaplingCellState.Invalid)
+                    if (saplingCell.State != SaplingCellState.NotOnLandscape)
                     {
                         bool checkCellState = false;
                         int nSaplings = saplingCell.GetOccupiedSlotCount();
@@ -336,10 +347,10 @@ namespace iLand.World
                             if (saplingCell.Saplings[index].IsOccupied())
                             {
                                 // growth of this sapling tree
-                                HeightCell heightCell = heightGrid[heightGrid.Index5(lightIndex)];
+                                HeightCell heightCell = heightGrid[heightGrid.LightIndexToHeightIndex(lightIndex)];
                                 float lightValue = lightGrid[lightIndex];
 
-                                checkCellState |= this.GrowSaplings(model, saplingCell, saplingCell.Saplings[index], lightIndex, heightCell.Height, lightValue, nSaplings);
+                                checkCellState |= this.GrowSaplings(model, saplingCell, saplingCell.Saplings[index], lightIndex, heightCell.MaximumVegetationHeightInM, lightValue, nSaplings);
                             }
                         }
                         if (checkCellState)
@@ -467,6 +478,7 @@ namespace iLand.World
                 // add a new tree
                 float heightOrDiameterVariation = model.Project.Model.SeedDispersal.RecruitmentDimensionVariation;
                 Point lightCellIndexXY = model.Landscape.LightGrid.GetCellXYIndex(lightCellIndex);
+                Debug.Assert(this.ProjectExtent.Contains(model.Landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
                 for (int saplingIndex = 0; saplingIndex < saplingsToEstablishAsTrees; ++saplingIndex)
                 {
                     // add variation: add +/-N% to dbh and *independently* to height.
@@ -549,7 +561,7 @@ namespace iLand.World
             see also: http://iland-model.org/individual+tree+light+availability */
         public void CalculateWaterAndBiomassGrowthForYear(Model model)
         {
-            if (this.Trees.TotalLightWeightedLeafArea == 0.0 || this.heightCellsOnLandscape == 0)
+            if ((this.Trees.TotalLightWeightedLeafArea == 0.0F) || (this.heightCellsOnLandscape == 0))
             {
                 // clear statistics of resource unit species
                 for (int species = 0; species < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++species)
@@ -641,8 +653,8 @@ namespace iLand.World
             }
 
             // soil water model - this determines soil water contents needed for response calculations
-            WaterCycleData hydrologicState = this.WaterCycle.RunYear(model.Project);
-            model.Modules.CalculateWater(this, hydrologicState);
+            this.WaterCycle.RunYear(model.Project);
+            model.Modules.CalculateWater(this);
 
             // invoke species specific calculation (3-PG)
             for (int speciesIndex = 0; speciesIndex < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++speciesIndex)

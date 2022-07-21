@@ -43,7 +43,11 @@ namespace iLand
 
         public static class File
         {
+            public const string CsvExtension = ".csv";
             public const int DefaultBufferSize = 128 * 1024; // 128 kB
+            public const string FeatherExtension = ".feather";
+            public const string PicusExtension = ".picus";
+            public const string SqliteExtension = ".sqlite";
         }
 
         public static class Limit

@@ -6,6 +6,6 @@ namespace iLand.Plugin
      */
     internal interface IWaterInterface
     {
-        void CalculateWater(ResourceUnit resourceUnit, WaterCycleData waterCycle);
+        void CalculateWater(ResourceUnit resourceUnit);
     }
 }

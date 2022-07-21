@@ -71,21 +71,21 @@ namespace iLand.Output
                 return;
             }
 
-            bool isRUlevel = true;
+            bool logResourceUnitDetails = true;
             // switch off details if this is indicated in the conditionRU option
             if ((this.mResourceUnitFilter.IsEmpty == false) && (this.mResourceUnitFilter.Evaluate(model.CurrentYear) == 0.0))
             {
-                isRUlevel = false;
+                logResourceUnitDetails = false;
             }
 
             Span<float> accumulatedValues = stackalloc float[23]; // 8 data values
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.ID == -1 || ru.Snags == null)
+                if (ru.Snags == null)
                 {
                     continue; // do not include if out of project area
                 }
-                Debug.Assert(ru.Snags != null, "Resource unit has null soil when its snags are non-null.");
+                Debug.Assert(ru.Soil != null, "Resource unit has null soil when its snags are non-null.");
                 
                 ResourceUnitTreeStatistics ruStatistics = ru.Trees.StatisticsForAllSpeciesAndStands;
                 if (ruStatistics.IsPerHectare == false)
@@ -94,7 +94,7 @@ namespace iLand.Output
                 }
 
                 float areaFactor = ru.AreaInLandscape / Constant.ResourceUnitAreaInM2; // conversion factor from real area to per ha values
-                if (isRUlevel)
+                if (logResourceUnitDetails)
                 {
                     insertRow.Parameters[0].Value = model.CurrentYear;
                     insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;

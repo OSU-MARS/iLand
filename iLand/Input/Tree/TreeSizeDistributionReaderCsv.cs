@@ -4,11 +4,11 @@ using System.Globalization;
 
 namespace iLand.Input.Tree
 {
-    internal class TreeSizeDistributionReader : TreeReader
+    internal class TreeSizeDistributionReaderCsv : TreeReader
     {
         public List<TreeSizeRange> TreeSizeDistribution { get; private init; }
 
-        public TreeSizeDistributionReader(string treeFilePath, TreeSizeDistributionDataIndex treeSizeHeader, CsvFile treeFile)
+        public TreeSizeDistributionReaderCsv(string treeFilePath, TreeSizeDistributionCsvHeader treeSizeHeader, CsvFile treeFile)
             : base(treeFilePath)
         {
             this.TreeSizeDistribution = new();

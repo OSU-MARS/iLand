@@ -8,13 +8,13 @@ namespace iLand.Output
 {
     public class WaterAnnualOutput : AnnualOutput
     {
-        private readonly Expression mYearFilter; // condition for landscape-level output
-        private readonly Expression mResourceUnitFilter; // condition for resource-unit-level output
+        private readonly Expression resourceUnitFilter; // condition for resource-unit-level output
+        private readonly Expression yearFilter; // condition for landscape-level output
 
         public WaterAnnualOutput()
         {
-            this.mYearFilter = new Expression();
-            this.mResourceUnitFilter = new Expression();
+            this.resourceUnitFilter = new();
+            this.yearFilter = new();
 
             this.Name = "Water output";
             this.TableName = "water";
@@ -41,7 +41,7 @@ namespace iLand.Output
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             // global condition
-            if ((this.mYearFilter.IsEmpty == false) && (mYearFilter.Evaluate(model.CurrentYear) == 0.0))
+            if ((this.yearFilter.IsEmpty == false) && (yearFilter.Evaluate(model.CurrentYear) == 0.0))
             {
                 return;
             }
@@ -52,18 +52,13 @@ namespace iLand.Output
             float stockable = 0.0F, stocked = 0.0F;
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.ID == -1)
-                {
-                    continue; // do not include if out of project area
-                }
-
                 bool logResourceUnits = true;
                 // switch off details if this is indicated in the conditionRU option
-                if (this.mResourceUnitFilter.IsEmpty == false)
+                if (this.resourceUnitFilter.IsEmpty == false)
                 {
-                    Debug.Assert(this.mResourceUnitFilter.Wrapper != null);
-                    ((ResourceUnitWrapper)this.mResourceUnitFilter.Wrapper).ResourceUnit = ru;
-                    logResourceUnits = this.mResourceUnitFilter.Evaluate(model.CurrentYear) != 0.0;
+                    Debug.Assert(this.resourceUnitFilter.Wrapper != null);
+                    ((ResourceUnitWrapper)this.resourceUnitFilter.Wrapper).ResourceUnit = ru;
+                    logResourceUnits = this.resourceUnitFilter.Evaluate(model.CurrentYear) != 0.0;
                 }
 
                 WaterCycle wc = ru.WaterCycle;
@@ -115,9 +110,9 @@ namespace iLand.Output
         public override void Setup(Model model)
         {
             // use a condition for to control execuation for the current year
-            this.mYearFilter.SetExpression(model.Project.Output.Annual.Water.Condition);
-            this.mResourceUnitFilter.SetExpression(model.Project.Output.Annual.Water.ConditionRU);
-            this.mResourceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
+            this.yearFilter.SetExpression(model.Project.Output.Annual.Water.Condition);
+            this.resourceUnitFilter.SetExpression(model.Project.Output.Annual.Water.ConditionRU);
+            this.resourceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
         }
     }
 }

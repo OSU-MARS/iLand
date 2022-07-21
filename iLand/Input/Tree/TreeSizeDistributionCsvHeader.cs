@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace iLand.Input.Tree
 {
-    internal class TreeSizeDistributionDataIndex
+    internal class TreeSizeDistributionCsvHeader
     {
         public int Count { get; private init; }
         public int Species { get; private init; }
@@ -18,7 +18,7 @@ namespace iLand.Input.Tree
 
         public bool CanBeSizeDistributionFile { get; private init; }
 
-        public TreeSizeDistributionDataIndex(CsvFile treeFile)
+        public TreeSizeDistributionCsvHeader(CsvFile treeFile)
         {
             this.Count = treeFile.GetColumnIndex("count");
             this.Species = treeFile.GetColumnIndex("species");

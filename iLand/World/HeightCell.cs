@@ -4,21 +4,21 @@
     {
         private HeightCellFlags flags;
 
-        public float Height { get; set; } // tallest tree height (m)
+        public float MaximumVegetationHeightInM { get; set; } // height of tallest tree in cell, m, or height of regeneration layer
         public int TreeCount { get; private set; }
 
         public void AddTree(float height) 
         { 
             ++this.TreeCount;
-            if (height > this.Height)
+            if (height > this.MaximumVegetationHeightInM)
             {
-                this.Height = height;
+                this.MaximumVegetationHeightInM = height;
             }
         }
 
         public void ClearTrees()
         {
-            this.Height = Constant.RegenerationLayerHeight;
+            this.MaximumVegetationHeightInM = Constant.RegenerationLayerHeight;
             this.TreeCount = 0;
         }
 
@@ -51,7 +51,7 @@
 
         public override string ToString()
         {
-            return this.TreeCount + " trees, " + this.Height + " m, " + this.flags;
+            return this.TreeCount + " trees, " + this.MaximumVegetationHeightInM + " m, " + this.flags;
         }
     }
 }

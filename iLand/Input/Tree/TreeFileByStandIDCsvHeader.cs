@@ -1,13 +1,13 @@
 ﻿namespace iLand.Input.Tree
 {
-    internal class TreeFileByStandIDDataIndex
+    internal class TreeFileByStandIDCsvHeader
     {
         public int StandID { get; private init; }
         public int TreeFileName { get; private init; }
 
         public bool CanBeIndexFile { get; private init; }
 
-        public TreeFileByStandIDDataIndex(CsvFile treeFile)
+        public TreeFileByStandIDCsvHeader(CsvFile treeFile)
         {
             this.StandID = treeFile.GetColumnIndex("standID");
             this.TreeFileName = treeFile.GetColumnIndex("treeFileName");

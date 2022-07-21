@@ -2,7 +2,7 @@
 
 namespace iLand.Input
 {
-    internal class WeatherDataIndexMonthly
+    internal class WeatherCsvHeaderMonthly
     {
         public int ID { get; private init; }
         public int Precipitation01 { get; private init; }
@@ -91,7 +91,7 @@ namespace iLand.Input
         public int TemperatureMin12 { get; private init; }
         public int Year { get; private init; }
 
-        public WeatherDataIndexMonthly(CsvFile weatherFile)
+        public WeatherCsvHeaderMonthly(CsvFile weatherFile)
         {
             this.ID = weatherFile.GetColumnIndex("ID2");
             this.Precipitation01 = weatherFile.GetColumnIndex("PPT01");
@@ -181,9 +181,9 @@ namespace iLand.Input
             this.Year = weatherFile.GetColumnIndex("Year");
         }
 
-        public WeatherDataIndexMonthly(RecordBatch apacheBatch)
+        public WeatherCsvHeaderMonthly(RecordBatch arrowBatch)
         {
-            Schema schema = apacheBatch.Schema;
+            Schema schema = arrowBatch.Schema;
 
             this.ID = schema.GetFieldIndex("ID2");
             this.Precipitation01 = schema.GetFieldIndex("PPT01");

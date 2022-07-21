@@ -47,7 +47,7 @@ namespace iLand.World
             };
             if (this.Parameters.Kyl <= 0.0 || this.Parameters.Kyr <= 0.0)
             {
-                throw new NotSupportedException(String.Format("Kyl or kyr less than zero: kyl: {0} kyr: {1}", this.Parameters.Kyl, this.Parameters.Kyr));
+                throw new NotSupportedException(String.Format("Kyl or kyr less than zero: kyl: {0} (young labile decomposition rate), kyr: {1} (young refractory decomposition rate)", this.Parameters.Kyl, this.Parameters.Kyr));
             }
 
             this.ClimateDecompositionFactor = 0.0F;

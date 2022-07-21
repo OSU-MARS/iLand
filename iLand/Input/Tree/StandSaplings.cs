@@ -16,12 +16,12 @@ namespace iLand.Input.Tree
         public int StandID { get; private init; }
         public string Species { get; private init; }
 
-        public StandSaplings(StandSaplingsDataIndex saplingHeader, string[] row)
+        public StandSaplings(StandSaplingsCsvHeader saplingHeader, string[] row)
         {
             // required fields
             this.StandID = Int32.Parse(row[saplingHeader.StandID], CultureInfo.InvariantCulture); // no restrictions
             this.Species = row[saplingHeader.Species];
-            if (string.IsNullOrWhiteSpace(Species))
+            if (String.IsNullOrWhiteSpace(Species))
             {
                 throw new NotSupportedException("Sapling species (column 'species') for stand '" + StandID + "' is missing.");
             }

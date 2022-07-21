@@ -9,11 +9,11 @@ namespace iLand.Output
 {
     public class SaplingAnnualOutput : AnnualOutput
     {
-        private readonly Expression mResouceUnitFilter;
+        private readonly Expression resourceUnitFilter;
 
         public SaplingAnnualOutput()
         {
-            this.mResouceUnitFilter = new Expression();
+            this.resourceUnitFilter = new();
 
             this.Name = "Sapling Output";
             this.TableName = "sapling";
@@ -34,24 +34,19 @@ namespace iLand.Output
 
         public override void Setup(Model model)
         {
-            this.mResouceUnitFilter.SetExpression(model.Project.Output.Annual.Sapling.Condition);
-            this.mResouceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
+            this.resourceUnitFilter.SetExpression(model.Project.Output.Annual.Sapling.Condition);
+            this.resourceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.ID == -1)
+                if (this.resourceUnitFilter.IsEmpty == false)
                 {
-                    continue; // do not include if out of project area
-                }
-
-                if (this.mResouceUnitFilter.IsEmpty == false)
-                {
-                    Debug.Assert(this.mResouceUnitFilter.Wrapper != null);
-                    ((ResourceUnitWrapper)this.mResouceUnitFilter.Wrapper).ResourceUnit = ru;
-                    if (this.mResouceUnitFilter.Execute() == 0.0)
+                    Debug.Assert(this.resourceUnitFilter.Wrapper != null);
+                    ((ResourceUnitWrapper)this.resourceUnitFilter.Wrapper).ResourceUnit = ru;
+                    if (this.resourceUnitFilter.Execute() == 0.0)
                     {
                         continue;
                     }

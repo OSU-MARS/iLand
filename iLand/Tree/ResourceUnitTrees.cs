@@ -307,21 +307,18 @@ namespace iLand.Tree
                     {
                         treesOfSpecies.DropLastNTrees(treesToDrop);
                         // release memory at ends of arrays if a meaningful amount can be freed
-                        if (treesOfSpecies.Capacity > 100)
+                        if ((treesOfSpecies.Capacity > 100) && (((float)treesOfSpecies.Count / (float)treesOfSpecies.Capacity) < 0.2F))
                         {
-                            if (((float)treesOfSpecies.Count / (float)treesOfSpecies.Capacity) < 0.2F)
-                            {
-                                // int target_size = 2*mTrees.Count;
-                                // Debug.WriteLine("reduce size from " + mTrees.Capacity + " to " + target_size);
-                                // mTrees.reserve(qMax(target_size, 100));
-                                // if (GlobalSettings.Instance.LogDebug())
-                                // {
-                                //     Debug.WriteLine("reduce tree storage of RU " + Index + " from " + Trees.Capacity + " to " + Trees.Count);
-                                // }
+                            // int target_size = 2*mTrees.Count;
+                            // Debug.WriteLine("reduce size from " + mTrees.Capacity + " to " + target_size);
+                            // mTrees.reserve(qMax(target_size, 100));
+                            // if (GlobalSettings.Instance.LogDebug())
+                            // {
+                            //     Debug.WriteLine("reduce tree storage of RU " + Index + " from " + Trees.Capacity + " to " + Trees.Count);
+                            // }
 
-                                int simdCompatibleTreeCapacity = Constant.Simd128x4.Width * (treesOfSpecies.Count / Constant.Simd128x4.Width);
-                                treesOfSpecies.Resize(simdCompatibleTreeCapacity);
-                            }
+                            int simdCompatibleTreeCapacity = Constant.Simd128x4.Width * (treesOfSpecies.Count / Constant.Simd128x4.Width + 1);
+                            treesOfSpecies.Resize(simdCompatibleTreeCapacity);
                         }
                     }
                 }

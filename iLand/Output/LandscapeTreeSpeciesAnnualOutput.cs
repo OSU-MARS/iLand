@@ -15,8 +15,8 @@ namespace iLand.Output
 
         public LandscapeTreeSpeciesAnnualOutput()
         {
-            this.filter = new Expression();
-            this.treeStatisticsBySpeciesID = new Dictionary<string, LandscapeTreeSpeciesStatistics>();
+            this.filter = new();
+            this.treeStatisticsBySpeciesID = new();
 
             this.Name = "Landscape aggregates per species";
             this.TableName = "landscape";
@@ -64,10 +64,6 @@ namespace iLand.Output
 
             foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
             {
-                if (ru.ID == -1)
-                {
-                    continue; // do not include if out of project area
-                }
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeStatistics ruSpeciesStats = ruSpecies.Statistics;

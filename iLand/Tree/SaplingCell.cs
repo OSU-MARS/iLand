@@ -12,7 +12,7 @@ namespace iLand.Tree
 
         public SaplingCell()
         {
-            this.State = SaplingCellState.Invalid;
+            this.State = SaplingCellState.NotOnLandscape;
             this.Saplings = new Sapling[SaplingCell.SaplingsPerCell];
             for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
@@ -23,7 +23,7 @@ namespace iLand.Tree
 
         public void CheckState()
         {
-            if (this.State == SaplingCellState.Invalid)
+            if (this.State == SaplingCellState.NotOnLandscape)
             {
                 return;
             }
@@ -85,7 +85,7 @@ namespace iLand.Tree
         /// return the maximum height on the pixel
         public float MaxHeight()
         {
-            if (this.State == SaplingCellState.Invalid)
+            if (this.State == SaplingCellState.NotOnLandscape)
             {
                 return 0.0F;
             }
@@ -99,7 +99,7 @@ namespace iLand.Tree
 
         public bool HasNewSaplings()
         {
-            if (this.State == SaplingCellState.Invalid)
+            if (this.State == SaplingCellState.NotOnLandscape)
             {
                 return false;
             }
@@ -116,7 +116,7 @@ namespace iLand.Tree
         /// return the sapling tree of the requested species, or 0
         public Sapling? FirstOrDefault(int speciesIndex)
         {
-            if (this.State == SaplingCellState.Invalid)
+            if (this.State == SaplingCellState.NotOnLandscape)
             {
                 return null;
             }

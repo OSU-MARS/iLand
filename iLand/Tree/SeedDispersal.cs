@@ -104,7 +104,7 @@ namespace iLand.Tree
 
             if ((model.Project.World.Geometry.BufferWidth % Constant.SeedmapCellSizeInM) != 0)
             {
-                throw new NotSupportedException("SeedDispersal:setup(): The buffer (model.world.buffer) must be a integer multiple of the seed pixel size (currently 20m, e.g. 20,40,60,...)).");
+                throw new NotSupportedException("The world buffer width (/project/model/world/geometry/bufferWidth) must be a integer multiple of the seed cell size (currently 20m, e.g. 20,40,60,...)).");
             }
 
             // settings
