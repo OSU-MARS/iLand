@@ -74,7 +74,7 @@
       <!-- default is to query the soil water curve for the soil saturation potential but it can be overridden here -->
       <!--<soilSaturationPotential>-15.0</soilSaturationPotential>--> <!-- specified in kPa -->
       <usePARFractionBelowGroundAllocation>true</usePARFractionBelowGroundAllocation>
-      <overrideGppPerYear>0</overrideGppPerYear>
+      <!--<overrideGppPerYear>0</overrideGppPerYear>--> <!-- force GPP to a specific value -->
       <randomSeed>0</randomSeed>
       <scheduledEventsFileName>empty time event script.csv</scheduledEventsFileName>
     </settings>
@@ -213,14 +213,14 @@
       </phenology>
     </species>
     <weather>
-      <co2concentration>380</co2concentration>
-      <file>Kalkalpen subset.sqlite</file>
-      <databaseQueryFilter></databaseQueryFilter>
+      <co2file>Kalkalpen CO2.csv</co2file>
+      <weatherFile>Kalkalpen subset.sqlite</weatherFile>
       <defaultDatabaseTable>climate1</defaultDatabaseTable>
-      <batchYears>100</batchYears>
-      <temperatureShift>0</temperatureShift>
-      <precipitationShift>1</precipitationShift>
+      <dailyWeatherChunkSizeInYears>100</dailyWeatherChunkSizeInYears>
+      <!-- if needed, <startYear>nnnn</startYear> can be used to exclude leading years in the time series-->
       <randomSamplingEnabled>false</randomSamplingEnabled>
+      <precipitationShift>1</precipitationShift>
+      <temperatureShift>0</temperatureShift>
     </weather>
   </world>
   <output>

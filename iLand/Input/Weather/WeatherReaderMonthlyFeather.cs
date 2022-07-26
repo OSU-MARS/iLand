@@ -3,11 +3,11 @@ using Apache.Arrow.Ipc;
 using System;
 using System.IO;
 
-namespace iLand.Input
+namespace iLand.Input.Weather
 {
     internal class WeatherReaderMonthlyFeather : WeatherReaderMonthly
     {
-        public WeatherReaderMonthlyFeather(string weatherFilePath)
+        public WeatherReaderMonthlyFeather(string weatherFilePath, int startYear)
         {
             // Arrow 8.0.0 supports only uncompressed feather: https://issues.apache.org/jira/browse/ARROW-17062
             using FileStream weatherStream = new(weatherFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, Constant.File.DefaultBufferSize);
@@ -19,8 +19,14 @@ namespace iLand.Input
 
                 WeatherTimeSeriesMonthly? monthlyWeather = null;
                 string? previousWeatherID = null;
-                for (int sourceIndex = 0; sourceIndex < batch.Length; ++sourceIndex /* destinationIndex in loop */)
+                for (int sourceIndex = 0; sourceIndex < batch.Length; ++sourceIndex /* destinationIndex incremented in loop */)
                 {
+                    int year = fields.Year.Values[sourceIndex];
+                    if (year < startYear)
+                    {
+                        continue;
+                    }
+
                     string weatherID = fields.ID.GetString(sourceIndex);
                     if (String.Equals(weatherID, previousWeatherID) == false)
                     {

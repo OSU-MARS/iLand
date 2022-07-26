@@ -4,40 +4,40 @@ using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 
-namespace iLand.Input
+namespace iLand.Input.Weather
 {
     internal class WeatherReaderDailySql
     {
         private readonly float precipitationMultiplier; // daily precipitation scaling factor
         private int nextYearToLoad;
+        private readonly int startYear;
         private readonly float temperatureShift; // offset of daily temperatures
         private readonly float temperatureTau;
         private readonly string weatherDatabaseFilePath;
         private readonly string weatherTableName; // database table to load this daily weather time series from
-        private readonly string? weatherTableQueryFilter;
 
         public WeatherReaderDailySql(string weatherDatabaseFilePath, string weatherTableName, Project projectFile)
         {
-            if (String.IsNullOrEmpty(weatherTableName))
+            if (string.IsNullOrEmpty(weatherTableName))
             {
                 throw new ArgumentOutOfRangeException(nameof(weatherTableName));
             }
 
             this.nextYearToLoad = 0;
             this.precipitationMultiplier = projectFile.World.Weather.PrecipitationMultiplier;
+            this.startYear = projectFile.World.Weather.StartYear;
             this.temperatureShift = projectFile.World.Weather.TemperatureShift;
             this.temperatureTau = projectFile.Model.Ecosystem.TemperatureMA1tau;
             this.weatherDatabaseFilePath = weatherDatabaseFilePath;
             this.weatherTableName = weatherTableName;
-            this.weatherTableQueryFilter = projectFile.World.Weather.DatabaseQueryFilter;
         }
 
         public void LoadGroupOfYears(int yearsToLoad, WeatherTimeSeriesDaily dailyWeather, List<int> monthDayIndices)
         {
             string? weatherTableQueryFilter = null;
-            if (String.IsNullOrEmpty(this.weatherTableQueryFilter) == false)
+            if (this.startYear != Constant.NoDataInt32)
             {
-                weatherTableQueryFilter = "where " + this.weatherTableQueryFilter;
+                weatherTableQueryFilter = "where year >= " + this.startYear;
             }
             if (this.nextYearToLoad > 0)
             {

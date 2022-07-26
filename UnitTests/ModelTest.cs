@@ -17,45 +17,51 @@ namespace iLand.Test
         public TestContext? TestContext { get; set; }
 
         /// <summary>
-        /// Elliott State Research Forest, southwestern Oregon, USA
+        /// Elliott State Research Forest, southwestern Oregon, USA. Individual tree segmentation of 2021 Coos County Oregon LiDAR 
+        /// Consortium tiles s04110w07050 and s04110w07020 (two adjacent tiles in the northeastern Elliott out of 501 tiles covering
+        /// the forest).
         /// </summary>
         [TestMethod]
         public void Elliott()
         {
-            int expectedResourceUnitCount = 34494; // unbuffered resource unit count
+            int expectedWeatherIDs4km = 37; // 81 4 km weather cells in input, 37 of which cover the unbuffered Elliott
+            int expectedWeatherTimesteps = 12 * (2100 - 2022 + 1); // data files start in 2011 but Elliott.xml sets start year to 2022
+            int expectedResourceUnitCount = 34494; // window = , unbuffered resource unit count = 34494
             using Model elliott = LandTest.LoadProject(LandTest.GetElliottProjectPath(this.TestContext!)); // ~4 seconds in debug
             Assert.IsTrue(elliott.Landscape.ResourceUnits.Count == expectedResourceUnitCount); 
 
             // check .feather weather read from weather file path in Elliott project file
-            Assert.IsTrue(elliott.Landscape.WeatherByID.Count == 37); // 81 4 km weather cells in input, 37 of which cover the unbuffered Elliott
+            Assert.IsTrue(elliott.Landscape.WeatherByID.Count == expectedWeatherIDs4km); 
             foreach (Weather monthlyWeather in elliott.Landscape.WeatherByID.Values)
             {
-                Assert.IsTrue(monthlyWeather.TimeSeries.Count == 12 * (2100 - 2011 + 1));
+                Assert.IsTrue(monthlyWeather.TimeSeries.Count == expectedWeatherTimesteps);
             }
 
-            #if !DEBUG
             // run at least two singlethreaded timesteps as sanity: minimum test case duration ~12 seconds in debug, ~4 seconds in release
             for (int simulationYear = 0; simulationYear < 3; ++simulationYear)
             {
                 elliott.RunYear();
             }
 
-            // if of interest, check larger resource unit .csv read (basic functionality is covered on Kalkalpen, Elliot project uses .feather)
+            #if !DEBUG
+            int availableWeatherIDs4km = 81; // 81 4 km weather cells in input, 37 of which cover the unbuffered Elliott
+
+            // check larger resource unit .csv read (basic functionality is covered on Kalkalpen, Elliot project uses .feather)
             string resourceUnitFilePath = elliott.Project.GetFilePath(ProjectDirectory.Gis, "resource units unbuffered 4 km weather.csv");
             ResourceUnitEnvironment defaultEnvironment = new(elliott.Project.World);
             ResourceUnitReaderCsv resourceUnitReader = new(resourceUnitFilePath, defaultEnvironment);
             Assert.IsTrue(resourceUnitReader.Environments.Count == expectedResourceUnitCount);
 
-            // check .csv weather read
+            // check monthly .csv weather read
             string weatherFeatherFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "weather 4 km 2011-2100 13GCMssp370.csv");
             WeatherReaderMonthlyCsv weatherFeatherReader = new(weatherFeatherFilePath);
-            Assert.IsTrue(weatherFeatherReader.MonthlyWeatherByID.Count == 81);
+            Assert.IsTrue(weatherFeatherReader.MonthlyWeatherByID.Count == availableWeatherIDs4km);
             foreach (WeatherTimeSeriesMonthly monthlyWeatherTimeSeries in weatherFeatherReader.MonthlyWeatherByID.Values)
             {
-                Assert.IsTrue(monthlyWeatherTimeSeries.Count == 12 * (2100 - 2011 + 1));
+                Assert.IsTrue(monthlyWeatherTimeSeries.Count == expectedWeatherTimesteps);
             }
 
-            // if of interest, check larger individual tree .csv read
+            // check larger individual tree .csv read (Elliott project uses .feather)
             string individualTreeTilePath = elliott.Project.GetFilePath(ProjectDirectory.Init, "TSegD_H10Cr20h10A50MD7_s04110w07020.csv");
             IndividualTreeReader individualTreeReader = (IndividualTreeReader)TreeReader.Create(individualTreeTilePath);
             Assert.IsTrue(individualTreeReader.HeightInM.Count == 13124);
@@ -198,8 +204,8 @@ namespace iLand.Test
                     }
                     // Salix caprea and Robinia pseudoacacia aren't viable as placed on the resource unit and should stress out of the stand in the
                     // first timestep. They should therefore be dropped as tree species on the resource unit.
-                    Assert.IsTrue(resourceUnit0Trees.ContainsKey("saca") == false);
-                    Assert.IsTrue(resourceUnit0Trees.ContainsKey("rops") == false);
+                    Assert.IsTrue(resourceUnit0Trees.ContainsKey("saca") == false, "Salix caprea did not die out of stand.");
+                    Assert.IsTrue(resourceUnit0Trees.ContainsKey("rops") == false, "Robinia pseudoacacia did not die out of stand.");
 
                     int minimumTreeCount = 30 - 2 * year - 4; // TODO: wide tolerance required due to stochastic mortality
                     int resourceUnit0treeSpeciesCount = kalkalpen.Landscape.ResourceUnits[0].Trees.TreesBySpeciesID.Count;
@@ -466,40 +472,6 @@ namespace iLand.Test
             }
         }
 
-        [TestMethod]
-        public void MalcolmKnapp16()
-        {
-            using Model plot16 = LandTest.LoadProject(LandTest.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Plot16));
-            ModelTest.VerifyMalcolmKnappResourceUnit(plot16);
-
-            // 2019 - 1985 + 1 = 35 years of data available
-            for (int simulationYear = 0; simulationYear < 35; ++simulationYear)
-            {
-                plot16.RunYear();
-            }
-
-            ModelTest.VerifyMalcolmKnappWeather(plot16);
-            ModelTest.VerifyMalcolmKnappModel(plot16);
-            ModelTest.VerifyMalcolmKnappDouglasFir(plot16);
-        }
-
-        [TestMethod]
-        public void MalcolmKnappNelder()
-        {
-            using Model nelder1 = LandTest.LoadProject(LandTest.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Nelder1));
-            ModelTest.VerifyMalcolmKnappResourceUnit(nelder1);
-
-            // age 25 to 51
-            for (int simulationYear = 0; simulationYear < 26; ++simulationYear)
-            {
-                nelder1.RunYear();
-            }
-
-            ModelTest.VerifyMalcolmKnappWeather(nelder1);
-            ModelTest.VerifyMalcolmKnappModel(nelder1);
-            ModelTest.VerifyMalcolmKnappDouglasFir(nelder1);
-        }
-
         private static void VerifyKalkalpenModel(Model model)
         {
             float worldBufferWidthInM = 60.0F;
@@ -605,8 +577,7 @@ namespace iLand.Test
                 Tree.LeafPhenology deciduousConifer = weather.GetPhenology(2);
 
                 // private climate variables
-                //   tableName, batchYears, temperatureShift, precipitationShift, randomSamplingEnabled, randomSamplingList, filter
-                Assert.IsTrue(weather.AtmosphericCO2ConcentrationInPpm == 360.0);
+                //   weatherID, dailyWeatherChunkSizeInYears, temperatureShift, precipitationShift, randomSamplingEnabled, randomSamplingList, startYear
                 Assert.IsTrue((weather.MeanAnnualTemperature > 0.0) && (weather.MeanAnnualTemperature < 30.0));
                 // Assert.IsTrue(String.Equals(climate.ClimateTableName, "HaneyUBC", StringComparison.OrdinalIgnoreCase));
                 Assert.IsTrue(conifer.ID == 0);

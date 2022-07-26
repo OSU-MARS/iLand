@@ -1,5 +1,6 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
+using iLand.Input.Weather;
 using iLand.Tool;
 using System;
 using System.Collections.Generic;
@@ -73,7 +74,6 @@ namespace iLand.World
                 }
             }
 
-            this.AtmosphericCO2ConcentrationInPpm = model.Project.World.Weather.CO2ConcentrationInPpm;
             //if (model.Project.Output.Logging.LogLevel >= EventLevel.Informational)
             //{
             //    Trace.TraceInformation(this.currentDataYear + " CO₂ concentration: " + this.CarbonDioxidePpm + " ppm.");
@@ -84,8 +84,12 @@ namespace iLand.World
             {
                 throw new NotSupportedException("Weather data is not available for simulation year " + this.CurrentDataYear + ".");
             }
-            this.TimeSeries.CurrentYearStartIndex = this.monthDayIndices[this.CurrentDataYear * Constant.MonthsInYear];
-            this.TimeSeries.NextYearStartIndex = this.monthDayIndices[(this.CurrentDataYear + 1) * Constant.MonthsInYear];
+            int currentJanuaryIndex = this.CurrentDataYear * Constant.MonthsInYear;
+            int nextJanuaryIndex = currentJanuaryIndex + Constant.MonthsInYear;
+            this.CO2ByMonth.CurrentYearStartIndex = currentJanuaryIndex;
+            this.CO2ByMonth.NextYearStartIndex = nextJanuaryIndex;
+            this.TimeSeries.CurrentYearStartIndex = this.monthDayIndices[currentJanuaryIndex];
+            this.TimeSeries.NextYearStartIndex = this.monthDayIndices[nextJanuaryIndex];
 
             // some aggregates
             // calculate radiation sum of the year and monthly precipitation

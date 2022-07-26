@@ -103,10 +103,10 @@ namespace iLand.Tree
 
             // global value set?
             float gppOverride = projectFile.Model.Settings.OverrideGppPerYear;
-            if (gppOverride > 0.0F)
+            if (Single.IsNaN(gppOverride) == false)
             {
                 annualRUgpp = gppOverride;
-                this.RootFraction = 0.4F; // TODO: why is this triggred by a GPP override?
+                this.RootFraction = 0.4F; // TODO: why is this triggered by a GPP override?
             }
 
             // yearly GPP in kg biomass/m²

@@ -2,6 +2,8 @@
 library(dplyr)
 library(ggplot2)
 library(patchwork)
+library(readr)
+library(tidyr)
 
 theme_set(theme_bw() + theme(axis.line = element_line(size = 0.5),
                              legend.background = element_rect(fill = alpha("white", 0.5)),
@@ -59,3 +61,8 @@ plot_layout(heights = c(0.75, 0.25))
 
 dateTimeExtensions %>% group_by(month) %>% slice_min(dayOfYearIndex, n = 1) %>% arrange(monthIndex)
 dateTimeExtensions %>% filter((monthIndex != monthIndexFromTruncation) | (leapMonthIndex != leapMonthIndexFromTruncation))
+
+## Kalkalpen CO₂ file
+kalkalpenCO2 = crossing(year = seq(1950, 2099), month = seq(1, 12)) %>%
+  mutate(co2 = 380) # atmospheric CO₂ is set to a fixed 380 ppm for the Kalkalpen project
+write_csv(kalkalpenCO2, "UnitTests/Kalkalpen/database/Kalkalpen CO2.csv")

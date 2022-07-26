@@ -1,6 +1,6 @@
 ﻿namespace iLand.Input
 {
-    public class ResourceUnitCsvHeader
+    public class ResourceUnitHeaderCsv
     {
         public int AnnualNitrogenDeposition { get; private init; }
         public int CenterX { get; private init; }
@@ -47,7 +47,7 @@
 
         public int WeatherID { get; private init; }
 
-        public ResourceUnitCsvHeader(CsvFile environmentFile)
+        public ResourceUnitHeaderCsv(CsvFile environmentFile)
         {
             this.AnnualNitrogenDeposition = environmentFile.GetColumnIndex("soilAnnualNitrogenDeposition");
             this.CenterX = environmentFile.GetColumnIndex("centerX");

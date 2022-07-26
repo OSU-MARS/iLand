@@ -37,7 +37,9 @@
       </nitrogenResponseClasses>
     </species>
     <weather>
-      <file>weather 4 km 2011-2100 13GCMssp370.feather</file>
+      <co2file>co2 ssp370.csv</co2file>
+      <weatherFile>weather 4 km 2011-2100 13GCMssp370.feather</weatherFile>
+      <startYear>2022</startYear>
     </weather>
   </world>
 </project>

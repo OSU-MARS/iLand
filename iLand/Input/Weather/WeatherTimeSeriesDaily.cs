@@ -2,7 +2,7 @@
 using System;
 using System.Globalization;
 
-namespace iLand.Input
+namespace iLand.Input.Weather
 {
     // weather variables of a day
     // http://iland-model.org/ClimateData
@@ -11,11 +11,11 @@ namespace iLand.Input
         public int[] DayOfMonth { get; private set; } // day of the month (1..31)
         public float[] TemperatureDaytimeMeanMA1 { get; private set; } // temperature delayed (after Mäkelä 2008) for response calculations
 
-        public WeatherTimeSeriesDaily(Timestep timestep, int capacity)
-            : base(timestep, capacity)
+        public WeatherTimeSeriesDaily(Timestep timestep, int capacityInDays)
+            : base(timestep, capacityInDays)
         {
-            this.DayOfMonth = new int[capacity];
-            this.TemperatureDaytimeMeanMA1 = new float[capacity];
+            this.DayOfMonth = new int[capacityInDays];
+            this.TemperatureDaytimeMeanMA1 = new float[capacityInDays];
         }
 
         public override void Resize(int newSize)

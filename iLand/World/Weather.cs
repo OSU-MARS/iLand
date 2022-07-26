@@ -1,5 +1,5 @@
-﻿using iLand.Input;
-using iLand.Input.ProjectFile;
+﻿using iLand.Input.ProjectFile;
+using iLand.Input.Weather;
 using iLand.Tree;
 using System;
 using System.Collections.Generic;
@@ -25,7 +25,7 @@ namespace iLand.World
         protected List<LeafPhenology> TreeSpeciesPhenology { get; private init; } // phenology calculations
         protected int YearsToLoad { get; private init; } // number of years to load from database
 
-        public float AtmosphericCO2ConcentrationInPpm { get; protected set; }
+        public CO2TimeSeriesMonthly CO2ByMonth { get; protected init; } // ppm
         public float MeanAnnualTemperature { get; protected set; } // °C
         public float[] PrecipitationByMonth { get; private init; } // mm
         public Sun Sun { get; private init; } // solar radiation class
@@ -40,8 +40,12 @@ namespace iLand.World
             this.RandomListIndex = -1;
             this.RandomYearList = new();
             this.SampledYears = new();
-            this.YearsToLoad = projectFile.World.Weather.BatchYears;
+            this.YearsToLoad = projectFile.World.Weather.DailyWeatherChunkSizeInYears;
 
+            string co2filePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.CO2File);
+            CO2ReaderMonthlyCsv co2reader = new(co2filePath, Constant.Data.MonthlyWeatherAllocationIncrement);
+
+            this.CO2ByMonth = co2reader.MonthlyCO2;
             this.PrecipitationByMonth = new float[Constant.MonthsInYear];
             this.Sun = new Sun(projectFile.World.Geometry.Latitude);
             this.DaytimeMeanTemperatureByMonth = new float[Constant.MonthsInYear];

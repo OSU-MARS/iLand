@@ -1,7 +1,7 @@
 ﻿using Apache.Arrow;
 using System.Linq;
 
-namespace iLand.Input
+namespace iLand.Input.Weather
 {
     public class WeatherArrowBatchMonthly : ArrowBatch
     {

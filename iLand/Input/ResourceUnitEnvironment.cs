@@ -54,7 +54,7 @@ namespace iLand.Input
         public string SpeciesTableName { get; private init; }
         public bool UseDynamicAvailableNitrogen { get; private init; }
 
-        public ResourceUnitEnvironment(ResourceUnitCsvHeader header, string[] environmentFileRow, ResourceUnitEnvironment defaultEnvironment)
+        public ResourceUnitEnvironment(ResourceUnitHeaderCsv header, string[] environmentFileRow, ResourceUnitEnvironment defaultEnvironment)
         {
             this.AnnualNitrogenDeposition = header.AnnualNitrogenDeposition >= 0 ? Single.Parse(environmentFileRow[header.AnnualNitrogenDeposition], CultureInfo.InvariantCulture) : defaultEnvironment.AnnualNitrogenDeposition;
             this.WeatherID = header.WeatherID >= 0 ? environmentFileRow[header.WeatherID] : defaultEnvironment.WeatherID;

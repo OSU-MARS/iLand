@@ -1,6 +1,7 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Input.Tree;
+using iLand.Input.Weather;
 using iLand.Tool;
 using iLand.Tree;
 using Microsoft.Data.Sqlite;
@@ -133,13 +134,13 @@ namespace iLand.World
             }
 
             // instantiate resource units only where defined in resource unit file
-            string weatherFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.File);
+            string weatherFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.WeatherFile);
             string? weatherFileExtension = Path.GetExtension(weatherFilePath);
             WeatherReaderMonthly? monthlyWeatherReader = weatherFileExtension switch
             {
                 // for now, assume .csv and .feather weather is monthly and all weather tables in SQLite databases are daily
-                Constant.File.CsvExtension => new WeatherReaderMonthlyCsv(weatherFilePath),
-                Constant.File.FeatherExtension => new WeatherReaderMonthlyFeather(weatherFilePath),
+                Constant.File.CsvExtension => new WeatherReaderMonthlyCsv(weatherFilePath, projectFile.World.Weather.StartYear),
+                Constant.File.FeatherExtension => new WeatherReaderMonthlyFeather(weatherFilePath, projectFile.World.Weather.StartYear),
                 Constant.File.SqliteExtension => null,
                 _ => throw new NotSupportedException("Unhandled weather file type '" + weatherFileExtension + "'.")
             };

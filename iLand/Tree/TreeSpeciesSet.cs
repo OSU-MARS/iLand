@@ -258,17 +258,21 @@ namespace iLand.Tree
         /// </remarks>
         public float GetCarbonDioxideModifier(float atmosphericCO2, float nitrogenModifier, float soilWaterModifier)
         {
-            Debug.Assert((nitrogenModifier >= 0.0F) && (nitrogenModifier <= 1.000001F));
-            Debug.Assert((soilWaterModifier >= 0.0F) && (soilWaterModifier <= 1.000001F));
-            if (nitrogenModifier == 0.0F)
+            Debug.Assert((nitrogenModifier >= 0.0F) && (nitrogenModifier <= 1.000001F) && 
+                         (soilWaterModifier >= 0.0F) && (soilWaterModifier <= 1.000001F));
+            if ((atmosphericCO2 < this.co2compensationPoint) || (nitrogenModifier == 0.0F))
             {
+                // atmospheric concentration below compensation point -> modifier would be negative
+                // nitrogen = 0 -> r becomes 1 -> divide by zero in k2
                 return 0.0F;
             }
 
             float beta = this.co2beta0 * (2.0F - soilWaterModifier) * nitrogenModifier;
             float r = 1.0F + Constant.Ln2 * beta; // NPP increase for a doubling of atmospheric CO2 (Eq. 17)
 
-            // fertilization function (cf. Farquhar 1980) based on Michaelis-Menten expressions
+            // fertilization function (Farquhar 1980) based on Michaelis-Menten expressions
+            // Farquhar GD, von Caemmerer S, Berry JA. 1980. A biochemical model of photosynthetic CO₂ assimilation in leaves of C₃ species.
+            //   Planta 149:78–90. https://doi.org/10.1007/BF00386231
             float deltaCO2 =  this.co2baseConcentration - this.co2compensationPoint;
             float k2 = (2.0F * this.co2baseConcentration - this.co2compensationPoint - r * deltaCO2) / ((r - 1.0F) * deltaCO2 * (2.0F * this.co2baseConcentration - this.co2compensationPoint)); // Eq. 16
             float k1 = (1.0F + k2 * deltaCO2) / deltaCO2;

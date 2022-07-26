@@ -14,7 +14,7 @@ namespace iLand.Input
         public ResourceUnitReaderCsv(string resourceUnitFilePath, ResourceUnitEnvironment defaultEnvironment)
         {
             using CsvFile resourceUnitEnvironmentFile = new(resourceUnitFilePath);
-            ResourceUnitCsvHeader environmentHeader = new(resourceUnitEnvironmentFile);
+            ResourceUnitHeaderCsv environmentHeader = new(resourceUnitEnvironmentFile);
 
             if (String.IsNullOrEmpty(defaultEnvironment.WeatherID) && (environmentHeader.WeatherID < 0))
             {

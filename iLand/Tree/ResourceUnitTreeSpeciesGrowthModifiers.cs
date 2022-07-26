@@ -1,4 +1,5 @@
 ﻿using iLand.Input;
+using iLand.Input.Weather;
 using iLand.Tool;
 using iLand.World;
 using System;
@@ -56,6 +57,7 @@ namespace iLand.Tree
             this.ZeroMonthlyAndAnnualModifiers(); // reset values
 
             // nitrogen response: a yearly value based on available nitrogen
+            // Calculated before monthly modifiers as calculation of the CO₂ modifier requires the nitrogen modifier.
             if (this.ResourceUnit.Soil == null)
             {
                 this.NitrogenModifierForYear = 1.0F; // available nitrogen calculations are disabled, so default to making nitrogen non-limiting
@@ -66,43 +68,40 @@ namespace iLand.Tree
                 Debug.Assert(this.NitrogenModifierForYear >= 0.0);
             }
 
-            // calculate monthly responses
+            // calculate monthly modifiers for the current simulation year (January-December calendar year)
             LeafPhenology leafPhenology = this.ResourceUnit.Weather.GetPhenology(this.Species.LeafPhenologyID);
             WaterCycle ruWaterCycle = this.ResourceUnit.WaterCycle;
+            CO2TimeSeriesMonthly co2timeSeries = this.ResourceUnit.Weather.CO2ByMonth;
             WeatherTimeSeries weatherTimeSeries = this.ResourceUnit.Weather.TimeSeries;
             if (weatherTimeSeries.Timestep == Timestep.Daily)
             {
-                this.CalculateMonthlyGrowthModifiersFromDailyWeather((WeatherTimeSeriesDaily)weatherTimeSeries, leafPhenology, ruWaterCycle);
+                this.CalculateMonthlyGrowthModifiersFromDailyWeather((WeatherTimeSeriesDaily)weatherTimeSeries, leafPhenology, co2timeSeries, ruWaterCycle);
             }
             else if (weatherTimeSeries.Timestep == Timestep.Monthly)
             {
-                this.CalculateMonthlyGrowthModifiersFromMonthlyWeather(weatherTimeSeries, leafPhenology, ruWaterCycle);
+                this.CalculateMonthlyGrowthModifiersFromMonthlyWeather(weatherTimeSeries, leafPhenology, co2timeSeries, ruWaterCycle);
             }
             else
             {
                 throw new NotSupportedException("Unhandled weather series timestep " + weatherTimeSeries.Timestep + ".");
             }
 
-            // CO₂ and checks
+            // checks
+            #if DEBUG
             for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
             {
-                // CO₂ response equations assume nitrogen and soil water responses are in [0 1], so CO₂ response is calculated after finding
-                // the average soil water response
-                // TODO: fold this into CalculateMonthlyGrowthModifiersFrom*Weather() once monthly CO₂ is supported
-                float ambientCO2 = weather.AtmosphericCO2ConcentrationInPpm; // CO₂ level of first day of year (CO₂ is static)
-                this.CO2ModifierByMonth[monthIndex] = this.Species.SpeciesSet.GetCarbonDioxideModifier(ambientCO2, this.NitrogenModifierForYear, this.SoilWaterModifierByMonth[monthIndex]);
-
                 Debug.Assert((this.CO2ModifierByMonth[monthIndex] > 0.0F) && (this.CO2ModifierByMonth[monthIndex] <= 1.3F));
                 Debug.Assert((this.SoilWaterModifierByMonth[monthIndex] >= 0.0F) && (this.SoilWaterModifierByMonth[monthIndex] <= 1.000001F));
                 Debug.Assert((this.TemperatureModifierByMonth[monthIndex] >= 0.0F) && (this.TemperatureModifierByMonth[monthIndex] <= 1.000001F));
                 Debug.Assert((this.VpdModifierByMonth[monthIndex] > 0.0F) && (this.VpdModifierByMonth[monthIndex] <= 1.000001F));
                 Debug.Assert(this.UtilizableRadiationByMonth[monthIndex] >= 0.0F); // utilizable radiation will be zero if the limiting response is zero
             }
+            #endif
 
             this.TotalRadiationForYear = this.ResourceUnit.Weather.TotalAnnualRadiation; // TODO: is this copy necessary?
         }
 
-        private void CalculateMonthlyGrowthModifiersFromDailyWeather(WeatherTimeSeriesDaily dailyWeatherSeries, LeafPhenology leafPhenology, WaterCycle ruWaterCycle)
+        private void CalculateMonthlyGrowthModifiersFromDailyWeather(WeatherTimeSeriesDaily dailyWeatherSeries, LeafPhenology leafPhenology, CO2TimeSeriesMonthly co2timeSeries, WaterCycle ruWaterCycle)
         {
             int leafOnDayIndex = leafPhenology.LeafOnStartDayOfYearIndex;
             int leafOffDayIndex = leafPhenology.LeafOnEndDayOfYearIndex;
@@ -137,20 +136,24 @@ namespace iLand.Tree
                 }
             }
 
-            // convert sums of daily values to monthly and accumulate annual variables
+            // convert sums of daily values to monthly, accumulate annual variables, and find CO₂ modifier
             bool isLeapYear = dailyWeatherSeries.IsCurrentlyLeapYear();
-            for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
+            for (int monthIndex = 0, co2timestepIndex = co2timeSeries.CurrentYearStartIndex; monthIndex < Constant.MonthsInYear; ++co2timestepIndex, ++monthIndex)
             {
                 float daysInMonth = (float)DateTimeExtensions.GetDaysInMonth(monthIndex, isLeapYear);
-                this.SoilWaterModifierByMonth[monthIndex] /= daysInMonth;
+                float soilWaterModifier = this.SoilWaterModifierByMonth[monthIndex] / daysInMonth;
+                this.SoilWaterModifierByMonth[monthIndex] = soilWaterModifier;
                 this.TemperatureModifierByMonth[monthIndex] /= daysInMonth;
                 this.VpdModifierByMonth[monthIndex] /= daysInMonth;
 
                 this.UtilizableRadiationForYear += this.UtilizableRadiationByMonth[monthIndex];
+
+                float atmosphericCO2 = co2timeSeries.CO2ConcentrationInPpm[co2timestepIndex];
+                this.CO2ModifierByMonth[monthIndex] = this.Species.SpeciesSet.GetCarbonDioxideModifier(atmosphericCO2, this.NitrogenModifierForYear, soilWaterModifier);
             }
         }
 
-        private void CalculateMonthlyGrowthModifiersFromMonthlyWeather(WeatherTimeSeries monthlyTimeSeries, LeafPhenology leafPhenology, WaterCycle ruWaterCycle)
+        private void CalculateMonthlyGrowthModifiersFromMonthlyWeather(WeatherTimeSeries monthlyTimeSeries, LeafPhenology leafPhenology, CO2TimeSeriesMonthly co2timeSeries, WaterCycle ruWaterCycle)
         {
             for (int weatherMonthIndex = monthlyTimeSeries.CurrentYearStartIndex; weatherMonthIndex < monthlyTimeSeries.NextYearStartIndex; ++weatherMonthIndex)
             {
@@ -158,27 +161,32 @@ namespace iLand.Tree
                 // environmental responses
                 this.GlobalRadiationByMonth[monthOfYearIndex] += monthlyTimeSeries.SolarRadiationTotal[weatherMonthIndex];
 
-                float soilWaterResponse = this.Species.GetSoilWaterModifier(ruWaterCycle.SoilWaterPotentialByWeatherTimestepInYear[monthOfYearIndex]);
-                this.SoilWaterModifierByMonth[monthOfYearIndex] += soilWaterResponse;
+                float soilWaterModifier = this.Species.GetSoilWaterModifier(ruWaterCycle.SoilWaterPotentialByWeatherTimestepInYear[monthOfYearIndex]);
+                this.SoilWaterModifierByMonth[monthOfYearIndex] += soilWaterModifier;
 
-                float temperatureResponse = this.Species.GetTemperatureModifier(monthlyTimeSeries.TemperatureDaytimeMean[weatherMonthIndex]);
-                this.TemperatureModifierByMonth[monthOfYearIndex] += temperatureResponse;
+                float temperatureModifier = this.Species.GetTemperatureModifier(monthlyTimeSeries.TemperatureDaytimeMean[weatherMonthIndex]);
+                this.TemperatureModifierByMonth[monthOfYearIndex] += temperatureModifier;
 
                 float vpdResponse = this.Species.GetVpdModifier(monthlyTimeSeries.VpdMeanInKPa[weatherMonthIndex]);
                 this.VpdModifierByMonth[monthOfYearIndex] += vpdResponse;
 
                 // combine responses
-                float minimumResponse = MathF.Min(MathF.Min(vpdResponse, temperatureResponse), soilWaterResponse);
+                float minimumResponse = MathF.Min(MathF.Min(vpdResponse, temperatureModifier), soilWaterModifier);
 
                 // estimate utilizable radiation
                 float leafOnFraction = leafPhenology.LeafOnFractionByMonth[monthOfYearIndex];
                 float utilizableRadiation = monthlyTimeSeries.SolarRadiationTotal[weatherMonthIndex] * leafOnFraction * minimumResponse;
 
-                Debug.Assert((minimumResponse >= 0.0F) && (minimumResponse < 1.000001F), "Minimum of VPD (" + vpdResponse + "), temperature (" + temperatureResponse + "), and soil water (" + soilWaterResponse + ") responses is not in [0, 1].");
+                Debug.Assert((minimumResponse >= 0.0F) && (minimumResponse < 1.000001F), "Minimum of VPD (" + vpdResponse + "), temperature (" + temperatureModifier + "), and soil water (" + soilWaterModifier + ") responses is not in [0, 1].");
                 Debug.Assert((utilizableRadiation >= 0.0F) && (utilizableRadiation < 100.0F)); // sanity upper bound
                 this.UtilizableRadiationByMonth[monthOfYearIndex] += utilizableRadiation;
 
                 this.UtilizableRadiationForYear += utilizableRadiation;
+
+                // CO₂ response equations require nitrogen and soil water responses in [0 1], so CO₂ response is calculated after finding
+                // the average soil water response
+                float atmosphericCO2 = co2timeSeries.CO2ConcentrationInPpm[weatherMonthIndex];
+                this.CO2ModifierByMonth[monthOfYearIndex] = this.Species.SpeciesSet.GetCarbonDioxideModifier(atmosphericCO2, this.NitrogenModifierForYear, soilWaterModifier);
             }
         }
 

@@ -2,16 +2,16 @@
 using System;
 using System.Globalization;
 
-namespace iLand.Input
+namespace iLand.Input.Weather
 {
     public class WeatherTimeSeriesMonthly : WeatherTimeSeries
     {
         public float[] SnowTotalInMM { get; private set; }
 
-        public WeatherTimeSeriesMonthly(Timestep timestep, int capacity)
-            : base(timestep, capacity)
+        public WeatherTimeSeriesMonthly(Timestep timestep, int capacityInMonths)
+            : base(timestep, capacityInMonths)
         {
-            this.SnowTotalInMM = new float[capacity];
+            this.SnowTotalInMM = new float[capacityInMonths];
         }
 
         public override void Resize(int newSize)

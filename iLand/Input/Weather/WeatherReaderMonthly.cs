@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace iLand.Input
+namespace iLand.Input.Weather
 {
     internal class WeatherReaderMonthly
     {

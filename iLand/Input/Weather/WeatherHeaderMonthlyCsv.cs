@@ -1,8 +1,8 @@
 ﻿using Apache.Arrow;
 
-namespace iLand.Input
+namespace iLand.Input.Weather
 {
-    internal class WeatherCsvHeaderMonthly
+    internal class WeatherHeaderMonthlyCsv
     {
         public int ID { get; private init; }
         public int Precipitation01 { get; private init; }
@@ -91,7 +91,7 @@ namespace iLand.Input
         public int TemperatureMin12 { get; private init; }
         public int Year { get; private init; }
 
-        public WeatherCsvHeaderMonthly(CsvFile weatherFile)
+        public WeatherHeaderMonthlyCsv(CsvFile weatherFile)
         {
             this.ID = weatherFile.GetColumnIndex("ID2");
             this.Precipitation01 = weatherFile.GetColumnIndex("PPT01");
@@ -179,98 +179,6 @@ namespace iLand.Input
             this.TemperatureMin11 = weatherFile.GetColumnIndex("Tmin11");
             this.TemperatureMin12 = weatherFile.GetColumnIndex("Tmin12");
             this.Year = weatherFile.GetColumnIndex("Year");
-        }
-
-        public WeatherCsvHeaderMonthly(RecordBatch arrowBatch)
-        {
-            Schema schema = arrowBatch.Schema;
-
-            this.ID = schema.GetFieldIndex("ID2");
-            this.Precipitation01 = schema.GetFieldIndex("PPT01");
-            this.Precipitation02 = schema.GetFieldIndex("PPT02");
-            this.Precipitation03 = schema.GetFieldIndex("PPT03");
-            this.Precipitation04 = schema.GetFieldIndex("PPT04");
-            this.Precipitation05 = schema.GetFieldIndex("PPT05");
-            this.Precipitation06 = schema.GetFieldIndex("PPT06");
-            this.Precipitation07 = schema.GetFieldIndex("PPT07");
-            this.Precipitation08 = schema.GetFieldIndex("PPT08");
-            this.Precipitation09 = schema.GetFieldIndex("PPT09");
-            this.Precipitation10 = schema.GetFieldIndex("PPT10");
-            this.Precipitation11 = schema.GetFieldIndex("PPT11");
-            this.Precipitation12 = schema.GetFieldIndex("PPT12");
-            this.RelativeHumidityMean01 = schema.GetFieldIndex("RH01");
-            this.RelativeHumidityMean02 = schema.GetFieldIndex("RH02");
-            this.RelativeHumidityMean03 = schema.GetFieldIndex("RH03");
-            this.RelativeHumidityMean04 = schema.GetFieldIndex("RH04");
-            this.RelativeHumidityMean05 = schema.GetFieldIndex("RH05");
-            this.RelativeHumidityMean06 = schema.GetFieldIndex("RH06");
-            this.RelativeHumidityMean07 = schema.GetFieldIndex("RH07");
-            this.RelativeHumidityMean08 = schema.GetFieldIndex("RH08");
-            this.RelativeHumidityMean09 = schema.GetFieldIndex("RH09");
-            this.RelativeHumidityMean10 = schema.GetFieldIndex("RH10");
-            this.RelativeHumidityMean11 = schema.GetFieldIndex("RH11");
-            this.RelativeHumidityMean12 = schema.GetFieldIndex("RH12");
-            this.Snow01 = schema.GetFieldIndex("PAS01");
-            this.Snow02 = schema.GetFieldIndex("PAS02");
-            this.Snow03 = schema.GetFieldIndex("PAS03");
-            this.Snow04 = schema.GetFieldIndex("PAS04");
-            this.Snow05 = schema.GetFieldIndex("PAS05");
-            this.Snow06 = schema.GetFieldIndex("PAS06");
-            this.Snow07 = schema.GetFieldIndex("PAS07");
-            this.Snow08 = schema.GetFieldIndex("PAS08");
-            this.Snow09 = schema.GetFieldIndex("PAS09");
-            this.Snow10 = schema.GetFieldIndex("PAS10");
-            this.Snow11 = schema.GetFieldIndex("PAS11");
-            this.Snow12 = schema.GetFieldIndex("PAS12");
-            this.SolarRadiation01 = schema.GetFieldIndex("Rad01");
-            this.SolarRadiation02 = schema.GetFieldIndex("Rad02");
-            this.SolarRadiation03 = schema.GetFieldIndex("Rad03");
-            this.SolarRadiation04 = schema.GetFieldIndex("Rad04");
-            this.SolarRadiation05 = schema.GetFieldIndex("Rad05");
-            this.SolarRadiation06 = schema.GetFieldIndex("Rad06");
-            this.SolarRadiation07 = schema.GetFieldIndex("Rad07");
-            this.SolarRadiation08 = schema.GetFieldIndex("Rad08");
-            this.SolarRadiation09 = schema.GetFieldIndex("Rad09");
-            this.SolarRadiation10 = schema.GetFieldIndex("Rad10");
-            this.SolarRadiation11 = schema.GetFieldIndex("Rad11");
-            this.SolarRadiation12 = schema.GetFieldIndex("Rad12");
-            this.TemperatureMax01 = schema.GetFieldIndex("Tmax01");
-            this.TemperatureMax02 = schema.GetFieldIndex("Tmax02");
-            this.TemperatureMax03 = schema.GetFieldIndex("Tmax03");
-            this.TemperatureMax04 = schema.GetFieldIndex("Tmax04");
-            this.TemperatureMax05 = schema.GetFieldIndex("Tmax05");
-            this.TemperatureMax06 = schema.GetFieldIndex("Tmax06");
-            this.TemperatureMax07 = schema.GetFieldIndex("Tmax07");
-            this.TemperatureMax08 = schema.GetFieldIndex("Tmax08");
-            this.TemperatureMax09 = schema.GetFieldIndex("Tmax09");
-            this.TemperatureMax10 = schema.GetFieldIndex("Tmax10");
-            this.TemperatureMax11 = schema.GetFieldIndex("Tmax11");
-            this.TemperatureMax12 = schema.GetFieldIndex("Tmax12");
-            this.TemperatureMean01 = schema.GetFieldIndex("Tave01");
-            this.TemperatureMean02 = schema.GetFieldIndex("Tave02");
-            this.TemperatureMean03 = schema.GetFieldIndex("Tave03");
-            this.TemperatureMean04 = schema.GetFieldIndex("Tave04");
-            this.TemperatureMean05 = schema.GetFieldIndex("Tave05");
-            this.TemperatureMean06 = schema.GetFieldIndex("Tave06");
-            this.TemperatureMean07 = schema.GetFieldIndex("Tave07");
-            this.TemperatureMean08 = schema.GetFieldIndex("Tave08");
-            this.TemperatureMean09 = schema.GetFieldIndex("Tave09");
-            this.TemperatureMean10 = schema.GetFieldIndex("Tave10");
-            this.TemperatureMean11 = schema.GetFieldIndex("Tave11");
-            this.TemperatureMean12 = schema.GetFieldIndex("Tave12");
-            this.TemperatureMin01 = schema.GetFieldIndex("Tmin01");
-            this.TemperatureMin02 = schema.GetFieldIndex("Tmin02");
-            this.TemperatureMin03 = schema.GetFieldIndex("Tmin03");
-            this.TemperatureMin04 = schema.GetFieldIndex("Tmin04");
-            this.TemperatureMin05 = schema.GetFieldIndex("Tmin05");
-            this.TemperatureMin06 = schema.GetFieldIndex("Tmin06");
-            this.TemperatureMin07 = schema.GetFieldIndex("Tmin07");
-            this.TemperatureMin08 = schema.GetFieldIndex("Tmin08");
-            this.TemperatureMin09 = schema.GetFieldIndex("Tmin09");
-            this.TemperatureMin10 = schema.GetFieldIndex("Tmin10");
-            this.TemperatureMin11 = schema.GetFieldIndex("Tmin11");
-            this.TemperatureMin12 = schema.GetFieldIndex("Tmin12");
-            this.Year = schema.GetFieldIndex("Year");
         }
     }
 }
