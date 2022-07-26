@@ -147,7 +147,6 @@ namespace iLand.Tree
             {
                 species.SeedDispersal = new SeedDispersal(species);
                 species.SeedDispersal.Setup(model); // setup memory for the seed map (grid)
-                species.SeedDispersal.SetupExternalSeeds(model);
             }
             // Debug.WriteLine("Setup of seed dispersal maps finished.");
         }

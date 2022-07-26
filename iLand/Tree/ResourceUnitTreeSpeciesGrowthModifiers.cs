@@ -65,7 +65,7 @@ namespace iLand.Tree
             else
             {
                 this.NitrogenModifierForYear = this.Species.GetNitrogenModifier(this.ResourceUnit.Soil.PlantAvailableNitrogen);
-                Debug.Assert(this.NitrogenModifierForYear >= 0.0);
+                Debug.Assert(this.NitrogenModifierForYear >= 0.0F);
             }
 
             // calculate monthly modifiers for the current simulation year (January-December calendar year)

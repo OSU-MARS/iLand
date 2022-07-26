@@ -22,9 +22,9 @@ namespace iLand.Tree
         public SaplingEstablishment SaplingEstablishment { get; private init; } // establishment submodel
         public SaplingProperties SaplingStats { get; private init; } // statistics for the sapling sub module
         public TreeSpecies Species { get; private init; } // return pointer to species
-        public ResourceUnitTreeStatistics Statistics { get; private init; } // statistics of this species on the resource unit
-        public ResourceUnitTreeStatistics StatisticsDead { get; private init; } // statistics of trees that have died
+        public ResourceUnitTreeStatistics StatisticsLive { get; private init; } // statistics of this species on the resource unit
         public ResourceUnitTreeStatistics StatisticsManagement { get; private init; } // statistics of removed trees
+        public ResourceUnitTreeStatistics StatisticsSnag { get; private init; } // statistics of trees that have died
         public ResourceUnitTreeSpeciesGrowth TreeGrowth { get; private init; } // the 3-PG production model of this species on this resource unit
 
         public ResourceUnitTreeSpecies(TreeSpecies treeSpecies, ResourceUnit ru)
@@ -39,9 +39,9 @@ namespace iLand.Tree
             this.RemovedStemVolume = 0.0F;
             this.SaplingEstablishment = new SaplingEstablishment();
             this.SaplingStats = new SaplingProperties();
-            this.Statistics = new ResourceUnitTreeStatistics(ru, this);
-            this.StatisticsDead = new ResourceUnitTreeStatistics(ru, this);
+            this.StatisticsLive = new ResourceUnitTreeStatistics(ru, this);
             this.StatisticsManagement = new ResourceUnitTreeStatistics(ru, this);
+            this.StatisticsSnag = new ResourceUnitTreeStatistics(ru, this);
             this.TreeGrowth = new ResourceUnitTreeSpeciesGrowth(ru, this); // requires this.Species be set
         }
 
@@ -59,7 +59,7 @@ namespace iLand.Tree
             // if *not* called from establishment, clear the species-level-stats
             if (fromSaplingEstablishmentOrGrowth == false)
             {
-                this.Statistics.Zero();
+                this.StatisticsLive.Zero();
             }
 
             if ((this.LaiFraction > 0.0F) || (fromSaplingEstablishmentOrGrowth == true))
@@ -88,7 +88,7 @@ namespace iLand.Tree
             // removed growth is the running sum of all removed
             // tree volume. the current "GWL" therefore is current volume (standing) + mRemovedGrowth.
             // important: statisticsDead() and statisticsMgmt() need to calculate() before -> volume() is already scaled to ha
-            this.RemovedStemVolume += this.StatisticsDead.StemVolume + this.StatisticsManagement.StemVolume;
+            this.RemovedStemVolume += this.StatisticsSnag.StemVolume + this.StatisticsManagement.StemVolume;
         }
     }
 }

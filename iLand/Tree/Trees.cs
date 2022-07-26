@@ -826,7 +826,7 @@ namespace iLand.Tree
 
                 if (this.IsDead(treeIndex) == false)
                 {
-                    ruSpecies.Statistics.AddToCurrentYear(this, treeIndex, treeGrowthData, skipDead: true);
+                    ruSpecies.StatisticsLive.AddToCurrentYear(this, treeIndex, treeGrowthData, skipDead: true);
 
                     int standID = this.StandID[treeIndex];
                     if (standID >= Constant.DefaultStandID)
@@ -1116,7 +1116,7 @@ namespace iLand.Tree
             this.SetOrClearFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
             this.RU.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
-            ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null, skipDead: false);
+            ruSpecies.StatisticsSnag.AddToCurrentYear(this, treeIndex, null, skipDead: false);
             this.OnTreeRemoved(model, treeIndex, MortalityCause.Disturbance);
 
             this.RU.AddSprout(model, this, treeIndex);
@@ -1161,7 +1161,7 @@ namespace iLand.Tree
             this.RU.Trees.OnTreeDied();
 
             ResourceUnitTreeSpecies ruSpecies = this.RU.Trees.GetResourceUnitSpecies(this.Species);
-            ruSpecies.StatisticsDead.AddToCurrentYear(this, treeIndex, null, skipDead: false); // add tree to statistics
+            ruSpecies.StatisticsSnag.AddToCurrentYear(this, treeIndex, null, skipDead: false); // add tree to statistics
 
             this.OnTreeRemoved(model, treeIndex, MortalityCause.Stress);
 

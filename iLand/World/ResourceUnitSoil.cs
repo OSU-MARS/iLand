@@ -40,12 +40,12 @@ namespace iLand.World
                 Ko = environment.SoilOrganicDecompositionRate,
                 Kyl = environment.SoilYoungLabileDecompositionRate,
                 Kyr = environment.SoilYoungRefractoryDecompositionRate,
-                Leaching = environment.SoilLeaching,
+                NitrogenLeachingFraction = environment.SoilNitrogenLeachingFraction,
                 Qb = environment.SoilQb,
                 Qh = environment.SoilQh,
                 UseDynamicAvailableNitrogen = environment.UseDynamicAvailableNitrogen
             };
-            if (this.Parameters.Kyl <= 0.0 || this.Parameters.Kyr <= 0.0)
+            if ((this.Parameters.Kyl <= 0.0) || (this.Parameters.Kyr <= 0.0))
             {
                 throw new NotSupportedException(String.Format("Kyl or kyr less than zero: kyl: {0} (young labile decomposition rate), kyr: {1} (young refractory decomposition rate)", this.Parameters.Kyl, this.Parameters.Kyr));
             }
@@ -58,7 +58,7 @@ namespace iLand.World
             // ICBM/2 "old" carbon pool: humified soil organic content
             this.OrganicMatter = new CarbonNitrogenTuple(0.001F * environment.SoilOrganicC, // environment values are in kg/ha, pool sizes are in t/ha
                                                          0.001F * environment.SoilOrganicN);
-            this.PlantAvailableNitrogen = environment.SoilAvailableNitrogen; // TODO: gets overwritten rather than modified in NewYear()?
+            this.PlantAvailableNitrogen = environment.SoilAvailableNitrogen;
             // ICBM/2 litter layer
             this.YoungLabile = new CarbonNitrogenPool(0.001F * environment.SoilYoungLabileC,
                                                       0.001F * environment.SoilYoungLabileN,
@@ -197,10 +197,10 @@ namespace iLand.World
             if (this.Parameters.UseDynamicAvailableNitrogen)
             {
                 // TODO: why is ICBM/2N formulated with no memory of previously available nitrogen?
-                float leaching = this.Parameters.Leaching;
+                float annualLeachingFraction = this.Parameters.NitrogenLeachingFraction;
                 float litterNitrogen = kyl * this.ClimateDecompositionFactor * (1.0F - hc) / (1.0F - el) * (this.YoungLabile.N - el * this.YoungLabile.C / qb);  // N from labile...
                 float coarseWoodyNitrogen = kyr * this.ClimateDecompositionFactor * (1.0F - hc) / (1.0F - er) * (this.YoungRefractory.N - er * this.YoungRefractory.C / qb); // + N from refractory...
-                float humusNitrogen = ko * this.ClimateDecompositionFactor * this.OrganicMatter.N * (1.0F - leaching); // + N from SOM pool (reduced by leaching (leaching modeled only from slow SOM Pool))
+                float humusNitrogen = ko * this.ClimateDecompositionFactor * this.OrganicMatter.N * (1.0F - annualLeachingFraction); // + N from SOM pool (reduced by leaching (leaching modeled only from slow SOM Pool))
                 this.PlantAvailableNitrogen = 1000.0F * (litterNitrogen + coarseWoodyNitrogen + humusNitrogen); // t/ha -> kg/ha
 
                 if (this.PlantAvailableNitrogen < 0.0F)

@@ -54,7 +54,7 @@ namespace iLand.Output
 
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics stat = ruSpecies.Statistics;
+                    ResourceUnitTreeStatistics stat = ruSpecies.StatisticsLive;
                     SaplingProperties sap = ruSpecies.SaplingStats;
 
                     if (stat.SaplingCount == 0)

@@ -100,8 +100,9 @@ namespace iLand.Tree
         public ResourceUnitTreeStatistics(ResourceUnit ru, ResourceUnitTreeSpecies ruSpecies)
             : this(ru)
         {
-            this.IsPerHectare = true;
             this.requiresPerHectareConversion = true;
+
+            this.IsPerHectare = true;
             this.ResourceUnitSpecies = ruSpecies;
         }
 

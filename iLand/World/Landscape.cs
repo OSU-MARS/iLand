@@ -177,13 +177,12 @@ namespace iLand.World
                 Debug.Assert((ruGridIndex >= 0) && (ruGridIndex < this.ResourceUnitGrid.CellCount));
 
                 float ruMinProjectX = ruProjectCentroidX - 0.5F * Constant.ResourceUnitSizeInM;
-                float ruMaxProjectY = ruProjectCentroidY + 0.5F * Constant.ResourceUnitSizeInM;
                 float ruMinProjectY = ruProjectCentroidY - 0.5F * Constant.ResourceUnitSizeInM;
                 ResourceUnit newRU = new(projectFile, weather, treeSpeciesSet, ruGridIndex)
                 {
                     ProjectExtent = new RectangleF(ruMinProjectX, ruMinProjectY, Constant.ResourceUnitSizeInM, Constant.ResourceUnitSizeInM),
                     ID = environment.ResourceUnitID,
-                    TopLeftLightIndexXY = this.LightGrid.GetCellXYIndex(ruMinProjectX, ruMaxProjectY)
+                    MinimumLightIndexXY = this.LightGrid.GetCellXYIndex(ruMinProjectX, ruMinProjectY)
                 };
                 newRU.Setup(projectFile, environment);
                 this.ResourceUnits.Add(newRU);

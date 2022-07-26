@@ -107,11 +107,11 @@ namespace iLand.Output
             }
             if (model.Project.Output.Annual.Stand.Enabled)
             {
-                this.enabledOutputs.Add(new StandAnnualOutput());
+                this.enabledOutputs.Add(new ResourceUnitLiveTreeAnnualOutput());
             }
             if (model.Project.Output.Annual.StandDead.Enabled)
             {
-                this.enabledOutputs.Add(new StandDeadAnnualOutput());
+                this.enabledOutputs.Add(new ResourceUnitSnagAnnualOutput());
             }
             if (model.Project.Output.Annual.Tree.Enabled)
             {

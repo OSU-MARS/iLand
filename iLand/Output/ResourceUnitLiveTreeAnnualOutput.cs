@@ -7,11 +7,11 @@ using Microsoft.Data.Sqlite;
 namespace iLand.Output
 {
     /** StandOut is basic stand level info per species and ressource unit */
-    public class StandAnnualOutput : AnnualOutput
+    public class ResourceUnitLiveTreeAnnualOutput : AnnualOutput
     {
         private readonly Expression yearFilter;
 
-        public StandAnnualOutput()
+        public ResourceUnitLiveTreeAnnualOutput()
         {
             this.yearFilter = new();
 
@@ -62,7 +62,7 @@ namespace iLand.Output
             {
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics speciesStats = ruSpecies.Statistics;
+                    ResourceUnitTreeStatistics speciesStats = ruSpecies.StatisticsLive;
                     if (speciesStats.TreeCount == 0 && speciesStats.CohortCount == 0)
                     {
                         continue;

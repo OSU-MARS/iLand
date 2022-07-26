@@ -274,7 +274,7 @@ namespace iLand.Output
 
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    if (bySpecies && ruSpecies.Statistics.TreeCount == 0)
+                    if (bySpecies && ruSpecies.StatisticsLive.TreeCount == 0)
                     {
                         continue;
                     }

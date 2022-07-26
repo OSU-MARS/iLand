@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Xml;
 
 namespace iLand.Input.ProjectFile
@@ -9,7 +9,7 @@ namespace iLand.Input.ProjectFile
         public string? ResourceUnitFile { get; private set; }
         public string? SaplingsByStandFile { get; private set; }
         public string? StandRasterFile { get; private set; }
-        public string? TreeFile { get; private set; }
+        public List<string> TreeFiles { get; private set; }
         public string? TreeSizeDistribution { get; private set; }
 
         public InitialHeightGrid HeightGrid { get; private init; }
@@ -23,7 +23,7 @@ namespace iLand.Input.ProjectFile
             this.Snags = new IntitialSnags();
             this.SaplingsByStandFile = null;
             this.StandRasterFile = null;
-            this.TreeFile = null;
+            this.TreeFiles = new();
             this.TreeSizeDistribution = "1-x^2";
         }
 
@@ -58,7 +58,7 @@ namespace iLand.Input.ProjectFile
                     this.StandRasterFile = reader.ReadElementContentAsString().Trim();
                     break;
                 case "treeFile":
-                    this.TreeFile = reader.ReadElementContentAsString().Trim();
+                    this.TreeFiles.Add(reader.ReadElementContentAsString().Trim());
                     break;
                 case "treeSizeDistribution":
                     this.TreeSizeDistribution = reader.ReadElementContentAsString().Trim();

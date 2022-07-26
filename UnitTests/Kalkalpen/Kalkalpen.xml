@@ -89,7 +89,7 @@
       <dumpStamps>false</dumpStamps>
     </debug>
     <defaultSoil>
-      <!-- plant accessible nitrogen and deposition, kg/ha-yr -->
+      <!-- plant accessible nitrogen, kg/ha, and deposition, kg/ha-yr -->
       <!-- derived from Zöbelboden-data. Hülber et al. reported values a bit lower than that for the same area: http://onlinelibrary.wiley.com/doi/10.3170/2008-7-18489/pdf -->
       <annualNitrogenDeposition>21.8</annualNitrogenDeposition>
       <availableNitrogen>84</availableNitrogen>
@@ -153,6 +153,7 @@
              3) lists a tree size distribution for each stand
            Format is .csv or similar delimiters with, optionally, wrapping a Picus trees element. Required to be in the project's init directory. -->
       <cloneIndividualTreesToEachResourceUnit>true</cloneIndividualTreesToEachResourceUnit>
+      <!-- multiple <treeFile> elements can be used to list tree files if, for example, trees are in tiles -->
       <treeFile>one tree of each European species.picus</treeFile>
       <heightGrid>
         <!-- file specifying initial heights to generate trees from -->
@@ -291,7 +292,7 @@
       </water>
     </annual>
     <memory>
-      <standStatistics enabled="false" />
+      <resourceUnitTrajectories enabled="false" />
     </memory>
   </output>
   <modules>

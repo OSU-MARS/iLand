@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Security.Cryptography;
 
 namespace iLand.Simulation
 {
@@ -28,8 +29,9 @@ namespace iLand.Simulation
         public Model(Project projectFile)
         {
             this.isDisposed = false;
-            // if a random seed is specified in the project file, use to produce an always an equal sequence of random numbers
-            this.RandomGenerator = new(mersenneTwister: true, projectFile.Model.Settings.RandomSeed);
+            // if a random seed is specified in the project file use it to produce an always an equal sequence of random numbers
+            int seed = projectFile.Model.Settings.RandomSeed == null ? RandomNumberGenerator.GetInt32(Int32.MinValue, Int32.MaxValue) : projectFile.Model.Settings.RandomSeed.Value;
+            this.RandomGenerator = new(mersenneTwister: true, seed);
 
             this.AnnualOutputs = new Output.AnnualOutputs();
             this.CurrentYear = 0; // set to zero so outputs with initial state start logging at year 0 (first log pulse is at end of constructor)

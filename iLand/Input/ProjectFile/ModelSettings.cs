@@ -36,7 +36,7 @@ namespace iLand.Input.ProjectFile
 
 		public ModelSettings()
         {
-			this.CarbonCycleEnabled = false;
+			this.CarbonCycleEnabled = true;
 			this.ExpressionLinearizationEnabled = false;
 			this.GrowthEnabled = true;
 			this.MortalityEnabled = true;

@@ -14,7 +14,7 @@
         public float Ko { get; set; } // decomposition rate for soil organic matter (ICBM/2N "old" pool)
         public float Kyl { get; set; } // litter decomposition rate
         public float Kyr { get; set; } // downed woody debris (DWD) decomposition rate
-        public float Leaching { get; set; } // fraction of mineralized nitrogen in the O layer no longer available for plants due to being leached away
+        public float NitrogenLeachingFraction { get; set; } // fraction of mineralized nitrogen in the O layer no longer available for plants due to being leached away
         public float Qb { get; set; } // C/N ratio of soil microbes
         public float Qh { get; set; } // C/N ratio of soil organic matter
         public bool UseDynamicAvailableNitrogen { get; set; }

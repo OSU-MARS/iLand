@@ -118,7 +118,7 @@ namespace iLand.World
             float laiWeightedCanopyConductance = 0.0F;
             foreach (ResourceUnitTreeSpecies ruSpecies in this.ru.Trees.SpeciesAvailableOnResourceUnit) 
             {
-                float lai = ruSpecies.Statistics.LeafAreaIndex; // use previous year's LAI as this year's hasn't yet been computed
+                float lai = ruSpecies.StatisticsLive.LeafAreaIndex; // use previous year's LAI as this year's hasn't yet been computed
                 if (ruSpecies.Species.IsConiferous)
                 {
                     laiConifer += lai;

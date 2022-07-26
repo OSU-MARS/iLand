@@ -1,15 +1,14 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class MemoryOutputs : XmlSerializable
     {
-		public Enablable StandStatistics { get; private set; }
+		public Enablable ResourceUnitTrajectories { get; private set; }
 
 		public MemoryOutputs()
 		{
-			this.StandStatistics = new Enablable("standStatistics");
+			this.ResourceUnitTrajectories = new Enablable("resourceUnitTrajectories");
 		}
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -18,8 +17,8 @@ namespace iLand.Input.ProjectFile
 			{
 				switch (reader.Name)
 				{
-					case "standStatistics":
-						this.StandStatistics.ReadXml(reader);
+					case "resourceUnitTrajectories":
+						this.ResourceUnitTrajectories.ReadXml(reader);
 						break;
 					default:
 						throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");

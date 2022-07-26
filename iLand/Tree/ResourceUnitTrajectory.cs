@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace iLand.Tree
 {
-    public class ResourceUnitTreeStatisticsWithPreviousYears : ResourceUnitTreeStatistics
+    public class ResourceUnitTrajectory : ResourceUnitTreeStatistics
     {
         public List<float> AverageDbhByYear { get; private init; } // average dbh (cm)
         public List<float> AverageHeightByYear { get; private init; } // average tree height (m)
@@ -35,35 +35,35 @@ namespace iLand.Tree
         public List<float> StemCarbonByYear { get; private init; }
         public List<float> StemNitrogenByYear { get; private init; }
 
-        public ResourceUnitTreeStatisticsWithPreviousYears(ResourceUnit ru)
+        public ResourceUnitTrajectory(ResourceUnit ru)
             : base(ru)
         {
-            int defaultCapacity = 20;
-            this.CohortCountByYear = new List<int>(defaultCapacity);
-            this.SaplingCountByYear = new List<int>(defaultCapacity);
-            this.AverageDbhByYear = new List<float>(defaultCapacity);
-            this.AverageHeightByYear = new List<float>(defaultCapacity);
-            this.BasalAreaByYear = new List<float>(defaultCapacity);
-            this.TreeCountByYear = new List<float>(defaultCapacity);
-            this.LiveAndSnagStemVolumeByYear = new List<float>(defaultCapacity);
-            this.LeafAreaIndexByYear = new List<float>(defaultCapacity);
-            this.MeanSaplingAgeByYear = new List<float>(defaultCapacity);
-            this.TreeNppByYear = new List<float>(defaultCapacity);
-            this.TreeNppAbovegroundByYear = new List<float>(defaultCapacity);
-            this.SaplingNppByYear = new List<float>(defaultCapacity);
-            this.LiveStemVolumeByYear = new List<float>(defaultCapacity);
-            this.BranchCarbonByYear = new List<float>(defaultCapacity);
-            this.BranchNitrogenByYear = new List<float>(defaultCapacity);
-            this.CoarseRootCarbonByYear = new List<float>(defaultCapacity);
-            this.CoarseRootNitrogenByYear = new List<float>(defaultCapacity);
-            this.FineRootCarbonByYear = new List<float>(defaultCapacity);
-            this.FineRootNitrogenByYear = new List<float>(defaultCapacity);
-            this.FoliageCarbonByYear = new List<float>(defaultCapacity);
-            this.FoliageNitrogenByYear = new List<float>(defaultCapacity);
-            this.RegenerationCarbonByYear = new List<float>(defaultCapacity);
-            this.RegenerationNitrogenByYear = new List<float>(defaultCapacity);
-            this.StemCarbonByYear = new List<float>(defaultCapacity);
-            this.StemNitrogenByYear = new List<float>(defaultCapacity);
+            int defaultCapacityInYears = 20;
+            this.CohortCountByYear = new(defaultCapacityInYears);
+            this.SaplingCountByYear = new(defaultCapacityInYears);
+            this.AverageDbhByYear = new(defaultCapacityInYears);
+            this.AverageHeightByYear = new(defaultCapacityInYears);
+            this.BasalAreaByYear = new(defaultCapacityInYears);
+            this.TreeCountByYear = new(defaultCapacityInYears);
+            this.LiveAndSnagStemVolumeByYear = new(defaultCapacityInYears);
+            this.LeafAreaIndexByYear = new(defaultCapacityInYears);
+            this.MeanSaplingAgeByYear = new(defaultCapacityInYears);
+            this.TreeNppByYear = new(defaultCapacityInYears);
+            this.TreeNppAbovegroundByYear = new(defaultCapacityInYears);
+            this.SaplingNppByYear = new(defaultCapacityInYears);
+            this.LiveStemVolumeByYear = new(defaultCapacityInYears);
+            this.BranchCarbonByYear = new(defaultCapacityInYears);
+            this.BranchNitrogenByYear = new(defaultCapacityInYears);
+            this.CoarseRootCarbonByYear = new(defaultCapacityInYears);
+            this.CoarseRootNitrogenByYear = new(defaultCapacityInYears);
+            this.FineRootCarbonByYear = new(defaultCapacityInYears);
+            this.FineRootNitrogenByYear = new(defaultCapacityInYears);
+            this.FoliageCarbonByYear = new(defaultCapacityInYears);
+            this.FoliageNitrogenByYear = new(defaultCapacityInYears);
+            this.RegenerationCarbonByYear = new(defaultCapacityInYears);
+            this.RegenerationNitrogenByYear = new(defaultCapacityInYears);
+            this.StemCarbonByYear = new(defaultCapacityInYears);
+            this.StemNitrogenByYear = new(defaultCapacityInYears);
         }
 
         public override void OnEndYear()

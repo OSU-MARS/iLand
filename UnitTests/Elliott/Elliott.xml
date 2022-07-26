@@ -2,16 +2,46 @@
 <project>
   <model>
     <settings>
+      <regenerationEnabled>false</regenerationEnabled> <!-- disabled due to high computational cost -->
       <maxThreads>16</maxThreads>
       <randomSeed>0</randomSeed>
     </settings>
   </model>
+  <output>
+    <memory>
+      <resourceUnitTrajectories enabled="true" />
+    </memory>
+  </output>
   <world>
+    <defaultSoil>
+      <!-- plant accessible nitrogen, kg/ha, and deposition, kg/ha-yr, crude defaults for central Oregon Coast Range -->
+      <annualNitrogenDeposition>5</annualNitrogenDeposition>
+      <availableNitrogen>2000</availableNitrogen>
+      <useDynamicAvailableNitrogen>false</useDynamicAvailableNitrogen> <!-- disabled for now due to N exhaustion -->
+      <!-- soil depth and van Genuchten properties specified per resource unit -->
+      <!-- initial content of carbon and nitrogen pools, kg/ha, and annual decomposition rates (labile pool is litter, refractory pool is coarse woody debris) 
+           Values copied from Kalkalpen simply to allow ICBM/2 code to be exercised when dynamic nitrogen is enabled. -->
+      <youngLabileC>12375</youngLabileC>
+      <youngLabileN>652.1</youngLabileN>
+      <youngLabileDecompRate>0.227</youngLabileDecompRate>
+      <youngRefractoryC>33832</youngRefractoryC>
+      <youngRefractoryN>121.2</youngRefractoryN>
+      <youngRefractoryDecompRate>0.071</youngRefractoryDecompRate>
+      <organicMatterC>128666</organicMatterC>
+      <organicMatterN>83.68</organicMatterN>
+      <organicMatterDecompRate>0.011656</organicMatterDecompRate>
+      <humificationRate>0.2992</humificationRate>
+      <qb>5</qb> <!-- carbon-nitrogen ratio of soil microbes -->
+      <el>0.152</el> <!-- microbal efficiency in the labile pool, auxiliary parameter -->
+      <er>0.319</er> <!-- microbal efficiency in the refractory pool, auxiliary parameter -->
+      <qh>14.5</qh> <!-- carbon-nitrogen ratio of soil organic matter -->
+    </defaultSoil>
     <geometry>
       <latitude>43.57</latitude>
     </geometry>
     <initialization>
-      <resourceUnitFile>resource units unbuffered 4 km weather.feather</resourceUnitFile>
+      <resourceUnitFile>unit test resource units 200 m weather.feather</resourceUnitFile>
+      <treeFile>TSegD_H10Cr20h10A50MD7_s04110w07050.feather</treeFile>
       <treeFile>TSegD_H10Cr20h10A50MD7_s04110w07020.feather</treeFile>
     </initialization>
     <species>
@@ -38,7 +68,7 @@
     </species>
     <weather>
       <co2file>co2 ssp370.csv</co2file>
-      <weatherFile>weather 4 km 2011-2100 13GCMssp370.feather</weatherFile>
+      <weatherFile>unit test weather 200 m 2011-2100 13GCMssp370.feather</weatherFile>
       <startYear>2022</startYear>
     </weather>
   </world>

@@ -5,9 +5,9 @@ using Microsoft.Data.Sqlite;
 
 namespace iLand.Output
 {
-    public class StandDeadAnnualOutput : AnnualOutput
+    public class ResourceUnitSnagAnnualOutput : AnnualOutput
     {
-        public StandDeadAnnualOutput()
+        public ResourceUnitSnagAnnualOutput()
         {
             this.Name = "Dead trees by species/RU";
             this.TableName = "standDead";
@@ -33,8 +33,8 @@ namespace iLand.Output
             {
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics stat = ruSpecies.StatisticsDead;
-                    if (stat.TreeCount == 0.0)
+                    ResourceUnitTreeStatistics stat = ruSpecies.StatisticsSnag;
+                    if (stat.TreeCount == 0.0F)
                     {
                         continue;
                     }

@@ -648,71 +648,75 @@ namespace iLand.World
                 heightGridResponse.Linearize(0.0, 2.0);
             }
 
-            string treeFilePath = projectFile.GetFilePath(ProjectDirectory.Init, projectFile.World.Initialization.TreeFile);
-            TreeReader treeFile = TreeReader.Create(treeFilePath);
-
-            if (treeFile is IndividualTreeReader individualTreeReader)
+            List<string> treeFiles = projectFile.World.Initialization.TreeFiles;
+            for (int treeFileIndex = 0; treeFileIndex < treeFiles.Count; ++treeFileIndex)
             {
-                if (projectFile.World.Initialization.CloneIndividualTreesToEachResourceUnit)
+                string treeFilePath = projectFile.GetFilePath(ProjectDirectory.Init, treeFiles[treeFileIndex]);
+                TreeReader treeFile = TreeReader.Create(treeFilePath);
+
+                if (treeFile is IndividualTreeReader individualTreeReader)
                 {
-                    // cloned individual trees: initialize each resource unit from a single, common tree file if resource units aren't specified
-                    // in tree file
+                    if (projectFile.World.Initialization.CloneIndividualTreesToEachResourceUnit)
+                    {
+                        // cloned individual trees: initialize each resource unit from a single, common tree file if resource units aren't specified
+                        // in tree file
+                        foreach (ResourceUnit ru in landscape.ResourceUnits)
+                        {
+                            this.ApplyTreeFileToResourceUnit(projectFile, landscape, ru, randomGenerator, treeFile, Constant.DefaultStandID);
+                        }
+                    }
+                    else
+                    {
+                        // full listing of individual trees (LiDAR segmentation or similar): transfer trees as listed to resource unit
+                        TreePopulator.PopulateResourceUnitsWithIndividualTrees(projectFile, landscape, individualTreeReader);
+                    }
+                }
+                else if (treeFile is TreeSizeDistributionReaderCsv treeSizeReader)
+                {
+                    // appply a single tree size distribution to all resource units
+                    string? treeSizeDistribution = projectFile.World.Initialization.TreeSizeDistribution;
+                    if (treeSizeDistribution == null)
+                    {
+                        throw new NotSupportedException("");
+                    }
+                    if ((this.treeSizeDistribution == null) || (this.treeSizeDistribution.ProbabilityDensityFunction != treeSizeDistribution))
+                    {
+                        this.treeSizeDistribution = new(treeSizeDistribution);
+                    }
+
                     foreach (ResourceUnit ru in landscape.ResourceUnits)
                     {
-                        this.ApplyTreeFileToResourceUnit(projectFile, landscape, ru, randomGenerator, treeFile, Constant.DefaultStandID);
+                        this.PopulateResourceUnitTreesFromSizeDistribution(projectFile, landscape, ru, treeSizeReader.TreeSizeDistribution, randomGenerator);
+                    }
+                }
+                else if (treeFile is TreeFileByStandIDReaderCsv treeFileByStandIDReader)
+                {
+                    // different kinds of trees in each stand: load and apply a different tree file per stand
+                    // The tree file can be either individual trees or a size distribution.
+                    if (landscape.StandRaster == null || landscape.StandRaster.IsSetup() == false)
+                    {
+                        throw new NotSupportedException("/project/model/world/initialization/trees is 'standRaster' but no stand raster (/project/model/world/initialization/standRasterFile) is present.");
+                    }
+
+                    foreach ((int standID, string standTreeFileName) in treeFileByStandIDReader.TreeFileNameByStandID)
+                    {
+                        // for now, assume tree files are seldom repeated and there's little to no benefit in caching loaded files
+                        // C++ code doesn't mask tree generation using the stand raster, so resource units which lie in multiple stands will get
+                        // multiple tree fills, if specified, which don't follow the stand boundaries and result in overstocking.
+                        IList<(ResourceUnit RU, float OccupiedAreaInRU)> resourceUnitsInStand = landscape.StandRaster.GetResourceUnitAreaFractions(standID);
+                        string standTreeFilePath = projectFile.GetFilePath(ProjectDirectory.Init, standTreeFileName);
+                        TreeReader standTreeFile = TreeReader.Create(standTreeFilePath);
+                        for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitsInStand.Count; ++resourceUnitIndex)
+                        {
+                            ResourceUnit ru = resourceUnitsInStand[resourceUnitIndex].RU;
+                            this.ApplyTreeFileToResourceUnit(projectFile, landscape, ru, randomGenerator, standTreeFile, standID);
+                        }
                     }
                 }
                 else
                 {
-                    // full listing of individual trees (LiDAR segmentation or similar): transfer trees as listed to resource unit
-                    TreePopulator.PopulateResourceUnitsWithIndividualTrees(projectFile, landscape, individualTreeReader);
+                    throw new NotImplementedException("/project/model/world/initialization/treeFile '" + treeFilePath + "' is not in a recognized format.");
                 }
-            }
-            else if (treeFile is TreeSizeDistributionReaderCsv treeSizeReader)
-            {
-                // appply a single tree size distribution to all resource units
-                string? treeSizeDistribution = projectFile.World.Initialization.TreeSizeDistribution;
-                if (treeSizeDistribution == null)
-                {
-                    throw new NotSupportedException("");
-                }
-                if ((this.treeSizeDistribution == null) || (this.treeSizeDistribution.ProbabilityDensityFunction != treeSizeDistribution))
-                {
-                    this.treeSizeDistribution = new(treeSizeDistribution);
-                }
-
-                foreach (ResourceUnit ru in landscape.ResourceUnits)
-                {
-                    this.PopulateResourceUnitTreesFromSizeDistribution(projectFile, landscape, ru, treeSizeReader.TreeSizeDistribution, randomGenerator);
-                }
-            }
-            else if (treeFile is TreeFileByStandIDReaderCsv treeFileByStandIDReader)
-            {
-                // different kinds of trees in each stand: load and apply a different tree file per stand
-                // The tree file can be either individual trees or a size distribution.
-                if (landscape.StandRaster == null || landscape.StandRaster.IsSetup() == false)
-                {
-                    throw new NotSupportedException("/project/model/world/initialization/trees is 'standRaster' but no stand raster (/project/model/world/initialization/standRasterFile) is present.");
-                }
-
-                foreach ((int standID, string standTreeFileName) in treeFileByStandIDReader.TreeFileNameByStandID)
-                {
-                    // for now, assume tree files are seldom repeated and there's little to no benefit in caching loaded files
-                    // C++ code doesn't mask tree generation using the stand raster, so resource units which lie in multiple stands will get
-                    // multiple tree fills, if specified, which don't follow the stand boundaries and result in overstocking.
-                    IList<(ResourceUnit RU, float OccupiedAreaInRU)> resourceUnitsInStand = landscape.StandRaster.GetResourceUnitAreaFractions(standID);
-                    string standTreeFilePath = projectFile.GetFilePath(ProjectDirectory.Init, standTreeFileName);
-                    TreeReader standTreeFile = TreeReader.Create(standTreeFilePath);
-                    for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitsInStand.Count; ++resourceUnitIndex)
-                    {
-                        ResourceUnit ru = resourceUnitsInStand[resourceUnitIndex].RU;
-                        this.ApplyTreeFileToResourceUnit(projectFile, landscape, ru, randomGenerator, standTreeFile, standID);
-                    }
-                }
-            }
-            else
-            {
-                throw new NotImplementedException("/project/model/world/initialization/treeFile '" + treeFilePath + "' is not in a recognized format.");
             }
 
             TreePopulator.EvaluateDebugTrees(projectFile, landscape);

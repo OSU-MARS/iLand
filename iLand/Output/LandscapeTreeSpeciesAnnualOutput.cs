@@ -66,7 +66,7 @@ namespace iLand.Output
             {
                 foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics ruSpeciesStats = ruSpecies.Statistics;
+                    ResourceUnitTreeStatistics ruSpeciesStats = ruSpecies.StatisticsLive;
                     if (ruSpeciesStats.TreeCount == 0 && ruSpeciesStats.CohortCount == 0 && ruSpeciesStats.LiveAndSnagStemVolume == 0.0F)
                     {
                         continue;

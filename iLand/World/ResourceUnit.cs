@@ -31,7 +31,7 @@ namespace iLand.World
         public ResourceUnitSoil? Soil { get; private set; }
         // TODO: should be Grid<SaplingCell> rather than an array
         public SaplingCell[]? SaplingCells { get; private set; }
-        public Point TopLeftLightIndexXY { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
+        public Point MinimumLightIndexXY { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
         public ResourceUnitTrees Trees { get; private init; }
         public WaterCycle WaterCycle { get; private init; }
 
@@ -226,7 +226,7 @@ namespace iLand.World
             float[] lightCorrection = new float[Constant.LightCellsPerHectare];
             Array.Fill(lightCorrection, -1.0F);
 
-            Point ruOrigin = this.TopLeftLightIndexXY; // offset on LIF/saplings grid
+            Point ruOrigin = this.MinimumLightIndexXY; // offset on LIF/saplings grid
             Point seedmapOrigin = new(ruOrigin.X / Constant.LightCellsPerSeedmapCellWidth, ruOrigin.Y / Constant.LightCellsPerSeedmapCellWidth); // seed-map has 20m resolution, LIF 2m . factor 10
             this.Trees.TreeSpeciesSet.GetRandomSpeciesSampleIndices(model.RandomGenerator, out int sampleBegin, out int sampleEnd);
             for (int sampleIndex = sampleBegin; sampleIndex != sampleEnd; ++sampleIndex)
@@ -300,7 +300,7 @@ namespace iLand.World
                                 float lightValue = lightGrid[lightIndex];
                                 float lriCorrection = lightCorrection[lightIndexY * Constant.LightCellsPerRUWidth + lightIndexX];
                                 // calculate the LIFcorrected only once per pixel; the relative height is 0 (light level on the forest floor)
-                                if (lriCorrection < 0.0)
+                                if (lriCorrection < 0.0F)
                                 {
                                     // TODO: lightCorrection[] is never updated -> no caching?
                                     lriCorrection = ruSpecies.Species.SpeciesSet.GetLriCorrection(lightValue, 0.0F);
@@ -331,7 +331,7 @@ namespace iLand.World
             Grid<HeightCell> heightGrid = model.Landscape.HeightGrid;
             Grid<float> lightGrid = model.Landscape.LightGrid;
 
-            Point ruOrigin = this.TopLeftLightIndexXY;
+            Point ruOrigin = this.MinimumLightIndexXY;
             for (int lightIndexY = 0; lightIndexY < Constant.LightCellsPerRUWidth; ++lightIndexY)
             {
                 int lightIndex = lightGrid.IndexXYToIndex(ruOrigin.X, ruOrigin.Y + lightIndexY);
@@ -366,7 +366,7 @@ namespace iLand.World
             {
                 ResourceUnitTreeSpecies ruSpecies = this.Trees.SpeciesAvailableOnResourceUnit[species];
                 ruSpecies.SaplingStats.AfterSaplingGrowth(model, this, ruSpecies.Species);
-                ruSpecies.Statistics.AddToCurrentYear(ruSpecies.SaplingStats);
+                ruSpecies.StatisticsLive.AddToCurrentYear(ruSpecies.SaplingStats);
             }
 
             // debug output related to saplings
@@ -486,7 +486,7 @@ namespace iLand.World
                     float heightInM = sapling.HeightInM * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
                     int treeIndex = this.Trees.AddTree(model.Project, model.Landscape, species.ID, dbhInCm, heightInM, lightCellIndexXY, sapling.Age, out Trees treesOfSpecies);
                     Debug.Assert(treesOfSpecies.IsDead(treeIndex) == false);
-                    ruSpecies.Statistics.AddToCurrentYear(treesOfSpecies, treeIndex, null, skipDead: true); // count the newly created trees already in the stats
+                    ruSpecies.StatisticsLive.AddToCurrentYear(treesOfSpecies, treeIndex, null, skipDead: true); // count the newly created trees already in the stats
                 }
 
                 // clear all regeneration from this pixel (including this tree)
@@ -566,7 +566,7 @@ namespace iLand.World
                 // clear statistics of resource unit species
                 for (int species = 0; species < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++species)
                 {
-                    this.Trees.SpeciesAvailableOnResourceUnit[species].Statistics.Zero();
+                    this.Trees.SpeciesAvailableOnResourceUnit[species].StatisticsLive.Zero();
                 }
 
                 this.AreaWithTrees = 0.0F;
@@ -642,7 +642,7 @@ namespace iLand.World
                 // note: LAIFactors are only 1 if sum of LAI is > 1.0 (see WaterCycle)
                 for (int ruSpeciesIndex = 0; ruSpeciesIndex < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++ruSpeciesIndex)
                 {
-                    float speciesLeafAreaFraction = this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex].Statistics.LeafAreaIndex / allSpeciesLeafAreaIndex; // use previous year's LAI as this year's hasn't yet been computed
+                    float speciesLeafAreaFraction = this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex].StatisticsLive.LeafAreaIndex / allSpeciesLeafAreaIndex; // use previous year's LAI as this year's hasn't yet been computed
                     if (speciesLeafAreaFraction > 1.000001F) // allow numerical error
                     {
                         ResourceUnitTreeSpecies ruSpecies = this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex];

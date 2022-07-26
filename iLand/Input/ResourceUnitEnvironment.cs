@@ -37,8 +37,8 @@ namespace iLand.Input
         public float SoilAvailableNitrogen { get; private init; }
         public float SoilEr { get; private init; } // microbial refractory efficiency
         public float SoilEl { get; private init; } // microbial labial efficiency
-        public float SoilLeaching { get; private init; }
         public float SoilHumificationRate { get; private init; }
+        public float SoilNitrogenLeachingFraction { get; private init; }
         public float SoilOrganicC { get; private init; }
         public float SoilOrganicDecompositionRate { get; private init; }
         public float SoilOrganicN { get; private init; }
@@ -84,8 +84,8 @@ namespace iLand.Input
             this.SoilAvailableNitrogen = header.SoilAvailableNitrogen >= 0 ? Single.Parse(environmentFileRow[header.SoilAvailableNitrogen], CultureInfo.InvariantCulture) : defaultEnvironment.SoilAvailableNitrogen;
             this.SoilEl = header.SoilEl >= 0 ? Single.Parse(environmentFileRow[header.SoilEl], CultureInfo.InvariantCulture) : defaultEnvironment.SoilEl;
             this.SoilEr = header.SoilEr >= 0 ? Single.Parse(environmentFileRow[header.SoilEr], CultureInfo.InvariantCulture) : defaultEnvironment.SoilEr;
-            this.SoilLeaching = header.SoilLeaching >= 0 ? Single.Parse(environmentFileRow[header.SoilLeaching], CultureInfo.InvariantCulture) : defaultEnvironment.SoilLeaching;
             this.SoilHumificationRate = header.SoilHumificationRate >= 0 ? Single.Parse(environmentFileRow[header.SoilHumificationRate], CultureInfo.InvariantCulture) : defaultEnvironment.SoilHumificationRate;
+            this.SoilNitrogenLeachingFraction = header.SoilLeaching >= 0 ? Single.Parse(environmentFileRow[header.SoilLeaching], CultureInfo.InvariantCulture) : defaultEnvironment.SoilNitrogenLeachingFraction;
             this.SoilOrganicC = header.SoilOrganicMatterC >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterC], CultureInfo.InvariantCulture) : defaultEnvironment.SoilOrganicC;
             this.SoilOrganicDecompositionRate = header.SoilOrganicMatterDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterDecompositionRate], CultureInfo.InvariantCulture) : defaultEnvironment.SoilOrganicDecompositionRate;
             this.SoilOrganicN = header.SoilOrganicMatterN >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterN], CultureInfo.InvariantCulture) : defaultEnvironment.SoilOrganicN;
@@ -133,7 +133,7 @@ namespace iLand.Input
             this.SoilAvailableNitrogen = arrowBatch.SoilAvailableNitrogen != null ? arrowBatch.SoilAvailableNitrogen.Values[index] : defaultEnvironment.SoilAvailableNitrogen;
             this.SoilEl = arrowBatch.SoilEl != null ? arrowBatch.SoilEl.Values[index] : defaultEnvironment.SoilEl;
             this.SoilEr = arrowBatch.SoilEr != null ? arrowBatch.SoilEr.Values[index] : defaultEnvironment.SoilEr;
-            this.SoilLeaching = arrowBatch.SoilLeaching != null ? arrowBatch.SoilLeaching.Values[index] : defaultEnvironment.SoilLeaching;
+            this.SoilNitrogenLeachingFraction = arrowBatch.SoilLeaching != null ? arrowBatch.SoilLeaching.Values[index] : defaultEnvironment.SoilNitrogenLeachingFraction;
             this.SoilHumificationRate = arrowBatch.SoilHumificationRate != null ? arrowBatch.SoilHumificationRate.Values[index] : defaultEnvironment.SoilHumificationRate;
             this.SoilOrganicC = arrowBatch.SoilOrganicMatterC != null ? arrowBatch.SoilOrganicMatterC.Values[index] : defaultEnvironment.SoilOrganicC;
             this.SoilOrganicDecompositionRate = arrowBatch.SoilOrganicMatterDecompositionRate != null ? arrowBatch.SoilOrganicMatterDecompositionRate.Values[index] : defaultEnvironment.SoilOrganicDecompositionRate;
@@ -175,7 +175,7 @@ namespace iLand.Input
             this.AnnualNitrogenDeposition = world.DefaultSoil.AnnualNitrogenDeposition;
             this.SoilEl = world.DefaultSoil.MicrobialLabileEfficiency;
             this.SoilEr = world.DefaultSoil.MicrobialRefractoryEfficiency;
-            this.SoilLeaching = world.DefaultSoil.NitrogenLeachingFraction;
+            this.SoilNitrogenLeachingFraction = world.DefaultSoil.NitrogenLeachingFraction;
 
             // default soil parameters specified in <site> rather than in <defaultSoil>
             this.SoilDepthInCm = world.DefaultSoil.Depth;
