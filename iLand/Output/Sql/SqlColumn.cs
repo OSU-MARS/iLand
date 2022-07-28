@@ -1,6 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 
-namespace iLand.Output
+namespace iLand.Output.Sql
 {
     public class SqlColumn
     {

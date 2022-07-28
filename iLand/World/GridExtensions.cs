@@ -26,15 +26,15 @@ namespace iLand.World
 
         public static float Max(this Grid<float> grid)
         {
-            float maxv = float.MinValue;
+            float maxValue = Single.MinValue;
             for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
             {
                 for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
                 {
-                    maxv = Math.Max(maxv, grid[xIndex, yIndex]);
+                    maxValue = MathF.Max(maxValue, grid[xIndex, yIndex]);
                 }
             }
-            return maxv;
+            return maxValue;
         }
 
         public static void Multiply(this Grid<float> grid, float factor)
@@ -60,19 +60,5 @@ namespace iLand.World
             }
             return total;
         }
-
-        //public static Grid<double> ToDouble(this Grid<int> grid)
-        //{
-        //    Grid<double> doubleGrid = new Grid<double>();
-        //    doubleGrid.Setup(grid.PhysicalExtent, grid.CellSize);
-        //    for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
-        //    {
-        //        for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
-        //        {
-        //            doubleGrid[xIndex, yIndex] = grid[xIndex, yIndex];
-        //        }
-        //    }
-        //    return doubleGrid;
-        //}
     }
 }

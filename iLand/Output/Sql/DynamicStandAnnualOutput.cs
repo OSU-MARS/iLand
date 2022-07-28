@@ -1,4 +1,5 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
+using iLand.Simulation;
 using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
@@ -8,8 +9,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Model = iLand.Simulation.Model;
 
-namespace iLand.Output
+namespace iLand.Output.Sql
 {
     public class DynamicStandAnnualOutput : AnnualOutput
     {
@@ -36,20 +38,20 @@ namespace iLand.Output
 
             this.Name = "dynamic stand output by species/RU";
             this.TableName = "dynamicstand";
-            this.Description = "Userdefined outputs for tree aggregates for each stand or species." + System.Environment.NewLine +
+            this.Description = "Userdefined outputs for tree aggregates for each stand or species." + Environment.NewLine +
                                "Technically, each field is calculated 'live', i.e. it is looped over all trees, and eventually the statistics (percentiles) " +
-                               "are calculated. The aggregated values are not scaled to any area unit." + System.Environment.NewLine +
-                               "!!!Specifying the aggregation" + System.Environment.NewLine +
+                               "are calculated. The aggregated values are not scaled to any area unit." + Environment.NewLine +
+                               "!!!Specifying the aggregation" + Environment.NewLine +
                                "The ''by_species'' and ''by_ru'' option allow to define the aggregation level. When ''by_species'' is set to ''true'', " +
                                "a row for each species will be created, otherwise all trees of all species are aggregated to one row. " +
-                               "Similarly, ''by_ru''=''true'' means outputs for each resource unit, while a value of ''false'' aggregates over the full project area." + System.Environment.NewLine +
-                               "!!!Specifying filters" + System.Environment.NewLine +
+                               "Similarly, ''by_ru''=''true'' means outputs for each resource unit, while a value of ''false'' aggregates over the full project area." + Environment.NewLine +
+                               "!!!Specifying filters" + Environment.NewLine +
                                "You can use the 'rufilter' and 'treefilter' XML settings to reduce the limit the output to a subset of resource units / trees. " +
                                "Both filters are valid expressions (for resource unit level and tree level, respectively). For example, a ''treefilter'' of 'speciesindex=0' reduces the output to just one species.\n" +
-                               "The ''condition'' filter is (when present) evaluated and the output is only executed when ''condition'' is true (variable='year') This can be used to constrain the output to specific years (e.g. 'in(year,100,200,300)' produces output only for the given year." + System.Environment.NewLine +
-                               "!!!Specifying data columns" + System.Environment.NewLine +
+                               "The ''condition'' filter is (when present) evaluated and the output is only executed when ''condition'' is true (variable='year') This can be used to constrain the output to specific years (e.g. 'in(year,100,200,300)' produces output only for the given year." + Environment.NewLine +
+                               "!!!Specifying data columns" + Environment.NewLine +
                                "Each field is defined as: ''field.aggregatio''n (separated by a dot). A ''field'' is a valid [Expression]. ''Aggregation'' is one of the following:  " +
-                               "mean, sum, min, max, p25, p50, p75, p5, 10, p90, p95 (pXX=XXth percentile), sd (std.dev.)." + System.Environment.NewLine +
+                               "mean, sum, min, max, p25, p50, p75, p5, 10, p90, p95 (pXX=XXth percentile), sd (std.dev.)." + Environment.NewLine +
                                "Complex expression are allowed, e.g: if(dbh>50,1,0).sum (-> counts trees with dbh>50)";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnit());
@@ -58,24 +60,24 @@ namespace iLand.Output
             // other colums are added during setup...
         }
 
-        public override void Setup(Model model)
+        public override void Setup(Project projectFile, SimulationState simulationState)
         {
-            string? columnString = model.Project.Output.Annual.DynamicStand.Columns;
+            string? columnString = projectFile.Output.Sql.DynamicStand.Columns;
             if (String.IsNullOrEmpty(columnString))
             {
                 return;
             }
 
-            this.resourceUnitFilter.SetExpression(model.Project.Output.Annual.DynamicStand.ResourceUnitFilter);
-            this.treeFilter.SetExpression(model.Project.Output.Annual.DynamicStand.TreeFilter);
-            this.yearFilter.SetExpression(model.Project.Output.Annual.DynamicStand.Condition);
+            this.resourceUnitFilter.SetExpression(projectFile.Output.Sql.DynamicStand.ResourceUnitFilter);
+            this.treeFilter.SetExpression(projectFile.Output.Sql.DynamicStand.TreeFilter);
+            this.yearFilter.SetExpression(projectFile.Output.Sql.DynamicStand.Condition);
             // clear columns
             this.Columns.RemoveRange(4, Columns.Count - 4);
             this.fieldList.Clear();
 
             // setup fields
             // int pos = 0;
-            TreeWrapper treeWrapper = new(model);
+            TreeVariableAccessor treeWrapper = new(simulationState);
             Regex regex = new("([^\\.]+).(\\w+)[,\\s]*"); // two parts: before dot and after dot, and , + whitespace at the end
             MatchCollection columns = regex.Matches(columnString);
             foreach (Match column in columns)
@@ -107,7 +109,7 @@ namespace iLand.Output
                 string sqlColumnName = String.Format("{0}_{1}", columnVariable, columnVariableAggregation);
                 sqlColumnName = Regex.Replace(sqlColumnName, "[\\[\\]\\,\\(\\)<>=!\\s]", "_");
                 sqlColumnName = sqlColumnName.Replace("__", "_");
-                this.Columns.Add(new SqlColumn(sqlColumnName, columnVariable, SqliteType.Real));
+                this.Columns.Add(new(sqlColumnName, columnVariable, SqliteType.Real));
             }
         }
 
@@ -119,14 +121,15 @@ namespace iLand.Output
             }
             if (this.yearFilter.IsEmpty == false)
             {
-                if (this.yearFilter.Evaluate(model.CurrentYear) != 0.0)
+                int currentSimulationYear = model.SimulationState.CurrentYear;
+                if (this.yearFilter.Evaluate(currentSimulationYear) != 0.0)
                 {
                     return;
                 }
             }
 
-            bool perSpecies = model.Project.Output.Annual.DynamicStand.BySpecies;
-            bool perRU = model.Project.Output.Annual.DynamicStand.ByResourceUnit;
+            bool perSpecies = model.Project.Output.Sql.DynamicStand.BySpecies;
+            bool perRU = model.Project.Output.Sql.DynamicStand.ByResourceUnit;
             if (perRU)
             {
                 // when looping over resource units, do it differently (old way)
@@ -139,8 +142,8 @@ namespace iLand.Output
             {
                 throw new NotImplementedException("Generation of a unique list of species from multiple species sets is not currently supported.");
             }
-            List<double> fieldData = new(); //statistics data
-            TreeWrapper treeWrapper = new(model);
+            List<float> fieldData = new(); //statistics data
+            TreeVariableAccessor treeWrapper = new(model.SimulationState);
             Expression customExpression = new();
 
             TreeSpeciesSet treeSpeciesSet = model.Landscape.SpeciesSetsByTableName.First().Value;
@@ -198,7 +201,7 @@ namespace iLand.Output
                     // constant values (if not already present)
                     if (columnIndex == 0)
                     {
-                        insertRow.Parameters[0].Value = model.CurrentYear;
+                        insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
                         insertRow.Parameters[1].Value = -1;
                         insertRow.Parameters[2].Value = -1;
                         if (perSpecies)
@@ -214,7 +217,7 @@ namespace iLand.Output
 
                     // calculate statistics
                     fieldStatistics.SetData(fieldData);
-                    double value = field.AggregationIndex switch
+                    float value = field.AggregationIndex switch
                     {
                         0 => fieldStatistics.Mean,
                         1 => fieldStatistics.Sum,
@@ -228,7 +231,7 @@ namespace iLand.Output
                         9 => fieldStatistics.GetPercentile(90),
                         10 => fieldStatistics.GetPercentile(95),
                         11 => fieldStatistics.GetStandardDeviation(),
-                        _ => 0.0,
+                        _ => 0.0F,
                     };
                     // add current value to output
                     insertRow.Parameters[++columnIndex].Value = value;
@@ -253,26 +256,26 @@ namespace iLand.Output
                 return; // nothing to do if no fields to log
             }
 
-            List<double> data = new(); //statistics data
+            List<float> fieldData = new(); //statistics data
             SummaryStatistics fieldStatistics = new(); // statistcs helper class
-            TreeWrapper treeWrapper = new(model);
-            ResourceUnitWrapper ruWrapper = new(model);
+            TreeVariableAccessor treeWrapper = new(model.SimulationState);
+            ResourceUnitVariableAccessor ruWrapper = new(model.SimulationState);
             this.resourceUnitFilter.Wrapper = ruWrapper;
 
             Expression fieldExpression = new();
-            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
+            foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
                 // test filter
                 if (this.resourceUnitFilter.IsEmpty == false)
                 {
-                    ruWrapper.ResourceUnit = ru;
-                    if (this.resourceUnitFilter.Execute() == 0.0)
+                    ruWrapper.ResourceUnit = resourceUnit;
+                    if (this.resourceUnitFilter.Execute() == 0.0F)
                     {
                         continue;
                     }
                 }
 
-                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     if (bySpecies && ruSpecies.StatisticsLive.TreeCount == 0)
                     {
@@ -289,9 +292,9 @@ namespace iLand.Output
                             fieldExpression.SetExpression(field.Expression);
                             fieldExpression.Wrapper = treeWrapper;
                         }
-                        data.Clear();
+                        fieldData.Clear();
                         bool hasTrees = false;
-                        Trees treesOfSpecies = ru.Trees.TreesBySpeciesID[ruSpecies.Species.ID];
+                        Trees treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID[ruSpecies.Species.ID];
                         treeWrapper.Trees = treesOfSpecies;
                         for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                         {
@@ -309,7 +312,7 @@ namespace iLand.Output
                             if (!this.treeFilter.IsEmpty)
                             {
                                 this.treeFilter.Wrapper = treeWrapper;
-                                if (this.treeFilter.Execute() == 0.0)
+                                if (this.treeFilter.Execute() == 0.0F)
                                 {
                                     continue;
                                 }
@@ -318,11 +321,11 @@ namespace iLand.Output
 
                             if (field.VariableIndex >= 0)
                             {
-                                data.Add(treeWrapper.GetValue(field.VariableIndex));
+                                fieldData.Add(treeWrapper.GetValue(field.VariableIndex));
                             }
                             else
                             {
-                                data.Add(fieldExpression.Execute());
+                                fieldData.Add(fieldExpression.Execute());
                             }
                         }
 
@@ -334,9 +337,9 @@ namespace iLand.Output
 
                         if (columnIndex == 0)
                         {
-                            insertRow.Parameters[0].Value = model.CurrentYear;
-                            insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
-                            insertRow.Parameters[2].Value = ru.ID;
+                            insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                            insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
+                            insertRow.Parameters[2].Value = resourceUnit.ID;
                             if (bySpecies)
                             {
                                 insertRow.Parameters[3].Value = ruSpecies.Species.ID;
@@ -349,8 +352,8 @@ namespace iLand.Output
                         }
 
                         // calculate statistics
-                        fieldStatistics.SetData(data);
-                        double value = field.AggregationIndex switch
+                        fieldStatistics.SetData(fieldData);
+                        float value = field.AggregationIndex switch
                         {
                             0 => fieldStatistics.Mean,
                             1 => fieldStatistics.Sum,
@@ -364,7 +367,7 @@ namespace iLand.Output
                             9 => fieldStatistics.GetPercentile(90),
                             10 => fieldStatistics.GetPercentile(95),
                             11 => fieldStatistics.GetStandardDeviation(),
-                            _ => 0.0,
+                            _ => 0.0F,
                         };
                         // add current value to output
                         insertRow.Parameters[++columnIndex].Value = value;

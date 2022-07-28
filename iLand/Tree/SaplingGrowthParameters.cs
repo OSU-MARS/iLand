@@ -21,11 +21,11 @@ namespace iLand.Tree
         {
             this.BrowsingProbability = 0.0F;
             this.HeightDiameterRatio = 80.0F;
-            this.HeightGrowthPotential = new Expression();
+            this.HeightGrowthPotential = new();
             this.MaxStressYears = 3;
             this.ReinekeR = 1450.0F;
             this.ReferenceRatio = 1.0F;
-            this.RepresentedClasses = new List<float>();
+            this.RepresentedClasses = new();
             this.SproutGrowth = 0.0F;
             this.StressThreshold = 0.1F;
         }

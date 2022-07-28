@@ -3,7 +3,7 @@ using iLand.World;
 using System;
 using System.Diagnostics;
 
-namespace iLand.Output
+namespace iLand.Output.Sql
 {
     internal class LandscapeTreeSpeciesStatistics
     {
@@ -22,29 +22,31 @@ namespace iLand.Output
         public float TreeNpp { get; private set; }
         public float TreeNppAboveground { get; private set; }
 
-        public void AddResourceUnit(ResourceUnit ru, ResourceUnitTreeStatistics ruSpeciesStats)
+        public void AddResourceUnit(ResourceUnit resourceUnit, ResourceUnitTreeStatistics ruLiveTreeStatisticsForSpecies)
         {
-            if (ruSpeciesStats.IsPerHectare == false)
+            if (ruLiveTreeStatisticsForSpecies.IsPerHectare == false)
             {
-                throw new ArgumentOutOfRangeException(nameof(ruSpeciesStats), "Attempt to aggregate species statistics which are not per hectare.");
+                throw new ArgumentOutOfRangeException(nameof(ruLiveTreeStatisticsForSpecies), "Attempt to aggregate species statistics which are not per hectare.");
             }
-            this.totalAreaInLandscape += ru.AreaInLandscape;
-            this.totalAreaWithTrees += ru.AreaWithTrees;
 
-            this.AverageDbh += ruSpeciesStats.AverageDbh * ru.AreaInLandscape;
-            this.AverageHeight += ruSpeciesStats.AverageHeight * ru.AreaInLandscape;
-            this.BasalArea += ruSpeciesStats.BasalArea * ru.AreaInLandscape;
-            this.CohortCount += ruSpeciesStats.CohortCount * ru.AreaInLandscape;
-            this.LeafAreaIndex += ruSpeciesStats.LeafArea;
-            this.LiveAndSnagStemVolume += ruSpeciesStats.LiveAndSnagStemVolume * ru.AreaInLandscape;
-            this.LiveStemVolume += ruSpeciesStats.StemVolume * ru.AreaInLandscape;
-            this.TreeCount += ruSpeciesStats.TreeCount * ru.AreaInLandscape;
-            this.TotalCarbon += ruSpeciesStats.GetTotalCarbon() * ru.AreaInLandscape;
-            this.TreeNpp += ruSpeciesStats.TreeNpp * ru.AreaInLandscape;
-            this.TreeNppAboveground += ruSpeciesStats.TreeNppAboveground * ru.AreaInLandscape;
+            float ruAreaInLandscape = resourceUnit.AreaInLandscapeInM2;
+            this.totalAreaInLandscape += ruAreaInLandscape;
+            this.totalAreaWithTrees += resourceUnit.AreaWithTreesInM2;
+
+            this.AverageDbh += ruLiveTreeStatisticsForSpecies.AverageDbh * ruAreaInLandscape;
+            this.AverageHeight += ruLiveTreeStatisticsForSpecies.AverageHeight * ruAreaInLandscape;
+            this.BasalArea += ruLiveTreeStatisticsForSpecies.BasalArea * ruAreaInLandscape;
+            this.CohortCount += ruLiveTreeStatisticsForSpecies.CohortCount * ruAreaInLandscape;
+            this.LeafAreaIndex += ruLiveTreeStatisticsForSpecies.LeafArea;
+            this.LiveAndSnagStemVolume += ruLiveTreeStatisticsForSpecies.LiveAndSnagStemVolume * ruAreaInLandscape;
+            this.LiveStemVolume += ruLiveTreeStatisticsForSpecies.StemVolume * ruAreaInLandscape;
+            this.TreeCount += ruLiveTreeStatisticsForSpecies.TreeCount * ruAreaInLandscape;
+            this.TotalCarbon += ruLiveTreeStatisticsForSpecies.GetTotalCarbon() * ruAreaInLandscape;
+            this.TreeNpp += ruLiveTreeStatisticsForSpecies.TreeNpp * ruAreaInLandscape;
+            this.TreeNppAboveground += ruLiveTreeStatisticsForSpecies.TreeNppAboveground * ruAreaInLandscape;
         }
 
-        public void ConvertSumsToAreaWeightedAverages()
+        public void ConvertIncrementalSumsToAreaWeightedAverages()
         {
             Debug.Assert(this.totalAreaInLandscape > 0.0F);
             this.AverageDbh /= this.totalAreaInLandscape;

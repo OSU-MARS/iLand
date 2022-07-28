@@ -3,7 +3,7 @@
     internal struct ExpressionToken
     {
         public ExpressionTokenType Type { get; set; }
-        public double Value { get; set; }
+        public float Value { get; set; }
         public int Index { get; set; }
 
         public override string ToString()

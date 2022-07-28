@@ -18,7 +18,7 @@ namespace iLand.World
             float percentSand = environment.SoilSand;
             float percentSilt = environment.SoilSilt;
             float percentClay = environment.SoilClay;
-            if (Math.Abs(100.0 - (percentSand + percentSilt + percentClay)) > 0.01)
+            if (MathF.Abs(100.0F - (percentSand + percentSilt + percentClay)) > 0.01F)
             {
                 throw new NotSupportedException("Soil textures do not sum to 100% within 0.01% for resource unit " + environment.ResourceUnitID + ". Sand: " + percentSand + "%, silt: " + percentSilt + "%, clay: " + percentClay + "%.");
             }

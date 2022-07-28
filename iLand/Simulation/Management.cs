@@ -3,7 +3,6 @@ using iLand.Tree;
 using iLand.World;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 
 namespace iLand.Simulation
@@ -16,28 +15,28 @@ namespace iLand.Simulation
         */
     public class Management
     {
-        private List<(Trees Trees, List<int> LiveTreeIndices)> mTreesInMostRecentlyLoadedStand;
+        private List<(Trees Trees, List<int> LiveTreeIndices)> treesInMostRecentlyLoadedStand;
 
         // property getter & setter for removal fractions
         /// removal fraction foliage: 0: 0% will be removed, 1: 100% will be removed from the forest by management operations (i.e. calls to manage() instead of kill())
-        private readonly float mRemoveFoliage;
+        private readonly float removalFractionFoliage;
         /// removal fraction branch biomass: 0: 0% will be removed, 1: 100% will be removed from the forest by management operations (i.e. calls to manage() instead of kill())
-        private readonly float mRemoveBranch;
+        private readonly float removalFractionBranch;
         /// removal float stem biomass: 0: 0% will be removed, 1: 100% will be removed from the forest by management operations (i.e. calls to manage() instead of kill())
-        private readonly float mRemoveStem;
+        private readonly float removalFractionStem;
 
         public Management()
         {
             // default values for removal fractions
             // 100% of the stem, 0% of foliage and branches
-            this.mRemoveFoliage = 0.0F;
-            this.mRemoveBranch = 0.0F;
-            this.mRemoveStem = 1.0F;
-            this.mTreesInMostRecentlyLoadedStand = new List<(Trees, List<int>)>();
+            this.removalFractionFoliage = 0.0F;
+            this.removalFractionBranch = 0.0F;
+            this.removalFractionStem = 1.0F;
+            this.treesInMostRecentlyLoadedStand = new();
         }
 
         // return number of trees currently in list
-        public int Count() { return this.mTreesInMostRecentlyLoadedStand.Count; }
+        public int Count() { return this.treesInMostRecentlyLoadedStand.Count; }
         /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
         // public float Mean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
         /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
@@ -71,8 +70,8 @@ namespace iLand.Simulation
 
         public int KillAllInCurrentStand(Model model, bool removeBiomassFractions)
         {
-            int initialTreeCount = this.mTreesInMostRecentlyLoadedStand.Count;
-            foreach ((Trees Trees, List<int> LiveTreeIndices) treesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
+            int initialTreeCount = this.treesInMostRecentlyLoadedStand.Count;
+            foreach ((Trees Trees, List<int> LiveTreeIndices) treesOfSpecies in this.treesInMostRecentlyLoadedStand)
             {
                 // TODO: doesn't check IsCutDown() flag?
                 Trees trees = treesOfSpecies.Trees;
@@ -80,7 +79,7 @@ namespace iLand.Simulation
                 {
                     if (removeBiomassFractions)
                     {
-                        trees.Remove(model, treeIndex, this.mRemoveFoliage, this.mRemoveBranch, this.mRemoveStem);
+                        trees.Remove(model, treeIndex, this.removalFractionFoliage, this.removalFractionBranch, this.removalFractionStem);
                     }
                     else
                     {
@@ -88,14 +87,14 @@ namespace iLand.Simulation
                     }
                 }
             }
-            mTreesInMostRecentlyLoadedStand.Clear();
+            treesInMostRecentlyLoadedStand.Clear();
             return initialTreeCount;
         }
 
         public int LethalDisturbanceInCurrentStand(Model model)
         {
             int treeCount = 0;
-            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
+            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
             {
                 Trees trees = liveTreesOfSpecies.Trees;
                 foreach (int treeIndex in liveTreesOfSpecies.LiveTreeIndices)
@@ -105,7 +104,7 @@ namespace iLand.Simulation
                     ++treeCount;
                 }
             }
-            this.mTreesInMostRecentlyLoadedStand.Clear(); // TODO: why?
+            this.treesInMostRecentlyLoadedStand.Clear(); // TODO: why?
             return treeCount;
         }
 
@@ -121,7 +120,7 @@ namespace iLand.Simulation
 
         public void CutAndDropAllTreesInStand(Model model)
         {
-            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
+            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
             {
                 Trees trees = liveTreesOfSpecies.Trees;
                 foreach (int liveTreeIndex in liveTreesOfSpecies.LiveTreeIndices)
@@ -130,7 +129,7 @@ namespace iLand.Simulation
                     trees.MarkTreeAsDead(model, liveTreeIndex);
                 }
             }
-            this.mTreesInMostRecentlyLoadedStand.Clear();
+            this.treesInMostRecentlyLoadedStand.Clear();
         }
 
         //private int RemovePercentageFromStand(Model model, int pctFrom, int pctTo, int maxTreesToKill, bool removeBiomassFractions)
@@ -238,16 +237,16 @@ namespace iLand.Simulation
           */
         private int RemoveTrees(Model model, string treeSelectionExpressionString, float removalProbabilityIfSelected, bool management)
         {
-            TreeWrapper treeWrapper = new(model);
+            TreeVariableAccessor treeWrapper = new(model.SimulationState);
             Expression selectionExpression = new(treeSelectionExpressionString, treeWrapper);
             selectionExpression.EnableIncrementalSum();
             int treesRemoved = 0;
-            for (int speciesIndex = 0; speciesIndex < mTreesInMostRecentlyLoadedStand.Count; ++speciesIndex)
+            for (int speciesIndex = 0; speciesIndex < treesInMostRecentlyLoadedStand.Count; ++speciesIndex)
             {
-                Trees treesOfSpecies = mTreesInMostRecentlyLoadedStand[speciesIndex].Trees;
+                Trees treesOfSpecies = treesInMostRecentlyLoadedStand[speciesIndex].Trees;
                 treeWrapper.Trees = treesOfSpecies;
                 // if expression evaluates to true and if random number below threshold...
-                List<int> treeIndices = mTreesInMostRecentlyLoadedStand[speciesIndex].LiveTreeIndices;
+                List<int> treeIndices = treesInMostRecentlyLoadedStand[speciesIndex].LiveTreeIndices;
                 for (int removalIndex = 0; removalIndex < treeIndices.Count; ++removalIndex)
                 {
                     int treeIndex = treeIndices[removalIndex];
@@ -256,7 +255,7 @@ namespace iLand.Simulation
                     {
                         if (management)
                         {
-                            treesOfSpecies.Remove(model, treeIndex, mRemoveFoliage, mRemoveBranch, mRemoveStem);
+                            treesOfSpecies.Remove(model, treeIndex, removalFractionFoliage, removalFractionBranch, removalFractionStem);
                         }
                         else
                         {
@@ -278,8 +277,8 @@ namespace iLand.Simulation
         // calculate aggregates for all trees in the internal list
         //private float AggregateFunction(GlobalSettings globalSettings, string expression, string filter, string type)
         //{
-        //    TreeWrapper tw = new TreeWrapper();
-        //    Expression expr = new Expression(expression, tw);
+        //    TreeWrapper tw = new();
+        //    Expression expr = new(expression, tw);
 
         //    float sum = 0.0;
         //    int n = 0;
@@ -297,7 +296,7 @@ namespace iLand.Simulation
         //    else
         //    {
         //        // with filtering
-        //        Expression filter_expr = new Expression(filter, tw);
+        //        Expression filter_expr = new(filter, tw);
         //        filter_expr.EnableIncrementalSum();
         //        for (int tp = 0; tp < mTrees.Count; ++tp)
         //        {
@@ -323,14 +322,14 @@ namespace iLand.Simulation
 
         public void RunYear()
         {
-            this.mTreesInMostRecentlyLoadedStand.Clear();
+            this.treesInMostRecentlyLoadedStand.Clear();
         }
 
         public int FilterByTreeID(List<int> treeIDlist)
         {
             List<(Trees Trees, List<int>)> filteredTrees = new();
             int treesSelected = 0;
-            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.mTreesInMostRecentlyLoadedStand)
+            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
             {
                 Trees trees = liveTreesOfSpecies.Trees;
                 List<int>? treeIndicesInSpecies = null;
@@ -343,7 +342,7 @@ namespace iLand.Simulation
                         {
                             if (treeIndicesInSpecies == null)
                             {
-                                treeIndicesInSpecies = new List<int>();
+                                treeIndicesInSpecies = new();
                                 filteredTrees.Add(new(trees, treeIndicesInSpecies));
                             }
 
@@ -354,24 +353,24 @@ namespace iLand.Simulation
                 }
             }
 
-            this.mTreesInMostRecentlyLoadedStand = filteredTrees;
+            this.treesInMostRecentlyLoadedStand = filteredTrees;
             return treesSelected;
         }
 
         public int Filter(Model model, string filter)
         {
-            TreeWrapper treeWrapper = new(model);
+            TreeVariableAccessor treeWrapper = new(model.SimulationState);
             Expression filterExpression = new(filter, treeWrapper);
             filterExpression.EnableIncrementalSum();
 
-            for (int treesOfSpeciesIndex = 0; treesOfSpeciesIndex < this.mTreesInMostRecentlyLoadedStand.Count; ++treesOfSpeciesIndex)
+            for (int treesOfSpeciesIndex = 0; treesOfSpeciesIndex < this.treesInMostRecentlyLoadedStand.Count; ++treesOfSpeciesIndex)
             {
-                treeWrapper.Trees = this.mTreesInMostRecentlyLoadedStand[treesOfSpeciesIndex].Trees;
-                List<int> standTreeIndices = this.mTreesInMostRecentlyLoadedStand[treesOfSpeciesIndex].LiveTreeIndices;
+                treeWrapper.Trees = this.treesInMostRecentlyLoadedStand[treesOfSpeciesIndex].Trees;
+                List<int> standTreeIndices = this.treesInMostRecentlyLoadedStand[treesOfSpeciesIndex].LiveTreeIndices;
                 for (int standTreeIndex = 0; standTreeIndex < standTreeIndices.Count; ++standTreeIndex)
                 {
                     treeWrapper.TreeIndex = standTreeIndices[standTreeIndex];
-                    double value = filterExpression.Evaluate(treeWrapper);
+                    float value = filterExpression.Evaluate(treeWrapper);
                     // keep if expression returns true (1)
                     bool keep = value == 1.0;
                     // if value is >0 (i.e. not "false"), then draw a random number
@@ -392,14 +391,14 @@ namespace iLand.Simulation
 
                 if (standTreeIndices.Count == 0)
                 {
-                    this.mTreesInMostRecentlyLoadedStand.RemoveAt(treesOfSpeciesIndex);
+                    this.treesInMostRecentlyLoadedStand.RemoveAt(treesOfSpeciesIndex);
                     --treesOfSpeciesIndex;
                 }
             }
 
             // int totalTreesInStand = mTreesInMostRecentlyLoadedStand.Count;
             // Debug.WriteLine("filtering with " + filter + " N=" + totalTreesInStand + "/" + mTreesInMostRecentlyLoadedStand.Count + " trees (before/after filtering).");
-            return this.mTreesInMostRecentlyLoadedStand.Count;
+            return this.treesInMostRecentlyLoadedStand.Count;
         }
 
         //public int LoadResourceUnit(int ruindex)
@@ -423,9 +422,9 @@ namespace iLand.Simulation
 
         //private int Load(string filter, Model model)
         //{
-        //    TreeWrapper tw = new TreeWrapper();
+        //    TreeWrapper tw = new();
         //    mTrees.Clear();
-        //    AllTreeIterator at = new AllTreeIterator(model);
+        //    AllTreeIterator at = new(model);
         //    if (String.IsNullOrEmpty(filter))
         //    {
         //        for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
@@ -438,7 +437,7 @@ namespace iLand.Simulation
         //    }
         //    else
         //    {
-        //        Expression expr = new Expression(filter, tw);
+        //        Expression expr = new(filter, tw);
         //        expr.EnableIncrementalSum();
         //        Debug.WriteLine("filtering with " + filter);
         //        for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
@@ -495,8 +494,8 @@ namespace iLand.Simulation
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
-                ResourceUnit ru = ruAreas[areaIndex].Item1;
-                if (ru.Soil == null)
+                ResourceUnit resourceUnit = ruAreas[areaIndex].Item1;
+                if (resourceUnit.Soil == null)
                 {
                     throw new NotSupportedException("Soil is not enabled on resource unit. Down wood, litter, and soil carbon cannot be removed.");
                 }
@@ -506,14 +505,14 @@ namespace iLand.Simulation
                 // swd
                 if (standingWoodyFraction > 0.0F)
                 {
-                    if (ru.Snags == null)
+                    if (resourceUnit.Snags == null)
                     {
                         throw new NotSupportedException("Snags are not enabled on resource unit. Standing woody carbon cannot be removed.");
                     }
-                    ru.Snags.RemoveCarbon(standingWoodyFraction * areaFactor);
+                    resourceUnit.Snags.RemoveCarbon(standingWoodyFraction * areaFactor);
                 }
                 // soil pools
-                ru.Soil.RemoveBiomassFractions(downWoodFraction * areaFactor, litterFraction * areaFactor, soilFraction * areaFactor);
+                resourceUnit.Soil.RemoveBiomassFractions(downWoodFraction * areaFactor, litterFraction * areaFactor, soilFraction * areaFactor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
             //Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));
@@ -535,15 +534,15 @@ namespace iLand.Simulation
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
-                ResourceUnit ru = ruAreas[areaIndex].Item1;
-                if (ru.Snags == null)
+                ResourceUnit resourceUnit = ruAreas[areaIndex].Item1;
+                if (resourceUnit.Snags == null)
                 {
                     throw new NotSupportedException("Snags are not enabled on resource unit so snag to slash conversion is not possible.");
                 }
 
                 float area_factor = ruAreas[areaIndex].Item2; // 0..1
                 //totalArea += area_factor;
-                ru.Snags.TransferStandingWoodToSoil(slashFraction * area_factor);
+                resourceUnit.Snags.TransferStandingWoodToSoil(slashFraction * area_factor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
             // Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));
@@ -559,7 +558,7 @@ namespace iLand.Simulation
             }
             if (mapGrid.IsSetup())
             {
-                this.mTreesInMostRecentlyLoadedStand = mapGrid.GetLivingTreesInStand(standID);
+                this.treesInMostRecentlyLoadedStand = mapGrid.GetLivingTreesInStand(standID);
             }
             else
             {
@@ -583,8 +582,8 @@ namespace iLand.Simulation
         //public void Sort(Model model, string sortExpressionString)
         //{
         //    // TODO: replace sort expression with lambda expression?
-        //    TreeWrapper treeWrapper = new TreeWrapper();
-        //    Expression sorter = new Expression(sortExpressionString, treeWrapper);
+        //    TreeWrapper treeWrapper = new();
+        //    Expression sorter = new(sortExpressionString, treeWrapper);
         //    // fill the "value" part of the tree storage with a value for each tree
         //    for (int i = 0; i < mTreesInMostRecentlyLoadedStand.Count; ++i)
         //    {

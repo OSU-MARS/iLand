@@ -24,20 +24,6 @@ namespace iLand.Tool
             return value;
         }
 
-        public static double Limit(double value, double min, double max)
-        {
-            Debug.Assert(max > min);
-            if (value < min)
-            {
-                return min;
-            }
-            if (value > max)
-            {
-                return max;
-            }
-            return value;
-        }
-
         public static int Limit(int value, int min, int max)
         {
             Debug.Assert(max > min);

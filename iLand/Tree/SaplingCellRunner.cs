@@ -23,7 +23,7 @@ namespace iLand.Tree
             this.landscape = landscape;
             this.standID = standID;
             RectangleF standBoundingBox = landscape.StandRaster.GetBoundingBox(standID);
-            this.standLightEnumerator = new GridWindowEnumerator<float>(landscape.LightGrid, standBoundingBox);
+            this.standLightEnumerator = new(landscape.LightGrid, standBoundingBox);
 
             this.RU = null;
         }

@@ -9,8 +9,7 @@ namespace iLand.Tree
 {
     public class ResourceUnitTrees
     {
-        private readonly bool retainStandStatisticsInMemory;
-        private readonly ResourceUnit ru;
+        private readonly ResourceUnit resourceUnit;
 
         public float AggregatedLightWeightedLeafArea { get; private set; } // sum of lightresponse*LA of the current unit
         public float AverageLeafAreaWeightedAgingFactor { get; private set; } // used by WaterCycle
@@ -26,10 +25,9 @@ namespace iLand.Tree
         public Dictionary<int, ResourceUnitTreeStatistics> TreeStatisticsByStandID { get; private init; }
         public TreeSpeciesSet TreeSpeciesSet { get; private init; } // get SpeciesSet this RU links to.
 
-        public ResourceUnitTrees(Project projectFile, ResourceUnit ru, TreeSpeciesSet treeSpeciesSet)
+        public ResourceUnitTrees(ResourceUnit resourceUnit, TreeSpeciesSet treeSpeciesSet)
         {
-            this.retainStandStatisticsInMemory = projectFile.Output.Memory.ResourceUnitTrajectories.Enabled;
-            this.ru = ru;
+            this.resourceUnit = resourceUnit;
 
             this.AggregatedLightWeightedLeafArea = 0.0F;
             this.AverageLeafAreaWeightedAgingFactor = 0.0F;
@@ -37,15 +35,15 @@ namespace iLand.Tree
             this.HasDeadTrees = false;
             this.PhotosyntheticallyActiveArea = 0.0F;
             this.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea = 0.0F;
-            this.SpeciesAvailableOnResourceUnit = new List<ResourceUnitTreeSpecies>(treeSpeciesSet.Count);
-            this.TreeStatisticsByStandID = new Dictionary<int, ResourceUnitTreeStatistics>();
-            this.StatisticsForAllSpeciesAndStands = new ResourceUnitTreeStatistics(ru)
+            this.SpeciesAvailableOnResourceUnit = new(treeSpeciesSet.Count);
+            this.TreeStatisticsByStandID = new();
+            this.StatisticsForAllSpeciesAndStands = new(resourceUnit)
             {
                 IsPerHectare = true
             };
             this.TotalLeafArea = 0.0F;
             this.TotalLightWeightedLeafArea = 0.0F;
-            this.TreesBySpeciesID = new Dictionary<string, Trees>();
+            this.TreesBySpeciesID = new();
             this.TreeSpeciesSet = treeSpeciesSet;
 
             for (int index = 0; index < treeSpeciesSet.Count; ++index)
@@ -53,7 +51,7 @@ namespace iLand.Tree
                 TreeSpecies species = treeSpeciesSet[index];
                 Debug.Assert(species.Index == index);
 
-                ResourceUnitTreeSpecies ruSpecies = new(species, ru);
+                ResourceUnitTreeSpecies ruSpecies = new(species, resourceUnit);
                 this.SpeciesAvailableOnResourceUnit.Add(ruSpecies);
             }
         }
@@ -93,7 +91,7 @@ namespace iLand.Tree
                     throw new ArgumentOutOfRangeException(nameof(speciesID));
                 }
 
-                treesOfSpecies = new Trees(landscape, this.ru, this.SpeciesAvailableOnResourceUnit[speciesIndex].Species);
+                treesOfSpecies = new Trees(landscape, this.resourceUnit, this.SpeciesAvailableOnResourceUnit[speciesIndex].Species);
                 this.TreesBySpeciesID.Add(speciesID, treesOfSpecies);
             }
             Debug.Assert(String.Equals(treesOfSpecies.Species.ID, speciesID, StringComparison.OrdinalIgnoreCase));
@@ -121,7 +119,7 @@ namespace iLand.Tree
             // }
             if ((this.AverageLeafAreaWeightedAgingFactor < 0.0F) || (this.AverageLeafAreaWeightedAgingFactor > 1.0F))
             {
-                throw new ArithmeticException("Average aging invalid: RU-index " + this.ru.ResourceUnitGridIndex + ", LAI " + this.StatisticsForAllSpeciesAndStands.LeafAreaIndex);
+                throw new ArithmeticException("Average aging invalid: RU-index " + this.resourceUnit.ResourceUnitGridIndex + ", LAI " + this.StatisticsForAllSpeciesAndStands.LeafAreaIndex);
             }
         }
 
@@ -134,7 +132,7 @@ namespace iLand.Tree
         // function is called after finishing the individual growth / mortality.
         public void AfterTreeGrowth()
         {
-            ru.Trees.RemoveDeadTrees();
+            resourceUnit.Trees.RemoveDeadTrees();
             this.AverageAging();
         }
 
@@ -354,14 +352,7 @@ namespace iLand.Tree
                         {
                             if (this.TreeStatisticsByStandID.TryGetValue(standID, out currentStandStatistics) == false)
                             {
-                                if (this.retainStandStatisticsInMemory)
-                                {
-                                    currentStandStatistics = new ResourceUnitTrajectory(this.ru);
-                                }
-                                else
-                                {
-                                    currentStandStatistics = new ResourceUnitTreeStatistics(this.ru);
-                                }
+                                currentStandStatistics = new(this.resourceUnit);
                                 this.TreeStatisticsByStandID.Add(standID, currentStandStatistics);
                             }
 

@@ -32,12 +32,12 @@ namespace iLand.World
         public GrassCover()
         {
             this.algorithm = GrassAlgorithm.CellOnOff;
-            this.cellProbabilityDensityFunction = new RandomCustomPdf();
-            this.continousCover = new Expression();
+            this.cellProbabilityDensityFunction = new();
+            this.continousCover = new();
             this.continuousRegenerationEffectByCover = new float[GrassCover.FullCoverValue];
-            //this.mLayers = new GrassCoverLayers();
+            //this.mLayers = new();
 
-            this.CoverOrOnOffGrid = new Grid<short>();
+            this.CoverOrOnOffGrid = new();
             this.IsEnabled = false;
 
             //this.mLayers.SetGrid(this.Grid);
@@ -106,7 +106,7 @@ namespace iLand.World
                     throw new NotSupportedException("Required expression 'grassPotential' is missing.");
                 }
                 this.continousCover.SetExpression(grassPotential);
-                this.continousCover.Linearize(0.0, 1.0, Math.Min(GrassCover.FullCoverValue, 1000));
+                this.continousCover.Linearize(0.0F, 1.0F, Math.Min(GrassCover.FullCoverValue, 1000));
 
                 string? grassEffect = projectFile.World.Grass.ContinuousRegenerationEffect;
                 if (String.IsNullOrEmpty(grassEffect))
@@ -125,11 +125,11 @@ namespace iLand.World
                 // set up the effect on regeneration in NSTEPS steps
                 for (int stepIndex = 0; stepIndex < GrassCover.FullCoverValue; ++stepIndex)
                 {
-                    float regenEffect = (float)continousRegenerationEffect.Evaluate(stepIndex / (double)(GrassCover.FullCoverValue - 1));
+                    float regenEffect = (float)continousRegenerationEffect.Evaluate(stepIndex / (float)(GrassCover.FullCoverValue - 1));
                     this.continuousRegenerationEffectByCover[stepIndex] = Maths.Limit(regenEffect, 0.0F, 1.0F);
                 }
 
-                this.continuousCoverAtFullLight = (Int16)(Maths.Limit(continousCover.Evaluate(1.0F), 0.0, 1.0) * (GrassCover.FullCoverValue - 1)); // the max value of the potential function
+                this.continuousCoverAtFullLight = (Int16)(Maths.Limit(continousCover.Evaluate(1.0F), 0.0F, 1.0F) * (GrassCover.FullCoverValue - 1)); // the max value of the potential function
             }
             else
             {
@@ -200,7 +200,7 @@ namespace iLand.World
                         continue;
                     }
 
-                    int maxCover = (int)(Maths.Limit(this.continousCover.Evaluate(lightGrid[lightIndex]), 0.0, 1.0) * (GrassCover.FullCoverValue - 1));
+                    int maxCover = (int)(Maths.Limit(this.continousCover.Evaluate(lightGrid[lightIndex]), 0.0F, 1.0F) * (GrassCover.FullCoverValue - 1));
                     this.CoverOrOnOffGrid[lightIndex] = (Int16)Math.Min(this.CoverOrOnOffGrid[lightIndex] + this.continousGrowthRate, maxCover);
                 }
                 // Debug.WriteLine("skipped " << cellsSkipped);
@@ -218,7 +218,7 @@ namespace iLand.World
                     if (this.CoverOrOnOffGrid[lightIndex] == 0 && lightGrid[lightIndex] > this.cellLifThreshold)
                     {
                         // enable grass cover
-                        this.CoverOrOnOffGrid[lightIndex] = (Int16)(Math.Max(this.cellProbabilityDensityFunction.GetRandomValue(randomGenerator), 0.0) + 1); // switch on...
+                        this.CoverOrOnOffGrid[lightIndex] = (Int16)(MathF.Max(this.cellProbabilityDensityFunction.GetRandomValue(randomGenerator), 0.0F) + 1); // switch on...
                     }
                     if (this.CoverOrOnOffGrid[lightIndex] == 1 && lightGrid[lightIndex] < this.cellLifThreshold)
                     {

@@ -5,7 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using Model = iLand.Simulation.Model;
-using Snags = iLand.Tree.Snags;
+using ResourceUnitSnags = iLand.Tree.ResourceUnitSnags;
 
 namespace iLand.World
 {
@@ -20,14 +20,14 @@ namespace iLand.World
         private int heightCellsOnLandscape; // count of on landscape height grid cells within the RU
         private int heightCellsWithTrees;  // count of pixels that are stocked with trees
 
-        public float AreaInLandscape { get; set; } // total stockable area in m² at height grid (10 m) resolution
-        public float AreaWithTrees { get; private set; } // the stocked area in m² at height grid (10 m) resolution
+        public float AreaInLandscapeInM2 { get; set; } // total stockable area in m² at height grid (10 m) resolution
+        public float AreaWithTreesInM2 { get; private set; } // the stocked area in m² at height grid (10 m) resolution
         public RectangleF ProjectExtent { get; set; }
         public ResourceUnitCarbonFluxes CarbonCycle { get; private init; }
         public Weather Weather { get; set; }
         public int ID { get; set; }
         public int ResourceUnitGridIndex { get; private init; }
-        public Snags? Snags { get; private set; }
+        public ResourceUnitSnags? Snags { get; private set; }
         public ResourceUnitSoil? Soil { get; private set; }
         // TODO: should be Grid<SaplingCell> rather than an array
         public SaplingCell[]? SaplingCells { get; private set; }
@@ -40,22 +40,22 @@ namespace iLand.World
             this.heightCellsOnLandscape = 0;
             this.heightCellsWithTrees = 0;
 
-            this.AreaInLandscape = 0.0F;
-            this.AreaWithTrees = 0.0F;
-            this.CarbonCycle = new ResourceUnitCarbonFluxes();
+            this.AreaInLandscapeInM2 = 0.0F;
+            this.AreaWithTreesInM2 = 0.0F;
+            this.CarbonCycle = new();
             this.Weather = weather;
             this.ID = 0;
             this.ResourceUnitGridIndex = ruGridIndex;
             this.SaplingCells = null;
             this.Snags = null;
             this.Soil = null;
-            this.Trees = new ResourceUnitTrees(projectFile, this, speciesSet);
-            this.WaterCycle = new WaterCycle(projectFile, this);
+            this.Trees = new(this, speciesSet);
+            this.WaterCycle = new(projectFile, this);
         }
 
         public float GetAreaWithinLandscape() { return Constant.HeightCellAreaInM2 * this.heightCellsOnLandscape; } // get the on-landscape part of resource unit's area in m2
         // TODO: why does this variant of LAI calculation use stockable area instead of stocked area?
-        public float GetLeafAreaIndex() { return this.AreaInLandscape != 0.0F ? this.Trees.TotalLeafArea / this.AreaInLandscape : 0.0F; }
+        public float GetLeafAreaIndex() { return this.AreaInLandscapeInM2 != 0.0F ? this.Trees.TotalLeafArea / this.AreaInLandscapeInM2 : 0.0F; }
 
         public void Setup(Project projectFile, ResourceUnitEnvironment environment)
         {
@@ -63,8 +63,8 @@ namespace iLand.World
 
             if (projectFile.Model.Settings.CarbonCycleEnabled)
             {
-                this.Soil = new ResourceUnitSoil(this, environment);
-                this.Snags = new Snags(projectFile, this, environment);
+                this.Soil = new(this, environment);
+                this.Snags = new(projectFile, this, environment);
             }
 
             if (projectFile.Model.Settings.RegenerationEnabled)
@@ -73,7 +73,7 @@ namespace iLand.World
                 for (int cellIndex = 0; cellIndex < this.SaplingCells.Length; ++cellIndex)
                 {
                     // TODO: SoA instead of AoS storage
-                    this.SaplingCells[cellIndex] = new SaplingCell();
+                    this.SaplingCells[cellIndex] = new();
                 }
             }
 
@@ -157,7 +157,7 @@ namespace iLand.World
                 return;
             }
 
-            trees.RU.ClearSaplings(saplingCell, false);
+            trees.ResourceUnit.ClearSaplings(saplingCell, false);
             Sapling? sapling = saplingCell.AddSaplingIfSlotFree(Constant.Sapling.MinimumHeight, 0, trees.Species.Index);
             if (sapling != null)
             {
@@ -169,7 +169,7 @@ namespace iLand.World
             float crownArea = MathF.PI * crownRadius * crownRadius; //m2
             // calculate how many cells on the ground are covered by the crown (this is a rather rough estimate)
             // n_cells: in addition to the original cell
-            int lightCellsInCrown = (int)Math.Round(crownArea / (Constant.LightCellSizeInM * Constant.LightCellSizeInM) - 1.0);
+            int lightCellsInCrown = (int)MathF.Round(crownArea / (Constant.LightCellSizeInM * Constant.LightCellSizeInM) - 1.0F);
             if (lightCellsInCrown > 0)
             {
                 ReadOnlySpan<int> offsetsX = stackalloc int[] { 1, 1, 0, -1, -1, -1, 0, 1 };
@@ -569,13 +569,13 @@ namespace iLand.World
                     this.Trees.SpeciesAvailableOnResourceUnit[species].StatisticsLive.Zero();
                 }
 
-                this.AreaWithTrees = 0.0F;
+                this.AreaWithTreesInM2 = 0.0F;
                 this.Trees.PhotosyntheticallyActiveArea = 0.0F; // TODO: is this redundant?
             }
             else
             {
                 // height pixels are counted during the height-grid-calculations
-                this.AreaWithTrees = Constant.HeightCellSizeInM * Constant.HeightCellSizeInM * this.heightCellsWithTrees; // m² (1 height grid pixel = 10x10m)
+                this.AreaWithTreesInM2 = Constant.HeightCellSizeInM * Constant.HeightCellSizeInM * this.heightCellsWithTrees; // m² (1 height grid pixel = 10x10m)
                 float laiBasedOnRUAreaWithinLandscape = this.GetLeafAreaIndex();
                 if (laiBasedOnRUAreaWithinLandscape < 3.0F)
                 {
@@ -598,7 +598,7 @@ namespace iLand.World
                     //}
                     if (laiBasedOnRUAreaWithinLandscape < 1.0)
                     {
-                        this.AreaWithTrees = MathF.Min(totalCrownArea, this.AreaWithTrees);
+                        this.AreaWithTreesInM2 = MathF.Min(totalCrownArea, this.AreaWithTreesInM2);
                     }
                     else
                     {
@@ -606,18 +606,18 @@ namespace iLand.World
                         // interpolate between sum of crown area of trees (at LAI=1) and the pixel-based value (at LAI=3 and above)
                         // TODO: assumes trees are homogeneously distributed across resource unit and that crowns don't overlap
                         float linearInterpolationPoint = (laiBasedOnRUAreaWithinLandscape - 1.0F) / 2.0F; // 0 at LAI=1, 1 at LAI=3
-                        this.AreaWithTrees = this.AreaWithTrees * linearInterpolationPoint + MathF.Min(totalCrownArea, this.AreaWithTrees) * (1.0F - linearInterpolationPoint);
+                        this.AreaWithTreesInM2 = this.AreaWithTreesInM2 * linearInterpolationPoint + MathF.Min(totalCrownArea, this.AreaWithTreesInM2) * (1.0F - linearInterpolationPoint);
                     }
                 }
 
-                Debug.Assert(this.AreaWithTrees > 0.0F);
+                Debug.Assert(this.AreaWithTreesInM2 > 0.0F);
 
                 // calculate the leaf area index (LAI)
-                float ruLeafAreaIndex = this.Trees.TotalLeafArea / this.AreaWithTrees;
+                float ruLeafAreaIndex = this.Trees.TotalLeafArea / this.AreaWithTreesInM2;
                 // calculate the intercepted radiation fraction using the law of Beer Lambert
                 float ruK = model.Project.Model.Ecosystem.ResourceUnitLightExtinctionCoefficient;
                 float lightInterceptionFraction = 1.0F - MathF.Exp(-ruK * ruLeafAreaIndex);
-                this.Trees.PhotosyntheticallyActiveArea = this.AreaWithTrees * lightInterceptionFraction; // m2
+                this.Trees.PhotosyntheticallyActiveArea = this.AreaWithTreesInM2 * lightInterceptionFraction; // m2
 
                 // calculate the total weighted leaf area on this RU:
                 this.Trees.AverageLightRelativeIntensity = this.Trees.PhotosyntheticallyActiveArea / this.Trees.TotalLightWeightedLeafArea; // p_WLA
@@ -683,10 +683,10 @@ namespace iLand.World
             {
                 Debug.Assert(this.Snags != null);
 
-                this.CarbonCycle.Npp = this.Trees.StatisticsForAllSpeciesAndStands.TreeNpp * Constant.BiomassCFraction;
-                this.CarbonCycle.Npp += this.Trees.StatisticsForAllSpeciesAndStands.SaplingNpp * Constant.BiomassCFraction;
+                this.CarbonCycle.Npp = this.Trees.StatisticsForAllSpeciesAndStands.TreeNpp * Constant.DryBiomassCarbonFraction;
+                this.CarbonCycle.Npp += this.Trees.StatisticsForAllSpeciesAndStands.SaplingNpp * Constant.DryBiomassCarbonFraction;
 
-                float area_factor = this.AreaInLandscape / Constant.ResourceUnitAreaInM2; //conversion factor
+                float area_factor = this.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2; //conversion factor
                 float to_atm = this.Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha
                 to_atm += 0.1F * this.Soil.FluxToAtmosphere.C * Constant.ResourceUnitAreaInM2; // soil: t/ha * 0.0001 ha/m2 * 1000 kg/ton = 0.1 kg/m2
                 this.CarbonCycle.CarbonToAtmosphere = to_atm;

@@ -26,7 +26,7 @@ namespace iLand.Input.ProjectFile
 		public BarkBeetle()
 			: base("barkBeetle")
         {
-			this.ReferenceClimate = new BarkBeetleReferenceClimate();
+			this.ReferenceClimate = new();
         }
 
 		protected override void ReadStartElement(XmlReader reader)

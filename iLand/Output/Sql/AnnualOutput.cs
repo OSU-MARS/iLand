@@ -1,13 +1,14 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
+using iLand.Simulation;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Model = iLand.Simulation.Model;
 
-namespace iLand.Output
+namespace iLand.Output.Sql
 {
-    /** @class Output
-        The Output class abstracts output data (database, textbased, ...).
+    /** The Output class abstracts output data (database, textbased, ...).
         To create a new output, create a class derived from Output and perform the following steps:
         - Overwriteructor:
         Create columns and set fixed properties (e.g. table name)
@@ -29,7 +30,7 @@ namespace iLand.Output
         setDescription("Output of indivdual trees.");
         columns() << OutputColumn("id", "id of the tree", OutInteger)
                  << OutputColumn("name", "tree species name", OutString)
-                 << OutputColumn("v1", "a double value", OutDouble);
+                 << OutputColumn("v1", "a float value", OutFloat);
         }
         // (2) optionally: some special settings (here: filter)
         void TreeOut::setup()
@@ -73,7 +74,7 @@ namespace iLand.Output
         {
             this.insertRowSqlText = null;
 
-            this.Columns = new List<SqlColumn>();
+            this.Columns = new();
         }
 
         public void LogYear(Model model, SqliteTransaction transaction)
@@ -122,8 +123,9 @@ namespace iLand.Output
             this.insertRowSqlText = "insert into " + this.TableName + " (" + String.Join(", ", columnNames) + ") values (@" + String.Join(", @", columnNames) + ")";
         }
 
-        public virtual void Setup(Model model)
+        public virtual void Setup(Project projectFile, SimulationState simulationState)
         {
+            // default to no op as a few outputs don't have anything they need to do in Setup()
         }
 
         //public string WriteHeaderToWiki()

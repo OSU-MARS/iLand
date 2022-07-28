@@ -14,7 +14,7 @@ namespace iLand.Input.ProjectFile
 
         public System(string? defaultHomePath)
         {
-            this.Paths = new Paths(defaultHomePath);
+            this.Paths = new(defaultHomePath);
         }
 
         protected override void ReadStartElement(XmlReader reader)

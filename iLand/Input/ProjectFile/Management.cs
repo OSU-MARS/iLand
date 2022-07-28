@@ -11,7 +11,7 @@ namespace iLand.Input.ProjectFile
 
         public Management()
         {
-            this.Abe = new AgentBasedEngine();
+            this.Abe = new();
         }
 
         protected override void ReadStartElement(XmlReader reader)

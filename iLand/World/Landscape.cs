@@ -92,18 +92,18 @@ namespace iLand.World
                 _ => throw new NotSupportedException("Unhandled resource unit environment file type '" + resourceUnitExtension + "'.")
             };
             RectangleF resourceUnitGisExtent = resourceUnitReader.GetBoundingBox();
-            this.ProjectOriginInGisCoordinates = new PointF(resourceUnitGisExtent.X - worldBufferWidth, resourceUnitGisExtent.Y - worldBufferWidth);
+            this.ProjectOriginInGisCoordinates = new(resourceUnitGisExtent.X - worldBufferWidth, resourceUnitGisExtent.Y - worldBufferWidth);
             this.ResourceUnitGrid.Setup(new RectangleF(worldBufferWidth, worldBufferWidth, resourceUnitGisExtent.Width, resourceUnitGisExtent.Height), Constant.ResourceUnitSizeInM);
             // resource units are created below, so grid contains only nulls at this point
 
             RectangleF bufferedExtent = new(0.0F, 0.0F, resourceUnitGisExtent.Width + 2 * worldBufferWidth, resourceUnitGisExtent.Height + 2 * worldBufferWidth);
-            this.HeightGrid = new Grid<HeightCell>(bufferedExtent, Constant.HeightCellSizeInM);
+            this.HeightGrid = new(bufferedExtent, Constant.HeightCellSizeInM);
             for (int index = 0; index < this.HeightGrid.CellCount; ++index)
             {
                 this.HeightGrid[index] = new HeightCell();
             }
 
-            this.LightGrid = new Grid<float>(bufferedExtent, Constant.LightCellSizeInM); // (re)initialized by Model at start of every timestep
+            this.LightGrid = new(bufferedExtent, Constant.LightCellSizeInM); // (re)initialized by Model at start of every timestep
 
             string? standRasterFile = projectFile.World.Initialization.StandRasterFile;
             if (String.IsNullOrEmpty(standRasterFile) == false)
@@ -229,13 +229,13 @@ namespace iLand.World
         private void MarkHeightPixelsAndScaleSnags() // calculate the stockable area for each RU (i.e.: with stand grid values <> -1)
         {
             this.TotalStockableHectares = 0.0F;
-            foreach (ResourceUnit ru in this.ResourceUnits)
+            foreach (ResourceUnit resourceUnit in this.ResourceUnits)
             {
                 //        if (ru.id()==-1) {
                 //            ru.setStockableArea(0.);
                 //            continue;
                 //        }
-                GridWindowEnumerator<HeightCell> ruHeightGridEnumerator = new(this.HeightGrid, ru.ProjectExtent);
+                GridWindowEnumerator<HeightCell> ruHeightGridEnumerator = new(this.HeightGrid, resourceUnit.ProjectExtent);
                 int heightCellsInLandscape = 0;
                 int heightCellsInResourceUnit = 0;
                 while (ruHeightGridEnumerator.MoveNext())
@@ -258,10 +258,10 @@ namespace iLand.World
                     throw new NotSupportedException("No height cells found in resource unit.");
                 }
 
-                ru.AreaInLandscape = Constant.HeightCellAreaInM2 * heightCellsInLandscape; // in m²
-                if (ru.Snags != null)
+                resourceUnit.AreaInLandscapeInM2 = Constant.HeightCellAreaInM2 * heightCellsInLandscape; // in m²
+                if (resourceUnit.Snags != null)
                 {
-                    ru.Snags.ScaleInitialState();
+                    resourceUnit.Snags.ScaleInitialState();
                 }
                 this.TotalStockableHectares += Constant.HeightCellAreaInM2 * heightCellsInLandscape / Constant.ResourceUnitAreaInM2; // in ha
             }
@@ -356,10 +356,10 @@ namespace iLand.World
         /// return the SaplingCell (i.e. container for the ind. saplings) for the given 2x2m coordinates
         /// if 'only_valid' is true, then null is returned if no living saplings are on the cell
         /// 'rRUPtr' is a pointer to a RU-ptr: if provided, a pointer to the resource unit is stored
-        public SaplingCell? GetSaplingCell(Point lightCellPosition, bool onlyValid, out ResourceUnit ru)
+        public SaplingCell? GetSaplingCell(Point lightCellPosition, bool onlyValid, out ResourceUnit resourceUnit)
         {
-            ru = this.GetResourceUnit(this.LightGrid.GetCellProjectCentroid(lightCellPosition));
-            SaplingCell saplingCell = ru.GetSaplingCell(lightCellPosition);
+            resourceUnit = this.GetResourceUnit(this.LightGrid.GetCellProjectCentroid(lightCellPosition));
+            SaplingCell saplingCell = resourceUnit.GetSaplingCell(lightCellPosition);
             if ((saplingCell != null) && (!onlyValid || saplingCell.State != SaplingCellState.NotOnLandscape))
             {
                 return saplingCell;
@@ -459,14 +459,14 @@ namespace iLand.World
                     }
 
                     Point lightCellIndex = lightGrid.GetCellXYIndex(lightCellIndicesAndValues[randomIndex].CellIndex);
-                    SaplingCell? saplingCell = this.GetSaplingCell(lightCellIndex, true, out ResourceUnit ru);
+                    SaplingCell? saplingCell = this.GetSaplingCell(lightCellIndex, true, out ResourceUnit resourceUnit);
                     if (saplingCell != null)
                     {
-                        TreeSpecies species = ru.Trees.TreeSpeciesSet[saplingsInStand.Species];
+                        TreeSpecies species = resourceUnit.Trees.TreeSpeciesSet[saplingsInStand.Species];
                         Sapling? sapling = saplingCell.AddSaplingIfSlotFree(height, age, species.Index);
                         if (sapling != null)
                         {
-                            fractionallyOccupiedCellCount += Math.Max(1.0F, species.SaplingGrowth.RepresentedStemNumberFromHeight(sapling.HeightInM));
+                            fractionallyOccupiedCellCount += MathF.Max(1.0F, species.SaplingGrowth.RepresentedStemNumberFromHeight(sapling.HeightInM));
                         }
                         else
                         {

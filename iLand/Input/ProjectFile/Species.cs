@@ -20,10 +20,10 @@ namespace iLand.Input.ProjectFile
             this.DatabaseTable = Constant.Data.DefaultSpeciesTable;
             this.ReaderStampFile = "readerstamp.bin";
 
-            this.CO2Response = new CO2Response();
-            this.LightResponse = new LightResponse();
-            this.NitrogenResponseClasses = new NitrogenResponseClasses();
-            this.Phenology = new List<LeafPhenology>();
+            this.CO2Response = new();
+            this.LightResponse = new();
+            this.NitrogenResponseClasses = new();
+            this.Phenology = new();
         }
 
 		protected override void ReadStartElement(XmlReader reader)

@@ -4,19 +4,19 @@ namespace iLand
 {
     internal static class Constant
     {
-        public const float BiomassCFraction = 0.5F; // fraction of (dry) biomass which is carbon
         public const int DaysInDecade = 3652; // integer truncation of 10 years * 365.2425 days/year, could also use 3653 for decades with three leap years
         public const int DaysInLeapYear = 366;
         public const int DaysInYear = 365;
 
         public const int DefaultStandID = 0; // lowest valid stand ID, any negative IDs in stand raster are treated as no data or no stand
+        public const float DryBiomassCarbonFraction = 0.5F; // fraction of dry biomass which is carbon
         public const int EvergreenLeafPhenologyID = 0;
 
         public const int HeightCellsPerRUWidth = 10; // height cells per resource unit side length, used for torus positioning
         public const int HeightCellAreaInM2 = 100; // 100 m² area of a height pixel
         public const int HeightCellSizeInM = 10; // size of height grid cells, m
         public const int LightCellSizeInM = 2; // size of light grid cells, m
-        public const int LightCellsPerHectare = 2500; // pixel/ha ( 10000 / (2*2) )
+        public const int LightCellsPerHectare = 2500; // 10000 / (2*2)
         public const int LightCellsPerSeedmapCellWidth = 10; // 20 m / 2 m; keep in sync with seedmap and light cell sizes
         public const int LightCellsPerHeightCellWidth = 5; // 10 / 2 LIF pixels per height pixel; keep in sync with light and height cell sizes
         public const int LightCellsPerRUWidth = 50; // 100/2
@@ -33,12 +33,14 @@ namespace iLand
         public const float Ln2 = 0.693147180559945F;
         public const int MonthsInYear = 12;
         public const float QuarterPi = 0.25F * MathF.PI;
+        public const float SquareMetersPerHectare = 10000.0F;
         public const float Sqrt2 = 1.4142135623731F;
 
         public static class Data
         {
+            public const int AnnualAllocationIncrement = 25; // 25 years
             public const string DefaultSpeciesTable = "species";
-            public const int MonthlyWeatherAllocationIncrement = 12 * 25; // 25 years
+            public const int MonthlyAllocationIncrement = 12 * 25; // 25 years
         }
 
         public static class File

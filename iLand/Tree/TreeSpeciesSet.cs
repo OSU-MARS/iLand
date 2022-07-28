@@ -41,15 +41,15 @@ namespace iLand.Tree
 
         public TreeSpeciesSet(Project projectFile, string sqlTableName)
         {
-            this.lightResponseShadeIntolerant = new Expression();
-            this.lightResponseShadeTolerant = new Expression();
-            this.relativeHeightModifer = new Expression();
-            //this.mSeedDispersal = new List<SeedDispersal>();
-            this.treeSpeciesByID = new Dictionary<string, TreeSpecies>();
+            this.lightResponseShadeIntolerant = new();
+            this.lightResponseShadeTolerant = new();
+            this.relativeHeightModifer = new();
+            //this.mSeedDispersal = new();
+            this.treeSpeciesByID = new();
 
-            this.ActiveSpecies = new List<TreeSpecies>();
-            this.RandomSpeciesOrder = new List<int>(); // lazy initialization
-            this.ReaderStamps = new TreeSpeciesStamps();
+            this.ActiveSpecies = new();
+            this.RandomSpeciesOrder = new(); // lazy initialization
+            this.ReaderStamps = new();
             this.SqlTableName = sqlTableName;
 
             // load active tree species from a database table and create/setup the species
@@ -114,10 +114,10 @@ namespace iLand.Tree
 
             if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
             {
-                this.lightResponseShadeTolerant.Linearize(0.0, 1.0);
-                this.lightResponseShadeIntolerant.Linearize(0.0, 1.0);
+                this.lightResponseShadeTolerant.Linearize(0.0F, 1.0F);
+                this.lightResponseShadeIntolerant.Linearize(0.0F, 1.0F);
                 // x: LRI, y: relative height
-                this.relativeHeightModifer.Linearize(0.0, 1.0, 0.0, 1.0);
+                this.relativeHeightModifer.Linearize(0.0F, 1.0F, 0.0F, 1.0F);
             }
         }
 
@@ -145,7 +145,7 @@ namespace iLand.Tree
         {
             foreach (TreeSpecies species in this.ActiveSpecies) 
             {
-                species.SeedDispersal = new SeedDispersal(species);
+                species.SeedDispersal = new(species);
                 species.SeedDispersal.Setup(model); // setup memory for the seed map (grid)
             }
             // Debug.WriteLine("Setup of seed dispersal maps finished.");

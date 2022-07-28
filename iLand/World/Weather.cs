@@ -43,11 +43,11 @@ namespace iLand.World
             this.YearsToLoad = projectFile.World.Weather.DailyWeatherChunkSizeInYears;
 
             string co2filePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.CO2File);
-            CO2ReaderMonthlyCsv co2reader = new(co2filePath, Constant.Data.MonthlyWeatherAllocationIncrement);
+            CO2ReaderMonthlyCsv co2reader = new(co2filePath, Constant.Data.MonthlyAllocationIncrement);
 
             this.CO2ByMonth = co2reader.MonthlyCO2;
             this.PrecipitationByMonth = new float[Constant.MonthsInYear];
-            this.Sun = new Sun(projectFile.World.Geometry.Latitude);
+            this.Sun = new(projectFile.World.Geometry.Latitude);
             this.DaytimeMeanTemperatureByMonth = new float[Constant.MonthsInYear];
 
             if (this.DoRandomSampling)

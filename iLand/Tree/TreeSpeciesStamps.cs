@@ -38,13 +38,13 @@ namespace iLand.Tree
 
         static TreeSpeciesStamps()
         {
-            TreeSpeciesStamps.DistanceGrid = new Grid<float>();
+            TreeSpeciesStamps.DistanceGrid = new();
         }
 
         public TreeSpeciesStamps()
         {
-            this.lightStampsByDbhAndHDRatio = new Grid<LightStamp?>();
-            this.lightStampsWithTreeSizes = new List<LightStampWithTreeSize>();
+            this.lightStampsByDbhAndHDRatio = new();
+            this.lightStampsWithTreeSizes = new();
 
             this.lightStampsByDbhAndHDRatio.Setup(Constant.Stamp.DbhClassCount, // cellsize
                                                   Constant.Stamp.HeightDiameterClassCount, // count x
@@ -60,26 +60,33 @@ namespace iLand.Tree
 
         /// getKey: decodes a floating point piar of dbh and hd-ratio to indices for the
         /// lookup table containing pointers to the actual stamps.
-        private static void GetClasses(float dbh, float hd_value, out int diameterClass, out int heightDiameterClass)
+        private static (int diameterClass, int heightDiameterClass) GetClasses(float dbh, float heightDiameterRatio)
         {
-            heightDiameterClass = (int)((hd_value - Constant.Stamp.HeightDiameterClassMinimum) / Constant.Stamp.HeightDiameterClassSize);
+            int heightDiameterClass = (int)((heightDiameterRatio - Constant.Stamp.HeightDiameterClassMinimum) / Constant.Stamp.HeightDiameterClassSize);
             // dbh_class = int(dbh - cBHDclassLow) / cBHDclassWidth;
             // fixed scheme: smallest classification scheme for tree-diameters:
-            // 1cm width from 4 up to 9cm,
-            // 2cm bins from 10 to 18cm
-            // 4cm bins starting from 20cm, max DBH=255 (with 70 classes)
-            if (dbh < 10.0F)
+            // 1cm width from 5 up to 9 cm,
+            // 2cm bins from 10 to 20 cm
+            // 4cm bins starting from 20 cm, max DBH at 70 classes = 255 cm
+            int diameterClass;
+            if (dbh < 4.0F)
             {
-                diameterClass = Math.Max(0, (int)(dbh - 4.0F)); // classes from 0..5
+                diameterClass = 0; // class 0
+            }
+            else if (dbh < 10.0F)
+            {
+                diameterClass = (int)(dbh - 4.0F); // classes from 0-5
             }
             else if (dbh < 20.0F)
             {
-                diameterClass = 6 + (int)((dbh - 10.0F) / 2.0F); // 10-12cm has index 6
+                diameterClass = 6 + (int)((dbh - 10.0F) / 2.0F); // 10-12 cm has index 6
             }
             else
             {
-                diameterClass = 11 + (int)((dbh - 20.0F) / 4.0F); // 20-24cm has index 11
+                diameterClass = 11 + (int)((dbh - 20.0F) / 4.0F); // 20-24 cm has index 11
             }
+
+            return (diameterClass, heightDiameterClass);
         }
 
         /** fill up the nulls in the lookup map */
@@ -198,10 +205,10 @@ namespace iLand.Tree
 
         /** add a stamp to the internal storage.
             After loading the function finalizeSetup() must be called to ensure that gaps in the matrix get filled. */
-        public void AddStamp(LightStamp stamp, float dbh, float hdRatio, float crownRadius)
+        public void AddStamp(LightStamp stamp, float dbh, float heightDiameterRatio, float crownRadius)
         {
-            TreeSpeciesStamps.GetClasses(dbh, hdRatio, out int diameterClass, out int hdClass); // decode dbh/hd-value
-            this.AddStamp(stamp, diameterClass, hdClass, crownRadius, dbh, hdRatio); // dont set crownradius
+            (int diameterClass, int hdClass) = TreeSpeciesStamps.GetClasses(dbh, heightDiameterRatio); // decode dbh/hd-value
+            this.AddStamp(stamp, diameterClass, hdClass, crownRadius, dbh, heightDiameterRatio); // dont set crownradius
         }
 
         public void AddReaderStamp(LightStamp stamp, float crownRadiusInMeters)
@@ -239,13 +246,13 @@ namespace iLand.Tree
             return stamp;
         }
 
-        /** fast access for an individual stamp using a lookup table.
-            the dimensions of the lookup table are defined by class-constants.
+        /** fast access for an individual stamp using a lookup table
+            The dimensions of the lookup table are defined by class-constants.
             If stamp is not found there, the more complete list of stamps is searched. */
         public LightStamp GetStamp(float dbhInCm, float heightInM)
         {
-            float hdRatio = 100.0F * heightInM / dbhInCm;
-            TreeSpeciesStamps.GetClasses(dbhInCm, hdRatio, out int diameterClass, out int hdClass);
+            float heightDiameterRatio = 100.0F * heightInM / dbhInCm;
+            (int diameterClass, int hdClass) = TreeSpeciesStamps.GetClasses(dbhInCm, heightDiameterRatio);
 
             // retrieve stamp from lookup table when tree is within the lookup table's size range
             LightStamp? stamp = null;
@@ -271,7 +278,7 @@ namespace iLand.Tree
                 }
             }
             // find a stamp of matching height-diameter ratio if the DBH is out of range.
-            else if (hdClass < Constant.Stamp.HeightDiameterClassCount && hdClass >= 0)
+            else if ((hdClass < Constant.Stamp.HeightDiameterClassCount) && (hdClass >= 0))
             {
                 //if (GlobalSettings.Instance.LogDebug())
                 //{
@@ -451,7 +458,7 @@ namespace iLand.Tree
             StringBuilder stampString = new(String.Format("****** Dump of StampContainer {0} **********", this.mFilePath));
             foreach (LightStampWithTreeSize stamp in this.lightStampsWithTreeSizes)
             {
-                stampString.AppendFormat("Stamp size: {0} offset: {1} dbh: {2} hd-ratio: {3}", Math.Sqrt((double)stamp.Stamp.Count()), stamp.Stamp.CenterCellPosition, stamp.Dbh, stamp.HDratio);
+                stampString.AppendFormat("Stamp size: {0} offset: {1} dbh: {2} hd-ratio: {3}", MathF.Sqrt((float)stamp.Stamp.Count()), stamp.Stamp.CenterCellPosition, stamp.Dbh, stamp.HDratio);
                 // add data....
                 int maxIndex = 2 * stamp.Stamp.CenterCellPosition + 1;
                 for (int y = 0; y < maxIndex; ++y)

@@ -308,7 +308,7 @@ namespace iLand.World
             this.CellSizeInM = cellSizeInM;
             this.SizeX = cellsX;
             this.SizeY = cellsY;
-            this.ProjectExtent = new RectangleF(this.ProjectExtent.X, this.ProjectExtent.Y, cellSizeInM * cellsX, cellSizeInM * cellsY);
+            this.ProjectExtent = new(this.ProjectExtent.X, this.ProjectExtent.Y, cellSizeInM * cellsX, cellSizeInM * cellsY);
         }
 
         /// dumps a Grid<T> to a wideform CSV

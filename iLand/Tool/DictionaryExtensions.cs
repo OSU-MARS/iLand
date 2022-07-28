@@ -8,7 +8,7 @@ namespace iLand.Tool
         {
             if (dictionary.TryGetValue(key, out List<TValue>? valueList) == false)
             {
-                valueList = new List<TValue>();
+                valueList = new();
                 dictionary.Add(key, valueList);
             }
             valueList.Add(value);

@@ -3,7 +3,6 @@ using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Security.Cryptography;
@@ -13,18 +12,17 @@ namespace iLand.Simulation
     public class Model : IDisposable
     {
         private bool isDisposed;
-        private readonly MaybeParallel<ResourceUnit> ruParallel;
+        private readonly MaybeParallel<ResourceUnit> resourceUnitParallel;
 
-        public int CurrentYear { get; set; }
-
+        public Output.Outputs Output { get; private init; }
         public Landscape Landscape { get; private init; }
         public Management? Management { get; private init; }
         public ModelSettings ModelSettings { get; private init; }
         public Plugin.Modules Modules { get; private init; }
-        public Output.AnnualOutputs AnnualOutputs { get; private init; }
         public Project Project { get; private init; }
         public RandomGenerator RandomGenerator { get; private init; }
         public ScheduledEvents? ScheduledEvents { get; private init; }
+        public SimulationState SimulationState { get; private init; }
 
         public Model(Project projectFile)
         {
@@ -33,16 +31,16 @@ namespace iLand.Simulation
             int seed = projectFile.Model.Settings.RandomSeed == null ? RandomNumberGenerator.GetInt32(Int32.MinValue, Int32.MaxValue) : projectFile.Model.Settings.RandomSeed.Value;
             this.RandomGenerator = new(mersenneTwister: true, seed);
 
-            this.AnnualOutputs = new Output.AnnualOutputs();
-            this.CurrentYear = 0; // set to zero so outputs with initial state start logging at year 0 (first log pulse is at end of constructor)
             this.Landscape = new(projectFile);
             this.Management = null;
-            this.ModelSettings = new ModelSettings();
-            this.Modules = new Plugin.Modules();
+            this.ModelSettings = new();
+            this.Modules = new();
+            this.Output = new(projectFile, this.Landscape, this);
             this.Project = projectFile;
             this.ScheduledEvents = null;
+            this.SimulationState = new();
 
-            if ((this.Landscape.ResourceUnits.Count != 1) && projectFile.World.Geometry.IsTorus)
+            if (projectFile.World.Geometry.IsTorus && (this.Landscape.ResourceUnits.Count != 1))
             {
                 throw new NotSupportedException("Toroidal light field indexing currently assumes only a single resource unit is present.");
             }
@@ -52,7 +50,7 @@ namespace iLand.Simulation
             standReader.SetupTrees(projectFile, this.Landscape, this.RandomGenerator);
 
             // setup the helper that does the multithreading
-            this.ruParallel = new MaybeParallel<ResourceUnit>(this.Landscape.ResourceUnits)
+            this.resourceUnitParallel = new(this.Landscape.ResourceUnits)
             {
                 MaximumThreads = this.Project.Model.Settings.MaxThreads
             };
@@ -88,7 +86,7 @@ namespace iLand.Simulation
 
             if (String.IsNullOrEmpty(this.Project.Model.Management.FileName) == false)
             {
-                this.Management = new Management();
+                this.Management = new();
                 // string mgmtFile = xml.GetString("model.management.file");
                 // string path = this.GlobalSettings.Path(mgmtFile, "script");
             }
@@ -101,19 +99,15 @@ namespace iLand.Simulation
             }
 
             // calculate initial stand statistics
-            this.ruParallel.ForEach((ResourceUnit ru) =>
+            this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
             {
-                ru.CountHeightCellsContainingTrees(this.Landscape);
-                ru.Trees.SetupStatistics();
-                ru.SetupSaplingStatistics();
+                resourceUnit.CountHeightCellsContainingTrees(this.Landscape);
+                resourceUnit.Trees.SetupStatistics();
+                resourceUnit.SetupSaplingStatistics();
             });
 
-            // setup outputs
-            this.AnnualOutputs.Setup(this);
-
-            // write outputs to with inital state (without any growth)
-            this.AnnualOutputs.LogYear(this); // log initial state
-            this.CurrentYear = 1; // move to first year
+            // log initial state in year zero
+            this.Output.LogYear(this);
         }
 
         /** Main model runner.
@@ -131,6 +125,8 @@ namespace iLand.Simulation
           */
         public void RunYear() // run a single year
         {
+            ++this.SimulationState.CurrentYear;
+
             //this.GlobalSettings.SystemStatistics.Reset();
             // initalization at start of year for external modules
             this.Modules.OnStartYear();
@@ -147,9 +143,9 @@ namespace iLand.Simulation
             }
 
             // reset statistics
-            foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
+            foreach (ResourceUnit resourceUnit in this.Landscape.ResourceUnits)
             {
-                ru.OnStartYear();
+                resourceUnit.OnStartYear();
             }
 
             foreach (TreeSpeciesSet speciesSet in this.Landscape.SpeciesSetsByTableName.Values)
@@ -178,17 +174,17 @@ namespace iLand.Simulation
                (4) cleanup of tree lists (remove dead trees)
               */
             // let the trees grow (growth on stand-level, tree-level, mortality)
-            this.ruParallel.ForEach((ResourceUnit ru) =>
+            this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
             {
                 // stocked area
-                ru.CountHeightCellsContainingTrees(this.Landscape);
+                resourceUnit.CountHeightCellsContainingTrees(this.Landscape);
                 // 3-PG tree growth
-                ru.CalculateWaterAndBiomassGrowthForYear(this);
+                resourceUnit.CalculateWaterAndBiomassGrowthForYear(this);
 
-                ru.Trees.BeforeTreeGrowth(); // reset aging
+                resourceUnit.Trees.BeforeTreeGrowth(); // reset aging
                 // calculate light responses
                 // responses are based on *modified* values for LightResourceIndex
-                foreach (Trees treesOfSpecies in ru.Trees.TreesBySpeciesID.Values)
+                foreach (Trees treesOfSpecies in resourceUnit.Trees.TreesBySpeciesID.Values)
                 {
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                     {
@@ -196,14 +192,14 @@ namespace iLand.Simulation
                     }
                 }
 
-                ru.Trees.CalculatePhotosyntheticActivityRatio();
+                resourceUnit.Trees.CalculatePhotosyntheticActivityRatio();
 
-                foreach (Trees treesOfSpecies in ru.Trees.TreesBySpeciesID.Values)
+                foreach (Trees treesOfSpecies in resourceUnit.Trees.TreesBySpeciesID.Values)
                 {
                     treesOfSpecies.CalculateAnnualGrowth(this); // actual growth of individual trees
                 }
 
-                ru.Trees.AfterTreeGrowth();
+                resourceUnit.Trees.AfterTreeGrowth();
             });
 
             this.Landscape.GrassCover.UpdateCoverage(this.Landscape, this.RandomGenerator); // evaluate the grass / herb cover (and its effect on regeneration)
@@ -221,10 +217,10 @@ namespace iLand.Simulation
                         species.SeedDispersal.DisperseSeeds(this);
                     });
                 }
-                this.ruParallel.ForEach((ResourceUnit ru) =>
+                this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
                 {
-                    ru.EstablishSaplings(this);
-                    ru.GrowSaplings(this);
+                    resourceUnit.EstablishSaplings(this);
+                    resourceUnit.GrowSaplings(this);
                 });
             }
 
@@ -236,24 +232,23 @@ namespace iLand.Simulation
             // calculate soil / snag dynamics
             if (this.ModelSettings.CarbonCycleEnabled)
             {
-                this.ruParallel.ForEach((ResourceUnit ru) =>
+                this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
                 {
                     // (1) do calculations on snag dynamics for the resource unit
                     // (2) do the soil carbon and nitrogen dynamics calculations (ICBM/2N)
-                    ru.CalculateCarbonCycle();
+                    resourceUnit.CalculateCarbonCycle();
                 });
             }
 
-            foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
+            foreach (ResourceUnit resourceUnit in this.Landscape.ResourceUnits)
             {
                 // calculate statistics
-                ru.OnEndYear();
+                resourceUnit.OnEndYear();
             }
             // create outputs
-            this.AnnualOutputs.LogYear(this);
+            this.Output.LogYear(this);
 
             // this.GlobalSettings.SystemStatistics.AddToDebugList();
-            ++this.CurrentYear;
         }
 
         public void Dispose()
@@ -269,7 +264,7 @@ namespace iLand.Simulation
             {
                 if (disposing)
                 {
-                    this.AnnualOutputs.Dispose();
+                    this.Output.Dispose();
                 }
                 this.isDisposed = true;
             }
@@ -294,9 +289,9 @@ namespace iLand.Simulation
             // - Light stamping does not lock light grid areas and race conditions therefore exist between threads stamping adjacent
             //   resource units.
             //
-            this.ruParallel.ForEach((ResourceUnit ru) =>
+            this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
             {
-                foreach (Trees treesOfSpecies in ru.Trees.TreesBySpeciesID.Values)
+                foreach (Trees treesOfSpecies in resourceUnit.Trees.TreesBySpeciesID.Values)
                 {
                     if (this.Project.World.Geometry.IsTorus)
                     {
@@ -345,12 +340,12 @@ namespace iLand.Simulation
         /// clean the tree data structures (remove harvested trees) - call after management operations.
         private void RemoveDeadTreesAndRecalculateStandStatistics(bool recalculateSpeciesStats)
         {
-            foreach (ResourceUnit ru in this.Landscape.ResourceUnits)
+            foreach (ResourceUnit resourceUnit in this.Landscape.ResourceUnits)
             {
-                if (ru.Trees.HasDeadTrees)
+                if (resourceUnit.Trees.HasDeadTrees)
                 {
-                    ru.Trees.RemoveDeadTrees();
-                    ru.Trees.RecalculateStatistics(recalculateSpeciesStats);
+                    resourceUnit.Trees.RemoveDeadTrees();
+                    resourceUnit.Trees.RecalculateStatistics(recalculateSpeciesStats);
                 }
             }
         }

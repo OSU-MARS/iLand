@@ -18,7 +18,7 @@ namespace iLand.World
     public class WaterCycle
     {
         private float residualSoilWater; // bucket "height" of PWP (is fixed to -4MPa) (mm)
-        private readonly ResourceUnit ru; // resource unit to which this watercycle is connected
+        private readonly ResourceUnit resourceUnit; // resource unit to which this watercycle is connected
         private SoilWaterRetention? soilWaterRetention;
         private readonly SnowPack snowPack; // object representing the snow cover (aggregation, melting)
 
@@ -41,16 +41,16 @@ namespace iLand.World
         /// daily amount of water that actually reaches the ground (i.e., after interception)
         public float[] WaterReachingSoilByWeatherTimestep { get; private init; }
 
-        public WaterCycle(Project projectFile, ResourceUnit ru)
+        public WaterCycle(Project projectFile, ResourceUnit resourceUnit)
         {
             this.residualSoilWater = Single.NaN;
-            this.ru = ru;
+            this.resourceUnit = resourceUnit;
             this.soilWaterRetention = null;
             this.snowPack = new();
 
-            int weatherTimestepsPerYear = ru.Weather.TimeSeries.GetTimestepsPerYear();
+            int weatherTimestepsPerYear = resourceUnit.Weather.TimeSeries.GetTimestepsPerYear();
 
-            this.Canopy = new Canopy(projectFile.Model.Ecosystem.AirDensity);
+            this.Canopy = new(projectFile.Model.Ecosystem.AirDensity);
             this.FieldCapacity = Single.NaN;
             this.SoilWaterPotentialByWeatherTimestepInYear = new float[weatherTimestepsPerYear];
 
@@ -116,7 +116,7 @@ namespace iLand.World
             float laiConifer = 0.0F;
             float laiBroadleaf = 0.0F;
             float laiWeightedCanopyConductance = 0.0F;
-            foreach (ResourceUnitTreeSpecies ruSpecies in this.ru.Trees.SpeciesAvailableOnResourceUnit) 
+            foreach (ResourceUnitTreeSpecies ruSpecies in this.resourceUnit.Trees.SpeciesAvailableOnResourceUnit) 
             {
                 float lai = ruSpecies.StatisticsLive.LeafAreaIndex; // use previous year's LAI as this year's hasn't yet been computed
                 if (ruSpecies.Species.IsConiferous)
@@ -160,7 +160,7 @@ namespace iLand.World
         {
             float soilAtmosphereModifier = 0.0F; // LAI weighted minimum modifier for all species on the RU
             float totalLaiFactor = 0.0F;
-            foreach (ResourceUnitTreeSpecies ruSpecies in this.ru.Trees.SpeciesAvailableOnResourceUnit)
+            foreach (ResourceUnitTreeSpecies ruSpecies in this.resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
             {
                 if (ruSpecies.LaiFraction > 0.0F)
                 {
@@ -181,16 +181,16 @@ namespace iLand.World
             // conceptually: totalModifier = agingModifier * min(vpdModifier, waterModifier)
             if (totalLaiFactor == 1.0F)
             {
-                soilAtmosphereModifier *= ru.Trees.AverageLeafAreaWeightedAgingFactor; // no ground cover: use aging value for all LA
+                soilAtmosphereModifier *= resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor; // no ground cover: use aging value for all LA
             }
-            else if (totalLaiFactor > 0.0F && ru.Trees.AverageLeafAreaWeightedAgingFactor > 0.0F)
+            else if (totalLaiFactor > 0.0F && resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor > 0.0F)
             {
-                soilAtmosphereModifier *= (1.0F - totalLaiFactor) * 1.0F + (totalLaiFactor * ru.Trees.AverageLeafAreaWeightedAgingFactor); // between 0..1: a part of the LAI is "ground cover" (aging=1)
+                soilAtmosphereModifier *= (1.0F - totalLaiFactor) * 1.0F + (totalLaiFactor * resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor); // between 0..1: a part of the LAI is "ground cover" (aging=1)
             }
 
-            if (this.ru.Trees.AverageLeafAreaWeightedAgingFactor > 1.0F || this.ru.Trees.AverageLeafAreaWeightedAgingFactor < 0.0F || soilAtmosphereModifier < 0.0F || soilAtmosphereModifier > 1.0F)
+            if (this.resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor > 1.0F || this.resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor < 0.0F || soilAtmosphereModifier < 0.0F || soilAtmosphereModifier > 1.0F)
             {
-                throw new NotSupportedException("Average aging or soil atmosphere modifier invalid. Aging: " + ru.Trees.AverageLeafAreaWeightedAgingFactor + ", soil-atmosphere response " + soilAtmosphereModifier + ", total LAI factor: " + totalLaiFactor + ".");
+                throw new NotSupportedException("Average aging or soil atmosphere modifier invalid. Aging: " + resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor + ", soil-atmosphere response " + soilAtmosphereModifier + ", total LAI factor: " + totalLaiFactor + ".");
             }
             return soilAtmosphereModifier;
         }
@@ -207,7 +207,7 @@ namespace iLand.World
             // see Species.GetVpdModifier()
 
             float vpdModifier = MathF.Exp(-0.6F * vpdInKilopascals);
-            return Math.Min(waterModifier, vpdModifier);
+            return MathF.Min(waterModifier, vpdModifier);
         }
 
         /// Main Water Cycle function. This function triggers all water related tasks for
@@ -231,7 +231,7 @@ namespace iLand.World
             this.TotalEvapotranspiration = 0.0F;
             this.TotalRunoff = 0.0F;
             float daysInTimestep = 1.0F;
-            WeatherTimeSeries weatherTimeSeries = this.ru.Weather.TimeSeries;
+            WeatherTimeSeries weatherTimeSeries = this.resourceUnit.Weather.TimeSeries;
             bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
             for (int weatherTimestepIndex = weatherTimeSeries.CurrentYearStartIndex, weatherTimestepInYearIndex = 0; weatherTimestepIndex < weatherTimeSeries.NextYearStartIndex; ++weatherTimestepIndex, ++weatherTimestepInYearIndex)
             {
@@ -285,7 +285,7 @@ namespace iLand.World
                 // calculate the LAI-weighted growth modifiers for soil water and VPD
                 float interceptionBeforeTranspiration = this.Canopy.TotalInterceptedWaterInMM;
                 float soilAtmosphereModifier = this.GetSoilAtmosphereModifier(currentPsi, weatherTimeSeries.VpdMeanInKPa[weatherTimestepIndex]);
-                float dayLengthInHours = this.ru.Weather.Sun.GetDayLengthInHours(dayOfYearIndex);
+                float dayLengthInHours = this.resourceUnit.Weather.Sun.GetDayLengthInHours(dayOfYearIndex);
                 float evapotranspirationInMM = this.Canopy.FlowEvapotranspirationTimestep3PG(projectFile, weatherTimeSeries, weatherTimestepIndex, dayLengthInHours, soilAtmosphereModifier);
                 // if there is some flow from intercepted water to the ground -> add to "water_to_the_ground"
                 if (this.Canopy.TotalInterceptedWaterInMM < interceptionBeforeTranspiration)

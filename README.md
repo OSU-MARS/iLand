@@ -22,20 +22,24 @@ for modeling in Europe and contains an example model from Kalkalpen National Par
 * Separation of input parsing from data objects, simplifying support for multiple input formats. Feather (Apache Arrow) is supported, within Arrow 8's 
   C# limitations, as a binary alternative to SQL databases and parsing CSV of other delimited files. Feather simplifies integration with R for iLand 
   project setup and data analysis.
+* Separation of output objects and calculations from model calculations and objects, disentangling the object model and reducing unnecessary calculation.
 * Removal of static state so that multiple iLand models can be instantiated in the same app domain. As a corollary, species names are no
   longer replaced with their species set indices within expressions as this [management filtering feature](http://iland-model.org/Expression#Constants)
   relied on static lookups from deep within the parse stack.
+* Standardization on single precision rather than retaining the mixed and variable use of single and double precision of the C++ build. This essentially
+  halves the memory footprint of floating point data and reduces calculation and single precision exponentiation, logarithms, square roots, and 
+  trigonometric functions evaluate more quickly than their double precision equivalents. Numeric drift remains negligible compared to simulation
+  uncertainty.
+* Conversion to managed code, replacing pointers with indices and C# nullable annotation. Structured exception handling is converted to C#'s exception 
+  model. The SQL data layer is rewritten using managed Sqlite and GridRunner<T> becomes the IEnumerator<T>-like GridWindowEnumerator<T>.
 * Replacement of the GlobalSettings::instance()->settings() and DOM XML reparsing with conventional XML deserialization which checks for schema errors
   such as typos and misplaced elements that were previously ignored. This induces improvements in state handling internal to iLand as parameter splitting 
   between global settings and the global property bag and overwriting of such settings has been removed. In particular, the ResourceUnitReader class 
   (the Environment class in C++) now functions as conventional enumerator of resource unit properties rather than as a property bag manipulator. 
   Associated code defects in initialization file loading, constant nitrogen, and dynamic nitrogen have been fixed.
-* Conversion to managed code, replacing pointers with indices and C# nullable annotation. Structured exception handling is converted to C#'s exception 
-  model. The SQL data layer is rewritten using managed Sqlite and GridRunner<T> becomes the IEnumerator<T>-like GridWindowEnumerator<T>.
-* Standardization on single precision for most calculations rather than retaining the mixed and variable use of single and double precision of the C++
-  build.
-* Deprecation of trace based debugging output in favor of debug assertions, exceptions, and expansion of unit test coverage. Where practical, dead
-  code is removed and duplicate code consolidated. Renaming for clarity and C# style conformance is substantial.
+* Deprecation of trace based debugging output in favor of debug assertions, exceptions, and expansion of unit test coverage. As practical, interactions 
+  are refactored for increased encapsulation, dead code is removed, and duplicate code consolidated. Renaming for clarity and C# style conformance is 
+  substantial.
 
 ### Relationship to iLand 0.8 (2014) and earlier
 iLand was initially applied to simulation of the [HJ Andrews Experimental Forest in Oregon](https://andrewsforest.oregonstate.edu/) with publication in
@@ -59,9 +63,12 @@ these effects are likely small compared to those of atmospheric refraction, terr
 to toroidal resource units).
 * Moving average of daily soil water potential for sapling establishment restarted every January 1st even though the calendar year boundary is usually 
 within the growing season on tropical and southern hemisphere sites.
+* ResourceUnitSoil carbon and nitrogen inputs were off by a factor of 10,000 because resource units' in landscape areas in m² were misinterpreted as
+  areas in hectares.
 * Positioning of light grid origin at resource unit grid orientation lead integer truncation of light grid indexes to double stamp the x = 0 column and
 y = 0 row of the light grid, leading to competition overestimation and growth underestimation of trees in this row and column.
 * The last day of a leap year was a leaf off day for evergreen species, meaning no photosynthesis would occur that day.
+* State mishandling in SummaryStatistics allowed invalid median values and standard deviations.
 
 Decoupling from Qt additionally exempts iLand development from Qt licensing terms (minimum US$ 302/month, as of July 2022, or Qt code contributions in 
 kind), reducing the cost of open source software.

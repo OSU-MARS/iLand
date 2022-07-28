@@ -11,10 +11,10 @@ namespace iLand.Input.ProjectFile
 
         public Model()
         {
-            this.Ecosystem = new Ecosystem();
-            this.Management = new Management();
-            this.SeedDispersal = new SeedDispersal();
-            this.Settings = new ModelSettings();
+            this.Ecosystem = new();
+            this.Management = new();
+            this.SeedDispersal = new();
+            this.Settings = new();
         }
 
         protected override void ReadStartElement(XmlReader reader)

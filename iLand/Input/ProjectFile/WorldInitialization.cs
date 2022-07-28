@@ -18,9 +18,9 @@ namespace iLand.Input.ProjectFile
         public WorldInitialization()
         {
             this.CloneIndividualTreesToEachResourceUnit = false;
-            this.HeightGrid = new InitialHeightGrid();
+            this.HeightGrid = new();
             this.ResourceUnitFile = null;
-            this.Snags = new IntitialSnags();
+            this.Snags = new();
             this.SaplingsByStandFile = null;
             this.StandRasterFile = null;
             this.TreeFiles = new();

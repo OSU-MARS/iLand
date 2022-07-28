@@ -1,9 +1,10 @@
-﻿using iLand.World;
+﻿using iLand.Tree;
+using iLand.World;
 using System.Collections.Generic;
 
-namespace iLand.Tree
+namespace iLand.Output
 {
-    public class ResourceUnitTrajectory : ResourceUnitTreeStatistics
+    public class StandOrResourceUnitTrajectory
     {
         public List<float> AverageDbhByYear { get; private init; } // average dbh (cm)
         public List<float> AverageHeightByYear { get; private init; } // average tree height (m)
@@ -35,10 +36,11 @@ namespace iLand.Tree
         public List<float> StemCarbonByYear { get; private init; }
         public List<float> StemNitrogenByYear { get; private init; }
 
-        public ResourceUnitTrajectory(ResourceUnit ru)
-            : base(ru)
+        public ResourceUnit ResourceUnit { get; private init; }
+
+        public StandOrResourceUnitTrajectory(ResourceUnit resourceUnit)
         {
-            int defaultCapacityInYears = 20;
+            int defaultCapacityInYears = Constant.Data.AnnualAllocationIncrement;
             this.CohortCountByYear = new(defaultCapacityInYears);
             this.SaplingCountByYear = new(defaultCapacityInYears);
             this.AverageDbhByYear = new(defaultCapacityInYears);
@@ -64,39 +66,41 @@ namespace iLand.Tree
             this.RegenerationNitrogenByYear = new(defaultCapacityInYears);
             this.StemCarbonByYear = new(defaultCapacityInYears);
             this.StemNitrogenByYear = new(defaultCapacityInYears);
+
+            this.ResourceUnit = resourceUnit;
         }
 
-        public override void OnEndYear()
+        public void AddYear()
         {
-            base.OnEndYear();
+            ResourceUnitTreeStatistics endOfYearResourceUnitTreeStatistics = this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands;
 
-            this.AverageDbhByYear.Add(this.AverageDbh);
-            this.AverageHeightByYear.Add(this.AverageHeight);
-            this.BasalAreaByYear.Add(this.BasalArea);
-            this.CohortCountByYear.Add(this.CohortCount);
-            this.LeafAreaIndexByYear.Add(this.LeafAreaIndex);
-            this.LiveStemVolumeByYear.Add(this.StemVolume);
-            this.LiveAndSnagStemVolumeByYear.Add(this.LiveAndSnagStemVolume);
-            this.MeanSaplingAgeByYear.Add(this.MeanSaplingAge);
-            this.TreeNppByYear.Add(this.TreeNpp);
-            this.TreeNppAbovegroundByYear.Add(this.TreeNppAboveground);
-            this.TreeCountByYear.Add(this.TreeCount);
+            this.AverageDbhByYear.Add(endOfYearResourceUnitTreeStatistics.AverageDbh);
+            this.AverageHeightByYear.Add(endOfYearResourceUnitTreeStatistics.AverageHeight);
+            this.BasalAreaByYear.Add(endOfYearResourceUnitTreeStatistics.BasalArea);
+            this.CohortCountByYear.Add(endOfYearResourceUnitTreeStatistics.CohortCount);
+            this.LeafAreaIndexByYear.Add(endOfYearResourceUnitTreeStatistics.LeafAreaIndex);
+            this.LiveStemVolumeByYear.Add(endOfYearResourceUnitTreeStatistics.StemVolume);
+            this.LiveAndSnagStemVolumeByYear.Add(endOfYearResourceUnitTreeStatistics.LiveAndSnagStemVolume);
+            this.MeanSaplingAgeByYear.Add(endOfYearResourceUnitTreeStatistics.MeanSaplingAge);
+            this.TreeNppByYear.Add(endOfYearResourceUnitTreeStatistics.TreeNpp);
+            this.TreeNppAbovegroundByYear.Add(endOfYearResourceUnitTreeStatistics.TreeNppAboveground);
+            this.TreeCountByYear.Add(endOfYearResourceUnitTreeStatistics.TreeCount);
 
-            this.RegenerationCarbonByYear.Add(this.RegenerationCarbon);
-            this.RegenerationNitrogenByYear.Add(this.RegenerationNitrogen);
-            this.SaplingCountByYear.Add(this.SaplingCount);
-            this.SaplingNppByYear.Add(this.SaplingNpp);
+            this.RegenerationCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.RegenerationCarbon);
+            this.RegenerationNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.RegenerationNitrogen);
+            this.SaplingCountByYear.Add(endOfYearResourceUnitTreeStatistics.SaplingCount);
+            this.SaplingNppByYear.Add(endOfYearResourceUnitTreeStatistics.SaplingNpp);
 
-            this.BranchCarbonByYear.Add(this.BranchCarbon);
-            this.BranchNitrogenByYear.Add(this.BranchNitrogen);
-            this.CoarseRootCarbonByYear.Add(this.CoarseRootCarbon);
-            this.CoarseRootNitrogenByYear.Add(this.CoarseRootNitrogen);
-            this.FineRootCarbonByYear.Add(this.FineRootCarbon);
-            this.FineRootNitrogenByYear.Add(this.FineRootNitrogen);
-            this.FoliageCarbonByYear.Add(this.FoliageCarbon);
-            this.FoliageNitrogenByYear.Add(this.FoliageNitrogen);
-            this.StemCarbonByYear.Add(this.StemCarbon);
-            this.StemNitrogenByYear.Add(this.StemNitrogen);
+            this.BranchCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.BranchCarbon);
+            this.BranchNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.BranchNitrogen);
+            this.CoarseRootCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.CoarseRootCarbon);
+            this.CoarseRootNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.CoarseRootNitrogen);
+            this.FineRootCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.FineRootCarbon);
+            this.FineRootNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.FineRootNitrogen);
+            this.FoliageCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.FoliageCarbon);
+            this.FoliageNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.FoliageNitrogen);
+            this.StemCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.StemCarbon);
+            this.StemNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.StemNitrogen);
         }
     }
 }

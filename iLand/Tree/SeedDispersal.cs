@@ -61,18 +61,18 @@ namespace iLand.Tree
 
         public SeedDispersal(TreeSpecies species)
         {
-            this.externalSeedBaseMap = new Grid<float>();
-            this.externalSeedData = new Dictionary<string, List<float>>();
-            this.externalSeedMap = new Grid<float>();
-            this.kernelMastYear = new Grid<float>(); // species specific "seed kernel" (small) for seed years
-            this.kernelNonMastYear = new Grid<float>(); // species specific "seed kernel" (small) for non-seed-years
-            this.kernelSerotiny = new Grid<float>(); // seed kernel for extra seed rain
-            this.longDispersalDistance = new List<float>(); // long distance dispersal distances (e.g. the "rings")
-            this.longDistanceDispersalSeedsByRing = new List<float>();  // long distance dispersal # of cells that should be affected in each "ring"
-            this.seedMapSerotiny = new Grid<float>(); // seed map that keeps track of serotiny events
-            this.sourceMap = new Grid<float>(); // (large) seedmap used to denote the sources
+            this.externalSeedBaseMap = new();
+            this.externalSeedData = new();
+            this.externalSeedMap = new();
+            this.kernelMastYear = new(); // species specific "seed kernel" (small) for seed years
+            this.kernelNonMastYear = new(); // species specific "seed kernel" (small) for non-seed-years
+            this.kernelSerotiny = new(); // seed kernel for extra seed rain
+            this.longDispersalDistance = new(); // long distance dispersal distances (e.g. the "rings")
+            this.longDistanceDispersalSeedsByRing = new();  // long distance dispersal # of cells that should be affected in each "ring"
+            this.seedMapSerotiny = new(); // seed map that keeps track of serotiny events
+            this.sourceMap = new(); // (large) seedmap used to denote the sources
 
-            this.SeedMap = new Grid<float>(); // (large) seedmap. Is filled by individual trees and then processed
+            this.SeedMap = new(); // (large) seedmap. Is filled by individual trees and then processed
             this.Species = species;
         }
 
@@ -224,7 +224,7 @@ namespace iLand.Tree
             //    float max_dist = max_radius * seedmap_size;
             //    for (float *p=mSeedKernel.begin(); p!=mSeedKernel.end();++p) {
             //        float d = mSeedKernel.distance(center, mSeedKernel.indexOf(p));
-            //        *p = Math.Max( 1.0 - d / max_dist, 0.0);
+            //        *p = MathF.Max( 1.0 - d / max_dist, 0.0F);
             //    }
 
             // randomize seed map.... set 1/3 to "filled"
@@ -249,7 +249,7 @@ namespace iLand.Tree
             // setup of sectors
             // setup of base map
             float seedmap_size = 20.0F;
-            this.externalSeedBaseMap = new Grid<float>();
+            this.externalSeedBaseMap = new();
             this.externalSeedBaseMap.Setup(model.Landscape.HeightGrid.ProjectExtent, seedmap_size);
             this.externalSeedBaseMap.Fill(0.0F);
             if (this.externalSeedBaseMap.CellCount * 4 != model.Landscape.HeightGrid.CellCount)
@@ -466,7 +466,7 @@ namespace iLand.Tree
                 for (int kernelIndex = 0; kernelIndex < kernel.CellCount; ++kernelIndex)
                 {
                     // TODO: why isn't this a call to kernel.limit(0, 1)?
-                    kernel[kernelIndex] = Math.Min(kernel[kernelIndex], 1.0F);
+                    kernel[kernelIndex] = MathF.Min(kernel[kernelIndex], 1.0F);
                 }
             }
             // set the parent cell to 1
@@ -519,8 +519,8 @@ namespace iLand.Tree
         /* R-Code:
         treemig=function(as1,as2,ks,d) # two-part exponential function, cf. Lischke & Loeffler (2006), Annex
                 {
-                p1=(1-ks)*Math.Exp(-d/as1)/as1
-                if(as2>0){p2=ks*Math.Exp(-d/as2)/as2}else{p2=0}
+                p1=(1-ks)*MathF.Exp(-d/as1)/as1
+                if(as2>0){p2=ks*MathF.Exp(-d/as2)/as2}else{p2=0}
                 p1+p2
                 }
         */
@@ -876,7 +876,7 @@ namespace iLand.Tree
                 if (sourceMap[sourceIndex] != 0.0F)
                 {
                     // if LAI  >3, then full potential is assumed, below LAI=3 a linear ramp is used
-                    sourceMap[sourceIndex] = Math.Min(sourceMap[sourceIndex] / (sourceMap.CellSizeInM * sourceMap.CellSizeInM) / 3.0F, 3.0F);
+                    sourceMap[sourceIndex] = MathF.Min(sourceMap[sourceIndex] / (sourceMap.CellSizeInM * sourceMap.CellSizeInM) / 3.0F, 3.0F);
                 }
             }
 
@@ -996,7 +996,7 @@ namespace iLand.Tree
                                 }
                                 else
                                 {
-                                    nSeeds = (int)Math.Round(longDistanceDispersalSeedsByRing[densityIndex]); // number of pixels to activate
+                                    nSeeds = (int)MathF.Round(longDistanceDispersalSeedsByRing[densityIndex]); // number of pixels to activate
                                 }
                                 for (int seed = 0; seed < nSeeds; ++seed)
                                 {

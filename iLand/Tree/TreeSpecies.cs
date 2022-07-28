@@ -102,17 +102,17 @@ namespace iLand.Tree
                 throw new ArgumentNullException(nameof(speciesSet));
             }
 
-            this.aging = new Expression();
-            this.lightIntensityProfiles = new TreeSpeciesStamps();
-            this.heightDiameterRatioUpperBound = new Expression();
-            this.heightDiameterRatioLowerBound = new Expression();
-            this.serotinyFormula = new Expression();
+            this.aging = new();
+            this.lightIntensityProfiles = new();
+            this.heightDiameterRatioUpperBound = new();
+            this.heightDiameterRatioLowerBound = new();
+            this.serotinyFormula = new();
 
-            this.SaplingEstablishment = new SaplingEstablishmentParameters();
+            this.SaplingEstablishment = new();
             this.ID = id;
             this.Index = speciesSet.Count;
             this.Name = name;
-            this.SaplingGrowth = new SaplingGrowthParameters();
+            this.SaplingGrowth = new();
             this.SeedDispersal = null;
             this.SpeciesSet = speciesSet;
         }
@@ -237,8 +237,8 @@ namespace iLand.Tree
             species.heightDiameterRatioUpperBound.SetAndParse(reader.HdHigh());
             if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
             {
-                species.heightDiameterRatioLowerBound.Linearize(0.0, 100.0); // input: dbh (cm). above 100cm the formula will be directly executed
-                species.heightDiameterRatioUpperBound.Linearize(0.0, 100.0);
+                species.heightDiameterRatioLowerBound.Linearize(0.0F, 100.0F); // input: dbh (cm). above 100cm the formula will be directly executed
+                species.heightDiameterRatioUpperBound.Linearize(0.0F, 100.0F);
             }
 
             // form/density
@@ -280,7 +280,7 @@ namespace iLand.Tree
             species.aging.SetAndParse(reader.Aging());
             if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
             {
-                species.aging.Linearize(0.0, 1.0); // input is harmonic mean of relative age and relative height
+                species.aging.Linearize(0.0F, 1.0F); // input is harmonic mean of relative age and relative height
             }
             if ((species.maximumAgeInYears <= 0.0F) || (species.maximumAgeInYears > 1000.0F * 1000.0F) ||
                 (species.maximumHeightInM <= 0.0) || (species.maximumHeightInM > 200.0)) // Sequoia semperivirens (Hyperion) 115.7 m
@@ -384,7 +384,7 @@ namespace iLand.Tree
             species.SaplingGrowth.SetupReinekeLookup();
             if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
             {
-                species.SaplingGrowth.HeightGrowthPotential.Linearize(0.0, Constant.Sapling.MaximumHeight);
+                species.SaplingGrowth.HeightGrowthPotential.Linearize(0.0F, Constant.Sapling.MaximumHeight);
             }
             return species;
         }

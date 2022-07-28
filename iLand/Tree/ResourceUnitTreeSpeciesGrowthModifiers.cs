@@ -35,10 +35,10 @@ namespace iLand.Tree
         public float UtilizableRadiationForYear { get; private set; } // yearly sum of utilized radiation (MJ/²)
         public float[] VpdModifierByMonth { get; private init; } // monthly average or estimate of vpd-response
 
-        public ResourceUnitTreeSpeciesGrowthModifiers(ResourceUnit ru, ResourceUnitTreeSpecies ruSpecies)
+        public ResourceUnitTreeSpeciesGrowthModifiers(ResourceUnit resourceUnit, ResourceUnitTreeSpecies ruSpecies)
         {
             this.Species = ruSpecies.Species;
-            this.ResourceUnit = ru;
+            this.ResourceUnit = resourceUnit;
 
             this.CO2ModifierByMonth = new float[Constant.MonthsInYear];
             this.GlobalRadiationByMonth = new float[Constant.MonthsInYear];

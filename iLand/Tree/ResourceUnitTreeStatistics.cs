@@ -16,7 +16,7 @@ namespace iLand.Tree
     public class ResourceUnitTreeStatistics
     {
         private readonly bool requiresPerHectareConversion;
-        private readonly ResourceUnit ru;
+        private readonly ResourceUnit resourceUnit;
         private float sumDbh;
         private float sumHeight;
         private float sumSaplingAge;
@@ -56,9 +56,9 @@ namespace iLand.Tree
         public float StemCarbon { get; private set; } // kg or kg/ha
         public float StemNitrogen { get; private set; } // kg or kg/ha
 
-        public ResourceUnitTreeStatistics(ResourceUnit ru)
+        public ResourceUnitTreeStatistics(ResourceUnit resourceUnit)
         {
-            this.ru = ru;
+            this.resourceUnit = resourceUnit;
             this.sumDbh = 0.0F;
             this.sumHeight = 0.0F;
             this.sumSaplingAge = 0.0F;
@@ -97,8 +97,8 @@ namespace iLand.Tree
             this.StemNitrogen = 0.0F;
         }
 
-        public ResourceUnitTreeStatistics(ResourceUnit ru, ResourceUnitTreeSpecies ruSpecies)
-            : this(ru)
+        public ResourceUnitTreeStatistics(ResourceUnit resourceUnit, ResourceUnitTreeSpecies ruSpecies)
+            : this(resourceUnit)
         {
             this.requiresPerHectareConversion = true;
 
@@ -173,7 +173,7 @@ namespace iLand.Tree
             this.RegenerationCarbon += sapling.CarbonLiving.C;
             this.RegenerationNitrogen += sapling.CarbonLiving.N;
 
-            this.SaplingNpp += sapling.CarbonGain.C / Constant.BiomassCFraction;
+            this.SaplingNpp += sapling.CarbonGain.C / Constant.DryBiomassCarbonFraction;
         }
 
         public void AddToCurrentYear(Trees trees, int treeIndex, TreeGrowthData? treeGrowth, bool skipDead)
@@ -197,16 +197,16 @@ namespace iLand.Tree
             }
 
             // carbon and nitrogen pools
-            this.BranchCarbon += Constant.BiomassCFraction * trees.GetBranchBiomass(treeIndex);
-            this.BranchNitrogen += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.GetBranchBiomass(treeIndex);
-            this.CoarseRootCarbon += Constant.BiomassCFraction * trees.CoarseRootMass[treeIndex];
-            this.CoarseRootNitrogen += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.CoarseRootMass[treeIndex];
-            this.FineRootCarbon += Constant.BiomassCFraction * trees.FineRootMass[treeIndex];
-            this.FineRootNitrogen += Constant.BiomassCFraction / trees.Species.CNRatioFineRoot * trees.FineRootMass[treeIndex];
-            this.FoliageCarbon += Constant.BiomassCFraction * trees.FoliageMass[treeIndex];
-            this.FoliageNitrogen += Constant.BiomassCFraction / trees.Species.CNRatioFineRoot * trees.FoliageMass[treeIndex];
-            this.StemCarbon += Constant.BiomassCFraction * trees.StemMass[treeIndex];
-            this.StemNitrogen += Constant.BiomassCFraction / trees.Species.CNRatioWood * trees.StemMass[treeIndex];
+            this.BranchCarbon += Constant.DryBiomassCarbonFraction * trees.GetBranchBiomass(treeIndex);
+            this.BranchNitrogen += Constant.DryBiomassCarbonFraction / trees.Species.CNRatioWood * trees.GetBranchBiomass(treeIndex);
+            this.CoarseRootCarbon += Constant.DryBiomassCarbonFraction * trees.CoarseRootMass[treeIndex];
+            this.CoarseRootNitrogen += Constant.DryBiomassCarbonFraction / trees.Species.CNRatioWood * trees.CoarseRootMass[treeIndex];
+            this.FineRootCarbon += Constant.DryBiomassCarbonFraction * trees.FineRootMass[treeIndex];
+            this.FineRootNitrogen += Constant.DryBiomassCarbonFraction / trees.Species.CNRatioFineRoot * trees.FineRootMass[treeIndex];
+            this.FoliageCarbon += Constant.DryBiomassCarbonFraction * trees.FoliageMass[treeIndex];
+            this.FoliageNitrogen += Constant.DryBiomassCarbonFraction / trees.Species.CNRatioFineRoot * trees.FoliageMass[treeIndex];
+            this.StemCarbon += Constant.DryBiomassCarbonFraction * trees.StemMass[treeIndex];
+            this.StemNitrogen += Constant.DryBiomassCarbonFraction / trees.Species.CNRatioWood * trees.StemMass[treeIndex];
         }
 
         public virtual void OnEndYear()
@@ -221,15 +221,15 @@ namespace iLand.Tree
             {
                 this.MeanSaplingAge = this.sumSaplingAge / this.CohortCount; // else leave mean sapling age as zero
             }
-            Debug.Assert(this.ru.AreaInLandscape > 0.0F);
-            this.LeafAreaIndex = this.LeafArea / this.ru.AreaInLandscape; // this.ru.AreaWithTrees;
+            Debug.Assert(this.resourceUnit.AreaInLandscapeInM2 > 0.0F);
+            this.LeafAreaIndex = this.LeafArea / this.resourceUnit.AreaInLandscapeInM2; // this.ru.AreaWithTrees;
             this.LiveAndSnagStemVolume = this.StemVolume; // initialization, removed volume may be added below
 
             // scale values to per hectare if resource unit <> 1ha
             // note: do this only on species-level (avoid double scaling)
             if (this.requiresPerHectareConversion)
             {              
-                float ruExpansionFactor = Constant.ResourceUnitAreaInM2 / this.ru.AreaInLandscape;
+                float ruExpansionFactor = Constant.ResourceUnitAreaInM2 / this.resourceUnit.AreaInLandscapeInM2;
                 if (ruExpansionFactor != 1.0F)
                 {
                     this.sumDbh *= ruExpansionFactor; // probably not strictly necessary
@@ -268,9 +268,9 @@ namespace iLand.Tree
 
         public void AddCurrentYears(ResourceUnitTreeStatistics other)
         {
-            if (Object.ReferenceEquals(this.ru, other.ru) == false)
+            if (Object.ReferenceEquals(this.resourceUnit, other.resourceUnit) == false)
             {
-                throw new ArgumentOutOfRangeException(nameof(other), "Attempt to add statistics from different resource units (grid indices " + this.ru.ResourceUnitGridIndex + " and " + other.ru.ResourceUnitGridIndex + ".");
+                throw new ArgumentOutOfRangeException(nameof(other), "Attempt to add statistics from different resource units (grid indices " + this.resourceUnit.ResourceUnitGridIndex + " and " + other.resourceUnit.ResourceUnitGridIndex + ".");
             }
             if (this.IsPerHectare != other.IsPerHectare)
             {

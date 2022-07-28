@@ -12,7 +12,7 @@ namespace iLand.Simulation
 
         public ScheduledEvents(Project projectFile, string eventFilePath)
         {
-            this.eventsByYear = new Dictionary<int, List<(string Name, string Value)>>();
+            this.eventsByYear = new();
             
             using CsvFile eventFile = new(projectFile.GetFilePath(ProjectDirectory.Home, eventFilePath));
             int yearIndex = eventFile.GetColumnIndex("year");
@@ -26,7 +26,7 @@ namespace iLand.Simulation
                 int year = Int32.Parse(row[yearIndex], CultureInfo.InvariantCulture);
                 if (this.eventsByYear.TryGetValue(year, out List<(string Name, string Value)>? eventsOfYear) == false)
                 {
-                    eventsOfYear = new List<(string Name, string Value)>();
+                    eventsOfYear = new();
                     this.eventsByYear.Add(year, eventsOfYear);
                 }
 
@@ -43,8 +43,8 @@ namespace iLand.Simulation
 
         public void RunYear(Model model)
         {
-            int currentYear = model.CurrentYear;
-            if (eventsByYear.TryGetValue(currentYear, out List<(string Name, string Value)>? eventsOfYear) == false)
+            int currentSimulationYear = model.SimulationState.CurrentYear;
+            if (eventsByYear.TryGetValue(currentSimulationYear, out List<(string Name, string Value)>? eventsOfYear) == false)
             {
                 return;
             }

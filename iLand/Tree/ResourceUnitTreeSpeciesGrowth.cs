@@ -21,10 +21,10 @@ namespace iLand.Tree
         // utilizable radiation MJ/m² and month
         public float[] UtilizablePar { get; private init; }
 
-        public ResourceUnitTreeSpeciesGrowth(ResourceUnit ru, ResourceUnitTreeSpecies ruSpecies)
+        public ResourceUnitTreeSpeciesGrowth(ResourceUnit resourceUnit, ResourceUnitTreeSpecies ruSpecies)
         {
             this.AnnualGpp = 0.0F;
-            this.Modifiers = new(ru, ruSpecies);
+            this.Modifiers = new(resourceUnit, ruSpecies);
             this.MonthlyGpp = new float[Constant.MonthsInYear];
             this.RootFraction = 0.0F;
             this.SiteEnvironmentSaplingHeightGrowthMultiplier = 0.0F;
@@ -41,7 +41,7 @@ namespace iLand.Tree
             // Radiation: sum over all days of each month with foliage
             // conversion from gC to kg Biomass: C/Biomass=0.5
             float annualRUgpp = 0.0F;
-            const float gramsCarbonToKilogramsBiomass = 0.001F / Constant.BiomassCFraction;
+            const float gramsCarbonToKilogramsBiomass = 0.001F / Constant.DryBiomassCarbonFraction;
             for (int month = 0; month < Constant.MonthsInYear; ++month)
             {
                 // This is based on the utilizable photosynthetic active radiation.

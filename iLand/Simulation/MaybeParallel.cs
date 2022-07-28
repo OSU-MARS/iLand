@@ -67,7 +67,7 @@ namespace iLand.Simulation
         //        Parallel.For(0, chunks, (int chunk) =>
         //        {
         //            int p = begin + chunksize * chunk;
-        //            int pend = Math.Min(p + chunksize, end);
+        //            int pend = MathF.Min(p + chunksize, end);
         //            funcptr.Invoke(p, pend);
         //        });
         //    }

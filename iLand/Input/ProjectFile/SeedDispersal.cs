@@ -20,12 +20,12 @@ namespace iLand.Input.ProjectFile
         {
 			this.DumpSeedMapsPath = null;
 			this.ExternalSeedBackgroundInput = null;
-			this.ExternalSeedBelt = new ExternalSeedBelt();
+			this.ExternalSeedBelt = new();
 			this.ExternalSeedBuffer = null;
 			this.ExternalSeedEnabled = false;
 			this.ExternalSeedDirection = null;
 			this.ExternalSeedSpecies = null;
-			this.LongDistanceDispersal = new LongDistanceDispersal();
+			this.LongDistanceDispersal = new();
 			this.RecruitmentDimensionVariation = 0.1F; // +/- 10%
         }
 

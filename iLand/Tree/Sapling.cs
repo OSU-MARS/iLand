@@ -36,9 +36,9 @@ namespace iLand.Tree
         }
 
         // get resource unit species of the sapling tree
-        public ResourceUnitTreeSpecies GetResourceUnitSpecies(ResourceUnit ru)
+        public ResourceUnitTreeSpecies GetResourceUnitSpecies(ResourceUnit resourceUnit)
         {
-            return ru.Trees.SpeciesAvailableOnResourceUnit[this.SpeciesIndex];
+            return resourceUnit.Trees.SpeciesAvailableOnResourceUnit[this.SpeciesIndex];
         }
     }
 }

@@ -1,11 +1,13 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
+using iLand.Simulation;
 using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
 using System.Diagnostics;
+using Model = iLand.Simulation.Model;
 
-namespace iLand.Output
+namespace iLand.Output.Sql
 {
     public class SaplingDetailsAnnualOutput : AnnualOutput
     {
@@ -26,28 +28,28 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
             this.Columns.Add(SqlColumn.CreateSpecies());
-            this.Columns.Add(new SqlColumn("n_represented", "number of trees that are represented by the cohort (Reineke function).", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("dbh", "diameter of the cohort (cm).", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("height", "height of the cohort (m).", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("age", "age of the cohort (years) ", SqliteType.Integer));
+            this.Columns.Add(new("n_represented", "number of trees that are represented by the cohort (Reineke function).", SqliteType.Real));
+            this.Columns.Add(new("dbh", "diameter of the cohort (cm).", SqliteType.Real));
+            this.Columns.Add(new("height", "height of the cohort (m).", SqliteType.Real));
+            this.Columns.Add(new("age", "age of the cohort (years) ", SqliteType.Integer));
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
+            foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
                 // exclude if a condition is specified and condition is not met
                 if (this.resourceUnitFilter.IsEmpty == false)
                 {
                     Debug.Assert(this.resourceUnitFilter.Wrapper != null);
-                    ((ResourceUnitWrapper)this.resourceUnitFilter.Wrapper).ResourceUnit = ru;
-                    if (this.resourceUnitFilter.Execute() == 0.0)
+                    ((ResourceUnitVariableAccessor)this.resourceUnitFilter.Wrapper).ResourceUnit = resourceUnit;
+                    if (this.resourceUnitFilter.Execute() == 0.0F)
                     {
                         continue;
                     }
                 }
 
-                SaplingCell[]? saplingCells = ru.SaplingCells;
+                SaplingCell[]? saplingCells = resourceUnit.SaplingCells;
                 if (saplingCells != null)
                 {
                     for (int lightCellIndex = 0; lightCellIndex < saplingCells.Length; ++lightCellIndex)
@@ -60,7 +62,7 @@ namespace iLand.Output
                             {
                                 if (saplingCell.Saplings[index].IsOccupied())
                                 {
-                                    ResourceUnitTreeSpecies ruSpecies = saplingCell.Saplings[index].GetResourceUnitSpecies(ru);
+                                    ResourceUnitTreeSpecies ruSpecies = saplingCell.Saplings[index].GetResourceUnitSpecies(resourceUnit);
                                     TreeSpecies treeSpecies = ruSpecies.Species;
                                     float dbh = 100.0F * saplingCell.Saplings[index].HeightInM / treeSpecies.SaplingGrowth.HeightDiameterRatio;
                                     // check minimum dbh
@@ -70,9 +72,9 @@ namespace iLand.Output
                                     }
                                     float n_repr = treeSpecies.SaplingGrowth.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].HeightInM) / n_on_px;
 
-                                    insertRow.Parameters[0].Value = model.CurrentYear;
-                                    insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
-                                    insertRow.Parameters[2].Value = ru.ID;
+                                    insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                                    insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
+                                    insertRow.Parameters[2].Value = resourceUnit.ID;
                                     insertRow.Parameters[3].Value = ruSpecies.Species.ID;
                                     insertRow.Parameters[4].Value = n_repr;
                                     insertRow.Parameters[5].Value = dbh;
@@ -87,11 +89,11 @@ namespace iLand.Output
             }
         }
 
-        public override void Setup(Model model)
+        public override void Setup(Project projectFile, SimulationState simulationState)
         {
-            this.resourceUnitFilter.SetExpression(model.Project.Output.Annual.SaplingDetail.Condition);
-            this.resourceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
-            this.minimumDbh = model.Project.Output.Annual.SaplingDetail.MinDbh;
+            this.resourceUnitFilter.SetExpression(projectFile.Output.Sql.SaplingDetail.Condition);
+            this.resourceUnitFilter.Wrapper = new ResourceUnitVariableAccessor(simulationState);
+            this.minimumDbh = projectFile.Output.Sql.SaplingDetail.MinDbh;
         }
     }
 }

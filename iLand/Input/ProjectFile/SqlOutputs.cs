@@ -2,7 +2,7 @@
 
 namespace iLand.Input.ProjectFile
 {
-    public class AnnualOutputs : XmlSerializable
+    public class SqlOutputs : XmlSerializable
     {
 		public string? DatabaseFile { get; private set; }
 
@@ -25,28 +25,28 @@ namespace iLand.Input.ProjectFile
 		public Enablable Wind { get; private init; }
 		public Enablable Fire { get; private init; }
 
-		public AnnualOutputs()
+		public SqlOutputs()
 		{
 			this.DatabaseFile = null;
 
-			this.Carbon = new ResourceUnitConditionOutput("carbon");
-			this.CarbonFlow = new ResourceUnitConditionOutput("carbonFlow");
-			this.DynamicStand = new DynamicStandAnnualOutput();
-			this.Landscape = new ConditionAnnualOutput("landscape");
-			this.LandscapeRemoved = new LandscapeRemovedOutput();
-			this.Management = new Enablable("management");
-			this.ProductionMonth = new Enablable("productionMonth");
-			this.Sapling = new ConditionAnnualOutput("sapling");
-			this.SaplingDetail = new SaplingDetailAnnualOutput();
-			this.Stand = new ConditionAnnualOutput("stand");
-			this.StandDead = new Enablable("standDead");
-			this.Tree = new FilterAnnualOutput("tree");
-			this.TreeRemoved = new FilterAnnualOutput("treeRemoved");
-			this.Water = new ResourceUnitConditionOutput("water");
+			this.Carbon = new("carbon");
+			this.CarbonFlow = new("carbonFlow");
+			this.DynamicStand = new();
+			this.Landscape = new("landscape");
+			this.LandscapeRemoved = new();
+			this.Management = new("management");
+			this.ProductionMonth = new("productionMonth");
+			this.Sapling = new("sapling");
+			this.SaplingDetail = new();
+			this.Stand = new("stand");
+			this.StandDead = new("standDead");
+			this.Tree = new("tree");
+			this.TreeRemoved = new("treeRemoved");
+			this.Water = new("water");
 
-			this.BarkBeetle = new Enablable("barkBeetle");
-			this.Wind = new Enablable("wind");
-			this.Fire = new Enablable("fire");
+			this.BarkBeetle = new("barkBeetle");
+			this.Wind = new("wind");
+			this.Fire = new("fire");
 		}
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -114,11 +114,11 @@ namespace iLand.Input.ProjectFile
 			{
 				switch (reader.Name)
 				{
-					case "annual":
-						reader.Read();
-						break;
 					case "databaseFile":
 						this.DatabaseFile = reader.ReadElementContentAsString().Trim();
+						break;
+					case "sql":
+						reader.Read();
 						break;
 					default:
 						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");

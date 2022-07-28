@@ -3,7 +3,7 @@ using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
 
-namespace iLand.Output
+namespace iLand.Output.Sql
 {
     /** ProductionOut describes finegrained production details on the level of resourceunits per month. */
     public class ProductionAnnualOutput : AnnualOutput
@@ -17,30 +17,30 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
             this.Columns.Add(SqlColumn.CreateSpecies());
-            this.Columns.Add(new SqlColumn("month", "month of year", SqliteType.Integer));
-            this.Columns.Add(new SqlColumn("tempResponse", "monthly average of daily respose value temperature", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("waterResponse", "monthly average of daily respose value soil water", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("vpdResponse", "monthly vapour pressure deficit respose.", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("co2Response", "monthly response value for ambient co2.", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("nitrogenResponse", "yearly respose value nitrogen", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("radiation_m2", "global radiation PAR in MJ per m2 and month", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("utilizableRadiation_m2", "utilizable PAR in MJ per m2 and month (sum of daily rad*min(respVpd,respWater,respTemp))", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("GPP_kg_m2", "GPP (without Aging) in kg Biomass/m2", SqliteType.Real));
+            this.Columns.Add(new("month", "month of year", SqliteType.Integer));
+            this.Columns.Add(new("tempResponse", "monthly average of daily respose value temperature", SqliteType.Real));
+            this.Columns.Add(new("waterResponse", "monthly average of daily respose value soil water", SqliteType.Real));
+            this.Columns.Add(new("vpdResponse", "monthly vapour pressure deficit respose.", SqliteType.Real));
+            this.Columns.Add(new("co2Response", "monthly response value for ambient co2.", SqliteType.Real));
+            this.Columns.Add(new("nitrogenResponse", "yearly respose value nitrogen", SqliteType.Real));
+            this.Columns.Add(new("radiation_m2", "global radiation PAR in MJ per m2 and month", SqliteType.Real));
+            this.Columns.Add(new("utilizableRadiation_m2", "utilizable PAR in MJ per m2 and month (sum of daily rad*min(respVpd,respWater,respTemp))", SqliteType.Real));
+            this.Columns.Add(new("GPP_kg_m2", "GPP (without Aging) in kg Biomass/m2", SqliteType.Real));
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
+            foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
-                foreach (ResourceUnitTreeSpecies ruSpecies in ru.Trees.SpeciesAvailableOnResourceUnit)
+                foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeSpeciesGrowth growth = ruSpecies.TreeGrowth;
                     ResourceUnitTreeSpeciesGrowthModifiers growthModifiers = growth.Modifiers;
                     for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
                     {
-                        insertRow.Parameters[0].Value = model.CurrentYear;
-                        insertRow.Parameters[1].Value = ruSpecies.RU.ResourceUnitGridIndex;
-                        insertRow.Parameters[2].Value = ruSpecies.RU.ID;
+                        insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                        insertRow.Parameters[1].Value = ruSpecies.ResourceUnit.ResourceUnitGridIndex;
+                        insertRow.Parameters[2].Value = ruSpecies.ResourceUnit.ID;
                         insertRow.Parameters[3].Value = ruSpecies.Species.ID;
                         insertRow.Parameters[4].Value = monthIndex + 1; // month
                         insertRow.Parameters[5].Value = growthModifiers.TemperatureModifierByMonth[monthIndex];

@@ -29,7 +29,7 @@ namespace iLand.Input.ProjectFile
 		public Fire()
 			: base("fire")
         {
-			this.Wind = new FireWind();
+			this.Wind = new();
         }
 
 		protected override void ReadStartElement(XmlReader reader)

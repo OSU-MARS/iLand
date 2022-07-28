@@ -1,19 +1,18 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class Outputs : XmlSerializable
 	{
-		public AnnualOutputs Annual { get; private init; }
 		public MemoryOutputs Memory { get; private init; }
 		public Logging Logging { get; private init; }
+		public SqlOutputs Sql { get; private init; }
 
 		public Outputs()
         {
-			this.Annual = new AnnualOutputs();
-			this.Logging = new Logging();
-			this.Memory = new MemoryOutputs();
+			this.Logging = new();
+			this.Memory = new();
+			this.Sql = new();
 		}
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -28,14 +27,14 @@ namespace iLand.Input.ProjectFile
 				case "output":
 					reader.Read();
 					break;
-				case "annual":
-					this.Annual.ReadXml(reader);
-					break;
 				case "logging":
 					this.Logging.ReadXml(reader);
 					break;
 				case "memory":
 					this.Memory.ReadXml(reader);
+					break;
+				case "sql":
+					this.Sql.ReadXml(reader);
 					break;
 				default:
 					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");

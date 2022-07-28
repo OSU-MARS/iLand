@@ -13,16 +13,16 @@ namespace iLand.Input.ProjectFile
 		public User User { get; private init; }
 		public World World { get; private init; }
 
-		public Project(string xmlFilePath)
+		public Project(string projectFilePath)
         {
-			this.Model = new Model();
-			this.Modules = new Modules();
-			this.Output = new Outputs();
-			this.System = new System(Path.GetDirectoryName(xmlFilePath)); // if home path is not specified, default it to the location of the project file
-			this.User = new User();
-			this.World = new World();
+			this.Model = new();
+			this.Modules = new();
+			this.Output = new();
+			this.System = new(Path.GetDirectoryName(projectFilePath)); // if home path is not specified, default it to the location of the project file
+			this.User = new();
+			this.World = new();
 
-			using FileStream stream = new(xmlFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+			using FileStream stream = new(projectFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 			using XmlReader reader = XmlReader.Create(stream);
 			reader.MoveToContent();
 			this.ReadXml(reader);

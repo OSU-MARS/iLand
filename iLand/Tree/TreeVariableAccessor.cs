@@ -7,16 +7,16 @@ using System.Diagnostics;
 
 namespace iLand.Tree
 {
-    internal class TreeWrapper : ExpressionWrapper
+    internal class TreeVariableAccessor : ExpressionVariableAccessor
     {
         private static readonly ReadOnlyCollection<string> TreeVariableNames;
 
         public int TreeIndex { get; set; }
         public Trees? Trees { get; set; }
 
-        static TreeWrapper()
+        static TreeVariableAccessor()
         {
-            TreeWrapper.TreeVariableNames = new List<string>(ExpressionWrapper.BaseVariableNames)
+            TreeVariableAccessor.TreeVariableNames = new List<string>(ExpressionVariableAccessor.BaseVariableNames)
             {
                 "id", "dbh", "height", "ruindex", "x", "y", "volume", "lri", "leafarea", "lightresponse", // fields 0-9
                 "woodymass", "rootmass", "foliagemass", "age", "opacity" /* 10-14 */, "dead", "stress", "deltad", // 15-17
@@ -24,8 +24,8 @@ namespace iLand.Tree
             }.AsReadOnly();
         }
 
-        public TreeWrapper(Model? model)
-            : base(model)
+        public TreeVariableAccessor(SimulationState? simulationState)
+            : base(simulationState, null)
         {
             this.Trees = null;
             this.TreeIndex = -1;
@@ -39,19 +39,19 @@ namespace iLand.Tree
 
         public override ReadOnlyCollection<string> GetVariableNames()
         {
-            return TreeWrapper.TreeVariableNames;
+            return TreeVariableAccessor.TreeVariableNames;
         }
 
-        public override double GetValue(int variableIndex)
+        public override float GetValue(int variableIndex)
         {
             Debug.Assert(this.Trees != null);
 
-            return (variableIndex - ExpressionWrapper.BaseVariableNames.Count) switch
+            return (variableIndex - ExpressionVariableAccessor.BaseVariableNames.Count) switch
             {
                 0 => this.Trees.Tag[this.TreeIndex],// id
                 1 => this.Trees.Dbh[this.TreeIndex],// dbh
                 2 => this.Trees.Height[this.TreeIndex],// height
-                3 => this.Trees.RU.ResourceUnitGridIndex,// ruindex
+                3 => this.Trees.ResourceUnit.ResourceUnitGridIndex,// ruindex
                 4 => this.Trees.GetCellCenterPoint(this.TreeIndex).X,// x
                 5 => this.Trees.GetCellCenterPoint(this.TreeIndex).Y,// y
                 6 => this.Trees.GetStemVolume(this.TreeIndex),// volume
@@ -63,7 +63,7 @@ namespace iLand.Tree
                 12 => this.Trees.FoliageMass[this.TreeIndex],
                 13 => this.Trees.Age[this.TreeIndex],
                 14 => this.Trees.Opacity[this.TreeIndex],
-                15 => this.Trees.IsDead(this.TreeIndex) ? 1.0 : 0.0,
+                15 => this.Trees.IsDead(this.TreeIndex) ? 1.0F : 0.0F,
                 16 => this.Trees.StressIndex[this.TreeIndex],
                 17 => this.Trees.DbhDelta[this.TreeIndex],// increment of last year
                 18 => this.Trees.Species.GetBiomassFoliage(this.Trees.Dbh[this.TreeIndex]),// allometric foliage

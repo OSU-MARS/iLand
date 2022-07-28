@@ -1,10 +1,12 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
+using iLand.Simulation;
 using iLand.Tool;
 using iLand.World;
 using Microsoft.Data.Sqlite;
 using System.Diagnostics;
+using Model = iLand.Simulation.Model;
 
-namespace iLand.Output
+namespace iLand.Output.Sql
 {
     public class WaterAnnualOutput : AnnualOutput
     {
@@ -28,20 +30,21 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
-            this.Columns.Add(new SqlColumn("stocked_area", "area (ha/ha) which is stocked (covered by crowns, absorbing radiation)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("stockable_area", "area (ha/ha) which is stockable (and within the project area)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("precipitation_mm", "Annual precipitation sum (mm)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("et_mm", "Evapotranspiration (mm)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("excess_mm", "annual sum of water loss due to lateral outflow/groundwater flow (mm)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("snowcover_days", "days with snowcover >0mm", SqliteType.Integer));
-            this.Columns.Add(new SqlColumn("total_radiation", "total incoming radiation over the year (MJ/m2), sum of data in weather input)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("radiation_snowcover", "sum of radiation input (MJ/m2) for days with snow cover", SqliteType.Integer));
+            this.Columns.Add(new("stocked_area", "area (ha/ha) which is stocked (covered by crowns, absorbing radiation)", SqliteType.Real));
+            this.Columns.Add(new("stockable_area", "area (ha/ha) which is stockable (and within the project area)", SqliteType.Real));
+            this.Columns.Add(new("precipitation_mm", "Annual precipitation sum (mm)", SqliteType.Real));
+            this.Columns.Add(new("et_mm", "Evapotranspiration (mm)", SqliteType.Real));
+            this.Columns.Add(new("excess_mm", "annual sum of water loss due to lateral outflow/groundwater flow (mm)", SqliteType.Real));
+            this.Columns.Add(new("snowcover_days", "days with snowcover >0mm", SqliteType.Integer));
+            this.Columns.Add(new("total_radiation", "total incoming radiation over the year (MJ/m2), sum of data in weather input)", SqliteType.Real));
+            this.Columns.Add(new("radiation_snowcover", "sum of radiation input (MJ/m2) for days with snow cover", SqliteType.Integer));
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             // global condition
-            if ((this.yearFilter.IsEmpty == false) && (yearFilter.Evaluate(model.CurrentYear) == 0.0))
+            int currentSimulationYear = model.SimulationState.CurrentYear;
+            if ((this.yearFilter.IsEmpty == false) && (yearFilter.Evaluate(currentSimulationYear) == 0.0))
             {
                 return;
             }
@@ -50,41 +53,41 @@ namespace iLand.Output
             int snowDays = 0;
             float evapotranspiration = 0.0F, runoff = 0.0F, rad = 0.0F, snowRad = 0.0F, precip = 0.0F;
             float stockable = 0.0F, stocked = 0.0F;
-            foreach (ResourceUnit ru in model.Landscape.ResourceUnits)
+            foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
                 bool logResourceUnits = true;
                 // switch off details if this is indicated in the conditionRU option
                 if (this.resourceUnitFilter.IsEmpty == false)
                 {
                     Debug.Assert(this.resourceUnitFilter.Wrapper != null);
-                    ((ResourceUnitWrapper)this.resourceUnitFilter.Wrapper).ResourceUnit = ru;
-                    logResourceUnits = this.resourceUnitFilter.Evaluate(model.CurrentYear) != 0.0;
+                    ((ResourceUnitVariableAccessor)this.resourceUnitFilter.Wrapper).ResourceUnit = resourceUnit;
+                    logResourceUnits = this.resourceUnitFilter.Evaluate(currentSimulationYear) != 0.0;
                 }
 
-                WaterCycle wc = ru.WaterCycle;
+                WaterCycle wc = resourceUnit.WaterCycle;
                 if (logResourceUnits)
                 {
-                    insertRow.Parameters[0].Value = model.CurrentYear;
-                    insertRow.Parameters[1].Value = ru.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = ru.ID;
-                    insertRow.Parameters[3].Value = ru.AreaWithTrees / Constant.ResourceUnitAreaInM2;
-                    insertRow.Parameters[4].Value = ru.AreaInLandscape / Constant.ResourceUnitAreaInM2;
-                    insertRow.Parameters[5].Value = ru.Weather.GetTotalPrecipitationInCurrentYear();
+                    insertRow.Parameters[0].Value = currentSimulationYear;
+                    insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
+                    insertRow.Parameters[2].Value = resourceUnit.ID;
+                    insertRow.Parameters[3].Value = resourceUnit.AreaWithTreesInM2 / Constant.ResourceUnitAreaInM2;
+                    insertRow.Parameters[4].Value = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2;
+                    insertRow.Parameters[5].Value = resourceUnit.Weather.GetTotalPrecipitationInCurrentYear();
                     insertRow.Parameters[6].Value = wc.TotalEvapotranspiration;
                     insertRow.Parameters[7].Value = wc.TotalRunoff;
                     insertRow.Parameters[8].Value = wc.SnowDays;
-                    insertRow.Parameters[9].Value = ru.Weather.TotalAnnualRadiation;
+                    insertRow.Parameters[9].Value = resourceUnit.Weather.TotalAnnualRadiation;
                     insertRow.Parameters[10].Value = wc.SnowDayRadiation;
                     insertRow.ExecuteNonQuery();
                 }
                 ++resourceUnitCount;
-                stockable += ru.AreaInLandscape; 
-                stocked += ru.AreaWithTrees;
-                precip += ru.Weather.GetTotalPrecipitationInCurrentYear();
+                stockable += resourceUnit.AreaInLandscapeInM2; 
+                stocked += resourceUnit.AreaWithTreesInM2;
+                precip += resourceUnit.Weather.GetTotalPrecipitationInCurrentYear();
                 evapotranspiration += wc.TotalEvapotranspiration;
                 runoff += wc.TotalRunoff; 
                 snowDays += (int)wc.SnowDays;
-                rad += ru.Weather.TotalAnnualRadiation;
+                rad += resourceUnit.Weather.TotalAnnualRadiation;
                 snowRad += wc.SnowDayRadiation;
             }
 
@@ -93,7 +96,7 @@ namespace iLand.Output
             {
                 return;
             }
-            insertRow.Parameters[0].Value = model.CurrentYear; // codes -1/-1 for landscape level
+            insertRow.Parameters[0].Value = currentSimulationYear; // codes -1/-1 for landscape level
             insertRow.Parameters[1].Value = -1;
             insertRow.Parameters[2].Value = -1;
             insertRow.Parameters[3].Value = stocked / resourceUnitCount / Constant.ResourceUnitAreaInM2;
@@ -107,12 +110,12 @@ namespace iLand.Output
             insertRow.ExecuteNonQuery();
         }
 
-        public override void Setup(Model model)
+        public override void Setup(Project projectFile, SimulationState simulationState)
         {
             // use a condition for to control execuation for the current year
-            this.yearFilter.SetExpression(model.Project.Output.Annual.Water.Condition);
-            this.resourceUnitFilter.SetExpression(model.Project.Output.Annual.Water.ConditionRU);
-            this.resourceUnitFilter.Wrapper = new ResourceUnitWrapper(model);
+            this.yearFilter.SetExpression(projectFile.Output.Sql.Water.Condition);
+            this.resourceUnitFilter.SetExpression(projectFile.Output.Sql.Water.ConditionRU);
+            this.resourceUnitFilter.Wrapper = new ResourceUnitVariableAccessor(simulationState);
         }
     }
 }

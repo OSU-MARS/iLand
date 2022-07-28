@@ -8,7 +8,7 @@ namespace iLand.Input.ProjectFile
 
 		public MemoryOutputs()
 		{
-			this.ResourceUnitTrajectories = new Enablable("resourceUnitTrajectories");
+			this.ResourceUnitTrajectories = new("resourceUnitTrajectories");
 		}
 
 		protected override void ReadStartElement(XmlReader reader)

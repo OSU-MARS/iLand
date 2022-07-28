@@ -1,17 +1,19 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
+using iLand.Simulation;
 using iLand.Tool;
 using iLand.Tree;
 using Microsoft.Data.Sqlite;
+using Model = iLand.Simulation.Model;
 
-namespace iLand.Output
+namespace iLand.Output.Sql
 {
     public class TreesAnnualOutput : AnnualOutput
     {
-        private readonly Expression mTreeFilter;
+        private readonly Expression treeFilter;
 
         public TreesAnnualOutput()
         {
-            this.mTreeFilter = new Expression();
+            this.treeFilter = new();
 
             this.Name = "Tree Output";
             this.TableName = "tree";
@@ -22,52 +24,52 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
             this.Columns.Add(SqlColumn.CreateSpecies());
-            this.Columns.Add(new SqlColumn("id", "id of the tree", SqliteType.Integer));
-            this.Columns.Add(new SqlColumn("x", "position of the tree, x-direction (m)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("y", "position of the tree, y-direction (m)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("dbh", "dbh (cm) of the tree", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("height", "height (m) of the tree", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("basalArea", "basal area of tree in m2", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("volume_m3", "volume of tree (m3)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("leafArea_m2", "current leaf area of the tree (m2)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("foliageMass", "current mass of foliage (kg)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("woodyMass", "kg Biomass in woody department", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("fineRootMass", "kg Biomass in fine-root department", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("coarseRootMass", "kg Biomass in coarse-root department", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("lri", "LightResourceIndex of the tree (raw light index from iLand, without applying resource-unit modifications)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("lightResponse", "light response value (including species specific response to the light level)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("stressIndex", "scalar (0..1) indicating the stress level (see [Mortality]).", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", SqliteType.Real));
+            this.Columns.Add(new("id", "id of the tree", SqliteType.Integer));
+            this.Columns.Add(new("x", "position of the tree, x-direction (m)", SqliteType.Real));
+            this.Columns.Add(new("y", "position of the tree, y-direction (m)", SqliteType.Real));
+            this.Columns.Add(new("dbh", "dbh (cm) of the tree", SqliteType.Real));
+            this.Columns.Add(new("height", "height (m) of the tree", SqliteType.Real));
+            this.Columns.Add(new("basalArea", "basal area of tree in m2", SqliteType.Real));
+            this.Columns.Add(new("volume_m3", "volume of tree (m3)", SqliteType.Real));
+            this.Columns.Add(new("leafArea_m2", "current leaf area of the tree (m2)", SqliteType.Real));
+            this.Columns.Add(new("foliageMass", "current mass of foliage (kg)", SqliteType.Real));
+            this.Columns.Add(new("woodyMass", "kg Biomass in woody department", SqliteType.Real));
+            this.Columns.Add(new("fineRootMass", "kg Biomass in fine-root department", SqliteType.Real));
+            this.Columns.Add(new("coarseRootMass", "kg Biomass in coarse-root department", SqliteType.Real));
+            this.Columns.Add(new("lri", "LightResourceIndex of the tree (raw light index from iLand, without applying resource-unit modifications)", SqliteType.Real));
+            this.Columns.Add(new("lightResponse", "light response value (including species specific response to the light level)", SqliteType.Real));
+            this.Columns.Add(new("stressIndex", "scalar (0..1) indicating the stress level (see [Mortality]).", SqliteType.Real));
+            this.Columns.Add(new("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", SqliteType.Real));
         }
 
-        public override void Setup(Model model)
+        public override void Setup(Project projectFile, SimulationState simulationState)
         {
-            this.mTreeFilter.SetExpression(model.Project.Output.Annual.Tree.Filter);
+            this.treeFilter.SetExpression(projectFile.Output.Sql.Tree.Filter);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             AllTreesEnumerator allTreeEnumerator = new(model.Landscape);
-            TreeWrapper treeWrapper = new(model);
-            this.mTreeFilter.Wrapper = treeWrapper;
+            TreeVariableAccessor treeWrapper = new(model.SimulationState);
+            this.treeFilter.Wrapper = treeWrapper;
             while (allTreeEnumerator.MoveNext())
             {
                 Trees treesOfSpecies = allTreeEnumerator.CurrentTrees;
                 int treeIndex = allTreeEnumerator.CurrentTreeIndex;
-                if (this.mTreeFilter.IsEmpty == false)
+                if (this.treeFilter.IsEmpty == false)
                 { 
                     // nothing to log if tree is excluded by filter
                     treeWrapper.Trees = treesOfSpecies;
                     treeWrapper.TreeIndex = treeIndex;
-                    if (this.mTreeFilter.Execute() == 0.0)
+                    if (this.treeFilter.Execute() == 0.0F)
                     {
                         continue;
                     }
                 }
 
-                insertRow.Parameters[0].Value = model.CurrentYear;
-                insertRow.Parameters[1].Value = treesOfSpecies.RU.ResourceUnitGridIndex;
-                insertRow.Parameters[2].Value = treesOfSpecies.RU.ID;
+                insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                insertRow.Parameters[1].Value = treesOfSpecies.ResourceUnit.ResourceUnitGridIndex;
+                insertRow.Parameters[2].Value = treesOfSpecies.ResourceUnit.ID;
                 insertRow.Parameters[3].Value = treesOfSpecies.Species.ID;
                 insertRow.Parameters[4].Value = treesOfSpecies.Tag[treeIndex];
                 insertRow.Parameters[5].Value = treesOfSpecies.GetCellCenterPoint(treeIndex).X;

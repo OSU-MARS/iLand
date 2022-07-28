@@ -62,7 +62,7 @@
             {
                 return;
             }
-            float newC = biomass * Constant.BiomassCFraction;
+            float newC = biomass * Constant.DryBiomassCarbonFraction;
             float thisCfraction = this.C / (newC + this.C);
             this.DecompositionRate = this.DecompositionRate * thisCfraction + decompositionRate * (1.0F - thisCfraction);
             base.AddBiomass(biomass, cnRatio);

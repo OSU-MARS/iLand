@@ -92,7 +92,7 @@ namespace iLand.Tree
             float tallestSapling = 0.0F;
             for (int slotIndex = 0; slotIndex < this.Saplings.Length; ++slotIndex)
             {
-                tallestSapling = Math.Max(this.Saplings[slotIndex].HeightInM, tallestSapling);
+                tallestSapling = MathF.Max(this.Saplings[slotIndex].HeightInM, tallestSapling);
             }
             return tallestSapling;
         }

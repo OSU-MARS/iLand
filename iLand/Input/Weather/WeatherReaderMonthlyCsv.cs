@@ -22,12 +22,12 @@ namespace iLand.Input.Weather
                 string weatherID = row[weatherHeader.ID];
                 if (this.MonthlyWeatherByID.TryGetValue(weatherID, out WeatherTimeSeriesMonthly? monthlyWeather) == false)
                 {
-                    monthlyWeather = new(Timestep.Monthly, Constant.Data.MonthlyWeatherAllocationIncrement);
+                    monthlyWeather = new(Timestep.Monthly, Constant.Data.MonthlyAllocationIncrement);
                     this.MonthlyWeatherByID.Add(weatherID, monthlyWeather);
                 }
                 else if (monthlyWeather.Capacity - 12 < monthlyWeather.Count)
                 {
-                    monthlyWeather.Resize(monthlyWeather.Capacity + Constant.Data.MonthlyWeatherAllocationIncrement);
+                    monthlyWeather.Resize(monthlyWeather.Capacity + Constant.Data.MonthlyAllocationIncrement);
                 }
 
                 // January

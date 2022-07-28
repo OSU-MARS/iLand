@@ -1,11 +1,13 @@
-﻿using iLand.Simulation;
+﻿using iLand.Input.ProjectFile;
+using iLand.Simulation;
 using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
 using System.Collections.Generic;
+using Model = iLand.Simulation.Model;
 
-namespace iLand.Output
+namespace iLand.Output.Sql
 {
     public class TreeRemovedAnnualOutput : AnnualOutput
     {
@@ -25,23 +27,23 @@ namespace iLand.Output
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
             this.Columns.Add(SqlColumn.CreateSpecies());
-            this.Columns.Add(new SqlColumn("id", "id of the tree", SqliteType.Integer));
-            this.Columns.Add(new SqlColumn("reason", "reason of removal: 0: mortality, 1: management, 2: disturbance ", SqliteType.Integer));
-            this.Columns.Add(new SqlColumn("x", "position of the tree, x-direction (m)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("y", "position of the tree, y-direction (m)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("dbh", "dbh (cm) of the tree", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("height", "height (m) of the tree", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("basalArea", "basal area of tree in m2", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("volume_m3", "volume of tree (m3)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("leafArea_m2", "current leaf area of the tree (m2)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("foliageMass", "current mass of foliage (kg)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("woodyMass", "kg Biomass in woody department", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("fineRootMass", "kg Biomass in fine-root department", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("coarseRootMass", "kg Biomass in coarse-root department", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("lri", "LightResourceIndex of the tree (raw light index from iLand, without applying resource-unit modifications)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("lightResponse", "light response value (including species specific response to the light level)", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("stressIndex", "scalar (0..1) indicating the stress level (see [Mortality]).", SqliteType.Real));
-            this.Columns.Add(new SqlColumn("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", SqliteType.Real));
+            this.Columns.Add(new("id", "id of the tree", SqliteType.Integer));
+            this.Columns.Add(new("reason", "reason of removal: 0: mortality, 1: management, 2: disturbance ", SqliteType.Integer));
+            this.Columns.Add(new("x", "position of the tree, x-direction (m)", SqliteType.Real));
+            this.Columns.Add(new("y", "position of the tree, y-direction (m)", SqliteType.Real));
+            this.Columns.Add(new("dbh", "dbh (cm) of the tree", SqliteType.Real));
+            this.Columns.Add(new("height", "height (m) of the tree", SqliteType.Real));
+            this.Columns.Add(new("basalArea", "basal area of tree in m2", SqliteType.Real));
+            this.Columns.Add(new("volume_m3", "volume of tree (m3)", SqliteType.Real));
+            this.Columns.Add(new("leafArea_m2", "current leaf area of the tree (m2)", SqliteType.Real));
+            this.Columns.Add(new("foliageMass", "current mass of foliage (kg)", SqliteType.Real));
+            this.Columns.Add(new("woodyMass", "kg Biomass in woody department", SqliteType.Real));
+            this.Columns.Add(new("fineRootMass", "kg Biomass in fine-root department", SqliteType.Real));
+            this.Columns.Add(new("coarseRootMass", "kg Biomass in coarse-root department", SqliteType.Real));
+            this.Columns.Add(new("lri", "LightResourceIndex of the tree (raw light index from iLand, without applying resource-unit modifications)", SqliteType.Real));
+            this.Columns.Add(new("lightResponse", "light response value (including species specific response to the light level)", SqliteType.Real));
+            this.Columns.Add(new("stressIndex", "scalar (0..1) indicating the stress level (see [Mortality]).", SqliteType.Real));
+            this.Columns.Add(new("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", SqliteType.Real));
         }
 
         public bool TryAddTree(Model model, Trees trees, int treeIndex, MortalityCause reason)
@@ -49,22 +51,22 @@ namespace iLand.Output
             if (this.treeFilter.IsEmpty == false)
             {
                 // skip trees if filter is present
-                TreeWrapper treeWrapper = new(model)
+                TreeVariableAccessor treeWrapper = new(model.SimulationState)
                 {
                     Trees = trees,
                     TreeIndex = treeIndex
                 };
                 this.treeFilter.Wrapper = treeWrapper;
-                if (this.treeFilter.Execute() == 0.0)
+                if (this.treeFilter.Execute() == 0.0F)
                 {
                     return false;
                 }
             }
 
-            if (this.removedTreesByResourceUnit.TryGetValue(trees.RU, out (Trees Trees, List<MortalityCause> Removals) removedTreesOfSpecies) == false)
+            if (this.removedTreesByResourceUnit.TryGetValue(trees.ResourceUnit, out (Trees Trees, List<MortalityCause> Removals) removedTreesOfSpecies) == false)
             {
-                removedTreesOfSpecies = new(new Trees(model.Landscape, trees.RU, trees.Species), new List<MortalityCause>());
-                this.removedTreesByResourceUnit.Add(trees.RU, removedTreesOfSpecies);
+                removedTreesOfSpecies = new(new Trees(model.Landscape, trees.ResourceUnit, trees.Species), new List<MortalityCause>());
+                this.removedTreesByResourceUnit.Add(trees.ResourceUnit, removedTreesOfSpecies);
             }
 
             removedTreesOfSpecies.Trees.Add(trees, treeIndex);
@@ -79,9 +81,9 @@ namespace iLand.Output
                 Trees trees = removedTreesOfSpecies.Trees;
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
-                    insertRow.Parameters[0].Value = model.CurrentYear;
-                    insertRow.Parameters[1].Value = trees.RU.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = trees.RU.ID;
+                    insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                    insertRow.Parameters[1].Value = trees.ResourceUnit.ResourceUnitGridIndex;
+                    insertRow.Parameters[2].Value = trees.ResourceUnit.ID;
                     insertRow.Parameters[3].Value = trees.Species.ID;
                     insertRow.Parameters[4].Value = trees.Tag[treeIndex];
                     insertRow.Parameters[5].Value = (int)removedTreesOfSpecies.Removals[treeIndex];
@@ -107,9 +109,9 @@ namespace iLand.Output
             this.removedTreesByResourceUnit.Clear();
         }
 
-        public override void Setup(Model model)
+        public override void Setup(Project projectFile, SimulationState simulationState)
         {
-            this.treeFilter.SetExpression(model.Project.Output.Annual.TreeRemoved.Filter);
+            this.treeFilter.SetExpression(projectFile.Output.Sql.TreeRemoved.Filter);
         }
     }
 }

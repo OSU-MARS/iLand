@@ -6,7 +6,7 @@
 
         public CO2ReaderMonthly()
         {
-            this.MonthlyCO2 = new(Constant.Data.MonthlyWeatherAllocationIncrement);
+            this.MonthlyCO2 = new(Constant.Data.MonthlyAllocationIncrement);
         }
     }
 }

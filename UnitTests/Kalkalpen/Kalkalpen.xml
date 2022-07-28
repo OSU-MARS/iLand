@@ -230,8 +230,11 @@
       <!-- setting to true forces debug output to be written immediately (can help for debugging) -->
       <flush>false</flush>
     </logging>
-    <annual>
-      <!-- iland.boku.ac.at/outputs -->
+    <memory>
+      <resourceUnitTrajectories enabled="false" />
+    </memory>
+    <sql>
+      <!-- https://iland-model.org/Outputs -->
       <databaseFile>Kalkalpen subset output.sqlite</databaseFile>
       <barkBeetle enabled="true" />
       <carbon enabled="true" />
@@ -290,15 +293,11 @@
         <!-- broken by expression variable indexing bug (mostly) inherited from C++ -->
         <!-- mod(year,10)=0 -->
       </water>
-    </annual>
-    <memory>
-      <resourceUnitTrajectories enabled="false" />
-    </memory>
+    </sql>
   </output>
   <modules>
-    <!-- section for "plugins" add a section for each plugin and enable/disable with 
-     the "enabled" switch. 
-     http://iland.boku.ac.at/disturbance+modules -->
+    <!-- a section for each plugin module, modules are turned on and off with their @enabled attribute
+     http://iland-model.org/disturbance+modules -->
     <fire enabled="false">
       <!-- the "enabled" tag is available for each module -->
       <onlySimulation>true</onlySimulation>

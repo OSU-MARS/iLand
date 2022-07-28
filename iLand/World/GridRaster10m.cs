@@ -17,16 +17,16 @@ namespace iLand.World
         // holds the extent of each rasterized polygon and a count of occupied pixels
         private readonly Dictionary<int, (RectangleF BoundingBox, int OccupiedAreaInM2)> boundingBoxByRasterizedPolygonID;
         // holds a list of resource units + areas per rasterized polygon ID
-        private readonly Dictionary<int, List<(ResourceUnit RU, float OccupiedAreaInRU)>> resourceUnitsByRasterizedPolygonID;
+        private readonly Dictionary<int, List<(ResourceUnit ResourceUnit, float OccupiedAreaInRU)>> resourceUnitsByRasterizedPolygonID;
 
         public Grid<int> Grid { get; private init; }
 
         public GridRaster10m()
         {
-            this.boundingBoxByRasterizedPolygonID = new Dictionary<int, (RectangleF, int)>();
-            this.resourceUnitsByRasterizedPolygonID = new Dictionary<int, List<(ResourceUnit, float)>>();
+            this.boundingBoxByRasterizedPolygonID = new();
+            this.resourceUnitsByRasterizedPolygonID = new();
 
-            this.Grid = new Grid<int>();
+            this.Grid = new();
         }
 
         public GridRaster10m(string filePath)
@@ -63,8 +63,8 @@ namespace iLand.World
                     this.boundingBoxByRasterizedPolygonID.Add(rasterizedPolygonID, data);
                 }
                 
-                ResourceUnit ru = landscape.GetResourceUnit(this.Grid.GetCellProjectCentroid(cellIndex));
-                if (ru == null)
+                ResourceUnit resourceUnit = landscape.GetResourceUnit(this.Grid.GetCellProjectCentroid(cellIndex));
+                if (resourceUnit == null)
                 {
                     continue;
                 }
@@ -78,8 +78,8 @@ namespace iLand.World
                 Debug.Assert(this.Grid.CellSizeInM == Constant.HeightCellsPerRUWidth);
                 for (int index = 0; index < resourceUnitsInStand.Count; ++index)
                 {
-                    (ResourceUnit RU, float OccupiedAreaInRU) candidate = resourceUnitsInStand[index];
-                    if (candidate.RU == ru)
+                    (ResourceUnit ResourceUnit, float OccupiedAreaInRU) candidate = resourceUnitsInStand[index];
+                    if (candidate.ResourceUnit == resourceUnit)
                     {
                         candidate.OccupiedAreaInRU += 0.01F; // 1 pixel = 1% of the area
                         ruFound = true;
@@ -88,7 +88,7 @@ namespace iLand.World
                 }
                 if (ruFound == false)
                 {
-                    this.resourceUnitsByRasterizedPolygonID.AddToList(gridIndex, (ru, 0.01F)); // TODO: why add non-intersecting RUs with 0.01 instead of 0.0?
+                    this.resourceUnitsByRasterizedPolygonID.AddToList(gridIndex, (resourceUnit, 0.01F)); // TODO: why add non-intersecting RUs with 0.01 instead of 0.0?
                 }
             }
         }
@@ -111,7 +111,7 @@ namespace iLand.World
 
         /// returns a list with resource units and area factors per 'id'.
         /// the area is '1' if the resource unit is fully covered by the grid-value.
-        public IList<(ResourceUnit RU, float OccupiedAreaInRU)> GetResourceUnitAreaFractions(int standID)
+        public IList<(ResourceUnit ResourceUnit, float OccupiedAreaInRU)> GetResourceUnitAreaFractions(int standID)
         {
             return this.resourceUnitsByRasterizedPolygonID[standID]; 
         }
@@ -120,10 +120,10 @@ namespace iLand.World
         public List<(Trees, List<int>)> GetLivingTreesInStand(int standID)
         {
             List<(Trees Trees, List<int> LiveTreeIndices)> livingTrees = new();
-            IReadOnlyCollection<(ResourceUnit, float)> resourceUnitsInStand = this.resourceUnitsByRasterizedPolygonID[standID];
-            foreach ((ResourceUnit RU, float) ru in resourceUnitsInStand)
+            IReadOnlyCollection<(ResourceUnit, float _)> resourceUnitsInStand = this.resourceUnitsByRasterizedPolygonID[standID];
+            foreach ((ResourceUnit ResourceUnit, float _) unitInStand in resourceUnitsInStand)
             {
-                foreach (Trees trees in ru.RU.Trees.TreesBySpeciesID.Values)
+                foreach (Trees trees in unitInStand.ResourceUnit.Trees.TreesBySpeciesID.Values)
                 {
                     (Trees Trees, List<int> LiveTreeIndices) livingTreesInStand = new(trees, new List<int>());
                     for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)

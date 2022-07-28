@@ -5,47 +5,40 @@ using System.Collections.ObjectModel;
 
 namespace iLand.Tool
 {
-    /** @class ExpressionWrapper
-      The base class for objects that can be used within Expressions.
+    /** base class for objects whose numerical properties can be accessed within Expressions
       Derived from ExpressionWrapper are wrappers for e.g. Trees or ResourceUnits.
       They must provide a getVariablesList() and a value() function.
-      Note: the must also provide "virtual double value(string variableName) { return value(variableName); }"
-          because it seems to be not possible in C++ to use functions from derived and base class simultaneously that only differ in the
-          argument signature.
-      @sa Expression
-
       */
-    /** ExpressionWrapper is the base class for exposing C++ elements
-     *  to the built-in Expression engine. See TreeWrapper for an example.
-     */
-    public abstract class ExpressionWrapper
+    // base class for exposing C# elements to the built-in Expression engine. See TreeWrapper for an example.
+    public abstract class ExpressionVariableAccessor
     {
         protected static readonly ReadOnlyCollection<string> BaseVariableNames;
 
-        public Model? Model { get; private init; }
+        public RandomGenerator? RandomGenerator { get; private init; }
+        public SimulationState? SimulationState { get; private init; }
 
-        static ExpressionWrapper()
+        static ExpressionVariableAccessor()
         {
-            ExpressionWrapper.BaseVariableNames = new List<string>() { "year" }.AsReadOnly();
+            ExpressionVariableAccessor.BaseVariableNames = new List<string>() { "year" }.AsReadOnly();
         }
 
-        protected ExpressionWrapper(Model? model)
+        protected ExpressionVariableAccessor(SimulationState? simulationState, RandomGenerator? randomGenerator)
         {
-            this.Model = model;
+            this.RandomGenerator = randomGenerator;
+            this.SimulationState = simulationState;
         }
 
         public abstract ReadOnlyCollection<string> GetVariableNames();
 
-        // must be overloaded!
-        public virtual double GetValue(int variableIndex)
+        public virtual float GetValue(int variableIndex)
         {
             if (variableIndex == 0)
             {
-                if (this.Model == null)
+                if (this.SimulationState == null)
                 {
                     throw new NotSupportedException("Attempt to obtain current year from wrapper but Model was not specified.");
                 }
-                return this.Model.CurrentYear;
+                return this.SimulationState.CurrentYear;
             }
 
             throw new NotSupportedException("Unhandled variable index " + variableIndex + ".");
@@ -56,7 +49,7 @@ namespace iLand.Tool
             return this.GetVariableNames().IndexOf(variableName);
         }
 
-        public double GetValueByName(string variableName)
+        public float GetValueByName(string variableName)
         {
             int index = this.GetVariableIndex(variableName);
             return this.GetValue(index);

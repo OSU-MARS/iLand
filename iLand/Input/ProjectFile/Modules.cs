@@ -11,9 +11,9 @@ namespace iLand.Input.ProjectFile
 
 		public Modules()
         {
-			this.BarkBeetle = new BarkBeetle();
-			this.Fire = new Fire();
-			this.Wind = new Wind();
+			this.BarkBeetle = new();
+			this.Fire = new();
+			this.Wind = new();
         }
 
 		protected override void ReadStartElement(XmlReader reader)

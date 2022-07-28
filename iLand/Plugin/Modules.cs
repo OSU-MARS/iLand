@@ -14,10 +14,10 @@ namespace iLand.Plugin
 
         public Modules()
         {
-            this.disturbanceModules = new List<IDisturbanceInterface>();
-            this.mortalityModules = new List<ITreeDeathInterface>();
-            this.resourceUnitSetupModules = new List<ISetupResourceUnitInterface>();
-            this.waterModules = new List<IWaterInterface>();
+            this.disturbanceModules = new();
+            this.mortalityModules = new();
+            this.resourceUnitSetupModules = new();
+            this.waterModules = new();
 
             foreach (IDisturbanceInterface modules in PluginLoader.StaticInstances)
             {
@@ -96,11 +96,11 @@ namespace iLand.Plugin
             }
         }
 
-        public void SetupResourceUnit(ResourceUnit ru)
+        public void SetupResourceUnit(ResourceUnit resourceUnit)
         {
             for (int resourceSetupIndex = 0; resourceSetupIndex < this.resourceUnitSetupModules.Count; ++resourceSetupIndex)
             {
-                this.resourceUnitSetupModules[resourceSetupIndex].SetupResourceUnit(ru);
+                this.resourceUnitSetupModules[resourceSetupIndex].SetupResourceUnit(resourceUnit);
             }
         }
 

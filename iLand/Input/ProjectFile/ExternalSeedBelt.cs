@@ -18,7 +18,7 @@ namespace iLand.Input.ProjectFile
 			this.SectorsY = 0;
             this.WidthInM = 10;
 
-            this.Sectors = new List<ExternalSeedBeltSector>();
+            this.Sectors = new();
         }
 
         protected override void ReadStartElement(XmlReader reader)

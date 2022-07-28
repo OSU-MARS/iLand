@@ -1,4 +1,5 @@
-﻿using iLand.Tree;
+﻿using iLand.Output;
+using iLand.Tree;
 using iLand.World;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -55,102 +56,117 @@ namespace iLand.Test
             this.ObservedStemVolumeByYear.Add(stemVolume);
         }
 
-        public void Verify(ResourceUnit resourceUnit, float maximumTreeCount, List<float> expectedGppByYear, List<float> expectedNppByYear, List<float> expectedVolumeByYear, int standID)
+        public void Verify(StandOrResourceUnitTrajectory actualTrajectory, float maximumTreeCount, List<float> expectedGppByYear, List<float> expectedNppByYear, List<float> expectedVolumeByYear)
         {
             float growthMultiplier = 1.0F - this.NonmonotonicGrowthTolerance;
             float treeNppMultiplier = 1.0F - this.TreeNppTolerance;
 
-            ResourceUnitTrajectory resourceUnitTrajectory = (ResourceUnitTrajectory)resourceUnit.Trees.TreeStatisticsByStandID[standID];
-            for (int year = 0; year < expectedVolumeByYear.Count; ++year)
+            for (int simulationYear = 0; simulationYear < expectedVolumeByYear.Count; ++simulationYear)
             {
-                float observedGpp = this.ObservedGppByYear[year];
-                float expectedGpp = expectedGppByYear[year];
-                float relativeGppError = MathF.Abs(1.0F - observedGpp / expectedGpp);
+                float observedGpp = this.ObservedGppByYear[simulationYear];
+                float expectedGpp = expectedGppByYear[simulationYear];
+                float relativeGppError;
+                if (expectedGpp != 0.0F)
+                {
+                    relativeGppError = MathF.Abs(1.0F - observedGpp / expectedGpp);
+                }
+                else
+                {
+                    relativeGppError = observedGpp; // fall back to absolute error from zero since relative error is not well defined 
+                }
 
-                float observedNpp = this.ObservedNppByYear[year];
-                float expectedNpp = expectedNppByYear[year];
-                float recordedNpp = resourceUnitTrajectory.TreeNppByYear[year];
-                float relativeNppError = MathF.Abs(1.0F - observedNpp / expectedNpp);
+                float observedNpp = this.ObservedNppByYear[simulationYear];
+                float expectedNpp = expectedNppByYear[simulationYear];
+                float recordedNpp = actualTrajectory.TreeNppByYear[simulationYear];
+                float relativeNppError;
+                if (expectedNpp != 0.0F)
+                {
+                    relativeNppError = MathF.Abs(1.0F - observedNpp / expectedNpp);
+                }
+                else
+                {
+                    relativeNppError = observedNpp;
+                }
 
-                float observedStemVolume = this.ObservedStemVolumeByYear[year];
-                float expectedStemVolume = expectedVolumeByYear[year];
-                float recordedVolume = resourceUnitTrajectory.LiveStemVolumeByYear[year];
+                float observedStemVolume = this.ObservedStemVolumeByYear[simulationYear];
+                float expectedStemVolume = expectedVolumeByYear[simulationYear];
+                float recordedVolume = actualTrajectory.LiveStemVolumeByYear[simulationYear];
                 float relativeVolumeError = MathF.Abs(1.0F - observedStemVolume / expectedStemVolume);
 
-                Assert.IsTrue(relativeGppError < this.GppTolerance, "Expected GPP of {0:0.000} kg/m² in simulation year {1} but the GPP recorded was {2:0.000} kg/m², a {3:0.0%} difference.", expectedGpp, year, observedGpp, relativeGppError);
-                Assert.IsTrue(relativeNppError < this.NppTolerance, "Expected NPP of {0:0.000} kg/ha in simulation year {1} but the NPP recorded was {2:0.000} kg/ha, a {3:0.0%} difference.", expectedNpp, year, observedNpp, relativeNppError);
-                Assert.IsTrue(relativeVolumeError < this.StemVolumeTolerance, "Expected stem volume of {0:0.000} m³ in simulation year {1} but the stem volume recorded was {2:0.000} m³, a {3:0.0%} difference.", expectedStemVolume, year, observedStemVolume, relativeVolumeError);
+                Assert.IsTrue(relativeGppError < this.GppTolerance, "Expected GPP of {0:0.000} kg/m² in simulation year {1} but the GPP recorded was {2:0.000} kg/m², a {3:0.0%} difference.", expectedGpp, simulationYear, observedGpp, relativeGppError);
+                Assert.IsTrue(relativeNppError < this.NppTolerance, "Expected NPP of {0:0.000} kg/ha in simulation year {1} but the NPP recorded was {2:0.000} kg/ha, a {3:0.0%} difference.", expectedNpp, simulationYear, observedNpp, relativeNppError);
+                Assert.IsTrue(relativeVolumeError < this.StemVolumeTolerance, "Expected stem volume of {0:0.000} m³ in simulation year {1} but the stem volume recorded was {2:0.000} m³, a {3:0.0%} difference.", expectedStemVolume, simulationYear, observedStemVolume, relativeVolumeError);
                 Assert.IsTrue(observedNpp == recordedNpp);
                 Assert.IsTrue(MathF.Abs(observedStemVolume - recordedVolume) < 0.001F);
 
                 // plot statistics are multiplied by expansion factor obtained from portion of resource unit occupied to obtain per hectare values
-                if (year == 0)
+                if (simulationYear == 0)
                 {
                     // sanity checks on initial state
-                    Assert.IsTrue(resourceUnitTrajectory.AverageDbhByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.AverageHeightByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.BasalAreaByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.LeafAreaIndexByYear[year] >= 1.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.LiveStemVolumeByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.LiveAndSnagStemVolumeByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.TreeNppAbovegroundByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.TreeNppByYear[year] > 0.0F);
-                    float treeCount = resourceUnitTrajectory.TreeCountByYear[year];
+                    Assert.IsTrue(actualTrajectory.AverageDbhByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.AverageHeightByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.BasalAreaByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.LeafAreaIndexByYear[simulationYear] >= 1.0F);
+                    Assert.IsTrue(actualTrajectory.LiveStemVolumeByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.LiveAndSnagStemVolumeByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.TreeNppAbovegroundByYear[simulationYear] == 0.0F);
+                    Assert.IsTrue(actualTrajectory.TreeNppByYear[simulationYear] == 0.0F);
+                    float treeCount = actualTrajectory.TreeCountByYear[simulationYear];
                     Assert.IsTrue((treeCount >= 0.0F) && (treeCount <= maximumTreeCount));
-                    Assert.IsTrue(resourceUnitTrajectory.CohortCountByYear[year] == 0);
-                    Assert.IsTrue(resourceUnitTrajectory.MeanSaplingAgeByYear[year] == 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.SaplingNppByYear[year] == 0.0F);
+                    Assert.IsTrue(actualTrajectory.CohortCountByYear[simulationYear] == 0);
+                    Assert.IsTrue(actualTrajectory.MeanSaplingAgeByYear[simulationYear] == 0.0F);
+                    Assert.IsTrue(actualTrajectory.SaplingNppByYear[simulationYear] == 0.0F);
 
-                    Assert.IsTrue(resourceUnitTrajectory.BranchCarbonByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.BranchNitrogenByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.CoarseRootCarbonByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.CoarseRootNitrogenByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.FineRootCarbonByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.FineRootNitrogenByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.FoliageCarbonByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.FoliageNitrogenByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.RegenerationCarbonByYear[year] == 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.RegenerationNitrogenByYear[year] == 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.SaplingCountByYear[year] == 0);
-                    Assert.IsTrue(resourceUnitTrajectory.StemCarbonByYear[year] > 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.StemNitrogenByYear[year] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.BranchCarbonByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.BranchNitrogenByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.CoarseRootCarbonByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.CoarseRootNitrogenByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.FineRootCarbonByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.FineRootNitrogenByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.FoliageCarbonByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.FoliageNitrogenByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.RegenerationCarbonByYear[simulationYear] == 0.0F);
+                    Assert.IsTrue(actualTrajectory.RegenerationNitrogenByYear[simulationYear] == 0.0F);
+                    Assert.IsTrue(actualTrajectory.SaplingCountByYear[simulationYear] == 0);
+                    Assert.IsTrue(actualTrajectory.StemCarbonByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.StemNitrogenByYear[simulationYear] > 0.0F);
                 }
                 else
                 {
                     // sanity checks on growth and mortality
-                    int previousYear = year - 1;
-                    Assert.IsTrue(resourceUnitTrajectory.AverageDbhByYear[year] > growthMultiplier * resourceUnitTrajectory.AverageDbhByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.AverageHeightByYear[year] > growthMultiplier * resourceUnitTrajectory.AverageHeightByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.BasalAreaByYear[year] > growthMultiplier * resourceUnitTrajectory.BasalAreaByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.LeafAreaIndexByYear[year] > growthMultiplier * resourceUnitTrajectory.LeafAreaIndexByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.LiveStemVolumeByYear[year] > growthMultiplier * resourceUnitTrajectory.LiveStemVolumeByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.LiveAndSnagStemVolumeByYear[year] >= growthMultiplier * resourceUnitTrajectory.LiveAndSnagStemVolumeByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.StemCarbonByYear[year] > growthMultiplier * resourceUnitTrajectory.StemCarbonByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.StemNitrogenByYear[year] > growthMultiplier * resourceUnitTrajectory.StemNitrogenByYear[previousYear]);
-                    float treeCount = resourceUnitTrajectory.TreeCountByYear[year];
+                    int previousYear = simulationYear - 1;
+                    Assert.IsTrue(actualTrajectory.AverageDbhByYear[simulationYear] > growthMultiplier * actualTrajectory.AverageDbhByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.AverageHeightByYear[simulationYear] > growthMultiplier * actualTrajectory.AverageHeightByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.BasalAreaByYear[simulationYear] > growthMultiplier * actualTrajectory.BasalAreaByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.LeafAreaIndexByYear[simulationYear] > growthMultiplier * actualTrajectory.LeafAreaIndexByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.LiveStemVolumeByYear[simulationYear] > growthMultiplier * actualTrajectory.LiveStemVolumeByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.LiveAndSnagStemVolumeByYear[simulationYear] >= growthMultiplier * actualTrajectory.LiveAndSnagStemVolumeByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.StemCarbonByYear[simulationYear] > growthMultiplier * actualTrajectory.StemCarbonByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.StemNitrogenByYear[simulationYear] > growthMultiplier * actualTrajectory.StemNitrogenByYear[previousYear]);
+                    float treeCount = actualTrajectory.TreeCountByYear[simulationYear];
                     Assert.IsTrue((treeCount >= 0.0F) && (treeCount <= maximumTreeCount));
-                    Assert.IsTrue(resourceUnitTrajectory.TreeNppAbovegroundByYear[year] > treeNppMultiplier * resourceUnitTrajectory.TreeNppAbovegroundByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.TreeNppByYear[year] > treeNppMultiplier * resourceUnitTrajectory.TreeNppByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.TreeNppAbovegroundByYear[simulationYear] > treeNppMultiplier * actualTrajectory.TreeNppAbovegroundByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.TreeNppByYear[simulationYear] > treeNppMultiplier * actualTrajectory.TreeNppByYear[previousYear]);
 
-                    Assert.IsTrue(resourceUnitTrajectory.MeanSaplingAgeByYear[year] == 0.0F); // regeneration not enabled
-                    Assert.IsTrue(resourceUnitTrajectory.RegenerationCarbonByYear[year] == 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.RegenerationNitrogenByYear[year] == 0.0F);
-                    Assert.IsTrue(resourceUnitTrajectory.SaplingNppByYear[year] == 0.0F); // regeneration not enabled
-                    Assert.IsTrue(resourceUnitTrajectory.SaplingCountByYear[year] == 0);
+                    Assert.IsTrue(actualTrajectory.MeanSaplingAgeByYear[simulationYear] == 0.0F); // regeneration not enabled
+                    Assert.IsTrue(actualTrajectory.RegenerationCarbonByYear[simulationYear] == 0.0F);
+                    Assert.IsTrue(actualTrajectory.RegenerationNitrogenByYear[simulationYear] == 0.0F);
+                    Assert.IsTrue(actualTrajectory.SaplingNppByYear[simulationYear] == 0.0F); // regeneration not enabled
+                    Assert.IsTrue(actualTrajectory.SaplingCountByYear[simulationYear] == 0);
 
-                    Assert.IsTrue(resourceUnitTrajectory.BranchCarbonByYear[year] > growthMultiplier * resourceUnitTrajectory.BranchCarbonByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.BranchNitrogenByYear[year] > growthMultiplier * resourceUnitTrajectory.BranchNitrogenByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.CoarseRootCarbonByYear[year] > growthMultiplier * resourceUnitTrajectory.CoarseRootCarbonByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.CoarseRootNitrogenByYear[year] > growthMultiplier * resourceUnitTrajectory.CoarseRootNitrogenByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.CohortCountByYear[year] == 0); // no saplings at initialization and regeneration not enabled
-                    Assert.IsTrue(resourceUnitTrajectory.FineRootCarbonByYear[year] > growthMultiplier * resourceUnitTrajectory.FineRootCarbonByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.FineRootNitrogenByYear[year] > growthMultiplier * resourceUnitTrajectory.FineRootNitrogenByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.FoliageCarbonByYear[year] > growthMultiplier * resourceUnitTrajectory.FoliageCarbonByYear[previousYear]);
-                    Assert.IsTrue(resourceUnitTrajectory.FoliageNitrogenByYear[year] > growthMultiplier * resourceUnitTrajectory.FoliageNitrogenByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.BranchCarbonByYear[simulationYear] > growthMultiplier * actualTrajectory.BranchCarbonByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.BranchNitrogenByYear[simulationYear] > growthMultiplier * actualTrajectory.BranchNitrogenByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.CoarseRootCarbonByYear[simulationYear] > growthMultiplier * actualTrajectory.CoarseRootCarbonByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.CoarseRootNitrogenByYear[simulationYear] > growthMultiplier * actualTrajectory.CoarseRootNitrogenByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.CohortCountByYear[simulationYear] == 0); // no saplings at initialization and regeneration not enabled
+                    Assert.IsTrue(actualTrajectory.FineRootCarbonByYear[simulationYear] > growthMultiplier * actualTrajectory.FineRootCarbonByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.FineRootNitrogenByYear[simulationYear] > growthMultiplier * actualTrajectory.FineRootNitrogenByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.FoliageCarbonByYear[simulationYear] > growthMultiplier * actualTrajectory.FoliageCarbonByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.FoliageNitrogenByYear[simulationYear] > growthMultiplier * actualTrajectory.FoliageNitrogenByYear[previousYear]);
 
                     // sanity checks on ranges
-                    Assert.IsTrue(resourceUnitTrajectory.LiveStemVolumeByYear[year] >= resourceUnitTrajectory.LiveAndSnagStemVolumeByYear[year]);
-                    Assert.IsTrue((resourceUnitTrajectory.LeafAreaIndexByYear[year] > 0.3F) && (resourceUnitTrajectory.LeafAreaIndexByYear[year] < 20.0F));
+                    Assert.IsTrue(actualTrajectory.LiveStemVolumeByYear[simulationYear] >= actualTrajectory.LiveAndSnagStemVolumeByYear[simulationYear]);
+                    Assert.IsTrue((actualTrajectory.LeafAreaIndexByYear[simulationYear] > 0.3F) && (actualTrajectory.LeafAreaIndexByYear[simulationYear] < 20.0F));
                 }
             }
         }

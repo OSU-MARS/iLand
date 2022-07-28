@@ -10,19 +10,19 @@ namespace iLand.Tool
         */
     internal class RandomCustomPdf
     {
-        private readonly RandomWeighted mRandomIndex;
-        private Expression? mExpression;
-        private int mSteps;
-        private float mLowerBound, mUpperBound;
-        private float mDeltaX;
-        private bool mSumFunction;
+        private readonly RandomWeighted randomIndex;
+        private Expression? expression;
+        private int steps;
+        private float lowerBound, upperBound;
+        private float deltaX;
+        private bool sumFunction;
 
         public string? ProbabilityDensityFunction { get; private set; }
 
         public RandomCustomPdf()
         {
-            this.mExpression = null;
-            this.mRandomIndex = new RandomWeighted();
+            this.expression = null;
+            this.randomIndex = new();
         }
 
         public RandomCustomPdf(string probabilityDensityExpression)
@@ -41,22 +41,22 @@ namespace iLand.Tool
         public void Setup(string probabilityDensityExpression, float lowerBound = 0, float upperBound = 1, bool isSumFunc = false, int stepCount = 100)
         {
             this.ProbabilityDensityFunction = probabilityDensityExpression;
-            this.mSteps = stepCount;
-            this.mSumFunction = isSumFunc;
-            this.mExpression = new(probabilityDensityExpression);
+            this.steps = stepCount;
+            this.sumFunction = isSumFunc;
+            this.expression = new(probabilityDensityExpression);
 
-            this.mRandomIndex.Setup(mSteps);
-            this.mLowerBound = lowerBound;
-            this.mUpperBound = upperBound;
-            this.mDeltaX = (mUpperBound - mLowerBound) / mSteps;
-            float stepWidth = 1.0F / mSteps;
-            for (int step = 0; step < mSteps; ++step)
+            this.randomIndex.Setup(steps);
+            this.lowerBound = lowerBound;
+            this.upperBound = upperBound;
+            this.deltaX = (this.upperBound - this.lowerBound) / this.steps;
+            float stepWidth = 1.0F / steps;
+            for (int step = 0; step < steps; ++step)
             {
-                float x1 = this.mLowerBound + step * this.mDeltaX;
-                float x2 = x1 + this.mDeltaX;
+                float x1 = this.lowerBound + step * this.deltaX;
+                float x2 = x1 + this.deltaX;
                 // p1, p2: werte der pdf bei unterer und oberer grenze des aktuellen schrittes
-                float p1 = (float)this.mExpression.Evaluate(x1);
-                float p2 = (float)this.mExpression.Evaluate(x2);
+                float p1 = (float)this.expression.Evaluate(x1);
+                float p2 = (float)this.expression.Evaluate(x2);
                 // areaval: numerische integration zwischen x1 und x2
                 float stepProbability = 0.5F * (p1 + p2) * stepWidth;
                 if (isSumFunc)
@@ -64,40 +64,40 @@ namespace iLand.Tool
                     stepProbability -= p1 * stepWidth; // summenwahrscheinlichkeit: nur das Delta zaehlt.
                                                 // set weighted operiert mit integers . umrechnung: * huge_val
                 }
-                this.mRandomIndex.SetCellWeight(step, (int)(stepProbability * 100000000));
+                this.randomIndex.SetCellWeight(step, (int)(stepProbability * 100000000));
             }
         }
 
         public float GetRandomValue(RandomGenerator randomGenerator)
         {
             // zufallszahl ziehen.
-            if (this.mExpression == null)
+            if (this.expression == null)
             {
                 throw new NotSupportedException("GetRandomValue() called before Setup()."); // not set up properly                                                             
             }
 
             // (1) select slot randomly:
-            int slot = mRandomIndex.GetRandomCellIndex(randomGenerator);
+            int slot = randomIndex.GetRandomCellIndex(randomGenerator);
             // the current slot is:
-            float basevalue = mLowerBound + slot * mDeltaX;
+            float basevalue = lowerBound + slot * deltaX;
             // (2): draw a uniform random number within the slot
-            float value = randomGenerator.GetRandomFloat(basevalue, basevalue + mDeltaX);
+            float value = randomGenerator.GetRandomFloat(basevalue, basevalue + deltaX);
             return value;
         }
 
         public float GetProbabilityInRange(float lowerBound, float upperBound)
         {
-            if (this.mSumFunction)
+            if (this.sumFunction)
             {
-                if (this.mExpression == null)
+                if (this.expression == null)
                 {
                     throw new NotSupportedException("GetProbabilityOfRange() called before Setup()."); // not set up properly                                                             
                 }
-                double p1 = this.mExpression.Evaluate(lowerBound);
-                double p2 = this.mExpression.Evaluate(upperBound);
-                double probabilityInRange = p2 - p1;
+                float p1 = this.expression.Evaluate(lowerBound);
+                float p2 = this.expression.Evaluate(upperBound);
+                float probabilityInRange = p2 - p1;
                 Debug.Assert(probabilityInRange >= 0.0);
-                return (float)probabilityInRange;
+                return probabilityInRange;
             }
 
             // Wahrscheinlichkeit, dass wert zwischen lower- und upper-bound liegt.
@@ -105,18 +105,18 @@ namespace iLand.Tool
             {
                 return 0.0F;
             }
-            if (lowerBound < mLowerBound || upperBound > mUpperBound)
+            if ((lowerBound < this.lowerBound) || (upperBound > this.upperBound))
             {
                 return 0.0F;
             }
             // "steps" is the resolution between lower and upper bound
-            int iLow = (int)((mUpperBound - mLowerBound) / (double)mSteps * (lowerBound - mLowerBound));
-            int iHigh = (int)((mUpperBound - mLowerBound) / (double)mSteps * (upperBound - mUpperBound));
-            if (iLow < 0 || iLow >= mSteps || iHigh < 0 || iHigh >= mSteps)
+            int iLow = (int)((this.upperBound - this.lowerBound) / (float)this.steps * (lowerBound - this.lowerBound));
+            int iHigh = (int)((this.upperBound - this.lowerBound) / (float)this.steps * (upperBound - this.upperBound));
+            if (iLow < 0 || iLow >= steps || iHigh < 0 || iHigh >= steps)
             {
                 return -1;
             }
-            return mRandomIndex.GetRelativeWeight(iLow, iHigh);
+            return randomIndex.GetRelativeWeight(iLow, iHigh);
         }
     }
 }

@@ -1,19 +1,21 @@
-﻿using iLand.Tree;
+﻿using iLand.Input.ProjectFile;
+using iLand.Simulation;
+using iLand.Tree;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Model = iLand.Simulation.Model;
 
-namespace iLand.Output
+namespace iLand.Output.Sql
 {
     /** LandscapeRemovedOut is aggregated output for removed trees on the full landscape. All values are per hectare values. */
     public class LandscapeRemovedAnnualOutput : AnnualOutput
     {
         private const int KeyRemovalTypeMultiplier = 10000;
 
-        private bool mIncludeDeadTrees;
-        private bool mIncludeHarvestTrees;
+        private bool includeDeadTrees;
+        private bool includeHarvestTrees;
 
         private class LandscapeRemovalData
         {
@@ -40,10 +42,10 @@ namespace iLand.Output
 
         public LandscapeRemovedAnnualOutput()
         {
-            this.removalsByTypeAndSpeciesIndex = new Dictionary<int, LandscapeRemovalData>();
+            this.removalsByTypeAndSpeciesIndex = new();
 
-            this.mIncludeDeadTrees = false;
-            this.mIncludeHarvestTrees = true;
+            this.includeDeadTrees = false;
+            this.includeHarvestTrees = true;
 
             this.Name = "Aggregates of removed trees due to death, harvest, and disturbances per species";
             this.TableName = "landscape_removed";
@@ -61,11 +63,11 @@ namespace iLand.Output
 
         public void AddTree(Tree.Trees trees, int treeIndex, MortalityCause removalType)
         {
-            if (this.mIncludeDeadTrees == false && (removalType == MortalityCause.Stress))
+            if (this.includeDeadTrees == false && (removalType == MortalityCause.Stress))
             {
                 return;
             }
-            if (this.mIncludeHarvestTrees == false && (removalType == MortalityCause.Harvest || removalType == MortalityCause.Salavaged || removalType == MortalityCause.CutDown))
+            if (this.includeHarvestTrees == false && (removalType == MortalityCause.Harvest || removalType == MortalityCause.Salavaged || removalType == MortalityCause.CutDown))
             {
                 return;
             }
@@ -74,7 +76,7 @@ namespace iLand.Output
             int key = LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier * (int)removalType + trees.Species.Index;
             if (this.removalsByTypeAndSpeciesIndex.TryGetValue(key, out LandscapeRemovalData? removalData) == false)
             {
-                removalData = new LandscapeRemovalData(trees.Species);
+                removalData = new(trees.Species);
                 this.removalsByTypeAndSpeciesIndex.Add(key, removalData);
             }
             removalData.BasalArea += trees.GetBasalArea(treeIndex);
@@ -90,7 +92,7 @@ namespace iLand.Output
                 {
                     MortalityCause removalType = (MortalityCause)(removalKey / LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier);
                     int speciesIndex = removalKey % LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier;
-                    insertRow.Parameters[0].Value = model.CurrentYear;
+                    insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
                     insertRow.Parameters[1].Value = removalData.TreeSpecies.ID;
                     insertRow.Parameters[2].Value = removalType switch
                     {
@@ -115,10 +117,10 @@ namespace iLand.Output
             }
         }
 
-        public override void Setup(Model model)
+        public override void Setup(Project projectFile, SimulationState simulationState)
         {
-            this.mIncludeHarvestTrees = model.Project.Output.Annual.LandscapeRemoved.IncludeHarvest;
-            this.mIncludeDeadTrees = model.Project.Output.Annual.LandscapeRemoved.IncludeNatural;
+            this.includeHarvestTrees = projectFile.Output.Sql.LandscapeRemoved.IncludeHarvest;
+            this.includeDeadTrees = projectFile.Output.Sql.LandscapeRemoved.IncludeNatural;
         }
     }
 }

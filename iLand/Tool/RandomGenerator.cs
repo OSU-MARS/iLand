@@ -28,7 +28,7 @@ namespace iLand.Tool
             }
             else
             {
-                this.pseudorandom = new Random(seed.Value);
+                this.pseudorandom = new(seed.Value);
             }
             this.RefillBuffer();
         }
@@ -39,12 +39,6 @@ namespace iLand.Tool
             float value = ((float)this.GetRandomInteger() - Int32.MinValue) / (2.0F * Int32.MaxValue + 1.0F);
             Debug.Assert((value >= 0.0) && (value <= 1.0));
             return value;
-        }
-
-        // returns a random number in [0, toInclusive]
-        public float GetRandomFloat(float toInclusive)
-        { 
-            return toInclusive * this.GetRandomProbability(); 
         }
 
         // get a random integer in [Int32.MinValue, Int32.MaxValue]
@@ -70,7 +64,7 @@ namespace iLand.Tool
         // GetRandomFloat() returns a random number from [p1, p2] -> p2 is a possible result!
         public float GetRandomFloat(float fromInclusive, float toInclusive)
         {
-            return fromInclusive + this.GetRandomFloat(toInclusive - fromInclusive);
+            return fromInclusive + (toInclusive - fromInclusive) * this.GetRandomProbability();
         }
 
         // return a random number from "from" to "to" (excluding 'to'), i.e. GetRandomInteger(3, 6) returns 3, 4 or 5.
@@ -79,19 +73,19 @@ namespace iLand.Tool
             return fromInclusive + this.GetRandomInteger(toExclusive - fromInclusive);
         }
 
-        public double GetRandomNormal(double mean, double stddev)
+        public float GetRandomNormal(float mean, float stddev)
         {
             // Return a real number from a normal (Gaussian) distribution with given
             // mean and standard deviation by polar form of Box-Muller transformation
-            double x, y, r;
+            float x, y, r;
             do
             {
-                x = 2.0 * this.GetRandomProbability() - 1.0;
-                y = 2.0 * this.GetRandomProbability() - 1.0;
+                x = 2.0F * this.GetRandomProbability() - 1.0F;
+                y = 2.0F * this.GetRandomProbability() - 1.0F;
                 r = x * x + y * y;
             }
-            while (r >= 1.0 || r == 0.0);
-            double s = Math.Sqrt(-2.0 * Math.Log(r) / r);
+            while ((r >= 1.0F) || (r == 0.0F));
+            float s = MathF.Sqrt(-2.0F * MathF.Log(r) / r);
             return mean + x * s * stddev;
         }
 

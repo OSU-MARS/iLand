@@ -343,7 +343,7 @@ namespace iLand.Tree
             }
 
             float miniumumLeafOnMovingAveragePsiInKPa = Single.MaxValue; // kPa
-            WaterCycle waterCycle = ruSpecies.RU.WaterCycle;
+            WaterCycle waterCycle = ruSpecies.ResourceUnit.WaterCycle;
             for (int dayOfYear = 0, movingAverageIndex = 0; dayOfYear < daysInYear; ++dayOfYear)
             {
                 // running average: remove oldest item, add new item in a ringbuffer

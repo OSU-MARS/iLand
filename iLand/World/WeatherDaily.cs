@@ -44,15 +44,16 @@ namespace iLand.World
                 {
                     // random without list
                     // make sure that the sequence of years is the same for the full landscape
-                    if (this.SampledYears.Count < model.CurrentYear)
+                    int currentSimulationYear = model.SimulationState.CurrentYear;
+                    if (this.SampledYears.Count < currentSimulationYear)
                     {
-                        while (this.SampledYears.Count - 1 < model.CurrentYear)
+                        while (this.SampledYears.Count - 1 < currentSimulationYear)
                         {
                             this.SampledYears.Add(model.RandomGenerator.GetRandomInteger(0, this.YearsToLoad));
                         }
                     }
 
-                    this.CurrentDataYear = this.SampledYears[model.CurrentYear];
+                    this.CurrentDataYear = this.SampledYears[currentSimulationYear];
                 }
                 else
                 {

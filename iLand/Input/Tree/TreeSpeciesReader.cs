@@ -195,7 +195,7 @@ namespace iLand.Input.Tree
         public float RespNitrogenClass() { return reader.GetFloat(this.respNitrogenClass); }
         public int PhenologyClass() { return reader.GetInt32(this.phenologyClass); }
         public float MaxCanopyConductance() { return reader.GetFloat(this.maxCanopyConductance); }
-        public float PsiMin() { return -Math.Abs(reader.GetFloat(this.psiMin)); } // force a negative value
+        public float PsiMin() { return -MathF.Abs(reader.GetFloat(this.psiMin)); } // force a negative value
         public float LightResponseClass() { return reader.GetFloat(this.lightResponseClass); }
         public int MastYearInterval() { return reader.GetInt32(this.mastYearInterval); }
         public int MaturityYears() { return reader.GetInt32(this.maturityYears); }

@@ -12,12 +12,15 @@ namespace iLand.Tree
     */
     public class LightStamp
     {
-        public int CenterCellPosition { get; set; } // delta between edge of the stamp and the logical center point (of the tree). e.g. a 5x5 stamp in an 8x8-grid has an offset from 2.
+        // delta between edge of the stamp and the logical center point of the tree (same in x and y). E.g., a 5x5 stamp in an 8x8-grid has an offset from 2.
+        public int CenterCellPosition { get; set; }
         public float CrownArea { get; private set; }
         public float CrownRadius { get; private set; }
         public float[] Data { get; private init; }
-        public int DataSize { get; private init; } // internal size of the stamp; e.g. 4 -> 4x4 stamp with 16 pixels.
-        public LightStamp? Reader { get; private set; } // pointer to the appropriate reader stamp (if available)
+        // internal size of the stamp; e.g. 4 -> 4x4 stamp with 16 pixels.
+        public int DataSize { get; private init; }
+        // pointer to the appropriate reader stamp (if available)
+        public LightStamp? Reader { get; private set; }
 
         public LightStamp(int dataSize)
         {
@@ -82,14 +85,8 @@ namespace iLand.Tree
 
         public float GetDistanceToCenter(int indexX, int indexY)
         {
-            return TreeSpeciesStamps.DistanceGrid[Math.Abs(indexX - CenterCellPosition), Math.Abs(indexY - CenterCellPosition)];
+            return TreeSpeciesStamps.DistanceGrid[Math.Abs(indexX - this.CenterCellPosition), Math.Abs(indexY - this.CenterCellPosition)];
         }
-
-        //float distanceToCenter(int ix, int iy)
-        //{
-        //    //
-        //    return StampContainer::distanceGrid().constValueAtIndex(Math.Abs(ix-m_offset), Math.Abs(iy-m_offset));
-        //}
 
         public string Dump()
         {
@@ -105,29 +102,6 @@ namespace iLand.Tree
             }
             return result.ToString();
         }
-
-        //public void LoadFromTextFile(string fileName)
-        //{
-        //    string txt = Helper.LoadTextFile(fileName);
-        //    List<string> lines = txt.Split("\n").ToList();
-
-        //    Setup(lines.Count);
-        //    int l = 0;
-        //    foreach (string line in lines)
-        //    {
-        //        List<string> cols = line.Split(";").ToList();
-        //        if (cols.Count != lines.Count)
-        //        {
-        //            Debug.WriteLine("loadFromFile: invalid count of rows/cols.");
-        //            return;
-        //        }
-        //        for (int i = 0; i < cols.Count; i++)
-        //        {
-        //            this[i, l] = Single.Parse(cols[i], CultureInfo.InvariantCulture);
-        //        }
-        //        l++;
-        //    }
-        //}
 
         // load from stream....
         public void Load(BinaryReader input)
@@ -180,7 +154,7 @@ namespace iLand.Tree
         //    else
         //        type = StampSize.Grid64x64;
 
-        //    Stamp stamp = new Stamp((int)type);
+        //    Stamp stamp = new((int)type);
         //    int swidth = width;
         //    if (width > 63)
         //    {

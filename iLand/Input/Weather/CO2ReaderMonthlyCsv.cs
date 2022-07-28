@@ -20,7 +20,7 @@ namespace iLand.Input.Weather
 
                 if (this.MonthlyCO2.Capacity - 12 < this.MonthlyCO2.Count)
                 {
-                    this.MonthlyCO2.Resize(this.MonthlyCO2.Capacity + Constant.Data.MonthlyWeatherAllocationIncrement);
+                    this.MonthlyCO2.Resize(this.MonthlyCO2.Capacity + Constant.Data.MonthlyAllocationIncrement);
                 }
 
                 int month = Int32.Parse(row[co2header.Month], CultureInfo.InvariantCulture);

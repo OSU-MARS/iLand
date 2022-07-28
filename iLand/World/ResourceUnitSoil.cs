@@ -12,7 +12,7 @@ namespace iLand.World
     public class ResourceUnitSoil
     {
         public SoilParameters Parameters { get; private init; }
-        public ResourceUnit RU { get; private init; } // link to containing resource unit
+        public ResourceUnit ResourceUnit { get; private init; } // link to containing resource unit
 
         public float ClimateDecompositionFactor { get; set; } // set the climate decomposition factor for the current year
         public CarbonNitrogenTuple FluxToAtmosphere { get; private set; } // total flux due to heterotrophic respiration kg/ha
@@ -24,14 +24,14 @@ namespace iLand.World
         public CarbonNitrogenPool YoungLabile { get; private set; } // young labile matter (litter) (t/ha)
         public CarbonNitrogenPool YoungRefractory { get; private set; } // young refractory (woody debris)  matter (t/ha)
 
-        public ResourceUnitSoil(ResourceUnit ru, ResourceUnitEnvironment environment)
+        public ResourceUnitSoil(ResourceUnit resourceUnit, ResourceUnitEnvironment environment)
         {
-            this.RU = ru;
+            this.ResourceUnit = resourceUnit;
 
             // see Xenakis 2008 for parameter definitions
             // Xenakis G, Raya D, Maurizio M. 2008. Sensitivity and uncertainty analysis from a coupled 3-PG and soil organic matter 
             //   decomposition model. Ecological Modelling 219(1–2):1-16. https://doi.org/10.1016/j.ecolmodel.2008.07.020
-            this.Parameters = new SoilParameters()
+            this.Parameters = new()
             {
                 AnnualNitrogenDeposition = environment.AnnualNitrogenDeposition,
                 El = environment.SoilEl,
@@ -51,22 +51,22 @@ namespace iLand.World
             }
 
             this.ClimateDecompositionFactor = 0.0F;
-            this.FluxToAtmosphere = new CarbonNitrogenTuple();
-            this.FluxToDisturbance = new CarbonNitrogenTuple();
-            this.InputLabile = new CarbonNitrogenPool();
-            this.InputRefractory = new CarbonNitrogenPool();
+            this.FluxToAtmosphere = new();
+            this.FluxToDisturbance = new();
+            this.InputLabile = new();
+            this.InputRefractory = new();
             // ICBM/2 "old" carbon pool: humified soil organic content
-            this.OrganicMatter = new CarbonNitrogenTuple(0.001F * environment.SoilOrganicC, // environment values are in kg/ha, pool sizes are in t/ha
-                                                         0.001F * environment.SoilOrganicN);
+            this.OrganicMatter = new(0.001F * environment.SoilOrganicC, // environment values are in kg/ha, pool sizes are in t/ha
+                                     0.001F * environment.SoilOrganicN);
             this.PlantAvailableNitrogen = environment.SoilAvailableNitrogen;
             // ICBM/2 litter layer
-            this.YoungLabile = new CarbonNitrogenPool(0.001F * environment.SoilYoungLabileC,
-                                                      0.001F * environment.SoilYoungLabileN,
-                                                      this.Parameters.Kyl);
+            this.YoungLabile = new(0.001F * environment.SoilYoungLabileC,
+                                   0.001F * environment.SoilYoungLabileN,
+                                   this.Parameters.Kyl);
             // ICBM/2 coarse woody debris
-            this.YoungRefractory = new CarbonNitrogenPool(0.001F * environment.SoilYoungRefractoryC,
-                                                          0.001F * environment.SoilYoungRefractoryN,
-                                                          this.Parameters.Kyr);
+            this.YoungRefractory = new(0.001F * environment.SoilYoungRefractoryC,
+                                       0.001F * environment.SoilYoungRefractoryN,
+                                       this.Parameters.Kyr);
 
             if (!this.OrganicMatter.HasCarbonAndNitrogen())
             {
@@ -90,13 +90,13 @@ namespace iLand.World
         }
 
         /// set soil inputs of current year (litter and deadwood)
-        public void SetSoilInput(CarbonNitrogenPool labile_input_kg_ha, CarbonNitrogenPool refractory_input_kg_ha)
+        public void SetSoilInput(CarbonNitrogenPool labileInputInKgPerHa, CarbonNitrogenPool refractoryInputInKgHa)
         {
             // stockable area:
             // if the stockable area is < 1ha, then
             // scale the soil inputs to a full hectare
-            float area_ha = RU != null ? RU.AreaInLandscape / Constant.ResourceUnitAreaInM2 : 1.0F;
-            if (area_ha <= 0.0)
+            float ruLandscapeAreaInHa = this.ResourceUnit.AreaInLandscapeInM2 / Constant.SquareMetersPerHectare;
+            if (ruLandscapeAreaInHa <= 0.0F)
             {
                 throw new NotSupportedException("Resource unit's stockable area is zero or negative.");
             }
@@ -106,12 +106,12 @@ namespace iLand.World
             // the soil module always calculates per ha values, so nothing else needs to be done here.
             // area_ha = std::max(area_ha, 0.1);
 
-            this.InputLabile = labile_input_kg_ha * (0.001F / area_ha); // transfer from kg/ha -> tons/ha and scale to 1 ha
-            this.InputRefractory = refractory_input_kg_ha * (0.001F / area_ha);
+            this.InputLabile = labileInputInKgPerHa * (0.001F / ruLandscapeAreaInHa); // transfer from kg/ha -> tons/ha and scale to 1 ha
+            this.InputRefractory = refractoryInputInKgHa * (0.001F / ruLandscapeAreaInHa);
             // calculate the decomposition rates
             this.Parameters.Kyl = this.YoungLabile.GetWeightedDecomposiitonRate(this.InputLabile);
             this.Parameters.Kyr = this.YoungRefractory.GetWeightedDecomposiitonRate(this.InputRefractory);
-            if (Double.IsNaN(this.Parameters.Kyr) || Double.IsNaN(this.YoungRefractory.C))
+            if (Single.IsNaN(this.Parameters.Kyr) || Single.IsNaN(this.YoungRefractory.C))
             {
                 throw new ArgumentException("Kyr or refractory carbon is NAN");
             }
@@ -123,13 +123,13 @@ namespace iLand.World
             // checks
             if (this.ClimateDecompositionFactor == 0.0)
             {
-                throw new NotSupportedException("Climate decomposition factor is zero for resource unit " + RU.ResourceUnitGridIndex + ".");
+                throw new NotSupportedException("Climate decomposition factor is zero for resource unit " + ResourceUnit.ResourceUnitGridIndex + ".");
             }
 
             float timestep = Constant.TimeStepInYears; // 1 year (annual)
             CarbonNitrogenTuple totalBefore = this.YoungLabile + this.YoungRefractory + this.OrganicMatter;
             CarbonNitrogenTuple totalInput = this.InputLabile + this.InputRefractory;
-            if (Double.IsNaN(totalInput.C) || Double.IsNaN(this.Parameters.Kyr))
+            if (Single.IsNaN(totalInput.C) || Single.IsNaN(this.Parameters.Kyr))
             {
                 Debug.Fail("Input carbon or decomposition rate is NaN.");
             }
@@ -208,7 +208,7 @@ namespace iLand.World
                     // TODO: should this check follow deposition?
                     this.PlantAvailableNitrogen = 0.0F;
                 }
-                if (Double.IsNaN(this.PlantAvailableNitrogen) || Double.IsNaN(this.YoungRefractory.C))
+                if (Single.IsNaN(this.PlantAvailableNitrogen) || Single.IsNaN(this.YoungRefractory.C))
                 {
                     throw new ApplicationException("Plant available nitrogen or coarse woody carbon is NaN.");
                 }
@@ -225,7 +225,7 @@ namespace iLand.World
 
         //public List<object> DebugList()
         //{
-        //    List<object> list = new List<object>() 
+        //    List<object> list = new()
         //    {
         //        // (1) inputs of the year
         //        mInputLab.C, mInputLab.N, mInputLab.DecompositionRate, mInputRef.C, mInputRef.N, mInputRef.DecompositionRate, ClimateDecompositionFactor,

@@ -116,8 +116,8 @@ namespace iLand.Input
         /// this removes all comments and uses the system line-end
         //public void SaveFile(string fileName)
         //{
-        //    using FileStream file = new FileStream(fileName, FileMode.Create, FileAccess.Write);
-        //    using StreamWriter str = new StreamWriter(file);
+        //    using FileStream file = new(fileName, FileMode.Create, FileAccess.Write);
+        //    using StreamWriter str = new(file);
         //    if (HasColumnNames)
         //    {
         //        str.WriteLine(String.Join(mSeparator, ColumnNames));

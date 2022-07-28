@@ -33,7 +33,7 @@ namespace iLand.Input.Weather
                         if (this.MonthlyWeatherByID.TryGetValue(weatherID, out monthlyWeather) == false)
                         {
                             // don't number of series in batch isn't known until last row, so can't estimate series length a priori
-                            monthlyWeather = new(Timestep.Monthly, Constant.Data.MonthlyWeatherAllocationIncrement);
+                            monthlyWeather = new(Timestep.Monthly, Constant.Data.MonthlyAllocationIncrement);
                             this.MonthlyWeatherByID.Add(weatherID, monthlyWeather);
                         }
 
@@ -41,7 +41,7 @@ namespace iLand.Input.Weather
                     }
                     if (monthlyWeather!.Capacity - 12 < monthlyWeather.Count)
                     {
-                        monthlyWeather.Resize(monthlyWeather.Capacity + Constant.Data.MonthlyWeatherAllocationIncrement);
+                        monthlyWeather.Resize(monthlyWeather.Capacity + Constant.Data.MonthlyAllocationIncrement);
                     }
 
                     // January
