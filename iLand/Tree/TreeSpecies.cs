@@ -62,10 +62,10 @@ namespace iLand.Tree
         public int LeafPhenologyID { get; private set; } // leaf phenology defined in project file or Constant.EvergreenLeafPhenologyID
         /// the full name (e.g. Picea abies) of the species
         public string Name { get; private init; }
-        // cn ratios
-        public float CNRatioFoliage { get; private set; }
-        public float CNRatioFineRoot { get; private set; }
-        public float CNRatioWood { get; private set; }
+        // carbon:nitrogen ratios
+        public float CarbonNitrogenRatioFoliage { get; private set; }
+        public float CarbonNitrogenRatioFineRoot { get; private set; }
+        public float CarbonNitrogenRatioWood { get; private set; }
         // turnover rates
         public float TurnoverLeaf { get; private set; } // yearly turnover rate of leaves
         public float TurnoverFineRoot { get; private set; } // yearly turnover rate of roots
@@ -218,12 +218,12 @@ namespace iLand.Tree
             species.barkFractionAtDbh = reader.BarkThickness();
 
             // cn-ratios
-            species.CNRatioFoliage = reader.CnFoliage();
-            species.CNRatioFineRoot = reader.CnFineroot();
-            species.CNRatioWood = reader.CnWood();
-            if ((species.CNRatioFineRoot <= 0.0F) || (species.CNRatioFineRoot > 1000.0F) ||
-                (species.CNRatioFoliage <= 0.0F) || (species.CNRatioFoliage > 1000.0F) ||
-                (species.CNRatioWood <= 0.0F) || (species.CNRatioFoliage > 1000.0F))
+            species.CarbonNitrogenRatioFoliage = reader.CnFoliage();
+            species.CarbonNitrogenRatioFineRoot = reader.CnFineroot();
+            species.CarbonNitrogenRatioWood = reader.CnWood();
+            if ((species.CarbonNitrogenRatioFineRoot <= 0.0F) || (species.CarbonNitrogenRatioFineRoot > 1000.0F) ||
+                (species.CarbonNitrogenRatioFoliage <= 0.0F) || (species.CarbonNitrogenRatioFoliage > 1000.0F) ||
+                (species.CarbonNitrogenRatioWood <= 0.0F) || (species.CarbonNitrogenRatioFoliage > 1000.0F))
             {
                 throw new SqliteException("Error reading " + species.ID + ": at least one carbon-nitrogen ratio is zero, negative, or improbably high.", (int)SqliteErrorCode.Error);
             }
@@ -290,7 +290,7 @@ namespace iLand.Tree
 
             // mortality
             // the probabilites (mDeathProb_...) are the yearly prob. of death.
-            // from a population a fraction of p_lucky remains after ageMax years. see wiki: base+mortality
+            // from a population a fraction of p_lucky remains after ageMax years. https://iland-model.org/base+mortality
             float fixedMortalityBase = reader.ProbIntrinsic();
             float stressMortalityCoefficient = reader.ProbStress();
             if ((fixedMortalityBase < 0.0F) || (stressMortalityCoefficient < 0.0F) || (stressMortalityCoefficient > 1000.0F)) // sanity upper bound

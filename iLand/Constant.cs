@@ -16,10 +16,10 @@ namespace iLand
         public const int HeightCellAreaInM2 = 100; // 100 m² area of a height pixel
         public const int HeightCellSizeInM = 10; // size of height grid cells, m
         public const int LightCellSizeInM = 2; // size of light grid cells, m
-        public const int LightCellsPerHectare = 2500; // 10000 / (2*2)
+        public const int LightCellsPerHectare = 2500; // 10000 m² / (2 m * 2 m)
         public const int LightCellsPerSeedmapCellWidth = 10; // 20 m / 2 m; keep in sync with seedmap and light cell sizes
-        public const int LightCellsPerHeightCellWidth = 5; // 10 / 2 LIF pixels per height pixel; keep in sync with light and height cell sizes
-        public const int LightCellsPerRUWidth = 50; // 100/2
+        public const int LightCellsPerHeightCellWidth = 5; // 10 m / 2 m LIF pixels per height pixel; keep in sync with light and height cell sizes
+        public const int LightCellsPerRUWidth = 50; // 100 m / 2 m
 
         public const int NoDataInt32 = Int32.MinValue;
         public const float NoDataSingle = Single.NaN;

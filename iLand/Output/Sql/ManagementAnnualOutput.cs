@@ -32,8 +32,8 @@ namespace iLand.Output.Sql
             {
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics ruManagementEffects = ruSpecies.StatisticsManagement;
-                    if (ruManagementEffects.TreeCount == 0)
+                    ResourceUnitTreeSpeciesStatistics ruManagementEffects = ruSpecies.StatisticsManagement;
+                    if (ruManagementEffects.TreesPerHa == 0)
                     {
                         continue;
                     }
@@ -42,11 +42,11 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = resourceUnit.ID;
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID; // keys
-                    insertRow.Parameters[4].Value = ruManagementEffects.TreeCount;
-                    insertRow.Parameters[5].Value = ruManagementEffects.AverageDbh;
-                    insertRow.Parameters[6].Value = ruManagementEffects.AverageHeight;
-                    insertRow.Parameters[7].Value = ruManagementEffects.StemVolume;
-                    insertRow.Parameters[8].Value = ruManagementEffects.BasalArea;
+                    insertRow.Parameters[4].Value = ruManagementEffects.TreesPerHa;
+                    insertRow.Parameters[5].Value = ruManagementEffects.AverageDbhInCm;
+                    insertRow.Parameters[6].Value = ruManagementEffects.AverageHeightInM;
+                    insertRow.Parameters[7].Value = ruManagementEffects.StemVolumeInM3PerHa;
+                    insertRow.Parameters[8].Value = ruManagementEffects.BasalAreaInM2PerHa;
 
                     insertRow.ExecuteNonQuery();
                 }

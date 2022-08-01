@@ -13,7 +13,7 @@ namespace iLand.Output.Sql
     public class LandscapeTreeSpeciesAnnualOutput : AnnualOutput
     {
         private readonly Expression filter;
-        private readonly Dictionary<string, LandscapeTreeSpeciesStatistics> treeStatisticsBySpeciesID;
+        private readonly SortedList<string, LandscapeTreeSpeciesStatistics> treeStatisticsBySpeciesID;
 
         public LandscapeTreeSpeciesAnnualOutput()
         {
@@ -60,17 +60,22 @@ namespace iLand.Output.Sql
             }
 
             // clear landscape stats
-            foreach ((string _, LandscapeTreeSpeciesStatistics speciesStatistics) in this.treeStatisticsBySpeciesID)
+            for (int treeSpeciesIndex = 0; treeSpeciesIndex < this.treeStatisticsBySpeciesID.Count; ++treeSpeciesIndex)
             {
-                speciesStatistics.Zero();
+                this.treeStatisticsBySpeciesID.Values[treeSpeciesIndex].Zero();
             }
 
             foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics ruLiveTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
-                    if ((ruLiveTreeStatisticsForSpecies.TreeCount == 0) && (ruLiveTreeStatisticsForSpecies.CohortCount == 0) && (ruLiveTreeStatisticsForSpecies.LiveAndSnagStemVolume == 0.0F))
+                    ResourceUnitTreeSpeciesStatistics ruLiveTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
+
+                    // removed growth is the running sum of all removed
+                    // tree volume. the current "GWL" therefore is current volume (standing) + mRemovedGrowth.
+                    // important: statisticsDead() and statisticsMgmt() need to calculate() before -> volume() is already scaled to ha
+                    float totalStemVolumeInM3PerHa = ruLiveTreeStatisticsForSpecies.StemVolumeInM3PerHa + ruSpecies.StatisticsManagement.StemVolumeInM3PerHa + ruSpecies.StatisticsSnag.StemVolumeInM3PerHa;
+                    if ((ruLiveTreeStatisticsForSpecies.TreesPerHa == 0.0F) && (ruLiveTreeStatisticsForSpecies.CohortsPerHa == 0.0F) && (totalStemVolumeInM3PerHa == 0.0F))
                     {
                         continue;
                     }
@@ -79,7 +84,7 @@ namespace iLand.Output.Sql
                         speciesStatistics = new();
                         this.treeStatisticsBySpeciesID.Add(ruSpecies.Species.ID, speciesStatistics);
                     }
-                    speciesStatistics.AddResourceUnit(resourceUnit, ruLiveTreeStatisticsForSpecies);
+                    speciesStatistics.AddResourceUnit(resourceUnit, ruLiveTreeStatisticsForSpecies, totalStemVolumeInM3PerHa);
                 }
             }
 
@@ -87,16 +92,20 @@ namespace iLand.Output.Sql
             foreach (KeyValuePair<string, LandscapeTreeSpeciesStatistics> species in this.treeStatisticsBySpeciesID)
             {
                 LandscapeTreeSpeciesStatistics speciesStats = species.Value;
-                speciesStats.ConvertIncrementalSumsToAreaWeightedAverages();
+                if (speciesStats.TreeCount > 0.0F)
+                {
+                    // species may have died out of landscape, in which case tree count and all other properties should be zero
+                    speciesStats.ConvertIncrementalSumsToAreaWeightedAverages();
+                }
 
                 insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
                 insertRow.Parameters[1].Value = species.Key; // keys: year, species
                 insertRow.Parameters[2].Value = speciesStats.TreeCount;
                 insertRow.Parameters[3].Value = speciesStats.AverageDbh;
                 insertRow.Parameters[4].Value = speciesStats.AverageHeight;
-                insertRow.Parameters[5].Value = speciesStats.LiveStemVolume;
+                insertRow.Parameters[5].Value = speciesStats.LiveStandingStemVolume;
                 insertRow.Parameters[6].Value = speciesStats.TotalCarbon;
-                insertRow.Parameters[7].Value = speciesStats.LiveAndSnagStemVolume;
+                insertRow.Parameters[7].Value = speciesStats.LiveStandingAndRemovedStemVolume;
                 insertRow.Parameters[8].Value = speciesStats.BasalArea;
                 insertRow.Parameters[9].Value = speciesStats.TreeNpp;
                 insertRow.Parameters[10].Value = speciesStats.TreeNppAboveground;

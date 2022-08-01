@@ -19,8 +19,9 @@ namespace iLand.Test
         {
             this.DiameterInCmByTag.Clear();
             this.HeightInMByTag.Clear();
-            foreach (Trees treesOfSpecies in resourceUnit.Trees.TreesBySpeciesID.Values)
+            for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
             {
+                Trees treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
                     this.DiameterInCmByTag.Add(treesOfSpecies.Tag[treeIndex], treesOfSpecies.Dbh[treeIndex]);

@@ -19,7 +19,7 @@ namespace iLand.Tree
     {
         private const int RandomSets = 20;
 
-        private readonly Dictionary<string, TreeSpecies> treeSpeciesByID;
+        private readonly SortedList<string, TreeSpecies> treeSpeciesByID;
         // nitrogen response classes
         private readonly float class1K, class1minimum; // parameters of nitrogen response class 1
         private readonly float class2K, class2minimum; // parameters of nitrogen response class 2

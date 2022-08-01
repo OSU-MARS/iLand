@@ -184,13 +184,13 @@ namespace iLand.World
                     ID = environment.ResourceUnitID,
                     MinimumLightIndexXY = this.LightGrid.GetCellXYIndex(ruMinProjectX, ruMinProjectY)
                 };
-                newRU.Setup(projectFile, environment);
+                newRU.SetupEnvironment(projectFile, environment);
                 this.ResourceUnits.Add(newRU);
                 this.ResourceUnitGrid[ruGridIndex] = newRU; // save in the RUmap grid
             }
             if (this.ResourceUnits.Count == 0)
             {
-                throw new NotSupportedException("Setup of Model: no resource units present!");
+                throw new NotSupportedException("No resource units present!");
             }
 
             this.MarkHeightPixelsAndScaleSnags();
@@ -531,20 +531,15 @@ namespace iLand.World
                     StandSaplings saplings = saplingsInStands[standIndex];
                     if (saplings.StandID != previousStandID)
                     {
-                        if (previousStandID >= Constant.DefaultStandID)
-                        {
-                            // process stand
-                            int standEndIndex = standIndex - 1; // up to the last
-                            this.SetupSaplingsAndGrass(previousStandID, saplingsInStands, standStartIndex, standEndIndex, randomGenerator);
-                        }
+                        // process stand
+                        int standEndIndex = standIndex - 1; // up to the last
+                        this.SetupSaplingsAndGrass(previousStandID, saplingsInStands, standStartIndex, standEndIndex, randomGenerator);
+
                         standStartIndex = standIndex; // mark beginning of new stand
                         previousStandID = saplings.StandID;
                     }
                 }
-                if (previousStandID >= Constant.DefaultStandID)
-                {
-                    this.SetupSaplingsAndGrass(previousStandID, saplingsInStands, standStartIndex, saplingsInStands.Count - 1, randomGenerator); // the last stand
-                }
+                this.SetupSaplingsAndGrass(previousStandID, saplingsInStands, standStartIndex, saplingsInStands.Count - 1, randomGenerator); // the last stand
             }
             else if (saplingsInStands.Count != 0)
             {

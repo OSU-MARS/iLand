@@ -37,12 +37,12 @@ namespace iLand.Output.Sql
             this.Columns.Add(new("height_avg_m", "average tree height (m)", SqliteType.Real));
             this.Columns.Add(new("volume_m3", "volume (geomery, taper factor) in m3", SqliteType.Real));
             this.Columns.Add(new("total_carbon_kg", "total carbon in living biomass (aboveground compartments and roots) of all living trees (including regeneration layer) (kg/ha)", SqliteType.Real));
-            this.Columns.Add(new("gwl_m3", "'gesamtwuchsleistung' (total growth including removed/dead trees) volume (geomery, taper factor) in m3", SqliteType.Real));
-            this.Columns.Add(new("basal_area_m2", "total basal area at breast height (m2)", SqliteType.Real));
-            this.Columns.Add(new("NPP_kg", "sum of NPP (aboveground + belowground) kg Biomass/ha", SqliteType.Real));
-            this.Columns.Add(new("NPPabove_kg", "sum of NPP (abovegroundground) kg Biomass/ha", SqliteType.Real));
-            this.Columns.Add(new("LAI", "Leafareaindex (m2/m2)", SqliteType.Real));
-            this.Columns.Add(new("cohort_count_ha", "number of cohorts in the regeneration layer (<4m) /ha", SqliteType.Integer));
+            this.Columns.Add(new("gwl_m3", "'gesamtwuchsleistung' (total growth including removed/dead trees) volume (geomery, taper factor) in m³", SqliteType.Real));
+            this.Columns.Add(new("basal_area_m2", "total basal area at breast height (m²)", SqliteType.Real));
+            this.Columns.Add(new("NPP_kg", "sum of NPP (aboveground + belowground) kg biomass/ha", SqliteType.Real));
+            this.Columns.Add(new("NPPabove_kg", "sum of NPP (abovegroundground) kg biomass/ha", SqliteType.Real));
+            this.Columns.Add(new("LAI", "leaf area index (m²/m²)", SqliteType.Real));
+            this.Columns.Add(new("cohort_count_ha", "number of cohorts in the regeneration layer (<4m) per hectare", SqliteType.Integer));
         }
 
         public override void Setup(Project projectFile, SimulationState simulationState)
@@ -64,28 +64,30 @@ namespace iLand.Output.Sql
             {
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics ruTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
-                    if (ruTreeStatisticsForSpecies.TreeCount == 0 && ruTreeStatisticsForSpecies.CohortCount == 0)
+                    ResourceUnitTreeSpeciesStatistics ruLiveTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
+                    if ((ruLiveTreeStatisticsForSpecies.TreesPerHa == 0.0F) && (ruLiveTreeStatisticsForSpecies.CohortsPerHa == 0.0F))
                     {
                         continue;
                     }
+
                     insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
                     insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = resourceUnit.ID;
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID;
-                    insertRow.Parameters[4].Value = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2; // keys
+                    insertRow.Parameters[4].Value = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2;
                     // insertRow.Parameters[4].Value = ru.boundingBox().center().x() << ru.boundingBox().center().y();  // temp
-                    insertRow.Parameters[5].Value = ruTreeStatisticsForSpecies.TreeCount;
-                    insertRow.Parameters[6].Value = ruTreeStatisticsForSpecies.AverageDbh;
-                    insertRow.Parameters[7].Value = ruTreeStatisticsForSpecies.AverageHeight;
-                    insertRow.Parameters[8].Value = ruTreeStatisticsForSpecies.StemVolume;
-                    insertRow.Parameters[9].Value = ruTreeStatisticsForSpecies.GetTotalCarbon();
-                    insertRow.Parameters[10].Value = ruTreeStatisticsForSpecies.LiveAndSnagStemVolume;
-                    insertRow.Parameters[11].Value = ruTreeStatisticsForSpecies.BasalArea;
-                    insertRow.Parameters[12].Value = ruTreeStatisticsForSpecies.TreeNpp;
-                    insertRow.Parameters[13].Value = ruTreeStatisticsForSpecies.TreeNppAboveground;
-                    insertRow.Parameters[14].Value = ruTreeStatisticsForSpecies.LeafAreaIndex;
-                    insertRow.Parameters[15].Value = ruTreeStatisticsForSpecies.CohortCount;
+                    insertRow.Parameters[5].Value = ruLiveTreeStatisticsForSpecies.TreesPerHa;
+                    insertRow.Parameters[6].Value = ruLiveTreeStatisticsForSpecies.AverageDbhInCm;
+                    insertRow.Parameters[7].Value = ruLiveTreeStatisticsForSpecies.AverageHeightInM;
+                    insertRow.Parameters[8].Value = ruLiveTreeStatisticsForSpecies.StemVolumeInM3PerHa;
+                    insertRow.Parameters[9].Value = ruLiveTreeStatisticsForSpecies.GetTotalCarbon();
+                    float totalStemVolumeInM3PerHa = ruLiveTreeStatisticsForSpecies.StemVolumeInM3PerHa + ruSpecies.StatisticsManagement.StemVolumeInM3PerHa + ruSpecies.StatisticsSnag.StemVolumeInM3PerHa;
+                    insertRow.Parameters[10].Value = totalStemVolumeInM3PerHa;
+                    insertRow.Parameters[11].Value = ruLiveTreeStatisticsForSpecies.BasalAreaInM2PerHa;
+                    insertRow.Parameters[12].Value = ruLiveTreeStatisticsForSpecies.TreeNppPerHa;
+                    insertRow.Parameters[13].Value = ruLiveTreeStatisticsForSpecies.TreeNppPerHaAboveground;
+                    insertRow.Parameters[14].Value = ruLiveTreeStatisticsForSpecies.LeafAreaIndex;
+                    insertRow.Parameters[15].Value = ruLiveTreeStatisticsForSpecies.CohortsPerHa;
                     insertRow.ExecuteNonQuery();
                 }
             }

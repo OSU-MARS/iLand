@@ -44,17 +44,7 @@ namespace iLand.World
             }
             else if (treeReader is TreeSizeDistributionReaderCsv sizeDistributionReader)
             {
-                if (standID > Constant.DefaultStandID)
-                {
-                    // execute stand based initialization
-                    this.PopulateStandTreesFromSizeDistribution(projectFile, landscape, sizeDistributionReader.TreeSizeDistribution, randomGenerator, standID);
-                }
-                else
-                {
-                    // exeucte the initialization based on single resource units
-                    this.PopulateResourceUnitTreesFromSizeDistribution(projectFile, landscape, resourceUnit, sizeDistributionReader.TreeSizeDistribution, randomGenerator);
-                    resourceUnit.Trees.RemoveDeadTrees(); // TODO: is this necessary?
-                }
+                this.PopulateStandTreesFromSizeDistribution(projectFile, landscape, sizeDistributionReader.TreeSizeDistribution, randomGenerator, standID);
             }
             else
             {
@@ -142,7 +132,7 @@ namespace iLand.World
                     treeWrapper.Trees = allTreeEnumerator.CurrentTrees;
                     treeWrapper.TreeIndex = allTreeEnumerator.CurrentTreeIndex;
                     float result = debugTreeExpression.Execute();
-                    if (result != 0.0)
+                    if (result != 0.0F)
                     {
                         allTreeEnumerator.CurrentTrees.SetDebugging(allTreeEnumerator.CurrentTreeIndex);
                     }

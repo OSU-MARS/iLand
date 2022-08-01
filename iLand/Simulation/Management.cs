@@ -301,7 +301,7 @@ namespace iLand.Simulation
         //        for (int tp = 0; tp < mTrees.Count; ++tp)
         //        {
         //            tw.Tree = mTrees[tp].Item1;
-        //            if (filter_expr.Calculate(globalSettings) != 0.0)
+        //            if (filter_expr.Calculate(globalSettings) != 0.0F)
         //            {
         //                sum += expr.Calculate(globalSettings);
         //                ++n;

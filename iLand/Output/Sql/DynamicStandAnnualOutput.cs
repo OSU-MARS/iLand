@@ -38,7 +38,7 @@ namespace iLand.Output.Sql
 
             this.Name = "dynamic stand output by species/RU";
             this.TableName = "dynamicstand";
-            this.Description = "Userdefined outputs for tree aggregates for each stand or species." + Environment.NewLine +
+            this.Description = "User defined outputs for tree aggregates for each stand or species." + Environment.NewLine +
                                "Technically, each field is calculated 'live', i.e. it is looped over all trees, and eventually the statistics (percentiles) " +
                                "are calculated. The aggregated values are not scaled to any area unit." + Environment.NewLine +
                                "!!!Specifying the aggregation" + Environment.NewLine +
@@ -71,12 +71,11 @@ namespace iLand.Output.Sql
             this.resourceUnitFilter.SetExpression(projectFile.Output.Sql.DynamicStand.ResourceUnitFilter);
             this.treeFilter.SetExpression(projectFile.Output.Sql.DynamicStand.TreeFilter);
             this.yearFilter.SetExpression(projectFile.Output.Sql.DynamicStand.Condition);
-            // clear columns
-            this.Columns.RemoveRange(4, Columns.Count - 4);
+            // remove any columns following the four columns added in the constructor
+            this.Columns.RemoveRange(4, this.Columns.Count - 4);
             this.fieldList.Clear();
 
             // setup fields
-            // int pos = 0;
             TreeVariableAccessor treeWrapper = new(simulationState);
             Regex regex = new("([^\\.]+).(\\w+)[,\\s]*"); // two parts: before dot and after dot, and , + whitespace at the end
             MatchCollection columns = regex.Matches(columnString);
@@ -122,18 +121,18 @@ namespace iLand.Output.Sql
             if (this.yearFilter.IsEmpty == false)
             {
                 int currentSimulationYear = model.SimulationState.CurrentYear;
-                if (this.yearFilter.Evaluate(currentSimulationYear) != 0.0)
+                if (this.yearFilter.Evaluate(currentSimulationYear) != 0.0F)
                 {
                     return;
                 }
             }
 
-            bool perSpecies = model.Project.Output.Sql.DynamicStand.BySpecies;
-            bool perRU = model.Project.Output.Sql.DynamicStand.ByResourceUnit;
-            if (perRU)
+            bool logBySpecies = model.Project.Output.Sql.DynamicStand.BySpecies;
+            bool logByResourceUnit = model.Project.Output.Sql.DynamicStand.ByResourceUnit;
+            if (logByResourceUnit)
             {
                 // when looping over resource units, do it differently (old way)
-                this.ExtractByResourceUnit(model, perSpecies, insertRow);
+                this.ExtractByResourceUnit(model, logBySpecies, insertRow);
                 return;
             }
 
@@ -142,7 +141,7 @@ namespace iLand.Output.Sql
             {
                 throw new NotImplementedException("Generation of a unique list of species from multiple species sets is not currently supported.");
             }
-            List<float> fieldData = new(); //statistics data
+            List<float> fieldData = new(); // statistics data
             TreeVariableAccessor treeWrapper = new(model.SimulationState);
             Expression customExpression = new();
 
@@ -156,7 +155,7 @@ namespace iLand.Output.Sql
                 AllTreesEnumerator allTreeEnumerator = new(model.Landscape);
                 while (allTreeEnumerator.MoveNextLiving())
                 {
-                    if (perSpecies && allTreeEnumerator.CurrentTrees.Species != species)
+                    if (logBySpecies && allTreeEnumerator.CurrentTrees.Species != species)
                     {
                         continue;
                     }
@@ -204,7 +203,7 @@ namespace iLand.Output.Sql
                         insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
                         insertRow.Parameters[1].Value = -1;
                         insertRow.Parameters[2].Value = -1;
-                        if (perSpecies)
+                        if (logBySpecies)
                         {
                             insertRow.Parameters[3].Value = species.ID;
                         }
@@ -242,7 +241,7 @@ namespace iLand.Output.Sql
                     insertRow.ExecuteNonQuery();
                 }
 
-                if (perSpecies == false)
+                if (logBySpecies == false)
                 {
                     break;
                 }
@@ -277,7 +276,7 @@ namespace iLand.Output.Sql
 
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    if (bySpecies && ruSpecies.StatisticsLive.TreeCount == 0)
+                    if (bySpecies && ruSpecies.StatisticsLive.TreesPerHa == 0)
                     {
                         continue;
                     }

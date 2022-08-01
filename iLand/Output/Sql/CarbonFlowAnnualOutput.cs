@@ -85,8 +85,8 @@ namespace iLand.Output.Sql
                 }
 
                 float areaFactor = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2; //conversion factor
-                float npp = resourceUnit.Trees.StatisticsForAllSpeciesAndStands.TreeNpp * Constant.DryBiomassCarbonFraction; // kg C/ha
-                npp += resourceUnit.Trees.StatisticsForAllSpeciesAndStands.SaplingNpp * Constant.DryBiomassCarbonFraction; // kgC/ha
+                float npp = resourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa * Constant.DryBiomassCarbonFraction; // kg C/ha
+                npp += resourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.SaplingNppPerHa * Constant.DryBiomassCarbonFraction; // kgC/ha
 
                 // Snag pools are not scaled per ha (but refer to the stockable RU), soil pools and biomass statistics (NPP, ...) 
                 // are scaled.

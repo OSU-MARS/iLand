@@ -123,12 +123,14 @@ namespace iLand.World
             IReadOnlyCollection<(ResourceUnit, float _)> resourceUnitsInStand = this.resourceUnitsByRasterizedPolygonID[standID];
             foreach ((ResourceUnit ResourceUnit, float _) unitInStand in resourceUnitsInStand)
             {
-                foreach (Trees trees in unitInStand.ResourceUnit.Trees.TreesBySpeciesID.Values)
+                SortedList<string, Trees> treesBySpeciesID = unitInStand.ResourceUnit.Trees.TreesBySpeciesID;
+                for (int speciesIndex = 0; speciesIndex < treesBySpeciesID.Count; ++speciesIndex)
                 {
-                    (Trees Trees, List<int> LiveTreeIndices) livingTreesInStand = new(trees, new List<int>());
-                    for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
+                    Trees treesOfSpecies = treesBySpeciesID.Values[speciesIndex];
+                    (Trees Trees, List<int> LiveTreeIndices) livingTreesInStand = new(treesOfSpecies, new List<int>());
+                    for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                     {
-                        if ((this.GetPolygonIDFromLightGridIndex(trees.LightCellIndexXY[treeIndex]) == standID) && (trees.IsDead(treeIndex) == false))
+                        if ((this.GetPolygonIDFromLightGridIndex(treesOfSpecies.LightCellIndexXY[treeIndex]) == standID) && (treesOfSpecies.IsDead(treeIndex) == false))
                         {
                             livingTreesInStand.LiveTreeIndices.Add(treeIndex);
                         }

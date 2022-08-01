@@ -10,6 +10,7 @@
   <output>
     <memory>
       <resourceUnitTrajectories enabled="true" />
+      <standTrajectories enabled="true" />
     </memory>
   </output>
   <world>

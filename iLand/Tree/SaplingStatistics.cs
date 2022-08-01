@@ -7,49 +7,34 @@ namespace iLand.Tree
 {
     /** The SaplingStat class stores statistics on the resource unit x species level.
       */
-    public class SaplingProperties
+    public class SaplingStatistics
     {
-        private float mSumDbhDied; // running sum of dbh of died trees (used to calculate detritus)
+        private float sumDeadDbhInCm; // running sum of dbh of died trees (used to calculate detritus)
 
-        public float AverageAge { get; set; } // average age of saplings (years)
+        public float AverageAgeInYears { get; set; } // average age of saplings (years)
         public float AverageDeltaHPotential { get; set; } // average height increment potential (m)
         public float AverageDeltaHRealized { get; set; } // average realized height increment
         public float AverageHeight { get; set; } // average height of saplings (m)
-        public CarbonNitrogenTuple CarbonLiving { get; private init; } // kg Carbon (kg/ru) of saplings
-        public CarbonNitrogenTuple CarbonGain { get; private set; } // net growth (kg / ru) of saplings
-        public int DeadSaplings { get; private set; } // number of tree cohorts died
-        public int LivingCohorts { get; set; } // get the number of cohorts
+        public CarbonNitrogenTuple CarbonNitrogenLiving { get; private init; } // kg carbon (kg / ru) of saplings
+        public CarbonNitrogenTuple CarbonNitrogenGain { get; private set; } // net growth (kg / ru) of saplings
+        public int DeadCohorts { get; private set; } // number of sapling cohorts died
+        public int LivingCohorts { get; set; } // get the number of living sapling cohorts
         public float LivingSaplings { get; set; } // number of individual trees in the regen layer (using Reinekes R), with h>1.3m
         public float LivingSaplingsSmall { get; set; } // number of individual trees of cohorts < 1.3m height
-        public int NewSaplings { get; set; } // number of tree cohorts added
-        public int RecruitedSaplings { get; set; } // number of cohorts recruited (i.e. grown out of regeneration layer)
+        public int NewCohorts { get; set; } // number of tree cohorts added
+        public int RecruitedCohorts { get; set; } // number of cohorts recruited (i.e. grown out of regeneration layer)
 
-        public SaplingProperties()
+        public SaplingStatistics()
         {
-            this.CarbonGain = new();
-            this.CarbonLiving = new();
-            this.ClearStatistics();
+            this.CarbonNitrogenGain = new();
+            this.CarbonNitrogenLiving = new();
+            this.ZeroStatistics();
         }
 
-        public void AddCarbonOfDeadSapling(float dbh)
+        public void AddDeadCohort(float dbhInCm)
         { 
-            ++this.DeadSaplings;
-            this.mSumDbhDied += dbh; 
-        }
-
-        public void ClearStatistics()
-        {
-            this.mSumDbhDied = 0.0F;
-            this.AverageAge = 0.0F;
-            this.AverageDeltaHPotential = 0.0F;
-            this.AverageDeltaHRealized = 0.0F;
-            this.AverageHeight = 0.0F;
-            this.LivingSaplings = 0.0F;
-            this.LivingSaplingsSmall = 0.0F;
-            this.NewSaplings = 0;
-            this.RecruitedSaplings = 0;
-            this.DeadSaplings = 0;
-            this.LivingCohorts = 0;
+            ++this.DeadCohorts;
+            this.sumDeadDbhInCm += dbhInCm; 
         }
 
         public void AfterSaplingGrowth(Model model, ResourceUnit resourceUnit, TreeSpecies species)
@@ -61,8 +46,8 @@ namespace iLand.Tree
             }
 
             // calculate carbon balance
-            CarbonNitrogenTuple previousCarbonLiving = this.CarbonLiving;
-            this.CarbonLiving.Zero();
+            CarbonNitrogenTuple previousCarbonLiving = this.CarbonNitrogenLiving;
+            this.CarbonNitrogenLiving.Zero();
 
             CarbonNitrogenTuple deadWood = new(); // pools for mortality
             CarbonNitrogenTuple deadFine = new();
@@ -79,11 +64,11 @@ namespace iLand.Tree
                 float foliage = species.GetBiomassFoliage(averageDbh);
                 float fineRoot = foliage * species.FinerootFoliageRatio;
 
-                this.CarbonLiving.AddBiomass(woodyBiomass * nSaplings, species.CNRatioWood);
-                this.CarbonLiving.AddBiomass(foliage * nSaplings, species.CNRatioFoliage);
-                this.CarbonLiving.AddBiomass(fineRoot * nSaplings, species.CNRatioFineRoot);
+                this.CarbonNitrogenLiving.AddBiomass(woodyBiomass * nSaplings, species.CarbonNitrogenRatioWood);
+                this.CarbonNitrogenLiving.AddBiomass(foliage * nSaplings, species.CarbonNitrogenRatioFoliage);
+                this.CarbonNitrogenLiving.AddBiomass(fineRoot * nSaplings, species.CarbonNitrogenRatioFineRoot);
 
-                Debug.Assert(Single.IsNaN(this.CarbonLiving.C) == false, "carbon NaN in calculate (living trees).");
+                Debug.Assert(Single.IsNaN(this.CarbonNitrogenLiving.C) == false, "carbon NaN in calculate (living trees).");
 
                 // turnover
                 if (resourceUnit.Snags != null)
@@ -99,24 +84,24 @@ namespace iLand.Tree
                     float nPreviousSaplings = this.LivingCohorts * species.SaplingGrowth.RepresentedStemNumberFromDiameter(MathF.Max(1.0F, previousAverageDbh));
                     if (nSaplings < nPreviousSaplings)
                     {
-                        deadWood.AddBiomass(woodyBiomass * (nPreviousSaplings - nSaplings), species.CNRatioWood);
-                        deadFine.AddBiomass(foliage * (nPreviousSaplings - nSaplings), species.CNRatioFoliage);
-                        deadFine.AddBiomass(fineRoot * (nPreviousSaplings - nSaplings), species.CNRatioFineRoot);
+                        deadWood.AddBiomass(woodyBiomass * (nPreviousSaplings - nSaplings), species.CarbonNitrogenRatioWood);
+                        deadFine.AddBiomass(foliage * (nPreviousSaplings - nSaplings), species.CarbonNitrogenRatioFoliage);
+                        deadFine.AddBiomass(fineRoot * (nPreviousSaplings - nSaplings), species.CarbonNitrogenRatioFineRoot);
                         Debug.Assert(Single.IsNaN(deadFine.C) == false, "Carbon NaN in self thinning calculation.");
                     }
                 }
             }
-            if (this.DeadSaplings != 0)
+            if (this.DeadCohorts != 0)
             {
-                float avg_dbh_dead = mSumDbhDied / this.DeadSaplings;
-                float n = this.DeadSaplings * species.SaplingGrowth.RepresentedStemNumberFromDiameter(avg_dbh_dead);
+                float avg_dbh_dead = sumDeadDbhInCm / this.DeadCohorts;
+                float n = this.DeadCohorts * species.SaplingGrowth.RepresentedStemNumberFromDiameter(avg_dbh_dead);
                 // woody parts: stem, branchse and coarse roots
 
-                deadWood.AddBiomass((species.GetBiomassStem(avg_dbh_dead) + species.GetBiomassBranch(avg_dbh_dead) + species.GetBiomassCoarseRoot(avg_dbh_dead)) * n, species.CNRatioWood);
+                deadWood.AddBiomass((species.GetBiomassStem(avg_dbh_dead) + species.GetBiomassBranch(avg_dbh_dead) + species.GetBiomassCoarseRoot(avg_dbh_dead)) * n, species.CarbonNitrogenRatioWood);
                 float foliage = species.GetBiomassFoliage(avg_dbh_dead) * n;
 
-                deadFine.AddBiomass(foliage, species.CNRatioFoliage);
-                deadFine.AddBiomass(foliage * species.FinerootFoliageRatio, species.CNRatioFineRoot);
+                deadFine.AddBiomass(foliage, species.CarbonNitrogenRatioFoliage);
+                deadFine.AddBiomass(foliage * species.FinerootFoliageRatio, species.CarbonNitrogenRatioFineRoot);
                 //Debug.WriteLineIf(Single.IsNaN(deadFine.C), "carbon NaN in calculate (died trees).");
             }
             if (!deadWood.HasNoCarbon() || !deadFine.HasNoCarbon())
@@ -129,10 +114,10 @@ namespace iLand.Tree
 
             // calculate net growth:
             // delta of stocks
-            this.CarbonGain = this.CarbonLiving + deadFine + deadWood - previousCarbonLiving;
-            if (this.CarbonGain.C < 0)
+            this.CarbonNitrogenGain = this.CarbonNitrogenLiving + deadFine + deadWood - previousCarbonLiving;
+            if (this.CarbonNitrogenGain.C < 0)
             {
-                this.CarbonGain.Zero();
+                this.CarbonNitrogenGain.Zero();
             }
 
             //globalSettings.SystemStatistics.SaplingCount += LivingCohorts;
@@ -143,7 +128,7 @@ namespace iLand.Tree
         {
             if (this.LivingCohorts != 0)
             {
-                this.AverageAge /= this.LivingCohorts;
+                this.AverageAgeInYears /= this.LivingCohorts;
                 this.AverageDeltaHPotential /= this.LivingCohorts;
                 this.AverageDeltaHRealized /= this.LivingCohorts;
                 this.AverageHeight /= this.LivingCohorts;
@@ -155,7 +140,7 @@ namespace iLand.Tree
         {
             averageHeight = this.AverageHeight;
             averageDbh = 100.0F * averageHeight / species.SaplingGrowth.HeightDiameterRatio;
-            averageAge = this.AverageAge;
+            averageAge = this.AverageAgeInYears;
             float nSaplings = species.SaplingGrowth.RepresentedStemNumberFromDiameter(averageDbh);
             return nSaplings;
             // *** old code (sapling.cpp) ***
@@ -183,6 +168,22 @@ namespace iLand.Tree
             //    rAvgHeight = h_sum;
             //    rAvgAge = age_sum;
             //    return total;
+        }
+
+        public void ZeroStatistics()
+        {
+            this.sumDeadDbhInCm = 0.0F;
+
+            this.AverageAgeInYears = 0.0F;
+            this.AverageDeltaHPotential = 0.0F;
+            this.AverageDeltaHRealized = 0.0F;
+            this.AverageHeight = 0.0F;
+            this.DeadCohorts = 0;
+            this.LivingCohorts = 0;
+            this.LivingSaplings = 0.0F;
+            this.LivingSaplingsSmall = 0.0F;
+            this.NewCohorts = 0;
+            this.RecruitedCohorts = 0;
         }
     }
 }

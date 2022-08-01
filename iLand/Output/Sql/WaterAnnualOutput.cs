@@ -50,22 +50,28 @@ namespace iLand.Output.Sql
             }
 
             int resourceUnitCount = 0;
-            int snowDays = 0;
-            float evapotranspiration = 0.0F, runoff = 0.0F, rad = 0.0F, snowRad = 0.0F, precip = 0.0F;
-            float stockable = 0.0F, stocked = 0.0F;
-            foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
+            float snowDays = 0.0F;
+            float totalEvapotranspiration = 0.0F;
+            float totalRunoff = 0.0F;
+            float totalSolarRadiation = 0.0F;
+            float snowDaySolarRadiation = 0.0F;
+            float totalAnnualPrecipitation = 0.0F;
+            float stockableAreaInM2 = 0.0F;
+            float stockedAreaInM2 = 0.0F;
+            for (int resourceUnitIndex = 0; resourceUnitIndex < model.Landscape.ResourceUnits.Count; ++resourceUnitIndex)
             {
-                bool logResourceUnits = true;
+                ResourceUnit resourceUnit = model.Landscape.ResourceUnits[resourceUnitIndex];
+                bool logResourceUnit = true;
                 // switch off details if this is indicated in the conditionRU option
                 if (this.resourceUnitFilter.IsEmpty == false)
                 {
                     Debug.Assert(this.resourceUnitFilter.Wrapper != null);
                     ((ResourceUnitVariableAccessor)this.resourceUnitFilter.Wrapper).ResourceUnit = resourceUnit;
-                    logResourceUnits = this.resourceUnitFilter.Evaluate(currentSimulationYear) != 0.0;
+                    logResourceUnit = this.resourceUnitFilter.Evaluate(currentSimulationYear) != 0.0F;
                 }
 
-                WaterCycle wc = resourceUnit.WaterCycle;
-                if (logResourceUnits)
+                WaterCycle waterCycle = resourceUnit.WaterCycle;
+                if (logResourceUnit)
                 {
                     insertRow.Parameters[0].Value = currentSimulationYear;
                     insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
@@ -73,40 +79,41 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[3].Value = resourceUnit.AreaWithTreesInM2 / Constant.ResourceUnitAreaInM2;
                     insertRow.Parameters[4].Value = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2;
                     insertRow.Parameters[5].Value = resourceUnit.Weather.GetTotalPrecipitationInCurrentYear();
-                    insertRow.Parameters[6].Value = wc.TotalEvapotranspiration;
-                    insertRow.Parameters[7].Value = wc.TotalRunoff;
-                    insertRow.Parameters[8].Value = wc.SnowDays;
+                    insertRow.Parameters[6].Value = waterCycle.TotalEvapotranspiration;
+                    insertRow.Parameters[7].Value = waterCycle.TotalRunoff;
+                    insertRow.Parameters[8].Value = waterCycle.SnowDays;
                     insertRow.Parameters[9].Value = resourceUnit.Weather.TotalAnnualRadiation;
-                    insertRow.Parameters[10].Value = wc.SnowDayRadiation;
+                    insertRow.Parameters[10].Value = waterCycle.SnowDayRadiation;
                     insertRow.ExecuteNonQuery();
                 }
+
+                stockableAreaInM2 += resourceUnit.AreaInLandscapeInM2; 
+                stockedAreaInM2 += resourceUnit.AreaWithTreesInM2;
+                totalAnnualPrecipitation += resourceUnit.Weather.GetTotalPrecipitationInCurrentYear();
+                totalEvapotranspiration += waterCycle.TotalEvapotranspiration;
+                totalRunoff += waterCycle.TotalRunoff; 
+                snowDays += waterCycle.SnowDays;
+                totalSolarRadiation += resourceUnit.Weather.TotalAnnualRadiation;
+                snowDaySolarRadiation += waterCycle.SnowDayRadiation;
                 ++resourceUnitCount;
-                stockable += resourceUnit.AreaInLandscapeInM2; 
-                stocked += resourceUnit.AreaWithTreesInM2;
-                precip += resourceUnit.Weather.GetTotalPrecipitationInCurrentYear();
-                evapotranspiration += wc.TotalEvapotranspiration;
-                runoff += wc.TotalRunoff; 
-                snowDays += (int)wc.SnowDays;
-                rad += resourceUnit.Weather.TotalAnnualRadiation;
-                snowRad += wc.SnowDayRadiation;
             }
 
-            // write landscape sums
+            // write landscape-level averages
             if (resourceUnitCount == 0)
             {
                 return;
             }
             insertRow.Parameters[0].Value = currentSimulationYear; // codes -1/-1 for landscape level
-            insertRow.Parameters[1].Value = -1;
-            insertRow.Parameters[2].Value = -1;
-            insertRow.Parameters[3].Value = stocked / resourceUnitCount / Constant.ResourceUnitAreaInM2;
-            insertRow.Parameters[4].Value = stockable / resourceUnitCount / Constant.ResourceUnitAreaInM2;
-            insertRow.Parameters[5].Value = precip / resourceUnitCount; // mean precip
-            insertRow.Parameters[6].Value = evapotranspiration / resourceUnitCount;
-            insertRow.Parameters[7].Value = runoff / resourceUnitCount;
+            insertRow.Parameters[1].Value = -1; // resource unit grid index
+            insertRow.Parameters[2].Value = -1; // resource unit ID
+            insertRow.Parameters[3].Value = stockedAreaInM2 / (Constant.ResourceUnitAreaInM2 * resourceUnitCount);
+            insertRow.Parameters[4].Value = stockableAreaInM2 / (Constant.ResourceUnitAreaInM2 * resourceUnitCount);
+            insertRow.Parameters[5].Value = totalAnnualPrecipitation / resourceUnitCount; // mean precip
+            insertRow.Parameters[6].Value = totalEvapotranspiration / resourceUnitCount;
+            insertRow.Parameters[7].Value = totalRunoff / resourceUnitCount;
             insertRow.Parameters[8].Value = snowDays / resourceUnitCount;
-            insertRow.Parameters[9].Value = rad / resourceUnitCount;
-            insertRow.Parameters[10].Value = snowRad / resourceUnitCount;
+            insertRow.Parameters[9].Value = totalSolarRadiation / resourceUnitCount;
+            insertRow.Parameters[10].Value = snowDaySolarRadiation / resourceUnitCount;
             insertRow.ExecuteNonQuery();
         }
 

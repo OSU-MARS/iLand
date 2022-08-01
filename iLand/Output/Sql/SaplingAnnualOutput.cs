@@ -56,13 +56,13 @@ namespace iLand.Output.Sql
 
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics ruLiveTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
-                    if (ruLiveTreeStatisticsForSpecies.SaplingCount == 0)
+                    ResourceUnitTreeSpeciesStatistics ruLiveTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
+                    if (ruLiveTreeStatisticsForSpecies.SaplingsPerHa == 0)
                     {
                         continue;
                     }
 
-                    SaplingProperties saplingStatisticsForSpecies = ruSpecies.SaplingStats;
+                    SaplingStatistics saplingStatisticsForSpecies = ruSpecies.SaplingStats;
                     insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
                     insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = resourceUnit.ID;
@@ -74,7 +74,7 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[5].Value = saplingStatisticsForSpecies.LivingSaplingsSmall;
                     insertRow.Parameters[6].Value = saplingStatisticsForSpecies.LivingCohorts;
                     insertRow.Parameters[7].Value = saplingStatisticsForSpecies.AverageHeight;
-                    insertRow.Parameters[8].Value = saplingStatisticsForSpecies.AverageAge;
+                    insertRow.Parameters[8].Value = saplingStatisticsForSpecies.AverageAgeInYears;
                     insertRow.ExecuteNonQuery();
                 }
             }

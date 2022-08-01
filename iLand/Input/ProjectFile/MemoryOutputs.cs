@@ -4,11 +4,13 @@ namespace iLand.Input.ProjectFile
 {
     public class MemoryOutputs : XmlSerializable
     {
+		public Enablable StandTrajectories { get; private set; }
 		public Enablable ResourceUnitTrajectories { get; private set; }
 
 		public MemoryOutputs()
 		{
 			this.ResourceUnitTrajectories = new("resourceUnitTrajectories");
+			this.StandTrajectories = new("standTrajectories");
 		}
 
 		protected override void ReadStartElement(XmlReader reader)
@@ -19,6 +21,9 @@ namespace iLand.Input.ProjectFile
 				{
 					case "resourceUnitTrajectories":
 						this.ResourceUnitTrajectories.ReadXml(reader);
+						break;
+					case "standTrajectories":
+						this.StandTrajectories.ReadXml(reader);
 						break;
 					default:
 						throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");

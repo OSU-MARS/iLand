@@ -1,5 +1,4 @@
 ﻿using iLand.Tree;
-using iLand.World;
 using System.Collections.Generic;
 
 namespace iLand.Output
@@ -9,18 +8,17 @@ namespace iLand.Output
         public List<float> AverageDbhByYear { get; private init; } // average dbh (cm)
         public List<float> AverageHeightByYear { get; private init; } // average tree height (m)
         public List<float> BasalAreaByYear { get; private init; } // sum of basal area of all trees (m2/ha)
-        public List<int> CohortCountByYear { get; private init; } // number of cohorts of saplings / ha
-        public List<float> LiveAndSnagStemVolumeByYear { get; private init; } // total increment (gesamtwuchsleistung, m3/ha)
         public List<float> LeafAreaIndexByYear { get; private init; } // [m2/m2]/ha stocked area.
-        public List<float> TreeCountByYear { get; private init; }
+        public List<float> LiveStemVolumeByYear { get; private init; } // sum of tree volume (m3/ha)
         public List<float> TreeNppByYear { get; private init; } // sum. of NPP (kg Biomass increment, above+belowground, trees >4m)/ha
         public List<float> TreeNppAbovegroundByYear { get; private init; } // above ground NPP (kg Biomass increment)/ha
+        public List<float> TreesPerHectareByYear { get; private init; }
 
+        public List<float> CohortsPerHectareByYear { get; private init; } // number of cohorts of saplings / ha
         public List<float> MeanSaplingAgeByYear { get; private init; } // average age of sapling (currenty not weighted with represented sapling numbers...)
         public List<float> SaplingNppByYear { get; private init; } // carbon gain of saplings (kg Biomass increment)/ha
         // number of sapling (Reinekes Law)
-        public List<int> SaplingCountByYear { get; private init; } // number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
-        public List<float> LiveStemVolumeByYear { get; private init; } // sum of tree volume (m3/ha)
+        public List<float> SaplingsPerHectareByYear { get; private init; } // number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
 
         // carbon/nitrogen cycle
         public List<float> BranchCarbonByYear { get; private init; }
@@ -36,24 +34,23 @@ namespace iLand.Output
         public List<float> StemCarbonByYear { get; private init; }
         public List<float> StemNitrogenByYear { get; private init; }
 
-        public ResourceUnit ResourceUnit { get; private init; }
-
-        public StandOrResourceUnitTrajectory(ResourceUnit resourceUnit)
+        protected StandOrResourceUnitTrajectory()
         {
             int defaultCapacityInYears = Constant.Data.AnnualAllocationIncrement;
-            this.CohortCountByYear = new(defaultCapacityInYears);
-            this.SaplingCountByYear = new(defaultCapacityInYears);
             this.AverageDbhByYear = new(defaultCapacityInYears);
             this.AverageHeightByYear = new(defaultCapacityInYears);
             this.BasalAreaByYear = new(defaultCapacityInYears);
-            this.TreeCountByYear = new(defaultCapacityInYears);
-            this.LiveAndSnagStemVolumeByYear = new(defaultCapacityInYears);
             this.LeafAreaIndexByYear = new(defaultCapacityInYears);
-            this.MeanSaplingAgeByYear = new(defaultCapacityInYears);
+            this.LiveStemVolumeByYear = new(defaultCapacityInYears);
             this.TreeNppByYear = new(defaultCapacityInYears);
             this.TreeNppAbovegroundByYear = new(defaultCapacityInYears);
+            this.TreesPerHectareByYear = new(defaultCapacityInYears);
+
+            this.CohortsPerHectareByYear = new(defaultCapacityInYears);
+            this.MeanSaplingAgeByYear = new(defaultCapacityInYears);
             this.SaplingNppByYear = new(defaultCapacityInYears);
-            this.LiveStemVolumeByYear = new(defaultCapacityInYears);
+            this.SaplingsPerHectareByYear = new(defaultCapacityInYears);
+
             this.BranchCarbonByYear = new(defaultCapacityInYears);
             this.BranchNitrogenByYear = new(defaultCapacityInYears);
             this.CoarseRootCarbonByYear = new(defaultCapacityInYears);
@@ -66,41 +63,36 @@ namespace iLand.Output
             this.RegenerationNitrogenByYear = new(defaultCapacityInYears);
             this.StemCarbonByYear = new(defaultCapacityInYears);
             this.StemNitrogenByYear = new(defaultCapacityInYears);
-
-            this.ResourceUnit = resourceUnit;
         }
 
-        public void AddYear()
+        protected void AddYear(StandOrResourceUnitTreeStatistics endOfYearLiveTreeStatistics)
         {
-            ResourceUnitTreeStatistics endOfYearResourceUnitTreeStatistics = this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands;
+            this.AverageDbhByYear.Add(endOfYearLiveTreeStatistics.AverageDbhInCm);
+            this.AverageHeightByYear.Add(endOfYearLiveTreeStatistics.AverageHeightInM);
+            this.BasalAreaByYear.Add(endOfYearLiveTreeStatistics.BasalAreaInM2PerHa);
+            this.CohortsPerHectareByYear.Add(endOfYearLiveTreeStatistics.CohortsPerHa);
+            this.LeafAreaIndexByYear.Add(endOfYearLiveTreeStatistics.LeafAreaIndex);
+            this.LiveStemVolumeByYear.Add(endOfYearLiveTreeStatistics.StemVolumeInM3PerHa);
+            this.MeanSaplingAgeByYear.Add(endOfYearLiveTreeStatistics.MeanSaplingAgeInYears);
+            this.TreeNppByYear.Add(endOfYearLiveTreeStatistics.TreeNppPerHa);
+            this.TreeNppAbovegroundByYear.Add(endOfYearLiveTreeStatistics.TreeNppPerHaAboveground);
+            this.TreesPerHectareByYear.Add(endOfYearLiveTreeStatistics.TreesPerHa);
 
-            this.AverageDbhByYear.Add(endOfYearResourceUnitTreeStatistics.AverageDbh);
-            this.AverageHeightByYear.Add(endOfYearResourceUnitTreeStatistics.AverageHeight);
-            this.BasalAreaByYear.Add(endOfYearResourceUnitTreeStatistics.BasalArea);
-            this.CohortCountByYear.Add(endOfYearResourceUnitTreeStatistics.CohortCount);
-            this.LeafAreaIndexByYear.Add(endOfYearResourceUnitTreeStatistics.LeafAreaIndex);
-            this.LiveStemVolumeByYear.Add(endOfYearResourceUnitTreeStatistics.StemVolume);
-            this.LiveAndSnagStemVolumeByYear.Add(endOfYearResourceUnitTreeStatistics.LiveAndSnagStemVolume);
-            this.MeanSaplingAgeByYear.Add(endOfYearResourceUnitTreeStatistics.MeanSaplingAge);
-            this.TreeNppByYear.Add(endOfYearResourceUnitTreeStatistics.TreeNpp);
-            this.TreeNppAbovegroundByYear.Add(endOfYearResourceUnitTreeStatistics.TreeNppAboveground);
-            this.TreeCountByYear.Add(endOfYearResourceUnitTreeStatistics.TreeCount);
+            this.RegenerationCarbonByYear.Add(endOfYearLiveTreeStatistics.RegenerationCarbonInKgPerHa);
+            this.RegenerationNitrogenByYear.Add(endOfYearLiveTreeStatistics.RegenerationNitrogenInKgPerHa);
+            this.SaplingsPerHectareByYear.Add(endOfYearLiveTreeStatistics.SaplingsPerHa);
+            this.SaplingNppByYear.Add(endOfYearLiveTreeStatistics.SaplingNppPerHa);
 
-            this.RegenerationCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.RegenerationCarbon);
-            this.RegenerationNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.RegenerationNitrogen);
-            this.SaplingCountByYear.Add(endOfYearResourceUnitTreeStatistics.SaplingCount);
-            this.SaplingNppByYear.Add(endOfYearResourceUnitTreeStatistics.SaplingNpp);
-
-            this.BranchCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.BranchCarbon);
-            this.BranchNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.BranchNitrogen);
-            this.CoarseRootCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.CoarseRootCarbon);
-            this.CoarseRootNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.CoarseRootNitrogen);
-            this.FineRootCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.FineRootCarbon);
-            this.FineRootNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.FineRootNitrogen);
-            this.FoliageCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.FoliageCarbon);
-            this.FoliageNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.FoliageNitrogen);
-            this.StemCarbonByYear.Add(endOfYearResourceUnitTreeStatistics.StemCarbon);
-            this.StemNitrogenByYear.Add(endOfYearResourceUnitTreeStatistics.StemNitrogen);
+            this.BranchCarbonByYear.Add(endOfYearLiveTreeStatistics.BranchCarbonInKgPerHa);
+            this.BranchNitrogenByYear.Add(endOfYearLiveTreeStatistics.BranchNitrogenInKgPerHa);
+            this.CoarseRootCarbonByYear.Add(endOfYearLiveTreeStatistics.CoarseRootCarbonInKgPerHa);
+            this.CoarseRootNitrogenByYear.Add(endOfYearLiveTreeStatistics.CoarseRootNitrogenInKgPerHa);
+            this.FineRootCarbonByYear.Add(endOfYearLiveTreeStatistics.FineRootCarbonInKgPerHa);
+            this.FineRootNitrogenByYear.Add(endOfYearLiveTreeStatistics.FineRootNitrogenInKgPerHa);
+            this.FoliageCarbonByYear.Add(endOfYearLiveTreeStatistics.FoliageCarbonInKgPerHa);
+            this.FoliageNitrogenByYear.Add(endOfYearLiveTreeStatistics.FoliageNitrogenInKgPerHa);
+            this.StemCarbonByYear.Add(endOfYearLiveTreeStatistics.StemCarbonInKgPerHa);
+            this.StemNitrogenByYear.Add(endOfYearLiveTreeStatistics.StemNitrogenInKgPerHa);
         }
     }
 }

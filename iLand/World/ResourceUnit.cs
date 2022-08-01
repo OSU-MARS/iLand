@@ -57,73 +57,6 @@ namespace iLand.World
         // TODO: why does this variant of LAI calculation use stockable area instead of stocked area?
         public float GetLeafAreaIndex() { return this.AreaInLandscapeInM2 != 0.0F ? this.Trees.TotalLeafArea / this.AreaInLandscapeInM2 : 0.0F; }
 
-        public void Setup(Project projectFile, ResourceUnitEnvironment environment)
-        {
-            this.WaterCycle.Setup(projectFile, environment);
-
-            if (projectFile.Model.Settings.CarbonCycleEnabled)
-            {
-                this.Soil = new(this, environment);
-                this.Snags = new(projectFile, this, environment);
-            }
-
-            if (projectFile.Model.Settings.RegenerationEnabled)
-            {
-                this.SaplingCells = new SaplingCell[Constant.LightCellsPerHectare];
-                for (int cellIndex = 0; cellIndex < this.SaplingCells.Length; ++cellIndex)
-                {
-                    // TODO: SoA instead of AoS storage
-                    this.SaplingCells[cellIndex] = new();
-                }
-            }
-
-            // if dynamic coupling of soil nitrogen is enabled, a starting value for available N is calculated
-            // TODO: but starting values are in the environment file?
-            //if (this.Soil != null && model.ModelSettings.UseDynamicAvailableNitrogen && model.ModelSettings.CarbonCycleEnabled)
-            //{
-            //    this.Soil.ClimateDecompositionFactor = 1.0; // TODO: why is this set to 1.0 without restoring the original value?
-            //    this.Soil.CalculateYear();
-            //}
-        }
-
-        public void SetupSaplingStatistics()
-        {
-            if (this.SaplingCells == null)
-            {
-                return;
-            }
-
-            for (int lightCellIndex = 0; lightCellIndex < Constant.LightCellsPerHectare; ++lightCellIndex)
-            {
-                SaplingCell saplingCell = this.SaplingCells[lightCellIndex];
-                if (saplingCell.State != SaplingCellState.NotOnLandscape)
-                {
-                    int cohortsInCell = saplingCell.GetOccupiedSlotCount();
-                    for (int saplingCellIndex = 0; saplingCellIndex < saplingCell.Saplings.Length; ++saplingCellIndex)
-                    {
-                        if (saplingCell.Saplings[saplingCellIndex].IsOccupied())
-                        {
-                            Sapling sapling = saplingCell.Saplings[saplingCellIndex];
-                            ResourceUnitTreeSpecies ruSpecies = sapling.GetResourceUnitSpecies(this);
-                            ++ruSpecies.SaplingStats.LivingCohorts;
-                            float nRepresented = ruSpecies.Species.SaplingGrowth.RepresentedStemNumberFromHeight(sapling.HeightInM) / cohortsInCell;
-                            if (sapling.HeightInM > 1.3F)
-                            {
-                                ruSpecies.SaplingStats.LivingSaplings += nRepresented;
-                            }
-                            else
-                            {
-                                ruSpecies.SaplingStats.LivingSaplingsSmall += nRepresented;
-                            }
-
-                            ruSpecies.SaplingStats.AverageHeight += sapling.HeightInM;
-                            ruSpecies.SaplingStats.AverageAge += sapling.Age;
-                        }
-                    }
-                }
-            }
-        }
-
         // stocked area calculation
         public void CountHeightCellsContainingTrees(Landscape landscape) 
         {
@@ -202,7 +135,7 @@ namespace iLand.World
                     if (!removeBiomass)
                     {
                         ResourceUnitTreeSpecies ruSpecies = saplingCell.Saplings[index].GetResourceUnitSpecies(this);
-                        ruSpecies.SaplingStats.AddCarbonOfDeadSapling(saplingCell.Saplings[index].HeightInM / ruSpecies.Species.SaplingGrowth.HeightDiameterRatio * 100.0F);
+                        ruSpecies.SaplingStats.AddDeadCohort(saplingCell.Saplings[index].HeightInM / ruSpecies.Species.SaplingGrowth.HeightDiameterRatio * 100.0F);
                     }
                     saplingCell.Saplings[index].Clear();
                 }
@@ -216,7 +149,7 @@ namespace iLand.World
 
             for (int species = 0; species < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++species)
             {
-                this.Trees.SpeciesAvailableOnResourceUnit[species].SaplingStats.ClearStatistics();
+                this.Trees.SpeciesAvailableOnResourceUnit[species].SaplingStats.ZeroStatistics();
             }
             if (this.Trees.TreeSpeciesSet.RandomSpeciesOrder.Count < 1)
             {
@@ -313,7 +246,7 @@ namespace iLand.World
                                     // ok, lets add a sapling at the given position (age is incremented later)
                                     sapling.SetSapling(Constant.Sapling.MinimumHeight, 0, speciesIndex);
                                     saplingCell.CheckState();
-                                    ++ruSpecies.SaplingStats.NewSaplings;
+                                    ++ruSpecies.SaplingStats.NewCohorts;
                                 }
                             }
                         }
@@ -366,7 +299,8 @@ namespace iLand.World
             {
                 ResourceUnitTreeSpecies ruSpecies = this.Trees.SpeciesAvailableOnResourceUnit[species];
                 ruSpecies.SaplingStats.AfterSaplingGrowth(model, this, ruSpecies.Species);
-                ruSpecies.StatisticsLive.AddToCurrentYear(ruSpecies.SaplingStats);
+                ruSpecies.StatisticsLive.Add(ruSpecies.SaplingStats);
+                // TODO: how to include saplings in stand statistics?
             }
 
             // debug output related to saplings
@@ -443,7 +377,7 @@ namespace iLand.World
                 if (sapling.StressYears > species.SaplingGrowth.MaxStressYears)
                 {
                     // sapling dies...
-                    ruSpecies.SaplingStats.AddCarbonOfDeadSapling(sapling.HeightInM / species.SaplingGrowth.HeightDiameterRatio * 100.0F);
+                    ruSpecies.SaplingStats.AddDeadCohort(sapling.HeightInM / species.SaplingGrowth.HeightDiameterRatio * 100.0F);
                     sapling.Clear();
                     return true; // need cleanup
                 }
@@ -461,7 +395,7 @@ namespace iLand.World
             // recruitment?
             if (sapling.HeightInM > 4.0F)
             {
-                ruSpecies.SaplingStats.RecruitedSaplings++;
+                ruSpecies.SaplingStats.RecruitedCohorts++;
 
                 float centralDbh = 100.0F * sapling.HeightInM / species.SaplingGrowth.HeightDiameterRatio;
                 // the number of trees to create (result is in trees per pixel)
@@ -481,12 +415,12 @@ namespace iLand.World
                 Debug.Assert(this.ProjectExtent.Contains(model.Landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
                 for (int saplingIndex = 0; saplingIndex < saplingsToEstablishAsTrees; ++saplingIndex)
                 {
-                    // add variation: add +/-N% to dbh and *independently* to height.
+                    // add variation: add +/-N% to DBH and *independently* to height.
                     float dbhInCm = centralDbh * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
                     float heightInM = sapling.HeightInM * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
                     int treeIndex = this.Trees.AddTree(model.Project, model.Landscape, species.ID, dbhInCm, heightInM, lightCellIndexXY, sapling.Age, out Trees treesOfSpecies);
                     Debug.Assert(treesOfSpecies.IsDead(treeIndex) == false);
-                    ruSpecies.StatisticsLive.AddToCurrentYear(treesOfSpecies, treeIndex, null, skipDead: true); // count the newly created trees already in the stats
+                    ruSpecies.StatisticsLive.Add(treesOfSpecies, treeIndex); // capture newly acknowledged tree into tree statistics
                 }
 
                 // clear all regeneration from this pixel (including this tree)
@@ -497,14 +431,14 @@ namespace iLand.World
                     {
                         // add carbon to the ground
                         ResourceUnitTreeSpecies sruSpecies = saplingCell.Saplings[cellIndex].GetResourceUnitSpecies(this);
-                        sruSpecies.SaplingStats.AddCarbonOfDeadSapling(saplingCell.Saplings[cellIndex].HeightInM / sruSpecies.Species.SaplingGrowth.HeightDiameterRatio * 100.0F);
+                        sruSpecies.SaplingStats.AddDeadCohort(saplingCell.Saplings[cellIndex].HeightInM / sruSpecies.Species.SaplingGrowth.HeightDiameterRatio * 100.0F);
                         saplingCell.Saplings[cellIndex].Clear();
                     }
                 }
                 return true; // need cleanup
             }
             // book keeping (only for survivors) for the sapling of the resource unit / species
-            SaplingProperties saplingStats = ruSpecies.SaplingStats;
+            SaplingStatistics saplingStats = ruSpecies.SaplingStats;
             float n_repr = species.SaplingGrowth.RepresentedStemNumberFromHeight(sapling.HeightInM) / cohorts_on_px;
             if (sapling.HeightInM > 1.3F)
             {
@@ -516,7 +450,7 @@ namespace iLand.World
             }
             saplingStats.LivingCohorts++;
             saplingStats.AverageHeight += sapling.HeightInM;
-            saplingStats.AverageAge += sapling.Age;
+            saplingStats.AverageAgeInYears += sapling.Age;
             saplingStats.AverageDeltaHPotential += delta_h_pot;
             saplingStats.AverageDeltaHRealized += delta_h_pot * heightGrowthFactor;
             return false;
@@ -581,8 +515,9 @@ namespace iLand.World
                 {
                     // estimate stocked area based on crown projections
                     float totalCrownArea = 0.0F;
-                    foreach (Trees treesOfSpecies in this.Trees.TreesBySpeciesID.Values)
+                    for (int speciesIndex = 0; speciesIndex < this.Trees.TreesBySpeciesID.Count; ++speciesIndex)
                     {
+                        Trees treesOfSpecies = this.Trees.TreesBySpeciesID.Values[speciesIndex];
                         for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                         {
                             if (treesOfSpecies.IsDead(treeIndex) == false)
@@ -646,9 +581,9 @@ namespace iLand.World
                     if (speciesLeafAreaFraction > 1.000001F) // allow numerical error
                     {
                         ResourceUnitTreeSpecies ruSpecies = this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex];
-                        throw new NotSupportedException(ruSpecies.Species.Name + " at RU grid index " + this.ResourceUnitGridIndex + ": leaf area exceeds area of all species in resource unit.");
+                        throw new NotSupportedException(ruSpecies.Species.Name + " on resource unit " + this.ID + ": leaf area exceeds area of all species in resource unit.");
                     }
-                    this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex].SetRULaiFraction(speciesLeafAreaFraction);
+                    this.Trees.SpeciesAvailableOnResourceUnit[ruSpeciesIndex].LaiFraction = speciesLeafAreaFraction;
                 }
             }
 
@@ -683,8 +618,8 @@ namespace iLand.World
             {
                 Debug.Assert(this.Snags != null);
 
-                this.CarbonCycle.Npp = this.Trees.StatisticsForAllSpeciesAndStands.TreeNpp * Constant.DryBiomassCarbonFraction;
-                this.CarbonCycle.Npp += this.Trees.StatisticsForAllSpeciesAndStands.SaplingNpp * Constant.DryBiomassCarbonFraction;
+                this.CarbonCycle.Npp = this.Trees.TreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa * Constant.DryBiomassCarbonFraction;
+                this.CarbonCycle.Npp += this.Trees.TreeAndSaplingStatisticsForAllSpecies.SaplingNppPerHa * Constant.DryBiomassCarbonFraction;
 
                 float area_factor = this.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2; //conversion factor
                 float to_atm = this.Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha
@@ -729,6 +664,76 @@ namespace iLand.World
             //                              Snags.DebugList(), // snag debug outs
             //                              Soil.DebugList() }); // ICBM/2N debug outs
             //}
+        }
+
+        public void SetupEnvironment(Project projectFile, ResourceUnitEnvironment environment)
+        {
+            this.WaterCycle.Setup(projectFile, environment);
+
+            if (projectFile.Model.Settings.CarbonCycleEnabled)
+            {
+                this.Soil = new(this, environment);
+                this.Snags = new(projectFile, this, environment);
+            }
+
+            if (projectFile.Model.Settings.RegenerationEnabled)
+            {
+                this.SaplingCells = new SaplingCell[Constant.LightCellsPerHectare];
+                for (int cellIndex = 0; cellIndex < this.SaplingCells.Length; ++cellIndex)
+                {
+                    // TODO: SoA instead of AoS storage
+                    this.SaplingCells[cellIndex] = new();
+                }
+            }
+
+            // if dynamic coupling of soil nitrogen is enabled, a starting value for available N is calculated
+            // TODO: but starting values are in the environment file?
+            //if (this.Soil != null && model.ModelSettings.UseDynamicAvailableNitrogen && model.ModelSettings.CarbonCycleEnabled)
+            //{
+            //    this.Soil.ClimateDecompositionFactor = 1.0; // TODO: why is this set to 1.0 without restoring the original value?
+            //    this.Soil.CalculateYear();
+            //}
+        }
+
+        public void SetupTreesAndSaplings(Landscape landscape)
+        {
+            this.CountHeightCellsContainingTrees(landscape);
+            this.Trees.SetupStatistics();
+
+            if (this.SaplingCells == null)
+            {
+                return;
+            }
+
+            for (int lightCellIndex = 0; lightCellIndex < Constant.LightCellsPerHectare; ++lightCellIndex)
+            {
+                SaplingCell saplingCell = this.SaplingCells[lightCellIndex];
+                if (saplingCell.State != SaplingCellState.NotOnLandscape)
+                {
+                    int cohortsInCell = saplingCell.GetOccupiedSlotCount();
+                    for (int saplingCellIndex = 0; saplingCellIndex < saplingCell.Saplings.Length; ++saplingCellIndex)
+                    {
+                        if (saplingCell.Saplings[saplingCellIndex].IsOccupied())
+                        {
+                            Sapling sapling = saplingCell.Saplings[saplingCellIndex];
+                            ResourceUnitTreeSpecies ruSpecies = sapling.GetResourceUnitSpecies(this);
+                            ++ruSpecies.SaplingStats.LivingCohorts;
+                            float nRepresented = ruSpecies.Species.SaplingGrowth.RepresentedStemNumberFromHeight(sapling.HeightInM) / cohortsInCell;
+                            if (sapling.HeightInM > 1.3F)
+                            {
+                                ruSpecies.SaplingStats.LivingSaplings += nRepresented;
+                            }
+                            else
+                            {
+                                ruSpecies.SaplingStats.LivingSaplingsSmall += nRepresented;
+                            }
+
+                            ruSpecies.SaplingStats.AverageHeight += sapling.HeightInM;
+                            ruSpecies.SaplingStats.AverageAgeInYears += sapling.Age;
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -35,6 +35,8 @@ namespace iLand.Test
             {
                 using Model elliott = LandTest.LoadProject(LandTest.GetElliottProjectPath(this.TestContext!)); // ~4 seconds in debug
                 Assert.IsTrue(elliott.Landscape.ResourceUnits.Count == expectedResourceUnitCount);
+                ModelTest.VerifyElliottModel(elliott);
+                ModelTest.VerifyElliottOutput(elliott, simulationYear: 0);
 
                 // check .feather weather read from weather file path in Elliott project file
                 Assert.IsTrue(elliott.Landscape.WeatherByID.Count == expectedWeatherIDs200m);
@@ -74,9 +76,10 @@ namespace iLand.Test
                 {
                     elliott.RunYear();
                     observedTrajectory82597.AddYear(resourceUnit82597);
+
+                    ModelTest.VerifyElliottOutput(elliott, simulationYear);
                 }
 
-                ModelTest.VerifyElliottModel(elliott);
                 ModelTest.VerifyElliottResourceUnits(elliott);
                 ModelTest.VerifyElliottWeather(elliott);
 
@@ -121,7 +124,6 @@ namespace iLand.Test
                               (pisi.ID == "pisi") && (pipo.ID == "pipo") && (psme.ID == "psme") && (tshe.ID == "tshe") && (tsme.ID == "tsme") && 
                               (thpl.ID == "thpl"));
                 ModelTest.VerifyDouglasFirPacificNorthwest(elliott);
-            }
 
             // in the interests of test runtime, limit larger file testing to release builds
             #if !DEBUG
@@ -154,6 +156,7 @@ namespace iLand.Test
             IndividualTreeReader individualTreeReader = (IndividualTreeReader)TreeReader.Create(individualTreeTilePath);
             Assert.IsTrue(individualTreeReader.HeightInM.Count == 13124);
             #endif
+            }
         }
 
         /// <summary>
@@ -302,9 +305,9 @@ namespace iLand.Test
             // bmRoot_b    2.33
             // bmBranch_a  0.04004
             // bmBranch_b  2.1382
-            Assert.IsTrue(MathF.Abs(douglasFir.CNRatioFineRoot - 9.0F) < 0.001F);
-            Assert.IsTrue(MathF.Abs(douglasFir.CNRatioFoliage - 60.3F) < 0.001F);
-            Assert.IsTrue(MathF.Abs(douglasFir.CNRatioWood - 452.0F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.CarbonNitrogenRatioFineRoot - 9.0F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.CarbonNitrogenRatioFoliage - 60.3F) < 0.001F);
+            Assert.IsTrue(MathF.Abs(douglasFir.CarbonNitrogenRatioWood - 452.0F) < 0.001F);
             Assert.IsTrue(MathF.Abs(douglasFir.DeathProbabilityFixed - 0.00355005264F) < 0.000001F); // transformed from 0.67
             // probStress  6.9
             // displayColor D6F288
@@ -377,6 +380,8 @@ namespace iLand.Test
 
         private static void VerifyElliottModel(Model model)
         {
+            Assert.IsTrue(model.Output.ResourceUnitTrajectories.Count == model.Landscape.ResourceUnits.Count);
+            Assert.IsTrue(model.Output.StandTrajectoriesByID.Count == 14);
             Assert.IsTrue(model.Project.Model.Ecosystem.AirDensity == 1.2041F);
             Assert.IsTrue(model.Project.Model.Ecosystem.BoundaryLayerConductance == 0.2F);
             Assert.IsTrue(model.Project.Model.Ecosystem.LightUseEpsilon == 2.8F);
@@ -393,10 +398,33 @@ namespace iLand.Test
             Assert.IsTrue(model.Project.World.Geometry.IsTorus == false);
         }
 
+        private static void VerifyElliottOutput(Model model, int simulationYear)
+        {
+            // resource units
+            for (int resourceUnitIndex = 0; resourceUnitIndex < model.Landscape.ResourceUnits.Count; ++resourceUnitIndex)
+            {
+                ResourceUnitTrajectory resourceUnitTrajectory = model.Output.ResourceUnitTrajectories[resourceUnitIndex];
+                ModelTest.VerifyTrajectory(resourceUnitTrajectory, simulationYear);
+            }
+
+            // stands
+            for (int standIndex = 0; standIndex < model.Output.StandTrajectoriesByID.Count; ++standIndex)
+            {
+                int standID = model.Output.StandTrajectoriesByID.Keys[standIndex];
+                StandTrajectory standTrajectory = model.Output.StandTrajectoriesByID.Values[standIndex];
+                Assert.IsTrue(standTrajectory.StandID == standID);
+
+                ModelTest.VerifyTrajectory(standTrajectory, simulationYear);
+            }
+        }
+
         private static void VerifyElliottResourceUnits(Model model)
         {
-            foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
+            for (int resourceUnitIndex = 0; resourceUnitIndex < model.Landscape.ResourceUnits.Count; ++resourceUnitIndex)
             {
+                ResourceUnit resourceUnit = model.Landscape.ResourceUnits[resourceUnitIndex];
+                ResourceUnitTrajectory resourceUnitTrajectory = model.Output.ResourceUnitTrajectories[resourceUnitIndex];
+                Assert.IsTrue(Object.ReferenceEquals(resourceUnit, resourceUnitTrajectory.ResourceUnit));
                 // resource unit variables read from weather file which are aren't currently test accessible
                 //   ru.Snags: swdC, swdCount, swdCN, swdHalfLife, swdDecomRate, otherC, other CN
                 // resource unit variables read from project file which are aren't currently test accessible
@@ -437,11 +465,11 @@ namespace iLand.Test
                 //ru.Variables.Nep;
                 Assert.IsTrue((resourceUnit.WaterCycle.CanopyConductance > 0.001F) && (resourceUnit.WaterCycle.CanopyConductance < 0.1F), "Water cycle: canopy conductance"); // initially zero
                 Assert.IsTrue((resourceUnit.WaterCycle.CurrentSoilWater >= 0.0F) && (resourceUnit.WaterCycle.CurrentSoilWater <= resourceUnit.WaterCycle.FieldCapacity), "Water cycle: current water content of " + resourceUnit.WaterCycle.CurrentSoilWater + " mm is negative or greater than the field capacity of " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
-                Assert.IsTrue((resourceUnit.WaterCycle.FieldCapacity > 100.0F) && (resourceUnit.WaterCycle.FieldCapacity < 800.0F), "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
+                Assert.IsTrue((resourceUnit.WaterCycle.FieldCapacity > 400.0F) && (resourceUnit.WaterCycle.FieldCapacity < 1150.0F), "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
                 Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.MonthsInYear, "Water cycle: water potential length");
                 foreach (float psi in resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear)
                 {
-                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential");
+                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential of " + psi + " kpa.");
                 }
                 Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
                 Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= 10.0F), "Water cycle: snow days");
@@ -658,7 +686,7 @@ namespace iLand.Test
                 Assert.IsTrue(endOfYearTrees.HeightInMByTag.Count >= minimumTreeCount);
 
                 // check living trees
-                Dictionary<string, Trees> resourceUnitTrees = resourceUnit.Trees.TreesBySpeciesID;
+                SortedList<string, Trees> resourceUnitTrees = resourceUnit.Trees.TreesBySpeciesID;
                 foreach (Trees treesOfSpecies in resourceUnitTrees.Values)
                 {
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
@@ -903,6 +931,59 @@ namespace iLand.Test
             Assert.IsTrue(MathF.Abs(shortPotential - 0.431F) < 0.01F);
             Assert.IsTrue(MathF.Abs(mediumPotential - 1.367F) < 0.01F);
             Assert.IsTrue(MathF.Abs(tallPotential - 5.202F) < 0.01F);
+        }
+
+        private static void VerifyTrajectory(StandOrResourceUnitTrajectory trajectory, int simulationYear)
+        {
+            float averageDbhInCm = trajectory.AverageDbhByYear[simulationYear];
+            float averageHeightInM = trajectory.AverageHeightByYear[simulationYear];
+            float basalAreaInM2PerHa = trajectory.BasalAreaByYear[simulationYear];
+            float branchCarbonInKgPerHa = trajectory.BranchCarbonByYear[simulationYear];
+            float branchNitrogenInKgPerHa = trajectory.BranchNitrogenByYear[simulationYear];
+            float coarseRootCarbonInKgPerHa = trajectory.CoarseRootCarbonByYear[simulationYear];
+            float coarseRootNitrogenInKgPerHa = trajectory.CoarseRootNitrogenByYear[simulationYear];
+            float saplingCohortsPerHectare = trajectory.CohortsPerHectareByYear[simulationYear];
+            float fineRootCarbonInKgPerHa = trajectory.FineRootCarbonByYear[simulationYear];
+            float fineRootNitrogenInKgPerHa = trajectory.FineRootNitrogenByYear[simulationYear];
+            float foliageCarbonInKgPerHa = trajectory.FoliageCarbonByYear[simulationYear];
+            float foliageNitrogenInKgPerHa = trajectory.FoliageNitrogenByYear[simulationYear];
+            float leafAreaIndex = trajectory.LeafAreaIndexByYear[simulationYear];
+            float liveStemVolumeInM3PerHa = trajectory.LiveStemVolumeByYear[simulationYear];
+            float meanSaplingAgeInYears = trajectory.MeanSaplingAgeByYear[simulationYear];
+            float regenerationCarbonInKgPerHa = trajectory.RegenerationCarbonByYear[simulationYear];
+            float regenerationNitrogenInKgPerHa = trajectory.RegenerationNitrogenByYear[simulationYear];
+            float saplingsPerHectare = trajectory.SaplingsPerHectareByYear[simulationYear];
+            float stemCarbonInKgPerHa = trajectory.StemCarbonByYear[simulationYear];
+            float stemNitrogenInKgPerHa = trajectory.StemNitrogenByYear[simulationYear];
+            float treeAbovegroundNpp = trajectory.TreeNppAbovegroundByYear[simulationYear];
+            float treeNpp = trajectory.TreeNppByYear[simulationYear];
+            float treesPerHectare = trajectory.TreesPerHectareByYear[simulationYear];
+
+            Assert.IsTrue((Single.IsNaN(averageDbhInCm) == false) && (averageDbhInCm >= 0.0F) && (averageDbhInCm < 200.0F));
+            Assert.IsTrue((Single.IsNaN(averageHeightInM) == false) && (averageHeightInM >= 0.0F) && (averageHeightInM < 100.0F));
+            Assert.IsTrue((Single.IsNaN(basalAreaInM2PerHa) == false) && (basalAreaInM2PerHa >= 0.0F) && (basalAreaInM2PerHa < 200.0F));
+            Assert.IsTrue((Single.IsNaN(leafAreaIndex) == false) && (leafAreaIndex >= 0.0F) && (leafAreaIndex < 20.0F));
+            Assert.IsTrue((Single.IsNaN(liveStemVolumeInM3PerHa) == false) && (liveStemVolumeInM3PerHa >= 0.0F) && (liveStemVolumeInM3PerHa < 2000.0F));
+            Assert.IsTrue((Single.IsNaN(treeAbovegroundNpp) == false) && (treeAbovegroundNpp >= 0.0F) && (treeAbovegroundNpp < 2000.0F));
+            Assert.IsTrue((Single.IsNaN(treeNpp) == false) && (treeNpp >= 0.0F) && (treeNpp < 2000.0F));
+
+            Assert.IsTrue((Single.IsNaN(meanSaplingAgeInYears) == false) && (meanSaplingAgeInYears >= 0.0F) && (meanSaplingAgeInYears < 20.0F));
+            Assert.IsTrue((Single.IsNaN(saplingCohortsPerHectare) == false) && (saplingCohortsPerHectare >= 0.0F) && (saplingCohortsPerHectare < 200.0F));
+            Assert.IsTrue((Single.IsNaN(saplingsPerHectare) == false) && (saplingsPerHectare >= 0.0F) && (saplingsPerHectare < 200.0F));
+            Assert.IsTrue((Single.IsNaN(treesPerHectare) == false) && (treesPerHectare >= 0.0F) && (treesPerHectare < 2000.0F));
+
+            Assert.IsTrue((Single.IsNaN(branchCarbonInKgPerHa) == false) && (branchCarbonInKgPerHa >= 0.0F) && (branchCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((Single.IsNaN(branchNitrogenInKgPerHa) == false) && (branchNitrogenInKgPerHa >= 0.0F) && (branchNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((Single.IsNaN(coarseRootCarbonInKgPerHa) == false) && (coarseRootCarbonInKgPerHa >= 0.0F) && (coarseRootCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((Single.IsNaN(coarseRootNitrogenInKgPerHa) == false) && (coarseRootNitrogenInKgPerHa >= 0.0F) && (coarseRootNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((Single.IsNaN(fineRootCarbonInKgPerHa) == false) && (fineRootCarbonInKgPerHa >= 0.0F) && (fineRootCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((Single.IsNaN(fineRootNitrogenInKgPerHa) == false) && (fineRootNitrogenInKgPerHa >= 0.0F) && (fineRootNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((Single.IsNaN(foliageCarbonInKgPerHa) == false) && (foliageCarbonInKgPerHa >= 0.0F) && (foliageCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((Single.IsNaN(foliageNitrogenInKgPerHa) == false) && (foliageNitrogenInKgPerHa >= 0.0F) && (foliageNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((Single.IsNaN(regenerationCarbonInKgPerHa) == false) && (regenerationCarbonInKgPerHa >= 0.0F) && (regenerationCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((Single.IsNaN(regenerationNitrogenInKgPerHa) == false) && (regenerationNitrogenInKgPerHa >= 0.0F) && (regenerationNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((Single.IsNaN(stemCarbonInKgPerHa) == false) && (stemCarbonInKgPerHa >= 0.0F) && (stemCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((Single.IsNaN(stemNitrogenInKgPerHa) == false) && (stemNitrogenInKgPerHa >= 0.0F) && (stemNitrogenInKgPerHa < 200000.0F));
         }
     }
 }

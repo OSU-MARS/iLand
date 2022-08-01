@@ -53,25 +53,25 @@ namespace iLand.World
                 case 5: 
                     return this.ResourceUnit.AreaInLandscapeInM2;
                 case 6: 
-                    return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.TreeCount;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.TreesPerHa;
                 case 7: 
-                    return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.StemVolume;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.StemVolumeInM3PerHa;
                 case 8: 
-                    return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.AverageDbh;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.AverageDbhInCm;
                 case 9: 
-                    return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.AverageHeight;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.AverageHeightInM;
                 case 10: 
-                    return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.BasalArea;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.BasalAreaInM2PerHa;
                 case 11: 
-                    return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.LeafAreaIndex;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.LeafAreaIndex;
                 case 12: 
                     return this.ResourceUnit.Trees.AverageLeafAreaWeightedAgingFactor;
                 case 13: 
-                    return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.CohortCount;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.CohortsPerHa;
                 case 14: 
-                    return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.SaplingCount;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.SaplingsPerHa;
                 case 15: 
-                    return this.ResourceUnit.Trees.StatisticsForAllSpeciesAndStands.MeanSaplingAge;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.MeanSaplingAgeInYears;
                 case 16:
                     return this.ResourceUnit.WaterCycle.CanopyConductance;
                 // soil C + soil N

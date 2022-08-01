@@ -15,35 +15,35 @@ namespace iLand.Output.Sql
         public float BasalArea { get; private set; }
         public float CohortCount { get; private set; }
         public float LeafAreaIndex { get; private set; }
-        public float LiveAndSnagStemVolume { get; private set; }
-        public float LiveStemVolume { get; private set; }
+        public float LiveStandingAndRemovedStemVolume { get; private set; }
+        public float LiveStandingStemVolume { get; private set; }
         public float TotalCarbon { get; private set; }
         public float TreeCount { get; private set; }
         public float TreeNpp { get; private set; }
         public float TreeNppAboveground { get; private set; }
 
-        public void AddResourceUnit(ResourceUnit resourceUnit, ResourceUnitTreeStatistics ruLiveTreeStatisticsForSpecies)
+        public void AddResourceUnit(ResourceUnit resourceUnit, ResourceUnitTreeSpeciesStatistics ruLiveTreeStatisticsForSpecies, float totalStemVolumeInM3PerHa)
         {
-            if (ruLiveTreeStatisticsForSpecies.IsPerHectare == false)
+            float ruAreaInLandscape = resourceUnit.AreaInLandscapeInM2;
+            if (ruAreaInLandscape <= 0.0F)
             {
-                throw new ArgumentOutOfRangeException(nameof(ruLiveTreeStatisticsForSpecies), "Attempt to aggregate species statistics which are not per hectare.");
+                throw new ArgumentOutOfRangeException(nameof(resourceUnit));
             }
 
-            float ruAreaInLandscape = resourceUnit.AreaInLandscapeInM2;
             this.totalAreaInLandscape += ruAreaInLandscape;
             this.totalAreaWithTrees += resourceUnit.AreaWithTreesInM2;
 
-            this.AverageDbh += ruLiveTreeStatisticsForSpecies.AverageDbh * ruAreaInLandscape;
-            this.AverageHeight += ruLiveTreeStatisticsForSpecies.AverageHeight * ruAreaInLandscape;
-            this.BasalArea += ruLiveTreeStatisticsForSpecies.BasalArea * ruAreaInLandscape;
-            this.CohortCount += ruLiveTreeStatisticsForSpecies.CohortCount * ruAreaInLandscape;
-            this.LeafAreaIndex += ruLiveTreeStatisticsForSpecies.LeafArea;
-            this.LiveAndSnagStemVolume += ruLiveTreeStatisticsForSpecies.LiveAndSnagStemVolume * ruAreaInLandscape;
-            this.LiveStemVolume += ruLiveTreeStatisticsForSpecies.StemVolume * ruAreaInLandscape;
-            this.TreeCount += ruLiveTreeStatisticsForSpecies.TreeCount * ruAreaInLandscape;
+            this.AverageDbh += ruLiveTreeStatisticsForSpecies.AverageDbhInCm * ruAreaInLandscape;
+            this.AverageHeight += ruLiveTreeStatisticsForSpecies.AverageHeightInM * ruAreaInLandscape;
+            this.BasalArea += ruLiveTreeStatisticsForSpecies.BasalAreaInM2PerHa * ruAreaInLandscape;
+            this.CohortCount += ruLiveTreeStatisticsForSpecies.CohortsPerHa * ruAreaInLandscape;
+            this.LeafAreaIndex += ruLiveTreeStatisticsForSpecies.TotalLeafAreaInM2;
+            this.LiveStandingAndRemovedStemVolume += totalStemVolumeInM3PerHa * ruAreaInLandscape;
+            this.LiveStandingStemVolume += ruLiveTreeStatisticsForSpecies.StemVolumeInM3PerHa * ruAreaInLandscape;
+            this.TreeCount += ruLiveTreeStatisticsForSpecies.TreesPerHa * ruAreaInLandscape;
             this.TotalCarbon += ruLiveTreeStatisticsForSpecies.GetTotalCarbon() * ruAreaInLandscape;
-            this.TreeNpp += ruLiveTreeStatisticsForSpecies.TreeNpp * ruAreaInLandscape;
-            this.TreeNppAboveground += ruLiveTreeStatisticsForSpecies.TreeNppAboveground * ruAreaInLandscape;
+            this.TreeNpp += ruLiveTreeStatisticsForSpecies.TreeNppPerHa * ruAreaInLandscape;
+            this.TreeNppAboveground += ruLiveTreeStatisticsForSpecies.TreeNppPerHaAboveground * ruAreaInLandscape;
         }
 
         public void ConvertIncrementalSumsToAreaWeightedAverages()
@@ -54,8 +54,8 @@ namespace iLand.Output.Sql
             this.BasalArea /= this.totalAreaInLandscape;
             this.CohortCount /= this.totalAreaInLandscape;
             this.LeafAreaIndex /= this.totalAreaWithTrees;
-            this.LiveAndSnagStemVolume /= this.totalAreaInLandscape;
-            this.LiveStemVolume /= this.totalAreaInLandscape;
+            this.LiveStandingAndRemovedStemVolume /= this.totalAreaInLandscape;
+            this.LiveStandingStemVolume /= this.totalAreaInLandscape;
             this.TreeCount /= this.totalAreaInLandscape;
             this.TotalCarbon /= this.totalAreaInLandscape;
             this.TreeNpp /= this.totalAreaInLandscape;
@@ -72,8 +72,8 @@ namespace iLand.Output.Sql
             this.BasalArea = 0.0F;
             this.CohortCount = 0.0F;
             this.LeafAreaIndex = 0.0F;
-            this.LiveAndSnagStemVolume = 0.0F;
-            this.LiveStemVolume = 0.0F;
+            this.LiveStandingAndRemovedStemVolume = 0.0F;
+            this.LiveStandingStemVolume = 0.0F;
             this.TreeCount = 0.0F;
             this.TotalCarbon = 0.0F;
             this.TreeNpp = 0.0F;

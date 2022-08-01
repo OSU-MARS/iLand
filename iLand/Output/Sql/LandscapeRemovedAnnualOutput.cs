@@ -16,28 +16,6 @@ namespace iLand.Output.Sql
 
         private bool includeDeadTrees;
         private bool includeHarvestTrees;
-
-        private class LandscapeRemovalData
-        {
-            public float BasalArea { get; set; }
-            public float Count { get; set; }
-            public TreeSpecies TreeSpecies { get; private init; }
-            public float Volume { get; set; }
-
-            public LandscapeRemovalData(TreeSpecies treeSpecies)
-            {
-                this.TreeSpecies = treeSpecies;
-                this.Zero();
-            }
-
-            public void Zero()
-            {
-                this.BasalArea = 0.0F;
-                this.Count = 0.0F;
-                this.Volume = 0.0F;
-            }
-        }
-
         private readonly Dictionary<int, LandscapeRemovalData> removalsByTypeAndSpeciesIndex;
 
         public LandscapeRemovedAnnualOutput()
@@ -121,6 +99,27 @@ namespace iLand.Output.Sql
         {
             this.includeHarvestTrees = projectFile.Output.Sql.LandscapeRemoved.IncludeHarvest;
             this.includeDeadTrees = projectFile.Output.Sql.LandscapeRemoved.IncludeNatural;
+        }
+
+        private class LandscapeRemovalData
+        {
+            public float BasalArea { get; set; }
+            public float Count { get; set; }
+            public TreeSpecies TreeSpecies { get; private init; }
+            public float Volume { get; set; }
+
+            public LandscapeRemovalData(TreeSpecies treeSpecies)
+            {
+                this.TreeSpecies = treeSpecies;
+                this.Zero();
+            }
+
+            public void Zero()
+            {
+                this.BasalArea = 0.0F;
+                this.Count = 0.0F;
+                this.Volume = 0.0F;
+            }
         }
     }
 }

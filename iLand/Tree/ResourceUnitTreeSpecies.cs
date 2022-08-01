@@ -15,16 +15,15 @@ namespace iLand.Tree
       */
     public class ResourceUnitTreeSpecies
     {
-        /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
-        public float LaiFraction { get; private set; }
-        public float RemovedStemVolume { get; private set; } // sum of volume with was remvoved because of death/management (m3/ha)
+        private float laiFraction;
+
         public ResourceUnit ResourceUnit { get; private init; } // return pointer to resource unit
         public SaplingEstablishment SaplingEstablishment { get; private init; } // establishment submodel
-        public SaplingProperties SaplingStats { get; private init; } // statistics for the sapling sub module
+        public SaplingStatistics SaplingStats { get; private init; } // statistics for the sapling sub module
         public TreeSpecies Species { get; private init; } // return pointer to species
-        public ResourceUnitTreeStatistics StatisticsLive { get; private init; } // statistics of this species on the resource unit
-        public ResourceUnitTreeStatistics StatisticsManagement { get; private init; } // statistics of removed trees
-        public ResourceUnitTreeStatistics StatisticsSnag { get; private init; } // statistics of trees that have died
+        public ResourceUnitTreeSpeciesStatistics StatisticsLive { get; private init; } // statistics of this species on the resource unit
+        public ResourceUnitTreeSpeciesStatistics StatisticsManagement { get; private init; } // statistics of removed trees
+        public ResourceUnitTreeSpeciesStatistics StatisticsSnag { get; private init; } // statistics of trees that have died
         public ResourceUnitTreeSpeciesGrowth TreeGrowth { get; private init; } // the 3-PG production model of this species on this resource unit
 
         public ResourceUnitTreeSpecies(TreeSpecies treeSpecies, ResourceUnit resourceUnit)
@@ -36,7 +35,6 @@ namespace iLand.Tree
             this.ResourceUnit = resourceUnit;
             this.Species = treeSpecies;
 
-            this.RemovedStemVolume = 0.0F;
             this.SaplingEstablishment = new();
             this.SaplingStats = new();
             this.StatisticsLive = new(resourceUnit, this);
@@ -45,13 +43,18 @@ namespace iLand.Tree
             this.TreeGrowth = new(resourceUnit, this); // requires this.Species be set
         }
 
-        public void SetRULaiFraction(float laiFraction)
+        /// relative fraction of LAI of this species (0..1) (if total LAI on resource unit is >= 1, then the sum of all LAIfactors of all species = 1)
+        public float LaiFraction
         {
-            if (laiFraction < 0.0F || laiFraction > 1.00001F)
+            get { return this.laiFraction; }
+            set
             {
-                throw new ArgumentOutOfRangeException("Invalid LAI fraction " + laiFraction + ".");
+                if ((value < 0.0F) || (value > 1.00001F))
+                {
+                    throw new ArgumentOutOfRangeException("Invalid LAI fraction " + value + ".");
+                }
+                this.laiFraction = value;
             }
-            this.LaiFraction = laiFraction;
         }
 
         public void CalculateBiomassGrowthForYear(Project projectFile, bool fromSaplingEstablishmentOrGrowth = false)
@@ -74,21 +77,6 @@ namespace iLand.Tree
                 this.TreeGrowth.Modifiers.ZeroMonthlyAndAnnualModifiers();
                 this.TreeGrowth.ZeroMonthlyAndAnnualValues();
             }
-        }
-
-        public float LeafArea()
-        {
-            // Leaf area of the species:
-            // total leaf area on the RU * fraction of leafarea
-            return this.LaiFraction * this.ResourceUnit.GetLeafAreaIndex();
-        }
-
-        public void UpdateGwl()
-        {
-            // removed growth is the running sum of all removed
-            // tree volume. the current "GWL" therefore is current volume (standing) + mRemovedGrowth.
-            // important: statisticsDead() and statisticsMgmt() need to calculate() before -> volume() is already scaled to ha
-            this.RemovedStemVolume += this.StatisticsSnag.StemVolume + this.StatisticsManagement.StemVolume;
         }
     }
 }

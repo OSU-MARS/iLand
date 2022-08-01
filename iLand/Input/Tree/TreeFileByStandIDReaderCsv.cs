@@ -18,11 +18,6 @@ namespace iLand.Input.Tree
             {
                 ++lineNumber;
                 int standID = Int32.Parse(row[treeFileIndexHeader.StandID], CultureInfo.InvariantCulture);
-                if (standID < Constant.DefaultStandID)
-                {
-                    throw new NotSupportedException("Stand IDs must be zero or greater (ID " + standID + " in line " + lineNumber + " of '" + treeFilePath + "').");
-                }
-
                 string treeFileName = row[treeFileIndexHeader.TreeFileName];
                 if (String.IsNullOrWhiteSpace(treeFileName) == false)
                 {

@@ -8,23 +8,25 @@ namespace iLand.Tree
     {
         private readonly Landscape landscape;
         private int resourceUnitIndex;
-        private Dictionary<string, Trees>.Enumerator treeSpeciesEnumerator;
+        private IEnumerator<KeyValuePair<string, Trees>>? treeSpeciesEnumerator;
 
         public int CurrentTreeIndex { get; private set; }
 
         public AllTreesEnumerator(Landscape landscape)
         {
             this.landscape = landscape;
-            this.Reset();
+            this.resourceUnitIndex = 0;
+            this.treeSpeciesEnumerator = null;
+            this.CurrentTreeIndex = -1;
         }
 
-        public Trees CurrentTrees { get { return this.treeSpeciesEnumerator.Current.Value; } }
-
-        public void Reset() 
-        {
-            this.resourceUnitIndex = 0;
-            this.CurrentTreeIndex = -1;
-            this.treeSpeciesEnumerator = default;
+        public Trees CurrentTrees 
+        { 
+            get 
+            { 
+                Debug.Assert(this.treeSpeciesEnumerator != null);
+                return this.treeSpeciesEnumerator.Current.Value; 
+            }
         }
 
         /** iterate over all trees of the model. return NULL if all trees processed.
@@ -49,7 +51,7 @@ namespace iLand.Tree
                         break;
                     }
                 }
-                // finished if all RU processed
+                // finished if all resource units processed
                 if (resourceUnitIndex == this.landscape.ResourceUnits.Count)
                 {
                     return false;
@@ -62,7 +64,7 @@ namespace iLand.Tree
                 this.CurrentTreeIndex = 0;
             }
             // move to next resource unit with trees when positioned at last tree in current resource unit
-            else if (this.CurrentTreeIndex == this.treeSpeciesEnumerator.Current.Value.Count - 1)
+            else if (this.CurrentTreeIndex == this.treeSpeciesEnumerator!.Current.Value.Count - 1)
             {
                 // move to next RU with trees
                 for (++this.resourceUnitIndex; this.resourceUnitIndex < landscape.ResourceUnits.Count; ++this.resourceUnitIndex)

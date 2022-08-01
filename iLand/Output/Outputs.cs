@@ -1,10 +1,12 @@
 ﻿using iLand.Input.ProjectFile;
 using iLand.Output.Sql;
 using iLand.Simulation;
+using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Xml;
 using Model = iLand.Simulation.Model;
 
@@ -13,6 +15,7 @@ namespace iLand.Output
     // Global container that handles data output.
     public class Outputs : IDisposable
     {
+        private readonly SortedList<int, StandTreeStatistics> currentYearStandStatistics;
         private int mostRecentSimulationYearCommittedToDatabase;
         private bool isDisposed;
         private readonly int sqlCommitIntervalInYears;
@@ -21,30 +24,58 @@ namespace iLand.Output
         private SqliteTransaction? sqlOutputTransaction;
 
         public LandscapeRemovedAnnualOutput? LandscapeRemoved { get; private init; }
-        public List<StandOrResourceUnitTrajectory> ResourceUnitTrajectories { get; private init; }
+        public List<ResourceUnitTrajectory> ResourceUnitTrajectories { get; private init; } // in same order as Landscape.ResourceUnits
+        public SortedList<int, StandTrajectory> StandTrajectoriesByID { get; private init; }
         public TreeRemovedAnnualOutput? TreeRemoved { get; private init; }
 
         public Outputs(Project projectFile, Landscape landscape, Model model) // TODO: remove model
         {
+            this.currentYearStandStatistics = new();
             this.mostRecentSimulationYearCommittedToDatabase = -1;
             this.isDisposed = false;
             this.sqlCommitIntervalInYears = 10; // 
             this.sqlDatabaseConnection = null; // initialized in Setup()
-            this.sqlOutputs = new List<AnnualOutput>();
+            this.sqlOutputs = new();
             this.sqlOutputTransaction = null; // managed in LogYear()
 
             this.LandscapeRemoved = null;
             this.ResourceUnitTrajectories = new();
+            this.StandTrajectoriesByID = new();
             this.TreeRemoved = null;
 
-            if (projectFile.Output.Memory.ResourceUnitTrajectories.Enabled)
+            bool logResourceUnitTrajectories = projectFile.Output.Memory.ResourceUnitTrajectories.Enabled;
+            bool logStandTrajectories = projectFile.Output.Memory.StandTrajectories.Enabled;
+            if (logResourceUnitTrajectories || logStandTrajectories)
             {
                 List<ResourceUnit> resourceUnits = landscape.ResourceUnits;
-                this.ResourceUnitTrajectories.Capacity = resourceUnits.Count;
+                if (logResourceUnitTrajectories)
+                {
+                    this.ResourceUnitTrajectories.Capacity = resourceUnits.Count;
+                }
+
+                int previousStandID = Constant.NoDataInt32;
                 for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnits.Count; ++resourceUnitIndex)
                 {
                     ResourceUnit resourceUnit = resourceUnits[resourceUnitIndex];
-                    this.ResourceUnitTrajectories.Add(new(resourceUnit));
+                    if (logResourceUnitTrajectories)
+                    {
+                        this.ResourceUnitTrajectories.Add(new ResourceUnitTrajectory(resourceUnit));
+                    }
+                    if (logStandTrajectories)
+                    {
+                        SortedList<int, ResourceUnitTreeStatistics> standsInResourceUnit = resourceUnit.Trees.TreeStatisticsByStandID;
+                        for (int standIndex = 0; standIndex < standsInResourceUnit.Count; ++standIndex)
+                        {
+                            int standID = standsInResourceUnit.Keys[standIndex];
+                            if ((previousStandID != standID) && (this.currentYearStandStatistics.ContainsKey(standID) == false))
+                            {
+                                this.currentYearStandStatistics.Add(standID, new StandTreeStatistics(standID));
+                                this.StandTrajectoriesByID.Add(standID, new StandTrajectory(standID));
+                            }
+
+                            previousStandID = standID;
+                        }
+                    }
                 }
             }
 
@@ -169,12 +200,41 @@ namespace iLand.Output
         public void LogYear(Model model)
         {
             // in memory
-            if (this.ResourceUnitTrajectories.Count > 0)
+            bool logResourceUnitTrajectories = this.ResourceUnitTrajectories.Count > 0;
+            bool logStandTrajectories = this.StandTrajectoriesByID.Count > 0;
+            if (logResourceUnitTrajectories || logStandTrajectories)
             {
                 for (int resourceUnitIndex = 0; resourceUnitIndex < this.ResourceUnitTrajectories.Count; ++ resourceUnitIndex)
                 {
-                    StandOrResourceUnitTrajectory trajectory = this.ResourceUnitTrajectories[resourceUnitIndex];
-                    trajectory.AddYear();
+                    if (logResourceUnitTrajectories)
+                    {
+                        ResourceUnitTrajectory trajectory = this.ResourceUnitTrajectories[resourceUnitIndex];
+                        trajectory.AddYear();
+                    }
+                    if (logStandTrajectories)
+                    {
+                        SortedList<int, ResourceUnitTreeStatistics> resourceUnitStandStatisticsByID = model.Landscape.ResourceUnits[resourceUnitIndex].Trees.TreeStatisticsByStandID;
+                        for (int resourceUnitStandIndex = 0; resourceUnitStandIndex < resourceUnitStandStatisticsByID.Count; ++resourceUnitStandIndex)
+                        {
+                            int standID = resourceUnitStandStatisticsByID.Keys[resourceUnitStandIndex];
+                            ResourceUnitTreeStatistics resourceUnitStandStatistics = resourceUnitStandStatisticsByID.Values[resourceUnitStandIndex];
+
+                            StandTreeStatistics standStatistics = this.currentYearStandStatistics[standID];
+                            standStatistics.Add(resourceUnitStandStatistics);
+                        }
+                    }
+                }
+                for (int standIndex = 0; standIndex < this.currentYearStandStatistics.Count; ++standIndex)
+                {
+                    int standID = this.currentYearStandStatistics.Keys[standIndex];
+                    StandTreeStatistics standStatistics = this.currentYearStandStatistics.Values[standIndex];
+                    standStatistics.OnAdditionsComplete();
+                    
+                    Debug.Assert(standID == this.StandTrajectoriesByID.Keys[standIndex]);
+                    StandTrajectory standTrajectory = this.StandTrajectoriesByID[standID];
+                    standTrajectory.AddYear(standStatistics);
+
+                    standStatistics.Zero(); // reset accumulation for next year
                 }
             }
 
@@ -203,15 +263,5 @@ namespace iLand.Output
                 }
             }
         }
-
-        //public string WikiFormat()
-        //{
-        //    StringBuilder result = new StringBuilder();
-        //    foreach (Output output in outputs)
-        //    {
-        //        result.AppendLine(output.WriteHeaderToWiki());
-        //    }
-        //    return result.ToString();
-        //}
     }
 }

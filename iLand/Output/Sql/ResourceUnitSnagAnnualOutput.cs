@@ -33,8 +33,8 @@ namespace iLand.Output.Sql
             {
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeStatistics ruSnagStatisticsForSpecies = ruSpecies.StatisticsSnag;
-                    if (ruSnagStatisticsForSpecies.TreeCount == 0.0F)
+                    ResourceUnitTreeSpeciesStatistics ruSnagStatisticsForSpecies = ruSpecies.StatisticsSnag;
+                    if (ruSnagStatisticsForSpecies.TreesPerHa == 0.0F)
                     {
                         continue;
                     }
@@ -42,13 +42,13 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = resourceUnit.ID;
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID;
-                    insertRow.Parameters[4].Value = ruSnagStatisticsForSpecies.TreeCount;
-                    insertRow.Parameters[5].Value = ruSnagStatisticsForSpecies.AverageDbh;
-                    insertRow.Parameters[6].Value = ruSnagStatisticsForSpecies.AverageHeight;
-                    insertRow.Parameters[7].Value = ruSnagStatisticsForSpecies.StemVolume;
-                    insertRow.Parameters[8].Value = ruSnagStatisticsForSpecies.BasalArea;
-                    insertRow.Parameters[9].Value = ruSnagStatisticsForSpecies.TreeNpp;
-                    insertRow.Parameters[10].Value = ruSnagStatisticsForSpecies.TreeNppAboveground;
+                    insertRow.Parameters[4].Value = ruSnagStatisticsForSpecies.TreesPerHa;
+                    insertRow.Parameters[5].Value = ruSnagStatisticsForSpecies.AverageDbhInCm;
+                    insertRow.Parameters[6].Value = ruSnagStatisticsForSpecies.AverageHeightInM;
+                    insertRow.Parameters[7].Value = ruSnagStatisticsForSpecies.StemVolumeInM3PerHa;
+                    insertRow.Parameters[8].Value = ruSnagStatisticsForSpecies.BasalAreaInM2PerHa;
+                    insertRow.Parameters[9].Value = ruSnagStatisticsForSpecies.TreeNppPerHa;
+                    insertRow.Parameters[10].Value = ruSnagStatisticsForSpecies.TreeNppPerHaAboveground;
                     insertRow.ExecuteNonQuery();
                 }
             }
