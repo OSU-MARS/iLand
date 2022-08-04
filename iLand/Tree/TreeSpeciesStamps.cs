@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Text;
 
 namespace iLand.Tree
 {
@@ -21,20 +20,10 @@ namespace iLand.Tree
         // TODO: not safe across multiple light cell sizes
         public static Grid<float> DistanceGrid { get; private set; }
 
-        private struct LightStampWithTreeSize
-        {
-            public float CrownRadius { get; set; }
-            public float Dbh { get; set; }
-            public float HDratio { get; set; }
-            public LightStamp Stamp { get; set; }
-        }
-
-        private string? mFilePath;
-        private readonly Grid<LightStamp?> lightStampsByDbhAndHDRatio;
+        private readonly LightStamp?[,] lightStampsByDbhAndHeightDiameterRatio;
         private readonly List<LightStampWithTreeSize> lightStampsWithTreeSizes;
 
         public string Description { get; set; }
-        //public bool UseLookup { get; set; } // use lookup table?
 
         static TreeSpeciesStamps()
         {
@@ -43,26 +32,63 @@ namespace iLand.Tree
 
         public TreeSpeciesStamps()
         {
-            this.lightStampsByDbhAndHDRatio = new();
+            this.lightStampsByDbhAndHeightDiameterRatio = new LightStamp[Constant.LightStamp.DbhClasses, Constant.LightStamp.HeightDiameterClasses];
             this.lightStampsWithTreeSizes = new();
-
-            this.lightStampsByDbhAndHDRatio.Setup(Constant.Stamp.DbhClassCount, // cellsize
-                                                  Constant.Stamp.HeightDiameterClassCount, // count x
-                                                  1.0F); // count y
-            this.lightStampsByDbhAndHDRatio.Fill(null);
 
             this.Description = String.Empty;            
             // this.UseLookup = true;
             // Debug.WriteLine("grid after init" << gridToString(m_lookup);
         }
 
-        public int Count() { return lightStampsWithTreeSizes.Count; }
+        private void AddStamp(LightStamp stamp, int diameterClass, int hdClass, float crownRadiusInM, float dbhInCm, float hdRatio)
+        {
+            if ((diameterClass < 0) || (diameterClass >= Constant.LightStamp.DbhClasses) || (hdClass < 0) || (hdClass >= Constant.LightStamp.HeightDiameterClasses))
+            {
+                throw new NotSupportedException(String.Format("addStamp: Stamp out of range. dbh={0} hd={1}.", dbhInCm, hdRatio));
+            }
+            this.lightStampsByDbhAndHeightDiameterRatio[diameterClass, hdClass] = stamp;
+
+            stamp.SetCrownRadiusAndArea(crownRadiusInM);
+            LightStampWithTreeSize stampWithTreeSize = new()
+            {
+                DbhInCm = dbhInCm,
+                HeightDiameterRatio = hdRatio,
+                CrownRadiusInM = crownRadiusInM,
+                Stamp = stamp
+            };
+            this.lightStampsWithTreeSizes.Add(stampWithTreeSize);
+        }
+
+        public void AttachReaderStamps(TreeSpeciesStamps source)
+        {
+            int found = 0, total = 0;
+            foreach (LightStampWithTreeSize stampItem in this.lightStampsWithTreeSizes)
+            {
+                LightStamp stamp = source.GetReaderStamp(stampItem.CrownRadiusInM);
+                stampItem.Stamp.SetReader(stamp);
+                if (stamp != null)
+                {
+                    ++found;
+                }
+                ++total;
+                //si.crown_radius
+            }
+            //if (GlobalSettings.Instance.LogInfo())
+            //{
+            //    Debug.WriteLine("attachReaderStamps: found " + found + " stamps of " + total);
+            //}
+        }
+
+        public int Count() 
+        { 
+            return this.lightStampsWithTreeSizes.Count; 
+        }
 
         /// getKey: decodes a floating point piar of dbh and hd-ratio to indices for the
         /// lookup table containing pointers to the actual stamps.
         private static (int diameterClass, int heightDiameterClass) GetClasses(float dbh, float heightDiameterRatio)
         {
-            int heightDiameterClass = (int)((heightDiameterRatio - Constant.Stamp.HeightDiameterClassMinimum) / Constant.Stamp.HeightDiameterClassSize);
+            int heightDiameterClass = (int)((heightDiameterRatio - Constant.LightStamp.HeightDiameterClassMinimum) / Constant.LightStamp.HeightDiameterClassSize);
             // dbh_class = int(dbh - cBHDclassLow) / cBHDclassWidth;
             // fixed scheme: smallest classification scheme for tree-diameters:
             // 1cm width from 5 up to 9 cm,
@@ -89,156 +115,18 @@ namespace iLand.Tree
             return (diameterClass, heightDiameterClass);
         }
 
-        /** fill up the nulls in the lookup map */
-        private void FinalizeSetup()
-        {
-            //if (this.UseLookup == false)
-            //{
-            //    return;
-            //}
-
-            int maxStampSize = 0;
-            for (int diameterClass = 0; diameterClass < Constant.Stamp.DbhClassCount; ++diameterClass)
-            {
-                // find lowest value...
-                int hdIndex = 0;
-                LightStamp? stamp = null;
-                for (; hdIndex < Constant.Stamp.HeightDiameterClassCount; ++hdIndex)
-                {
-                    stamp = lightStampsByDbhAndHDRatio[diameterClass, hdIndex];
-                    if (stamp != null)
-                    {
-                        // fill up values left from this value
-                        for (int hfill = 0; hfill < hdIndex; hfill++)
-                        {
-                            lightStampsByDbhAndHDRatio[diameterClass, hfill] = stamp;
-                        }
-                        break;
-                    }
-                }
-                // go to last filled cell...
-                for (; hdIndex < Constant.Stamp.HeightDiameterClassCount; ++hdIndex)
-                {
-                    if (lightStampsByDbhAndHDRatio[diameterClass, hdIndex] == null)
-                    {
-                        break;
-                    }
-                    stamp = lightStampsByDbhAndHDRatio[diameterClass, hdIndex];
-                }
-                // fill up the rest...
-                for (; hdIndex < Constant.Stamp.HeightDiameterClassCount; ++hdIndex)
-                {
-                    lightStampsByDbhAndHDRatio[diameterClass, hdIndex] = stamp;
-                }
-                if (stamp != null)
-                {
-                    maxStampSize = Math.Max(maxStampSize, stamp.DataSize);
-                }
-
-                // if no stamps in this dbh-class, copy values (from last row)
-                if (stamp == null && diameterClass > 0)
-                {
-                    for (hdIndex = 0; hdIndex < Constant.Stamp.HeightDiameterClassCount; hdIndex++)
-                    {
-                        lightStampsByDbhAndHDRatio[diameterClass, hdIndex] = lightStampsByDbhAndHDRatio[diameterClass - 1, hdIndex];
-                    }
-                }
-            }
-
-            if (lightStampsByDbhAndHDRatio[0, 0] != null)
-            {
-                // first values are missing
-                int b = 0;
-                while (b < Constant.Stamp.DbhClassCount && lightStampsByDbhAndHDRatio[b, 0] == null)
-                {
-                    b++;
-                }
-                for (int fill = 0; fill < b; fill++)
-                {
-                    for (int h = 0; h < Constant.Stamp.HeightDiameterClassCount; h++)
-                    {
-                        lightStampsByDbhAndHDRatio[fill, h] = lightStampsByDbhAndHDRatio[b, h];
-                    }
-                }
-            }
-
-            // distance grid
-            if (TreeSpeciesStamps.DistanceGrid.SizeX < maxStampSize)
-            {
-                lock (TreeSpeciesStamps.DistanceGrid)
-                {
-                    if (TreeSpeciesStamps.DistanceGrid.SizeX < maxStampSize)
-                    {
-                        float lightCellSize = Constant.LightCellSizeInM;
-                        TreeSpeciesStamps.DistanceGrid.Setup(maxStampSize, maxStampSize, lightCellSize);
-                        for (int index = 0; index < TreeSpeciesStamps.DistanceGrid.CellCount; ++index)
-                        {
-                            Point cellPosition = TreeSpeciesStamps.DistanceGrid.GetCellXYIndex(index);
-                            TreeSpeciesStamps.DistanceGrid[index] = lightCellSize * MathF.Sqrt(cellPosition.X * cellPosition.X + cellPosition.Y * cellPosition.Y);
-                        }
-                    }
-                }
-            }
-        }
-
-        private void AddStamp(LightStamp stamp, int diameterClass, int hdClass, float crownRadiusInM, float dbh, float hdRatio)
-        {
-            //if (this.UseLookup)
-            //{
-                if (diameterClass < 0 || diameterClass >= Constant.Stamp.DbhClassCount || hdClass < 0 || hdClass >= Constant.Stamp.HeightDiameterClassCount)
-                {
-                    throw new NotSupportedException(String.Format("addStamp: Stamp out of range. dbh={0} hd={1}.", dbh, hdRatio));
-                }
-                lightStampsByDbhAndHDRatio[diameterClass, hdClass] = stamp; // save address in look up table
-            //} // if (useLookup)
-
-            stamp.SetCrownRadiusAndArea(crownRadiusInM);
-            LightStampWithTreeSize si = new()
-            {
-                Dbh = dbh,
-                HDratio = hdRatio,
-                CrownRadius = crownRadiusInM,
-                Stamp = stamp
-            };
-            lightStampsWithTreeSizes.Add(si); // store entry in list of stamps
-        }
-
-        /** add a stamp to the internal storage.
-            After loading the function finalizeSetup() must be called to ensure that gaps in the matrix get filled. */
-        public void AddStamp(LightStamp stamp, float dbh, float heightDiameterRatio, float crownRadius)
-        {
-            (int diameterClass, int hdClass) = TreeSpeciesStamps.GetClasses(dbh, heightDiameterRatio); // decode dbh/hd-value
-            this.AddStamp(stamp, diameterClass, hdClass, crownRadius, dbh, heightDiameterRatio); // dont set crownradius
-        }
-
-        public void AddReaderStamp(LightStamp stamp, float crownRadiusInMeters)
-        {
-            float rest = (crownRadiusInMeters % 1.0F) + 0.0001F;
-            int hdClass = (int)(10.0F * rest); // 0 .. 9.99999999
-            if (hdClass >= Constant.Stamp.HeightDiameterClassCount)
-            {
-                hdClass = Constant.Stamp.HeightDiameterClassCount - 1;
-            }
-            int diameterClass = (int)crownRadiusInMeters;
-            // Debug.WriteLine("Readerstamp r="<< crown_radius_m<<" index dbh hd:" << cls_dbh << cls_hd;
-            stamp.SetCrownRadiusAndArea(crownRadiusInMeters);
-
-            // prepare special keys for reader stamps
-            this.AddStamp(stamp, diameterClass, hdClass, crownRadiusInMeters, 0.0F, 0.0F); // set crownradius, but not dbh/hd
-        }
-
         /** retrieve a read-out-stamp. Readers depend solely on a crown radius.
             Internally, readers are stored in the same lookup-table, but using a encoding/decoding trick.*/
         public LightStamp GetReaderStamp(float crownRadiusInMeters)
         {
             // Readers: from 0..10m in 50 steps???
             int heightDiameterClass = (int)(((crownRadiusInMeters % 1.0F) + 0.0001) * 10); // 0 .. 9.99999999
-            if (heightDiameterClass >= Constant.Stamp.HeightDiameterClassCount)
+            if (heightDiameterClass >= Constant.LightStamp.HeightDiameterClasses)
             {
-                heightDiameterClass = Constant.Stamp.HeightDiameterClassCount - 1;
+                heightDiameterClass = Constant.LightStamp.HeightDiameterClasses - 1;
             }
             int diameterClass = (int)crownRadiusInMeters;
-            LightStamp? stamp = lightStampsByDbhAndHDRatio[diameterClass, heightDiameterClass];
+            LightStamp? stamp = lightStampsByDbhAndHeightDiameterRatio[diameterClass, heightDiameterClass];
             if (stamp == null)
             {
                 throw new ArgumentOutOfRangeException(nameof(crownRadiusInMeters));
@@ -256,60 +144,60 @@ namespace iLand.Tree
 
             // retrieve stamp from lookup table when tree is within the lookup table's size range
             LightStamp? stamp = null;
-            if ((diameterClass < Constant.Stamp.DbhClassCount) && (diameterClass >= 0) && 
-                (hdClass < Constant.Stamp.HeightDiameterClassCount) && (hdClass >= 0))
+            if ((diameterClass < Constant.LightStamp.DbhClasses) && (diameterClass >= 0) && 
+                (hdClass < Constant.LightStamp.HeightDiameterClasses) && (hdClass >= 0))
             {
-                stamp = lightStampsByDbhAndHDRatio[diameterClass, hdClass];
+                stamp = lightStampsByDbhAndHeightDiameterRatio[diameterClass, hdClass];
             }
             // find a stamp of matching diameter if the HD-ratio is out of range
-            else if ((diameterClass < Constant.Stamp.DbhClassCount) && (diameterClass >= 0))
+            else if ((diameterClass < Constant.LightStamp.DbhClasses) && (diameterClass >= 0))
             {
                 //if (GlobalSettings.Instance.LogDebug())
                 //{
                 //    Debug.WriteLine("HD for stamp out of range dbh " + dbhInCm + " and h=" + heightInM + " (using smallest/largeset HD)");
                 //}
-                if (hdClass >= Constant.Stamp.HeightDiameterClassCount)
+                if (hdClass >= Constant.LightStamp.HeightDiameterClasses)
                 {
-                    stamp = lightStampsByDbhAndHDRatio[diameterClass, Constant.Stamp.HeightDiameterClassCount - 1]; // tree is oversize
+                    stamp = lightStampsByDbhAndHeightDiameterRatio[diameterClass, Constant.LightStamp.HeightDiameterClasses - 1]; // tree is oversize
                 }
                 else
                 {
-                    stamp = lightStampsByDbhAndHDRatio[diameterClass, 0]; // tree is underersize
+                    stamp = lightStampsByDbhAndHeightDiameterRatio[diameterClass, 0]; // tree is underersize
                 }
             }
             // find a stamp of matching height-diameter ratio if the DBH is out of range.
-            else if ((hdClass < Constant.Stamp.HeightDiameterClassCount) && (hdClass >= 0))
+            else if ((hdClass < Constant.LightStamp.HeightDiameterClasses) && (hdClass >= 0))
             {
                 //if (GlobalSettings.Instance.LogDebug())
                 //{
                 //    Debug.WriteLine("DBH for stamp out of range dbh " + dbhInCm + "and h=" + heightInM + " -> using largest available DBH.");
                 //}
-                if (diameterClass >= Constant.Stamp.DbhClassCount)
+                if (diameterClass >= Constant.LightStamp.DbhClasses)
                 {
-                    stamp = lightStampsByDbhAndHDRatio[Constant.Stamp.DbhClassCount - 1, hdClass]; // tree is oversize
+                    stamp = lightStampsByDbhAndHeightDiameterRatio[Constant.LightStamp.DbhClasses - 1, hdClass]; // tree is oversize
                 }
                 else
                 {
-                    stamp = lightStampsByDbhAndHDRatio[0, hdClass]; // tree is undersize
+                    stamp = lightStampsByDbhAndHeightDiameterRatio[0, hdClass]; // tree is undersize
                 }
             }
             // both DBH and HD ratio are out of range
-            else if ((diameterClass >= Constant.Stamp.DbhClassCount) && (hdClass < 0))
+            else if ((diameterClass >= Constant.LightStamp.DbhClasses) && (hdClass < 0))
             {
                 //if (GlobalSettings.Instance.LogDebug())
                 //{
                 //    Debug.WriteLine("DBH AND HD for stamp out of range dbh " + dbhInCm + " and h=" + heightInM + "-> using largest available DBH/smallest HD.");
                 //}
-                stamp = lightStampsByDbhAndHDRatio[Constant.Stamp.DbhClassCount - 1, 0];
+                stamp = lightStampsByDbhAndHeightDiameterRatio[Constant.LightStamp.DbhClasses - 1, 0];
             }
             // handle the case that DBH is too high and HD ratio is too high (not very likely)
-            else if ((diameterClass >= Constant.Stamp.DbhClassCount) && (hdClass >= Constant.Stamp.HeightDiameterClassCount))
+            else if ((diameterClass >= Constant.LightStamp.DbhClasses) && (hdClass >= Constant.LightStamp.HeightDiameterClasses))
             {
                 //if (GlobalSettings.Instance.LogDebug())
                 //{
                 //    Debug.WriteLine("DBH AND HD for stamp out of range dbh " + dbhInCm + " and h=" + heightInM + "-> using largest available DBH.");
                 //}
-                stamp = lightStampsByDbhAndHDRatio[Constant.Stamp.DbhClassCount - 1, Constant.Stamp.HeightDiameterClassCount - 1];
+                stamp = lightStampsByDbhAndHeightDiameterRatio[Constant.LightStamp.DbhClasses - 1, Constant.LightStamp.HeightDiameterClasses - 1];
             }
 
             if (stamp == null)
@@ -319,50 +207,10 @@ namespace iLand.Tree
             return stamp;
         }
 
-        public void AttachReaderStamps(TreeSpeciesStamps source)
-        {
-            int found = 0, total = 0;
-            foreach (LightStampWithTreeSize stampItem in this.lightStampsWithTreeSizes)
-            {
-                LightStamp stamp = source.GetReaderStamp(stampItem.CrownRadius);
-                stampItem.Stamp.SetReader(stamp);
-                if (stamp != null)
-                {
-                    ++found;
-                }
-                ++total;
-                //si.crown_radius
-            }
-            //if (GlobalSettings.Instance.LogInfo())
-            //{
-            //    Debug.WriteLine("attachReaderStamps: found " + found + " stamps of " + total);
-            //}
-        }
-
-        public void Invert()
-        {
-            foreach (LightStampWithTreeSize si in lightStampsWithTreeSizes)
-            {
-                LightStamp s = si.Stamp;
-                float[] p = s.Data;
-                for (int index = 0; index < p.Length; ++index)
-                {
-                    p[index] = 1.0F - p[index];
-                }
-            }
-        }
-
         /// convenience function that loads stamps directly from a single file.
-        public void Load(string filePath)
+        public void Load(string stampFilePath)
         {
-            FileInfo stampFile = new(filePath);
-            if (!stampFile.Exists)
-            {
-                throw new FileNotFoundException(String.Format("The LIP stampfile {0} cannot be found!", filePath));
-            }
-            this.mFilePath = filePath;
-
-            using FileStream stampStream = stampFile.OpenRead();
+            using FileStream stampStream = new(stampFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, Constant.File.DefaultBufferSize, FileOptions.SequentialScan);
             using StampReaderBigEndian stampReader = new(stampStream);
             // Debug.WriteLine("loading stamp file " + fileName);
             // LIP files are created with QDataStream, which iLand C++ uses with its big endian defaults
@@ -397,27 +245,121 @@ namespace iLand.Tree
             for (int stampIndex = 0; stampIndex < stampCount; stampIndex++)
             {
                 int type = stampReader.ReadInt32(); // read type
-                float dbh = stampReader.ReadSingle();
-                float hdRatio = stampReader.ReadSingle();
-                float crownRadius = stampReader.ReadSingle();
-                Debug.Assert((dbh >= 0.0F) && (dbh < 225.0F), filePath + ": DBH"); // cm, maximum set by Pacific Northwest Douglas-fir
-                Debug.Assert((hdRatio >= 0.0F) && (hdRatio < 200.0F), filePath + ": height-diameter ratio"); // ratio
-                Debug.Assert((crownRadius >= 0.0F) && (crownRadius < 50.0F), filePath + ": crown radius"); // m
+                float dbhInCm = stampReader.ReadSingle();
+                float heightDiameterRatio = stampReader.ReadSingle();
+                float crownRadiusInM = stampReader.ReadSingle();
+                Debug.Assert((dbhInCm >= 0.0F) && (dbhInCm < 225.0F), stampFilePath + ": DBH"); // cm, maximum set by Pacific Northwest Douglas-fir
+                Debug.Assert((heightDiameterRatio >= 0.0F) && (heightDiameterRatio < 200.0F), stampFilePath + ": height-diameter ratio"); // ratio
+                Debug.Assert((crownRadiusInM >= 0.0F) && (crownRadiusInM < 50.0F), stampFilePath + ": crown radius"); // m
                 // Debug.WriteLine("stamp bhd hdvalue type readsum dominance type" + bhd + hdvalue + type + readsum + domvalue + type;
 
                 LightStamp stamp = new(type);
                 stamp.Load(stampReader);
 
-                if (dbh > 0.0F)
+                if (dbhInCm > 0.0F)
                 {
-                    AddStamp(stamp, dbh, hdRatio, crownRadius);
+                    (int diameterClass, int hdClass) = TreeSpeciesStamps.GetClasses(dbhInCm, heightDiameterRatio); // decode dbh/hd-value
+                    this.AddStamp(stamp, diameterClass, hdClass, crownRadiusInM, dbhInCm, heightDiameterRatio); // don't set crownradius
                 }
                 else
                 {
-                    AddReaderStamp(stamp, crownRadius);
+                    float crownRadiusResidual = (crownRadiusInM % 1.0F) + 0.0001F;
+                    int hdClass = (int)(10.0F * crownRadiusResidual); // 0 .. 9.99999999
+                    if (hdClass >= Constant.LightStamp.HeightDiameterClasses)
+                    {
+                        hdClass = Constant.LightStamp.HeightDiameterClasses - 1;
+                    }
+                    stamp.SetCrownRadiusAndArea(crownRadiusInM);
+
+                    // reader stamps are keyed only by crownradius, not DBH or height:diameter ratio
+                    int diameterClass = (int)crownRadiusInM;
+                    this.AddStamp(stamp, diameterClass, hdClass, crownRadiusInM, 0.0F, 0.0F);
                 }
             }
-            FinalizeSetup(); // fill up lookup grid
+
+            // fill up lookup grid
+            int maxStampSize = 0;
+            for (int diameterClassIndex = 0; diameterClassIndex < Constant.LightStamp.DbhClasses; ++diameterClassIndex)
+            {
+                // find lowest value...
+                int heightDiameterRatioClassIndex = 0;
+                LightStamp? stamp = null;
+                for (; heightDiameterRatioClassIndex < Constant.LightStamp.HeightDiameterClasses; ++heightDiameterRatioClassIndex)
+                {
+                    stamp = this.lightStampsByDbhAndHeightDiameterRatio[diameterClassIndex, heightDiameterRatioClassIndex];
+                    if (stamp != null)
+                    {
+                        // fill up values left from this value
+                        for (int hfill = 0; hfill < heightDiameterRatioClassIndex; hfill++)
+                        {
+                            this.lightStampsByDbhAndHeightDiameterRatio[diameterClassIndex, hfill] = stamp;
+                        }
+                        break;
+                    }
+                }
+                // go to last filled cell...
+                for (; heightDiameterRatioClassIndex < Constant.LightStamp.HeightDiameterClasses; ++heightDiameterRatioClassIndex)
+                {
+                    if (this.lightStampsByDbhAndHeightDiameterRatio[diameterClassIndex, heightDiameterRatioClassIndex] == null)
+                    {
+                        break;
+                    }
+                    stamp = this.lightStampsByDbhAndHeightDiameterRatio[diameterClassIndex, heightDiameterRatioClassIndex];
+                }
+                // fill up the rest...
+                for (; heightDiameterRatioClassIndex < Constant.LightStamp.HeightDiameterClasses; ++heightDiameterRatioClassIndex)
+                {
+                    this.lightStampsByDbhAndHeightDiameterRatio[diameterClassIndex, heightDiameterRatioClassIndex] = stamp;
+                }
+                if (stamp != null)
+                {
+                    maxStampSize = Math.Max(maxStampSize, stamp.DataSize);
+                }
+
+                // if no stamps in this dbh-class, copy values (from last row)
+                if (stamp == null && diameterClassIndex > 0)
+                {
+                    for (heightDiameterRatioClassIndex = 0; heightDiameterRatioClassIndex < Constant.LightStamp.HeightDiameterClasses; heightDiameterRatioClassIndex++)
+                    {
+                        this.lightStampsByDbhAndHeightDiameterRatio[diameterClassIndex, heightDiameterRatioClassIndex] = this.lightStampsByDbhAndHeightDiameterRatio[diameterClassIndex - 1, heightDiameterRatioClassIndex];
+                    }
+                }
+            }
+
+            if (this.lightStampsByDbhAndHeightDiameterRatio[0, 0] != null)
+            {
+                // first values are missing
+                int b = 0;
+                while (b < Constant.LightStamp.DbhClasses && this.lightStampsByDbhAndHeightDiameterRatio[b, 0] == null)
+                {
+                    b++;
+                }
+                for (int fill = 0; fill < b; fill++)
+                {
+                    for (int h = 0; h < Constant.LightStamp.HeightDiameterClasses; h++)
+                    {
+                        this.lightStampsByDbhAndHeightDiameterRatio[fill, h] = this.lightStampsByDbhAndHeightDiameterRatio[b, h];
+                    }
+                }
+            }
+
+            // distance grid
+            if (TreeSpeciesStamps.DistanceGrid.SizeX < maxStampSize)
+            {
+                lock (TreeSpeciesStamps.DistanceGrid)
+                {
+                    if (TreeSpeciesStamps.DistanceGrid.SizeX < maxStampSize)
+                    {
+                        float lightCellSize = Constant.LightCellSizeInM;
+                        TreeSpeciesStamps.DistanceGrid.Setup(maxStampSize, maxStampSize, lightCellSize);
+                        for (int index = 0; index < TreeSpeciesStamps.DistanceGrid.CellCount; ++index)
+                        {
+                            Point cellPosition = TreeSpeciesStamps.DistanceGrid.GetCellXYIndex(index);
+                            TreeSpeciesStamps.DistanceGrid[index] = lightCellSize * MathF.Sqrt(cellPosition.X * cellPosition.X + cellPosition.Y * cellPosition.Y);
+                        }
+                    }
+                }
+            }
         }
 
         /** Saves all stamps of the container to a binary stream.
@@ -446,41 +388,48 @@ namespace iLand.Tree
             {
                 int type = stamp.Stamp.DataSize;
                 output.Write(type);
-                output.Write(stamp.Dbh);
-                output.Write(stamp.HDratio);
-                output.Write(stamp.CrownRadius);
+                output.Write(stamp.DbhInCm);
+                output.Write(stamp.HeightDiameterRatio);
+                output.Write(stamp.CrownRadiusInM);
                 stamp.Stamp.Write(output);
             }
         }
 
-        public string Dump()
+        public void Write(StreamWriter writer)
         {
-            StringBuilder stampString = new(String.Format("****** Dump of StampContainer {0} **********", this.mFilePath));
-            foreach (LightStampWithTreeSize stamp in this.lightStampsWithTreeSizes)
+            writer.WriteLine("dbh,heightDiameterRatio,crownRadius,size,centerIndex,x,y,value");
+            for (int stampIndex = 0; stampIndex < this.lightStampsWithTreeSizes.Count; ++stampIndex)
             {
-                stampString.AppendFormat("Stamp size: {0} offset: {1} dbh: {2} hd-ratio: {3}", MathF.Sqrt((float)stamp.Stamp.Count()), stamp.Stamp.CenterCellPosition, stamp.Dbh, stamp.HDratio);
-                // add data....
-                int maxIndex = 2 * stamp.Stamp.CenterCellPosition + 1;
-                for (int y = 0; y < maxIndex; ++y)
-                {
-                    for (int x = 0; x < maxIndex; ++x)
-                    {
-                        stampString.Append(stamp.Stamp[x, y].ToString() + " ");
-                    }
-                    stampString.Append(System.Environment.NewLine);
-                }
-                stampString.AppendLine("==============================================");
+                LightStampWithTreeSize stamp = this.lightStampsWithTreeSizes[stampIndex];
+                string prefix = stamp.DbhInCm + "," + stamp.HeightDiameterRatio + "," + stamp.CrownRadiusInM;
+                stamp.Stamp.Write(prefix, writer);
             }
-            stampString.AppendLine("Dump of lookup map" + System.Environment.NewLine + "=====================");
-            for (int s = 0; s < lightStampsByDbhAndHDRatio.CellCount; ++s)
-            {
-                if (lightStampsByDbhAndHDRatio[s] != null)
-                {
-                    stampString.AppendFormat("P: x/y: {0}/{1}{2}", lightStampsByDbhAndHDRatio.GetCellXYIndex(s).X, lightStampsByDbhAndHDRatio.GetCellXYIndex(s).Y, System.Environment.NewLine);
-                }
-            }
-            stampString.AppendLine(lightStampsByDbhAndHDRatio.ToString());
-            return stampString.ToString();
+
+            //stampString.AppendLine("Dump of lookup map" + System.Environment.NewLine + "=====================");
+            //for (int stampIndex = 0; stampIndex < this.lightStampsByDbhAndHeightDiameterRatio.Length; ++stampIndex)
+            //{
+            //    if (this.lightStampsByDbhAndHeightDiameterRatio[stampIndex] != null)
+            //    {
+            //        stampString.AppendFormat("P: x/y: {0}/{1}{2}", lightStampsByDbhAndHeightDiameterRatio.GetCellXYIndex(stampIndex).X, lightStampsByDbhAndHeightDiameterRatio.GetCellXYIndex(stampIndex).Y, System.Environment.NewLine);
+            //    }
+            //}
+            //stampString.AppendLine(this.lightStampsByDbhAndHeightDiameterRatio.ToString());
+        }
+
+        public void Write(string filePath)
+        {
+            // for now, assume all write requests are for .csv
+            using FileStream stream = new(filePath, FileMode.Create, FileAccess.Write, FileShare.None, Constant.File.DefaultBufferSize, FileOptions.SequentialScan);
+            using StreamWriter writer = new(stream);
+            this.Write(writer);
+        }
+
+        private struct LightStampWithTreeSize
+        {
+            public float CrownRadiusInM { get; init; }
+            public float DbhInCm { get; init; }
+            public float HeightDiameterRatio { get; init; }
+            public LightStamp Stamp { get; init; }
         }
     }
 }

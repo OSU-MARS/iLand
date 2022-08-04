@@ -7,7 +7,6 @@ namespace iLand.Input.ProjectFile
     {
         public string? DatabaseFile { get; private set; }
         public string? DatabaseTable { get; private set; }
-        public string ReaderStampFile { get; private set; }
 
         public NitrogenResponseClasses NitrogenResponseClasses { get; private init; }
         public CO2Response CO2Response { get; private init; }
@@ -18,7 +17,6 @@ namespace iLand.Input.ProjectFile
         {
             this.DatabaseFile = null;
             this.DatabaseTable = Constant.Data.DefaultSpeciesTable;
-            this.ReaderStampFile = "readerstamp.bin";
 
             this.CO2Response = new();
             this.LightResponse = new();
@@ -43,9 +41,6 @@ namespace iLand.Input.ProjectFile
                     break;
                 case "databaseTable":
                     this.DatabaseTable = reader.ReadElementContentAsString().Trim();
-                    break;
-                case "reader":
-                    this.ReaderStampFile = reader.ReadElementContentAsString().Trim();
                     break;
                 case "nitrogenResponseClasses":
                     this.NitrogenResponseClasses.ReadXml(reader);

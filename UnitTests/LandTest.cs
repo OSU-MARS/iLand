@@ -22,7 +22,7 @@ namespace iLand.Test
             return Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "OSU", "iLand", "Malcolm Knapp", projectFileName);
         }
 
-        private static string GetUnitTestDirectoryPath(TestContext testContext)
+        protected static string GetUnitTestDirectoryPath(TestContext testContext)
         {
             return Path.Combine(testContext.TestDir, "..", "..", "UnitTests");
         }

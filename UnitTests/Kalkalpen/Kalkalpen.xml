@@ -171,7 +171,6 @@
     <species>
       <databaseFile>species_param_europe.sqlite</databaseFile>
       <databaseTable>species</databaseTable>
-      <reader>readerstamp.bin</reader>
       <co2response>
         <p0>1</p0>
         <baseConcentration>380</baseConcentration>

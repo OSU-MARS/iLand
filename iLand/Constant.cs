@@ -49,7 +49,16 @@ namespace iLand
             public const int DefaultBufferSize = 128 * 1024; // 128 kB
             public const string FeatherExtension = ".feather";
             public const string PicusExtension = ".picus";
+            public const string ReaderStampFileName = "readerstamp.bin";
             public const string SqliteExtension = ".sqlite";
+        }
+
+        public static class LightStamp
+        {
+            public const int DbhClasses = 70; // class count, see StampContainer.GetKey(): classes are smaller at smaller DBH
+            public const int HeightDiameterClassMinimum = 35; // hd ratio classes offset is 35: class 0 < 45, class 1 45-55, ...
+            public const int HeightDiameterClasses = 16; // class count: highest ratio: 185-195? 195-205?
+            public const int HeightDiameterClassSize = 10;
         }
 
         public static class Limit
@@ -74,15 +83,6 @@ namespace iLand
         public static class Simd128x4
         {
             public const int Width = 4;
-        }
-
-        public static class Stamp
-        {
-            // constants: comments may be wrong; conflicting information in C++
-            public const int DbhClassCount = 70; // class count, see StampContainer.GetKey(): for lower dbhs classes are smaller
-            public const int HeightDiameterClassMinimum = 35; // hd classes offset is 35: class 0 = 35-45 cm, class 1 = 45-55, ...
-            public const int HeightDiameterClassCount = 16; // class count. highest class:  185-195 cm
-            public const int HeightDiameterClassSize = 10;
         }
     }
 }

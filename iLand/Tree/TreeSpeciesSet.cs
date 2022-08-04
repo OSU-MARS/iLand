@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Xml;
 using Model = iLand.Simulation.Model;
 using iLand.Input.Tree;
+using System.IO;
 
 namespace iLand.Tree
 {
@@ -53,8 +54,10 @@ namespace iLand.Tree
             this.SqlTableName = sqlTableName;
 
             // load active tree species from a database table and create/setup the species
-            string readerStampFile = projectFile.GetFilePath(ProjectDirectory.LightIntensityProfile, projectFile.World.Species.ReaderStampFile);
-            this.ReaderStamps.Load(readerStampFile);
+            string? iLandAssemblyFilePath = Path.GetDirectoryName(typeof(TreeSpeciesSet).Assembly.Location);
+            Debug.Assert(iLandAssemblyFilePath != null);
+            string readerStampFilePath = Path.Combine(iLandAssemblyFilePath, Constant.File.ReaderStampFileName);
+            this.ReaderStamps.Load(readerStampFilePath);
 
             string speciesDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Species.DatabaseFile);
             using SqliteConnection speciesDatabase = Landscape.GetDatabaseConnection(speciesDatabaseFilePath, openReadOnly: true);

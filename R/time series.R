@@ -1,4 +1,3 @@
-# supporting R code for C#
 library(dplyr)
 library(ggplot2)
 library(patchwork)

@@ -225,7 +225,7 @@ namespace iLand.Tree
             this.NppReserve[this.Count] = nppReserve;
 
             LightStamp stamp = this.Species.GetStamp(dbhInCm, heightInM);
-            float opacity = 1.0F - MathF.Exp(-lightStampBeerLambertK * leafAreaInM2 / stamp.CrownArea);
+            float opacity = 1.0F - MathF.Exp(-lightStampBeerLambertK * leafAreaInM2 / stamp.CrownAreaInM2);
             this.Opacity[this.Count] = opacity;
             
             this.Stamp[this.Count] = stamp;
@@ -300,8 +300,8 @@ namespace iLand.Tree
         {
             LightStamp stamp = this.Stamp[treeIndex]!;
             Point stampOrigin = this.LightCellIndexXY[treeIndex];
-            stampOrigin.X -= stamp.CenterCellPosition;
-            stampOrigin.Y -= stamp.CenterCellPosition;
+            stampOrigin.X -= stamp.CenterCellIndex;
+            stampOrigin.Y -= stamp.CenterCellIndex;
             int stampSize = stamp.Size();
             if ((this.lightGrid.Contains(stampOrigin) == false) || (this.lightGrid.Contains(new Point(stampOrigin.X + stampSize, stampOrigin.Y + stampSize)) == false))
             {
@@ -349,7 +349,7 @@ namespace iLand.Tree
             Point ruOffset = new(this.LightCellIndexXY[treeIndex].X - treePositionWithinRU.X, this.LightCellIndexXY[treeIndex].Y - treePositionWithinRU.Y); // offset of the corner of the resource index
 
             LightStamp stamp = this.Stamp[treeIndex]!;
-            Point stampOrigin = new(treePositionWithinRU.X - stamp.CenterCellPosition, treePositionWithinRU.Y - stamp.CenterCellPosition);
+            Point stampOrigin = new(treePositionWithinRU.X - stamp.CenterCellIndex, treePositionWithinRU.Y - stamp.CenterCellIndex);
 
             int stampSize = stamp.Size();
             if (this.lightGrid.Contains(stampOrigin) == false || this.lightGrid.Contains(stampOrigin.X + stampSize, stampOrigin.Y + stampSize) == false)
@@ -393,7 +393,7 @@ namespace iLand.Tree
             this.heightGrid[treeHeightCellIndexXY].AddTree(this.Height[treeIndex]);
 
             LightStamp reader = this.Stamp[treeIndex]!.Reader!;
-            int center = reader.CenterCellPosition; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
+            int center = reader.CenterCellIndex; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
             int indexEastWest = this.LightCellIndexXY[treeIndex].X % Constant.LightCellsPerHeightCellWidth; // 4: very west, 0 east edge
             int indexNorthSouth = this.LightCellIndexXY[treeIndex].Y % Constant.LightCellsPerHeightCellWidth; // 4: northern edge, 0: southern edge
             if (indexEastWest - center < 0)
@@ -475,7 +475,7 @@ namespace iLand.Tree
             heightCell.AddTree(this.Height[treeIndex]);
 
             LightStamp reader = this.Stamp[treeIndex]!.Reader!;
-            int readerCenter = reader.CenterCellPosition; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
+            int readerCenter = reader.CenterCellIndex; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
             int indexEastWest = this.LightCellIndexXY[treeIndex].X % Constant.LightCellsPerHeightCellWidth; // 4: very west, 0 east edge
             int indexNorthSouth = this.LightCellIndexXY[treeIndex].Y % Constant.LightCellsPerHeightCellWidth; // 4: northern edge, 0: southern edge
             if (indexEastWest - readerCenter < 0)
@@ -574,7 +574,7 @@ namespace iLand.Tree
         public float GetCrownRadius(int treeIndex)
         {
             Debug.Assert(this.Stamp != null);
-            return this.Stamp[treeIndex]!.CrownRadius;
+            return this.Stamp[treeIndex]!.CrownRadiusInM;
         }
 
         public float GetBranchBiomass(int treeIndex)
@@ -594,8 +594,8 @@ namespace iLand.Tree
             Point lightCellPosition = this.LightCellIndexXY[treeIndex];
             float outsideAreaFactor = 0.1F;
 
-            int readerOffset = reader.CenterCellPosition;
-            int writerOffset = this.Stamp[treeIndex]!.CenterCellPosition;
+            int readerOffset = reader.CenterCellIndex;
+            int writerOffset = this.Stamp[treeIndex]!.CenterCellIndex;
             int writerReaderOffset = writerOffset - readerOffset; // offset on the *stamp* to the crown-cells
 
             lightCellPosition.X -= readerOffset;
@@ -656,9 +656,9 @@ namespace iLand.Tree
 
             float lightIndex = 0.0F;
             int readerSize = stampReader.Size();
-            int readerOriginX = treePositionInRU.X - stampReader.CenterCellPosition;
-            int readerOriginY = treePositionInRU.Y - stampReader.CenterCellPosition;
-            int writerReaderOffset = this.Stamp[treeIndex]!.CenterCellPosition - stampReader.CenterCellPosition; // offset on the *stamp* to the crown (light?) cells
+            int readerOriginX = treePositionInRU.X - stampReader.CenterCellIndex;
+            int readerOriginY = treePositionInRU.Y - stampReader.CenterCellIndex;
+            int writerReaderOffset = this.Stamp[treeIndex]!.CenterCellIndex - stampReader.CenterCellIndex; // offset on the *stamp* to the crown (light?) cells
             for (int readerY = 0; readerY < readerSize; ++readerY)
             {
                 int yTorus = Trees.GetTorusIndex(readerOriginY + readerY, Constant.LightCellsPerRUWidth, lightBufferWidthInCells, ruOffset.Y);
@@ -1073,7 +1073,7 @@ namespace iLand.Tree
             this.Stamp[treeIndex] = this.Species.GetStamp(this.Dbh[treeIndex], this.Height[treeIndex]); // get new stamp for updated dimensions
             // calculate the CrownFactor which reflects the opacity of the crown
             float treeK = model.Project.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
-            this.Opacity[treeIndex] = 1.0F - MathF.Exp(-treeK * this.LeafArea[treeIndex] / this.Stamp[treeIndex]!.CrownArea);
+            this.Opacity[treeIndex] = 1.0F - MathF.Exp(-treeK * this.LeafArea[treeIndex] / this.Stamp[treeIndex]!.CrownAreaInM2);
         }
 
         /// return the HD ratio of this year's increment based on the light status.

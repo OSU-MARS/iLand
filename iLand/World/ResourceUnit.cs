@@ -523,7 +523,7 @@ namespace iLand.World
                             if (treesOfSpecies.IsDead(treeIndex) == false)
                             {
                                 LightStamp reader = treesOfSpecies.Stamp[treeIndex]!.Reader!;
-                                totalCrownArea += reader.CrownArea;
+                                totalCrownArea += reader.CrownAreaInM2;
                             }
                         }
                     }
