@@ -19,7 +19,7 @@
       <annualNitrogenDeposition>5</annualNitrogenDeposition>
       <availableNitrogen>2000</availableNitrogen>
       <useDynamicAvailableNitrogen>false</useDynamicAvailableNitrogen> <!-- disabled for now due to N exhaustion -->
-      <!-- soil depth and van Genuchten properties specified per resource unit -->
+      <!-- soil plant accessible depth and van Genuchten properties specified per resource unit -->
       <!-- initial content of carbon and nitrogen pools, kg/ha, and annual decomposition rates (labile pool is litter, refractory pool is coarse woody debris) 
            Values copied from Kalkalpen simply to allow ICBM/2 code to be exercised when dynamic nitrogen is enabled. -->
       <youngLabileC>12375</youngLabileC>

@@ -10,7 +10,7 @@ namespace iLand.Input.ProjectFile
         public float AnnualNitrogenDeposition { get; private set; }
         public bool UseDynamicAvailableNitrogen { get; private set; }
 
-        public float Depth { get; private set; }
+        public float PlantAccessibleDepthInCm { get; private set; }
 
         public float ThetaR { get; private set; }
         public float ThetaS { get; private set; }
@@ -43,7 +43,7 @@ namespace iLand.Input.ProjectFile
             this.NitrogenLeachingFraction = 0.0015F;
             this.UseDynamicAvailableNitrogen = false;
 
-            this.Depth = Single.NaN;
+            this.PlantAccessibleDepthInCm = Single.NaN;
 
             this.PercentClay = Single.NaN;
             this.PercentSand = Single.NaN;
@@ -95,13 +95,6 @@ namespace iLand.Input.ProjectFile
                     if (this.AvailableNitrogen < 0.0F)
                     {
                         throw new XmlException("Available nitrogen is negative.");
-                    }
-                    break;
-                case "depth":
-                    this.Depth = reader.ReadElementContentAsFloat();
-                    if (this.Depth <= 0.0F)
-                    {
-                        throw new XmlException("Soil depth is zero or negative.");
                     }
                     break;
                 case "el":
@@ -172,6 +165,13 @@ namespace iLand.Input.ProjectFile
                     if ((this.PercentClay < 0.0F) || (this.PercentClay > 100.0F))
                     {
                         throw new XmlException("Soil clay content is negative or greater than 100%.");
+                    }
+                    break;
+                case "plantAccessibleDepth":
+                    this.PlantAccessibleDepthInCm = reader.ReadElementContentAsFloat();
+                    if (this.PlantAccessibleDepthInCm <= 0.0F)
+                    {
+                        throw new XmlException("Plant accessible soil depth is zero or negative.");
                     }
                     break;
                 case "qb":

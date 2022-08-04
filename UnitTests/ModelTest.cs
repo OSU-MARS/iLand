@@ -428,7 +428,7 @@ namespace iLand.Test
                 // resource unit variables read from weather file which are aren't currently test accessible
                 //   ru.Snags: swdC, swdCount, swdCN, swdHalfLife, swdDecomRate, otherC, other CN
                 // resource unit variables read from project file which are aren't currently test accessible
-                //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilDepth,
+                //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilPlantAccessibleDepth,
                 //            mKo (decomposition rate), mH (humification rate0
                 //   ru.WaterCycle.Canopy: interceptionStorageNeedle, interceptionStorageBroadleaf, snowMeltTemperature,
                 //                         waterUseSoilSaturation, pctSand, pctSilt, pctClay
@@ -465,7 +465,7 @@ namespace iLand.Test
                 //ru.Variables.Nep;
                 Assert.IsTrue((resourceUnit.WaterCycle.CanopyConductance > 0.001F) && (resourceUnit.WaterCycle.CanopyConductance < 0.1F), "Water cycle: canopy conductance"); // initially zero
                 Assert.IsTrue((resourceUnit.WaterCycle.CurrentSoilWater >= 0.0F) && (resourceUnit.WaterCycle.CurrentSoilWater <= resourceUnit.WaterCycle.FieldCapacity), "Water cycle: current water content of " + resourceUnit.WaterCycle.CurrentSoilWater + " mm is negative or greater than the field capacity of " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
-                Assert.IsTrue((resourceUnit.WaterCycle.FieldCapacity > 400.0F) && (resourceUnit.WaterCycle.FieldCapacity < 1150.0F), "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
+                Assert.IsTrue((resourceUnit.WaterCycle.FieldCapacity > 300.0F) && (resourceUnit.WaterCycle.FieldCapacity < 1000.0F), "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
                 Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.MonthsInYear, "Water cycle: water potential length");
                 foreach (float psi in resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear)
                 {
@@ -577,7 +577,7 @@ namespace iLand.Test
                 // resource unit variables read from weather file which are aren't currently test accessible
                 //   ru.Snags: swdC, swdCount, swdCN, swdHalfLife, swdDecomRate, otherC, other CN
                 // resource unit variables read from project file which are aren't currently test accessible
-                //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilDepth,
+                //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilPlantAccessibleDepth,
                 //            mKo (decomposition rate), mH (humification rate0
                 //   ru.WaterCycle.Canopy: interceptionStorageNeedle, interceptionStorageBroadleaf, snowMeltTemperature,
                 //                         waterUseSoilSaturation, pctSand, pctSilt, pctClay
@@ -640,7 +640,7 @@ namespace iLand.Test
                 //}
                 //Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0F) && (ru.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
                 //Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0F) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear), "Water cycle: snow days");
-                //Assert.IsTrue(MathF.Abs(ru.WaterCycle.SoilDepthInMM - 1340.0F) < 0.001F, "Soil: depth");
+                //Assert.IsTrue(MathF.Abs(ru.WaterCycle.SoilPlantAccessibleDepthInMM - 1340.0F) < 0.001F, "Soil: depth");
                 //Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0F, "Soil: evapotranspiration"); // zero at initialization
                 //Assert.IsTrue(ru.WaterCycle.TotalRunoff == 0.0F, "Soil: runoff"); // zero at initialization
             }
@@ -800,7 +800,7 @@ namespace iLand.Test
                 // resource unit variables read from weather file which are aren't currently test accessible
                 //   ru.Snags: swdC, swdCount, swdCN, swdHalfLife, swdDecomRate, otherC, other CN
                 // resource unit variables read from project file which are aren't currently test accessible
-                //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilDepth,
+                //   ru.Soil: qb, qh, el, er, leaching, nitrogenDeposition, soilPlantAccessibleDepth,
                 //            mKo (decomposition rate), mH (humification rate0
                 //   ru.WaterCycle.Canopy: interceptionStorageNeedle, interceptionStorageBroadleaf, snowMeltTemperature,
                 //                         waterUseSoilSaturation, pctSand, pctSilt, pctClay

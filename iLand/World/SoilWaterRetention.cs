@@ -14,7 +14,7 @@ namespace iLand.World
 
         public static SoilWaterRetention Create(ResourceUnitEnvironment environment)
         {
-            if (Single.IsNaN(environment.SoilDepthInCm) || (environment.SoilDepthInCm <= 0.0F))
+            if (Single.IsNaN(environment.SoilPlantAccessibleDepthInCm) || (environment.SoilPlantAccessibleDepthInCm < 0.0F))
             {
                 throw new ArgumentOutOfRangeException(nameof(environment));
             }

@@ -22,11 +22,31 @@ namespace iLand.Input
         public float SnagStemDecompositionRate { get; private init; }
         public float SnagHalfLife { get; private init; }
 
-        public float SoilDepthInCm { get; private init; } // cm
+        /// <summary>
+        /// rooting zone depth after volumetric exclusion of coarse fragments, cm
+        /// </summary>
+        /// <remarks>
+        /// A resource unit's plant accessible water (mm H₂O) is the product of the unit's plant accessible soil depth and
+        /// soil water content (cm³/cm³). Roots are typically assumed not to penetrate soild bedrock to access deep groundwater 
+        /// so, most commonly, the plant accessible soil depth will not exceed the physical depth of the soil. Often the plant 
+        /// accessible soil depth will be less than the physical soil depth for reasons such as
+        /// 
+        /// - The plants' root systems are not large enough to reach bedrock. This occurs when plants are small (seedlings and
+        ///   perhaps saplings in iLand's case), water demand isn't sufficient to promote development of deep taproots in the
+        ///   species of interest, or soils are exceptionally deep.
+        /// - Soil horizons contain rocks and therefore have volumetric exclusions to plant accessible water. For example, a 10
+        ///   cm horizon with 10% coarse fragment content is often approximated as having a 9 cm effective depth for the purpose
+        ///   of calculating plant accessible water. Actual relations between roots, soil pores, and fragments are more complex 
+        ///   and the amount of accessible water varies with the fragments' rock type, size distribution, and possibly shapes.
+        /// - Pans or other high density layers which roots cannot penetrate are present, rendering lower horizons plant 
+        ///   inaccessible. As with rooting depth, root penetration ability varies among species but iLand's single layer soil
+        ///   model and water cycle model currently lack the ability to niche species by their root capabilities.
+        /// </remarks>
+        public float SoilPlantAccessibleDepthInCm { get; private init; }
         // Mualem-van Genuchten water retention parameters
         public float SoilThetaR { get; private init; } // residual soil water content, m³/m³
         public float SoilThetaS { get; private init; } // saturated soil water content, m³/m³
-        public float SoilVanGenuchtenAlpha { get; private init; } // MPa, not log₁₀ transformed
+        public float SoilVanGenuchtenAlphaInKPa { get; private init; } // kPa, not log₁₀ transformed
         public float SoilVanGenuchtenN { get; private init; } // dimensionless
         // soil textures for estimation of Campbell (or other) water retention curve via pedotransfer regression
         public float SoilSand { get; private init; } // %
@@ -70,11 +90,11 @@ namespace iLand.Input
             this.SnagHalfLife = header.SnagHalfLife >= 0 ? Single.Parse(environmentFileRow[header.SnagHalfLife], CultureInfo.InvariantCulture) : defaultEnvironment.SnagsPerResourceUnit;
             this.SnagsPerResourceUnit = header.SnagsPerResourceUnit >= 0 ? Single.Parse(environmentFileRow[header.SnagsPerResourceUnit], CultureInfo.InvariantCulture) : defaultEnvironment.SnagsPerResourceUnit;
 
-            this.SoilDepthInCm = header.SoilDepthInCm >= 0 ? Single.Parse(environmentFileRow[header.SoilDepthInCm], CultureInfo.InvariantCulture) : defaultEnvironment.SoilDepthInCm;
+            this.SoilPlantAccessibleDepthInCm = header.SoilPlantAccessibleDepthInCm >= 0 ? Single.Parse(environmentFileRow[header.SoilPlantAccessibleDepthInCm], CultureInfo.InvariantCulture) : defaultEnvironment.SoilPlantAccessibleDepthInCm;
 
             this.SoilThetaR = header.SoilThetaR >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaR], CultureInfo.InvariantCulture) : defaultEnvironment.SoilThetaR;
             this.SoilThetaS = header.SoilThetaS >= 0 ? Single.Parse(environmentFileRow[header.SoilThetaS], CultureInfo.InvariantCulture) : defaultEnvironment.SoilThetaS;
-            this.SoilVanGenuchtenAlpha = header.SoilVanGenuchtenAlpha >= 0 ? Single.Parse(environmentFileRow[header.SoilVanGenuchtenAlpha], CultureInfo.InvariantCulture) : defaultEnvironment.SoilVanGenuchtenAlpha;
+            this.SoilVanGenuchtenAlphaInKPa = header.SoilVanGenuchtenAlpha >= 0 ? Single.Parse(environmentFileRow[header.SoilVanGenuchtenAlpha], CultureInfo.InvariantCulture) : defaultEnvironment.SoilVanGenuchtenAlphaInKPa;
             this.SoilVanGenuchtenN = header.SoilVanGenuchtenN >= 0 ? Single.Parse(environmentFileRow[header.SoilVanGenuchtenN], CultureInfo.InvariantCulture) : defaultEnvironment.SoilVanGenuchtenN;
 
             this.SoilClay = header.SoilClayPercentage >= 0 ? Single.Parse(environmentFileRow[header.SoilClayPercentage], CultureInfo.InvariantCulture) : defaultEnvironment.SoilClay;
@@ -119,11 +139,11 @@ namespace iLand.Input
             this.SnagHalfLife = arrowBatch.SnagHalfLife != null ? arrowBatch.SnagHalfLife.Values[index] : defaultEnvironment.SnagsPerResourceUnit;
             this.SnagsPerResourceUnit = arrowBatch.SnagsPerResourceUnit != null ? arrowBatch.SnagsPerResourceUnit.Values[index] : defaultEnvironment.SnagsPerResourceUnit;
 
-            this.SoilDepthInCm = arrowBatch.SoilDepthInCm != null ? arrowBatch.SoilDepthInCm.Values[index] : defaultEnvironment.SoilDepthInCm;
+            this.SoilPlantAccessibleDepthInCm = arrowBatch.SoilPlantAccessibleDepthInCm != null ? arrowBatch.SoilPlantAccessibleDepthInCm.Values[index] : defaultEnvironment.SoilPlantAccessibleDepthInCm;
 
             this.SoilThetaR = arrowBatch.SoilThetaR != null ? arrowBatch.SoilThetaR.Values[index] : defaultEnvironment.SoilThetaR;
             this.SoilThetaS = arrowBatch.SoilThetaS != null ? arrowBatch.SoilThetaS.Values[index] : defaultEnvironment.SoilThetaS;
-            this.SoilVanGenuchtenAlpha = arrowBatch.SoilVanGenuchtenAlpha != null ? arrowBatch.SoilVanGenuchtenAlpha.Values[index] : defaultEnvironment.SoilVanGenuchtenAlpha;
+            this.SoilVanGenuchtenAlphaInKPa = arrowBatch.SoilVanGenuchtenAlpha != null ? arrowBatch.SoilVanGenuchtenAlpha.Values[index] : defaultEnvironment.SoilVanGenuchtenAlphaInKPa;
             this.SoilVanGenuchtenN = arrowBatch.SoilVanGenuchtenN != null ? arrowBatch.SoilVanGenuchtenN.Values[index] : defaultEnvironment.SoilVanGenuchtenN;
 
             this.SoilClay = arrowBatch.SoilClayPercentage != null ? arrowBatch.SoilClayPercentage.Values[index] : defaultEnvironment.SoilClay;
@@ -178,12 +198,12 @@ namespace iLand.Input
             this.SoilNitrogenLeachingFraction = world.DefaultSoil.NitrogenLeachingFraction;
 
             // default soil parameters specified in <site> rather than in <defaultSoil>
-            this.SoilDepthInCm = world.DefaultSoil.Depth;
+            this.SoilPlantAccessibleDepthInCm = world.DefaultSoil.PlantAccessibleDepthInCm;
 
             // van Genuchten water retention curve
             this.SoilThetaR = world.DefaultSoil.ThetaR;
             this.SoilThetaS = world.DefaultSoil.ThetaS;
-            this.SoilVanGenuchtenAlpha = world.DefaultSoil.VanGenuchtenAlpha;
+            this.SoilVanGenuchtenAlphaInKPa = world.DefaultSoil.VanGenuchtenAlpha;
             this.SoilVanGenuchtenN = world.DefaultSoil.VanGenuchtenN;
 
             // soil texture for Campbell or other water retention curve

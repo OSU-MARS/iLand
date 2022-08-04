@@ -96,8 +96,8 @@
       <!-- fraction of O layer nitrogen removed by annual leaching -->
       <nitrogenLeachingFraction>0.0047</nitrogenLeachingFraction>
       <useDynamicAvailableNitrogen>true</useDynamicAvailableNitrogen>
-      <!-- soil depth, cm -->
-      <depth>38</depth>
+      <!-- plant accessible soil depth, cm -->
+      <plantAccessibleDepth>38</plantAccessibleDepth>
       <!-- texture percentages for estimation of Campbell soil water retention curve -->
       <percentSand>9</percentSand>
       <percentSilt>53</percentSilt>

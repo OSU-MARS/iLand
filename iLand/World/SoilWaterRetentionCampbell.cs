@@ -7,12 +7,12 @@ namespace iLand.World
     internal class SoilWaterRetentionCampbell : SoilWaterRetention
     {
         private readonly float saturationRatioPowerB; // see GetSoilWater*()
-        private readonly float soilDepthInMM;
+        private readonly float soilPlantAccessibleDepthInMM;
         private readonly float saturatedSoilWaterContent; // see GetSoilWater*(), [-], m3/m3
 
         public SoilWaterRetentionCampbell(ResourceUnitEnvironment environment)
         {
-            this.soilDepthInMM = 10.0F * environment.SoilDepthInCm; // convert from cm to mm TODO: zero is not a realistic default
+            this.soilPlantAccessibleDepthInMM = 10.0F * environment.SoilPlantAccessibleDepthInCm; // convert from cm to mm
 
             // get values...
             float percentSand = environment.SoilSand;
@@ -20,7 +20,7 @@ namespace iLand.World
             float percentClay = environment.SoilClay;
             if (MathF.Abs(100.0F - (percentSand + percentSilt + percentClay)) > 0.01F)
             {
-                throw new NotSupportedException("Soil textures do not sum to 100% within 0.01% for resource unit " + environment.ResourceUnitID + ". Sand: " + percentSand + "%, silt: " + percentSilt + "%, clay: " + percentClay + "%.");
+                throw new NotSupportedException("Soil texture percentages do not sum to 100% within 0.01% for resource unit " + environment.ResourceUnitID + ". Sand: " + percentSand + "%, silt: " + percentSilt + "%, clay: " + percentClay + "%.");
             }
 
             // calculate soil characteristics based on empirical functions from sparse United States data: 35 points in 23 states
@@ -51,14 +51,14 @@ namespace iLand.World
 
         public override float GetSoilWaterPotentialFromWater(float soilWaterInMM)
         {
-            Debug.Assert((soilWaterInMM >= 0.0F) && (this.soilDepthInMM > soilWaterInMM), "Soil depth is negative, soil water content is negative, or soil water content exceeds soil depth.");
+            Debug.Assert((soilWaterInMM >= 0.0F) && (this.soilPlantAccessibleDepthInMM > soilWaterInMM), "Soil depth is negative, soil water content is negative, or soil water content exceeds soil depth.");
 
             // psi_x = psi_ref * (θ / θref)^b
             if (soilWaterInMM < 0.001F)
             {
                 return -100000000.0F;
             }
-            float psiInKPa = this.SaturationPotentialInKPa * MathF.Pow(soilWaterInMM / this.soilDepthInMM / this.saturatedSoilWaterContent, this.saturationRatioPowerB);
+            float psiInKPa = this.SaturationPotentialInKPa * MathF.Pow(soilWaterInMM / this.soilPlantAccessibleDepthInMM / this.saturatedSoilWaterContent, this.saturationRatioPowerB);
             return psiInKPa;
         }
 
@@ -67,7 +67,7 @@ namespace iLand.World
             Debug.Assert(psiInKilopascals <= 0.0F, "Soil depth is negative or matric potential is positive. Are the arguments reversed?");
 
             // rho_x = rho_ref * (psi_x / psi_ref)^(1/b)
-            float mmH20 = this.soilDepthInMM * this.saturatedSoilWaterContent * MathF.Pow(psiInKilopascals / this.SaturationPotentialInKPa, 1.0F / this.saturationRatioPowerB);
+            float mmH20 = this.soilPlantAccessibleDepthInMM * this.saturatedSoilWaterContent * MathF.Pow(psiInKilopascals / this.SaturationPotentialInKPa, 1.0F / this.saturationRatioPowerB);
             return mmH20;
         }
     }

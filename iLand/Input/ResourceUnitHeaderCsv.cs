@@ -18,7 +18,7 @@
 
         public int SpeciesTableName { get; private init; }
 
-        public int SoilDepthInCm { get; private init; } // cm
+        public int SoilPlantAccessibleDepthInCm { get; private init; }
 
         public int SoilSandPercentage { get; private init; }
         public int SoilSiltPercentage { get; private init; }
@@ -62,7 +62,7 @@
             this.SnagStemDecompositionRate = environmentFile.GetColumnIndex("snagDecompositionRate");
             this.SoilAvailableNitrogen = environmentFile.GetColumnIndex("soilAvailableNitrogen");
             this.SoilClayPercentage = environmentFile.GetColumnIndex("soilClayPercent");
-            this.SoilDepthInCm = environmentFile.GetColumnIndex("soilDepth");
+            this.SoilPlantAccessibleDepthInCm = environmentFile.GetColumnIndex("soilPlantAccessibleDepth");
             this.SoilEl = environmentFile.GetColumnIndex("soilEl");
             this.SoilEr = environmentFile.GetColumnIndex("soilEr");
             this.SoilHumificationRate = environmentFile.GetColumnIndex("soilHumificationRate");

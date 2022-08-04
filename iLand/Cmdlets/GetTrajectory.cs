@@ -1,6 +1,5 @@
 ﻿using iLand.Input.ProjectFile;
 using System;
-using System.Diagnostics;
 using System.Management.Automation;
 using Model = iLand.Simulation.Model;
 
@@ -19,7 +18,7 @@ namespace iLand.Cmdlets
 
         public GetTrajectory()
         {
-            this.Years = 28;
+            this.Years = 25;
         }
 
         protected override void ProcessRecord()

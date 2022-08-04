@@ -19,7 +19,7 @@ namespace iLand.Input
         public FloatArray? SnagHalfLife { get; private init; }
         public FloatArray? SnagsPerResourceUnit { get; private init; }
 
-        public FloatArray? SoilDepthInCm { get; private init; }
+        public FloatArray? SoilPlantAccessibleDepthInCm { get; private init; }
 
         public FloatArray? SoilThetaR { get; private init; }
         public FloatArray? SoilThetaS { get; private init; }
@@ -66,7 +66,7 @@ namespace iLand.Input
             this.SnagStemDecompositionRate = ArrowBatch.MaybeGetArray<FloatArray>("snagDecompositionRate", schema, fields);
             this.SoilAvailableNitrogen = ArrowBatch.MaybeGetArray<FloatArray>("soilAvailableNitrogen", schema, fields);
             this.SoilClayPercentage = ArrowBatch.MaybeGetArray<FloatArray>("soilClayPercent", schema, fields);
-            this.SoilDepthInCm = ArrowBatch.MaybeGetArray<FloatArray>("soilDepth", schema, fields);
+            this.SoilPlantAccessibleDepthInCm = ArrowBatch.MaybeGetArray<FloatArray>("soilPlantAccessibleDepth", schema, fields);
             this.SoilEl = ArrowBatch.MaybeGetArray<FloatArray>("soilEl", schema, fields);
             this.SoilEr = ArrowBatch.MaybeGetArray<FloatArray>("soilEr", schema, fields);
             this.SoilHumificationRate = ArrowBatch.MaybeGetArray<FloatArray>("soilHumificationRate", schema, fields);

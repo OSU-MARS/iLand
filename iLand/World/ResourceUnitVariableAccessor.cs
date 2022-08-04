@@ -16,7 +16,7 @@ namespace iLand.World
         {
             ResourceUnitVariableAccessor.VariableNames = new List<string>(ExpressionVariableAccessor.BaseVariableNames) 
             { 
-                "id", "totalEffectiveArea", "nitrogenAvailable", "soilDepth", "stockedArea", "stockableArea",
+                "id", "totalEffectiveArea", "nitrogenAvailable", "stockedArea", "stockableArea",
                 "count", "volume", "avgDbh", "avgHeight", "basalArea", "leafAreaIndex", "aging", "cohortCount", "saplingCount", "saplingAge",
                 "canopyConductance", "soilC", "soilN", "snagC", "index", "meanTemp", "annualPrecip", "annualRad"
             }.AsReadOnly();
@@ -39,66 +39,68 @@ namespace iLand.World
 
             switch (variableIndex - ExpressionVariableAccessor.BaseVariableNames.Count)
             {
-                case 0: return this.ResourceUnit.ID; // id from grid
-                case 1: return this.ResourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea;
+                // ResourceUnitVariableAccessor.VariableNames[variableIndex]
+                case 0: 
+                    return this.ResourceUnit.ID; // id from grid
+                case 1: 
+                    return this.ResourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea;
                 case 2:
                     if (this.ResourceUnit.Soil != null)
                     {
                         return this.ResourceUnit.Soil.PlantAvailableNitrogen;
                     }
                     return -1.0F;
-                // case 3: return this.ResourceUnit.WaterCycle.SoilDepthInMM; // no longer supported
-                case 4: 
+                case 3: 
                     return this.ResourceUnit.AreaWithTreesInM2;
-                case 5: 
+                case 4: 
                     return this.ResourceUnit.AreaInLandscapeInM2;
-                case 6: 
+                case 5: 
                     return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.TreesPerHa;
-                case 7: 
+                case 6: 
                     return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.StemVolumeInM3PerHa;
-                case 8: 
+                case 7: 
                     return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.AverageDbhInCm;
-                case 9: 
+                case 8: 
                     return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.AverageHeightInM;
-                case 10: 
+                case 9: 
                     return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.BasalAreaInM2PerHa;
-                case 11: 
+                case 10: 
                     return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.LeafAreaIndex;
-                case 12: 
+                case 11: 
                     return this.ResourceUnit.Trees.AverageLeafAreaWeightedAgingFactor;
-                case 13: 
+                case 12: 
                     return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.CohortsPerHa;
-                case 14: 
+                case 13: 
                     return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.SaplingsPerHa;
-                case 15: 
+                case 14: 
                     return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.MeanSaplingAgeInYears;
-                case 16:
+                case 15:
                     return this.ResourceUnit.WaterCycle.CanopyConductance;
                 // soil C + soil N
-                case 17:
+                case 16:
                     if (this.ResourceUnit.Soil != null)
                     {
                         return this.ResourceUnit.Soil.YoungLabile.C + this.ResourceUnit.Soil.YoungRefractory.C + this.ResourceUnit.Soil.OrganicMatter.C;
                     }
                     return 0.0F;
-                case 18:
+                case 17:
                     if (this.ResourceUnit.Soil != null)
                     {
                         return this.ResourceUnit.Soil.YoungLabile.N + this.ResourceUnit.Soil.YoungRefractory.N + this.ResourceUnit.Soil.OrganicMatter.N;
                     }
                     return 0.0F;
                 // snags
-                case 19:
+                case 18:
                     if (this.ResourceUnit.Snags != null)
                     {
                         return this.ResourceUnit.Snags.StandingAndDebrisCarbon;
                     }
                     return 0.0F;
-                case 20: 
+                case 19: 
                     return this.ResourceUnit.ResourceUnitGridIndex; // numeric index
-                case 21: 
+                case 20: 
                     return this.ResourceUnit.Weather.MeanAnnualTemperature; // mean temperature
-                case 22:
+                case 21:
                     {
                         float totalAnnualPrecipitation = 0;
                         for (int monthIndex = 0; monthIndex < 12; ++monthIndex)
@@ -107,7 +109,7 @@ namespace iLand.World
                         }
                         return totalAnnualPrecipitation;
                     }
-                case 23: 
+                case 22: 
                     return this.ResourceUnit.Weather.TotalAnnualRadiation;
                 default:
                     return base.GetValue(variableIndex);
