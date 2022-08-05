@@ -314,16 +314,17 @@ namespace iLand.Tree
                 for (int lightX = stampOrigin.X, stampX = 0; stampX < stampSize; ++lightX, ++lightIndex, ++stampX)
                 {
                     // http://iland-model.org/competition+for+light
-                    // suppose there is no stamping outside
-                    float iStarXYJ = stamp[stampX, stampY]; // stampvalue
-                    //if (value>0.f) {
-                    float dominantHeight = this.heightGrid[lightX, lightY, Constant.LightCellsPerHeightCellWidth].MaximumVegetationHeightInM; // height of Z* on the current position
-                    float z = MathF.Max(this.Height[treeIndex] - stamp.GetDistanceToCenter(stampX, stampY), 0.0F); // distance to center = height (45 degree line)
-                    float zStarXYJ = (z >= dominantHeight) ? 1.0F : z / dominantHeight; // tree influence height
-                    iStarXYJ = 1.0F - iStarXYJ * this.Opacity[treeIndex] * zStarXYJ; // this tree's Beer-Lambert contribution to shading of light grid cell
-                    iStarXYJ = MathF.Max(iStarXYJ, 0.02F); // limit value
+                    float iXYJ = stamp[stampX, stampY]; // tree's light stamp value
+                    if (iXYJ != 0.0F) // zero = no tree shading => LIF intensity = 1 => no change in light grid
+                    {
+                        float dominantHeight = this.heightGrid[lightX, lightY, Constant.LightCellsPerHeightCellWidth].MaximumVegetationHeightInM; // height of z*u,v on the current position
+                        float zStarXYJ = MathF.Max(this.Height[treeIndex] - stamp.GetDistanceToCenter(stampX, stampY), 0.0F); // distance to center = height (45 degree line)
+                        float zStarMin = (zStarXYJ >= dominantHeight) ? 1.0F : zStarXYJ / dominantHeight; // tree influence height
+                        float iStarXYJ = 1.0F - this.Opacity[treeIndex] * iXYJ * zStarMin; // this tree's Beer-Lambert contribution to shading of light grid cell
+                        iStarXYJ = MathF.Max(iStarXYJ, 0.02F); // limit minimum value
 
-                    this.lightGrid[lightIndex] *= iStarXYJ; // compound LIF intensity
+                        this.lightGrid[lightIndex] *= iStarXYJ; // compound LIF intensity, Eq. 4
+                    }
                 }
             }
 

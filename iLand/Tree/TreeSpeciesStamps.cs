@@ -20,7 +20,7 @@ namespace iLand.Tree
         // TODO: not safe across multiple light cell sizes
         public static Grid<float> DistanceGrid { get; private set; }
 
-        private readonly LightStamp?[,] lightStampsByDbhAndHeightDiameterRatio;
+        private readonly LightStampWithTreeSize?[,] lightStampsByDbhAndHeightDiameterRatio;
         private readonly List<LightStampWithTreeSize> lightStampsWithTreeSizes;
 
         public string Description { get; set; }
@@ -32,7 +32,7 @@ namespace iLand.Tree
 
         public TreeSpeciesStamps()
         {
-            this.lightStampsByDbhAndHeightDiameterRatio = new LightStamp[Constant.LightStamp.DbhClasses, Constant.LightStamp.HeightDiameterClasses];
+            this.lightStampsByDbhAndHeightDiameterRatio = new LightStampWithTreeSize[Constant.LightStamp.DbhClasses, Constant.LightStamp.HeightDiameterClasses];
             this.lightStampsWithTreeSizes = new();
 
             this.Description = String.Empty;            
@@ -46,37 +46,40 @@ namespace iLand.Tree
             {
                 throw new NotSupportedException(String.Format("addStamp: Stamp out of range. dbh={0} hd={1}.", dbhInCm, hdRatio));
             }
-            this.lightStampsByDbhAndHeightDiameterRatio[diameterClass, hdClass] = stamp;
 
             stamp.SetCrownRadiusAndArea(crownRadiusInM);
-            LightStampWithTreeSize stampWithTreeSize = new()
+            LightStampWithTreeSize stampWithTreeSize = new(stamp)
             {
                 DbhInCm = dbhInCm,
                 HeightDiameterRatio = hdRatio,
                 CrownRadiusInM = crownRadiusInM,
-                Stamp = stamp
             };
+            this.lightStampsByDbhAndHeightDiameterRatio[diameterClass, hdClass] = stampWithTreeSize;
             this.lightStampsWithTreeSizes.Add(stampWithTreeSize);
         }
 
-        public void AttachReaderStamps(TreeSpeciesStamps source)
+        public void AttachReaderStamps(TreeSpeciesStamps readerStamps)
         {
-            int found = 0, total = 0;
-            foreach (LightStampWithTreeSize stampItem in this.lightStampsWithTreeSizes)
+            foreach (LightStampWithTreeSize speciesStamp in this.lightStampsWithTreeSizes)
             {
-                LightStamp stamp = source.GetReaderStamp(stampItem.CrownRadiusInM);
-                stampItem.Stamp.SetReader(stamp);
-                if (stamp != null)
+                /** retrieve a read-out-stamp. Readers depend solely on a crown radius.
+                    Internally, readers are stored in the same lookup-table, but using a encoding/decoding trick.*/
+                // Readers: from 0..10m in 50 steps???
+                float crownRadiusInMeters = speciesStamp.CrownRadiusInM;
+                int heightDiameterClass = (int)(((crownRadiusInMeters % 1.0F) + 0.0001) * 10); // 0 .. 9.99999999
+                if (heightDiameterClass >= Constant.LightStamp.HeightDiameterClasses)
                 {
-                    ++found;
+                    heightDiameterClass = Constant.LightStamp.HeightDiameterClasses - 1;
                 }
-                ++total;
-                //si.crown_radius
+                int crownRadiusClass = (int)crownRadiusInMeters;
+                LightStampWithTreeSize? readerStamp = readerStamps.lightStampsByDbhAndHeightDiameterRatio[crownRadiusClass, heightDiameterClass];
+                if (readerStamp == null)
+                {
+                    throw new InvalidOperationException("Reader stamp not found for crown radius class " + crownRadiusClass + " (crown radius " + crownRadiusInMeters + " m) and height class " + heightDiameterClass + " (height diameter ratio " + heightDiameterClass + ").");
+                }
+
+                speciesStamp.Stamp.SetReader(readerStamp.Stamp);
             }
-            //if (GlobalSettings.Instance.LogInfo())
-            //{
-            //    Debug.WriteLine("attachReaderStamps: found " + found + " stamps of " + total);
-            //}
         }
 
         public int Count() 
@@ -86,52 +89,33 @@ namespace iLand.Tree
 
         /// getKey: decodes a floating point piar of dbh and hd-ratio to indices for the
         /// lookup table containing pointers to the actual stamps.
-        private static (int diameterClass, int heightDiameterClass) GetClasses(float dbh, float heightDiameterRatio)
+        private static (int diameterClass, int heightDiameterClass) GetClasses(float dbhInCm, float heightDiameterRatio)
         {
             int heightDiameterClass = (int)((heightDiameterRatio - Constant.LightStamp.HeightDiameterClassMinimum) / Constant.LightStamp.HeightDiameterClassSize);
             // dbh_class = int(dbh - cBHDclassLow) / cBHDclassWidth;
             // fixed scheme: smallest classification scheme for tree-diameters:
-            // 1cm width from 5 up to 9 cm,
-            // 2cm bins from 10 to 20 cm
-            // 4cm bins starting from 20 cm, max DBH at 70 classes = 255 cm
+            // 1 cm width from 5 up to 9 cm,
+            // 2 cm bins from 10 to 20 cm
+            // 4 cm bins starting from 20 cm, max DBH at 70 classes = 255 cm
             int diameterClass;
-            if (dbh < 4.0F)
+            if (dbhInCm < 4.0F)
             {
                 diameterClass = 0; // class 0
             }
-            else if (dbh < 10.0F)
+            else if (dbhInCm < 10.0F)
             {
-                diameterClass = (int)(dbh - 4.0F); // classes from 0-5
+                diameterClass = (int)(dbhInCm - 4.0F); // classes from 0-5
             }
-            else if (dbh < 20.0F)
+            else if (dbhInCm < 20.0F)
             {
-                diameterClass = 6 + (int)((dbh - 10.0F) / 2.0F); // 10-12 cm has index 6
+                diameterClass = 6 + (int)((dbhInCm - 10.0F) / 2.0F); // 10-12 cm has index 6
             }
             else
             {
-                diameterClass = 11 + (int)((dbh - 20.0F) / 4.0F); // 20-24 cm has index 11
+                diameterClass = 11 + (int)((dbhInCm - 20.0F) / 4.0F); // 20-24 cm has index 11
             }
 
             return (diameterClass, heightDiameterClass);
-        }
-
-        /** retrieve a read-out-stamp. Readers depend solely on a crown radius.
-            Internally, readers are stored in the same lookup-table, but using a encoding/decoding trick.*/
-        public LightStamp GetReaderStamp(float crownRadiusInMeters)
-        {
-            // Readers: from 0..10m in 50 steps???
-            int heightDiameterClass = (int)(((crownRadiusInMeters % 1.0F) + 0.0001) * 10); // 0 .. 9.99999999
-            if (heightDiameterClass >= Constant.LightStamp.HeightDiameterClasses)
-            {
-                heightDiameterClass = Constant.LightStamp.HeightDiameterClasses - 1;
-            }
-            int diameterClass = (int)crownRadiusInMeters;
-            LightStamp? stamp = lightStampsByDbhAndHeightDiameterRatio[diameterClass, heightDiameterClass];
-            if (stamp == null)
-            {
-                throw new ArgumentOutOfRangeException(nameof(crownRadiusInMeters));
-            }
-            return stamp;
         }
 
         /** fast access for an individual stamp using a lookup table
@@ -143,11 +127,11 @@ namespace iLand.Tree
             (int diameterClass, int hdClass) = TreeSpeciesStamps.GetClasses(dbhInCm, heightDiameterRatio);
 
             // retrieve stamp from lookup table when tree is within the lookup table's size range
-            LightStamp? stamp = null;
+            LightStampWithTreeSize? stamp = null;
             if ((diameterClass < Constant.LightStamp.DbhClasses) && (diameterClass >= 0) && 
                 (hdClass < Constant.LightStamp.HeightDiameterClasses) && (hdClass >= 0))
             {
-                stamp = lightStampsByDbhAndHeightDiameterRatio[diameterClass, hdClass];
+                stamp = this.lightStampsByDbhAndHeightDiameterRatio[diameterClass, hdClass];
             }
             // find a stamp of matching diameter if the HD-ratio is out of range
             else if ((diameterClass < Constant.LightStamp.DbhClasses) && (diameterClass >= 0))
@@ -158,11 +142,11 @@ namespace iLand.Tree
                 //}
                 if (hdClass >= Constant.LightStamp.HeightDiameterClasses)
                 {
-                    stamp = lightStampsByDbhAndHeightDiameterRatio[diameterClass, Constant.LightStamp.HeightDiameterClasses - 1]; // tree is oversize
+                    stamp = this.lightStampsByDbhAndHeightDiameterRatio[diameterClass, Constant.LightStamp.HeightDiameterClasses - 1]; // tree is oversize
                 }
                 else
                 {
-                    stamp = lightStampsByDbhAndHeightDiameterRatio[diameterClass, 0]; // tree is underersize
+                    stamp = this.lightStampsByDbhAndHeightDiameterRatio[diameterClass, 0]; // tree is underersize
                 }
             }
             // find a stamp of matching height-diameter ratio if the DBH is out of range.
@@ -174,11 +158,11 @@ namespace iLand.Tree
                 //}
                 if (diameterClass >= Constant.LightStamp.DbhClasses)
                 {
-                    stamp = lightStampsByDbhAndHeightDiameterRatio[Constant.LightStamp.DbhClasses - 1, hdClass]; // tree is oversize
+                    stamp = this.lightStampsByDbhAndHeightDiameterRatio[Constant.LightStamp.DbhClasses - 1, hdClass]; // tree is oversize
                 }
                 else
                 {
-                    stamp = lightStampsByDbhAndHeightDiameterRatio[0, hdClass]; // tree is undersize
+                    stamp = this.lightStampsByDbhAndHeightDiameterRatio[0, hdClass]; // tree is undersize
                 }
             }
             // both DBH and HD ratio are out of range
@@ -186,25 +170,27 @@ namespace iLand.Tree
             {
                 //if (GlobalSettings.Instance.LogDebug())
                 //{
-                //    Debug.WriteLine("DBH AND HD for stamp out of range dbh " + dbhInCm + " and h=" + heightInM + "-> using largest available DBH/smallest HD.");
+                //    Debug.WriteLine("DBH and HD for stamp out of range dbh " + dbhInCm + " and h=" + heightInM + "-> using largest available DBH/smallest HD.");
                 //}
-                stamp = lightStampsByDbhAndHeightDiameterRatio[Constant.LightStamp.DbhClasses - 1, 0];
+                stamp = this.lightStampsByDbhAndHeightDiameterRatio[Constant.LightStamp.DbhClasses - 1, 0];
             }
             // handle the case that DBH is too high and HD ratio is too high (not very likely)
             else if ((diameterClass >= Constant.LightStamp.DbhClasses) && (hdClass >= Constant.LightStamp.HeightDiameterClasses))
             {
                 //if (GlobalSettings.Instance.LogDebug())
                 //{
-                //    Debug.WriteLine("DBH AND HD for stamp out of range dbh " + dbhInCm + " and h=" + heightInM + "-> using largest available DBH.");
+                //    Debug.WriteLine("DBH and HD for stamp out of range dbh " + dbhInCm + " and h=" + heightInM + "-> using largest available DBH.");
                 //}
-                stamp = lightStampsByDbhAndHeightDiameterRatio[Constant.LightStamp.DbhClasses - 1, Constant.LightStamp.HeightDiameterClasses - 1];
+                stamp = this.lightStampsByDbhAndHeightDiameterRatio[Constant.LightStamp.DbhClasses - 1, Constant.LightStamp.HeightDiameterClasses - 1];
             }
 
             if (stamp == null)
             {
                 throw new ArgumentOutOfRangeException("Stamp for DBH " + dbhInCm + " and height " + heightInM + " not found.");
             }
-            return stamp;
+            // check stamp is consistent with size of tree: currently fails on Douglas-fir and western hemlock due to older LIP files
+            // Debug.Assert((MathF.Abs(dbhInCm - stamp.DbhInCm) < 2.0F) && (MathF.Abs(heightDiameterRatio - stamp.HeightDiameterRatio) < 0.5F * Constant.LightStamp.HeightDiameterClassSize));
+            return stamp.Stamp;
         }
 
         /// convenience function that loads stamps directly from a single file.
@@ -283,7 +269,7 @@ namespace iLand.Tree
             {
                 // find lowest value...
                 int heightDiameterRatioClassIndex = 0;
-                LightStamp? stamp = null;
+                LightStampWithTreeSize? stamp = null;
                 for (; heightDiameterRatioClassIndex < Constant.LightStamp.HeightDiameterClasses; ++heightDiameterRatioClassIndex)
                 {
                     stamp = this.lightStampsByDbhAndHeightDiameterRatio[diameterClassIndex, heightDiameterRatioClassIndex];
@@ -313,7 +299,7 @@ namespace iLand.Tree
                 }
                 if (stamp != null)
                 {
-                    maxStampSize = Math.Max(maxStampSize, stamp.DataSize);
+                    maxStampSize = Math.Max(maxStampSize, stamp.Stamp.DataSize);
                 }
 
                 // if no stamps in this dbh-class, copy values (from last row)
@@ -334,11 +320,11 @@ namespace iLand.Tree
                 {
                     b++;
                 }
-                for (int fill = 0; fill < b; fill++)
+                for (int diameterClassIndex = 0; diameterClassIndex < b; ++diameterClassIndex)
                 {
-                    for (int h = 0; h < Constant.LightStamp.HeightDiameterClasses; h++)
+                    for (int heightClassIndex = 0; heightClassIndex < Constant.LightStamp.HeightDiameterClasses; ++heightClassIndex)
                     {
-                        this.lightStampsByDbhAndHeightDiameterRatio[fill, h] = this.lightStampsByDbhAndHeightDiameterRatio[b, h];
+                        this.lightStampsByDbhAndHeightDiameterRatio[diameterClassIndex, heightClassIndex] = this.lightStampsByDbhAndHeightDiameterRatio[b, heightClassIndex];
                     }
                 }
             }
@@ -424,12 +410,17 @@ namespace iLand.Tree
             this.Write(writer);
         }
 
-        private struct LightStampWithTreeSize
+        private class LightStampWithTreeSize
         {
             public float CrownRadiusInM { get; init; }
             public float DbhInCm { get; init; }
             public float HeightDiameterRatio { get; init; }
             public LightStamp Stamp { get; init; }
+
+            public LightStampWithTreeSize(LightStamp stamp)
+            {
+                this.Stamp = stamp;
+            }
         }
     }
 }

@@ -120,29 +120,29 @@ namespace iLand.Tree
         public bool Active { get; private init; }
 
         // allometries
-        public float GetBarkThickness(float dbh) 
+        public float GetBarkThickness(float dbhInCm) 
         { 
-            return this.barkFractionAtDbh * dbh;
+            return this.barkFractionAtDbh * dbhInCm;
         }
 
-        public float GetBiomassFoliage(float dbh)
+        public float GetBiomassFoliage(float dbhInCm)
         { 
-            return this.foliageA * MathF.Pow(dbh, this.foliageB); 
+            return this.foliageA * MathF.Pow(dbhInCm, this.foliageB); 
         }
 
-        public float GetBiomassStem(float dbh) 
+        public float GetBiomassStem(float dbhInCm) 
         { 
-            return this.woodyA * MathF.Pow(dbh, this.woodyB); 
+            return this.woodyA * MathF.Pow(dbhInCm, this.woodyB); 
         }
 
-        public float GetBiomassCoarseRoot(float dbh)
+        public float GetBiomassCoarseRoot(float dbhInCm)
         { 
-            return this.rootA * MathF.Pow(dbh, this.rootB); 
+            return this.rootA * MathF.Pow(dbhInCm, this.rootB); 
         }
         
-        public float GetBiomassBranch(float dbh)
+        public float GetBiomassBranch(float dbhInCm)
         {
-            return this.branchA * MathF.Pow(dbh, this.branchB); 
+            return this.branchA * MathF.Pow(dbhInCm, this.branchB); 
         }
         
         public float GetStemFoliageRatio() 
@@ -150,9 +150,9 @@ namespace iLand.Tree
             return this.woodyB / this.foliageB; // Duursma et al. 2007 eq 20
         }
 
-        public LightStamp GetStamp(float dbh, float height)
+        public LightStamp GetStamp(float dbhInCm, float heightInM)
         { 
-            return this.lightIntensityProfiles.GetStamp(dbh, height); 
+            return this.lightIntensityProfiles.GetStamp(dbhInCm, heightInM); 
         }
 
         public float GetLightResponse(float lightResourceIndex) 
