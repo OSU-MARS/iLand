@@ -16,11 +16,11 @@ namespace iLand.Input
     {
         public ResourceUnitReaderFeather(string resourceUnitFilePath, ResourceUnitEnvironment defaultEnvironment)
         {
-            // Arrow 8.0.0 supports only uncompressed feather: https://issues.apache.org/jira/browse/ARROW-17062
+            // Arrow 9.0.0 supports only uncompressed feather: https://issues.apache.org/jira/browse/ARROW-17062
             using FileStream resourceUnitStream = new(resourceUnitFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, Constant.File.DefaultBufferSize);
             using ArrowFileReader resourceUnitFile = new(resourceUnitStream); // ArrowFileReader.IsFileValid is false until a batch is read
 
-            for (RecordBatch batch = resourceUnitFile.ReadNextRecordBatch(); batch != null; batch = resourceUnitFile.ReadNextRecordBatch())
+            for (RecordBatch? batch = resourceUnitFile.ReadNextRecordBatch(); batch != null; batch = resourceUnitFile.ReadNextRecordBatch())
             {
                 ResourceUnitArrowBatch fields = new(batch);
                 if (String.IsNullOrEmpty(defaultEnvironment.WeatherID) && (fields.WeatherID == null))

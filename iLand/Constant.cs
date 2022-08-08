@@ -49,15 +49,13 @@ namespace iLand
             public const int DefaultBufferSize = 128 * 1024; // 128 kB
             public const string FeatherExtension = ".feather";
             public const string PicusExtension = ".picus";
-            public const string ReaderStampFileName = "readerstamp.bin";
+            public const string ReaderStampFileName = "readerstamp.feather";
             public const string SqliteExtension = ".sqlite";
         }
 
         public static class LightStamp
         {
-            public const int DbhClasses = 70; // class count, see StampContainer.GetKey(): classes are smaller at smaller DBH
             public const int HeightDiameterClassMinimum = 35; // hd ratio classes offset is 35: class 0 < 45, class 1 45-55, ...
-            public const int HeightDiameterClasses = 16; // class count: highest ratio: 185-195? 195-205?
             public const int HeightDiameterClassSize = 10;
         }
 

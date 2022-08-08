@@ -95,7 +95,7 @@ namespace iLand.Tree
         public SeedDispersal? SeedDispersal { get; set; }
         public TreeSpeciesSet SpeciesSet { get; private init; }
 
-        public TreeSpecies(TreeSpeciesSet speciesSet, string id, string name)
+        private TreeSpecies(TreeSpeciesSet speciesSet, string id, string name, string stampFilePath)
         {
             if (speciesSet == null)
             {
@@ -103,7 +103,7 @@ namespace iLand.Tree
             }
 
             this.aging = new();
-            this.lightIntensityProfiles = new();
+            this.lightIntensityProfiles = new(stampFilePath);
             this.heightDiameterRatioUpperBound = new();
             this.heightDiameterRatioLowerBound = new();
             this.serotinyFormula = new();
@@ -115,6 +115,9 @@ namespace iLand.Tree
             this.SaplingGrowth = new();
             this.SeedDispersal = null;
             this.SpeciesSet = speciesSet;
+
+            // attach writer stamps to reader stamps
+            this.lightIntensityProfiles.AttachReaderStamps(speciesSet.ReaderStamps);
         }
 
         public bool Active { get; private init; }
@@ -181,46 +184,39 @@ namespace iLand.Tree
             */
         public static TreeSpecies Load(Project projectFile, TreeSpeciesReader reader, TreeSpeciesSet speciesSet)
         {
-            TreeSpecies species = new(speciesSet, reader.ID(), reader.Name())
+            string stampFilePath = projectFile.GetFilePath(ProjectDirectory.LightIntensityProfile, reader.LipFile());
+            TreeSpecies species = new(speciesSet, reader.ID(), reader.Name(), stampFilePath)
             {
                 Active = reader.Active(),
+
+                // general properties
+                IsConiferous = reader.IsConiferous(),
+                IsEvergreen = reader.IsEvergreen(),
+
+                // setup allometries
+                foliageA = reader.BmFoliageA(),
+                foliageB = reader.BmFoliageB(),
+
+                woodyA = reader.BmWoodyA(),
+                woodyB = reader.BmWoodyB(),
+
+                rootA = reader.BmRootA(),
+                rootB = reader.BmRootB(),
+
+                branchA = reader.BmBranchA(),
+                branchB = reader.BmBranchB(),
+
+                SpecificLeafArea = reader.SpecificLeafArea(),
+                FinerootFoliageRatio = reader.FinerootFoliageRatio(),
+
+                barkFractionAtDbh = reader.BarkThickness(),
+
+                // cn-ratios
+                CarbonNitrogenRatioFoliage = reader.CnFoliage(),
+                CarbonNitrogenRatioFineRoot = reader.CnFineroot(),
+                CarbonNitrogenRatioWood = reader.CnWood()
             };
-            string stampFile = reader.LipFile();
-            // load stamps
-            species.lightIntensityProfiles.Load(projectFile.GetFilePath(ProjectDirectory.LightIntensityProfile, stampFile));
-            // attach writer stamps to reader stamps
-            species.lightIntensityProfiles.AttachReaderStamps(species.SpeciesSet.ReaderStamps);
-            // if (projectFile.World.Debug.DumpStamps)
-            // {
-            //     Debug.WriteLine(species.mLightIntensityProfiles.Dump());
-            // }
 
-            // general properties
-            species.IsConiferous = reader.IsConiferous();
-            species.IsEvergreen = reader.IsEvergreen();
-
-            // setup allometries
-            species.foliageA = reader.BmFoliageA();
-            species.foliageB = reader.BmFoliageB();
-
-            species.woodyA = reader.BmWoodyA();
-            species.woodyB = reader.BmWoodyB();
-
-            species.rootA = reader.BmRootA();
-            species.rootB = reader.BmRootB();
-
-            species.branchA = reader.BmBranchA();
-            species.branchB = reader.BmBranchB();
-
-            species.SpecificLeafArea = reader.SpecificLeafArea();
-            species.FinerootFoliageRatio = reader.FinerootFoliageRatio();
-
-            species.barkFractionAtDbh = reader.BarkThickness();
-
-            // cn-ratios
-            species.CarbonNitrogenRatioFoliage = reader.CnFoliage();
-            species.CarbonNitrogenRatioFineRoot = reader.CnFineroot();
-            species.CarbonNitrogenRatioWood = reader.CnWood();
             if ((species.CarbonNitrogenRatioFineRoot <= 0.0F) || (species.CarbonNitrogenRatioFineRoot > 1000.0F) ||
                 (species.CarbonNitrogenRatioFoliage <= 0.0F) || (species.CarbonNitrogenRatioFoliage > 1000.0F) ||
                 (species.CarbonNitrogenRatioWood <= 0.0F) || (species.CarbonNitrogenRatioFoliage > 1000.0F))

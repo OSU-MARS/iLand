@@ -39,9 +39,8 @@ namespace iLand.Cmdlets
                     throw new NotSupportedException("Species light stamp file '" + speciesLightStampFiles[speciesIndex] + "' lacks a file name.");
                 }
 
-                TreeSpeciesStamps stamps = new();
-                stamps.Load(Path.Combine(this.ProjectLip, baseName + ".bin"));
-                stamps.Write(Path.Combine(this.CsvDirectory, baseName + ".csv"));
+                TreeSpeciesStamps stamps = new(Path.Combine(this.ProjectLip, baseName + ".bin"));
+                stamps.WriteToCsv(Path.Combine(this.CsvDirectory, baseName + ".csv"));
             }
 
             // reader stamps
@@ -49,9 +48,8 @@ namespace iLand.Cmdlets
             {
                 string? iLandAssemblyFilePath = Path.GetDirectoryName(typeof(TreeSpeciesSet).Assembly.Location);
                 Debug.Assert(iLandAssemblyFilePath != null);
-                TreeSpeciesStamps readerStamps = new();
-                readerStamps.Load(Path.Combine(iLandAssemblyFilePath, "readerstamp.bin"));
-                readerStamps.Write(Path.Combine(this.CsvDirectory, "readerstamp.csv"));
+                TreeSpeciesStamps readerStamps = new(Path.Combine(iLandAssemblyFilePath, "readerstamp.feather"));
+                readerStamps.WriteToCsv(Path.Combine(this.CsvDirectory, "readerstamp.csv"));
             }
         }
     }

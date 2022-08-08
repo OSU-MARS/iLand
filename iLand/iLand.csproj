@@ -32,7 +32,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="readerstamp.bin" />
+    <None Remove="readerstamp.feather" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,7 +42,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="readerstamp.bin">
+    <Content Include="readerstamp.feather">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

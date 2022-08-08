@@ -42,6 +42,11 @@ namespace iLand.Tree
 
         public TreeSpeciesSet(Project projectFile, string sqlTableName)
         {
+            // load active tree species from a database table and create/setup the species
+            string? iLandAssemblyFilePath = Path.GetDirectoryName(typeof(TreeSpeciesSet).Assembly.Location);
+            Debug.Assert(iLandAssemblyFilePath != null);
+            string readerStampFilePath = Path.Combine(iLandAssemblyFilePath, Constant.File.ReaderStampFileName);
+
             this.lightResponseShadeIntolerant = new();
             this.lightResponseShadeTolerant = new();
             this.relativeHeightModifer = new();
@@ -50,14 +55,8 @@ namespace iLand.Tree
 
             this.ActiveSpecies = new();
             this.RandomSpeciesOrder = new(); // lazy initialization
-            this.ReaderStamps = new();
+            this.ReaderStamps = new(readerStampFilePath);
             this.SqlTableName = sqlTableName;
-
-            // load active tree species from a database table and create/setup the species
-            string? iLandAssemblyFilePath = Path.GetDirectoryName(typeof(TreeSpeciesSet).Assembly.Location);
-            Debug.Assert(iLandAssemblyFilePath != null);
-            string readerStampFilePath = Path.Combine(iLandAssemblyFilePath, Constant.File.ReaderStampFileName);
-            this.ReaderStamps.Load(readerStampFilePath);
 
             string speciesDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Species.DatabaseFile);
             using SqliteConnection speciesDatabase = Landscape.GetDatabaseConnection(speciesDatabaseFilePath, openReadOnly: true);

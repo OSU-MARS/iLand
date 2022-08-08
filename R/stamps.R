@@ -11,7 +11,6 @@ theme_set(theme_bw() + theme(axis.line = element_line(size = 0.5),
                              legend.margin = margin(),
                              panel.border = element_blank()))
 
-lightStampCsvColumnTypes = cols(dbh = "d", crownRadius = "d", value = "d", .default = "i")
 lightStampArrowSchema = schema(dbh = float32(), 
                                heightDiameterRatio = uint8(),
                                crownRadius = float32(),
@@ -25,21 +24,48 @@ lightStampArrowSchema = schema(dbh = float32(),
 # compressed longform is 45% smaller than iLand C++ 1.0's uncompressed binary format and 16x smaller than .csv
 # uncompressed longform is 4.2x larger than iLand C++ 1.0
 # writing one record batch per stamp (using RecordBatchFileWriter) increases file sizes by ~4 over longform
+lightStampCsvColumnTypes = cols(dbh = "d", crownRadius = "d", value = "d", .default = "i")
 readerStamps = read_csv("R/stamps/readerstamp.csv", col_types = lightStampCsvColumnTypes)
 readerArrow = arrow_table(readerStamps, schema = lightStampArrowSchema)
 write_feather(readerArrow, "R/stamps/readerstamp.feather")
 
-for (stampDirectory in c("R/stamps/Kalkalpen", "R/stamps/Pacific Northwest"))
+for (stampDirectory in c("Kalkalpen", "Pacific Northwest"))
 {
-  for (speciesFile in list.files(stampDirectory, "*.csv"))
+  for (speciesFile in list.files(file.path("R/stamps", stampDirectory), "*.csv"))
   {
-    speciesStamps = read_csv(file.path(stampDirectory, speciesFile), col_types = lightStampCsvColumnTypes)
+    speciesStamps = read_csv(file.path("R/stamps", stampDirectory, speciesFile), col_types = lightStampCsvColumnTypes)
     speciesArrow = arrow_table(speciesStamps, schema = lightStampArrowSchema)
-    write_feather(speciesArrow, file.path(stampDirectory, paste0("uncomp", file_path_sans_ext(speciesFile), ".feather")))
+    write_feather(speciesArrow, file.path("R/stamps", stampDirectory, paste0("uncomp", file_path_sans_ext(speciesFile), ".feather")))
   }
 }
 
+## expand compressed .feather in R/stamps to uncompressed feather in unit test projects
+# Workaround for lack of compression support in Arrow 9.0.0.
+readerStamps = read_feather("R/stamps/readerstamp.feather")
+readerArrow = arrow_table(readerStamps, schema = lightStampArrowSchema)
+write_feather(readerArrow, "iLand/readerstamp.feather", compression = "uncompressed")
+
+for (stampDirectory in c("Kalkalpen", "Pacific Northwest"))
+{
+  for (speciesFile in list.files(file.path("R/stamps", stampDirectory), "*.feather"))
+  {
+    speciesStamps = read_feather(file.path("R/stamps", stampDirectory, speciesFile))
+    speciesArrow = arrow_table(speciesStamps, schema = lightStampArrowSchema)
+    
+    projectDirectory = stampDirectory
+    if (stampDirectory == "Pacific Northwest")
+    {
+      projectDirectory = "Elliott"
+    }
+    write_feather(speciesArrow, file.path("UnitTests", projectDirectory, "lip", paste0(file_path_sans_ext(speciesFile), ".feather")), compression = "uncompressed")
+  }
+}
+
+
 ## species stamp review: Pacific Northwest species plus Kalkalpen version of Douglas-fir
+# Nonzero values in stamps often form a square or nearly so, rather than being round, and most stamp intensity is on the
+# upper (+y; northern) side of the tree.
+#
 # DBH classes: stamp DBHes are set to middle of diameter class
 #   size, cm  width, cm  center DBH, cm    size, cm   width, cm  center DBH, cm
 #   <5        5          4.5                32-36     4          34
@@ -67,52 +93,78 @@ for (stampDirectory in c("R/stamps/Kalkalpen", "R/stamps/Pacific Northwest"))
 #    95-105   100       175-185   180
 #   105-115   110       185-195   190
 # iLand v0.6 stamps
-#   species  DBH, cm  height:diameter ratio
-#   abgr     4.5-150  40-150 increment 10
-#   abpr     4.5-198  40-120 increment 10
-#   acma     4.5-150  30-180 increment 10    many crown sizes are square rather than round
-#   alru     4.5-98   40-180 increment 10
-#   pipo     4.5-198  30-130 increment 10
-#   pisi     4.5-198  40-150 increment 10
-#   psme     4.5-222  30-160 increment 5     (4.5-150, 40-190 increment 10 for Kalkalpen in iLand 1.0)
-#   thpl     4.5-198  30-190 increment 10
-#   tshe     4.5-198  40-150 increment 5
-#   tsme     4.5-150  40-130 increment 10
-speciesStamps = bind_rows(read_csv("R/stamps/Pacific Northwest/abam.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "acma"),
-                          read_csv("R/stamps/Pacific Northwest/abgr.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "abgr"),
-                          read_csv("R/stamps/Pacific Northwest/abpr.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "abpr"),
-                          read_csv("R/stamps/Pacific Northwest/acma.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "acma"),
-                          read_csv("R/stamps/Pacific Northwest/alru.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "alru"),
-                          read_csv("R/stamps/Pacific Northwest/pipo.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "pipo"),
-                          read_csv("R/stamps/Pacific Northwest/pisi.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "pisi"),
-                          read_csv("R/stamps/Pacific Northwest/psme.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "psme"),
-                          read_csv("R/stamps/Kalkalpen/psme.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Kalkalpen", species = "psme"),
-                          read_csv("R/stamps/Pacific Northwest/thpl.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "thpl"),
-                          read_csv("R/stamps/Pacific Northwest/tshe.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "tshe"),
-                          read_csv("R/stamps/Pacific Northwest/tsme.csv", col_types = lightStampCsvColumnTypes) %>% mutate(site = "Pacific Northwest", species = "tsme")) %>%
+#   species  DBH, cm  height:diameter ratio  stamp sizes
+#   abam     4.5-150  40-150 increment 10     4-48
+#   abgr     4.5-150  40-150 increment 10     4-48
+#   abpr     4.5-198  40-120 increment 10     4-64
+#   acma     4.5-150  30-180 increment 10    12-48
+#   alru     4.5-98   40-180 increment 10     8-48
+#   pipo     4.5-198  30-130 increment 10     4-64
+#   pisi     4.5-198  40-150 increment 10     4-64
+#   psme     4.5-222  30-160 increment 10     4-64  (4.5-150, 40-190 increment 10 for Kalkalpen in iLand 1.0)
+#   thpl     4.5-198  30-190 increment 10     4-64
+#   tshe     4.5-198  40-150 increment 10     4-64
+#   tsme     4.5-150  40-130 increment 10     4-48
+speciesStamps = bind_rows(read_feather("R/stamps/Kalkalpen/abal.feather") %>% mutate(site = "Kalkalpen", species = "abal"),
+                          read_feather("R/stamps/Kalkalpen/acca.feather") %>% mutate(site = "Kalkalpen", species = "acca"),
+                          read_feather("R/stamps/Kalkalpen/acpl.feather") %>% mutate(site = "Kalkalpen", species = "acpl"),
+                          read_feather("R/stamps/Kalkalpen/acps.feather") %>% mutate(site = "Kalkalpen", species = "acps"),
+                          read_feather("R/stamps/Kalkalpen/algl.feather") %>% mutate(site = "Kalkalpen", species = "algl"),
+                          read_feather("R/stamps/Kalkalpen/alin.feather") %>% mutate(site = "Kalkalpen", species = "alin"),
+                          read_feather("R/stamps/Kalkalpen/alvi.feather") %>% mutate(site = "Kalkalpen", species = "alvi"),
+                          read_feather("R/stamps/Kalkalpen/bepe.feather") %>% mutate(site = "Kalkalpen", species = "bepe"),
+                          read_feather("R/stamps/Kalkalpen/cabe.feather") %>% mutate(site = "Kalkalpen", species = "cabe"),
+                          read_feather("R/stamps/Kalkalpen/casa.feather") %>% mutate(site = "Kalkalpen", species = "casa"),
+                          read_feather("R/stamps/Kalkalpen/coav.feather") %>% mutate(site = "Kalkalpen", species = "coav"),
+                          read_feather("R/stamps/Kalkalpen/fasy.feather") %>% mutate(site = "Kalkalpen", species = "fasy"),
+                          read_feather("R/stamps/Kalkalpen/frex.feather") %>% mutate(site = "Kalkalpen", species = "frex"),
+                          read_feather("R/stamps/Kalkalpen/lade.feather") %>% mutate(site = "Kalkalpen", species = "lade"),
+                          read_feather("R/stamps/Kalkalpen/piab.feather") %>% mutate(site = "Kalkalpen", species = "piab"),
+                          read_feather("R/stamps/Kalkalpen/pice.feather") %>% mutate(site = "Kalkalpen", species = "pice"),
+                          read_feather("R/stamps/Kalkalpen/pini.feather") %>% mutate(site = "Kalkalpen", species = "pini"),
+                          read_feather("R/stamps/Kalkalpen/pisy.feather") %>% mutate(site = "Kalkalpen", species = "pisy"),
+                          read_feather("R/stamps/Kalkalpen/poni.feather") %>% mutate(site = "Kalkalpen", species = "poni"),
+                          read_feather("R/stamps/Kalkalpen/potr.feather") %>% mutate(site = "Kalkalpen", species = "potr"),
+                          read_feather("R/stamps/Kalkalpen/psme.feather") %>% mutate(site = "Kalkalpen", species = "psme"),
+                          read_feather("R/stamps/Kalkalpen/qupe.feather") %>% mutate(site = "Kalkalpen", species = "qupe"),
+                          read_feather("R/stamps/Kalkalpen/qupu.feather") %>% mutate(site = "Kalkalpen", species = "qupu"),
+                          read_feather("R/stamps/Kalkalpen/quro.feather") %>% mutate(site = "Kalkalpen", species = "quro"),
+                          read_feather("R/stamps/Kalkalpen/rops.feather") %>% mutate(site = "Kalkalpen", species = "rops"),
+                          read_feather("R/stamps/Kalkalpen/saca.feather") %>% mutate(site = "Kalkalpen", species = "saca"),
+                          read_feather("R/stamps/Kalkalpen/soar.feather") %>% mutate(site = "Kalkalpen", species = "soar"),
+                          read_feather("R/stamps/Kalkalpen/soau.feather") %>% mutate(site = "Kalkalpen", species = "soau"),
+                          read_feather("R/stamps/Kalkalpen/tico.feather") %>% mutate(site = "Kalkalpen", species = "tico"),
+                          read_feather("R/stamps/Kalkalpen/tipl.feather") %>% mutate(site = "Kalkalpen", species = "tipl"),
+                          read_feather("R/stamps/Kalkalpen/ulgl.feather") %>% mutate(site = "Kalkalpen", species = "ulgl"),
+                          read_feather("R/stamps/Pacific Northwest/abam.feather") %>% mutate(site = "Pacific Northwest", species = "abam"),
+                          read_feather("R/stamps/Pacific Northwest/abgr.feather") %>% mutate(site = "Pacific Northwest", species = "abgr"),
+                          read_feather("R/stamps/Pacific Northwest/abpr.feather") %>% mutate(site = "Pacific Northwest", species = "abpr"),
+                          read_feather("R/stamps/Pacific Northwest/acma.feather") %>% mutate(site = "Pacific Northwest", species = "acma"),
+                          read_feather("R/stamps/Pacific Northwest/alru.feather") %>% mutate(site = "Pacific Northwest", species = "alru"),
+                          read_feather("R/stamps/Pacific Northwest/pipo.feather") %>% mutate(site = "Pacific Northwest", species = "pipo"),
+                          read_feather("R/stamps/Pacific Northwest/pisi.feather") %>% mutate(site = "Pacific Northwest", species = "pisi"),
+                          read_feather("R/stamps/Pacific Northwest/psme.feather") %>% mutate(site = "Pacific Northwest", species = "psme"),
+                          read_feather("R/stamps/Pacific Northwest/thpl.feather") %>% mutate(site = "Pacific Northwest", species = "thpl"),
+                          read_feather("R/stamps/Pacific Northwest/tshe.feather") %>% mutate(site = "Pacific Northwest", species = "tshe"),
+                          read_feather("R/stamps/Pacific Northwest/tsme.feather") %>% mutate(site = "Pacific Northwest", species = "tsme")) %>%
   arrange(species, site, dbh, heightDiameterRatio) %>%
   mutate(stampID = paste(site, species, dbh, heightDiameterRatio),
          stampSizeID = paste(dbh, heightDiameterRatio))
 
-speciesStamps %>% group_by(site, species) %>% summarize(dbhMin = min(dbh), dbhMax = max(dbh), hdRatioMin = min(heightDiameterRatio), hdRatioMax = max(heightDiameterRatio), sizeMin = min(size), sizeMax = max(size), stamps = length(unique(stampID)), normalizedStamps = stamps / (0.1 * (hdRatioMax - hdRatioMin) * 0.24 * (dbhMax - dbhMin)))
+print(speciesStamps %>% group_by(site, species) %>% summarize(dbhClasses = length(unique(dbh)), hdClasses = length(unique(heightDiameterRatio)), dbhMin = min(dbh), dbhMax = max(dbh), hdRatioMin = min(heightDiameterRatio), hdRatioMax = max(heightDiameterRatio), sizeMin = min(size), sizeMax = max(size), stamps = length(unique(stampID)), normalizedStamps = stamps / (0.1 * (hdRatioMax - hdRatioMin) * 0.24 * (dbhMax - dbhMin))), n = 45)
 
 # DBH-crown radius check plots
-ggplot(speciesStamps %>% filter(species != "acma")) +
-  geom_line(aes(x = dbh, y = crownRadius, color = species, group = paste(species, heightDiameterRatio))) +
-  labs(x = "DBH, cm", y = "crown radius, m", color = NULL)
-ggplot(speciesStamps %>% filter(species == "acma")) +
-  geom_abline(intercept = 0.93, slope = 0.035, color = "grey70", linetype = "longdash") +
-  geom_abline(intercept = 1.22, slope = 0.058, color = "grey70", linetype = "longdash") +
+ggplot(speciesStamps) +
   geom_line(aes(x = dbh, y = crownRadius, color = species, group = paste(species, heightDiameterRatio))) +
   labs(x = "DBH, cm", y = "crown radius, m", color = NULL)
 
 # stamp check plots
-stampSpecies = "acma"
-ggplot(speciesStamps %>% filter(species == stampSpecies, size == 4) %>% mutate(value = na_if(value, 0))) +
+stampSpecies = "tshe"
+ggplot(speciesStamps %>% filter(species == stampSpecies, size == 4) %>% mutate(value = na_if(value, 0))) + # no acma, alru
   geom_raster(aes(x = x, y = y, fill = value, group = stampID)) +
   scale_fill_viridis_c(trans = "log10") +
   facet_wrap(vars(stampSizeID))
-ggplot(speciesStamps %>% filter(species == stampSpecies, size == 8) %>% mutate(value = na_if(value, 0))) +
+ggplot(speciesStamps %>% filter(species == stampSpecies, size == 8) %>% mutate(value = na_if(value, 0))) + # no acma
   geom_raster(aes(x = x, y = y, fill = value, group = stampID)) +
   scale_fill_viridis_c(trans = "log10") +
   facet_wrap(vars(stampSizeID))
@@ -141,13 +193,9 @@ ggplot(speciesStamps %>% filter(species == stampSpecies, size == 64) %>% mutate(
   scale_fill_viridis_c(trans = "log10") +
   facet_wrap(vars(stampSizeID))
 
-ggplot(speciesStamps %>% filter(species == stampSpecies, dbh == 9.5) %>% mutate(value = na_if(value, 0))) +
-  geom_raster(aes(x = x, y = y, fill = value, group = stampID)) +
-  scale_fill_viridis_c() +
-  facet_wrap(vars(crownRadius))
 
 ## reader stamps
-readerStamps = read_csv("R/stamps/readerstamp.csv", col_types = lightStampCsvColumnTypes) %>%
+readerStamps = read_feather("R/stamps/readerstamp.feather") %>%
   mutate(stampID = paste(size, crownRadius))
 
 ggplot(readerStamps %>% filter(size == 4) %>% mutate(value = na_if(value, 0))) +
@@ -167,7 +215,29 @@ ggplot(readerStamps %>% filter(size == 16) %>% mutate(value = na_if(value, 0))) 
   scale_fill_viridis_c(trans = "log10") +
   facet_wrap(vars(crownRadius))
 
-# DBH-crown radius regressions: models for Pacific Northwest species are all of the form crownRadius = a0 + a1 * DBH
+## remove lower iLand 0.8 bigleaf maple crown radii 
+acma = read_feather("R/stamps/Pacific Northwest/acma iLand 0.8.feather")
+
+ggplot(acma) +
+  geom_abline(intercept = 0.93, slope = 0.035, color = "grey70", linetype = "longdash") +
+  geom_abline(intercept = 1.22, slope = 0.058, color = "grey70", linetype = "longdash") +
+  geom_line(aes(x = dbh, y = crownRadius, color = "acma", group = heightDiameterRatio)) +
+  labs(x = "DBH, cm", y = "crown radius, m", color = NULL)
+
+
+## remove obsolete iLand 0.8 Douglas-fir and western hemlock height:diameter ratios
+#psme = read_feather("R/stamps/Pacific Northwest/psme iLand 0.8.feather") %>%
+#  filter(heightDiameterRatio %% 10 == 0)
+#psmeArrow = arrow_table(psme, schema = lightStampArrowSchema)
+#write_feather(psmeArrow, "R/stamps/Pacific Northwest/psme.feather")
+#
+#tshe = read_feather("R/stamps/Pacific Northwest/tshe iLand 0.8.feather") %>%
+#  filter(heightDiameterRatio %% 10 == 0)
+#tsheArrow = arrow_table(tshe, schema = lightStampArrowSchema)
+#write_feather(tsheArrow, "R/stamps/Pacific Northwest/tshe.feather")
+
+
+## DBH-crown radius regressions: models for Pacific Northwest species are all of the form crownRadius = a0 + a1 * DBH
 # species  a0	           a1
 # abpr  	 1.03328	     0.040476
 # acma    (0.93, 1.22)  (0.035, 0.058) - iLand 0.6's acma.bin has stamps from two slopes

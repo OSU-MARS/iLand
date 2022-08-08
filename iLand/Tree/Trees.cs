@@ -3,7 +3,6 @@ using iLand.World;
 using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Collections.Generic;
 using Model = iLand.Simulation.Model;
 
 namespace iLand.Tree
@@ -302,7 +301,7 @@ namespace iLand.Tree
             Point stampOrigin = this.LightCellIndexXY[treeIndex];
             stampOrigin.X -= stamp.CenterCellIndex;
             stampOrigin.Y -= stamp.CenterCellIndex;
-            int stampSize = stamp.Size();
+            int stampSize = stamp.GetSizeInLightCells();
             if ((this.lightGrid.Contains(stampOrigin) == false) || (this.lightGrid.Contains(new Point(stampOrigin.X + stampSize, stampOrigin.Y + stampSize)) == false))
             {
                 throw new NotSupportedException("Light grid's buffer width is not large enough to stamp tree.");
@@ -352,7 +351,7 @@ namespace iLand.Tree
             LightStamp stamp = this.Stamp[treeIndex]!;
             Point stampOrigin = new(treePositionWithinRU.X - stamp.CenterCellIndex, treePositionWithinRU.Y - stamp.CenterCellIndex);
 
-            int stampSize = stamp.Size();
+            int stampSize = stamp.GetSizeInLightCells();
             if (this.lightGrid.Contains(stampOrigin) == false || this.lightGrid.Contains(stampOrigin.X + stampSize, stampOrigin.Y + stampSize) == false)
             {
                 // TODO: in this case we should use another algorithm!!! necessary????
@@ -393,7 +392,7 @@ namespace iLand.Tree
             // count trees that are on height-grid cells (used for stockable area)
             this.heightGrid[treeHeightCellIndexXY].AddTree(this.Height[treeIndex]);
 
-            LightStamp reader = this.Stamp[treeIndex]!.Reader!;
+            LightStamp reader = this.Stamp[treeIndex]!.ReaderStamp!;
             int center = reader.CenterCellIndex; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
             int indexEastWest = this.LightCellIndexXY[treeIndex].X % Constant.LightCellsPerHeightCellWidth; // 4: very west, 0 east edge
             int indexNorthSouth = this.LightCellIndexXY[treeIndex].Y % Constant.LightCellsPerHeightCellWidth; // 4: northern edge, 0: southern edge
@@ -475,7 +474,7 @@ namespace iLand.Tree
             HeightCell heightCell = this.heightGrid[torusX, torusY];
             heightCell.AddTree(this.Height[treeIndex]);
 
-            LightStamp reader = this.Stamp[treeIndex]!.Reader!;
+            LightStamp reader = this.Stamp[treeIndex]!.ReaderStamp!;
             int readerCenter = reader.CenterCellIndex; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
             int indexEastWest = this.LightCellIndexXY[treeIndex].X % Constant.LightCellsPerHeightCellWidth; // 4: very west, 0 east edge
             int indexNorthSouth = this.LightCellIndexXY[treeIndex].Y % Constant.LightCellsPerHeightCellWidth; // 4: northern edge, 0: southern edge
@@ -591,7 +590,7 @@ namespace iLand.Tree
           */
         public void ReadLightInfluenceField(int treeIndex)
         {
-            LightStamp reader = this.Stamp[treeIndex]!.Reader!;
+            LightStamp reader = this.Stamp[treeIndex]!.ReaderStamp!;
             Point lightCellPosition = this.LightCellIndexXY[treeIndex];
             float outsideAreaFactor = 0.1F;
 
@@ -603,7 +602,7 @@ namespace iLand.Tree
             lightCellPosition.Y -= readerOffset;
 
             float sum = 0.0F;
-            int readerSize = reader.Size();
+            int readerSize = reader.GetSizeInLightCells();
             int rx = lightCellPosition.X;
             int ry = lightCellPosition.Y;
             for (int y = 0; y < readerSize; ++y, ++ry)
@@ -650,13 +649,13 @@ namespace iLand.Tree
         /// Torus version of read stamp (glued edges)
         public void ReadLightInfluenceFieldTorus(int treeIndex, int lightBufferWidthInCells)
         {
-            LightStamp stampReader = this.Stamp[treeIndex]!.Reader!;
+            LightStamp stampReader = this.Stamp[treeIndex]!.ReaderStamp!;
             Point treePositionInRU = new((this.LightCellIndexXY[treeIndex].X - lightBufferWidthInCells) % Constant.LightCellsPerRUWidth + lightBufferWidthInCells,
                                          (this.LightCellIndexXY[treeIndex].Y - lightBufferWidthInCells) % Constant.LightCellsPerRUWidth + lightBufferWidthInCells); // offset within the ha
             Point ruOffset = new(this.LightCellIndexXY[treeIndex].X - treePositionInRU.X, this.LightCellIndexXY[treeIndex].Y - treePositionInRU.Y); // offset of the corner of the resource index
 
             float lightIndex = 0.0F;
-            int readerSize = stampReader.Size();
+            int readerSize = stampReader.GetSizeInLightCells();
             int readerOriginX = treePositionInRU.X - stampReader.CenterCellIndex;
             int readerOriginY = treePositionInRU.Y - stampReader.CenterCellIndex;
             int writerReaderOffset = this.Stamp[treeIndex]!.CenterCellIndex - stampReader.CenterCellIndex; // offset on the *stamp* to the crown (light?) cells

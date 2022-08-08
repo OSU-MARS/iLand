@@ -12,7 +12,7 @@ namespace iLand.Input.Tree
             using FileStream individualTreeStream = new(individualTreeFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, Constant.File.DefaultBufferSize);
             using ArrowFileReader individualTreeFile = new(individualTreeStream); // ArrowFileReader.IsFileValid is false until a batch is read
 
-            for (RecordBatch batch = individualTreeFile.ReadNextRecordBatch(); batch != null; batch = individualTreeFile.ReadNextRecordBatch())
+            for (RecordBatch? batch = individualTreeFile.ReadNextRecordBatch(); batch != null; batch = individualTreeFile.ReadNextRecordBatch())
             {
                 IndividualTreeArrowBatch fields = new(batch);
                 for (int treeIndex = 0; treeIndex < batch.Length; ++treeIndex)
