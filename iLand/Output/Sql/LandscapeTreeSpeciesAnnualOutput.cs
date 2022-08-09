@@ -52,8 +52,8 @@ namespace iLand.Output.Sql
         {
             if (this.filter.IsEmpty == false)
             {
-                int currentSimulationYear = model.SimulationState.CurrentYear;
-                if (this.filter.Evaluate(currentSimulationYear) == 0.0F)
+                int currentCalendarYear = model.SimulationState.CurrentCalendarYear;
+                if (this.filter.Evaluate(currentCalendarYear) == 0.0F)
                 {
                     return;
                 }
@@ -75,7 +75,7 @@ namespace iLand.Output.Sql
                     // tree volume. the current "GWL" therefore is current volume (standing) + mRemovedGrowth.
                     // important: statisticsDead() and statisticsMgmt() need to calculate() before -> volume() is already scaled to ha
                     float totalStemVolumeInM3PerHa = ruLiveTreeStatisticsForSpecies.StemVolumeInM3PerHa + ruSpecies.StatisticsManagement.StemVolumeInM3PerHa + ruSpecies.StatisticsSnag.StemVolumeInM3PerHa;
-                    if ((ruLiveTreeStatisticsForSpecies.TreesPerHa == 0.0F) && (ruLiveTreeStatisticsForSpecies.CohortsPerHa == 0.0F) && (totalStemVolumeInM3PerHa == 0.0F))
+                    if ((ruLiveTreeStatisticsForSpecies.TreesPerHa == 0.0F) && (ruLiveTreeStatisticsForSpecies.SaplingCohortsPerHa == 0.0F) && (totalStemVolumeInM3PerHa == 0.0F))
                     {
                         continue;
                     }
@@ -98,7 +98,7 @@ namespace iLand.Output.Sql
                     speciesStats.ConvertIncrementalSumsToAreaWeightedAverages();
                 }
 
-                insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                 insertRow.Parameters[1].Value = species.Key; // keys: year, species
                 insertRow.Parameters[2].Value = speciesStats.TreeCount;
                 insertRow.Parameters[3].Value = speciesStats.AverageDbh;

@@ -43,8 +43,8 @@ namespace iLand.Output.Sql
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             // global condition
-            int currentSimulationYear = model.SimulationState.CurrentYear;
-            if ((this.yearFilter.IsEmpty == false) && (yearFilter.Evaluate(currentSimulationYear) == 0.0))
+            int currentCalendarYear = model.SimulationState.CurrentCalendarYear;
+            if ((this.yearFilter.IsEmpty == false) && (yearFilter.Evaluate(currentCalendarYear) == 0.0F))
             {
                 return;
             }
@@ -67,13 +67,13 @@ namespace iLand.Output.Sql
                 {
                     Debug.Assert(this.resourceUnitFilter.Wrapper != null);
                     ((ResourceUnitVariableAccessor)this.resourceUnitFilter.Wrapper).ResourceUnit = resourceUnit;
-                    logResourceUnit = this.resourceUnitFilter.Evaluate(currentSimulationYear) != 0.0F;
+                    logResourceUnit = this.resourceUnitFilter.Evaluate(currentCalendarYear) != 0.0F;
                 }
 
                 WaterCycle waterCycle = resourceUnit.WaterCycle;
                 if (logResourceUnit)
                 {
-                    insertRow.Parameters[0].Value = currentSimulationYear;
+                    insertRow.Parameters[0].Value = currentCalendarYear;
                     insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = resourceUnit.ID;
                     insertRow.Parameters[3].Value = resourceUnit.AreaWithTreesInM2 / Constant.ResourceUnitAreaInM2;
@@ -103,7 +103,7 @@ namespace iLand.Output.Sql
             {
                 return;
             }
-            insertRow.Parameters[0].Value = currentSimulationYear; // codes -1/-1 for landscape level
+            insertRow.Parameters[0].Value = currentCalendarYear; // codes -1/-1 for landscape level
             insertRow.Parameters[1].Value = -1; // resource unit grid index
             insertRow.Parameters[2].Value = -1; // resource unit ID
             insertRow.Parameters[3].Value = stockedAreaInM2 / (Constant.ResourceUnitAreaInM2 * resourceUnitCount);

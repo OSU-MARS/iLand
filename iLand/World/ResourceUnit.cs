@@ -298,7 +298,7 @@ namespace iLand.World
             for (int species = 0; species < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++species)
             {
                 ResourceUnitTreeSpecies ruSpecies = this.Trees.SpeciesAvailableOnResourceUnit[species];
-                ruSpecies.SaplingStats.AfterSaplingGrowth(model, this, ruSpecies.Species);
+                ruSpecies.SaplingStats.AfterSaplingGrowth(this, ruSpecies.Species);
                 ruSpecies.StatisticsLive.Add(ruSpecies.SaplingStats);
                 // TODO: how to include saplings in stand statistics?
             }

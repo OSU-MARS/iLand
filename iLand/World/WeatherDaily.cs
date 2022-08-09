@@ -1,7 +1,7 @@
-﻿using iLand.Input;
+﻿using iLand.Extensions;
+using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Input.Weather;
-using iLand.Tool;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -44,7 +44,7 @@ namespace iLand.World
                 {
                     // random without list
                     // make sure that the sequence of years is the same for the full landscape
-                    int currentSimulationYear = model.SimulationState.CurrentYear;
+                    int currentSimulationYear = model.SimulationState.CurrentCalendarYear - model.Landscape.WeatherFirstCalendarYear + 1;
                     if (this.SampledYears.Count < currentSimulationYear)
                     {
                         while (this.SampledYears.Count - 1 < currentSimulationYear)

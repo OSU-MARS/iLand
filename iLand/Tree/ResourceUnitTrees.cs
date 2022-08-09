@@ -360,15 +360,6 @@ namespace iLand.Tree
                 }
             }
 
-            // summarize statistics for the whole resource unit
-            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
-            {
-                ruSpecies.SaplingStats.AverageAgeAndHeights();
-                ruSpecies.StatisticsLive.Add(ruSpecies.SaplingStats);
-                ruSpecies.StatisticsLive.OnAdditionsComplete();
-                this.TreeAndSaplingStatisticsForAllSpecies.Add(ruSpecies.StatisticsLive);
-            }
-            this.TreeAndSaplingStatisticsForAllSpecies.OnAdditionsComplete();
             this.AverageAging();
         }
     }

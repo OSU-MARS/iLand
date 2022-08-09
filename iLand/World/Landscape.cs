@@ -15,8 +15,6 @@ namespace iLand.World
 {
     public class Landscape
     {
-        public Dictionary<string, Weather> WeatherByID { get; private init; }
-
         public GrassCover GrassCover { get; private init; }
         public Grid<float> LightGrid { get; private init; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
         public Grid<HeightCell> HeightGrid { get; private init; } // stores maximum heights of trees and some flags (currently 10x10m)
@@ -28,6 +26,8 @@ namespace iLand.World
         public GridRaster10m StandRaster { get; private init; } // retrieve the spatial grid that defines the stands (10m resolution)
 
         public float TotalStockableHectares { get; private set; } // total stockable area of the landscape (ha)
+        public Dictionary<string, Weather> WeatherByID { get; private init; }
+        public int WeatherFirstCalendarYear { get; private init; }
 
         public Landscape(Project projectFile)
         {
@@ -41,7 +41,6 @@ namespace iLand.World
                 throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + projectFile.World.Geometry.BufferWidth + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.HeightCellSizeInM + " m).");
             }
 
-            this.WeatherByID = new();
             // this.Extent is set below
             this.GrassCover = new();
             // this.LightGrid is set below
@@ -51,6 +50,8 @@ namespace iLand.World
             this.SpeciesSetsByTableName = new();
             this.StandRaster = new();
             // this.TotalStockableHectares is set in this.CalculateStockableArea()
+            this.WeatherByID = new();
+            this.WeatherFirstCalendarYear = Constant.NoDataInt32;
 
             // populate grids: resource units, height, and light (resource units have also a sapling grid)
             // The simulation area covered by the model is set to the minimum area encompassing all defined resource units as this
@@ -162,6 +163,16 @@ namespace iLand.World
                         weather = new WeatherDaily(weatherFilePath, weatherID, projectFile);
                     }
                     this.WeatherByID.Add(weatherID, weather);
+
+                    int firstCalendarYearInWeatherTimeSeries = weather.TimeSeries.Year[0];
+                    if (this.WeatherFirstCalendarYear == Constant.NoDataInt32)
+                    {
+                        this.WeatherFirstCalendarYear = firstCalendarYearInWeatherTimeSeries;
+                    }
+                    else if (this.WeatherFirstCalendarYear != firstCalendarYearInWeatherTimeSeries)
+                    {
+                        throw new NotSupportedException("Weather time series '" + weatherID + "' begins in calendar year " + firstCalendarYearInWeatherTimeSeries + ", which does not match other weather time series beginning in " + this.WeatherFirstCalendarYear + ".");
+                    }
                 }
                 if (this.SpeciesSetsByTableName.TryGetValue(environment.SpeciesTableName, out TreeSpeciesSet? treeSpeciesSet) == false)
                 {

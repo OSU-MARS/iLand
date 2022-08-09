@@ -10,26 +10,20 @@ namespace iLand.Tool
     {
         // buffer undergoes thread safe refill when end is reached
         private readonly int[] buffer;
-        private int bufferPosition = 0;
+        private int bufferPosition;
         private readonly Random pseudorandom;
 
-        public RandomGenerator(bool mersenneTwister, int? seed)
+        public RandomGenerator(bool mersenneTwister)
+            : this(mersenneTwister, RandomNumberGenerator.GetInt32(Int32.MaxValue))
         {
-            this.buffer = new int[10 * 1024];
-            this.bufferPosition = 0;
+        }
 
-            if (seed.HasValue == false)
-            {
-                seed = RandomNumberGenerator.GetInt32(Int32.MaxValue);
-            }
-            if (mersenneTwister)
-            {
-                this.pseudorandom = MT64Random.Create(buffer[^1]);
-            }
-            else
-            {
-                this.pseudorandom = new(seed.Value);
-            }
+        public RandomGenerator(bool mersenneTwister, int seed)
+        {
+            this.buffer = new int[10 * 1024]; // 10 kB
+            this.bufferPosition = 0;
+            this.pseudorandom = mersenneTwister ? MT64Random.Create(seed) : new Random(seed);
+
             this.RefillBuffer();
         }
 

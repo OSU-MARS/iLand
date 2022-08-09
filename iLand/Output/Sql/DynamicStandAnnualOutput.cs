@@ -120,8 +120,8 @@ namespace iLand.Output.Sql
             }
             if (this.yearFilter.IsEmpty == false)
             {
-                int currentSimulationYear = model.SimulationState.CurrentYear;
-                if (this.yearFilter.Evaluate(currentSimulationYear) != 0.0F)
+                int currentCalendarYear = model.SimulationState.CurrentCalendarYear;
+                if (this.yearFilter.Evaluate(currentCalendarYear) != 0.0F)
                 {
                     return;
                 }
@@ -200,7 +200,7 @@ namespace iLand.Output.Sql
                     // constant values (if not already present)
                     if (columnIndex == 0)
                     {
-                        insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                        insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                         insertRow.Parameters[1].Value = -1;
                         insertRow.Parameters[2].Value = -1;
                         if (logBySpecies)
@@ -336,7 +336,7 @@ namespace iLand.Output.Sql
 
                         if (columnIndex == 0)
                         {
-                            insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                            insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                             insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
                             insertRow.Parameters[2].Value = resourceUnit.ID;
                             if (bySpecies)

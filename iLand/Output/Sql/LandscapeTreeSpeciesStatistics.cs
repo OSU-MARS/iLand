@@ -36,7 +36,7 @@ namespace iLand.Output.Sql
             this.AverageDbh += ruLiveTreeStatisticsForSpecies.AverageDbhInCm * ruAreaInLandscape;
             this.AverageHeight += ruLiveTreeStatisticsForSpecies.AverageHeightInM * ruAreaInLandscape;
             this.BasalArea += ruLiveTreeStatisticsForSpecies.BasalAreaInM2PerHa * ruAreaInLandscape;
-            this.CohortCount += ruLiveTreeStatisticsForSpecies.CohortsPerHa * ruAreaInLandscape;
+            this.CohortCount += ruLiveTreeStatisticsForSpecies.SaplingCohortsPerHa * ruAreaInLandscape;
             this.LeafAreaIndex += ruLiveTreeStatisticsForSpecies.TotalLeafAreaInM2;
             this.LiveStandingAndRemovedStemVolume += totalStemVolumeInM3PerHa * ruAreaInLandscape;
             this.LiveStandingStemVolume += ruLiveTreeStatisticsForSpecies.StemVolumeInM3PerHa * ruAreaInLandscape;

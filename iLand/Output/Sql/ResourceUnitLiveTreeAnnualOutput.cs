@@ -54,7 +54,7 @@ namespace iLand.Output.Sql
         {
             if (this.yearFilter.IsEmpty == false)
             {
-                if (this.yearFilter.Evaluate(model.SimulationState.CurrentYear) == 0.0)
+                if (this.yearFilter.Evaluate(model.SimulationState.CurrentCalendarYear) == 0.0F)
                 {
                     return;
                 }
@@ -65,12 +65,12 @@ namespace iLand.Output.Sql
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     ResourceUnitTreeSpeciesStatistics ruLiveTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
-                    if ((ruLiveTreeStatisticsForSpecies.TreesPerHa == 0.0F) && (ruLiveTreeStatisticsForSpecies.CohortsPerHa == 0.0F))
+                    if ((ruLiveTreeStatisticsForSpecies.TreesPerHa == 0.0F) && (ruLiveTreeStatisticsForSpecies.SaplingCohortsPerHa == 0.0F))
                     {
                         continue;
                     }
 
-                    insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                    insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                     insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = resourceUnit.ID;
                     insertRow.Parameters[3].Value = ruSpecies.Species.ID;
@@ -87,7 +87,7 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[12].Value = ruLiveTreeStatisticsForSpecies.TreeNppPerHa;
                     insertRow.Parameters[13].Value = ruLiveTreeStatisticsForSpecies.TreeNppPerHaAboveground;
                     insertRow.Parameters[14].Value = ruLiveTreeStatisticsForSpecies.LeafAreaIndex;
-                    insertRow.Parameters[15].Value = ruLiveTreeStatisticsForSpecies.CohortsPerHa;
+                    insertRow.Parameters[15].Value = ruLiveTreeStatisticsForSpecies.SaplingCohortsPerHa;
                     insertRow.ExecuteNonQuery();
                 }
             }

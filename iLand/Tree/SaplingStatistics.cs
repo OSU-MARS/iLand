@@ -37,13 +37,9 @@ namespace iLand.Tree
             this.sumDeadDbhInCm += dbhInCm; 
         }
 
-        public void AfterSaplingGrowth(Model model, ResourceUnit resourceUnit, TreeSpecies species)
+        public void AfterSaplingGrowth(ResourceUnit resourceUnit, TreeSpecies species)
         {
             this.AverageAgeAndHeights();
-            if (model.SimulationState.CurrentYear == 0)
-            {
-                return; // no need for carbon flows in initial year
-            }
 
             // calculate carbon balance
             CarbonNitrogenTuple previousCarbonLiving = this.CarbonNitrogenLiving;

@@ -81,7 +81,7 @@ namespace iLand.Output.Sql
                 Trees trees = removedTreesOfSpecies.Trees;
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
-                    insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                    insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                     insertRow.Parameters[1].Value = trees.ResourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = trees.ResourceUnit.ID;
                     insertRow.Parameters[3].Value = trees.Species.ID;

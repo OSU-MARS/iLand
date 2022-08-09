@@ -58,7 +58,7 @@
         /// add biomass with a specific 'CNRatio' and 'parameter_value'
         public void AddBiomass(float biomass, float cnRatio, float decompositionRate)
         {
-            if (biomass == 0.0)
+            if (biomass == 0.0F)
             {
                 return;
             }

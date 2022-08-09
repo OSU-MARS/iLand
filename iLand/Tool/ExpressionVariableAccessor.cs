@@ -38,7 +38,7 @@ namespace iLand.Tool
                 {
                     throw new NotSupportedException("Attempt to obtain current year from wrapper but Model was not specified.");
                 }
-                return this.SimulationState.CurrentYear;
+                return this.SimulationState.CurrentCalendarYear;
             }
 
             throw new NotSupportedException("Unhandled variable index " + variableIndex + ".");

@@ -2,11 +2,12 @@
 {
     public class SimulationState
     {
-        public int CurrentYear { get; set; }
+        public int CurrentCalendarYear { get; set; }
 
-        public SimulationState()
+        public SimulationState(int initialCalendarYear)
         {
-            this.CurrentYear = 0; // set to zero so outputs with initial state start logging at year 0 (first log pulse is at end of this constructor)
+            // set to initial year so outputs with initial state start log it at the calendar year when the model was initialized
+            this.CurrentCalendarYear = initialCalendarYear;
         }
     }
 }

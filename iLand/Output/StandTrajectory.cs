@@ -19,5 +19,10 @@ namespace iLand.Output
             }
             base.AddYear(standTreeStatistics);
         }
+
+        public override int GetID()
+        {
+            return this.StandID;
+        }
     }
 }

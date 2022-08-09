@@ -112,8 +112,8 @@ namespace iLand.Test
                     Assert.IsTrue(actualTrajectory.TreeNppByYear[simulationYear] == 0.0F);
                     float treeCount = actualTrajectory.TreesPerHectareByYear[simulationYear];
                     Assert.IsTrue((treeCount >= 0.0F) && (treeCount <= maximumTreeCount));
-                    Assert.IsTrue(actualTrajectory.CohortsPerHectareByYear[simulationYear] == 0);
-                    Assert.IsTrue(actualTrajectory.MeanSaplingAgeByYear[simulationYear] == 0.0F);
+                    Assert.IsTrue(actualTrajectory.SaplingCohortsPerHectareByYear[simulationYear] == 0);
+                    Assert.IsTrue(actualTrajectory.SaplingMeanAgeByYear[simulationYear] == 0.0F);
                     Assert.IsTrue(actualTrajectory.SaplingNppByYear[simulationYear] == 0.0F);
 
                     Assert.IsTrue(actualTrajectory.BranchCarbonByYear[simulationYear] > 0.0F);
@@ -146,7 +146,7 @@ namespace iLand.Test
                     Assert.IsTrue(actualTrajectory.TreeNppAbovegroundByYear[simulationYear] > treeNppMultiplier * actualTrajectory.TreeNppAbovegroundByYear[previousYear]);
                     Assert.IsTrue(actualTrajectory.TreeNppByYear[simulationYear] > treeNppMultiplier * actualTrajectory.TreeNppByYear[previousYear]);
 
-                    Assert.IsTrue(actualTrajectory.MeanSaplingAgeByYear[simulationYear] == 0.0F); // regeneration not enabled
+                    Assert.IsTrue(actualTrajectory.SaplingMeanAgeByYear[simulationYear] == 0.0F); // regeneration not enabled
                     Assert.IsTrue(actualTrajectory.RegenerationCarbonByYear[simulationYear] == 0.0F);
                     Assert.IsTrue(actualTrajectory.RegenerationNitrogenByYear[simulationYear] == 0.0F);
                     Assert.IsTrue(actualTrajectory.SaplingNppByYear[simulationYear] == 0.0F); // regeneration not enabled
@@ -156,7 +156,7 @@ namespace iLand.Test
                     Assert.IsTrue(actualTrajectory.BranchNitrogenByYear[simulationYear] > growthMultiplier * actualTrajectory.BranchNitrogenByYear[previousYear]);
                     Assert.IsTrue(actualTrajectory.CoarseRootCarbonByYear[simulationYear] > growthMultiplier * actualTrajectory.CoarseRootCarbonByYear[previousYear]);
                     Assert.IsTrue(actualTrajectory.CoarseRootNitrogenByYear[simulationYear] > growthMultiplier * actualTrajectory.CoarseRootNitrogenByYear[previousYear]);
-                    Assert.IsTrue(actualTrajectory.CohortsPerHectareByYear[simulationYear] == 0); // no saplings at initialization and regeneration not enabled
+                    Assert.IsTrue(actualTrajectory.SaplingCohortsPerHectareByYear[simulationYear] == 0); // no saplings at initialization and regeneration not enabled
                     Assert.IsTrue(actualTrajectory.FineRootCarbonByYear[simulationYear] > growthMultiplier * actualTrajectory.FineRootCarbonByYear[previousYear]);
                     Assert.IsTrue(actualTrajectory.FineRootNitrogenByYear[simulationYear] > growthMultiplier * actualTrajectory.FineRootNitrogenByYear[previousYear]);
                     Assert.IsTrue(actualTrajectory.FoliageCarbonByYear[simulationYear] > growthMultiplier * actualTrajectory.FoliageCarbonByYear[previousYear]);

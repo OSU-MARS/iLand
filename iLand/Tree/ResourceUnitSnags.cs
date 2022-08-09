@@ -1,7 +1,7 @@
-﻿using iLand.Input;
+﻿using iLand.Extensions;
+using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Input.Weather;
-using iLand.Tool;
 using iLand.World;
 using System;
 using System.Diagnostics;
@@ -136,7 +136,7 @@ namespace iLand.Tree
 
         public bool HasNoCarbon()
         {
-            return this.LabileFlux.HasNoCarbon() && this.RefractoryFlux.HasNoCarbon() && (this.StandingAndDebrisCarbon == 0.0);
+            return this.LabileFlux.HasNoCarbon() && this.RefractoryFlux.HasNoCarbon() && (this.StandingAndDebrisCarbon == 0.0F);
         }
 
         /// a tree dies and the biomass of the tree is split between snags/soils/removals

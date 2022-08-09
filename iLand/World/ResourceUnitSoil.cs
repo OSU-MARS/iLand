@@ -121,7 +121,7 @@ namespace iLand.World
         public void CalculateYear()
         {
             // checks
-            if (this.ClimateDecompositionFactor == 0.0)
+            if (this.ClimateDecompositionFactor == 0.0F)
             {
                 throw new NotSupportedException("Climate decomposition factor is zero for resource unit " + ResourceUnit.ResourceUnitGridIndex + ".");
             }

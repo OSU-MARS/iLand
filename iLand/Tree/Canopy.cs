@@ -53,7 +53,7 @@ namespace iLand.Tree
             {
                 return 0.0F;
             }
-            if (this.laiTotal == 0.0)
+            if (this.laiTotal == 0.0F)
             {
                 return totalTimestepPrecipitationInMM;
             }

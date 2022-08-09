@@ -18,5 +18,10 @@ namespace iLand.Output
             ResourceUnitTreeStatistics endOfYearResourceUnitTreeStatistics = this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies;
             this.AddYear(endOfYearResourceUnitTreeStatistics);
         }
+
+        public override int GetID()
+        {
+            return this.ResourceUnit.ID;
+        }
     }
 }

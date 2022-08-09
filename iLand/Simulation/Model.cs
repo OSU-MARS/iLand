@@ -5,7 +5,6 @@ using iLand.World;
 using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Security.Cryptography;
 
 namespace iLand.Simulation
 {
@@ -27,9 +26,15 @@ namespace iLand.Simulation
         public Model(Project projectFile)
         {
             this.isDisposed = false;
-            // if a random seed is specified in the project file use it to produce an always an equal sequence of random numbers
-            int seed = projectFile.Model.Settings.RandomSeed == null ? RandomNumberGenerator.GetInt32(Int32.MinValue, Int32.MaxValue) : projectFile.Model.Settings.RandomSeed.Value;
-            this.RandomGenerator = new(mersenneTwister: true, seed);
+            if (projectFile.Model.Settings.RandomSeed.HasValue)
+            {
+                this.RandomGenerator = new(mersenneTwister: true, projectFile.Model.Settings.RandomSeed.Value);
+            }
+            else
+            {
+                // if a random seed is null, RandomGenerator..ctor() generates one
+                this.RandomGenerator = new(mersenneTwister: true);
+            }
 
             this.Landscape = new(projectFile);
             this.Management = null;
@@ -38,7 +43,7 @@ namespace iLand.Simulation
             // construction of this.Output is deferred until trees have been loaded onto resource units
             this.Project = projectFile;
             this.ScheduledEvents = null;
-            this.SimulationState = new();
+            this.SimulationState = new(this.Landscape.WeatherFirstCalendarYear - 1);
 
             if (projectFile.World.Geometry.IsTorus && (this.Landscape.ResourceUnits.Count != 1))
             {
@@ -99,6 +104,7 @@ namespace iLand.Simulation
             this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
             {
                 resourceUnit.SetupTreesAndSaplings(this.Landscape);
+                resourceUnit.OnEndYear(); // call OnEndYear() to finalize initial resource unit and, if present, and stand statistics for logging
             });
 
             // log initial state in year zero
@@ -121,7 +127,7 @@ namespace iLand.Simulation
           */
         public void RunYear() // run a single year
         {
-            ++this.SimulationState.CurrentYear;
+            ++this.SimulationState.CurrentCalendarYear;
 
             //this.GlobalSettings.SystemStatistics.Reset();
             // initalization at start of year for external modules

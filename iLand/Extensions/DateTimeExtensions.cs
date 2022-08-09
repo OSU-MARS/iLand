@@ -1,4 +1,4 @@
-﻿namespace iLand.Tool
+﻿namespace iLand.Extensions
 {
     public static class DateTimeExtensions
     {

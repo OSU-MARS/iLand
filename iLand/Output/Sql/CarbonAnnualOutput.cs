@@ -68,15 +68,15 @@ namespace iLand.Output.Sql
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
             // global condition
-            int currentSimulationYear = model.SimulationState.CurrentYear;
-            if ((this.yearFilter.IsEmpty == false) && (this.yearFilter.Evaluate(currentSimulationYear) == 0.0))
+            int currentCalendarYear = model.SimulationState.CurrentCalendarYear;
+            if ((this.yearFilter.IsEmpty == false) && (this.yearFilter.Evaluate(currentCalendarYear) == 0.0F))
             {
                 return;
             }
 
             bool logResourceUnitDetails = true;
             // switch off details if this is indicated in the conditionRU option
-            if ((this.resourceUnitFilter.IsEmpty == false) && (this.resourceUnitFilter.Evaluate(currentSimulationYear) == 0.0))
+            if ((this.resourceUnitFilter.IsEmpty == false) && (this.resourceUnitFilter.Evaluate(currentCalendarYear) == 0.0F))
             {
                 logResourceUnitDetails = false;
             }
@@ -94,7 +94,7 @@ namespace iLand.Output.Sql
                 float areaFactor = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2; // conversion factor from real area to per ha values
                 if (logResourceUnitDetails)
                 {
-                    insertRow.Parameters[0].Value = currentSimulationYear;
+                    insertRow.Parameters[0].Value = currentCalendarYear;
                     insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = resourceUnit.ID;
                     insertRow.Parameters[3].Value = areaFactor;
@@ -185,7 +185,7 @@ namespace iLand.Output.Sql
 
             // write landscape sums
             float totalStockableArea = accumulatedValues[0]; // convert to ha of stockable area
-            insertRow.Parameters[0].Value = currentSimulationYear;
+            insertRow.Parameters[0].Value = currentCalendarYear;
             insertRow.Parameters[1].Value = -1;
             insertRow.Parameters[2].Value = -1; // keys
             insertRow.Parameters[3].Value = accumulatedValues[0]; // stockable area [m2]

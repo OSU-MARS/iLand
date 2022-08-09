@@ -69,11 +69,11 @@ namespace iLand.World
                 case 11: 
                     return this.ResourceUnit.Trees.AverageLeafAreaWeightedAgingFactor;
                 case 12: 
-                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.CohortsPerHa;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.SaplingCohortsPerHa;
                 case 13: 
                     return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.SaplingsPerHa;
                 case 14: 
-                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.MeanSaplingAgeInYears;
+                    return this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.SaplingMeanAgeInYears;
                 case 15:
                     return this.ResourceUnit.WaterCycle.CanopyConductance;
                 // soil C + soil N

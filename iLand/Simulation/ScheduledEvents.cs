@@ -43,8 +43,8 @@ namespace iLand.Simulation
 
         public void RunYear(Model model)
         {
-            int currentSimulationYear = model.SimulationState.CurrentYear;
-            if (eventsByYear.TryGetValue(currentSimulationYear, out List<(string Name, string Value)>? eventsOfYear) == false)
+            int currentCalendarYear = model.SimulationState.CurrentCalendarYear;
+            if (eventsByYear.TryGetValue(currentCalendarYear, out List<(string Name, string Value)>? eventsOfYear) == false)
             {
                 return;
             }

@@ -27,7 +27,7 @@ lightStampArrowSchema = schema(dbh = float32(),
 lightStampCsvColumnTypes = cols(dbh = "d", crownRadius = "d", value = "d", .default = "i")
 readerStamps = read_csv("R/stamps/readerstamp.csv", col_types = lightStampCsvColumnTypes)
 readerArrow = arrow_table(readerStamps, schema = lightStampArrowSchema)
-write_feather(readerArrow, "R/stamps/readerstamp.feather")
+write_feather(readerArrow, "R/stamps/readerstamp.feather", mmap = FALSE)
 
 for (stampDirectory in c("Kalkalpen", "Pacific Northwest"))
 {
@@ -41,7 +41,7 @@ for (stampDirectory in c("Kalkalpen", "Pacific Northwest"))
 
 ## expand compressed .feather in R/stamps to uncompressed feather in unit test projects
 # Workaround for lack of compression support in Arrow 9.0.0.
-readerStamps = read_feather("R/stamps/readerstamp.feather")
+readerStamps = read_feather("R/stamps/readerstamp.feather", mmap = FALSE)
 readerArrow = arrow_table(readerStamps, schema = lightStampArrowSchema)
 write_feather(readerArrow, "iLand/readerstamp.feather", compression = "uncompressed")
 
@@ -105,48 +105,48 @@ for (stampDirectory in c("Kalkalpen", "Pacific Northwest"))
 #   thpl     4.5-198  30-190 increment 10     4-64
 #   tshe     4.5-198  40-150 increment 10     4-64
 #   tsme     4.5-150  40-130 increment 10     4-48
-speciesStamps = bind_rows(read_feather("R/stamps/Kalkalpen/abal.feather") %>% mutate(site = "Kalkalpen", species = "abal"),
-                          read_feather("R/stamps/Kalkalpen/acca.feather") %>% mutate(site = "Kalkalpen", species = "acca"),
-                          read_feather("R/stamps/Kalkalpen/acpl.feather") %>% mutate(site = "Kalkalpen", species = "acpl"),
-                          read_feather("R/stamps/Kalkalpen/acps.feather") %>% mutate(site = "Kalkalpen", species = "acps"),
-                          read_feather("R/stamps/Kalkalpen/algl.feather") %>% mutate(site = "Kalkalpen", species = "algl"),
-                          read_feather("R/stamps/Kalkalpen/alin.feather") %>% mutate(site = "Kalkalpen", species = "alin"),
-                          read_feather("R/stamps/Kalkalpen/alvi.feather") %>% mutate(site = "Kalkalpen", species = "alvi"),
-                          read_feather("R/stamps/Kalkalpen/bepe.feather") %>% mutate(site = "Kalkalpen", species = "bepe"),
-                          read_feather("R/stamps/Kalkalpen/cabe.feather") %>% mutate(site = "Kalkalpen", species = "cabe"),
-                          read_feather("R/stamps/Kalkalpen/casa.feather") %>% mutate(site = "Kalkalpen", species = "casa"),
-                          read_feather("R/stamps/Kalkalpen/coav.feather") %>% mutate(site = "Kalkalpen", species = "coav"),
-                          read_feather("R/stamps/Kalkalpen/fasy.feather") %>% mutate(site = "Kalkalpen", species = "fasy"),
-                          read_feather("R/stamps/Kalkalpen/frex.feather") %>% mutate(site = "Kalkalpen", species = "frex"),
-                          read_feather("R/stamps/Kalkalpen/lade.feather") %>% mutate(site = "Kalkalpen", species = "lade"),
-                          read_feather("R/stamps/Kalkalpen/piab.feather") %>% mutate(site = "Kalkalpen", species = "piab"),
-                          read_feather("R/stamps/Kalkalpen/pice.feather") %>% mutate(site = "Kalkalpen", species = "pice"),
-                          read_feather("R/stamps/Kalkalpen/pini.feather") %>% mutate(site = "Kalkalpen", species = "pini"),
-                          read_feather("R/stamps/Kalkalpen/pisy.feather") %>% mutate(site = "Kalkalpen", species = "pisy"),
-                          read_feather("R/stamps/Kalkalpen/poni.feather") %>% mutate(site = "Kalkalpen", species = "poni"),
-                          read_feather("R/stamps/Kalkalpen/potr.feather") %>% mutate(site = "Kalkalpen", species = "potr"),
-                          read_feather("R/stamps/Kalkalpen/psme.feather") %>% mutate(site = "Kalkalpen", species = "psme"),
-                          read_feather("R/stamps/Kalkalpen/qupe.feather") %>% mutate(site = "Kalkalpen", species = "qupe"),
-                          read_feather("R/stamps/Kalkalpen/qupu.feather") %>% mutate(site = "Kalkalpen", species = "qupu"),
-                          read_feather("R/stamps/Kalkalpen/quro.feather") %>% mutate(site = "Kalkalpen", species = "quro"),
-                          read_feather("R/stamps/Kalkalpen/rops.feather") %>% mutate(site = "Kalkalpen", species = "rops"),
-                          read_feather("R/stamps/Kalkalpen/saca.feather") %>% mutate(site = "Kalkalpen", species = "saca"),
-                          read_feather("R/stamps/Kalkalpen/soar.feather") %>% mutate(site = "Kalkalpen", species = "soar"),
-                          read_feather("R/stamps/Kalkalpen/soau.feather") %>% mutate(site = "Kalkalpen", species = "soau"),
-                          read_feather("R/stamps/Kalkalpen/tico.feather") %>% mutate(site = "Kalkalpen", species = "tico"),
-                          read_feather("R/stamps/Kalkalpen/tipl.feather") %>% mutate(site = "Kalkalpen", species = "tipl"),
-                          read_feather("R/stamps/Kalkalpen/ulgl.feather") %>% mutate(site = "Kalkalpen", species = "ulgl"),
-                          read_feather("R/stamps/Pacific Northwest/abam.feather") %>% mutate(site = "Pacific Northwest", species = "abam"),
-                          read_feather("R/stamps/Pacific Northwest/abgr.feather") %>% mutate(site = "Pacific Northwest", species = "abgr"),
-                          read_feather("R/stamps/Pacific Northwest/abpr.feather") %>% mutate(site = "Pacific Northwest", species = "abpr"),
-                          read_feather("R/stamps/Pacific Northwest/acma.feather") %>% mutate(site = "Pacific Northwest", species = "acma"),
-                          read_feather("R/stamps/Pacific Northwest/alru.feather") %>% mutate(site = "Pacific Northwest", species = "alru"),
-                          read_feather("R/stamps/Pacific Northwest/pipo.feather") %>% mutate(site = "Pacific Northwest", species = "pipo"),
-                          read_feather("R/stamps/Pacific Northwest/pisi.feather") %>% mutate(site = "Pacific Northwest", species = "pisi"),
-                          read_feather("R/stamps/Pacific Northwest/psme.feather") %>% mutate(site = "Pacific Northwest", species = "psme"),
-                          read_feather("R/stamps/Pacific Northwest/thpl.feather") %>% mutate(site = "Pacific Northwest", species = "thpl"),
-                          read_feather("R/stamps/Pacific Northwest/tshe.feather") %>% mutate(site = "Pacific Northwest", species = "tshe"),
-                          read_feather("R/stamps/Pacific Northwest/tsme.feather") %>% mutate(site = "Pacific Northwest", species = "tsme")) %>%
+speciesStamps = bind_rows(read_feather("R/stamps/Kalkalpen/abal.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "abal"),
+                          read_feather("R/stamps/Kalkalpen/acca.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "acca"),
+                          read_feather("R/stamps/Kalkalpen/acpl.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "acpl"),
+                          read_feather("R/stamps/Kalkalpen/acps.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "acps"),
+                          read_feather("R/stamps/Kalkalpen/algl.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "algl"),
+                          read_feather("R/stamps/Kalkalpen/alin.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "alin"),
+                          read_feather("R/stamps/Kalkalpen/alvi.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "alvi"),
+                          read_feather("R/stamps/Kalkalpen/bepe.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "bepe"),
+                          read_feather("R/stamps/Kalkalpen/cabe.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "cabe"),
+                          read_feather("R/stamps/Kalkalpen/casa.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "casa"),
+                          read_feather("R/stamps/Kalkalpen/coav.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "coav"),
+                          read_feather("R/stamps/Kalkalpen/fasy.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "fasy"),
+                          read_feather("R/stamps/Kalkalpen/frex.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "frex"),
+                          read_feather("R/stamps/Kalkalpen/lade.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "lade"),
+                          read_feather("R/stamps/Kalkalpen/piab.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "piab"),
+                          read_feather("R/stamps/Kalkalpen/pice.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "pice"),
+                          read_feather("R/stamps/Kalkalpen/pini.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "pini"),
+                          read_feather("R/stamps/Kalkalpen/pisy.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "pisy"),
+                          read_feather("R/stamps/Kalkalpen/poni.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "poni"),
+                          read_feather("R/stamps/Kalkalpen/potr.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "potr"),
+                          read_feather("R/stamps/Kalkalpen/psme.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "psme"),
+                          read_feather("R/stamps/Kalkalpen/qupe.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "qupe"),
+                          read_feather("R/stamps/Kalkalpen/qupu.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "qupu"),
+                          read_feather("R/stamps/Kalkalpen/quro.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "quro"),
+                          read_feather("R/stamps/Kalkalpen/rops.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "rops"),
+                          read_feather("R/stamps/Kalkalpen/saca.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "saca"),
+                          read_feather("R/stamps/Kalkalpen/soar.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "soar"),
+                          read_feather("R/stamps/Kalkalpen/soau.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "soau"),
+                          read_feather("R/stamps/Kalkalpen/tico.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "tico"),
+                          read_feather("R/stamps/Kalkalpen/tipl.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "tipl"),
+                          read_feather("R/stamps/Kalkalpen/ulgl.feather", mmap = FALSE) %>% mutate(site = "Kalkalpen", species = "ulgl"),
+                          read_feather("R/stamps/Pacific Northwest/abam.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "abam"),
+                          read_feather("R/stamps/Pacific Northwest/abgr.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "abgr"),
+                          read_feather("R/stamps/Pacific Northwest/abpr.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "abpr"),
+                          read_feather("R/stamps/Pacific Northwest/acma.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "acma"),
+                          read_feather("R/stamps/Pacific Northwest/alru.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "alru"),
+                          read_feather("R/stamps/Pacific Northwest/pipo.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "pipo"),
+                          read_feather("R/stamps/Pacific Northwest/pisi.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "pisi"),
+                          read_feather("R/stamps/Pacific Northwest/psme.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "psme"),
+                          read_feather("R/stamps/Pacific Northwest/thpl.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "thpl"),
+                          read_feather("R/stamps/Pacific Northwest/tshe.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "tshe"),
+                          read_feather("R/stamps/Pacific Northwest/tsme.feather", mmap = FALSE) %>% mutate(site = "Pacific Northwest", species = "tsme")) %>%
   arrange(species, site, dbh, heightDiameterRatio) %>%
   mutate(stampID = paste(site, species, dbh, heightDiameterRatio),
          stampSizeID = paste(dbh, heightDiameterRatio))
@@ -195,7 +195,7 @@ ggplot(speciesStamps %>% filter(species == stampSpecies, size == 64) %>% mutate(
 
 
 ## reader stamps
-readerStamps = read_feather("R/stamps/readerstamp.feather") %>%
+readerStamps = read_feather("R/stamps/readerstamp.feather", mmap = FALSE) %>%
   mutate(stampID = paste(size, crownRadius))
 
 ggplot(readerStamps %>% filter(size == 4) %>% mutate(value = na_if(value, 0))) +
@@ -216,7 +216,7 @@ ggplot(readerStamps %>% filter(size == 16) %>% mutate(value = na_if(value, 0))) 
   facet_wrap(vars(crownRadius))
 
 ## remove lower iLand 0.8 bigleaf maple crown radii 
-acma = read_feather("R/stamps/Pacific Northwest/acma iLand 0.8.feather")
+acma = read_feather("R/stamps/Pacific Northwest/acma iLand 0.8.feather", mmap = FALSE)
 
 ggplot(acma) +
   geom_abline(intercept = 0.93, slope = 0.035, color = "grey70", linetype = "longdash") +
@@ -226,12 +226,12 @@ ggplot(acma) +
 
 
 ## remove obsolete iLand 0.8 Douglas-fir and western hemlock height:diameter ratios
-#psme = read_feather("R/stamps/Pacific Northwest/psme iLand 0.8.feather") %>%
+#psme = read_feather("R/stamps/Pacific Northwest/psme iLand 0.8.feather", mmap = FALSE) %>%
 #  filter(heightDiameterRatio %% 10 == 0)
 #psmeArrow = arrow_table(psme, schema = lightStampArrowSchema)
 #write_feather(psmeArrow, "R/stamps/Pacific Northwest/psme.feather")
 #
-#tshe = read_feather("R/stamps/Pacific Northwest/tshe iLand 0.8.feather") %>%
+#tshe = read_feather("R/stamps/Pacific Northwest/tshe iLand 0.8.feather", mmap = FALSE) %>%
 #  filter(heightDiameterRatio %% 10 == 0)
 #tsheArrow = arrow_table(tshe, schema = lightStampArrowSchema)
 #write_feather(tsheArrow, "R/stamps/Pacific Northwest/tshe.feather")

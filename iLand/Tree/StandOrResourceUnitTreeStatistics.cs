@@ -20,8 +20,8 @@
         public float TreeNppPerHaAboveground { get; protected set; } // (kg biomass increment) or (kg biomass increment)/ha
 
         // saplings
-        public float CohortsPerHa { get; protected set; } // number of cohorts of saplings or cohorts/ha
-        public float MeanSaplingAgeInYears { get; protected set; } // average age of sapling (not currently weighted by represented sapling numbers)
+        public float SaplingCohortsPerHa { get; protected set; } // number of cohorts of saplings or cohorts/ha
+        public float SaplingMeanAgeInYears { get; protected set; } // average age of sapling (not currently weighted by represented sapling numbers)
         public float SaplingNppPerHa { get; protected set; } // carbon gain of saplings (kg biomass increment) or (kg biomass increment)/ha
         public float SaplingsPerHa { get; protected set; } // number of individuals in regeneration layer (represented by CohortCount cohorts), saplings or saplings/ha
 
@@ -61,7 +61,7 @@
             this.TreeNppPerHaAboveground += areaInHectares * completedTreeStatistics.TreeNppPerHaAboveground;
 
             // regeneration
-            this.CohortsPerHa += areaInHectares * completedTreeStatistics.CohortsPerHa;
+            this.SaplingCohortsPerHa += areaInHectares * completedTreeStatistics.SaplingCohortsPerHa;
             this.SaplingsPerHa += areaInHectares * completedTreeStatistics.SaplingsPerHa;
             this.SaplingNppPerHa += areaInHectares * completedTreeStatistics.SaplingNppPerHa;
 
@@ -97,7 +97,7 @@
             this.TreeNppPerHaAboveground += completedTreeStatistics.TreeNppPerHaAboveground;
 
             // regeneration
-            this.CohortsPerHa += completedTreeStatistics.CohortsPerHa;
+            this.SaplingCohortsPerHa += completedTreeStatistics.SaplingCohortsPerHa;
             this.SaplingsPerHa += completedTreeStatistics.SaplingsPerHa;
             this.SaplingNppPerHa += completedTreeStatistics.SaplingNppPerHa;
 
@@ -123,12 +123,12 @@
 
             this.TotalSaplingCohortAgeInYears = 0.0F;
 
-            this.CohortsPerHa = 0;
-            this.MeanSaplingAgeInYears = 0.0F;
             this.RegenerationCarbonInKgPerHa = 0.0F;
             this.RegenerationNitrogenInKgPerHa = 0.0F;
-            this.SaplingsPerHa = 0;
+            this.SaplingCohortsPerHa = 0;
+            this.SaplingMeanAgeInYears = 0.0F;
             this.SaplingNppPerHa = 0.0F;
+            this.SaplingsPerHa = 0;
 
             this.TreeNppPerHa = 0.0F;
             this.TreeNppPerHaAboveground = 0.0F;

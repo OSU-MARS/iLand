@@ -28,7 +28,7 @@ namespace iLand.Output
             // but this isn't currently available as an iLand input
             this.AverageDbhInCm += resourceUnitAreaInM2 * completedResourceUnitTreeStatistics.AverageDbhInCm;
             this.AverageHeightInM += resourceUnitAreaInM2 * completedResourceUnitTreeStatistics.AverageHeightInM;
-            this.MeanSaplingAgeInYears += resourceUnitAreaInM2 * completedResourceUnitTreeStatistics.MeanSaplingAgeInYears;
+            this.SaplingMeanAgeInYears += resourceUnitAreaInM2 * completedResourceUnitTreeStatistics.SaplingMeanAgeInYears;
             base.AddAreaWeighted(completedResourceUnitTreeStatistics, resourceUnitAreaInM2);
         }
 
@@ -53,8 +53,8 @@ namespace iLand.Output
             this.TreeNppPerHaAboveground /= this.areaInLandscapeInM2;
 
             // regeneration
-            this.CohortsPerHa /= this.areaInLandscapeInM2;
-            this.MeanSaplingAgeInYears /= this.areaInLandscapeInM2;
+            this.SaplingCohortsPerHa /= this.areaInLandscapeInM2;
+            this.SaplingMeanAgeInYears /= this.areaInLandscapeInM2;
             this.SaplingsPerHa /= this.areaInLandscapeInM2;
             this.SaplingNppPerHa /= this.areaInLandscapeInM2;
 

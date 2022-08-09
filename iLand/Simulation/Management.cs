@@ -443,9 +443,9 @@ namespace iLand.Simulation
         //        for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
         //        {
         //            tw.Tree = t;
-        //            if (!t.IsDead() && expr.Execute(model.GlobalSettings) == 0.0)
+        //            if (!t.IsDead() && expr.Execute(model.GlobalSettings) == 0.0F)
         //            {
-        //                mTrees.Add(new MutableTuple<Tree, float>(t, 0.0));
+        //                mTrees.Add(new MutableTuple<Tree, float>(t, 0.0F));
         //            }
         //        }
         //    }

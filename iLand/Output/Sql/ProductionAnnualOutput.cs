@@ -38,7 +38,7 @@ namespace iLand.Output.Sql
                     ResourceUnitTreeSpeciesGrowthModifiers growthModifiers = growth.Modifiers;
                     for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
                     {
-                        insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                        insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                         insertRow.Parameters[1].Value = ruSpecies.ResourceUnit.ResourceUnitGridIndex;
                         insertRow.Parameters[2].Value = ruSpecies.ResourceUnit.ID;
                         insertRow.Parameters[3].Value = ruSpecies.Species.ID;

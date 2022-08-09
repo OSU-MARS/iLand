@@ -70,7 +70,7 @@ namespace iLand.Output.Sql
                 {
                     MortalityCause removalType = (MortalityCause)(removalKey / LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier);
                     int speciesIndex = removalKey % LandscapeRemovedAnnualOutput.KeyRemovalTypeMultiplier;
-                    insertRow.Parameters[0].Value = model.SimulationState.CurrentYear;
+                    insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                     insertRow.Parameters[1].Value = removalData.TreeSpecies.ID;
                     insertRow.Parameters[2].Value = removalType switch
                     {

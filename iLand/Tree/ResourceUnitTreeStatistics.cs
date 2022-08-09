@@ -67,7 +67,7 @@ namespace iLand.Tree
 
         public void Add(SaplingStatistics sapling)
         {
-            this.CohortsPerHa += sapling.LivingCohorts;
+            this.SaplingCohortsPerHa += sapling.LivingCohorts;
             this.SaplingsPerHa += sapling.LivingSaplings; // saplings with height >1.3m
             this.TotalSaplingCohortAgeInYears += sapling.AverageAgeInYears * sapling.LivingCohorts;
 
@@ -92,9 +92,9 @@ namespace iLand.Tree
                 this.AverageDbhInCm = this.TotalDbhInCm / treeCount;
                 this.AverageHeightInM = this.TotalHeightInM / treeCount;
             }
-            if (this.CohortsPerHa != 0.0F)
+            if (this.SaplingCohortsPerHa != 0.0F)
             {
-                this.MeanSaplingAgeInYears = this.TotalSaplingCohortAgeInYears / this.CohortsPerHa; // else leave mean sapling age as zero
+                this.SaplingMeanAgeInYears = this.TotalSaplingCohortAgeInYears / this.SaplingCohortsPerHa; // else leave mean sapling age as zero
             }
 
             Debug.Assert(this.ResourceUnit.AreaInLandscapeInM2 > 0.0F);
@@ -114,7 +114,7 @@ namespace iLand.Tree
                 float ruExpansionFactor = Constant.SquareMetersPerHectare / resourceUnitAreaInLandscape;
                 this.BasalAreaInM2PerHa *= ruExpansionFactor;
 
-                this.CohortsPerHa *= ruExpansionFactor;
+                this.SaplingCohortsPerHa *= ruExpansionFactor;
                 this.SaplingsPerHa *= ruExpansionFactor;
                 this.SaplingNppPerHa *= ruExpansionFactor;
 

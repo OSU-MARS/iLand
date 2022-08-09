@@ -24,7 +24,7 @@ namespace iLand.Cmdlets
         protected override void ProcessRecord()
         {
             Project projectFile = new(this.Project!);
-            using Model model = new(projectFile);
+            Model model = new(projectFile); // up to the caller to dispose
 
             DateTime mostRecentProgressUpdate = DateTime.UtcNow;
             ProgressRecord progressRecord = new(0, "Simulating trajectory", "year 0/" + this.Years + "...");
@@ -41,6 +41,8 @@ namespace iLand.Cmdlets
                     mostRecentProgressUpdate = utcNow;
                 }
             }
+
+            this.WriteObject(model);
         }
     }
 }

@@ -241,7 +241,7 @@ namespace iLand.Output
             // SQL
             if (this.sqlOutputs.Count > 0)
             {
-                int currentSimulationYear = model.SimulationState.CurrentYear;
+                int currentCalendarYear = model.SimulationState.CurrentCalendarYear;
                 if (this.sqlOutputTransaction == null)
                 {
                     if (this.sqlDatabaseConnection == null)
@@ -249,13 +249,13 @@ namespace iLand.Output
                         throw new NotSupportedException("Attempt to call LogYear() without first calling Setup().");
                     }
                     this.sqlOutputTransaction = this.sqlDatabaseConnection.BeginTransaction();
-                    this.mostRecentSimulationYearCommittedToDatabase = currentSimulationYear;
+                    this.mostRecentSimulationYearCommittedToDatabase = currentCalendarYear;
                 }
                 foreach (AnnualOutput output in this.sqlOutputs)
                 {
                     output.LogYear(model, this.sqlOutputTransaction);
                 }
-                if (currentSimulationYear - this.mostRecentSimulationYearCommittedToDatabase > this.sqlCommitIntervalInYears)
+                if (currentCalendarYear - this.mostRecentSimulationYearCommittedToDatabase > this.sqlCommitIntervalInYears)
                 {
                     this.sqlOutputTransaction.Commit();
                     this.sqlOutputTransaction.Dispose();
