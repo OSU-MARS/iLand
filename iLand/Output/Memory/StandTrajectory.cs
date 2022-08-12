@@ -1,12 +1,13 @@
 ﻿using System;
 
-namespace iLand.Output
+namespace iLand.Output.Memory
 {
     public class StandTrajectory : StandOrResourceUnitTrajectory
     {
         public int StandID { get; private init; }
 
-        public StandTrajectory(int standID)
+        public StandTrajectory(int standID, int initialCapacityInYears)
+            : base(initialCapacityInYears)
         {
             this.StandID = standID;
         }
@@ -18,11 +19,6 @@ namespace iLand.Output
                 throw new ArgumentOutOfRangeException(nameof(standTreeStatistics));
             }
             base.AddYear(standTreeStatistics);
-        }
-
-        public override int GetID()
-        {
-            return this.StandID;
         }
     }
 }

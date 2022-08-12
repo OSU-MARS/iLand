@@ -2,7 +2,7 @@
 using iLand.Input.Weather; // used in release builds
 using iLand.Input.Tree; // used in release builds
 using iLand.Input.ProjectFile; // used in release builds
-using iLand.Output;
+using iLand.Output.Memory;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -101,7 +101,7 @@ namespace iLand.Test
                     1166.786F, 1166.786F, 1166.786F, 1166.786F, 1144.655F, 924.422F,
                     793.551F, 644.924F, 550.262F, 413.426F, 254.808F
                 };
-                StandOrResourceUnitTrajectory resourceUnit82597trajectory = elliott.Output.ResourceUnitTrajectories[resourceUnit82597index];
+                ResourceUnitAllSpeciesTrajectory? resourceUnit82597trajectory = elliott.Output.ResourceUnitTrajectories[resourceUnit82597index].AllTreeSpeciesTrajectory;
                 observedTrajectory82597.Verify(resourceUnit82597trajectory, 126.0F, expectedGppBySimulationYear, expectedNppBySimulationYear, expectedStemVolumeBySimulationYear);
 
                 // verify Pacific Northwest tree species loading
@@ -125,37 +125,37 @@ namespace iLand.Test
                               (thpl.ID == "thpl"));
                 ModelTest.VerifyDouglasFirPacificNorthwest(elliott);
 
-            // in the interests of test runtime, limit larger file testing to release builds
-            #if !DEBUG
-            int availableResourceUnits = 34494;
-            int availableWeatherIDs4km = 81; // 81 4 km weather cells in input, 37 of which cover the unbuffered Elliott
-            int availableWeatherTimesteps = 12 * (2100 - 2011 + 1);
+                // in the interests of test runtime, limit larger file testing to release builds
+                #if !DEBUG
+                int availableResourceUnits = 34494;
+                int availableWeatherIDs4km = 81; // 81 4 km weather cells in input, 37 of which cover the unbuffered Elliott
+                int availableWeatherTimesteps = 12 * (2100 - 2011 + 1);
 
-            // check full resource unit reads (basic .csv functionality is covered on Kalkalpen, Elliot project uses .feather subset)
-            ResourceUnitEnvironment defaultEnvironment = new(elliott.Project.World);
+                // check full resource unit reads (basic .csv functionality is covered on Kalkalpen, Elliot project uses .feather subset)
+                ResourceUnitEnvironment defaultEnvironment = new(elliott.Project.World);
 
-            string resourceUnitCsvPath = elliott.Project.GetFilePath(ProjectDirectory.Gis, "resource units unbuffered 4 km weather.csv");
-            ResourceUnitReaderCsv resourceUnitCsvReader = new(resourceUnitCsvPath, defaultEnvironment);
-            Assert.IsTrue(resourceUnitCsvReader.Environments.Count == availableResourceUnits);
+                string resourceUnitCsvPath = elliott.Project.GetFilePath(ProjectDirectory.Gis, "resource units unbuffered 4 km weather.csv");
+                ResourceUnitReaderCsv resourceUnitCsvReader = new(resourceUnitCsvPath, defaultEnvironment);
+                Assert.IsTrue(resourceUnitCsvReader.Environments.Count == availableResourceUnits);
 
-            string resourceUnitFeatherPath = elliott.Project.GetFilePath(ProjectDirectory.Gis, "resource units unbuffered 4 km weather.feather");
-            ResourceUnitReaderFeather resourceUnitFeatherReader = new(resourceUnitFeatherPath, defaultEnvironment);
-            Assert.IsTrue(resourceUnitFeatherReader.Environments.Count == availableResourceUnits);
+                string resourceUnitFeatherPath = elliott.Project.GetFilePath(ProjectDirectory.Gis, "resource units unbuffered 4 km weather.feather");
+                ResourceUnitReaderFeather resourceUnitFeatherReader = new(resourceUnitFeatherPath, defaultEnvironment);
+                Assert.IsTrue(resourceUnitFeatherReader.Environments.Count == availableResourceUnits);
 
-            // check monthly .csv weather read
-            string weatherFeatherFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "weather 4 km 2011-2100 13GCMssp370.csv");
-            WeatherReaderMonthlyCsv weatherFeatherReader = new(weatherFeatherFilePath, startYear: 2010); // should have no effect: actual start year in file is 2011
-            Assert.IsTrue(weatherFeatherReader.MonthlyWeatherByID.Count == availableWeatherIDs4km);
-            foreach (WeatherTimeSeriesMonthly monthlyWeatherTimeSeries in weatherFeatherReader.MonthlyWeatherByID.Values)
-            {
-                Assert.IsTrue(monthlyWeatherTimeSeries.Count == availableWeatherTimesteps);
-            }
+                // check monthly .csv weather read
+                string weatherFeatherFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "weather 4 km 2011-2100 13GCMssp370.csv");
+                WeatherReaderMonthlyCsv weatherFeatherReader = new(weatherFeatherFilePath, startYear: 2010); // should have no effect: actual start year in file is 2011
+                Assert.IsTrue(weatherFeatherReader.MonthlyWeatherByID.Count == availableWeatherIDs4km);
+                foreach (WeatherTimeSeriesMonthly monthlyWeatherTimeSeries in weatherFeatherReader.MonthlyWeatherByID.Values)
+                {
+                    Assert.IsTrue(monthlyWeatherTimeSeries.Count == availableWeatherTimesteps);
+                }
 
-            // check individual tree .csv read for a tile (Elliott project uses .feather)
-            string individualTreeTilePath = elliott.Project.GetFilePath(ProjectDirectory.Init, "TSegD_H10Cr20h10A50MD7_s04110w07020.csv");
-            IndividualTreeReader individualTreeReader = (IndividualTreeReader)TreeReader.Create(individualTreeTilePath);
-            Assert.IsTrue(individualTreeReader.HeightInM.Count == 13124);
-            #endif
+                // check individual tree .csv read for a tile (Elliott project uses .feather)
+                string individualTreeTilePath = elliott.Project.GetFilePath(ProjectDirectory.Init, "TSegD_H10Cr20h10A50MD7_s04110w07020.csv");
+                IndividualTreeReader individualTreeReader = (IndividualTreeReader)TreeReader.Create(individualTreeTilePath);
+                Assert.IsTrue(individualTreeReader.HeightInM.Count == 13124);
+                #endif
             }
         }
 
@@ -262,7 +262,7 @@ namespace iLand.Test
                 334.496F, 347.910F, 353.992F, 366.416F, 370.173F, 
                 386.721F, 394.456F, 405.953F, 421.018F
             };
-            observedTrajectory.Verify(plot14.Output.ResourceUnitTrajectories[0], 222.0F, expectedGppByYear, expectedNppByYear, expectedStemVolumeByYear);
+            observedTrajectory.Verify(plot14.Output.ResourceUnitTrajectories[0].AllTreeSpeciesTrajectory, 222.0F, expectedGppByYear, expectedNppByYear, expectedStemVolumeByYear); ;
         }
 
         private static void VerifyDouglasFirPacificNorthwest(Model model)
@@ -383,7 +383,12 @@ namespace iLand.Test
             for (int resourceUnitIndex = 0; resourceUnitIndex < model.Landscape.ResourceUnits.Count; ++resourceUnitIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = model.Output.ResourceUnitTrajectories[resourceUnitIndex];
-                ModelTest.VerifyTrajectory(resourceUnitTrajectory, simulationYear);
+                Assert.IsTrue(resourceUnitTrajectory.HasAllTreeSpeciesStatistics);
+                Assert.IsTrue(resourceUnitTrajectory.HasIndividualTreeSpeciesStatistics);
+                Assert.IsTrue(resourceUnitTrajectory.TreeSpeciesTrajectories.Count == 1);
+
+                ModelTest.VerifyTrajectory(resourceUnitTrajectory.AllTreeSpeciesTrajectory, simulationYear);
+                ModelTest.VerifyTrajectory(resourceUnitTrajectory.TreeSpeciesTrajectories[0], simulationYear);
             }
 
             // stands
@@ -965,6 +970,8 @@ namespace iLand.Test
             Assert.IsTrue((Single.IsNaN(regenerationNitrogenInKgPerHa) == false) && (regenerationNitrogenInKgPerHa >= 0.0F) && (regenerationNitrogenInKgPerHa < 200000.0F));
             Assert.IsTrue((Single.IsNaN(stemCarbonInKgPerHa) == false) && (stemCarbonInKgPerHa >= 0.0F) && (stemCarbonInKgPerHa < 2000000.0F));
             Assert.IsTrue((Single.IsNaN(stemNitrogenInKgPerHa) == false) && (stemNitrogenInKgPerHa >= 0.0F) && (stemNitrogenInKgPerHa < 200000.0F));
+
+            Assert.IsTrue(trajectory.LengthInYears == simulationYear + 1);
 
             float abovegroundTreeNppFromComponents = branchCarbonInKgPerHa + branchNitrogenInKgPerHa + foliageCarbonInKgPerHa + foliageNitrogenInKgPerHa + stemCarbonInKgPerHa + stemNitrogenInKgPerHa; // kg/ha
             float belowgroundTreeNppFromComponents = coarseRootCarbonInKgPerHa + coarseRootNitrogenInKgPerHa + fineRootCarbonInKgPerHa + fineRootNitrogenInKgPerHa; // kg/ha

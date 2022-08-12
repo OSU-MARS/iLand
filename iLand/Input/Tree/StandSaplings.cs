@@ -52,12 +52,12 @@ namespace iLand.Input.Tree
             if (saplingHeader.Height >= 0)
             {
                 this.Height = Single.Parse(row[saplingHeader.Height], CultureInfo.InvariantCulture);
-                this.MaxHeight = Constant.NoDataSingle;
-                this.MinHeight = Constant.NoDataSingle;
+                this.MaxHeight = Constant.NoDataFloat;
+                this.MinHeight = Constant.NoDataFloat;
             }
             else
             {
-                this.Height = Constant.NoDataSingle;
+                this.Height = Constant.NoDataFloat;
                 this.MaxHeight = Single.Parse(row[saplingHeader.HeightMax], CultureInfo.InvariantCulture);
                 this.MinHeight = Single.Parse(row[saplingHeader.HeightMin], CultureInfo.InvariantCulture);
             }

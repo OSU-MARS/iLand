@@ -1,21 +1,21 @@
-﻿using Apache.Arrow;
-using Apache.Arrow.Ipc;
+﻿using Apache.Arrow.Ipc;
 using Apache.Arrow.Types;
 using iLand.Extensions;
-using iLand.Output;
+using iLand.Output.Memory;
+using iLand.Tool;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Management.Automation;
-using System.Runtime.InteropServices;
 using Model = iLand.Simulation.Model;
 namespace iLand.Cmdlets
 {
     [Cmdlet(VerbsCommunications.Write, "Trajectory")]
     public class WriteTrajectory : Cmdlet
     {
+        private const int AllSpeciesIndex = 0;
+
         [Parameter]
         [ValidateNotNullOrEmpty]
         public string? ResourceUnitFile { get; set; }
@@ -35,64 +35,163 @@ namespace iLand.Cmdlets
             this.Trajectory = null;
         }
 
-        private static RecordBatch CreateArrowBatch<TTrajectory>(Schema schema, IList<TTrajectory> trajectories, int calendarYearBeforeFirstSimulationTimestep) where TTrajectory : StandOrResourceUnitTrajectory
+        private static StandOrResourceUnitTrajectoryArrowMemory CreateArrowMemory(IList<ResourceUnitTrajectory> resourceUnitTrajectories, int calendarYearBeforeFirstSimulationTimestep)
         {
-            // allocate arrays
-            int trajectoryLengthInYears = trajectories[0].Years;
-            int batchLength = trajectories.Count * trajectoryLengthInYears;
-            Memory<byte> year = new(new byte[batchLength * sizeof(Int32)]);
-            Memory<byte> resourceUnitIDs = new(new byte[batchLength * sizeof(Int32)]);
-            Memory<byte> averageDbh = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> averageHeight = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> basalArea = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> lai = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> liveStemVolume = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> treeNpp = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> treeAbovegroundNpp = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> treesPerHectare = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> saplingCohorts = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> saplingMeanAge = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> saplingNpp = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> saplingsPerHectare = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> branchCarbon = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> branchNitrogen = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> coarseRootCarbon = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> coarseRootNitrogen = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> fineRootCarbon = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> fineRootNitrogen = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> foliageCarbon = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> foliageNitrogen = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> regenerationCarbon = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> regenerationNitrogen = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> stemCarbon = new(new byte[batchLength * sizeof(float)]);
-            Memory<byte> stemNitrogen = new(new byte[batchLength * sizeof(float)]);
+            // find batch length
+            int batchLength = 0;
+            int maxTrajectoryLengthInYears = Int32.MinValue;
+            List<string> treeSpeciesPresent = new();
+            for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
+            {
+                ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
 
-            Span<int> yearDestination = year.Span.CastTo<int>();
-            Span<int> resourceUnitIDdestination = resourceUnitIDs.Span.CastTo<int>();
-            Span<float> averageDbhDestination = averageDbh.Span.CastTo<float>();
-            Span<float> averageHeightDestination = averageHeight.Span.CastTo<float>();
-            Span<float> basalAreaDestination = basalArea.Span.CastTo<float>();
-            Span<float> laiDestination = lai.Span.CastTo<float>();
-            Span<float> liveStemVolumeDestination = liveStemVolume.Span.CastTo<float>();
-            Span<float> treeNppDestination = treeNpp.Span.CastTo<float>();
-            Span<float> treeAbovegroundNppDestination = treeAbovegroundNpp.Span.CastTo<float>();
-            Span<float> treesPerHectareDestination = treesPerHectare.Span.CastTo<float>();
-            Span<float> saplingCohortsDestination = saplingCohorts.Span.CastTo<float>();
-            Span<float> saplingMeanAgeDestination = saplingMeanAge.Span.CastTo<float>();
-            Span<float> saplingNppDestination = saplingNpp.Span.CastTo<float>();
-            Span<float> saplingsPerHectareDestination = saplingsPerHectare.Span.CastTo<float>();
-            Span<float> branchCarbonDestination = branchCarbon.Span.CastTo<float>();
-            Span<float> branchNitrogenDestination = branchNitrogen.Span.CastTo<float>();
-            Span<float> coarseRootCarbonDestination = coarseRootCarbon.Span.CastTo<float>();
-            Span<float> coarseRootNitrogenDestination = coarseRootNitrogen.Span.CastTo<float>();
-            Span<float> fineRootCarbonDestination = fineRootCarbon.Span.CastTo<float>();
-            Span<float> fineRootNitrogenDestination = fineRootNitrogen.Span.CastTo<float>();
-            Span<float> foliageCarbonDestination = foliageCarbon.Span.CastTo<float>();
-            Span<float> foliageNitrogenDestination = foliageNitrogen.Span.CastTo<float>();
-            Span<float> regenerationCarbonDestination = regenerationCarbon.Span.CastTo<float>();
-            Span<float> regenerationNitrogenDestination = regenerationNitrogen.Span.CastTo<float>();
-            Span<float> stemCarbonDestination = stemCarbon.Span.CastTo<float>();
-            Span<float> stemNitrogenDestination = stemNitrogen.Span.CastTo<float>();
+                if (resourceUnitTrajectory.HasAllTreeSpeciesStatistics)
+                {
+                    int allTreeSpeciesTrajectoryLengthInYears = resourceUnitTrajectory.AllTreeSpeciesTrajectory.LengthInYears;
+                    batchLength += allTreeSpeciesTrajectoryLengthInYears;
+                    if (maxTrajectoryLengthInYears < allTreeSpeciesTrajectoryLengthInYears)
+                    {
+                        maxTrajectoryLengthInYears = allTreeSpeciesTrajectoryLengthInYears;
+                    }
+                }
+
+                if (resourceUnitTrajectory.HasIndividualTreeSpeciesStatistics)
+                {
+                    for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.TreeSpeciesTrajectories.Count; ++treeSpeciesIndex)
+                    {
+                        ResourceUnitTreeSpeciesTrajectory treeSpeciesTrajectory = resourceUnitTrajectory.TreeSpeciesTrajectories[treeSpeciesIndex];
+                        int treeSpeciesTrajectoryLengthInYears = treeSpeciesTrajectory.LengthInYears;
+                        
+                        batchLength += treeSpeciesTrajectoryLengthInYears;
+                        if (maxTrajectoryLengthInYears < treeSpeciesTrajectoryLengthInYears)
+                        {
+                            maxTrajectoryLengthInYears = treeSpeciesTrajectoryLengthInYears;
+                        }
+
+                        // for now, use O(N) species resolution
+                        // Under current forest model limitations (as of 2022), it's likely only a few majority tree species (or, in
+                        // tropical forests, functional species groups) will be present in most multispecies models. An ordinal O(N)
+                        // List<T> search is therefore likely faster than O(log N) checks against HashSet<T> or similar. This can be
+                        // revisited if profiling indicates it's too costly.
+                        // In models with a single tree species set Object.ReferenceEquals() could be used instead of String.Equals() but
+                        // this will fail when multiple species sets are used.
+                        string treeSpeciesID = treeSpeciesTrajectory.TreeSpecies.Species.ID;
+                        bool isKnownTreeSpecies = false;
+                        for (int knownTreeSpeciesIndex = 0; knownTreeSpeciesIndex < treeSpeciesPresent.Count; ++knownTreeSpeciesIndex)
+                        {
+                            if (String.Equals(treeSpeciesID, treeSpeciesPresent[knownTreeSpeciesIndex], StringComparison.Ordinal))
+                            {
+                                isKnownTreeSpecies = true;
+                                break;
+                            }
+                        }
+                        if (isKnownTreeSpecies == false)
+                        {
+                            treeSpeciesPresent.Add(treeSpeciesID);
+                        }
+                    }
+                }
+            }
+
+            // map tree species to integers for string table encoding
+            // Because Apache 9.0.0 does not support replacement dictionary interoperability between C# and R
+            // (https://issues.apache.org/jira/browse/ARROW-17391), mapping to USFS FIA codes is attempted first and, if this fails, then
+            // mapping to ITIS TSNs. This species coding workaround makes the species column written in the output somewhat human friendly
+            // as it contains well defined species identifiers rather than an arbitrary mapping. 
+            //
+            // For now, all species statistics are logged with FiaCode or ItisTsn = Default. 
+            // This is a reasomable compromise for multispecies models. For single species models there are three options
+            //
+            // 1) omit the species column for minimum file size
+            // 2) check every resource unit's tree species trajectories (if they're enabled) or tree lists (which requires no
+            //    species ingrowth or local extirpations occur to be correct and therefore isn't viable due to fragility),
+            //    detect single species modeling, and replace "all" with the ID of the single species present
+            // 3) assume that if single species models want species names in the output then enable individual species statistics 
+            //    are enabled rather than all species statistics
+            // 
+            // Currently, the third approach is used. Given replacement dictionary availability, "all" can instead be used for clarity.
+            // In the meantime, workarounds in R can use the form
+            //
+            //   data = read_feather(...) %>% mutate(species = factor(species, labels = c("all", "psme", ...), levels = c(0, 202, ...)))
+            //
+            // It is unclear if read_feather() can deserialize a field into a tibble factor column, so factorization in R may be 
+            // remain desirable even if ARROW-17391 is fixed.
+            Debug.Assert(WriteTrajectory.AllSpeciesIndex == 0);
+            List<int> treeSpeciesCodesAsIntegers = new(treeSpeciesPresent.Count);
+            IntegerType treeSpeciesFieldType = UInt16Type.Default;
+            bool useItisTsns = false;
+            for (int presentSpeciesIndex = 0; presentSpeciesIndex < treeSpeciesPresent.Count; ++presentSpeciesIndex)
+            {
+                if (FiaCodeExtensions.TryParse(treeSpeciesPresent[presentSpeciesIndex], out FiaCode fiaCode))
+                {
+                    treeSpeciesCodesAsIntegers.Add((int)fiaCode);
+                }
+                else
+                {
+                    useItisTsns = true;
+                    break;
+                }
+            }
+            if (useItisTsns)
+            {
+                treeSpeciesFieldType = Int32Type.Default;
+                for (int presentSpeciesIndex = 0; presentSpeciesIndex < treeSpeciesPresent.Count; ++presentSpeciesIndex)
+                {
+                    string treeSpeciesID = treeSpeciesPresent[presentSpeciesIndex];
+                    if (ItisTsnExtensions.TryParse(treeSpeciesID, out ItisTsn itisTsn))
+                    {
+                        if (presentSpeciesIndex >= treeSpeciesCodesAsIntegers.Count)
+                        {
+                            treeSpeciesCodesAsIntegers.Add((int)itisTsn);
+                        }
+                        else
+                        {
+                            treeSpeciesCodesAsIntegers[presentSpeciesIndex] = (int)itisTsn;
+                        }
+                    }
+                    else
+                    {
+                        throw new NotSupportedException("An ITIS TSN isn't known for the species '" + treeSpeciesID + "'.");
+                    }
+                }
+            }
+
+            // copy data from resource units
+            // StandOrResourceUnitTrajectoryArrowMemory batchMemory = new("resourceUnit", treeSpeciesPresent, batchLength);
+            StandOrResourceUnitTrajectoryArrowMemory batchMemory = new("resourceUnit", treeSpeciesFieldType, batchLength);
+            Span<int> yearSource = stackalloc int[maxTrajectoryLengthInYears];
+            yearSource.FillIncrementing(calendarYearBeforeFirstSimulationTimestep);
+
+            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitTrajectories.Count; ++resourceUnitIndex)
+            {
+                ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[resourceUnitIndex];
+                if (resourceUnitTrajectory.HasAllTreeSpeciesStatistics)
+                {
+                    batchMemory.Add(resourceUnitTrajectory.AllTreeSpeciesTrajectory, resourceUnitTrajectory.ResourceUnit.ID, WriteTrajectory.AllSpeciesIndex, yearSource);
+                }
+                if (resourceUnitTrajectory.HasIndividualTreeSpeciesStatistics)
+                {
+                    for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.TreeSpeciesTrajectories.Count; ++treeSpeciesIndex)
+                    {
+                        ResourceUnitTreeSpeciesTrajectory treeSpeciesTrajectory = resourceUnitTrajectory.TreeSpeciesTrajectories[treeSpeciesIndex];
+                        string treeSpeciesID = treeSpeciesTrajectory.TreeSpecies.Species.ID;
+                        int treeSpeciesCodeIndex = treeSpeciesPresent.IndexOf(treeSpeciesID);
+                        int treeSpeciesCode = treeSpeciesCodesAsIntegers[treeSpeciesCodeIndex];
+                        batchMemory.Add(treeSpeciesTrajectory, resourceUnitTrajectory.ResourceUnit.ID, treeSpeciesCode, yearSource);
+                    }
+                }
+            }
+
+            return batchMemory;
+        }
+
+        private static StandOrResourceUnitTrajectoryArrowMemory CreateArrowMemory(IList<StandTrajectory> standTrajectories, int calendarYearBeforeFirstSimulationTimestep)
+        {
+            // allocate memory for batch
+            int trajectoryLengthInYears = standTrajectories[0].LengthInYears;
+            int batchLength = standTrajectories.Count * trajectoryLengthInYears;
+            // StandOrResourceUnitTrajectoryArrowMemory batchMemory = new("stand", new string[] { "all" }, batchLength); // for now stand trajectories have only a single statistic encompassing all species
+            StandOrResourceUnitTrajectoryArrowMemory batchMemory = new("stand", UInt8Type.Default, batchLength);
 
             // copy data from resource units
             Span<int> yearSource = stackalloc int[trajectoryLengthInYears];
@@ -100,176 +199,56 @@ namespace iLand.Cmdlets
             {
                 yearSource[simulationYear] = simulationYear + calendarYearBeforeFirstSimulationTimestep;
             }
-            for (int batchIndex = 0, resourceUnitIndex = 0; resourceUnitIndex < trajectories.Count; ++resourceUnitIndex)
+            for (int resourceUnitIndex = 0; resourceUnitIndex < standTrajectories.Count; ++resourceUnitIndex)
             {
-                TTrajectory trajectory = trajectories[resourceUnitIndex];
-                if (trajectory.Years != trajectoryLengthInYears)
+                StandTrajectory trajectory = standTrajectories[resourceUnitIndex];
+                if (trajectory.LengthInYears != trajectoryLengthInYears)
                 {
-                    string trajectoryType = trajectory is ResourceUnitTrajectory ? "resource unit" : "stand";
-                    throw new NotSupportedException("Trajectory for " + trajectoryType + " " + trajectory.GetID() + " is " + trajectory.Years + " years long, which departs from the expected trajectory length of " + trajectoryLengthInYears + " years.");
+                    throw new NotSupportedException("Trajectory for stand " + trajectory.StandID + " is " + trajectory.LengthInYears + " years long, which departs from the expected trajectory length of " + trajectoryLengthInYears + " years.");
                 }
 
-                resourceUnitIDdestination.Slice(batchIndex, trajectoryLengthInYears).Fill(trajectory.GetID());
-                yearSource.CopyTo(yearDestination.Slice(batchIndex, trajectoryLengthInYears));
-
-                Span<float> averageDbhSource = CollectionsMarshal.AsSpan(trajectory.AverageDbhByYear);
-                averageDbhSource.CopyTo(averageDbhDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> averageHeightSource = CollectionsMarshal.AsSpan(trajectory.AverageHeightByYear);
-                averageHeightSource.CopyTo(averageHeightDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> basalAreaSource = CollectionsMarshal.AsSpan(trajectory.BasalAreaByYear);
-                basalAreaSource.CopyTo(basalAreaDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> leafAreaIndexSource = CollectionsMarshal.AsSpan(trajectory.LeafAreaIndexByYear);
-                leafAreaIndexSource.CopyTo(laiDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> liveStemVolumeSource = CollectionsMarshal.AsSpan(trajectory.LiveStemVolumeByYear);
-                liveStemVolumeSource.CopyTo(liveStemVolumeDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> treeNppSource = CollectionsMarshal.AsSpan(trajectory.TreeNppByYear);
-                treeNppSource.CopyTo(treeNppDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> treeNppAbovegroundSource = CollectionsMarshal.AsSpan(trajectory.TreeNppAbovegroundByYear);
-                treeNppAbovegroundSource.CopyTo(treeAbovegroundNppDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> treesPerHectareSource = CollectionsMarshal.AsSpan(trajectory.TreesPerHectareByYear);
-                treesPerHectareSource.CopyTo(treesPerHectareDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> saplingCohortsSource = CollectionsMarshal.AsSpan(trajectory.SaplingCohortsPerHectareByYear);
-                saplingCohortsSource.CopyTo(saplingCohortsDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> saplingMeanAgeSource = CollectionsMarshal.AsSpan(trajectory.SaplingMeanAgeByYear);
-                saplingMeanAgeSource.CopyTo(saplingMeanAgeDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> saplingNppSource = CollectionsMarshal.AsSpan(trajectory.SaplingNppByYear);
-                saplingNppSource.CopyTo(saplingNppDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> saplingsPerHectareSource = CollectionsMarshal.AsSpan(trajectory.SaplingsPerHectareByYear);
-                saplingsPerHectareSource.CopyTo(saplingsPerHectareDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> branchCarbonSource = CollectionsMarshal.AsSpan(trajectory.BranchCarbonByYear);
-                branchCarbonSource.CopyTo(branchCarbonDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> branchNitrogenSource = CollectionsMarshal.AsSpan(trajectory.BranchNitrogenByYear);
-                branchNitrogenSource.CopyTo(branchNitrogenDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> coarseRootCarbonSource = CollectionsMarshal.AsSpan(trajectory.CoarseRootCarbonByYear);
-                coarseRootCarbonSource.CopyTo(coarseRootCarbonDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> coarseRootNitrogenSource = CollectionsMarshal.AsSpan(trajectory.CoarseRootNitrogenByYear);
-                coarseRootNitrogenSource.CopyTo(coarseRootNitrogenDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> fineRootCarbonSource = CollectionsMarshal.AsSpan(trajectory.FineRootCarbonByYear);
-                fineRootCarbonSource.CopyTo(fineRootCarbonDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> fineRootNitrogenSource = CollectionsMarshal.AsSpan(trajectory.FineRootNitrogenByYear);
-                fineRootNitrogenSource.CopyTo(fineRootNitrogenDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> foliageCarbonSource = CollectionsMarshal.AsSpan(trajectory.FoliageCarbonByYear);
-                foliageCarbonSource.CopyTo(foliageCarbonDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> foliageNitrogenSource = CollectionsMarshal.AsSpan(trajectory.FoliageNitrogenByYear);
-                foliageNitrogenSource.CopyTo(foliageNitrogenDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> regenerationCarbonSource = CollectionsMarshal.AsSpan(trajectory.RegenerationCarbonByYear);
-                regenerationCarbonSource.CopyTo(regenerationCarbonDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> regeneratioNitrogenSource = CollectionsMarshal.AsSpan(trajectory.RegenerationNitrogenByYear);
-                regeneratioNitrogenSource.CopyTo(regenerationNitrogenDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> stemCarbonSource = CollectionsMarshal.AsSpan(trajectory.StemCarbonByYear);
-                stemCarbonSource.CopyTo(stemCarbonDestination.Slice(batchIndex, trajectoryLengthInYears));
-                Span<float> stemNitrogenSource = CollectionsMarshal.AsSpan(trajectory.StemNitrogenByYear);
-                stemNitrogenSource.CopyTo(stemNitrogenDestination.Slice(batchIndex, trajectoryLengthInYears));
-
-                batchIndex += trajectoryLengthInYears;
+                batchMemory.Add(trajectory, trajectory.StandID, WriteTrajectory.AllSpeciesIndex, yearSource);
             }
 
-            // repackage arrays into Arrow record batch
-            IArrowArray[] data = new IArrowArray[]
-            {
-                ArrowArrayExtensions.WrapInInt32(resourceUnitIDs),
-                ArrowArrayExtensions.WrapInInt32(year),
-                ArrowArrayExtensions.WrapInFloat(averageDbh),
-                ArrowArrayExtensions.WrapInFloat(averageHeight),
-                ArrowArrayExtensions.WrapInFloat(basalArea),
-                ArrowArrayExtensions.WrapInFloat(lai),
-                ArrowArrayExtensions.WrapInFloat(liveStemVolume),
-                ArrowArrayExtensions.WrapInFloat(treeNpp),
-                ArrowArrayExtensions.WrapInFloat(treeAbovegroundNpp),
-                ArrowArrayExtensions.WrapInFloat(treesPerHectare),
-                ArrowArrayExtensions.WrapInFloat(saplingCohorts),
-                ArrowArrayExtensions.WrapInFloat(saplingMeanAge),
-                ArrowArrayExtensions.WrapInFloat(saplingNpp),
-                ArrowArrayExtensions.WrapInFloat(saplingsPerHectare),
-                ArrowArrayExtensions.WrapInFloat(branchCarbon),
-                ArrowArrayExtensions.WrapInFloat(branchNitrogen),
-                ArrowArrayExtensions.WrapInFloat(coarseRootCarbon),
-                ArrowArrayExtensions.WrapInFloat(coarseRootNitrogen),
-                ArrowArrayExtensions.WrapInFloat(fineRootCarbon),
-                ArrowArrayExtensions.WrapInFloat(fineRootNitrogen),
-                ArrowArrayExtensions.WrapInFloat(foliageCarbon),
-                ArrowArrayExtensions.WrapInFloat(foliageNitrogen),
-                ArrowArrayExtensions.WrapInFloat(regenerationCarbon),
-                ArrowArrayExtensions.WrapInFloat(regenerationNitrogen),
-                ArrowArrayExtensions.WrapInFloat(stemCarbon),
-                ArrowArrayExtensions.WrapInFloat(stemNitrogen),
-            };
-
-            return new RecordBatch(schema, data, batchLength);
-        }
-
-        private static Schema CreateArrowSchema(string idFieldName)
-        {
-            List<Field> fields = new()
-            {
-                new(idFieldName, Int32Type.Default, false),
-                new("year", Int32Type.Default, false),
-                new("averageDbh", FloatType.Default, false),
-                new("averageHeight", FloatType.Default, false),
-                new("basalArea", FloatType.Default, false),
-                new("lai", FloatType.Default, false),
-                new("liveStemVolume", FloatType.Default, false),
-                new("treeNpp", FloatType.Default, false),
-                new("treeAbovegroundNpp", FloatType.Default, false),
-                new("treesPerHectare", FloatType.Default, false),
-                new("saplingCohorts", FloatType.Default, false),
-                new("saplingMeanAge", FloatType.Default, false),
-                new("saplingNpp", FloatType.Default, false),
-                new("saplingsPerHectare", FloatType.Default, false),
-                new("branchCarbon", FloatType.Default, false),
-                new("branchNitrogen", FloatType.Default, false),
-                new("coarseRootCarbon", FloatType.Default, false),
-                new("coarseRootNitrogen", FloatType.Default, false),
-                new("fineRootCarbon", FloatType.Default, false),
-                new("fineRootNitrogen", FloatType.Default, false),
-                new("foliageCarbon", FloatType.Default, false),
-                new("foliageNitrogen", FloatType.Default, false),
-                new("regenerationCarbon", FloatType.Default, false),
-                new("regenerationNitrogen", FloatType.Default, false),
-                new("stemCarbon", FloatType.Default, false),
-                new("stemNitrogen", FloatType.Default, false)
-            };
-
-            Dictionary<string, string> metadata = new();
-            return new Schema(fields, metadata);
+            return batchMemory;
         }
 
         protected override void ProcessRecord()
         {
-            // there's no requirement to log resource unit and stand trajectories just because they're present
             Debug.Assert(this.Trajectory != null);
+            int calendarYearBeforeFirstSimulationTimestep = this.Trajectory!.Landscape.WeatherFirstCalendarYear - 1;
+
+            // there's no requirement to log resource unit and stand trajectories just because they're present
             if (String.IsNullOrWhiteSpace(this.ResourceUnitFile) == false)
             {
                 IList<ResourceUnitTrajectory> trajectories = this.Trajectory.Output.ResourceUnitTrajectories;
-                if (trajectories.Count == 0)
+                if (trajectories.Count < 1)
                 {
                     throw new ParameterOutOfRangeException(nameof(this.ResourceUnitFile), "A resource unit file was specified but no resource unit trajectories were logged.");
                 }
-                this.WriteTrajectories(this.ResourceUnitFile, trajectories, "resourceUnit");
+                StandOrResourceUnitTrajectoryArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemory(trajectories, calendarYearBeforeFirstSimulationTimestep);
+                WriteTrajectory.WriteTrajectories(this.ResourceUnitFile, arrowMemory);
             }
 
             if (String.IsNullOrWhiteSpace(this.StandFile) == false)
             {
                 IList<StandTrajectory> trajectories = this.Trajectory.Output.StandTrajectoriesByID.Values;
-                if (trajectories.Count == 0)
+                if (trajectories.Count < 1)
                 {
                     throw new ParameterOutOfRangeException(nameof(this.StandFile), "A stand file was specified but no stand trajectories were logged.");
                 }
-                this.WriteTrajectories(this.StandFile, trajectories, "stand");
+                StandOrResourceUnitTrajectoryArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemory(trajectories, calendarYearBeforeFirstSimulationTimestep);
+                WriteTrajectory.WriteTrajectories(this.StandFile, arrowMemory);
             }
         }
 
-        private void WriteTrajectories<TTrajectory>(string trajectoryFilePath, IList<TTrajectory> trajectories, string idFieldName) where TTrajectory : StandOrResourceUnitTrajectory
+        private static void WriteTrajectories(string trajectoryFilePath, StandOrResourceUnitTrajectoryArrowMemory arrowMemory)
         {
             // for now, all weather time series should start in January of the first simulation year
-            int calendarYearBeforeFirstSimulationTimestep = this.Trajectory!.Landscape.WeatherFirstCalendarYear - 1;
-            Schema schema = WriteTrajectory.CreateArrowSchema(idFieldName);
-            RecordBatch batch = WriteTrajectory.CreateArrowBatch<TTrajectory>(schema, trajectories, calendarYearBeforeFirstSimulationTimestep);
-
             using FileStream stream = new(trajectoryFilePath, FileMode.Create, FileAccess.Write, FileShare.None, Constant.File.DefaultBufferSize, FileOptions.SequentialScan);
-            using ArrowFileWriter writer = new(stream, schema);
+            using ArrowFileWriter writer = new(stream, arrowMemory.RecordBatch.Schema);
             writer.WriteStart();
-            writer.WriteRecordBatch(batch);
+            writer.WriteRecordBatch(arrowMemory.RecordBatch);
             writer.WriteEnd();
         }
     }

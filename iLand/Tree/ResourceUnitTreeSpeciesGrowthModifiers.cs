@@ -22,7 +22,8 @@ namespace iLand.Tree
         */
     public class ResourceUnitTreeSpeciesGrowthModifiers
     {
-        public ResourceUnit ResourceUnit { get; private init; }
+        private readonly ResourceUnit resourceUnit;
+
         public TreeSpecies Species { get; private init; }
 
         public float[] CO2ModifierByMonth { get; private init; }
@@ -37,8 +38,8 @@ namespace iLand.Tree
 
         public ResourceUnitTreeSpeciesGrowthModifiers(ResourceUnit resourceUnit, ResourceUnitTreeSpecies ruSpecies)
         {
+            this.resourceUnit = resourceUnit;
             this.Species = ruSpecies.Species;
-            this.ResourceUnit = resourceUnit;
 
             this.CO2ModifierByMonth = new float[Constant.MonthsInYear];
             this.GlobalRadiationByMonth = new float[Constant.MonthsInYear];
@@ -58,21 +59,21 @@ namespace iLand.Tree
 
             // nitrogen response: a yearly value based on available nitrogen
             // Calculated before monthly modifiers as calculation of the CO₂ modifier requires the nitrogen modifier.
-            if (this.ResourceUnit.Soil == null)
+            if (this.resourceUnit.Soil == null)
             {
                 this.NitrogenModifierForYear = 1.0F; // available nitrogen calculations are disabled, so default to making nitrogen non-limiting
             }
             else
             {
-                this.NitrogenModifierForYear = this.Species.GetNitrogenModifier(this.ResourceUnit.Soil.PlantAvailableNitrogen);
+                this.NitrogenModifierForYear = this.Species.GetNitrogenModifier(this.resourceUnit.Soil.PlantAvailableNitrogen);
                 Debug.Assert(this.NitrogenModifierForYear >= 0.0F);
             }
 
             // calculate monthly modifiers for the current simulation year (January-December calendar year)
-            LeafPhenology leafPhenology = this.ResourceUnit.Weather.GetPhenology(this.Species.LeafPhenologyID);
-            WaterCycle ruWaterCycle = this.ResourceUnit.WaterCycle;
-            CO2TimeSeriesMonthly co2timeSeries = this.ResourceUnit.Weather.CO2ByMonth;
-            WeatherTimeSeries weatherTimeSeries = this.ResourceUnit.Weather.TimeSeries;
+            LeafPhenology leafPhenology = this.resourceUnit.Weather.GetPhenology(this.Species.LeafPhenologyID);
+            WaterCycle ruWaterCycle = this.resourceUnit.WaterCycle;
+            CO2TimeSeriesMonthly co2timeSeries = this.resourceUnit.Weather.CO2ByMonth;
+            WeatherTimeSeries weatherTimeSeries = this.resourceUnit.Weather.TimeSeries;
             if (weatherTimeSeries.Timestep == Timestep.Daily)
             {
                 this.CalculateMonthlyGrowthModifiersFromDailyWeather((WeatherTimeSeriesDaily)weatherTimeSeries, leafPhenology, co2timeSeries, ruWaterCycle);
@@ -94,11 +95,11 @@ namespace iLand.Tree
                 Debug.Assert((this.SoilWaterModifierByMonth[monthIndex] >= 0.0F) && (this.SoilWaterModifierByMonth[monthIndex] <= 1.000001F));
                 Debug.Assert((this.TemperatureModifierByMonth[monthIndex] >= 0.0F) && (this.TemperatureModifierByMonth[monthIndex] <= 1.000001F));
                 Debug.Assert((this.VpdModifierByMonth[monthIndex] > 0.0F) && (this.VpdModifierByMonth[monthIndex] <= 1.000001F));
-                Debug.Assert(this.UtilizableRadiationByMonth[monthIndex] >= 0.0F); // utilizable radiation will be zero if the limiting response is zero
+                Debug.Assert((this.UtilizableRadiationByMonth[monthIndex] >= 0.0F) && (this.UtilizableRadiationByMonth[monthIndex] < 5000.0F)); // utilizable radiation will be zero during leaf off months or if the limiting modifier is zero
             }
             #endif
 
-            this.TotalRadiationForYear = this.ResourceUnit.Weather.TotalAnnualRadiation; // TODO: is this copy necessary?
+            this.TotalRadiationForYear = this.resourceUnit.Weather.TotalAnnualRadiation; // TODO: is this copy necessary?
         }
 
         private void CalculateMonthlyGrowthModifiersFromDailyWeather(WeatherTimeSeriesDaily dailyWeatherSeries, LeafPhenology leafPhenology, CO2TimeSeriesMonthly co2timeSeries, WaterCycle ruWaterCycle)

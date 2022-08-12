@@ -8,7 +8,7 @@ using Model = iLand.Simulation.Model;
 
 namespace iLand.Output.Sql
 {
-    /** StandOut is basic stand level info per species and ressource unit */
+    // resource unit level statistics per tree species
     public class ResourceUnitLiveTreeAnnualOutput : AnnualOutput
     {
         private readonly Expression yearFilter;

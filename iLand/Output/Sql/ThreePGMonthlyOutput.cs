@@ -5,24 +5,24 @@ using Microsoft.Data.Sqlite;
 
 namespace iLand.Output.Sql
 {
-    /** ProductionOut describes finegrained production details on the level of resourceunits per month. */
-    public class ProductionAnnualOutput : AnnualOutput
+    // 3-PG monthly timesteps by resource unit tree species, triggered at simulation year end to write all 12 months in the calendar year
+    public class ThreePGMonthlyOutput : AnnualOutput
     {
-        public ProductionAnnualOutput()
+        public ThreePGMonthlyOutput()
         {
-            this.Name = "Production per month, species and resource unit";
-            this.TableName = "productionMonth";
-            this.Description = "Details about the 3-PG production submodule on monthly basis and for each species and resource unit.";
+            this.Name = "3-PG monthly timesteps by resource unit tree species";
+            this.TableName = "monthly3PG";
+            this.Description = "Details about the 3-PG production submodule on monthly basis and for each tree species on each resource unit.";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
             this.Columns.Add(SqlColumn.CreateSpecies());
             this.Columns.Add(new("month", "month of year", SqliteType.Integer));
-            this.Columns.Add(new("tempResponse", "monthly average of daily respose value temperature", SqliteType.Real));
-            this.Columns.Add(new("waterResponse", "monthly average of daily respose value soil water", SqliteType.Real));
-            this.Columns.Add(new("vpdResponse", "monthly vapour pressure deficit respose.", SqliteType.Real));
-            this.Columns.Add(new("co2Response", "monthly response value for ambient co2.", SqliteType.Real));
-            this.Columns.Add(new("nitrogenResponse", "yearly respose value nitrogen", SqliteType.Real));
+            this.Columns.Add(new("tempModifier", "monthly average of daily modifier value temperature", SqliteType.Real));
+            this.Columns.Add(new("waterModifier", "monthly average of daily modifier value soil water", SqliteType.Real));
+            this.Columns.Add(new("vpdModifier", "monthly vapour pressure deficit modifier.", SqliteType.Real));
+            this.Columns.Add(new("co2Modifier", "monthly response value for ambient co2.", SqliteType.Real));
+            this.Columns.Add(new("nitrogenModifier", "yearly modifier value nitrogen", SqliteType.Real));
             this.Columns.Add(new("radiation_m2", "global radiation PAR in MJ per m2 and month", SqliteType.Real));
             this.Columns.Add(new("utilizableRadiation_m2", "utilizable PAR in MJ per m2 and month (sum of daily rad*min(respVpd,respWater,respTemp))", SqliteType.Real));
             this.Columns.Add(new("GPP_kg_m2", "GPP (without Aging) in kg Biomass/m2", SqliteType.Real));

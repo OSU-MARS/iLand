@@ -22,14 +22,14 @@ namespace iLand.Input
         public EsriAsciiRasterReader(string esriAsciiRasterPath)
         {
             // this.data initialized below
-            this.lowerLeftCorner = new(Constant.NoDataSingle, Constant.NoDataSingle);
-            this.upperRightCorner = new(Constant.NoDataSingle, Constant.NoDataSingle);
+            this.lowerLeftCorner = new(Constant.NoDataFloat, Constant.NoDataFloat);
+            this.upperRightCorner = new(Constant.NoDataFloat, Constant.NoDataFloat);
 
             this.CellSize = 1; // default value (for line mode)
             this.Columns = -1;
             //this.MinValue = Constant.NoDataSingle;
             //this.MaxValue = Constant.NoDataSingle;
-            this.NoDataValue = Constant.NoDataSingle;
+            this.NoDataValue = Constant.NoDataFloat;
             this.Rows = -1;
 
             // read header

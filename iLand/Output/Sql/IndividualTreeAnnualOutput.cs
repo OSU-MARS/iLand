@@ -7,11 +7,11 @@ using Model = iLand.Simulation.Model;
 
 namespace iLand.Output.Sql
 {
-    public class TreesAnnualOutput : AnnualOutput
+    public class IndividualTreeAnnualOutput : AnnualOutput
     {
         private readonly Expression treeFilter;
 
-        public TreesAnnualOutput()
+        public IndividualTreeAnnualOutput()
         {
             this.treeFilter = new();
 
@@ -44,7 +44,7 @@ namespace iLand.Output.Sql
 
         public override void Setup(Project projectFile, SimulationState simulationState)
         {
-            this.treeFilter.SetExpression(projectFile.Output.Sql.Tree.Filter);
+            this.treeFilter.SetExpression(projectFile.Output.Sql.IndividualTree.Filter);
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

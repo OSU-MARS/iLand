@@ -41,7 +41,7 @@ namespace iLand.Input.ProjectFile
 			this.GrowthEnabled = true;
 			this.MortalityEnabled = true;
 			this.MaxThreads = Environment.ProcessorCount / 2; // one thread per core, assuming a hyperthreaded processor with only p-cores
-			this.OverrideGppPerYear = Constant.NoDataSingle;
+			this.OverrideGppPerYear = Constant.NoDataFloat;
 			this.RandomSeed = null;
 			this.RegenerationEnabled = false;
 			this.ScheduledEventsFileName = null;

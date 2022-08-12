@@ -22,7 +22,7 @@ namespace iLand
         public const int LightCellsPerRUWidth = 50; // 100 m / 2 m
 
         public const int NoDataInt32 = Int32.MinValue;
-        public const float NoDataSingle = Single.NaN;
+        public const float NoDataFloat = Single.NaN;
 
         public const float RegenerationLayerHeight = 4.0F; // m
         public const float ResourceUnitAreaInM2 = 10000.0F; // area of a resource unit, m²

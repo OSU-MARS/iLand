@@ -36,9 +36,12 @@ namespace iLand.Tree
             LightStamp.DistanceFromCenterGrid.Setup(halfOfMaxStampSize, halfOfMaxStampSize, lightCellSize);
             for (int indexX = 0; indexX < halfOfMaxStampSize; ++indexX)
             {
-                for (int indexY = 0; indexY < halfOfMaxStampSize; ++indexY)
+                for (int indexY = 0; indexY <= indexX; ++indexY)
                 {
-                    LightStamp.DistanceFromCenterGrid[indexX, indexY] = lightCellSize * MathF.Sqrt(indexX * indexX + indexY * indexY);
+                    // distance grid (matrix) is symmetric, so calculate once and assign twice
+                    float distanceInM = lightCellSize * MathF.Sqrt(indexX * indexX + indexY * indexY);
+                    LightStamp.DistanceFromCenterGrid[indexX, indexY] = distanceInM;
+                    LightStamp.DistanceFromCenterGrid[indexY, indexX] = distanceInM;
                 }
             }
         }
@@ -76,16 +79,16 @@ namespace iLand.Tree
             this.ReaderStamp = null;
         }
 
-        /// retrieve the value of the stamp at given indices x and y
-        public float this[int x, int y]
+        // retrieve the value of the stamp at given indices x and y
+        public float this[int indexX, int indexY]
         {
-            get { return this.Data[this.IndexOf(x, y)]; }
-            set { this.Data[this.IndexOf(x, y)] = value; }
+            get { return this.Data[this.IndexOf(indexX, indexY)]; }
+            set { this.Data[this.IndexOf(indexX, indexY)] = value; }
         }
 
-        public float this[int x, int y, int offset]
+        public float this[int indexX, int indexY, int offsetXY]
         {
-            get { return this[x + offset, y + offset]; }
+            get { return this[indexX + offsetXY, indexY + offsetXY]; }
         }
 
         public float GetDistanceToCenter(int indexX, int indexY)
@@ -99,10 +102,10 @@ namespace iLand.Tree
         }
 
         /// get index (e.g. for data()[index]) for indices x and y
-        private int IndexOf(int x, int y) 
+        private int IndexOf(int indexX, int indexY) 
         { 
-            Debug.Assert((y * this.DataSize + x) < this.Data.Length); 
-            return y * this.DataSize + x; 
+            Debug.Assert((indexY * this.DataSize + indexX) < this.Data.Length); 
+            return indexY * this.DataSize + indexX; 
         }
 
         public void SetReaderStamp(LightStamp readerStamp)

@@ -9,15 +9,15 @@ namespace iLand.Input.ProjectFile
 		public ResourceUnitConditionOutput Carbon { get; private init; }
 		public ResourceUnitConditionOutput CarbonFlow { get; private init; }
 		public DynamicStandAnnualOutput DynamicStand { get; private init; }
+		public FilterAnnualOutput IndividualTree { get; private init; }
 		public ConditionAnnualOutput Landscape { get; private init; }
 		public LandscapeRemovedOutput LandscapeRemoved { get; private init; }
 		public Enablable Management { get; private init; }
-		public Enablable ProductionMonth { get; private init; }
 		public ConditionAnnualOutput Sapling { get; private init; }
 		public SaplingDetailAnnualOutput SaplingDetail { get; private init; }
 		public ConditionAnnualOutput Stand { get; private init; }
 		public Enablable StandDead { get; private init; }
-		public FilterAnnualOutput Tree { get; private init; }
+		public Enablable ThreePG { get; private init; }
 		public FilterAnnualOutput TreeRemoved { get; private init; }
 		public ResourceUnitConditionOutput Water { get; private init; }
 
@@ -32,15 +32,15 @@ namespace iLand.Input.ProjectFile
 			this.Carbon = new("carbon");
 			this.CarbonFlow = new("carbonFlow");
 			this.DynamicStand = new();
+			this.IndividualTree = new("individualTree");
 			this.Landscape = new("landscape");
 			this.LandscapeRemoved = new();
 			this.Management = new("management");
-			this.ProductionMonth = new("productionMonth");
 			this.Sapling = new("sapling");
 			this.SaplingDetail = new();
 			this.Stand = new("stand");
 			this.StandDead = new("standDead");
-			this.Tree = new("tree");
+			this.ThreePG = new("threePG");
 			this.TreeRemoved = new("treeRemoved");
 			this.Water = new("water");
 
@@ -70,14 +70,14 @@ namespace iLand.Input.ProjectFile
 					case "fire":
 						this.Fire.ReadXml(reader);
 						break;
+					case "individualTree":
+						this.IndividualTree.ReadXml(reader);
+						break;
 					case "landscape":
 						this.Landscape.ReadXml(reader);
 						break;
 					case "landscapeRemoved":
 						this.LandscapeRemoved.ReadXml(reader);
-						break;
-					case "productionMonth":
-						this.ProductionMonth.ReadXml(reader);
 						break;
 					case "management":
 						this.Management.ReadXml(reader);
@@ -94,8 +94,8 @@ namespace iLand.Input.ProjectFile
 					case "standDead":
 						this.StandDead.ReadXml(reader);
 						break;
-					case "tree":
-						this.Tree.ReadXml(reader);
+					case "threePG":
+						this.ThreePG.ReadXml(reader);
 						break;
 					case "treeRemoved":
 						this.TreeRemoved.ReadXml(reader);

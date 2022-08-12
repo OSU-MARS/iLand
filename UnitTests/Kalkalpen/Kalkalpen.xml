@@ -230,7 +230,17 @@
       <flush>false</flush>
     </logging>
     <memory>
-      <resourceUnitTrajectories enabled="false" />
+      <!-- hint as to the expected simulation length in years
+           By default, memory is allocated for 25 years of stand trajectory and then increased in 25 year increments. If the simulation length
+           is known ahead of time this property can be set to avoid the incremental allocations or, if needed, reduce memory allocations for
+           short simulations. For example, a model initialized with 2021 data and simulated through December 2100 would have 80 year trajectories:
+           the initial values for 2021 and then 79 timesteps from 2022 through 2100. -->
+      <!--<initialTrajectoryLengthInYears>80</initialTrajectoryLengthInYears>-->
+      <!-- flags for logging of resource unit level tree statistics: None, AllTreeSpeciesStatistics IndividualTreeSpeciesStatistics
+           To log both all tree and individual species statistics use <resourceUnitTrajectories>AllTreeSpeciesStatistics, IndividualTreeSpeciesStatistics</resourceUnitTrajectories> -->
+      <resourceUnitTrajectories>None</resourceUnitTrajectories>
+      <!-- turn annual logging of stand stand level tree statistics on or off -->
+      <standTrajectories enabled="false" />
     </memory>
     <sql>
       <!-- https://iland-model.org/Outputs -->
@@ -255,6 +265,12 @@
           if(dbh&lt;10,1,0).sum,if(dbh&gt;10 and dbh&lt;20,1,0).sum, if(dbh&gt;20 and dbh&lt;30,1,0).sum, if(dbh&gt;30 and dbh&lt;40,1,0).sum, if(dbh&gt;40 and dbh&lt;50,1,0).sum, if(dbh&gt;50 and dbh&lt;60,1,0).sum, if(dbh&gt;60 and dbh&lt;70,1,0).sum, if(dbh&gt;70 and dbh&lt;80,1,0).sum, if(dbh&gt;80 and dbh&lt;90,1,0).sum, if(dbh&gt;90 and dbh&lt;100,1,0).sum, if(dbh&gt;=100,1,0).sum
         </columns>
       </dynamicStand>
+      <individualTree enabled="true">
+        <!-- SQL insert rate is ~47,000 rows/core-second (i7-3770, Microsoft.Data.Sqlite 5.0.0) which is dominated by individual tree logging 
+             When simulation speed is a concern, consider disabling tree logging or filtering trees. -->
+        <!-- <ruFilter>0</ruFilter> -->
+        <!-- modulo: mod(id,100)=0 -->
+      </individualTree>
       <landscape enabled="true">
         <condition></condition>
       </landscape>
@@ -265,7 +281,6 @@
         <includeNatural>true</includeNatural>
       </landscapeRemoved>
       <management enabled="true" />
-      <productionMonth enabled="true" />
       <sapling enabled="true" />
       <saplingDetail enabled="true">
         <!--<minDbh></minDbh>-->
@@ -275,12 +290,7 @@
         <!-- <condition>in(year, 50,100,150,200)</condition>, mod(year,25)=0 -->
       </stand>
       <standDead enabled="true" />
-      <tree enabled="true">
-        <!-- SQL insert rate is ~47,000 rows/core-second (i7-3770, Microsoft.Data.Sqlite 5.0.0) which is dominated by individual tree logging 
-             When simulation speed is a concern, consider disabling tree logging or filtering trees. -->
-        <!-- <ruFilter>0</ruFilter> -->
-        <!-- modulo: mod(id,100)=0 -->
-      </tree>
+      <threePG enabled="true" />
       <treeRemoved enabled="true">
         <!-- individual tree output -->
         <filter></filter>

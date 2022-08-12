@@ -1,4 +1,5 @@
 ﻿using iLand.Input.ProjectFile;
+using iLand.Output.Memory;
 using iLand.Output.Sql;
 using iLand.Simulation;
 using iLand.Tree;
@@ -23,10 +24,10 @@ namespace iLand.Output
         private readonly List<AnnualOutput> sqlOutputs;
         private SqliteTransaction? sqlOutputTransaction;
 
-        public LandscapeRemovedAnnualOutput? LandscapeRemoved { get; private init; }
+        public LandscapeRemovedAnnualOutput? LandscapeRemovedSql { get; private init; }
         public List<ResourceUnitTrajectory> ResourceUnitTrajectories { get; private init; } // in same order as Landscape.ResourceUnits
         public SortedList<int, StandTrajectory> StandTrajectoriesByID { get; private init; }
-        public TreeRemovedAnnualOutput? TreeRemoved { get; private init; }
+        public TreeRemovedAnnualOutput? TreeRemovedSql { get; private init; }
 
         public Outputs(Project projectFile, Landscape landscape, Model model) // TODO: remove model
         {
@@ -38,12 +39,13 @@ namespace iLand.Output
             this.sqlOutputs = new();
             this.sqlOutputTransaction = null; // managed in LogYear()
 
-            this.LandscapeRemoved = null;
+            this.LandscapeRemovedSql = null;
             this.ResourceUnitTrajectories = new();
             this.StandTrajectoriesByID = new();
-            this.TreeRemoved = null;
+            this.TreeRemovedSql = null;
 
-            bool logResourceUnitTrajectories = projectFile.Output.Memory.ResourceUnitTrajectories.Enabled;
+            ResourceUnitMemoryOutputs resourceUnitMemoryOutputs = projectFile.Output.Memory.ResourceUnitTrajectories;
+            bool logResourceUnitTrajectories = resourceUnitMemoryOutputs != ResourceUnitMemoryOutputs.None;
             bool logStandTrajectories = projectFile.Output.Memory.StandTrajectories.Enabled;
             if (logResourceUnitTrajectories || logStandTrajectories)
             {
@@ -53,13 +55,14 @@ namespace iLand.Output
                     this.ResourceUnitTrajectories.Capacity = resourceUnits.Count;
                 }
 
+                int initialCapacityInYears = projectFile.Output.Memory.InitialTrajectoryLengthInYears;
                 int previousStandID = Constant.NoDataInt32;
                 for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnits.Count; ++resourceUnitIndex)
                 {
                     ResourceUnit resourceUnit = resourceUnits[resourceUnitIndex];
                     if (logResourceUnitTrajectories)
                     {
-                        this.ResourceUnitTrajectories.Add(new ResourceUnitTrajectory(resourceUnit));
+                        this.ResourceUnitTrajectories.Add(new ResourceUnitTrajectory(resourceUnit, resourceUnitMemoryOutputs, initialCapacityInYears));
                     }
                     if (logStandTrajectories)
                     {
@@ -70,7 +73,7 @@ namespace iLand.Output
                             if ((previousStandID != standID) && (this.currentYearStandStatistics.ContainsKey(standID) == false))
                             {
                                 this.currentYearStandStatistics.Add(standID, new StandTreeStatistics(standID));
-                                this.StandTrajectoriesByID.Add(standID, new StandTrajectory(standID));
+                                this.StandTrajectoriesByID.Add(standID, new StandTrajectory(standID, initialCapacityInYears));
                             }
 
                             previousStandID = standID;
@@ -98,12 +101,12 @@ namespace iLand.Output
             }
             if (sqlOutputSettings.LandscapeRemoved.Enabled)
             {
-                this.LandscapeRemoved = new LandscapeRemovedAnnualOutput();
-                this.sqlOutputs.Add(this.LandscapeRemoved);
+                this.LandscapeRemovedSql = new LandscapeRemovedAnnualOutput();
+                this.sqlOutputs.Add(this.LandscapeRemovedSql);
             }
-            if (sqlOutputSettings.ProductionMonth.Enabled)
+            if (sqlOutputSettings.ThreePG.Enabled)
             {
-                this.sqlOutputs.Add(new ProductionAnnualOutput());
+                this.sqlOutputs.Add(new ThreePGMonthlyOutput());
             }
             if (sqlOutputSettings.Management.Enabled)
             {
@@ -125,49 +128,48 @@ namespace iLand.Output
             {
                 this.sqlOutputs.Add(new ResourceUnitSnagAnnualOutput());
             }
-            if (sqlOutputSettings.Tree.Enabled)
+            if (sqlOutputSettings.IndividualTree.Enabled)
             {
-                this.sqlOutputs.Add(new TreesAnnualOutput());
+                this.sqlOutputs.Add(new IndividualTreeAnnualOutput());
             }
             if (sqlOutputSettings.TreeRemoved.Enabled)
             {
-                this.TreeRemoved = new TreeRemovedAnnualOutput();
-                this.sqlOutputs.Add(this.TreeRemoved);
+                this.TreeRemovedSql = new TreeRemovedAnnualOutput();
+                this.sqlOutputs.Add(this.TreeRemovedSql);
             }
             if (sqlOutputSettings.Water.Enabled)
             {
                 this.sqlOutputs.Add(new WaterAnnualOutput());
             }
 
-            if (this.sqlOutputs.Count == 0)
+            // open output SQL database if there are SQL outputs
+            if (this.sqlOutputs.Count > 0)
             {
-                return; // nothing to output so no reason to open output database
-            }
+                // create run-metadata
+                //int maxID = (int)(long)SqlHelper.QueryValue("select max(id) from runs", g.DatabaseInput);
+                //maxID++;
+                //SqlHelper.ExecuteSql(String.Format("insert into runs (id, timestamp) values ({0}, '{1}')", maxID, timestamp), g.DatabaseInput);
+                // replace path information
+                // setup final path
+                string? outputDatabaseFile = sqlOutputSettings.DatabaseFile;
+                if (String.IsNullOrWhiteSpace(outputDatabaseFile))
+                {
+                    throw new XmlException("The /project/output/annual/databaseFile element is missing or does not specify an output database file name.");
+                }
+                string outputDatabasePath = projectFile.GetFilePath(ProjectDirectory.Output, outputDatabaseFile);
+                // dbPath.Replace("$id$", maxID.ToString(), StringComparison.Ordinal);
+                outputDatabasePath = outputDatabasePath.Replace("$date$", DateTime.Now.ToString("yyyyMMdd_hhmmss"), StringComparison.Ordinal);
+                this.sqlDatabaseConnection = Landscape.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
 
-            // create run-metadata
-            //int maxID = (int)(long)SqlHelper.QueryValue("select max(id) from runs", g.DatabaseInput);
-            //maxID++;
-            //SqlHelper.ExecuteSql(String.Format("insert into runs (id, timestamp) values ({0}, '{1}')", maxID, timestamp), g.DatabaseInput);
-            // replace path information
-            // setup final path
-            string? outputDatabaseFile = sqlOutputSettings.DatabaseFile;
-            if (String.IsNullOrWhiteSpace(outputDatabaseFile))
-            {
-                throw new XmlException("The /project/output/annual/databaseFile element is missing or does not specify an output database file name.");
+                using SqliteTransaction outputTableCreationTransaction = this.sqlDatabaseConnection.BeginTransaction();
+                SimulationState simulationState = model.SimulationState;
+                foreach (AnnualOutput output in this.sqlOutputs)
+                {
+                    output.Setup(projectFile, simulationState);
+                    output.Open(outputTableCreationTransaction);
+                }
+                outputTableCreationTransaction.Commit();
             }
-            string outputDatabasePath = projectFile.GetFilePath(ProjectDirectory.Output, outputDatabaseFile);
-            // dbPath.Replace("$id$", maxID.ToString(), StringComparison.Ordinal);
-            outputDatabasePath = outputDatabasePath.Replace("$date$", DateTime.Now.ToString("yyyyMMdd_hhmmss"), StringComparison.Ordinal);
-            this.sqlDatabaseConnection = Landscape.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
-
-            using SqliteTransaction outputTableCreationTransaction = this.sqlDatabaseConnection.BeginTransaction();
-            SimulationState simulationState = model.SimulationState;
-            foreach (AnnualOutput output in this.sqlOutputs)
-            {
-                output.Setup(projectFile, simulationState);
-                output.Open(outputTableCreationTransaction);
-            }
-            outputTableCreationTransaction.Commit();
         }
 
         public void Dispose()

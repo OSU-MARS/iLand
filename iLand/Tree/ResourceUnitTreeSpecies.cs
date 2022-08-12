@@ -23,7 +23,7 @@ namespace iLand.Tree
         public TreeSpecies Species { get; private init; } // return pointer to species
         public ResourceUnitTreeSpeciesStatistics StatisticsLive { get; private init; } // statistics of this species on the resource unit
         public ResourceUnitTreeSpeciesStatistics StatisticsManagement { get; private init; } // statistics of removed trees
-        public ResourceUnitTreeSpeciesStatistics StatisticsSnag { get; private init; } // statistics of trees that have died
+        public ResourceUnitTreeSpeciesStatistics StatisticsSnag { get; private init; } // statistics of trees that have died, maintained here for now since resource unit snags are tracked by size class and not by species
         public ResourceUnitTreeSpeciesGrowth TreeGrowth { get; private init; } // the 3-PG production model of this species on this resource unit
 
         public ResourceUnitTreeSpecies(TreeSpecies treeSpecies, ResourceUnit resourceUnit)

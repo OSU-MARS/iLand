@@ -18,13 +18,13 @@ namespace iLand.Output.Sql
             this.Columns.Add(SqlColumn.CreateResourceUnit());
             this.Columns.Add(SqlColumn.CreateID());
             this.Columns.Add(SqlColumn.CreateSpecies());
-            this.Columns.Add(new("count_ha", "tree count (that died this year)", SqliteType.Integer));
+            this.Columns.Add(new("count_ha", "snag count (that died this year)", SqliteType.Integer));
             this.Columns.Add(new("dbh_avg_cm", "average dbh (cm)", SqliteType.Real));
             this.Columns.Add(new("height_avg_m", "average tree height (m)", SqliteType.Real));
             this.Columns.Add(new("volume_m3", "volume (geomery, taper factor) in m3", SqliteType.Real));
             this.Columns.Add(new("basal_area_m2", "total basal area at breast height (m2)", SqliteType.Real));
-            this.Columns.Add(new("NPP_kg", "sum of NPP (aboveground + belowground) kg Biomass/ha", SqliteType.Real));
-            this.Columns.Add(new("NPPabove_kg", "sum of NPP (abovegroundground) kg Biomass/ha", SqliteType.Real));
+            this.Columns.Add(new("NPP_kg", "sum of NPP (aboveground + belowground) kg biomass/ha", SqliteType.Real));
+            this.Columns.Add(new("NPPabove_kg", "sum of NPP (abovegroundground) kg biomass/ha", SqliteType.Real));
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)

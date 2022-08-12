@@ -1,4 +1,4 @@
-﻿using iLand.Output;
+﻿using iLand.Output.Memory;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -56,8 +56,9 @@ namespace iLand.Test
             this.ObservedStemVolumeByYear.Add(stemVolume);
         }
 
-        public void Verify(StandOrResourceUnitTrajectory actualTrajectory, float maximumTreeCount, List<float> expectedGppByYear, List<float> expectedNppByYear, List<float> expectedVolumeByYear)
+        public void Verify(StandOrResourceUnitTrajectory? actualTrajectory, float maximumTreeCount, List<float> expectedGppByYear, List<float> expectedNppByYear, List<float> expectedVolumeByYear)
         {
+            Assert.IsTrue(actualTrajectory != null);
             float growthMultiplier = 1.0F - this.NonmonotonicGrowthTolerance;
             float treeNppMultiplier = 1.0F - this.TreeNppTolerance;
 

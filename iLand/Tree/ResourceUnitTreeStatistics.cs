@@ -98,7 +98,7 @@ namespace iLand.Tree
             }
 
             Debug.Assert(this.ResourceUnit.AreaInLandscapeInM2 > 0.0F);
-            this.LeafAreaIndex = this.TotalLeafAreaInM2 / this.ResourceUnit.AreaInLandscapeInM2; // this.ru.AreaWithTrees;
+            this.LeafAreaIndex = this.TotalLeafAreaInM2 / this.ResourceUnit.AreaInLandscapeInM2; // arguably could be this.ResourceUnit.AreaWithTrees, this calculation is redundant for all species statistics as LAIs have already been added
 
             // if resource unit is 1 ha then values are already per hectare, if not expansion factor multiplication is needed
             // For resource unit tree statistics, expansion factors are applied only at the species level and then species' per hectare

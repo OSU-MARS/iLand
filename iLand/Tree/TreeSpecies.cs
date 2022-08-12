@@ -53,7 +53,7 @@ namespace iLand.Tree
         private float treeMigKappaS; // seed dispersal parameters (TreeMig)
 
         // properties
-        /// @property id 4-character unique identification of the tree species
+        /// 4-character unique identification of the tree species
         public string ID { get; private init; }
         public int Index { get; private init; } // unique index of species within current species set
         public bool IsConiferous { get; private set; }

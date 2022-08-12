@@ -50,7 +50,7 @@
   <ItemGroup>
     <PackageReference Include="Apache.Arrow" Version="9.0.0" />
     <PackageReference Include="MersenneTwister" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.7" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.8" />
     <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.2.5" />
   </ItemGroup>
   

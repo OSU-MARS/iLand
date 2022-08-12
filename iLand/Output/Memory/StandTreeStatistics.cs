@@ -1,7 +1,7 @@
 ﻿using iLand.Tree;
 using System.Diagnostics;
 
-namespace iLand.Output
+namespace iLand.Output.Memory
 {
     public class StandTreeStatistics : StandOrResourceUnitTreeStatistics
     {
