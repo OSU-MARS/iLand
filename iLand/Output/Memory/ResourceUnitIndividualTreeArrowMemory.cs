@@ -7,10 +7,11 @@ using System.Collections.Generic;
 
 namespace iLand.Output.Memory
 {
-    internal class ResourceUnitIndividualTreeTrajectoriesArrowMemory : ArrowMemory
+    internal class ResourceUnitIndividualTreeArrowMemory : ArrowMemory
     {
         private readonly IntegerType treeSpeciesFieldType;
 
+        // if needed, a resource unit ID field can be included
         private readonly byte[] calendarYear;
         private readonly byte[] standID;
         private readonly byte[] treeSpeciesIndices;
@@ -31,7 +32,7 @@ namespace iLand.Output.Memory
 
         public RecordBatch RecordBatch { get; private init; }
 
-        public ResourceUnitIndividualTreeTrajectoriesArrowMemory(IntegerType treeSpeciesFieldType, int batchLength)
+        public ResourceUnitIndividualTreeArrowMemory(IntegerType treeSpeciesFieldType, int batchLength)
         {
             this.treeSpeciesFieldType = treeSpeciesFieldType;
 

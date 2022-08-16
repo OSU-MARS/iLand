@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using Weather = iLand.World.Weather;
 using Model = iLand.Simulation.Model;
+using SQLitePCL;
 
 namespace iLand.Test
 {
@@ -48,10 +49,9 @@ namespace iLand.Test
                 // located tracked resource units
                 ObservedResourceUnitTrajectory observedTrajectory82597 = new() // wholly contained within stand 78
                 {
-                    // for now, set loose tolerances due to preliminary tiles, lack of calibration, and high stochastic mortality
-                    NonmonotonicGrowthTolerance = 0.05F,
-                    NppTolerance = 0.05F,
-                    StemVolumeTolerance = 0.05F,
+                    NonmonotonicGrowthTolerance = 0.02F,
+                    NppTolerance = 0.02F,
+                    StemVolumeTolerance = 0.02F,
                     TreeNppTolerance = 0.05F
                 };
 
@@ -88,19 +88,20 @@ namespace iLand.Test
                 // changes to random number generation appear likely to require expected values be updated.
                 List<float> expectedGppBySimulationYear = new()
                 {
-                    0.0F, 14.607F, 14.671F, 14.646F, 14.864F, 14.502F, // 0...5
-                    14.842F, 15.047F, 14.870F, 14.913F, 14.974F // 6...10
+                    0.0F, 15.450F, 15.564F, 15.453F, 15.706F, 15.383F, // 0...5 
+                    15.701F, 15.846F, 15.707F, 15.792F, 15.869F // 6...10
                 };
                 List<float> expectedNppBySimulationYear = new()
                 {
-                    0.0F, 41568.55F, 42040.76F, 42148.52F, 42933.164F, 41954.23F, 
-                    43039.632F, 43698.95F, 42797.535F, 42940.05F, 43118.515F
+                    0.0F, 43965.105F, 44613.445F, 44506.644F, 45409.55F, 44584.406F, 
+                    45573.472F, 46075.98F, 45226.242F, 45500.94F, 45728.82F
                 };
                 List<float> expectedStemVolumeBySimulationYear = new()
                 {
-                    1166.786F, 1209.501F, 1252.128F, 1294.588F, 1338.040F, 1379.567F, 
-                    1422.594F, 1466.218F, 1508.038F, 1550.071F, 1592.181F
-                }; 
+                    1166.786F, 1212.667F, 1258.672F, 1304.184F, 1350.813F, 1395.704F, 
+                    1441.934F, 1488.567F, 1533.374F, 1578.614F, 1623.986F
+                };
+                    
                 ResourceUnitAllSpeciesTrajectory? resourceUnit82597trajectory = elliott.Output.ResourceUnitTrajectories[resourceUnit82597index].AllTreeSpeciesTrajectory;
                 observedTrajectory82597.Verify(resourceUnit82597trajectory, 126.0F, expectedGppBySimulationYear, expectedNppBySimulationYear, expectedStemVolumeBySimulationYear);
 
@@ -973,12 +974,12 @@ namespace iLand.Test
 
             Assert.IsTrue(trajectory.LengthInYears == simulationYear + 1);
 
-            float abovegroundTreeNppFromComponents = branchCarbonInKgPerHa + branchNitrogenInKgPerHa + foliageCarbonInKgPerHa + foliageNitrogenInKgPerHa + stemCarbonInKgPerHa + stemNitrogenInKgPerHa; // kg/ha
-            float belowgroundTreeNppFromComponents = coarseRootCarbonInKgPerHa + coarseRootNitrogenInKgPerHa + fineRootCarbonInKgPerHa + fineRootNitrogenInKgPerHa; // kg/ha
-            float totalTreeNpp = abovegroundTreeNppFromComponents + belowgroundTreeNppFromComponents; // kg/ha
+            float abovegroundTreeMassFromComponents = branchCarbonInKgPerHa + branchNitrogenInKgPerHa + foliageCarbonInKgPerHa + foliageNitrogenInKgPerHa + stemCarbonInKgPerHa + stemNitrogenInKgPerHa; // kg/ha
+            float belowgroundTreeMassFromComponents = coarseRootCarbonInKgPerHa + coarseRootNitrogenInKgPerHa + fineRootCarbonInKgPerHa + fineRootNitrogenInKgPerHa; // kg/ha
+            float totalTreeMass = abovegroundTreeMassFromComponents + belowgroundTreeMassFromComponents; // kg/ha
 
-            Assert.IsTrue(MathF.Abs(treeAbovegroundNppInKgPerHa / abovegroundTreeNppFromComponents) - 1.0F < 0.001F);
-            Assert.IsTrue(MathF.Abs(treeNppInKgPerHa / totalTreeNpp) - 1.0F < 0.001F);
+            Assert.IsTrue(treeAbovegroundNppInKgPerHa < 1.2F * abovegroundTreeMassFromComponents);
+            Assert.IsTrue(treeNppInKgPerHa < 1.2F * totalTreeMass);
         }
     }
 }

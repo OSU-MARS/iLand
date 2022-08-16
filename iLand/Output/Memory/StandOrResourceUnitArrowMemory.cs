@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace iLand.Output.Memory
 {
-    internal class StandOrResourceUnitTrajectoryArrowMemory : ArrowMemory
+    internal class StandOrResourceUnitArrowMemory : ArrowMemory
     {
         private readonly IntegerType treeSpeciesFieldType;
 
@@ -41,7 +41,7 @@ namespace iLand.Output.Memory
         public RecordBatch RecordBatch { get; private init; }
 
         // public StandOrResourceUnitTrajectoryArrowMemory(string idFieldName, IList<string> treeSpecies, int batchLength)
-        public StandOrResourceUnitTrajectoryArrowMemory(string idFieldName, string idFieldDescription, IntegerType treeSpeciesFieldType, int batchLength)
+        public StandOrResourceUnitArrowMemory(string idFieldName, string idFieldDescription, IntegerType treeSpeciesFieldType, int batchLength)
         {
             this.treeSpeciesFieldType = treeSpeciesFieldType;
 

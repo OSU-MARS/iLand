@@ -7,19 +7,19 @@ namespace iLand.Tree
 {
     public class ResourceUnitTreeSpeciesGrowth
     {
-        //  GPP production (yearly) (kg Biomass) per m² (effective area)
+        //  annual gross primary production, kg biomass/m² (effective area)
         public float AnnualGpp { get; private set; }
         // species specific responses to abiotic environment
         public ResourceUnitTreeSpeciesGrowthModifiers Modifiers { get; private set; }
-        // monthly Gross Primary Production [kg Biomass / m²]
+        // monthly gross primary production, kg biomass/m²
         public float[] MonthlyGpp { get; private init; }
         /// fraction of biomass that should be distributed to roots
         public float RootFraction { get; private set; }
         // f_env,yr: aggregate environmental factor [0..1}
         // f_env,yr: factor that aggregates the environment for the species over the year (weighted with the radiation pattern)
         public float SiteEnvironmentSaplingHeightGrowthMultiplier { get; private set; }
-        // utilizable radiation MJ/m² and month
-        public float[] UtilizablePar { get; private init; }
+        // utilizable photosynthetically active radiation, MJ/m²
+        public float[] UtilizableParByMonth { get; private init; }
 
         public ResourceUnitTreeSpeciesGrowth(ResourceUnit resourceUnit, ResourceUnitTreeSpecies ruSpecies)
         {
@@ -28,7 +28,7 @@ namespace iLand.Tree
             this.MonthlyGpp = new float[Constant.MonthsInYear];
             this.RootFraction = 0.0F;
             this.SiteEnvironmentSaplingHeightGrowthMultiplier = 0.0F;
-            this.UtilizablePar = new float[Constant.MonthsInYear];
+            this.UtilizableParByMonth = new float[Constant.MonthsInYear];
         }
 
         /** calculate a resource unit's GPP
@@ -62,7 +62,7 @@ namespace iLand.Tree
                 // maximum radiation use efficiency
                 float epsilon = projectFile.Model.Ecosystem.LightUseEpsilon * this.Modifiers.NitrogenModifierForYear * this.Modifiers.CO2ModifierByMonth[monthIndex];
 
-                this.UtilizablePar[monthIndex] = utilizableRadiation;
+                this.UtilizableParByMonth[monthIndex] = utilizableRadiation;
                 this.MonthlyGpp[monthIndex] = utilizableRadiation * epsilon * gramsCarbonToKilogramsBiomass; // ... results in GPP of the month kg Biomass/m2 (converted from gC/m2)
                 resourceUnitGppForYear += this.MonthlyGpp[monthIndex]; // kg biomass/m2
 
@@ -116,7 +116,7 @@ namespace iLand.Tree
         public void ZeroMonthlyAndAnnualValues()
         {
             Array.Fill(this.MonthlyGpp, 0.0F);
-            Array.Fill(this.UtilizablePar, 0.0F);
+            Array.Fill(this.UtilizableParByMonth, 0.0F);
 
             this.AnnualGpp = 0.0F;
             this.RootFraction = 0.0F;

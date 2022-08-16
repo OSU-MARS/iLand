@@ -2,6 +2,7 @@ library(arrow)
 library(dplyr)
 library(ggplot2)
 library(patchwork)
+library(tidyr)
 
 theme_set(theme_bw() + theme(axis.line = element_line(size = 0.5),
                              legend.background = element_rect(fill = alpha("white", 0.5)),
@@ -16,24 +17,44 @@ elliottResourceUnitTrajectories = read_feather("TestResults/Elliott resource uni
          species = factor(species, labels = c("all", "psme"), levels = c(0, 202)))
 elliottStandTrajectories = read_feather("TestResults/Elliott stand trajectories.feather", mmap = FALSE) %>%
   mutate(qmd = sqrt(basalArea / (0.01^2 * pi/4 * treesPerHectare)))
+elliottThreePG = read_feather("TestResults/Elliott 3-PG.feather", mmap = FALSE) %>%
+  mutate(decimalYear = year + 1/12 * (month - 0.5),
+         species = factor(species, labels = c("all", "psme"), levels = c(0, 202)),
+         uniqueID = paste(resourceUnit, species))
 
 ## basic check plots
 # Reineke stand density diagrams by resource unit and stand (with workaround for https://github.com/tidyverse/ggplot2/issues/4935)
+logBreaks = c(1, 2, 3, 4, 5, 6, 8, 10, 20, 30, 40, 50, 60, 80, 100, 200, 300, 400, 500, 600, 800, 1000, 2000, 3000, 4000)
+logMinorBreaks = c(1.5, 7, 9, 15, 70, 90, 150, 700, 900)
+sdi = crossing(tph = c(1, 4000), sdi = c(100, 200, 300, 400, 500, 600, 700, 800, 900, 1000)) %>% mutate(qmd = 25.4 * (sdi / tph)^(1/1.605))
+
 ggplot(elliottResourceUnitTrajectories %>% filter(species == "all")) +
+  geom_path(aes(x = tph, y = qmd, group = sdi), sdi, color = "grey70", linetype = "longdash") +
   geom_path(aes(x = treesPerHectare, y = qmd, group = resourceUnit), arrow = arrow(length = unit(0.25, "line"), type = "closed")) +
   geom_path(aes(x = treesPerHectare, y = qmd, color = liveStemVolume, group = resourceUnit)) +
+  coord_cartesian(xlim = c(7, 500), ylim = c(10, 150)) +
   labs(x = "resource unit TPH", y = "resource unit all species QMD, cm", color = bquote("live stem\nvolume, m"^3*" ha"^-1)) +
-  theme(legend.justification = c(1, 1), legend.position = c(0.99, 0.97))
+  scale_x_log10(breaks = logBreaks, minor_breaks = logMinorBreaks) +
+  scale_y_log10(breaks = logBreaks, minor_breaks = logMinorBreaks) +
+  theme(legend.justification = c(0, 0), legend.position = c(0.02, 0.02))
 ggplot(elliottResourceUnitTrajectories %>% filter(species == "psme")) +
+  geom_path(aes(x = tph, y = qmd, group = sdi), sdi, color = "grey70", linetype = "longdash") +
   geom_path(aes(x = treesPerHectare, y = qmd, group = resourceUnit), arrow = arrow(length = unit(0.25, "line"), type = "closed")) +
   geom_path(aes(x = treesPerHectare, y = qmd, color = liveStemVolume, group = resourceUnit)) +
+  coord_cartesian(xlim = c(7, 500), ylim = c(10, 150)) +
   labs(x = "resource unit TPH", y = "resource unit Douglas-fir QMD, cm", color = bquote("live stem\nvolume, m"^3*" ha"^-1)) +
-  theme(legend.justification = c(1, 1), legend.position = c(0.99, 0.97))
-ggplot(elliottStandTrajectories) +
-  geom_path(aes(x = treesPerHectare, y = qmd, group = stand), arrow = arrow(length = unit(0.25, "line"), type = "closed")) +
-  geom_path(aes(x = treesPerHectare, y = qmd, color = liveStemVolume, group = stand)) +
+  scale_x_log10(breaks = logBreaks, minor_breaks = logMinorBreaks) +
+  scale_y_log10(breaks = logBreaks, minor_breaks = logMinorBreaks) +
+  theme(legend.justification = c(0, 0), legend.position = c(0.02, 0.02))
+ggplot() +
+  geom_path(aes(x = tph, y = qmd, group = sdi), sdi, color = "grey70", linetype = "longdash") +
+  geom_path(aes(x = treesPerHectare, y = qmd, group = stand), elliottStandTrajectories, arrow = arrow(length = unit(0.25, "line"), type = "closed")) +
+  geom_path(aes(x = treesPerHectare, y = qmd, color = liveStemVolume, group = stand), elliottStandTrajectories) +
   labs(x = "stand TPH", y = "stand QMD, cm", color = bquote("live stem\nvolume, m"^3*" ha"^-1)) +
-  theme(legend.justification = c(1, 1), legend.position = c(0.99, 0.97))
+  coord_cartesian(xlim = c(4, 200), ylim = c(10, 150)) +
+  scale_x_log10(breaks = logBreaks, minor_breaks = logMinorBreaks) +
+  scale_y_log10(breaks = logBreaks, minor_breaks = logMinorBreaks) +
+  theme(legend.justification = c(0, 0), legend.position = c(0.02, 0.02))
 
 # height-diameter trajectories
 individualTreeSubset = elliottIndividualTreeTrajectories %>% filter(id %in% sample(unique(id), size = 250))
@@ -56,7 +77,7 @@ ggplot(elliottStandTrajectories) +
 
 # leaf area and LAI
 ggplot(individualTreeSubset) +
-  geom_line(aes(x = year, y = leafArea, color = species, group = id), alpha = 0.3, arrow = arrow(length = unit(0.25, "line"), type = "closed")) +
+  geom_line(aes(x = year, y = leafArea, color = species, group = id), alpha = 0.3) +
   labs(x = "calendar year", y = bquote("tree leaf area, m"^2), color = NULL) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
   theme(legend.justification = c(0, 1), legend.position = c(0.02, 0.99))
@@ -69,31 +90,46 @@ ggplot(elliottStandTrajectories) +
   labs(x = "calendar year", y = bquote("stand LAI, m"^2*" m"^-2), color = NULL) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2))
 
-# NPP
+# GPP and NPP, mostly NPP
 ggplot(individualTreeSubset) +
   geom_line(aes(x = year, y = nppReserve, color = species, group = id), alpha = 0.3) +
   labs(x = "calendar year", y = "tree NPP reserve, kg biomass", color = NULL) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
   theme(legend.justification = c(0, 1), legend.position = c(0.02, 0.99))
-ggplot(elliottResourceUnitTrajectories %>% filter(species == "all") %>% filter(year > 2021)) + # no NPP estimates in year before timestepping starts
+ggplot(elliottResourceUnitTrajectories %>% filter(species == "all", year > 2021)) + # no NPP estimates in year before timestepping starts
   geom_path(aes(x = year, y = treeNpp, color = "tree NPP, total", group = resourceUnit), alpha = 0.5) +
   geom_path(aes(x = year, y = treeAbovegroundNpp, color = "tree NPP, aboveground", group = resourceUnit), alpha = 0.5) +
   geom_path(aes(x = year, y = saplingNpp, color = "sapling NPP, total", group = resourceUnit), alpha = 0.5) +
+  guides(color = guide_legend(ncol = 3)) +
   labs(x = "calendar year", y = bquote("resource unit NPP, kg biomass ha"^-1), color = NULL) +
   scale_color_discrete(breaks = c("tree NPP, total", "tree NPP, aboveground", "sapling NPP, total")) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
-  theme(legend.justification = c(1, 1), legend.position = c(0.99, 0.99))
+  theme(legend.justification = c(0, 1), legend.position = c(0.02, 0.99))
 ggplot(elliottStandTrajectories %>% filter(year > 2021)) +
   geom_path(aes(x = year, y = treeNpp, color = "tree NPP, total", group = stand), alpha = 0.5) +
   geom_path(aes(x = year, y = treeAbovegroundNpp, color = "tree NPP, aboveground", group = stand), alpha = 0.5) +
   geom_path(aes(x = year, y = saplingNpp, color = "sapling NPP, total", group = stand), alpha = 0.5) +
+  guides(color = guide_legend(ncol = 3)) +
   labs(x = "calendar year", y = bquote("stand NPP, kg biomass ha"^-1), color = NULL) +
   scale_color_discrete(breaks = c("tree NPP, total", "tree NPP, aboveground", "sapling NPP, total")) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
-  theme(legend.justification = c(1, 1), legend.position = c(0.99, 0.99))
+  theme(legend.justification = c(0, 1), legend.position = c(0.02, 0.99))
+ggplot(elliottThreePG %>% filter(year > 2021)) + # 3-PG outputs are all zero in initialization year
+  geom_path(aes(x = decimalYear, y = solarRadiation, color = "solar radiation", group = uniqueID), alpha = 0.5) +
+  geom_path(aes(x = decimalYear, y = utilizablePar, color = "utilizable photosynthetically active radiation", group = uniqueID), alpha = 0.5) +
+  guides(color = guide_legend(ncol = 2)) +
+  labs(x = "calendar year", y = bquote("total solar radiation, MJ m"^-2*" month"^-1), color = NULL) +
+  scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
+  theme(legend.justification = c(1, 0), legend.position = c(0.99, 0.02))
+ggplot(elliottThreePG %>% filter(year > 2021)) + # 3-PG outputs are all zero in initialization year
+  geom_path(aes(x = decimalYear, y = monthlyGpp, group = uniqueID), alpha = 0.5) +  
+  guides(color = guide_legend(ncol = 2)) +
+  labs(x = "calendar year", y = bquote("gross primary production, kg biomass month"^-1), color = NULL) +
+  scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
+  theme(legend.justification = c(1, 0), legend.position = c(0.99, 0.02))
 
 # saplings: these are all zero if 1) no saplings in initial stand state and 2) regeneration isn't enabled
-ggplot(elliottResourceUnitTrajectories %>% filter(species = "psme")) +
+ggplot(elliottResourceUnitTrajectories %>% filter(species == "psme")) +
   geom_path(aes(x = year, y = saplingCohorts, color = "cohorts", group = resourceUnit), alpha = 0.5) +
   geom_path(aes(x = year, y = saplingMeanAge, color = "mean age", group = resourceUnit), alpha = 0.5) +
   geom_path(aes(x = year, y = saplingNpp, color = "NPP", group = resourceUnit), alpha = 0.5) +
@@ -150,22 +186,35 @@ ggplot(elliottResourceUnitTrajectories %>% filter(species = "psme")) + # in roug
 
 # tree lighting and stress response
 ggplot(individualTreeSubset) +
-  geom_line(aes(x = year, y = lightResourceIndex, color = species, group = id), alpha = 0.3) +
+  geom_path(aes(x = year, y = lightResourceIndex, color = species, group = id), alpha = 0.3) +
   labs(x = NULL, y = "light resource index", color = NULL) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
   theme(legend.position = "none") +
 ggplot(individualTreeSubset) +
-  geom_line(aes(x = year, y = opacity, color = species, group = id), alpha = 0.3) +
+  geom_path(aes(x = year, y = opacity, color = species, group = id), alpha = 0.3) +
   labs(x = NULL, y = "opacity", color = NULL) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
   theme(legend.position = "none") +
 ggplot(individualTreeSubset) +
-  geom_line(aes(x = year, y = lightResponse, color = species, group = id), alpha = 0.3) +
+  geom_path(aes(x = year, y = lightResponse, color = species, group = id), alpha = 0.3) +
   labs(x = "calendar year", y = "light response", color = NULL) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
   theme(legend.position = "none") +
 ggplot(individualTreeSubset) +
-  geom_line(aes(x = year, y = stressIndex, color = species, group = id), alpha = 0.3) +
+  geom_path(aes(x = year, y = stressIndex, color = species, group = id), alpha = 0.3) +
   labs(x = "calendar year", y = "stress index", color = NULL) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
   theme(legend.justification = c(0, 1), legend.position = c(0.02, 0.99))
+
+# 3-PG modifiers
+ggplot(elliottThreePG %>% filter(year > 2021)) + # 3-PG outputs are all zero in initialization year
+  geom_path(aes(x = decimalYear, y = co2Modifier, color = "CO2", group = uniqueID), alpha = 0.5) +
+  geom_path(aes(x = decimalYear, y = soilWaterModifier, color = "soil water", group = uniqueID), alpha = 0.5) +
+  geom_path(aes(x = decimalYear, y = temperatureModifier, color = "temperature", group = uniqueID), alpha = 0.5) +
+  geom_path(aes(x = decimalYear, y = vpdModifier, color = "VPD", group = uniqueID), alpha = 0.5) +
+  coord_cartesian(ylim = c(0, 1.1)) +
+  guides(color = guide_legend(ncol = 4)) +
+  labs(x = "calendar year", y = "3-PG growth modifier", color = NULL) +
+  scale_color_discrete(breaks = c("CO2", "soil water", "temperature", "VPD"), labels = c(bquote("CO"[2]), "soil water", "temperature", "VPD")) +
+  scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
+  theme(legend.justification = c(1, 0), legend.position = c(0.99, 0.02))

@@ -183,7 +183,7 @@ namespace iLand.Input.Weather
                     monthlyWeather.Month[destinationIndex] = 9;
                     monthlyWeather.PrecipitationTotalInMM[destinationIndex] = fields.Precipitation09.Values[sourceIndex];
                     monthlyWeather.SnowTotalInMM[destinationIndex] = fields.Snow09.Values[sourceIndex];
-                    monthlyWeather.SolarRadiationTotal[destinationIndex] = fields.SolarRadiation02.Values[sourceIndex];
+                    monthlyWeather.SolarRadiationTotal[destinationIndex] = fields.SolarRadiation09.Values[sourceIndex];
                     maxTemp = fields.TemperatureMax09.Values[sourceIndex];
                     monthlyWeather.TemperatureMax[destinationIndex] = maxTemp;
                     minTemp = fields.TemperatureMin09.Values[sourceIndex];

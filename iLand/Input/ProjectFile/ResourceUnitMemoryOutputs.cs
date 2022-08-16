@@ -8,6 +8,7 @@ namespace iLand.Input.ProjectFile
         None = 0x0,
         AllTreeSpeciesStatistics = 0x1,
         IndividualTrees = 0x2,
-        IndividualTreeSpeciesStatistics = 0x4
+        IndividualTreeSpeciesStatistics = 0x4,
+        ThreePG = 0x8
     }
 }

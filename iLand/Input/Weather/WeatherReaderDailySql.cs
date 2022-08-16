@@ -123,7 +123,7 @@ namespace iLand.Input.Weather
                     dailyWeather.TemperatureMin[dayIndex] = minTemperature;
                     dailyWeather.TemperatureMax[dayIndex] = maxTemperature;
                     // References for calculation of daytime mean temperature:
-                    //   Floyd, R. B., Braddock, R. D. 1984. A simple method for fitting average diurnal temperature curves.  Agricultural and Forest Meteorology 32: 107-119.
+                    //   Floyd, R. B., Braddock, R. D. 1984. A simple method for fitting average diurnal temperature curves. Agricultural and Forest Meteorology 32: 107-119.
                     //   Landsberg, J. J. 1986. Physiological ecology of forest production. Academic Press Inc., 197 S.
                     // For the primary meteorology stations as a group on the HJ Andrews Research Forest this form has adjusted R² = 0.98 with a mean absolute error
                     // of 1.20 C *but* the coefficient is 1.044 rather than 0.212.

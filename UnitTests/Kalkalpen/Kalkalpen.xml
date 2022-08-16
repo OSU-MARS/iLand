@@ -243,9 +243,10 @@
              - IndividualTrees: log annual time series for each individual tree present on the resource unit, either through the end of 
                simulation or until the tree dies
              - IndividualTreeSpeciesStatistics: log annual time series of summary statistics for each tree species present in resource unit
+             - ThreePG: log monthly time series of 3-PG growth modifiers
            
            Flags can be combined as a comma separated list, e.g. <resourceUnitTrajectories>AllTreeSpeciesStatistics, IndividualTrees,
-           IndividualTreeSpeciesStatistics</resourceUnitTrajectories> -->
+           IndividualTreeSpeciesStatistics, ThreePG</resourceUnitTrajectories> -->
       <resourceUnitTrajectories>None</resourceUnitTrajectories>
       <!-- turn annual logging of stand stand level tree statistics on or off -->
       <standTrajectories enabled="false" />

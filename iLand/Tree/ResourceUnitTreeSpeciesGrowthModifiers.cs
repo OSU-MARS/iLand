@@ -27,13 +27,13 @@ namespace iLand.Tree
         public TreeSpecies Species { get; private init; }
 
         public float[] CO2ModifierByMonth { get; private init; }
-        public float[] GlobalRadiationByMonth { get; private init; } // radiation sum in MJ/m²
+        public float[] SolarRadiationTotalByMonth { get; private init; } // monthly total radiation, MJ/m²
         public float[] SoilWaterModifierByMonth { get; private init; } // monthly average or estimate of daily soilwater response
         public float NitrogenModifierForYear { get; private set; }
         public float[] TemperatureModifierByMonth { get; private init; } // monthly average or estimate of daily temperature response
-        public float TotalRadiationForYear { get; private set; } // total radiation of the year (MJ/m²)
-        public float[] UtilizableRadiationByMonth { get; private init; } // sum of daily radiation*minResponse (MJ/m²)
-        public float UtilizableRadiationForYear { get; private set; } // yearly sum of utilized radiation (MJ/m²)
+        public float TotalRadiationForYear { get; private set; } // total radiation of the year, MJ/m²
+        public float[] UtilizableRadiationByMonth { get; private init; } // sum of daily radiation*minResponse, MJ/m²
+        public float UtilizableRadiationForYear { get; private set; } // yearly sum of utilized radiation, MJ/m²
         public float[] VpdModifierByMonth { get; private init; } // monthly average or estimate of vpd-response
 
         public ResourceUnitTreeSpeciesGrowthModifiers(ResourceUnit resourceUnit, ResourceUnitTreeSpecies ruSpecies)
@@ -42,7 +42,7 @@ namespace iLand.Tree
             this.Species = ruSpecies.Species;
 
             this.CO2ModifierByMonth = new float[Constant.MonthsInYear];
-            this.GlobalRadiationByMonth = new float[Constant.MonthsInYear];
+            this.SolarRadiationTotalByMonth = new float[Constant.MonthsInYear];
             this.NitrogenModifierForYear = 0.0F;
             this.SoilWaterModifierByMonth = new float[Constant.MonthsInYear];
             this.TemperatureModifierByMonth = new float[Constant.MonthsInYear];
@@ -108,18 +108,18 @@ namespace iLand.Tree
             int leafOffDayIndex = leafPhenology.LeafOnEndDayOfYearIndex;
             for (int dayOfYear = 0, weatherDayIndex = dailyWeatherSeries.CurrentYearStartIndex; weatherDayIndex < dailyWeatherSeries.NextYearStartIndex; ++weatherDayIndex, ++dayOfYear)
             {
-                int monthIndex = dailyWeatherSeries.Month[weatherDayIndex] - 1;
+                int monthOfYearIndex = dailyWeatherSeries.Month[weatherDayIndex] - 1;
                 // environmental responses
-                this.GlobalRadiationByMonth[monthIndex] += dailyWeatherSeries.SolarRadiationTotal[weatherDayIndex];
-
                 float soilWaterResponse = this.Species.GetSoilWaterModifier(ruWaterCycle.SoilWaterPotentialByWeatherTimestepInYear[dayOfYear]);
-                this.SoilWaterModifierByMonth[monthIndex] += soilWaterResponse;
+                this.SoilWaterModifierByMonth[monthOfYearIndex] += soilWaterResponse;
+
+                this.SolarRadiationTotalByMonth[monthOfYearIndex] += dailyWeatherSeries.SolarRadiationTotal[weatherDayIndex];
 
                 float temperatureResponse = this.Species.GetTemperatureModifier(dailyWeatherSeries.TemperatureDaytimeMeanMA1[weatherDayIndex]);
-                this.TemperatureModifierByMonth[monthIndex] += temperatureResponse;
+                this.TemperatureModifierByMonth[monthOfYearIndex] += temperatureResponse;
 
                 float vpdResponse = this.Species.GetVpdModifier(dailyWeatherSeries.VpdMeanInKPa[weatherDayIndex]);
-                this.VpdModifierByMonth[monthIndex] += vpdResponse;
+                this.VpdModifierByMonth[monthOfYearIndex] += vpdResponse;
 
                 // no utilizable radiation if day is outside of leaf on period so nothing to add
                 // If needed, tapering could be used to approxiate leaf out and senescence. Fixed on-off dates are also not reactive to weather.
@@ -133,7 +133,7 @@ namespace iLand.Tree
 
                     Debug.Assert((minimumResponse >= 0.0F) && (minimumResponse < 1.000001F), "Minimum of VPD (" + vpdResponse + "), temperature (" + temperatureResponse + "), and soil water (" + soilWaterResponse + ") responses is not in [0, 1].");
                     Debug.Assert((utilizableRadiation >= 0.0F) && (utilizableRadiation < 100.0F)); // sanity upper bound
-                    this.UtilizableRadiationByMonth[monthIndex] += utilizableRadiation;
+                    this.UtilizableRadiationByMonth[monthOfYearIndex] += utilizableRadiation;
                 }
             }
 
@@ -160,10 +160,10 @@ namespace iLand.Tree
             {
                 int monthOfYearIndex = monthlyTimeSeries.Month[weatherMonthIndex] - 1;
                 // environmental responses
-                this.GlobalRadiationByMonth[monthOfYearIndex] += monthlyTimeSeries.SolarRadiationTotal[weatherMonthIndex];
-
                 float soilWaterModifier = this.Species.GetSoilWaterModifier(ruWaterCycle.SoilWaterPotentialByWeatherTimestepInYear[monthOfYearIndex]);
                 this.SoilWaterModifierByMonth[monthOfYearIndex] += soilWaterModifier;
+
+                this.SolarRadiationTotalByMonth[monthOfYearIndex] += monthlyTimeSeries.SolarRadiationTotal[weatherMonthIndex];
 
                 float temperatureModifier = this.Species.GetTemperatureModifier(monthlyTimeSeries.TemperatureDaytimeMean[weatherMonthIndex]);
                 this.TemperatureModifierByMonth[monthOfYearIndex] += temperatureModifier;
@@ -207,7 +207,7 @@ namespace iLand.Tree
         public void ZeroMonthlyAndAnnualModifiers()
         {
             Array.Fill(this.CO2ModifierByMonth, 0.0F);
-            Array.Fill(this.GlobalRadiationByMonth, 0.0F);
+            Array.Fill(this.SolarRadiationTotalByMonth, 0.0F);
             Array.Fill(this.SoilWaterModifierByMonth, 0.0F);
             Array.Fill(this.TemperatureModifierByMonth, 0.0F);
             Array.Fill(this.UtilizableRadiationByMonth, 0.0F);

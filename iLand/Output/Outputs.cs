@@ -44,13 +44,14 @@ namespace iLand.Output
             this.StandTrajectoriesByID = new();
             this.TreeRemovedSql = null;
 
+            // memory outputs
             ResourceUnitMemoryOutputs resourceUnitMemoryOutputs = projectFile.Output.Memory.ResourceUnitTrajectories;
-            bool logResourceUnitTrajectories = resourceUnitMemoryOutputs != ResourceUnitMemoryOutputs.None;
+            bool logAnyTypeOfResourceUnitTrajectory = resourceUnitMemoryOutputs != ResourceUnitMemoryOutputs.None;
             bool logStandTrajectories = projectFile.Output.Memory.StandTrajectories.Enabled;
-            if (logResourceUnitTrajectories || logStandTrajectories)
+            if (logAnyTypeOfResourceUnitTrajectory || logStandTrajectories)
             {
                 List<ResourceUnit> resourceUnits = landscape.ResourceUnits;
-                if (logResourceUnitTrajectories)
+                if (logAnyTypeOfResourceUnitTrajectory)
                 {
                     this.ResourceUnitTrajectories.Capacity = resourceUnits.Count;
                 }
@@ -60,7 +61,7 @@ namespace iLand.Output
                 for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnits.Count; ++resourceUnitIndex)
                 {
                     ResourceUnit resourceUnit = resourceUnits[resourceUnitIndex];
-                    if (logResourceUnitTrajectories)
+                    if (logAnyTypeOfResourceUnitTrajectory)
                     {
                         this.ResourceUnitTrajectories.Add(new ResourceUnitTrajectory(resourceUnit, resourceUnitMemoryOutputs, initialCapacityInYears));
                     }
@@ -82,6 +83,7 @@ namespace iLand.Output
                 }
             }
 
+            // SQL outputs
             SqlOutputs sqlOutputSettings = projectFile.Output.Sql;
             if (sqlOutputSettings.Carbon.Enabled)
             {

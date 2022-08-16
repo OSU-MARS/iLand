@@ -48,8 +48,8 @@ namespace iLand.Output.Sql
                         insertRow.Parameters[7].Value = growthModifiers.VpdModifierByMonth[monthIndex];
                         insertRow.Parameters[8].Value = growthModifiers.CO2ModifierByMonth[monthIndex];
                         insertRow.Parameters[9].Value = growthModifiers.NitrogenModifierForYear;
-                        insertRow.Parameters[10].Value = growthModifiers.GlobalRadiationByMonth[monthIndex];
-                        insertRow.Parameters[11].Value = growth.UtilizablePar[monthIndex];
+                        insertRow.Parameters[10].Value = growthModifiers.SolarRadiationTotalByMonth[monthIndex];
+                        insertRow.Parameters[11].Value = growth.UtilizableParByMonth[monthIndex];
                         insertRow.Parameters[12].Value = growth.MonthlyGpp[monthIndex];
                         insertRow.ExecuteNonQuery();
                     }

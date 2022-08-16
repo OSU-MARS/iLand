@@ -14,18 +14,26 @@ namespace iLand.Output.Memory
         public ResourceUnit ResourceUnit { get; private init; }
         public ResourceUnitIndividualTreeTrajectories[]? IndividualTreeTrajectories { get; private init; }
         public ResourceUnitTreeSpecies[]? ResourceUnitTreeSpecies { get; private init; }
+        public ResourceUnitThreePGTimeSeries[]? ThreePGTimeSeries { get; private init; }
         public ResourceUnitTreeSpeciesTrajectory[]? TreeSpeciesTrajectories { get; private init; }
 
         public ResourceUnitTrajectory(ResourceUnit resourceUnit, ResourceUnitMemoryOutputs resourceUnitOutputs, int initialCapacityInYears)
         {
-            this.AllTreeSpeciesTrajectory = resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.AllTreeSpeciesStatistics) ? new(initialCapacityInYears) : null;
+            this.AllTreeSpeciesTrajectory = null;
             this.IndividualTreeTrajectories = null;
             this.ResourceUnit = resourceUnit;
+            this.ThreePGTimeSeries = null;
             this.TreeSpeciesTrajectories = null;
+
+            if (resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.AllTreeSpeciesStatistics))
+            {
+                this.AllTreeSpeciesTrajectory = new(initialCapacityInYears);
+            }
 
             bool logIndividualTrees = resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.IndividualTrees);
             bool logSpeciesStatistics = resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.IndividualTreeSpeciesStatistics);
-            if (logIndividualTrees || logSpeciesStatistics)
+            bool logThreePG = resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.ThreePG);
+            if (logIndividualTrees || logSpeciesStatistics || logThreePG)
             {
                 IList<TreeListSpatial> treesOnResourceUnitBySpecies = resourceUnit.Trees.TreesBySpeciesID.Values;
                 this.ResourceUnitTreeSpecies = new ResourceUnitTreeSpecies[treesOnResourceUnitBySpecies.Count];
@@ -36,6 +44,10 @@ namespace iLand.Output.Memory
                 if (logSpeciesStatistics)
                 {
                     this.TreeSpeciesTrajectories = new ResourceUnitTreeSpeciesTrajectory[treesOnResourceUnitBySpecies.Count];
+                }
+                if (logThreePG)
+                {
+                    this.ThreePGTimeSeries = new ResourceUnitThreePGTimeSeries[treesOnResourceUnitBySpecies.Count];
                 }
 
                 // for now, instantiate trajectories only for trees species which are initially present on the resource unit
@@ -52,6 +64,10 @@ namespace iLand.Output.Memory
                     if (logSpeciesStatistics)
                     {
                         this.TreeSpeciesTrajectories![treeSpeciesIndex] = new ResourceUnitTreeSpeciesTrajectory(initialCapacityInYears);
+                    }
+                    if (logThreePG)
+                    {
+                        this.ThreePGTimeSeries![treeSpeciesIndex] = new ResourceUnitThreePGTimeSeries(initialCapacityInYears);
                     }
                 }
             }
@@ -88,6 +104,17 @@ namespace iLand.Output.Memory
             }
         }
 
+        [MemberNotNullWhen(true, nameof(ResourceUnitTrajectory.ResourceUnitTreeSpecies), nameof(ResourceUnitTrajectory.ThreePGTimeSeries))]
+        public bool HasThreePGTimeSeries
+        {
+            get
+            {
+                bool hasThreePGTimeSeries = (this.ThreePGTimeSeries != null) && (this.ThreePGTimeSeries.Length > 0);
+                Debug.Assert((hasThreePGTimeSeries == false) || (this.ResourceUnitTreeSpecies != null));
+                return hasThreePGTimeSeries;
+            }
+        }
+
         public void AddYear()
         {
             if (this.HasAllTreeSpeciesStatistics)
@@ -98,7 +125,8 @@ namespace iLand.Output.Memory
 
             bool hasIndividualTreeSpeciesStatistics = this.HasTreeSpeciesStatistics;
             bool hasIndividualTreeTrajectories = this.HasIndividualTreeTrajectories;
-            if (hasIndividualTreeSpeciesStatistics || hasIndividualTreeTrajectories)
+            bool hasThreePGTimeSeries = this.HasThreePGTimeSeries;
+            if (hasIndividualTreeSpeciesStatistics || hasIndividualTreeTrajectories || hasThreePGTimeSeries)
             {
                 Debug.Assert(this.ResourceUnitTreeSpecies != null);
 
@@ -119,6 +147,8 @@ namespace iLand.Output.Memory
                         sourceTreeSpeciesCurrentlyOnResourceUnit = this.ResourceUnit.Trees.GetResourceUnitSpecies(treeSpecies);
                     }
 
+                    // 3-PG outputs are all zero for the initialization year (simulation year 0) and can be suppressed if needed
+                    // For now, the initialization year is included for consistency with other output files.
                     ResourceUnitTreeSpecies destinationTreeSpeciesForLogging = this.ResourceUnitTreeSpecies[treeSpeciesDestinationIndex];
                     if (Object.ReferenceEquals(destinationTreeSpeciesForLogging, sourceTreeSpeciesCurrentlyOnResourceUnit) == false)
                     {
@@ -140,6 +170,11 @@ namespace iLand.Output.Memory
                             ResourceUnitIndividualTreeTrajectories treeTrajectories = this.IndividualTreeTrajectories![treeSpeciesDestinationIndex];
                             treeTrajectories.AddYearWithoutSpecies(destinationTreeSpeciesForLogging);
                         }
+                        if (hasThreePGTimeSeries)
+                        {
+                            ResourceUnitThreePGTimeSeries threePGseries = this.ThreePGTimeSeries![treeSpeciesDestinationIndex];
+                            threePGseries.AddYearWithoutSpecies();
+                        }
                     }
                     else
                     {
@@ -152,6 +187,11 @@ namespace iLand.Output.Memory
                         {
                             ResourceUnitIndividualTreeTrajectories treeTrajectories = this.IndividualTreeTrajectories![treeSpeciesDestinationIndex];
                             treeTrajectories.AddYear(treesOnResourceUnit[treeSpeciesSourceIndex]);
+                        }
+                        if (hasThreePGTimeSeries)
+                        {
+                            ResourceUnitThreePGTimeSeries threePGseries = this.ThreePGTimeSeries![treeSpeciesDestinationIndex];
+                            threePGseries.AddYear(sourceTreeSpeciesCurrentlyOnResourceUnit);
                         }
 
                         ++treeSpeciesSourceIndex;
