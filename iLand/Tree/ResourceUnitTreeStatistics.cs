@@ -28,12 +28,12 @@ namespace iLand.Tree
             base.AddUnweighted(completedTreeSpeciesStatistics);
         }
 
-        public void Add(Trees trees, int treeIndex)
+        public void Add(TreeListSpatial trees, int treeIndex)
         {
             // trees
-            this.TotalDbhInCm += trees.Dbh[treeIndex];
-            this.TotalHeightInM += trees.Height[treeIndex];
-            this.TotalLeafAreaInM2 += trees.LeafArea[treeIndex];
+            this.TotalDbhInCm += trees.DbhInCm[treeIndex];
+            this.TotalHeightInM += trees.HeightInM[treeIndex];
+            this.TotalLeafAreaInM2 += trees.LeafAreaInM2[treeIndex];
 
             this.BasalAreaInM2PerHa += trees.GetBasalArea(treeIndex);
             this.StemVolumeInM3PerHa += trees.GetStemVolume(treeIndex);
@@ -43,21 +43,21 @@ namespace iLand.Tree
             float branchBiomass = trees.GetBranchBiomass(treeIndex);
             this.BranchCarbonInKgPerHa += Constant.DryBiomassCarbonFraction * branchBiomass;
             this.BranchNitrogenInKgPerHa += Constant.DryBiomassCarbonFraction / trees.Species.CarbonNitrogenRatioWood * branchBiomass;
-            float coarseRootMass = trees.CoarseRootMass[treeIndex];
+            float coarseRootMass = trees.CoarseRootMassInKg[treeIndex];
             this.CoarseRootCarbonInKgPerHa += Constant.DryBiomassCarbonFraction * coarseRootMass;
             this.CoarseRootNitrogenInKgPerHa += Constant.DryBiomassCarbonFraction / trees.Species.CarbonNitrogenRatioWood * coarseRootMass;
-            float fineRootMass = trees.FineRootMass[treeIndex];
+            float fineRootMass = trees.FineRootMassInKg[treeIndex];
             this.FineRootCarbonInKgPerHa += Constant.DryBiomassCarbonFraction * fineRootMass;
             this.FineRootNitrogenInKgPerHa += Constant.DryBiomassCarbonFraction / trees.Species.CarbonNitrogenRatioFineRoot * fineRootMass;
-            float foliageMass = trees.FoliageMass[treeIndex];
+            float foliageMass = trees.FoliageMassInKg[treeIndex];
             this.FoliageCarbonInKgPerHa += Constant.DryBiomassCarbonFraction * foliageMass;
             this.FoliageNitrogenInKgPerHa += Constant.DryBiomassCarbonFraction / trees.Species.CarbonNitrogenRatioFineRoot * foliageMass;
-            float stemMass = trees.StemMass[treeIndex];
+            float stemMass = trees.StemMassInKg[treeIndex];
             this.StemCarbonInKgPerHa += Constant.DryBiomassCarbonFraction * stemMass;
             this.StemNitrogenInKgPerHa += Constant.DryBiomassCarbonFraction / trees.Species.CarbonNitrogenRatioWood * stemMass;
         }
 
-        public void Add(Trees trees, int treeIndex, float npp, float abovegroundNpp)
+        public void Add(TreeListSpatial trees, int treeIndex, float npp, float abovegroundNpp)
         {
             this.Add(trees, treeIndex);
 

@@ -4,12 +4,9 @@ namespace iLand.Output.Memory
 {
     public class ResourceUnitTreeSpeciesTrajectory : StandOrResourceUnitTrajectory
     {
-        public ResourceUnitTreeSpecies TreeSpecies { get; private init; }
-
-        public ResourceUnitTreeSpeciesTrajectory(ResourceUnitTreeSpecies treeSpecies, int initialCapacityInYears)
+        public ResourceUnitTreeSpeciesTrajectory(int initialCapacityInYears)
             : base(initialCapacityInYears)
         {
-            this.TreeSpecies = treeSpecies;
         }
 
         public void AddYear(ResourceUnitTreeSpecies treeSpecies)

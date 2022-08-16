@@ -4,7 +4,7 @@ namespace iLand.Tree
 {
     /// (binary coded) tree flags
     [Flags]
-    internal enum TreeFlags
+    internal enum TreeFlags : UInt16
     {
         None = 0,
         Dead = 1,

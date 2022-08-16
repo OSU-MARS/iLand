@@ -117,17 +117,17 @@ namespace iLand.World
         }
 
         /// return a list of all living trees on the area denoted by 'id'
-        public List<(Trees, List<int>)> GetLivingTreesInStand(int standID)
+        public List<(TreeListSpatial, List<int>)> GetLivingTreesInStand(int standID)
         {
-            List<(Trees Trees, List<int> LiveTreeIndices)> livingTrees = new();
+            List<(TreeListSpatial Trees, List<int> LiveTreeIndices)> livingTrees = new();
             IReadOnlyCollection<(ResourceUnit, float _)> resourceUnitsInStand = this.resourceUnitsByRasterizedPolygonID[standID];
             foreach ((ResourceUnit ResourceUnit, float _) unitInStand in resourceUnitsInStand)
             {
-                SortedList<string, Trees> treesBySpeciesID = unitInStand.ResourceUnit.Trees.TreesBySpeciesID;
+                SortedList<string, TreeListSpatial> treesBySpeciesID = unitInStand.ResourceUnit.Trees.TreesBySpeciesID;
                 for (int speciesIndex = 0; speciesIndex < treesBySpeciesID.Count; ++speciesIndex)
                 {
-                    Trees treesOfSpecies = treesBySpeciesID.Values[speciesIndex];
-                    (Trees Trees, List<int> LiveTreeIndices) livingTreesInStand = new(treesOfSpecies, new List<int>());
+                    TreeListSpatial treesOfSpecies = treesBySpeciesID.Values[speciesIndex];
+                    (TreeListSpatial Trees, List<int> LiveTreeIndices) livingTreesInStand = new(treesOfSpecies, new List<int>());
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                     {
                         if ((this.GetPolygonIDFromLightGridIndex(treesOfSpecies.LightCellIndexXY[treeIndex]) == standID) && (treesOfSpecies.IsDead(treeIndex) == false))

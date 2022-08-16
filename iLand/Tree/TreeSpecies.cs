@@ -52,7 +52,7 @@ namespace iLand.Tree
         private float treeMigAlphaS2; // seed dispersal parameters (TreeMig)
         private float treeMigKappaS; // seed dispersal parameters (TreeMig)
 
-        // properties
+        public TreeList EmptyTreeList { get; private init; }
         /// 4-character unique identification of the tree species
         public string ID { get; private init; }
         public int Index { get; private init; } // unique index of species within current species set
@@ -108,10 +108,11 @@ namespace iLand.Tree
             this.heightDiameterRatioLowerBound = new();
             this.serotinyFormula = new();
 
-            this.SaplingEstablishment = new();
+            this.EmptyTreeList = new(this);
             this.ID = id;
             this.Index = speciesSet.Count;
             this.Name = name;
+            this.SaplingEstablishment = new();
             this.SaplingGrowth = new();
             this.SeedDispersal = null;
             this.SpeciesSet = speciesSet;
@@ -122,10 +123,72 @@ namespace iLand.Tree
 
         public bool Active { get; private init; }
 
-        // allometries
+        /** Seed production.
+           This function produces seeds if the tree is older than a species-specific age ("maturity")
+           If seeds are produced, this information is stored in a "SeedMap"
+          */
+        /// check the maturity of the tree and flag the position as seed source appropriately
+        public void DisperseSeeds(RandomGenerator randomGenerator, TreeListSpatial tree, int treeIndex)
+        {
+            if (this.SeedDispersal == null)
+            {
+                return; // regeneration is disabled
+            }
+
+            // if the tree is considered as serotinous (i.e. seeds need external trigger such as fire)
+            if (this.IsTreeSerotinousRandom(randomGenerator, tree.Age[treeIndex]))
+            {
+                return;
+            }
+
+            // no seed production if maturity age is not reached (species parameter) or if tree height is below 4m.
+            if (tree.Age[treeIndex] > minimumAgeInYearsForSeedProduction && tree.HeightInM[treeIndex] > 4.0F)
+            {
+                this.SeedDispersal.SetMatureTree(tree.LightCellIndexXY[treeIndex], tree.LeafAreaInM2[treeIndex]);
+            }
+        }
+
+        public UInt16 EstimateAgeFromHeight(float height)
+        {
+            float ageInYears = this.maximumAgeInYears * height / this.maximumHeightInM;
+            return (UInt16)ageInYears;
+        }
+
+        /** Aging formula.
+           calculates a relative "age" by combining a height- and an age-related term using a harmonic mean,
+           and feeding this into the Landsberg and Waring formula.
+           see http://iland-model.org/primary+production#respiration_and_aging
+           @param useAge set to true if "real" tree age is available. If false, only the tree height is used.
+          */
+        public float GetAgingFactor(float height, int age)
+        {
+            Debug.Assert(height > 0.0F);
+            Debug.Assert(age > 1);
+
+            float relativeHeight = MathF.Min(height / maximumHeightInM, 0.999999F); // 0.999999 -> avoid div/0
+            float relativeAge = MathF.Min(age / maximumAgeInYears, 0.999999F);
+
+            // harmonic mean: http://en.wikipedia.org/wiki/Harmonic_mean
+            float x = 1.0F - 2.0F / (1.0F / (1.0F - relativeHeight) + 1.0F / (1.0F - relativeAge));
+
+            float agingFactor = (float)aging.Evaluate(x);
+
+            return Maths.Limit(agingFactor, 0.0F, 1.0F);
+        }
+
         public float GetBarkThickness(float dbhInCm) 
         { 
             return this.barkFractionAtDbh * dbhInCm;
+        }
+
+        public float GetBiomassBranch(float dbhInCm)
+        {
+            return this.branchA * MathF.Pow(dbhInCm, this.branchB);
+        }
+
+        public float GetBiomassCoarseRoot(float dbhInCm)
+        {
+            return this.rootA * MathF.Pow(dbhInCm, this.rootB);
         }
 
         public float GetBiomassFoliage(float dbhInCm)
@@ -138,19 +201,39 @@ namespace iLand.Tree
             return this.woodyA * MathF.Pow(dbhInCm, this.woodyB); 
         }
 
-        public float GetBiomassCoarseRoot(float dbhInCm)
-        { 
-            return this.rootA * MathF.Pow(dbhInCm, this.rootB); 
-        }
-        
-        public float GetBiomassBranch(float dbhInCm)
+        public void GetHeightDiameterRatioLimits(float dbh, out float hdRatioLowerBound, out float hdRatioUpperBound)
         {
-            return this.branchA * MathF.Pow(dbhInCm, this.branchB); 
+            hdRatioLowerBound = (float)heightDiameterRatioLowerBound.Evaluate(dbh);
+            hdRatioUpperBound = (float)heightDiameterRatioUpperBound.Evaluate(dbh);
         }
-        
-        public float GetStemFoliageRatio() 
-        { 
-            return this.woodyB / this.foliageB; // Duursma et al. 2007 eq 20
+
+        public float GetLightResponse(float lightResourceIndex)
+        {
+            return this.SpeciesSet.GetLightResponse(lightResourceIndex, this.lightResponseClass);
+        }
+
+        // calculate probabilty of death based on the current stress index
+        public float GetMortalityProbability(float stressIndex)
+        {
+            if (stressIndex <= 0.0F)
+            {
+                return 0.0F;
+            }
+            float probability = 1.0F - MathF.Exp(-this.stressMortalityCoefficient * stressIndex);
+            return probability;
+        }
+
+        public float GetNitrogenModifier(float availableNitrogen)
+        {
+            return this.SpeciesSet.GetNitrogenModifier(availableNitrogen, this.nitrogenResponseClass);
+        }
+
+        // iLand specific model chosen from Hanson 2004: http://iland-model.org/soil+water+response
+        public float GetSoilWaterModifier(float psiInKilopascals)
+        {
+            float psiInMPa = 0.001F * psiInKilopascals; // convert to MPa
+            float waterModifier = Maths.Limit((psiInMPa - this.MinimumSoilWaterPotential) / (-0.015F - this.MinimumSoilWaterPotential), 0.0F, 1.0F);
+            return waterModifier;
         }
 
         public LightStamp GetStamp(float dbhInCm, float heightInM)
@@ -158,14 +241,29 @@ namespace iLand.Tree
             return this.lightIntensityProfiles.GetStamp(dbhInCm, heightInM); 
         }
 
-        public float GetLightResponse(float lightResourceIndex) 
-        { 
-            return this.SpeciesSet.GetLightResponse(lightResourceIndex, this.lightResponseClass); 
+        public float GetStemFoliageRatio()
+        {
+            return this.woodyB / this.foliageB; // Duursma et al. 2007 eq 20
         }
 
-        public float GetNitrogenModifier(float availableNitrogen) 
+        /** calculate fraction of stem wood increment base on dbh.
+            allometric equation: a*d^b -> first derivation: a*b*d^(b-1)
+            the ratio for stem is 1 minus the ratio of twigs to total woody increment at current "dbh". */
+        public float GetStemFraction(float dbh)
         {
-            return this.SpeciesSet.GetNitrogenModifier(availableNitrogen, this.nitrogenResponseClass); 
+            float stemFraction = 1.0F - branchA * branchB * MathF.Pow(dbh, branchB - 1.0F) / (woodyA * woodyB * MathF.Pow(dbh, woodyB - 1.0F));
+            return stemFraction;
+        }
+
+        /** Input: average temperature, °C
+            Slightly different from Mäkelä 2008 with daily weather series. The maximum parameter (Sk) in iLand is interpreted as the absolute
+            temperature yielding a response of 1; in Mäkelä 2008, Sk is the width of the range (relative to the lower threshold)
+            */
+        public float GetTemperatureModifier(float dailyMA1orMonthlyTemperature)
+        {
+            float modifier = MathF.Max(dailyMA1orMonthlyTemperature - this.modifierTempMin, 0.0F);
+            modifier = MathF.Min(modifier / (this.modifierTempMax - this.modifierTempMin), 1.0F);
+            return modifier;
         }
 
         // parameters for seed dispersal from equation 6 of
@@ -176,6 +274,23 @@ namespace iLand.Tree
             alphaS1 = this.treeMigAlphaS1; 
             alphaS2 = this.treeMigAlphaS2; 
             kappaS = this.treeMigKappaS; 
+        }
+
+        public float GetVpdModifier(float vpdInKiloPascals)
+        {
+            return MathF.Exp(this.modifierVpdK * vpdInKiloPascals);
+        }
+
+        /// returns true of a tree with given age/height is serotinous (i.e. seed release after fire)
+        public bool IsTreeSerotinousRandom(RandomGenerator randomGenerator, int age)
+        {
+            if (this.serotinyFormula.IsEmpty)
+            {
+                return false;
+            }
+            // the function result (e.g. from a logistic regression model, e.g. Schoennagel 2013) is interpreted as probability
+            float pSerotinous = (float)this.serotinyFormula.Evaluate(age);
+            return randomGenerator.GetRandomProbability() < pSerotinous;
         }
 
         /** main setup routine for tree species.
@@ -385,80 +500,6 @@ namespace iLand.Tree
             return species;
         }
 
-        /** calculate fraction of stem wood increment base on dbh.
-            allometric equation: a*d^b -> first derivation: a*b*d^(b-1)
-            the ratio for stem is 1 minus the ratio of twigs to total woody increment at current "dbh". */
-        public float GetStemFraction(float dbh)
-        {
-            float stemFraction = 1.0F - branchA * branchB * MathF.Pow(dbh, branchB - 1.0F) / (woodyA * woodyB * MathF.Pow(dbh, woodyB - 1.0F));
-            return stemFraction;
-        }
-
-        /** Aging formula.
-           calculates a relative "age" by combining a height- and an age-related term using a harmonic mean,
-           and feeding this into the Landsberg and Waring formula.
-           see http://iland-model.org/primary+production#respiration_and_aging
-           @param useAge set to true if "real" tree age is available. If false, only the tree height is used.
-          */
-        public float GetAgingFactor(float height, int age)
-        {
-            Debug.Assert(height > 0.0F);
-            Debug.Assert(age > 1);
-
-            float relativeHeight = MathF.Min(height / maximumHeightInM, 0.999999F); // 0.999999 -> avoid div/0
-            float relativeAge = MathF.Min(age / maximumAgeInYears, 0.999999F);
-
-            // harmonic mean: http://en.wikipedia.org/wiki/Harmonic_mean
-            float x = 1.0F - 2.0F / (1.0F / (1.0F - relativeHeight) + 1.0F / (1.0F - relativeAge));
-
-            float agingFactor = (float)aging.Evaluate(x);
-
-            return Maths.Limit(agingFactor, 0.0F, 1.0F);
-        }
-
-        public int EstimateAgeFromHeight(float height)
-        {
-            int age = (int)(this.maximumAgeInYears * height / this.maximumHeightInM);
-            return age;
-        }
-
-        /** Seed production.
-           This function produces seeds if the tree is older than a species-specific age ("maturity")
-           If seeds are produced, this information is stored in a "SeedMap"
-          */
-        /// check the maturity of the tree and flag the position as seed source appropriately
-        public void DisperseSeeds(RandomGenerator randomGenerator, Trees tree, int treeIndex)
-        {
-            if (this.SeedDispersal == null)
-            {
-                return; // regeneration is disabled
-            }
-
-            // if the tree is considered as serotinous (i.e. seeds need external trigger such as fire)
-            if (this.IsTreeSerotinousRandom(randomGenerator, tree.Age[treeIndex]))
-            {
-                return;
-            }
-
-            // no seed production if maturity age is not reached (species parameter) or if tree height is below 4m.
-            if (tree.Age[treeIndex] > minimumAgeInYearsForSeedProduction && tree.Height[treeIndex] > 4.0F)
-            {
-                this.SeedDispersal.SetMatureTree(tree.LightCellIndexXY[treeIndex], tree.LeafArea[treeIndex]);
-            }
-        }
-
-        /// returns true of a tree with given age/height is serotinous (i.e. seed release after fire)
-        public bool IsTreeSerotinousRandom(RandomGenerator randomGenerator, int age)
-        {
-            if (this.serotinyFormula.IsEmpty)
-            {
-                return false;
-            }
-            // the function result (e.g. from a logistic regression model, e.g. Schoennagel 2013) is interpreted as probability
-            float pSerotinous = (float)this.serotinyFormula.Evaluate(age);
-            return randomGenerator.GetRandomProbability() < pSerotinous;
-        }
-
         /** newYear is called by the SpeciesSet at the beginning of a year before any growth occurs.
           This is used for various initializations, e.g. to clear seed dispersal maps
           */
@@ -476,47 +517,6 @@ namespace iLand.Tree
                 // clear seed map
                 this.SeedDispersal.Clear(model);
             }
-        }
-
-        public void GetHeightDiameterRatioLimits(float dbh, out float hdRatioLowerBound, out float hdRatioUpperBound)
-        {
-            hdRatioLowerBound = (float)heightDiameterRatioLowerBound.Evaluate(dbh);
-            hdRatioUpperBound = (float)heightDiameterRatioUpperBound.Evaluate(dbh);
-        }
-
-        // calculate probabilty of death based on the current stress index
-        public float GetMortalityProbability(float stressIndex)
-        {
-            if (stressIndex <= 0.0F)
-            {
-                return 0.0F;
-            }
-            float probability = 1.0F - MathF.Exp(-this.stressMortalityCoefficient * stressIndex);
-            return probability;
-        }
-
-        // iLand specific model chosen from Hanson 2004: http://iland-model.org/soil+water+response
-        public float GetSoilWaterModifier(float psiInKilopascals)
-        {
-            float psiInMPa = 0.001F * psiInKilopascals; // convert to MPa
-            float waterModifier = Maths.Limit((psiInMPa - this.MinimumSoilWaterPotential) / (-0.015F - this.MinimumSoilWaterPotential), 0.0F, 1.0F);
-            return waterModifier;
-        }
-
-        /** Input: average temperature, °C
-            Slightly different from Mäkelä 2008 with daily weather series. The maximum parameter (Sk) in iLand is interpreted as the absolute
-            temperature yielding a response of 1; in Mäkelä 2008, Sk is the width of the range (relative to the lower threshold)
-            */
-        public float GetTemperatureModifier(float dailyMA1orMonthlyTemperature)
-        {
-            float modifier = MathF.Max(dailyMA1orMonthlyTemperature - this.modifierTempMin, 0.0F);
-            modifier = MathF.Min(modifier / (this.modifierTempMax - this.modifierTempMin), 1.0F);
-            return modifier;
-        }
-
-        public float GetVpdModifier(float vpdInKiloPascals)
-        {
-            return MathF.Exp(this.modifierVpdK * vpdInKiloPascals);
         }
     }
 }

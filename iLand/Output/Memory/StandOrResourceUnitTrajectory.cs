@@ -5,7 +5,6 @@ namespace iLand.Output.Memory
 {
     public class StandOrResourceUnitTrajectory
     {
-        public int CapacityInYears { get; private set; }
         public int LengthInYears { get; protected set; }
 
         public float[] AverageDbhByYear { get; private set; } // average dbh (cm)
@@ -39,7 +38,6 @@ namespace iLand.Output.Memory
 
         protected StandOrResourceUnitTrajectory(int initialCapacityInYears)
         {
-            this.CapacityInYears = initialCapacityInYears;
             this.LengthInYears = 0;
 
             this.AverageDbhByYear = new float[initialCapacityInYears];
@@ -68,6 +66,11 @@ namespace iLand.Output.Memory
             this.RegenerationNitrogenByYear = new float[initialCapacityInYears];
             this.StemCarbonByYear = new float[initialCapacityInYears];
             this.StemNitrogenByYear = new float[initialCapacityInYears];
+        }
+
+        public int CapacityInYears
+        {
+            get { return this.AverageDbhByYear.Length; }
         }
 
         protected void AddYear(StandOrResourceUnitTreeStatistics endOfYearLiveTreeStatistics)
@@ -110,34 +113,34 @@ namespace iLand.Output.Memory
 
         protected void Extend()
         {
-            this.CapacityInYears += Constant.Data.AnnualAllocationIncrement;
+            int newCapacity = this.CapacityInYears + Constant.Data.AnnualAllocationIncrement;
 
-            this.AverageDbhByYear = this.AverageDbhByYear.Resize(this.CapacityInYears);
-            this.AverageHeightByYear = this.AverageHeightByYear.Resize(this.CapacityInYears);
-            this.BasalAreaByYear = this.BasalAreaByYear.Resize(this.CapacityInYears);
-            this.LeafAreaIndexByYear = this.LeafAreaIndexByYear.Resize(this.CapacityInYears);
-            this.LiveStemVolumeByYear = this.LiveStemVolumeByYear.Resize(this.CapacityInYears);
-            this.TreeNppAbovegroundByYear = this.TreeNppAbovegroundByYear.Resize(this.CapacityInYears);
-            this.TreeNppByYear = this.TreeNppByYear.Resize(this.CapacityInYears);
-            this.TreesPerHectareByYear = this.TreesPerHectareByYear.Resize(this.CapacityInYears);
+            this.AverageDbhByYear = this.AverageDbhByYear.Resize(newCapacity);
+            this.AverageHeightByYear = this.AverageHeightByYear.Resize(newCapacity);
+            this.BasalAreaByYear = this.BasalAreaByYear.Resize(newCapacity);
+            this.LeafAreaIndexByYear = this.LeafAreaIndexByYear.Resize(newCapacity);
+            this.LiveStemVolumeByYear = this.LiveStemVolumeByYear.Resize(newCapacity);
+            this.TreeNppAbovegroundByYear = this.TreeNppAbovegroundByYear.Resize(newCapacity);
+            this.TreeNppByYear = this.TreeNppByYear.Resize(newCapacity);
+            this.TreesPerHectareByYear = this.TreesPerHectareByYear.Resize(newCapacity);
 
-            this.SaplingCohortsPerHectareByYear = this.SaplingCohortsPerHectareByYear.Resize(this.CapacityInYears);
-            this.SaplingMeanAgeByYear = this.SaplingMeanAgeByYear.Resize(this.CapacityInYears);
-            this.SaplingNppByYear = this.SaplingNppByYear.Resize(this.CapacityInYears);
-            this.SaplingsPerHectareByYear = this.SaplingsPerHectareByYear.Resize(this.CapacityInYears);
+            this.SaplingCohortsPerHectareByYear = this.SaplingCohortsPerHectareByYear.Resize(newCapacity);
+            this.SaplingMeanAgeByYear = this.SaplingMeanAgeByYear.Resize(newCapacity);
+            this.SaplingNppByYear = this.SaplingNppByYear.Resize(newCapacity);
+            this.SaplingsPerHectareByYear = this.SaplingsPerHectareByYear.Resize(newCapacity);
 
-            this.BranchCarbonByYear = this.BranchCarbonByYear.Resize(this.CapacityInYears);
-            this.BranchNitrogenByYear = this.BranchNitrogenByYear.Resize(this.CapacityInYears);
-            this.CoarseRootCarbonByYear = this.CoarseRootCarbonByYear.Resize(this.CapacityInYears);
-            this.CoarseRootNitrogenByYear = this.CoarseRootNitrogenByYear.Resize(this.CapacityInYears);
-            this.FineRootCarbonByYear = this.FineRootCarbonByYear.Resize(this.CapacityInYears);
-            this.FineRootNitrogenByYear = this.FineRootNitrogenByYear.Resize(this.CapacityInYears);
-            this.FoliageCarbonByYear = this.FoliageCarbonByYear.Resize(this.CapacityInYears);
-            this.FoliageNitrogenByYear = this.FoliageNitrogenByYear.Resize(this.CapacityInYears);
-            this.RegenerationCarbonByYear = this.RegenerationCarbonByYear.Resize(this.CapacityInYears);
-            this.RegenerationNitrogenByYear = this.RegenerationNitrogenByYear.Resize(this.CapacityInYears);
-            this.StemCarbonByYear = this.StemCarbonByYear.Resize(this.CapacityInYears);
-            this.StemNitrogenByYear = this.StemNitrogenByYear.Resize(this.CapacityInYears);
+            this.BranchCarbonByYear = this.BranchCarbonByYear.Resize(newCapacity);
+            this.BranchNitrogenByYear = this.BranchNitrogenByYear.Resize(newCapacity);
+            this.CoarseRootCarbonByYear = this.CoarseRootCarbonByYear.Resize(newCapacity);
+            this.CoarseRootNitrogenByYear = this.CoarseRootNitrogenByYear.Resize(newCapacity);
+            this.FineRootCarbonByYear = this.FineRootCarbonByYear.Resize(newCapacity);
+            this.FineRootNitrogenByYear = this.FineRootNitrogenByYear.Resize(newCapacity);
+            this.FoliageCarbonByYear = this.FoliageCarbonByYear.Resize(newCapacity);
+            this.FoliageNitrogenByYear = this.FoliageNitrogenByYear.Resize(newCapacity);
+            this.RegenerationCarbonByYear = this.RegenerationCarbonByYear.Resize(newCapacity);
+            this.RegenerationNitrogenByYear = this.RegenerationNitrogenByYear.Resize(newCapacity);
+            this.StemCarbonByYear = this.StemCarbonByYear.Resize(newCapacity);
+            this.StemNitrogenByYear = this.StemNitrogenByYear.Resize(newCapacity);
         }
     }
 }

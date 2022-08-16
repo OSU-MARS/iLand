@@ -36,35 +36,35 @@ namespace iLand.Input.Tree
                 }
                 this.SpeciesID.Add(speciesID);
 
-                int tag = treeCount;
-                if (individualTreeHeader.Tag >= 0)
+                int treeID = treeCount;
+                if (individualTreeHeader.TreeID >= 0)
                 {
                     // override default of ID = count of trees currently on resource unit
                     // So long as all trees are uniquely tagged in the input tree list and AddTree() isn't subsequently called on the resource
                     // unit later then IDs will remain unique.
                     // QgsVectorFileWriter (QGIS 3.22) unnecessarily places values of integer columns in quotation marks when writing .csv files,
                     // so check for and strip quotes.
-                    ReadOnlySpan<char> tagAsString = row[individualTreeHeader.Tag];
-                    if (tagAsString.Length < 1)
+                    ReadOnlySpan<char> treeIDAsString = row[individualTreeHeader.TreeID];
+                    if (treeIDAsString.Length < 1)
                     {
-                        throw new NotSupportedException("Tree tag at line " + (treeCount + 1) + " is empty."); // +1 for header row
+                        throw new NotSupportedException("Tree ID at line " + (treeCount + 1) + " is empty."); // +1 for header row
                     }
-                    if ((tagAsString[0] == '"') && (tagAsString.Length > 1) && (tagAsString[^1] == '"'))
+                    if ((treeIDAsString[0] == '"') && (treeIDAsString.Length > 1) && (treeIDAsString[^1] == '"'))
                     {
-                        tagAsString = tagAsString[1..^2];
+                        treeIDAsString = treeIDAsString[1..^2];
                     }
-                    tag = Int32.Parse(tagAsString, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                    treeID = Int32.Parse(treeIDAsString, NumberStyles.Integer, CultureInfo.InvariantCulture);
                 }
-                this.Tag.Add(tag);
+                this.TreeID.Add(treeID);
 
                 // convert from Picus-cm to m if necessary
                 float height = individualTreeHeader.HeightConversionFactor * Single.Parse(row[individualTreeHeader.Height], CultureInfo.InvariantCulture);
                 this.HeightInM.Add(height);
 
-                int age = 0;
+                UInt16 age = 0;
                 if (individualTreeHeader.Age >= 0)
                 {
-                    age = Int32.Parse(row[individualTreeHeader.Age], CultureInfo.InvariantCulture);
+                    age = UInt16.Parse(row[individualTreeHeader.Age], CultureInfo.InvariantCulture);
                 }
                 this.AgeInYears.Add(age);
 
@@ -82,7 +82,7 @@ namespace iLand.Input.Tree
                          this.AgeInYears.Count == this.HeightInM.Count &&
                          this.AgeInYears.Count == this.SpeciesID.Count &&
                          this.AgeInYears.Count == this.StandID.Count &&
-                         this.AgeInYears.Count == this.Tag.Count);
+                         this.AgeInYears.Count == this.TreeID.Count);
         }
     }
 }

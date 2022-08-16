@@ -7,6 +7,12 @@ namespace iLand.Input.Weather
 {
     internal class WeatherReaderMonthlyFeather : WeatherReaderMonthly
     {
+        /// <summary>
+        /// Read monthly weather data from ClimateNA transcoded from ClimateNA .csvs to .feather in R (readr::read_csv() and arrow::write_feather()).
+        /// </summary>
+        /// <remarks>
+        /// See unit conversion notes in <see cref="WeatherReaderMonthly">.
+        /// </remarks>
         public WeatherReaderMonthlyFeather(string weatherFilePath, int startYear)
         {
             // Arrow 8.0.0 supports only uncompressed feather: https://issues.apache.org/jira/browse/ARROW-17062

@@ -79,8 +79,8 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[3].Value = resourceUnit.AreaWithTreesInM2 / Constant.ResourceUnitAreaInM2;
                     insertRow.Parameters[4].Value = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2;
                     insertRow.Parameters[5].Value = resourceUnit.Weather.GetTotalPrecipitationInCurrentYear();
-                    insertRow.Parameters[6].Value = waterCycle.TotalEvapotranspiration;
-                    insertRow.Parameters[7].Value = waterCycle.TotalRunoff;
+                    insertRow.Parameters[6].Value = waterCycle.TotalAnnualEvapotranspirationInMM;
+                    insertRow.Parameters[7].Value = waterCycle.TotalAnnualRunoffInMM;
                     insertRow.Parameters[8].Value = waterCycle.SnowDays;
                     insertRow.Parameters[9].Value = resourceUnit.Weather.TotalAnnualRadiation;
                     insertRow.Parameters[10].Value = waterCycle.SnowDayRadiation;
@@ -90,8 +90,8 @@ namespace iLand.Output.Sql
                 stockableAreaInM2 += resourceUnit.AreaInLandscapeInM2; 
                 stockedAreaInM2 += resourceUnit.AreaWithTreesInM2;
                 totalAnnualPrecipitation += resourceUnit.Weather.GetTotalPrecipitationInCurrentYear();
-                totalEvapotranspiration += waterCycle.TotalEvapotranspiration;
-                totalRunoff += waterCycle.TotalRunoff; 
+                totalEvapotranspiration += waterCycle.TotalAnnualEvapotranspirationInMM;
+                totalRunoff += waterCycle.TotalAnnualRunoffInMM; 
                 snowDays += waterCycle.SnowDays;
                 totalSolarRadiation += resourceUnit.Weather.TotalAnnualRadiation;
                 snowDaySolarRadiation += waterCycle.SnowDayRadiation;

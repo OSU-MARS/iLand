@@ -39,7 +39,7 @@ namespace iLand.Output.Sql
             this.Columns.Add(new SqlColumn("basal_area_m2", "total basal area at breast height (m2)", SqliteType.Real));
         }
 
-        public void AddTree(Tree.Trees trees, int treeIndex, MortalityCause removalType)
+        public void AddTree(Tree.TreeListSpatial trees, int treeIndex, MortalityCause removalType)
         {
             if (this.includeDeadTrees == false && (removalType == MortalityCause.Stress))
             {

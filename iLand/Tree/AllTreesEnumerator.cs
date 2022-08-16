@@ -8,7 +8,7 @@ namespace iLand.Tree
     {
         private readonly Landscape landscape;
         private int resourceUnitIndex;
-        private IEnumerator<KeyValuePair<string, Trees>>? treeSpeciesEnumerator;
+        private IEnumerator<KeyValuePair<string, TreeListSpatial>>? treeSpeciesEnumerator;
 
         public int CurrentTreeIndex { get; private set; }
 
@@ -20,7 +20,7 @@ namespace iLand.Tree
             this.CurrentTreeIndex = -1;
         }
 
-        public Trees CurrentTrees 
+        public TreeListSpatial CurrentTrees 
         { 
             get 
             { 

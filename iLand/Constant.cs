@@ -4,6 +4,8 @@ namespace iLand
 {
     internal static class Constant
     {
+        public const int AllTreeSpeciesCode = 0;
+
         public const int DaysInDecade = 3652; // integer truncation of 10 years * 365.2425 days/year, could also use 3653 for decades with three leap years
         public const int DaysInLeapYear = 366;
         public const int DaysInYear = 365;
@@ -61,7 +63,8 @@ namespace iLand
 
         public static class Limit
         {
-            public const float DailySolarRadiation = 50.0F; // MJ/m²
+            public const float MonthlyTotalSolarRadiationMaximum = 1250.0F; // MJ/m²
+            public const float DailyTotalSolarRadiationMinimum = 0.0F; // MJ/m², set to zero for now to accept no data coding errors in weather series
             public const float MonthlyPrecipitationInMM = 9500.0F; // mm (Cherrapunji, July 1861)
             public const float TemperatureMax = 50.0F;
             public const float TemperatureMin = -70.0F;
@@ -78,9 +81,9 @@ namespace iLand
             public const float MinimumHeight = 0.05F; // m
         }
 
-        public static class Simd128x4
+        public static class Simd128
         {
-            public const int Width = 4;
+            public const int Width32 = 4;
         }
     }
 }

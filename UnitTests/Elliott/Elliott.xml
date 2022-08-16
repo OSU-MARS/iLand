@@ -9,7 +9,7 @@
   </model>
   <output>
     <memory>
-      <resourceUnitTrajectories>AllTreeSpeciesStatistics, IndividualTreeSpeciesStatistics</resourceUnitTrajectories>
+      <resourceUnitTrajectories>AllTreeSpeciesStatistics, IndividualTrees, IndividualTreeSpeciesStatistics</resourceUnitTrajectories>
       <standTrajectories enabled="true" />
     </memory>
   </output>

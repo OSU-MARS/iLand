@@ -1,5 +1,6 @@
 ﻿using Apache.Arrow;
 using Apache.Arrow.Ipc;
+using System;
 using System.IO;
 
 namespace iLand.Input.Tree
@@ -23,7 +24,7 @@ namespace iLand.Input.Tree
                     this.GisX.Add(fields.GisX.Values[treeIndex]);
                     this.GisY.Add(fields.GisY.Values[treeIndex]);
 
-                    int age = 0;
+                    UInt16 age = 0;
                     if (fields.AgeInYears != null)
                     {
                         age = fields.AgeInYears.Values[treeIndex];
@@ -37,12 +38,12 @@ namespace iLand.Input.Tree
                     }
                     this.StandID.Add(standID);
 
-                    int tag = this.Tag.Count;
-                    if (fields.Tag != null)
+                    int treeID = this.TreeID.Count;
+                    if (fields.TreeID != null)
                     {
-                        tag = fields.Tag.Values[treeIndex];
+                        treeID = fields.TreeID.Values[treeIndex];
                     }
-                    this.Tag.Add(tag);
+                    this.TreeID.Add(treeID);
                 }
             }
         }

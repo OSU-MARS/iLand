@@ -40,12 +40,12 @@ namespace iLand.Tree
 
             // Radiation: sum over all days of each month with foliage
             // conversion from gC to kg Biomass: C/Biomass=0.5
-            float annualRUgpp = 0.0F;
+            float resourceUnitGppForYear = 0.0F;
             const float gramsCarbonToKilogramsBiomass = 0.001F / Constant.DryBiomassCarbonFraction;
-            for (int month = 0; month < Constant.MonthsInYear; ++month)
+            for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
             {
                 // This is based on the utilizable photosynthetic active radiation.
-                // @sa http://iland-model.org/primary+production
+                // http://iland-model.org/primary+production
                 // calculate the available radiation. This is done in ResourceUnitTreeSpeciesGrowthModifiers.CalculateMonthlyGrowthModifiers()
                 // see Equation (3)
                 // multiplicative approach: responses are averaged one by one and multiplied on a monthly basis
@@ -56,17 +56,17 @@ namespace iLand.Tree
                 // minimum approach: for each day the minimum of vpd, temp, and soil water is calculated, then averaged for each month
                 //   float response = this.Modifiers.absorbedRadiation[month] *
                 //                    this.Modifiers.minimumModifiers[month];
-                float utilizableRadiation = this.Modifiers.UtilizableRadiationByMonth[month]; // utilizable radiation of the month ... (MJ/m2)
+                float utilizableRadiation = this.Modifiers.UtilizableRadiationByMonth[monthIndex]; // utilizable radiation of the month ... (MJ/m2)
                 // calculate the alphac (=photosynthetic efficiency) for the given month, gC/MJ radiation
                 //  this is based on a global efficiency, and modified per species
                 // maximum radiation use efficiency
-                float epsilon = projectFile.Model.Ecosystem.LightUseEpsilon * this.Modifiers.NitrogenModifierForYear * this.Modifiers.CO2ModifierByMonth[month];
+                float epsilon = projectFile.Model.Ecosystem.LightUseEpsilon * this.Modifiers.NitrogenModifierForYear * this.Modifiers.CO2ModifierByMonth[monthIndex];
 
-                this.UtilizablePar[month] = utilizableRadiation;
-                this.MonthlyGpp[month] = utilizableRadiation * epsilon * gramsCarbonToKilogramsBiomass; // ... results in GPP of the month kg Biomass/m2 (converted from gC/m2)
-                annualRUgpp += this.MonthlyGpp[month]; // kg biomass/m2
+                this.UtilizablePar[monthIndex] = utilizableRadiation;
+                this.MonthlyGpp[monthIndex] = utilizableRadiation * epsilon * gramsCarbonToKilogramsBiomass; // ... results in GPP of the month kg Biomass/m2 (converted from gC/m2)
+                resourceUnitGppForYear += this.MonthlyGpp[monthIndex]; // kg biomass/m2
 
-                Debug.Assert(this.MonthlyGpp[month] >= 0.0);
+                Debug.Assert(this.MonthlyGpp[monthIndex] >= 0.0);
             }
 
             // calculate f_env,yr: see http://iland-model.org/sapling+growth+and+competition
@@ -105,12 +105,12 @@ namespace iLand.Tree
             float gppOverride = projectFile.Model.Settings.OverrideGppPerYear;
             if (Single.IsNaN(gppOverride) == false)
             {
-                annualRUgpp = gppOverride;
+                resourceUnitGppForYear = gppOverride;
                 this.RootFraction = 0.4F; // TODO: why is this triggered by a GPP override?
             }
 
             // yearly GPP in kg biomass/m²
-            this.AnnualGpp = annualRUgpp;
+            this.AnnualGpp = resourceUnitGppForYear;
         }
 
         public void ZeroMonthlyAndAnnualValues()

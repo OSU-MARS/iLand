@@ -7,6 +7,7 @@ namespace iLand.Input.ProjectFile
     {
         None = 0x0,
         AllTreeSpeciesStatistics = 0x1,
-        IndividualTreeSpeciesStatistics = 0x2
+        IndividualTrees = 0x2,
+        IndividualTreeSpeciesStatistics = 0x4
     }
 }

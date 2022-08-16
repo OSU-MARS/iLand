@@ -236,8 +236,16 @@
            short simulations. For example, a model initialized with 2021 data and simulated through December 2100 would have 80 year trajectories:
            the initial values for 2021 and then 79 timesteps from 2022 through 2100. -->
       <!--<initialTrajectoryLengthInYears>80</initialTrajectoryLengthInYears>-->
-      <!-- flags for logging of resource unit level tree statistics: None, AllTreeSpeciesStatistics IndividualTreeSpeciesStatistics
-           To log both all tree and individual species statistics use <resourceUnitTrajectories>AllTreeSpeciesStatistics, IndividualTreeSpeciesStatistics</resourceUnitTrajectories> -->
+      <!-- flags for logging of resource unit level tree statistics
+           
+             - None: don't log anything (default, equivalent to omitting <resourceUnitTrajectories>
+             - AllTreeSpeciesStatistics: log annual time series of summary statistics for all trees in resource unit
+             - IndividualTrees: log annual time series for each individual tree present on the resource unit, either through the end of 
+               simulation or until the tree dies
+             - IndividualTreeSpeciesStatistics: log annual time series of summary statistics for each tree species present in resource unit
+           
+           Flags can be combined as a comma separated list, e.g. <resourceUnitTrajectories>AllTreeSpeciesStatistics, IndividualTrees,
+           IndividualTreeSpeciesStatistics</resourceUnitTrajectories> -->
       <resourceUnitTrajectories>None</resourceUnitTrajectories>
       <!-- turn annual logging of stand stand level tree statistics on or off -->
       <standTrajectories enabled="false" />

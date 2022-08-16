@@ -80,7 +80,7 @@ namespace iLand.Plugin
             return this.resourceUnitSetupModules.Count != 0;
         }
 
-        public void OnTreeDeath(Trees tree, MortalityCause mortalityCause)
+        public void OnTreeDeath(TreeListSpatial tree, MortalityCause mortalityCause)
         {
             for (int mortalityIndex = 0; mortalityIndex < mortalityModules.Count; ++mortalityIndex)
             {

@@ -12,7 +12,7 @@ namespace iLand.Output.Sql
     public class TreeRemovedAnnualOutput : AnnualOutput
     {
         private readonly Expression treeFilter;
-        private readonly Dictionary<ResourceUnit, (Trees Trees, List<MortalityCause> Removals)> removedTreesByResourceUnit;
+        private readonly Dictionary<ResourceUnit, (TreeListSpatial Trees, List<MortalityCause> Removals)> removedTreesByResourceUnit;
 
         public TreeRemovedAnnualOutput()
         {
@@ -46,7 +46,7 @@ namespace iLand.Output.Sql
             this.Columns.Add(new("reserve_kg", "NPP currently available in the reserve pool (kg Biomass)", SqliteType.Real));
         }
 
-        public bool TryAddTree(Model model, Trees trees, int treeIndex, MortalityCause reason)
+        public bool TryAddTree(Model model, TreeListSpatial trees, int treeIndex, MortalityCause reason)
         {
             if (this.treeFilter.IsEmpty == false)
             {
@@ -63,9 +63,9 @@ namespace iLand.Output.Sql
                 }
             }
 
-            if (this.removedTreesByResourceUnit.TryGetValue(trees.ResourceUnit, out (Trees Trees, List<MortalityCause> Removals) removedTreesOfSpecies) == false)
+            if (this.removedTreesByResourceUnit.TryGetValue(trees.ResourceUnit, out (TreeListSpatial Trees, List<MortalityCause> Removals) removedTreesOfSpecies) == false)
             {
-                removedTreesOfSpecies = new(new Trees(model.Landscape, trees.ResourceUnit, trees.Species), new List<MortalityCause>());
+                removedTreesOfSpecies = new(new TreeListSpatial(model.Landscape, trees.ResourceUnit, trees.Species), new List<MortalityCause>());
                 this.removedTreesByResourceUnit.Add(trees.ResourceUnit, removedTreesOfSpecies);
             }
 
@@ -76,32 +76,32 @@ namespace iLand.Output.Sql
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
-            foreach ((Trees Trees, List<MortalityCause> Removals) removedTreesOfSpecies in this.removedTreesByResourceUnit.Values)
+            foreach ((TreeListSpatial Trees, List<MortalityCause> Removals) removedTreesOfSpecies in this.removedTreesByResourceUnit.Values)
             {
-                Trees trees = removedTreesOfSpecies.Trees;
+                TreeListSpatial trees = removedTreesOfSpecies.Trees;
                 for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                 {
                     insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                     insertRow.Parameters[1].Value = trees.ResourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = trees.ResourceUnit.ID;
                     insertRow.Parameters[3].Value = trees.Species.ID;
-                    insertRow.Parameters[4].Value = trees.Tag[treeIndex];
+                    insertRow.Parameters[4].Value = trees.TreeID[treeIndex];
                     insertRow.Parameters[5].Value = (int)removedTreesOfSpecies.Removals[treeIndex];
                     insertRow.Parameters[6].Value = trees.GetCellCenterPoint(treeIndex).X;
                     insertRow.Parameters[7].Value = trees.GetCellCenterPoint(treeIndex).Y;
-                    insertRow.Parameters[8].Value = trees.Dbh[treeIndex];
-                    insertRow.Parameters[9].Value = trees.Height[treeIndex];
+                    insertRow.Parameters[8].Value = trees.DbhInCm[treeIndex];
+                    insertRow.Parameters[9].Value = trees.HeightInM[treeIndex];
                     insertRow.Parameters[10].Value = trees.GetBasalArea(treeIndex);
                     insertRow.Parameters[11].Value = trees.GetStemVolume(treeIndex);
-                    insertRow.Parameters[12].Value = trees.LeafArea[treeIndex];
-                    insertRow.Parameters[13].Value = trees.FoliageMass[treeIndex];
-                    insertRow.Parameters[14].Value = trees.StemMass[treeIndex];
-                    insertRow.Parameters[15].Value = trees.FineRootMass[treeIndex];
-                    insertRow.Parameters[16].Value = trees.CoarseRootMass[treeIndex];
+                    insertRow.Parameters[12].Value = trees.LeafAreaInM2[treeIndex];
+                    insertRow.Parameters[13].Value = trees.FoliageMassInKg[treeIndex];
+                    insertRow.Parameters[14].Value = trees.StemMassInKg[treeIndex];
+                    insertRow.Parameters[15].Value = trees.FineRootMassInKg[treeIndex];
+                    insertRow.Parameters[16].Value = trees.CoarseRootMassInKg[treeIndex];
                     insertRow.Parameters[17].Value = trees.LightResourceIndex[treeIndex];
                     insertRow.Parameters[18].Value = trees.LightResponse[treeIndex];
                     insertRow.Parameters[19].Value = trees.StressIndex[treeIndex];
-                    insertRow.Parameters[20].Value = trees.NppReserve[treeIndex];
+                    insertRow.Parameters[20].Value = trees.NppReserveInKg[treeIndex];
                     insertRow.ExecuteNonQuery();
                 }
             }

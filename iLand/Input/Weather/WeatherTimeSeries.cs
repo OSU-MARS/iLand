@@ -6,19 +6,19 @@ namespace iLand.Input.Weather
 {
     public abstract class WeatherTimeSeries : TimeSeries
     {
-        // sum of day [mm]
+        // total precipitation (daily or monthly), mm
         public float[] PrecipitationTotalInMM { get; private set; }
-        // sum of day (MJ/m²)
+        // total solar radiation (daily or month), MJ/m²
         public float[] SolarRadiationTotal { get; private set; }
 
-        // daily average degree C during daylight hours
+        // average (daily or monthly mean daily)temperature during daylight hours, °C
         public float[] TemperatureDaytimeMean { get; private set; }
-        // maximum temperature of the day
+        // maximum (daily or monthly mean daily) temperature
         public float[] TemperatureMax { get; private set; }
-        // minimum temperature of the day
+        // minimum (daily or monthly mean daily) temperature
         public float[] TemperatureMin { get; private set; }
 
-        // average of day [kPa] = [0.1 mbar] (1 bar = 100kPa)
+        // mean vapor pressure deficit (daily or monthly), kPa (1 bar = 100kPa -> 10 mbar = 1 kPa)
         public float[] VpdMeanInKPa { get; private set; }
 
         protected WeatherTimeSeries(Timestep timestep, int capacityInTimesteps)
@@ -60,6 +60,7 @@ namespace iLand.Input.Weather
         }
 
         // sanity checks
+        // TODO: differentiate between daily and monthly total precipitation and solar radiation
         public override void Validate(int index)
         {
             base.Validate(index);
@@ -91,10 +92,10 @@ namespace iLand.Input.Weather
             }
 
             float totalSolarRadiation = this.SolarRadiationTotal[index];
-            if (Single.IsNaN(totalSolarRadiation) || (totalSolarRadiation < 0.0F) || (totalSolarRadiation > Constant.Limit.DailySolarRadiation))
+            if (Single.IsNaN(totalSolarRadiation) || (totalSolarRadiation < Constant.Limit.DailyTotalSolarRadiationMinimum) || (totalSolarRadiation > Constant.Limit.MonthlyTotalSolarRadiationMaximum))
             {
                 DateTime date = new(this.Year[index], this.Month[index], 1);
-                throw new NotSupportedException("Total solar radiation of " + totalSolarRadiation + " MJ/m² in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is NaN, negative, or unexpectedly high (time series chunk index " + index + ").");
+                throw new NotSupportedException("Total solar radiation of " + totalSolarRadiation + " MJ/m² in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is NaN, unexpectedly low, or unexpectedly high (time series chunk index " + index + ").");
             }
 
             float vpdInKPa = this.VpdMeanInKPa[index];

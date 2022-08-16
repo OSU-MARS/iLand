@@ -1,8 +1,10 @@
-﻿using Apache.Arrow.Ipc;
+﻿using Apache.Arrow;
+using Apache.Arrow.Ipc;
 using Apache.Arrow.Types;
 using iLand.Extensions;
 using iLand.Output.Memory;
 using iLand.Tool;
+using iLand.Tree;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,7 +16,9 @@ namespace iLand.Cmdlets
     [Cmdlet(VerbsCommunications.Write, "Trajectory")]
     public class WriteTrajectory : Cmdlet
     {
-        private const int AllSpeciesIndex = 0;
+        [Parameter]
+        [ValidateNotNullOrEmpty]
+        public string? IndividualTreeFile { get; set; }
 
         [Parameter]
         [ValidateNotNullOrEmpty]
@@ -30,14 +34,92 @@ namespace iLand.Cmdlets
 
         public WriteTrajectory()
         {
+            this.IndividualTreeFile = null;
             this.ResourceUnitFile = null;
             this.StandFile = null;
             this.Trajectory = null;
         }
 
-        private static StandOrResourceUnitTrajectoryArrowMemory CreateArrowMemory(IList<ResourceUnitTrajectory> resourceUnitTrajectories, int calendarYearBeforeFirstSimulationTimestep)
+        private static void AccumulateTreeSpeciesPresent(ResourceUnitTrajectory resourceUnitTrajectory, List<string> treeSpeciesPresent)
         {
-            // find batch length
+            Debug.Assert(resourceUnitTrajectory.ResourceUnitTreeSpecies != null);
+
+            // for now, use O(N) species resolution
+            // Under current forest model limitations (as of 2022), it's likely only a few majority tree species (or, in
+            // tropical forests, functional species groups) will be present in most multispecies models. An ordinal O(N)
+            // List<T> search is therefore likely faster than O(log N) checks against HashSet<T> or similar. This can be
+            // revisited if profiling indicates it's too costly.
+            // In models with a single tree species set Object.ReferenceEquals() could be used instead of String.Equals() but
+            // this will fail when multiple species sets are used.
+            for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.ResourceUnitTreeSpecies.Length; ++treeSpeciesIndex)
+            {
+                string treeSpeciesID = resourceUnitTrajectory.ResourceUnitTreeSpecies[treeSpeciesIndex].Species.ID;
+                bool isKnownTreeSpecies = false;
+                for (int knownTreeSpeciesIndex = 0; knownTreeSpeciesIndex < treeSpeciesPresent.Count; ++knownTreeSpeciesIndex)
+                {
+                    if (String.Equals(treeSpeciesID, treeSpeciesPresent[knownTreeSpeciesIndex], StringComparison.Ordinal))
+                    {
+                        isKnownTreeSpecies = true;
+                        break;
+                    }
+                }
+                if (isKnownTreeSpecies == false)
+                {
+                    treeSpeciesPresent.Add(treeSpeciesID);
+                }
+            }
+        }
+
+        private static ResourceUnitIndividualTreeTrajectoriesArrowMemory CreateArrowMemoryForIndividualTrees(IList<ResourceUnitTrajectory> resourceUnitTrajectories, int calendarYearBeforeFirstSimulationTimestep)
+        {
+            // find batch length and tree species codes
+            int batchLength = 0;
+            List<string> treeSpeciesPresent = new();
+            for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
+            {
+                ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
+                if (resourceUnitTrajectory.HasIndividualTreeTrajectories)
+                {
+                    // count number of individual tree time series points
+                    for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.IndividualTreeTrajectories.Length; ++treeSpeciesIndex)
+                    {
+                        ResourceUnitIndividualTreeTrajectories treeSpeciesTrajectory = resourceUnitTrajectory.IndividualTreeTrajectories[treeSpeciesIndex];
+                        for (int simulationYear = 0; simulationYear < treeSpeciesTrajectory.LengthInYears; ++simulationYear)
+                        {
+                            TreeList? treesOfSpecies = treeSpeciesTrajectory.TreesByYear[simulationYear];
+                            Debug.Assert(treesOfSpecies != null);
+                            batchLength += treesOfSpecies.Count;
+                        }
+                    }
+
+                    WriteTrajectory.AccumulateTreeSpeciesPresent(resourceUnitTrajectory, treeSpeciesPresent);
+                }
+            }
+
+            List<int> treeSpeciesCodesAsIntegers = WriteTrajectory.GetTreeSpeciesCodes(treeSpeciesPresent, out IntegerType treeSpeciesFieldType);
+
+            // copy data from resource units
+            ResourceUnitIndividualTreeTrajectoriesArrowMemory arrowMemory = new(treeSpeciesFieldType, batchLength);
+            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitTrajectories.Count; ++resourceUnitIndex)
+            {
+                ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[resourceUnitIndex];
+                if (resourceUnitTrajectory.HasIndividualTreeTrajectories)
+                {
+                    for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.IndividualTreeTrajectories.Length; ++treeSpeciesIndex)
+                    {
+                        ResourceUnitIndividualTreeTrajectories treeTrajectoriesOfSpecies = resourceUnitTrajectory.IndividualTreeTrajectories[treeSpeciesIndex];
+                        int treeSpeciesCode = WriteTrajectory.GetTreeSpeciesCode(resourceUnitTrajectory.ResourceUnitTreeSpecies[treeSpeciesIndex], treeSpeciesPresent, treeSpeciesCodesAsIntegers);
+                        arrowMemory.Add(treeTrajectoriesOfSpecies, treeSpeciesCode, calendarYearBeforeFirstSimulationTimestep);
+                    }
+                }
+            }
+
+            return arrowMemory;
+        }
+
+        private static StandOrResourceUnitTrajectoryArrowMemory CreateArrowMemoryForResourceUnitStatistics(IList<ResourceUnitTrajectory> resourceUnitTrajectories, int calendarYearBeforeFirstSimulationTimestep)
+        {
+            // find batch length and tree species present
             int batchLength = 0;
             int maxTrajectoryLengthInYears = Int32.MinValue;
             List<string> treeSpeciesPresent = new();
@@ -55,9 +137,9 @@ namespace iLand.Cmdlets
                     }
                 }
 
-                if (resourceUnitTrajectory.HasIndividualTreeSpeciesStatistics)
+                if (resourceUnitTrajectory.HasTreeSpeciesStatistics)
                 {
-                    for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.TreeSpeciesTrajectories.Count; ++treeSpeciesIndex)
+                    for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.TreeSpeciesTrajectories.Length; ++treeSpeciesIndex)
                     {
                         ResourceUnitTreeSpeciesTrajectory treeSpeciesTrajectory = resourceUnitTrajectory.TreeSpeciesTrajectories[treeSpeciesIndex];
                         int treeSpeciesTrajectoryLengthInYears = treeSpeciesTrajectory.LengthInYears;
@@ -67,32 +149,78 @@ namespace iLand.Cmdlets
                         {
                             maxTrajectoryLengthInYears = treeSpeciesTrajectoryLengthInYears;
                         }
+                    }
 
-                        // for now, use O(N) species resolution
-                        // Under current forest model limitations (as of 2022), it's likely only a few majority tree species (or, in
-                        // tropical forests, functional species groups) will be present in most multispecies models. An ordinal O(N)
-                        // List<T> search is therefore likely faster than O(log N) checks against HashSet<T> or similar. This can be
-                        // revisited if profiling indicates it's too costly.
-                        // In models with a single tree species set Object.ReferenceEquals() could be used instead of String.Equals() but
-                        // this will fail when multiple species sets are used.
-                        string treeSpeciesID = treeSpeciesTrajectory.TreeSpecies.Species.ID;
-                        bool isKnownTreeSpecies = false;
-                        for (int knownTreeSpeciesIndex = 0; knownTreeSpeciesIndex < treeSpeciesPresent.Count; ++knownTreeSpeciesIndex)
-                        {
-                            if (String.Equals(treeSpeciesID, treeSpeciesPresent[knownTreeSpeciesIndex], StringComparison.Ordinal))
-                            {
-                                isKnownTreeSpecies = true;
-                                break;
-                            }
-                        }
-                        if (isKnownTreeSpecies == false)
-                        {
-                            treeSpeciesPresent.Add(treeSpeciesID);
-                        }
+                    WriteTrajectory.AccumulateTreeSpeciesPresent(resourceUnitTrajectory, treeSpeciesPresent);
+                }
+            }
+
+            List<int> treeSpeciesCodesAsIntegers = WriteTrajectory.GetTreeSpeciesCodes(treeSpeciesPresent, out IntegerType treeSpeciesFieldType);
+
+            // copy data from resource units
+            // StandOrResourceUnitTrajectoryArrowMemory arrowMemory = new("resourceUnit", treeSpeciesPresent, batchLength);
+            StandOrResourceUnitTrajectoryArrowMemory arrowMemory = new("resourceUnit", "Resource unit's numeric ID.", treeSpeciesFieldType, batchLength);
+            Span<Int16> yearSource = stackalloc Int16[maxTrajectoryLengthInYears];
+            yearSource.FillIncrementing(calendarYearBeforeFirstSimulationTimestep);
+
+            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitTrajectories.Count; ++resourceUnitIndex)
+            {
+                ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[resourceUnitIndex];
+                if (resourceUnitTrajectory.HasAllTreeSpeciesStatistics)
+                {
+                    arrowMemory.Add(resourceUnitTrajectory.AllTreeSpeciesTrajectory, resourceUnitTrajectory.ResourceUnit.ID, Constant.AllTreeSpeciesCode, yearSource);
+                }
+                if (resourceUnitTrajectory.HasTreeSpeciesStatistics)
+                {
+                    for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.TreeSpeciesTrajectories.Length; ++treeSpeciesIndex)
+                    {
+                        ResourceUnitTreeSpecies treeSpecies = resourceUnitTrajectory.ResourceUnitTreeSpecies[treeSpeciesIndex];
+                        ResourceUnitTreeSpeciesTrajectory treeSpeciesTrajectory = resourceUnitTrajectory.TreeSpeciesTrajectories[treeSpeciesIndex];
+                        string treeSpeciesID = treeSpecies.Species.ID;
+                        int treeSpeciesCodeIndex = treeSpeciesPresent.IndexOf(treeSpeciesID);
+                        int treeSpeciesCode = treeSpeciesCodesAsIntegers[treeSpeciesCodeIndex];
+                        arrowMemory.Add(treeSpeciesTrajectory, resourceUnitTrajectory.ResourceUnit.ID, treeSpeciesCode, yearSource);
                     }
                 }
             }
 
+            return arrowMemory;
+        }
+
+        private static StandOrResourceUnitTrajectoryArrowMemory CreateArrowMemoryForStandStatistics(IList<StandTrajectory> standTrajectories, int calendarYearBeforeFirstSimulationTimestep)
+        {
+            // allocate memory for batch
+            int trajectoryLengthInYears = standTrajectories[0].LengthInYears;
+            int batchLength = standTrajectories.Count * trajectoryLengthInYears;
+            // StandOrResourceUnitTrajectoryArrowMemory arrowMemory = new("stand", new string[] { "all" }, batchLength); // for now stand trajectories have only a single statistic encompassing all species
+            StandOrResourceUnitTrajectoryArrowMemory arrowMemory = new("stand", "Stand number", UInt8Type.Default, batchLength);
+
+            // copy data from resource units
+            Span<Int16> yearSource = stackalloc Int16[trajectoryLengthInYears];
+            yearSource.FillIncrementing(calendarYearBeforeFirstSimulationTimestep);
+            for (int resourceUnitIndex = 0; resourceUnitIndex < standTrajectories.Count; ++resourceUnitIndex)
+            {
+                StandTrajectory trajectory = standTrajectories[resourceUnitIndex];
+                if (trajectory.LengthInYears != trajectoryLengthInYears)
+                {
+                    throw new NotSupportedException("Trajectory for stand " + trajectory.StandID + " is " + trajectory.LengthInYears + " years long, which departs from the expected trajectory length of " + trajectoryLengthInYears + " years.");
+                }
+
+                arrowMemory.Add(trajectory, trajectory.StandID, Constant.AllTreeSpeciesCode, yearSource);
+            }
+
+            return arrowMemory;
+        }
+
+        private static int GetTreeSpeciesCode(ResourceUnitTreeSpecies treeSpecies, IList<string> treeSpeciesPresent, IList<int> treeSpeciesCodesAsIntegers)
+        {
+            string treeSpeciesID = treeSpecies.Species.ID;
+            int treeSpeciesCodeIndex = treeSpeciesPresent.IndexOf(treeSpeciesID);
+            return treeSpeciesCodesAsIntegers[treeSpeciesCodeIndex];
+        }
+
+        private static List<int> GetTreeSpeciesCodes(List<string> treeSpeciesPresent, out IntegerType treeSpeciesFieldType)
+        {
             // map tree species to integers for string table encoding
             // Because Apache 9.0.0 does not support replacement dictionary interoperability between C# and R
             // (https://issues.apache.org/jira/browse/ARROW-17391), mapping to USFS FIA codes is attempted first and, if this fails, then
@@ -116,13 +244,13 @@ namespace iLand.Cmdlets
             //
             // It is unclear if read_feather() can deserialize a field into a tibble factor column, so factorization in R may be 
             // remain desirable even if ARROW-17391 is fixed.
-            Debug.Assert(WriteTrajectory.AllSpeciesIndex == 0);
             List<int> treeSpeciesCodesAsIntegers = new(treeSpeciesPresent.Count);
-            IntegerType treeSpeciesFieldType = UInt16Type.Default;
+            treeSpeciesFieldType = UInt16Type.Default;
             bool useItisTsns = false;
             for (int presentSpeciesIndex = 0; presentSpeciesIndex < treeSpeciesPresent.Count; ++presentSpeciesIndex)
             {
-                if (FiaCodeExtensions.TryParse(treeSpeciesPresent[presentSpeciesIndex], out FiaCode fiaCode))
+                string treeSpeciesID = treeSpeciesPresent[presentSpeciesIndex];
+                if (FiaCodeExtensions.TryParse(treeSpeciesID, out FiaCode fiaCode))
                 {
                     treeSpeciesCodesAsIntegers.Add((int)fiaCode);
                 }
@@ -156,61 +284,7 @@ namespace iLand.Cmdlets
                 }
             }
 
-            // copy data from resource units
-            // StandOrResourceUnitTrajectoryArrowMemory batchMemory = new("resourceUnit", treeSpeciesPresent, batchLength);
-            StandOrResourceUnitTrajectoryArrowMemory batchMemory = new("resourceUnit", treeSpeciesFieldType, batchLength);
-            Span<int> yearSource = stackalloc int[maxTrajectoryLengthInYears];
-            yearSource.FillIncrementing(calendarYearBeforeFirstSimulationTimestep);
-
-            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitTrajectories.Count; ++resourceUnitIndex)
-            {
-                ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[resourceUnitIndex];
-                if (resourceUnitTrajectory.HasAllTreeSpeciesStatistics)
-                {
-                    batchMemory.Add(resourceUnitTrajectory.AllTreeSpeciesTrajectory, resourceUnitTrajectory.ResourceUnit.ID, WriteTrajectory.AllSpeciesIndex, yearSource);
-                }
-                if (resourceUnitTrajectory.HasIndividualTreeSpeciesStatistics)
-                {
-                    for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.TreeSpeciesTrajectories.Count; ++treeSpeciesIndex)
-                    {
-                        ResourceUnitTreeSpeciesTrajectory treeSpeciesTrajectory = resourceUnitTrajectory.TreeSpeciesTrajectories[treeSpeciesIndex];
-                        string treeSpeciesID = treeSpeciesTrajectory.TreeSpecies.Species.ID;
-                        int treeSpeciesCodeIndex = treeSpeciesPresent.IndexOf(treeSpeciesID);
-                        int treeSpeciesCode = treeSpeciesCodesAsIntegers[treeSpeciesCodeIndex];
-                        batchMemory.Add(treeSpeciesTrajectory, resourceUnitTrajectory.ResourceUnit.ID, treeSpeciesCode, yearSource);
-                    }
-                }
-            }
-
-            return batchMemory;
-        }
-
-        private static StandOrResourceUnitTrajectoryArrowMemory CreateArrowMemory(IList<StandTrajectory> standTrajectories, int calendarYearBeforeFirstSimulationTimestep)
-        {
-            // allocate memory for batch
-            int trajectoryLengthInYears = standTrajectories[0].LengthInYears;
-            int batchLength = standTrajectories.Count * trajectoryLengthInYears;
-            // StandOrResourceUnitTrajectoryArrowMemory batchMemory = new("stand", new string[] { "all" }, batchLength); // for now stand trajectories have only a single statistic encompassing all species
-            StandOrResourceUnitTrajectoryArrowMemory batchMemory = new("stand", UInt8Type.Default, batchLength);
-
-            // copy data from resource units
-            Span<int> yearSource = stackalloc int[trajectoryLengthInYears];
-            for (int simulationYear = 0; simulationYear < trajectoryLengthInYears; ++simulationYear)
-            {
-                yearSource[simulationYear] = simulationYear + calendarYearBeforeFirstSimulationTimestep;
-            }
-            for (int resourceUnitIndex = 0; resourceUnitIndex < standTrajectories.Count; ++resourceUnitIndex)
-            {
-                StandTrajectory trajectory = standTrajectories[resourceUnitIndex];
-                if (trajectory.LengthInYears != trajectoryLengthInYears)
-                {
-                    throw new NotSupportedException("Trajectory for stand " + trajectory.StandID + " is " + trajectory.LengthInYears + " years long, which departs from the expected trajectory length of " + trajectoryLengthInYears + " years.");
-                }
-
-                batchMemory.Add(trajectory, trajectory.StandID, WriteTrajectory.AllSpeciesIndex, yearSource);
-            }
-
-            return batchMemory;
+            return treeSpeciesCodesAsIntegers;
         }
 
         protected override void ProcessRecord()
@@ -219,15 +293,25 @@ namespace iLand.Cmdlets
             int calendarYearBeforeFirstSimulationTimestep = this.Trajectory!.Landscape.WeatherFirstCalendarYear - 1;
 
             // there's no requirement to log resource unit and stand trajectories just because they're present
-            if (String.IsNullOrWhiteSpace(this.ResourceUnitFile) == false)
+            bool logIndividualTrees = String.IsNullOrWhiteSpace(this.IndividualTreeFile) == false;
+            bool logResourceUnitStatistics = String.IsNullOrWhiteSpace(this.ResourceUnitFile) == false;
+            if (logIndividualTrees || logResourceUnitStatistics)
             {
                 IList<ResourceUnitTrajectory> trajectories = this.Trajectory.Output.ResourceUnitTrajectories;
                 if (trajectories.Count < 1)
                 {
-                    throw new ParameterOutOfRangeException(nameof(this.ResourceUnitFile), "A resource unit file was specified but no resource unit trajectories were logged.");
+                    throw new ParameterOutOfRangeException(nameof(this.ResourceUnitFile), "A resource unit or individual tree file was specified but no resource unit trajectories were logged.");
                 }
-                StandOrResourceUnitTrajectoryArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemory(trajectories, calendarYearBeforeFirstSimulationTimestep);
-                WriteTrajectory.WriteTrajectories(this.ResourceUnitFile, arrowMemory);
+                if (logIndividualTrees)
+                {
+                    ResourceUnitIndividualTreeTrajectoriesArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForIndividualTrees(trajectories, calendarYearBeforeFirstSimulationTimestep);
+                    WriteTrajectory.WriteTrajectories(this.IndividualTreeFile!, arrowMemory.RecordBatch);
+                }
+                if (logResourceUnitStatistics)
+                {
+                    StandOrResourceUnitTrajectoryArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForResourceUnitStatistics(trajectories, calendarYearBeforeFirstSimulationTimestep);
+                    WriteTrajectory.WriteTrajectories(this.ResourceUnitFile!, arrowMemory.RecordBatch);
+                }
             }
 
             if (String.IsNullOrWhiteSpace(this.StandFile) == false)
@@ -237,18 +321,18 @@ namespace iLand.Cmdlets
                 {
                     throw new ParameterOutOfRangeException(nameof(this.StandFile), "A stand file was specified but no stand trajectories were logged.");
                 }
-                StandOrResourceUnitTrajectoryArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemory(trajectories, calendarYearBeforeFirstSimulationTimestep);
-                WriteTrajectory.WriteTrajectories(this.StandFile, arrowMemory);
+                StandOrResourceUnitTrajectoryArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForStandStatistics(trajectories, calendarYearBeforeFirstSimulationTimestep);
+                WriteTrajectory.WriteTrajectories(this.StandFile, arrowMemory.RecordBatch);
             }
         }
 
-        private static void WriteTrajectories(string trajectoryFilePath, StandOrResourceUnitTrajectoryArrowMemory arrowMemory)
+        private static void WriteTrajectories(string trajectoryFilePath, RecordBatch recordBatch)
         {
             // for now, all weather time series should start in January of the first simulation year
             using FileStream stream = new(trajectoryFilePath, FileMode.Create, FileAccess.Write, FileShare.None, Constant.File.DefaultBufferSize, FileOptions.SequentialScan);
-            using ArrowFileWriter writer = new(stream, arrowMemory.RecordBatch.Schema);
+            using ArrowFileWriter writer = new(stream, recordBatch.Schema);
             writer.WriteStart();
-            writer.WriteRecordBatch(arrowMemory.RecordBatch);
+            writer.WriteRecordBatch(recordBatch);
             writer.WriteEnd();
         }
     }

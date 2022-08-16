@@ -7,7 +7,7 @@
         public int Height { get; private init; }
         public int Species { get; private init; }
         public int StandID { get; private init; } // optional
-        public int Tag { get; private init; } // optional
+        public int TreeID { get; private init; } // optional
         public int X { get; private init; }
         public int Y { get; private init; }
 
@@ -17,7 +17,7 @@
         public IndividualTreeCsvHeader(CsvFile treeFile)
         {
             this.StandID = treeFile.GetColumnIndex("standID"); // optional
-            this.Tag = treeFile.GetColumnIndex("id"); // optional
+            this.TreeID = treeFile.GetColumnIndex("id"); // optional
             this.X = treeFile.GetColumnIndex("x");
             this.Y = treeFile.GetColumnIndex("y");
             this.Dbh = treeFile.GetColumnIndex("bhdfrom");

@@ -23,7 +23,7 @@ namespace iLand.Tree
         public ResourceUnitTreeStatistics TreeAndSaplingStatisticsForAllSpecies { get; private init; }
         public TreeSpeciesSet TreeSpeciesSet { get; private init; } // get SpeciesSet this RU links to.
         public SortedList<int, ResourceUnitTreeStatistics> TreeStatisticsByStandID { get; private init; }
-        public SortedList<string, Trees> TreesBySpeciesID { get; private init; } // reference to the tree list.
+        public SortedList<string, TreeListSpatial> TreesBySpeciesID { get; private init; } // reference to the tree list.
 
         public ResourceUnitTrees(ResourceUnit resourceUnit, TreeSpeciesSet treeSpeciesSet)
         {
@@ -65,10 +65,10 @@ namespace iLand.Tree
             this.AggregatedLightWeightedLeafArea += leafArea * lightResponse; 
         }
 
-        public int AddTree(Project projectFile, Landscape landscape, string speciesID, float dbhInCm, float heightInM, Point lightCellIndexXY, int ageInYears, out Trees treesOfSpecies)
+        public int AddTree(Project projectFile, Landscape landscape, string speciesID, float dbhInCm, float heightInM, Point lightCellIndexXY, UInt16 ageInYears, out TreeListSpatial treesOfSpecies)
         {
             // get or create tree's species
-            if (this.TreesBySpeciesID.TryGetValue(speciesID, out Trees? nullableTreesOfSpecies))
+            if (this.TreesBySpeciesID.TryGetValue(speciesID, out TreeListSpatial? nullableTreesOfSpecies))
             {
                 treesOfSpecies = nullableTreesOfSpecies;
             }
@@ -88,7 +88,7 @@ namespace iLand.Tree
                     throw new ArgumentOutOfRangeException(nameof(speciesID));
                 }
 
-                treesOfSpecies = new Trees(landscape, this.resourceUnit, this.SpeciesAvailableOnResourceUnit[speciesIndex].Species);
+                treesOfSpecies = new TreeListSpatial(landscape, this.resourceUnit, this.SpeciesAvailableOnResourceUnit[speciesIndex].Species);
                 this.TreesBySpeciesID.Add(speciesID, treesOfSpecies);
             }
             Debug.Assert(String.Equals(treesOfSpecies.Species.ID, speciesID, StringComparison.OrdinalIgnoreCase));
@@ -230,7 +230,7 @@ namespace iLand.Tree
 
             for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
             {
-                Trees treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 ResourceUnitTreeSpecies speciesOnRU = this.GetResourceUnitSpecies(treesOfSpecies.Species);
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
@@ -265,7 +265,7 @@ namespace iLand.Tree
 
             for (int treeSpeciesIndex = 0; treeSpeciesIndex < this.TreesBySpeciesID.Count; ++treeSpeciesIndex)
             {
-                Trees treesOfSpecies = this.TreesBySpeciesID.Values[treeSpeciesIndex];
+                TreeListSpatial treesOfSpecies = this.TreesBySpeciesID.Values[treeSpeciesIndex];
                 int lastLiveTreeIndex;
                 for (lastLiveTreeIndex = treesOfSpecies.Count - 1; lastLiveTreeIndex >= 0 && treesOfSpecies.IsDead(lastLiveTreeIndex); --lastLiveTreeIndex)
                 {
@@ -313,7 +313,7 @@ namespace iLand.Tree
                             //     Debug.WriteLine("reduce tree storage of RU " + Index + " from " + Trees.Capacity + " to " + Trees.Count);
                             // }
 
-                            int simdCompatibleTreeCapacity = Constant.Simd128x4.Width * (treesOfSpecies.Count / Constant.Simd128x4.Width + 1);
+                            int simdCompatibleTreeCapacity = Constant.Simd128.Width32 * (treesOfSpecies.Count / Constant.Simd128.Width32 + 1);
                             treesOfSpecies.Resize(simdCompatibleTreeCapacity);
                         }
                     }
@@ -335,12 +335,12 @@ namespace iLand.Tree
             int previousStandID = Int32.MinValue;
             for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
             {
-                Trees treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 ResourceUnitTreeSpecies speciesOnRU = this.GetResourceUnitSpecies(treesOfSpecies.Species);
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    float agingFactor = treesOfSpecies.Species.GetAgingFactor(treesOfSpecies.Height[treeIndex], treesOfSpecies.Age[treeIndex]);
-                    this.AddAging(treesOfSpecies.LeafArea[treeIndex], agingFactor);
+                    float agingFactor = treesOfSpecies.Species.GetAgingFactor(treesOfSpecies.HeightInM[treeIndex], treesOfSpecies.Age[treeIndex]);
+                    this.AddAging(treesOfSpecies.LeafAreaInM2[treeIndex], agingFactor);
 
                     Debug.Assert(treesOfSpecies.IsDead(treeIndex) == false);
                     speciesOnRU.StatisticsLive.Add(treesOfSpecies, treeIndex);

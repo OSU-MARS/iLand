@@ -36,8 +36,8 @@ namespace iLand.World
 
         public float SnowDayRadiation { get; set; } // sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
         public float SnowDays { get; set; } // number of days with snowcover > 0
-        public float TotalEvapotranspiration { get; set; } // annual sum of evapotranspiration (mm)
-        public float TotalRunoff { get; set; } // annual sum of water loss due to lateral outflow/groundwater flow (mm)
+        public float TotalAnnualEvapotranspirationInMM { get; set; } // annual sum of evapotranspiration (mm)
+        public float TotalAnnualRunoffInMM { get; set; } // annual sum of water loss due to lateral outflow/groundwater flow (mm)
 
         /// daily amount of water that actually reaches the ground (i.e., after interception)
         public float[] WaterReachingSoilByWeatherTimestep { get; private init; }
@@ -58,8 +58,8 @@ namespace iLand.World
             this.SnowCover = new float[weatherTimestepsPerYear];
             this.SnowDayRadiation = Single.NaN;
             this.SnowDays = Single.NaN;
-            this.TotalEvapotranspiration = Single.NaN;
-            this.TotalRunoff = Single.NaN;
+            this.TotalAnnualEvapotranspirationInMM = Single.NaN;
+            this.TotalAnnualRunoffInMM = Single.NaN;
 
             this.WaterReachingSoilByWeatherTimestep = new float[weatherTimestepsPerYear];
         }
@@ -107,7 +107,7 @@ namespace iLand.World
 
             this.SnowDays = 0;
             this.snowPack.MeltTemperatureInC = projectFile.Model.Ecosystem.SnowmeltTemperature;
-            this.TotalEvapotranspiration = this.TotalRunoff = this.SnowDayRadiation = 0.0F;
+            this.TotalAnnualEvapotranspirationInMM = this.TotalAnnualRunoffInMM = this.SnowDayRadiation = 0.0F;
         }
 
         // get canopy characteristics of the resource unit.
@@ -229,8 +229,8 @@ namespace iLand.World
             // main loop over all days of the year
             this.SnowDayRadiation = 0.0F;
             this.SnowDays = 0;
-            this.TotalEvapotranspiration = 0.0F;
-            this.TotalRunoff = 0.0F;
+            this.TotalAnnualEvapotranspirationInMM = 0.0F;
+            this.TotalAnnualRunoffInMM = 0.0F;
             float daysInTimestep = 1.0F;
             WeatherTimeSeries weatherTimeSeries = this.resourceUnit.Weather.TimeSeries;
             bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
@@ -274,7 +274,7 @@ namespace iLand.World
                 {
                     // excess water runoff
                     float runoffInMM = this.CurrentSoilWater - this.FieldCapacity;
-                    this.TotalRunoff += runoffInMM;
+                    this.TotalAnnualRunoffInMM += runoffInMM;
                     this.CurrentSoilWater = this.FieldCapacity;
                 }
 
@@ -309,7 +309,7 @@ namespace iLand.World
                     this.CurrentSoilWater = this.residualSoilWater;
                 }
 
-                this.TotalEvapotranspiration += evapotranspirationInMM;
+                this.TotalAnnualEvapotranspirationInMM += evapotranspirationInMM;
             }
         }
     }

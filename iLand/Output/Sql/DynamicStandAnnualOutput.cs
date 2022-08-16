@@ -146,7 +146,7 @@ namespace iLand.Output.Sql
             Expression customExpression = new();
 
             TreeSpeciesSet treeSpeciesSet = model.Landscape.SpeciesSetsByTableName.First().Value;
-            List<Trees> liveTreesOfSpecies = new();
+            List<TreeListSpatial> liveTreesOfSpecies = new();
             for (int speciesSet = 0; speciesSet < treeSpeciesSet.ActiveSpecies.Count; ++speciesSet)
             {
                 liveTreesOfSpecies.Clear();
@@ -180,7 +180,7 @@ namespace iLand.Output.Sql
 
                     // fetch data values from the trees
                     fieldData.Clear();
-                    foreach (Trees trees in liveTreesOfSpecies)
+                    foreach (TreeListSpatial trees in liveTreesOfSpecies)
                     {
                         treeWrapper.Trees = trees;
                         for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
@@ -293,7 +293,7 @@ namespace iLand.Output.Sql
                         }
                         fieldData.Clear();
                         bool hasTrees = false;
-                        Trees treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID[ruSpecies.Species.ID];
+                        TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID[ruSpecies.Species.ID];
                         treeWrapper.Trees = treesOfSpecies;
                         for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                         {

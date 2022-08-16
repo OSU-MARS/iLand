@@ -54,7 +54,7 @@ namespace iLand.Output.Sql
             this.treeFilter.Wrapper = treeWrapper;
             while (allTreeEnumerator.MoveNext())
             {
-                Trees treesOfSpecies = allTreeEnumerator.CurrentTrees;
+                TreeListSpatial treesOfSpecies = allTreeEnumerator.CurrentTrees;
                 int treeIndex = allTreeEnumerator.CurrentTreeIndex;
                 if (this.treeFilter.IsEmpty == false)
                 { 
@@ -71,22 +71,22 @@ namespace iLand.Output.Sql
                 insertRow.Parameters[1].Value = treesOfSpecies.ResourceUnit.ResourceUnitGridIndex;
                 insertRow.Parameters[2].Value = treesOfSpecies.ResourceUnit.ID;
                 insertRow.Parameters[3].Value = treesOfSpecies.Species.ID;
-                insertRow.Parameters[4].Value = treesOfSpecies.Tag[treeIndex];
+                insertRow.Parameters[4].Value = treesOfSpecies.TreeID[treeIndex];
                 insertRow.Parameters[5].Value = treesOfSpecies.GetCellCenterPoint(treeIndex).X;
                 insertRow.Parameters[6].Value = treesOfSpecies.GetCellCenterPoint(treeIndex).Y;
-                insertRow.Parameters[7].Value = treesOfSpecies.Dbh[treeIndex];
-                insertRow.Parameters[8].Value = treesOfSpecies.Height[treeIndex];
+                insertRow.Parameters[7].Value = treesOfSpecies.DbhInCm[treeIndex];
+                insertRow.Parameters[8].Value = treesOfSpecies.HeightInM[treeIndex];
                 insertRow.Parameters[9].Value = treesOfSpecies.GetBasalArea(treeIndex);
                 insertRow.Parameters[10].Value = treesOfSpecies.GetStemVolume(treeIndex);
-                insertRow.Parameters[11].Value = treesOfSpecies.LeafArea[treeIndex];
-                insertRow.Parameters[12].Value = treesOfSpecies.FoliageMass[treeIndex];
-                insertRow.Parameters[13].Value = treesOfSpecies.StemMass[treeIndex];
-                insertRow.Parameters[14].Value = treesOfSpecies.FineRootMass[treeIndex];
-                insertRow.Parameters[15].Value = treesOfSpecies.CoarseRootMass[treeIndex];
+                insertRow.Parameters[11].Value = treesOfSpecies.LeafAreaInM2[treeIndex];
+                insertRow.Parameters[12].Value = treesOfSpecies.FoliageMassInKg[treeIndex];
+                insertRow.Parameters[13].Value = treesOfSpecies.StemMassInKg[treeIndex];
+                insertRow.Parameters[14].Value = treesOfSpecies.FineRootMassInKg[treeIndex];
+                insertRow.Parameters[15].Value = treesOfSpecies.CoarseRootMassInKg[treeIndex];
                 insertRow.Parameters[16].Value = treesOfSpecies.LightResourceIndex[treeIndex];
                 insertRow.Parameters[17].Value = treesOfSpecies.LightResponse[treeIndex];
                 insertRow.Parameters[18].Value = treesOfSpecies.StressIndex[treeIndex];
-                insertRow.Parameters[19].Value = treesOfSpecies.NppReserve[treeIndex];
+                insertRow.Parameters[19].Value = treesOfSpecies.NppReserveInKg[treeIndex];
                 insertRow.ExecuteNonQuery();
             }
         }

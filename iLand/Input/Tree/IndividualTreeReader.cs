@@ -1,17 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace iLand.Input.Tree
 {
     public class IndividualTreeReader : TreeReader
     {
-        public List<int> AgeInYears { get; private init; }
+        public List<UInt16> AgeInYears { get; private init; }
         public List<float> DbhInCm { get; private init; }
         public List<float> GisX { get; private init; }
         public List<float> GisY { get; private init; }
         public List<float> HeightInM { get; private init; }
         public List<string> SpeciesID { get; private init; }
         public List<int> StandID { get; private init; }
-        public List<int> Tag { get; private init; }
+        public List<int> TreeID { get; private init; }
 
         public IndividualTreeReader(string individualTreeFilePath)
             : base(individualTreeFilePath)
@@ -23,7 +24,7 @@ namespace iLand.Input.Tree
             this.HeightInM = new();
             this.SpeciesID = new();
             this.StandID = new();
-            this.Tag = new();
+            this.TreeID = new();
         }
     }
 }

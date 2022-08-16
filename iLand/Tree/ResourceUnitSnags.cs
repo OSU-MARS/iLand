@@ -146,7 +146,7 @@ namespace iLand.Tree
         /// @param branch_to_snag fraction (0..1) of the branch biomass that should be moved to a standing snag
         /// @param branch_to_soil fraction (0..1) of the branch biomass that should go directly to the soil
         /// @param foliage_to_soil fraction (0..1) of the foliage biomass that should go directly to the soil
-        public void AddDisturbance(Trees tree, int treeIndex, float stemToSnag, float stemToSoil, float branchToSnag, float branchToSoil, float foliageToSoil) 
+        public void AddDisturbance(TreeListSpatial tree, int treeIndex, float stemToSnag, float stemToSoil, float branchToSnag, float branchToSoil, float foliageToSoil) 
         {
             this.AddBiomassPools(tree, treeIndex, stemToSnag, stemToSoil, branchToSnag, branchToSoil, foliageToSoil);
         }
@@ -406,19 +406,19 @@ namespace iLand.Tree
             @param branch_to_soil fraction (0..1) of the branch biomass that should go directly to the soil
             @param foliage_to_soil fraction (0..1) of the foliage biomass that should go directly to the soil
             */
-        public void AddBiomassPools(Trees tree, int treeIndex, float stemToSnag, float stemToSoil, float branchToSnag, float branchToSoil, float foliageToSoil)
+        public void AddBiomassPools(TreeListSpatial tree, int treeIndex, float stemToSnag, float stemToSoil, float branchToSnag, float branchToSoil, float foliageToSoil)
         {
             TreeSpecies species = tree.Species;
 
             float branchBiomass = tree.GetBranchBiomass(treeIndex);
             // fine roots go to the labile pool
-            this.LabileFlux.AddBiomass(tree.FineRootMass[treeIndex], species.CarbonNitrogenRatioFineRoot, species.LitterDecompositionRate);
+            this.LabileFlux.AddBiomass(tree.FineRootMassInKg[treeIndex], species.CarbonNitrogenRatioFineRoot, species.LitterDecompositionRate);
 
             // a part of the foliage goes to the soil
-            this.LabileFlux.AddBiomass(tree.FoliageMass[treeIndex] * foliageToSoil, species.CarbonNitrogenRatioFoliage, species.LitterDecompositionRate);
+            this.LabileFlux.AddBiomass(tree.FoliageMassInKg[treeIndex] * foliageToSoil, species.CarbonNitrogenRatioFoliage, species.LitterDecompositionRate);
 
             // coarse roots and a part of branches are equally distributed over five years:
-            float biomass_rest = 0.2F * (tree.CoarseRootMass[treeIndex] + branchToSnag * branchBiomass);
+            float biomass_rest = 0.2F * (tree.CoarseRootMassInKg[treeIndex] + branchToSnag * branchBiomass);
             for (int year = 0; year < this.BranchesAndCoarseRootsByYear.Length; ++year)
             {
                 // TODO: why five years?
@@ -428,12 +428,12 @@ namespace iLand.Tree
             // the other part of the branches goes directly to the soil
             this.RefractoryFlux.AddBiomass(branchBiomass * branchToSoil, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
             // a part of the stem wood goes directly to the soil
-            this.RefractoryFlux.AddBiomass(tree.StemMass[treeIndex] * stemToSoil, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
+            this.RefractoryFlux.AddBiomass(tree.StemMassInKg[treeIndex] * stemToSoil, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
 
             // just for book-keeping: keep track of all inputs of branches / roots / swd into the "snag" pools
-            this.totalSnagInput.AddBiomass(branchBiomass * branchToSnag + tree.CoarseRootMass[0] + tree.StemMass[0] * stemToSnag, species.CarbonNitrogenRatioWood);
+            this.totalSnagInput.AddBiomass(branchBiomass * branchToSnag + tree.CoarseRootMassInKg[0] + tree.StemMassInKg[0] * stemToSnag, species.CarbonNitrogenRatioWood);
             // stem biomass is transferred to the standing woody debris pool (SWD), increase stem number of pool
-            int poolIndex = this.GetDiameterClassIndex(tree.Dbh[treeIndex]); // get right transfer pool
+            int poolIndex = this.GetDiameterClassIndex(tree.DbhInCm[treeIndex]); // get right transfer pool
 
             if (stemToSnag > 0.0F)
             {
@@ -441,33 +441,33 @@ namespace iLand.Tree
                 // note: here the calculations are repeated for every died trees (i.e. consecutive weighting ... but delivers the same results)
                 float p_old = this.NumberOfSnagsByClass[poolIndex] / (this.NumberOfSnagsByClass[poolIndex] + 1); // weighting factor for state vars (based on stem numbers)
                 float p_new = 1.0F / (this.NumberOfSnagsByClass[poolIndex] + 1.0F); // weighting factor for added tree (p_old + p_new = 1).
-                this.AverageDbhByClass[poolIndex] = this.AverageDbhByClass[poolIndex] * p_old + tree.Dbh[treeIndex] * p_new;
-                this.AverageHeightByClass[poolIndex] = this.AverageHeightByClass[poolIndex] * p_old + tree.Height[treeIndex] * p_new;
+                this.AverageDbhByClass[poolIndex] = this.AverageDbhByClass[poolIndex] * p_old + tree.DbhInCm[treeIndex] * p_new;
+                this.AverageHeightByClass[poolIndex] = this.AverageHeightByClass[poolIndex] * p_old + tree.HeightInM[treeIndex] * p_new;
                 this.AverageVolumeByClass[poolIndex] = this.AverageVolumeByClass[poolIndex] * p_old + tree.GetStemVolume(treeIndex) * p_new;
                 this.TimeSinceDeathByClass[poolIndex] = this.TimeSinceDeathByClass[poolIndex] * p_old + p_new;
                 this.HalfLifeByClass[poolIndex] = this.HalfLifeByClass[poolIndex] * p_old + species.SnagHalflife * p_new;
 
                 // average the decay rate (ksw); this is done based on the carbon content
                 // aggregate all trees that die in the current year (and save weighted decay rates to CurrentKSW)
-                p_old = toStandingWoodyByClass[poolIndex].C / (toStandingWoodyByClass[poolIndex].C + tree.StemMass[treeIndex] * Constant.DryBiomassCarbonFraction);
-                p_new = tree.StemMass[treeIndex] * Constant.DryBiomassCarbonFraction / (toStandingWoodyByClass[poolIndex].C + tree.StemMass[treeIndex] * Constant.DryBiomassCarbonFraction);
+                p_old = toStandingWoodyByClass[poolIndex].C / (toStandingWoodyByClass[poolIndex].C + tree.StemMassInKg[treeIndex] * Constant.DryBiomassCarbonFraction);
+                p_new = tree.StemMassInKg[treeIndex] * Constant.DryBiomassCarbonFraction / (toStandingWoodyByClass[poolIndex].C + tree.StemMassInKg[treeIndex] * Constant.DryBiomassCarbonFraction);
                 this.currentDecayRateByClass[poolIndex] = currentDecayRateByClass[poolIndex] * p_old + species.SnagDecompositionRate * p_new;
                 this.NumberOfSnagsByClass[poolIndex]++;
             }
 
             // finally add the biomass of the stem to the standing snag pool
             CarbonNitrogenPool toStandingWoody = toStandingWoodyByClass[poolIndex];
-            toStandingWoody.AddBiomass(tree.StemMass[treeIndex] * stemToSnag, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
+            toStandingWoody.AddBiomass(tree.StemMassInKg[treeIndex] * stemToSnag, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
 
             // the biomass that is not routed to snags or directly to the soil
             // is removed from the system (to atmosphere or harvested)
-            this.FluxToExtern.AddBiomass(tree.FoliageMass[treeIndex] * (1.0F - foliageToSoil) +
+            this.FluxToExtern.AddBiomass(tree.FoliageMassInKg[treeIndex] * (1.0F - foliageToSoil) +
                                          branchBiomass * (1.0F - branchToSnag - branchToSoil) +
-                                         tree.StemMass[treeIndex] * (1.0F - stemToSnag - stemToSoil), species.CarbonNitrogenRatioWood);
+                                         tree.StemMassInKg[treeIndex] * (1.0F - stemToSnag - stemToSoil), species.CarbonNitrogenRatioWood);
         }
 
         /// after the death of the tree the five biomass compartments are processed.
-        public void AddMortality(Trees trees, int treeIndex)
+        public void AddMortality(TreeListSpatial trees, int treeIndex)
         {
             this.AddBiomassPools(trees, treeIndex, 1.0F, 0.0F, // all stem biomass goes to snag
                                                    1.0F, 0.0F,       // all branch biomass to snag
@@ -516,7 +516,7 @@ namespace iLand.Tree
         /// add residual biomass of 'tree' after harvesting.
         /// remove_{stem, branch, foliage}_fraction: percentage of biomass compartment that is *removed* by the harvest operation [0..1] (i.e.: not to stay in the system)
         /// records on harvested biomass is collected (mTotalToExtern-pool).
-        public void AddHarvest(Trees trees, int treeIndex, float removeStemFraction, float removeBranchFraction, float removeFoliageFraction)
+        public void AddHarvest(TreeListSpatial trees, int treeIndex, float removeStemFraction, float removeBranchFraction, float removeFoliageFraction)
         {
             this.AddBiomassPools(trees, treeIndex, 0.0F, 1.0F - removeStemFraction, // "remove_stem_fraction" is removed . the rest goes to soil
                                                    0.0F, 1.0F - removeBranchFraction, // "remove_branch_fraction" is removed . the rest goes directly to the soil

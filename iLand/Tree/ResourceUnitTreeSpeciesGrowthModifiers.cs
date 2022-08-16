@@ -33,7 +33,7 @@ namespace iLand.Tree
         public float[] TemperatureModifierByMonth { get; private init; } // monthly average or estimate of daily temperature response
         public float TotalRadiationForYear { get; private set; } // total radiation of the year (MJ/m²)
         public float[] UtilizableRadiationByMonth { get; private init; } // sum of daily radiation*minResponse (MJ/m²)
-        public float UtilizableRadiationForYear { get; private set; } // yearly sum of utilized radiation (MJ/²)
+        public float UtilizableRadiationForYear { get; private set; } // yearly sum of utilized radiation (MJ/m²)
         public float[] VpdModifierByMonth { get; private init; } // monthly average or estimate of vpd-response
 
         public ResourceUnitTreeSpeciesGrowthModifiers(ResourceUnit resourceUnit, ResourceUnitTreeSpecies ruSpecies)
@@ -179,7 +179,7 @@ namespace iLand.Tree
                 float utilizableRadiation = monthlyTimeSeries.SolarRadiationTotal[weatherMonthIndex] * leafOnFraction * minimumResponse;
 
                 Debug.Assert((minimumResponse >= 0.0F) && (minimumResponse < 1.000001F), "Minimum of VPD (" + vpdResponse + "), temperature (" + temperatureModifier + "), and soil water (" + soilWaterModifier + ") responses is not in [0, 1].");
-                Debug.Assert((utilizableRadiation >= 0.0F) && (utilizableRadiation < 100.0F)); // sanity upper bound
+                Debug.Assert((utilizableRadiation >= 0.0F) && (utilizableRadiation < 500.0F)); // sanity upper bound
                 this.UtilizableRadiationByMonth[monthOfYearIndex] += utilizableRadiation;
 
                 this.UtilizableRadiationForYear += utilizableRadiation;

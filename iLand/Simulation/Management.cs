@@ -15,7 +15,7 @@ namespace iLand.Simulation
         */
     public class Management
     {
-        private List<(Trees Trees, List<int> LiveTreeIndices)> treesInMostRecentlyLoadedStand;
+        private List<(TreeListSpatial Trees, List<int> LiveTreeIndices)> treesInMostRecentlyLoadedStand;
 
         // property getter & setter for removal fractions
         /// removal fraction foliage: 0: 0% will be removed, 1: 100% will be removed from the forest by management operations (i.e. calls to manage() instead of kill())
@@ -51,7 +51,7 @@ namespace iLand.Simulation
         public static int KillRandomTreesAboveRetentionThreshold(Model model, int treesToRetain)
         {
             AllTreesEnumerator allTreeEnumerator = new(model.Landscape);
-            List<(Trees Trees, int TreeIndex)> livingTrees = new();
+            List<(TreeListSpatial Trees, int TreeIndex)> livingTrees = new();
             while (allTreeEnumerator.MoveNextLiving())
             {
                 livingTrees.Add(new(allTreeEnumerator.CurrentTrees, allTreeEnumerator.CurrentTreeIndex));
@@ -71,10 +71,10 @@ namespace iLand.Simulation
         public int KillAllInCurrentStand(Model model, bool removeBiomassFractions)
         {
             int initialTreeCount = this.treesInMostRecentlyLoadedStand.Count;
-            foreach ((Trees Trees, List<int> LiveTreeIndices) treesOfSpecies in this.treesInMostRecentlyLoadedStand)
+            foreach ((TreeListSpatial Trees, List<int> LiveTreeIndices) treesOfSpecies in this.treesInMostRecentlyLoadedStand)
             {
                 // TODO: doesn't check IsCutDown() flag?
-                Trees trees = treesOfSpecies.Trees;
+                TreeListSpatial trees = treesOfSpecies.Trees;
                 foreach (int treeIndex in treesOfSpecies.LiveTreeIndices)
                 {
                     if (removeBiomassFractions)
@@ -94,9 +94,9 @@ namespace iLand.Simulation
         public int LethalDisturbanceInCurrentStand(Model model)
         {
             int treeCount = 0;
-            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
+            foreach ((TreeListSpatial Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
             {
-                Trees trees = liveTreesOfSpecies.Trees;
+                TreeListSpatial trees = liveTreesOfSpecies.Trees;
                 foreach (int treeIndex in liveTreesOfSpecies.LiveTreeIndices)
                 {
                     // TODO: why 10%?
@@ -120,9 +120,9 @@ namespace iLand.Simulation
 
         public void CutAndDropAllTreesInStand(Model model)
         {
-            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
+            foreach ((TreeListSpatial Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
             {
-                Trees trees = liveTreesOfSpecies.Trees;
+                TreeListSpatial trees = liveTreesOfSpecies.Trees;
                 foreach (int liveTreeIndex in liveTreesOfSpecies.LiveTreeIndices)
                 {
                     trees.SetDeathReasonCutAndDrop(liveTreeIndex); // set flag that tree is cut down
@@ -243,7 +243,7 @@ namespace iLand.Simulation
             int treesRemoved = 0;
             for (int speciesIndex = 0; speciesIndex < treesInMostRecentlyLoadedStand.Count; ++speciesIndex)
             {
-                Trees treesOfSpecies = treesInMostRecentlyLoadedStand[speciesIndex].Trees;
+                TreeListSpatial treesOfSpecies = treesInMostRecentlyLoadedStand[speciesIndex].Trees;
                 treeWrapper.Trees = treesOfSpecies;
                 // if expression evaluates to true and if random number below threshold...
                 List<int> treeIndices = treesInMostRecentlyLoadedStand[speciesIndex].LiveTreeIndices;
@@ -327,18 +327,18 @@ namespace iLand.Simulation
 
         public int FilterByTreeID(List<int> treeIDlist)
         {
-            List<(Trees Trees, List<int>)> filteredTrees = new();
+            List<(TreeListSpatial Trees, List<int>)> filteredTrees = new();
             int treesSelected = 0;
-            foreach ((Trees Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
+            foreach ((TreeListSpatial Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
             {
-                Trees trees = liveTreesOfSpecies.Trees;
+                TreeListSpatial trees = liveTreesOfSpecies.Trees;
                 List<int>? treeIndicesInSpecies = null;
                 foreach (int treeID in treeIDlist)
                 {
-                    // O(N) search required; trees aren't sorted or indexed by tag and multiple trees may have the same tag number
+                    // O(N) search required; trees aren't sorted or indexed by tree ID and multiple trees may have the same ID number
                     for (int treeIndex = 0; treeIndex < trees.Count; ++treeIndex)
                     {                        
-                        if (trees.Tag[treeIndex] == treeID)
+                        if (trees.TreeID[treeIndex] == treeID)
                         {
                             if (treeIndicesInSpecies == null)
                             {

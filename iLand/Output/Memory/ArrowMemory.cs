@@ -1,4 +1,5 @@
-﻿using Apache.Arrow.Types;
+﻿using Apache.Arrow;
+using Apache.Arrow.Types;
 using System;
 using System.Runtime.InteropServices;
 
@@ -21,9 +22,19 @@ namespace iLand.Output.Memory
             source[..count].CopyTo(MemoryMarshal.Cast<byte, float>(field.Span).Slice(this.Count, count));
         }
 
-        protected void CopyFirstN(ReadOnlySpan<int> source, Memory<byte> field, int count)
+        protected void CopyFirstN(ReadOnlySpan<Int16> source, Memory<byte> field, int count)
         {
-            source[..count].CopyTo(MemoryMarshal.Cast<byte, int>(field.Span).Slice(this.Count, count));
+            source[..count].CopyTo(MemoryMarshal.Cast<byte, Int16>(field.Span).Slice(this.Count, count));
+        }
+
+        protected void CopyFirstN(ReadOnlySpan<Int32> source, Memory<byte> field, int count)
+        {
+            source[..count].CopyTo(MemoryMarshal.Cast<byte, Int32>(field.Span).Slice(this.Count, count));
+        }
+
+        protected void CopyFirstN(ReadOnlySpan<UInt16> source, Memory<byte> field, int count)
+        {
+            source[..count].CopyTo(MemoryMarshal.Cast<byte, UInt16>(field.Span).Slice(this.Count, count));
         }
 
         protected void Fill(Memory<byte> field, IntegerType fieldType, int value, int count)
@@ -70,9 +81,14 @@ namespace iLand.Output.Memory
             }
         }
 
-        protected void Fill(Memory<byte> field, int value, int count)
+        protected void Fill(Memory<byte> field, Int16 value, int count)
         {
-            MemoryMarshal.Cast<byte, int>(field.Span).Slice(this.Count, count).Fill(value);
+            MemoryMarshal.Cast<byte, Int16>(field.Span).Slice(this.Count, count).Fill(value);
+        }
+
+        protected void Fill(Memory<byte> field, Int32 value, int count)
+        {
+            MemoryMarshal.Cast<byte, Int32>(field.Span).Slice(this.Count, count).Fill(value);
         }
     }
 }

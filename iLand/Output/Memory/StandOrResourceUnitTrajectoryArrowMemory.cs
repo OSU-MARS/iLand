@@ -41,14 +41,14 @@ namespace iLand.Output.Memory
         public RecordBatch RecordBatch { get; private init; }
 
         // public StandOrResourceUnitTrajectoryArrowMemory(string idFieldName, IList<string> treeSpecies, int batchLength)
-        public StandOrResourceUnitTrajectoryArrowMemory(string idFieldName, IntegerType treeSpeciesFieldType, int batchLength)
+        public StandOrResourceUnitTrajectoryArrowMemory(string idFieldName, string idFieldDescription, IntegerType treeSpeciesFieldType, int batchLength)
         {
             this.treeSpeciesFieldType = treeSpeciesFieldType;
 
             // 27 fields @ 4 bytes/field -> 9700 trajectory years/MB -> 103 MB for one century of 10,000 resource units' all species trajectories
             // If needed, restricted batch lengths can be supported. But, for now, it's assumed a few hundred MB isn't a concern.
             this.id = new byte[batchLength * sizeof(Int32)];
-            this.calendarYear = new byte[batchLength * sizeof(Int32)];
+            this.calendarYear = new byte[batchLength * sizeof(Int16)];
             this.treeSpeciesIndices = new byte[batchLength * treeSpeciesFieldType.BitWidth / 8];
             this.averageDbh = new byte[batchLength * sizeof(float)];
             this.averageHeight = new byte[batchLength * sizeof(float)];
@@ -79,7 +79,7 @@ namespace iLand.Output.Memory
             List<Field> fields = new()
             {
                 new(idFieldName, Int32Type.Default, false),
-                new("year", Int32Type.Default, false),
+                new("year", Int16Type.Default, false),
                 new("species", treeSpeciesFieldType, false),
                 new("averageDbh", FloatType.Default, false),
                 new("averageHeight", FloatType.Default, false),
@@ -107,14 +107,43 @@ namespace iLand.Output.Memory
                 new("stemNitrogen", FloatType.Default, false)
             };
 
-            Dictionary<string, string> metadata = new();
+            Dictionary<string, string> metadata = new()
+            {
+                { idFieldName, idFieldDescription },
+                { "year", "Calendar year." },
+                { "species", "Integer code for tree species, typically " + Constant.AllTreeSpeciesCode + " to indicate all tree species present, a USFS FIA code (US Forest Service Forest Inventory and Analysis, 16 bit), or ITIS TSN (Integrated Taxonomic Information System taxonmic serial number, 32 bit)." },
+                { "averageDbh", "Arithmetic mean diameter of trees, cm." },
+                { "averageHeight", "Arithmetic mean height of trees, m." },
+                { "basalArea", "Basal area of trees, m²/ha." },
+                { "lai", "Leaf area index of trees, m²/m²." },
+                { "liveStemVolume", "Live stem volume of trees, , m³/ha" },
+                { "treeNpp", "Net primary production of trees, kg biomass/ha-yr." },
+                { "treeAbovegroundNpp", "Net primary production of trees in aboveground compartments, kg biomass/ha-yr." },
+                { "treesPerHectare", "Number of trees per hectare." },
+                { "saplingCohorts", "" },
+                { "saplingMeanAge", "Mean age of saplings in years." },
+                { "saplingNpp", "Net primary production of saplings, kg biomass/ha-yr." },
+                { "saplingsPerHectare", "Number of saplings per hectare." },
+                { "branchCarbon", "Carbon contained in tree branches, kg/ha-yr." },
+                { "branchNitrogen", "Nitrogen contained in tree branches, kg/ha-yr." },
+                { "coarseRootCarbon", "Carbon contained in trees' coarse roots, kg/ha-yr." },
+                { "coarseRootNitrogen", "Nitrogen contained in trees' coarse roots, kg/ha-yr." },
+                { "fineRootCarbon", "Carbon contained in trees' fine roots, kg/ha-yr." },
+                { "fineRootNitrogen", "Nitrogen contained in trees' fine roots, kg/ha-yr." },
+                { "foliageCarbon", "Carbon contained in trees' foliage, kg/ha-yr." },
+                { "foliageNitrogen", "Nitrogen contained in trees' foliage, kg/ha-yr." },
+                { "regenerationCarbon", "Carbon contained in saplings, kg/ha-yr." },
+                { "regenerationNitrogen", "Nitrogen contained in saplings, kg/ha-yr." },
+                { "stemCarbon", "Carbon contained in live tree stems (snags are reported separately), kg/ha-yr." },
+                { "stemNitrogen", "Nitrogen contained in live tree stems, kg/ha-yr." }
+            };
             Schema schema = new(fields, metadata);
 
             // repackage arrays into Arrow record batch
             IArrowArray[] arrowArrays = new IArrowArray[]
             {
                 ArrowArrayExtensions.WrapInInt32(this.id),
-                ArrowArrayExtensions.WrapInInt32(this.calendarYear),
+                ArrowArrayExtensions.WrapInInt16(this.calendarYear),
                 // not supported in Apache 9.0.0
                 // ArrowArrayExtensions.BindStringTable256(this.treeSpeciesIndices, treeSpecies),
                 ArrowArrayExtensions.Wrap(treeSpeciesFieldType, this.treeSpeciesIndices),
@@ -141,7 +170,7 @@ namespace iLand.Output.Memory
                 ArrowArrayExtensions.WrapInFloat(this.regenerationCarbon),
                 ArrowArrayExtensions.WrapInFloat(this.regenerationNitrogen),
                 ArrowArrayExtensions.WrapInFloat(this.stemCarbon),
-                ArrowArrayExtensions.WrapInFloat(this.stemNitrogen),
+                ArrowArrayExtensions.WrapInFloat(this.stemNitrogen)
             };
 
             this.RecordBatch = new(schema, arrowArrays, batchLength);
@@ -154,7 +183,7 @@ namespace iLand.Output.Memory
         /// <param name="polygonID">Resource unit or stand ID.</param>
         /// <param name="treeSpeciesCode">Index of tree species in tree species string table.</param>
         /// <param name="calendarYearSource">Sequential array of calendar years, starting with simulation year zero.</param>
-        public void Add(StandOrResourceUnitTrajectory trajectory, int polygonID, int treeSpeciesCode, Span<int> calendarYearSource)
+        public void Add(StandOrResourceUnitTrajectory trajectory, int polygonID, int treeSpeciesCode, Span<Int16> calendarYearSource)
         {
             int trajectoryLengthInYears = trajectory.LengthInYears;
 

@@ -78,7 +78,7 @@ namespace iLand.World
             Debug.Assert((this.heightCellsOnLandscape > 0) && ((this.heightCellsWithTrees > 0) || (this.Trees.TreesBySpeciesID.Count == 0)));
         }
 
-        public void AddSprout(Model model, Trees trees, int treeIndex)
+        public void AddSprout(Model model, TreeListSpatial trees, int treeIndex)
         {
             if (trees.Species.SaplingGrowth.SproutGrowth == 0.0F)
             {
@@ -418,7 +418,7 @@ namespace iLand.World
                     // add variation: add +/-N% to DBH and *independently* to height.
                     float dbhInCm = centralDbh * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
                     float heightInM = sapling.HeightInM * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
-                    int treeIndex = this.Trees.AddTree(model.Project, model.Landscape, species.ID, dbhInCm, heightInM, lightCellIndexXY, sapling.Age, out Trees treesOfSpecies);
+                    int treeIndex = this.Trees.AddTree(model.Project, model.Landscape, species.ID, dbhInCm, heightInM, lightCellIndexXY, sapling.Age, out TreeListSpatial treesOfSpecies);
                     Debug.Assert(treesOfSpecies.IsDead(treeIndex) == false);
                     ruSpecies.StatisticsLive.Add(treesOfSpecies, treeIndex); // capture newly acknowledged tree into tree statistics
                 }
@@ -517,12 +517,12 @@ namespace iLand.World
                     float totalCrownArea = 0.0F;
                     for (int speciesIndex = 0; speciesIndex < this.Trees.TreesBySpeciesID.Count; ++speciesIndex)
                     {
-                        Trees treesOfSpecies = this.Trees.TreesBySpeciesID.Values[speciesIndex];
+                        TreeListSpatial treesOfSpecies = this.Trees.TreesBySpeciesID.Values[speciesIndex];
                         for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                         {
                             if (treesOfSpecies.IsDead(treeIndex) == false)
                             {
-                                LightStamp reader = treesOfSpecies.Stamp[treeIndex]!.ReaderStamp!;
+                                LightStamp reader = treesOfSpecies.LightStamp[treeIndex]!.ReaderStamp!;
                                 totalCrownArea += reader.CrownAreaInM2;
                             }
                         }

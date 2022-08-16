@@ -35,7 +35,7 @@ namespace iLand.Input.Tree
                 bool setAgeToZero = true;
                 if (treeSizeHeader.Age >= 0)
                 {
-                    if (int.TryParse(row[treeSizeHeader.Age], out int age))
+                    if (UInt16.TryParse(row[treeSizeHeader.Age], out UInt16 age))
                     {
                         setAgeToZero = false;
                         sizeRange.Age = age;

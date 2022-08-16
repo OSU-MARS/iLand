@@ -48,11 +48,11 @@ namespace iLand.Test
                 // located tracked resource units
                 ObservedResourceUnitTrajectory observedTrajectory82597 = new() // wholly contained within stand 78
                 {
-                    // for now, set extremely loose tolerances due to preliminary tiles, lack of calibration, and high stochastic mortality
-                    NonmonotonicGrowthTolerance = 0.60F,
-                    NppTolerance = 0.70F,
-                    StemVolumeTolerance = 0.98F,
-                    TreeNppTolerance = 0.55F
+                    // for now, set loose tolerances due to preliminary tiles, lack of calibration, and high stochastic mortality
+                    NonmonotonicGrowthTolerance = 0.05F,
+                    NppTolerance = 0.05F,
+                    StemVolumeTolerance = 0.05F,
+                    TreeNppTolerance = 0.05F
                 };
 
                 ResourceUnit? resourceUnit82597 = null;
@@ -88,19 +88,19 @@ namespace iLand.Test
                 // changes to random number generation appear likely to require expected values be updated.
                 List<float> expectedGppBySimulationYear = new()
                 {
-                    0.0F, 0.479F, 0.482F, 0.479F, 0.488F, 0.476F, // 0...5
-                    0.487F, 0.493F, 0.488F, 0.489F, 0.491F // 6...10
+                    0.0F, 14.607F, 14.671F, 14.646F, 14.864F, 14.502F, // 0...5
+                    14.842F, 15.047F, 14.870F, 14.913F, 14.974F // 6...10
                 };
                 List<float> expectedNppBySimulationYear = new()
                 {
-                    0.0F, 1366.702F, 1369.033F, 1357.705F, 1324.310F, 1196.718F,
-                    1106.907F, 885.868F, 696.358F, 553.875F, 409.738F
+                    0.0F, 41568.55F, 42040.76F, 42148.52F, 42933.164F, 41954.23F, 
+                    43039.632F, 43698.95F, 42797.535F, 42940.05F, 43118.515F
                 };
                 List<float> expectedStemVolumeBySimulationYear = new()
                 {
-                    1166.786F, 1166.786F, 1166.786F, 1166.786F, 1144.655F, 924.422F,
-                    793.551F, 644.924F, 550.262F, 413.426F, 254.808F
-                };
+                    1166.786F, 1209.501F, 1252.128F, 1294.588F, 1338.040F, 1379.567F, 
+                    1422.594F, 1466.218F, 1508.038F, 1550.071F, 1592.181F
+                }; 
                 ResourceUnitAllSpeciesTrajectory? resourceUnit82597trajectory = elliott.Output.ResourceUnitTrajectories[resourceUnit82597index].AllTreeSpeciesTrajectory;
                 observedTrajectory82597.Verify(resourceUnit82597trajectory, 126.0F, expectedGppBySimulationYear, expectedNppBySimulationYear, expectedStemVolumeBySimulationYear);
 
@@ -179,7 +179,7 @@ namespace iLand.Test
                 endOfYearTrees.ObserveResourceUnit(resourceUnit1);
                 for (int simulationYear = 0; simulationYear < 3; ++simulationYear)
                 {
-                    if (startOfYearTrees.DiameterInCmByTag.Count == 0)
+                    if (startOfYearTrees.DiameterInCmByTreeID.Count == 0)
                     {
                         startOfYearTrees.ObserveResourceUnit(resourceUnit1);
                     }
@@ -384,8 +384,8 @@ namespace iLand.Test
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = model.Output.ResourceUnitTrajectories[resourceUnitIndex];
                 Assert.IsTrue(resourceUnitTrajectory.HasAllTreeSpeciesStatistics);
-                Assert.IsTrue(resourceUnitTrajectory.HasIndividualTreeSpeciesStatistics);
-                Assert.IsTrue(resourceUnitTrajectory.TreeSpeciesTrajectories.Count == 1);
+                Assert.IsTrue(resourceUnitTrajectory.HasTreeSpeciesStatistics);
+                Assert.IsTrue(resourceUnitTrajectory.TreeSpeciesTrajectories.Length == 1);
 
                 ModelTest.VerifyTrajectory(resourceUnitTrajectory.AllTreeSpeciesTrajectory, simulationYear);
                 ModelTest.VerifyTrajectory(resourceUnitTrajectory.TreeSpeciesTrajectories[0], simulationYear);
@@ -457,8 +457,8 @@ namespace iLand.Test
                 }
                 Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
                 Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= 10.0F), "Water cycle: snow days");
-                Assert.IsTrue((resourceUnit.WaterCycle.TotalEvapotranspiration > 1.0F) && (resourceUnit.WaterCycle.TotalEvapotranspiration < 100.0F), "Soil: evapotranspiration"); // zero at initialization
-                Assert.IsTrue((resourceUnit.WaterCycle.TotalRunoff > 500.0F) && (resourceUnit.WaterCycle.TotalRunoff < 3000.0F), "Soil: runoff"); // zero at initialization
+                Assert.IsTrue((resourceUnit.WaterCycle.TotalAnnualEvapotranspirationInMM > 1.0F) && (resourceUnit.WaterCycle.TotalAnnualEvapotranspirationInMM < 250.0F), "Soil: evapotranspiration"); // zero at initialization
+                Assert.IsTrue((resourceUnit.WaterCycle.TotalAnnualRunoffInMM > 100.0F) && (resourceUnit.WaterCycle.TotalAnnualRunoffInMM < 3000.0F), "Soil: runoff"); // zero at initialization
             }
 
             Assert.IsTrue(model.Landscape.ResourceUnits.Count == 190);
@@ -494,7 +494,7 @@ namespace iLand.Test
                 Assert.IsTrue(weather.Sun.LongestDayIndex == 172);
                 Assert.IsTrue(weather.Sun.IsNorthernHemisphere, "Sun.IsNorthernHemisphere = " + weather.Sun.IsNorthernHemisphere + ".");
                 // climate.TemperatureMonth;
-                Assert.IsTrue((weather.TotalAnnualRadiation > 100.0) && (weather.TotalAnnualRadiation < 1000.0));
+                Assert.IsTrue((weather.TotalAnnualRadiation > 3000.0) && (weather.TotalAnnualRadiation < 9000.0));
             }
         }
 
@@ -637,11 +637,11 @@ namespace iLand.Test
             // growth on observed resource unit
             float averageDiameterGrowth = 0.0F;
             float averageHeightGrowth = 0.0F;
-            foreach ((int tag, float height) in endOfYearTrees.HeightInMByTag)
+            foreach ((int treeID, float height) in endOfYearTrees.HeightInMByTreeID)
             {
-                float initialDiameter = startOfYearTrees.DiameterInCmByTag[tag];
-                float initialHeight = startOfYearTrees.HeightInMByTag[tag];
-                float finalDiameter = endOfYearTrees.DiameterInCmByTag[tag];
+                float initialDiameter = startOfYearTrees.DiameterInCmByTreeID[treeID];
+                float initialHeight = startOfYearTrees.HeightInMByTreeID[treeID];
+                float finalDiameter = endOfYearTrees.DiameterInCmByTreeID[treeID];
                 float finalHeight = height;
                 averageDiameterGrowth += finalDiameter - initialDiameter;
                 averageHeightGrowth += finalHeight - initialHeight;
@@ -651,7 +651,7 @@ namespace iLand.Test
                 Assert.IsTrue(finalHeight < 1.1F * initialHeight);
             }
 
-            int treesObserved = endOfYearTrees.HeightInMByTag.Count;
+            int treesObserved = endOfYearTrees.HeightInMByTreeID.Count;
             averageDiameterGrowth /= treesObserved;
             averageHeightGrowth /= treesObserved;
 
@@ -666,24 +666,24 @@ namespace iLand.Test
                 int resourceUnitTreeSpeciesCount = resourceUnit.Trees.TreesBySpeciesID.Count;
                 Assert.IsTrue(resourceUnitTreeSpeciesCount >= minimumTreeCount, "Expected " + minimumTreeCount + " trees but got " + resourceUnitTreeSpeciesCount + ".");
                 Assert.IsTrue(resourceUnit.Trees.TreesBySpeciesID.Count >= minimumTreeCount);
-                Assert.IsTrue(startOfYearTrees.DiameterInCmByTag.Count >= minimumTreeCount);
-                Assert.IsTrue(startOfYearTrees.HeightInMByTag.Count >= minimumTreeCount);
-                Assert.IsTrue(endOfYearTrees.DiameterInCmByTag.Count >= minimumTreeCount);
-                Assert.IsTrue(endOfYearTrees.HeightInMByTag.Count >= minimumTreeCount);
+                Assert.IsTrue(startOfYearTrees.DiameterInCmByTreeID.Count >= minimumTreeCount);
+                Assert.IsTrue(startOfYearTrees.HeightInMByTreeID.Count >= minimumTreeCount);
+                Assert.IsTrue(endOfYearTrees.DiameterInCmByTreeID.Count >= minimumTreeCount);
+                Assert.IsTrue(endOfYearTrees.HeightInMByTreeID.Count >= minimumTreeCount);
 
                 // check living trees
-                SortedList<string, Trees> resourceUnitTrees = resourceUnit.Trees.TreesBySpeciesID;
-                foreach (Trees treesOfSpecies in resourceUnitTrees.Values)
+                SortedList<string, TreeListSpatial> resourceUnitTrees = resourceUnit.Trees.TreesBySpeciesID;
+                foreach (TreeListSpatial treesOfSpecies in resourceUnitTrees.Values)
                 {
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                     {
                         Assert.IsTrue((treesOfSpecies.Age[treeIndex] > 0 + simulationYear) && (treesOfSpecies.Age[treeIndex] < 100 + simulationYear));
                         Assert.IsTrue(treesOfSpecies.GetBasalArea(treeIndex) > 0.0);
-                        Assert.IsTrue((treesOfSpecies.CoarseRootMass[treeIndex] >= 0.0F) && (treesOfSpecies.CoarseRootMass[treeIndex] < 1E6F));
-                        Assert.IsTrue((treesOfSpecies.Dbh[treeIndex] > 0.0F) && (treesOfSpecies.Dbh[treeIndex] < 200.0F));
-                        Assert.IsTrue((treesOfSpecies.DbhDelta[treeIndex] >= 0.0F) && (treesOfSpecies.DbhDelta[treeIndex] < 10.0F));
-                        Assert.IsTrue((treesOfSpecies.FineRootMass[treeIndex] > 0.0F) && (treesOfSpecies.FineRootMass[treeIndex] < 1E6F));
-                        Assert.IsTrue((treesOfSpecies.FoliageMass[treeIndex] > 0.0F) && (treesOfSpecies.FoliageMass[treeIndex] < 1000.0F));
+                        Assert.IsTrue((treesOfSpecies.CoarseRootMassInKg[treeIndex] >= 0.0F) && (treesOfSpecies.CoarseRootMassInKg[treeIndex] < 1E6F));
+                        Assert.IsTrue((treesOfSpecies.DbhInCm[treeIndex] > 0.0F) && (treesOfSpecies.DbhInCm[treeIndex] < 200.0F));
+                        Assert.IsTrue((treesOfSpecies.DbhDeltaInCm[treeIndex] >= 0.0F) && (treesOfSpecies.DbhDeltaInCm[treeIndex] < 10.0F));
+                        Assert.IsTrue((treesOfSpecies.FineRootMassInKg[treeIndex] > 0.0F) && (treesOfSpecies.FineRootMassInKg[treeIndex] < 1E6F));
+                        Assert.IsTrue((treesOfSpecies.FoliageMassInKg[treeIndex] > 0.0F) && (treesOfSpecies.FoliageMassInKg[treeIndex] < 1000.0F));
                         Assert.IsTrue(treesOfSpecies.GetBranchBiomass(treeIndex) > 0.0F);
                         Assert.IsTrue(treesOfSpecies.GetCrownRadius(treeIndex) > 0.0F);
                         Assert.IsTrue(treesOfSpecies.IsCutDown(treeIndex) == false);
@@ -697,19 +697,19 @@ namespace iLand.Test
                         Assert.IsTrue(treesOfSpecies.IsMarkedForCut(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsMarkedForHarvest(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.GetStemVolume(treeIndex) > 0.0F);
-                        Assert.IsTrue((treesOfSpecies.Height[treeIndex] > 0.0F) && (treesOfSpecies.Height[treeIndex] < 100.0F));
-                        Assert.IsTrue((treesOfSpecies.Tag[treeIndex] > 0) && (treesOfSpecies.Tag[treeIndex] < 40));
-                        Assert.IsTrue((treesOfSpecies.LeafArea[treeIndex] > 0.0F) && (treesOfSpecies.LeafArea[treeIndex] < 1000.0F));
+                        Assert.IsTrue((treesOfSpecies.HeightInM[treeIndex] > 0.0F) && (treesOfSpecies.HeightInM[treeIndex] < 100.0F));
+                        Assert.IsTrue((treesOfSpecies.TreeID[treeIndex] > 0) && (treesOfSpecies.TreeID[treeIndex] < 40));
+                        Assert.IsTrue((treesOfSpecies.LeafAreaInM2[treeIndex] > 0.0F) && (treesOfSpecies.LeafAreaInM2[treeIndex] < 1000.0F));
                         // Assert.IsTrue((tree.LightCellPosition);
                         Assert.IsTrue((treesOfSpecies.LightResourceIndex[treeIndex] > 0.0F) && (treesOfSpecies.LightResourceIndex[treeIndex] <= 1.0F));
                         Assert.IsTrue((treesOfSpecies.LightResponse[treeIndex] > -0.5F) && (treesOfSpecies.LightResponse[treeIndex] <= 1.0F));
-                        Assert.IsTrue((treesOfSpecies.NppReserve[treeIndex] > 0.0F) && (treesOfSpecies.NppReserve[treeIndex] < 1E4F));
+                        Assert.IsTrue((treesOfSpecies.NppReserveInKg[treeIndex] > 0.0F) && (treesOfSpecies.NppReserveInKg[treeIndex] < 1E4F));
                         Assert.IsTrue((treesOfSpecies.Opacity[treeIndex] > 0.0F) && (treesOfSpecies.Opacity[treeIndex] <= 1.0F));
                         Assert.IsTrue(object.ReferenceEquals(treesOfSpecies.ResourceUnit, resourceUnit));
                         // Assert.IsTrue(tree.Species.ID);
                         // Assert.IsTrue(tree.Stamp);
-                        Assert.IsTrue((treesOfSpecies.StemMass[treeIndex] > 0.0) && (treesOfSpecies.CoarseRootMass[treeIndex] < 1E6));
-                        Assert.IsTrue((treesOfSpecies.StressIndex[treeIndex] >= 0.0) && (treesOfSpecies.CoarseRootMass[treeIndex] < 1E6));
+                        Assert.IsTrue((treesOfSpecies.StemMassInKg[treeIndex] > 0.0) && (treesOfSpecies.CoarseRootMassInKg[treeIndex] < 1E6));
+                        Assert.IsTrue((treesOfSpecies.StressIndex[treeIndex] >= 0.0) && (treesOfSpecies.CoarseRootMassInKg[treeIndex] < 1E6));
                     }
 
                     Assert.IsTrue(treesOfSpecies.Capacity == 4);
@@ -831,8 +831,8 @@ namespace iLand.Test
                 }
                 Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
                 Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= Constant.DaysInLeapYear), "Water cycle: snow days");
-                Assert.IsTrue(resourceUnit.WaterCycle.TotalEvapotranspiration == 0.0F, "Soil: evapotranspiration"); // zero at initialization
-                Assert.IsTrue(resourceUnit.WaterCycle.TotalRunoff == 0.0F, "Soil: runoff"); // zero at initialization
+                Assert.IsTrue(resourceUnit.WaterCycle.TotalAnnualEvapotranspirationInMM == 0.0F, "Soil: evapotranspiration"); // zero at initialization
+                Assert.IsTrue(resourceUnit.WaterCycle.TotalAnnualRunoffInMM == 0.0F, "Soil: runoff"); // zero at initialization
             }
 
             Assert.IsTrue(model.Landscape.ResourceUnits.Count == 1);
@@ -949,9 +949,9 @@ namespace iLand.Test
             Assert.IsTrue((Single.IsNaN(averageHeightInM) == false) && (averageHeightInM >= 0.0F) && (averageHeightInM < 100.0F));
             Assert.IsTrue((Single.IsNaN(basalAreaInM2PerHa) == false) && (basalAreaInM2PerHa >= 0.0F) && (basalAreaInM2PerHa < 200.0F));
             Assert.IsTrue((Single.IsNaN(leafAreaIndex) == false) && (leafAreaIndex >= 0.0F) && (leafAreaIndex < 20.0F));
-            Assert.IsTrue((Single.IsNaN(liveStemVolumeInM3PerHa) == false) && (liveStemVolumeInM3PerHa >= 0.0F) && (liveStemVolumeInM3PerHa < 2000.0F));
-            Assert.IsTrue((Single.IsNaN(treeAbovegroundNppInKgPerHa) == false) && (treeAbovegroundNppInKgPerHa >= 0.0F) && (treeAbovegroundNppInKgPerHa < 2000.0F));
-            Assert.IsTrue((Single.IsNaN(treeNppInKgPerHa) == false) && (treeNppInKgPerHa >= 0.0F) && (treeNppInKgPerHa < 2000.0F));
+            Assert.IsTrue((Single.IsNaN(liveStemVolumeInM3PerHa) == false) && (liveStemVolumeInM3PerHa >= 0.0F) && (liveStemVolumeInM3PerHa < 3000.0F));
+            Assert.IsTrue((Single.IsNaN(treeAbovegroundNppInKgPerHa) == false) && (treeAbovegroundNppInKgPerHa >= 0.0F) && (treeAbovegroundNppInKgPerHa < 50000.0F));
+            Assert.IsTrue((Single.IsNaN(treeNppInKgPerHa) == false) && (treeNppInKgPerHa >= 0.0F) && (treeNppInKgPerHa < 75000.0F));
 
             Assert.IsTrue((Single.IsNaN(meanSaplingAgeInYears) == false) && (meanSaplingAgeInYears >= 0.0F) && (meanSaplingAgeInYears < 20.0F));
             Assert.IsTrue((Single.IsNaN(saplingCohortsPerHectare) == false) && (saplingCohortsPerHectare >= 0.0F) && (saplingCohortsPerHectare < 200.0F));

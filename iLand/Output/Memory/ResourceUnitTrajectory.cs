@@ -3,6 +3,7 @@ using iLand.Tree;
 using iLand.World;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace iLand.Output.Memory
@@ -11,42 +12,80 @@ namespace iLand.Output.Memory
     {
         public ResourceUnitAllSpeciesTrajectory? AllTreeSpeciesTrajectory { get; private init; }
         public ResourceUnit ResourceUnit { get; private init; }
-        public List<ResourceUnitTreeSpeciesTrajectory>? TreeSpeciesTrajectories { get; private init; }
+        public ResourceUnitIndividualTreeTrajectories[]? IndividualTreeTrajectories { get; private init; }
+        public ResourceUnitTreeSpecies[]? ResourceUnitTreeSpecies { get; private init; }
+        public ResourceUnitTreeSpeciesTrajectory[]? TreeSpeciesTrajectories { get; private init; }
 
         public ResourceUnitTrajectory(ResourceUnit resourceUnit, ResourceUnitMemoryOutputs resourceUnitOutputs, int initialCapacityInYears)
         {
             this.AllTreeSpeciesTrajectory = resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.AllTreeSpeciesStatistics) ? new(initialCapacityInYears) : null;
+            this.IndividualTreeTrajectories = null;
             this.ResourceUnit = resourceUnit;
+            this.TreeSpeciesTrajectories = null;
 
-            if (resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.IndividualTreeSpeciesStatistics))
+            bool logIndividualTrees = resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.IndividualTrees);
+            bool logSpeciesStatistics = resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.IndividualTreeSpeciesStatistics);
+            if (logIndividualTrees || logSpeciesStatistics)
             {
-                IList<Trees> treesOnResourceUnit = resourceUnit.Trees.TreesBySpeciesID.Values;
-                this.TreeSpeciesTrajectories = new(treesOnResourceUnit.Count);
+                IList<TreeListSpatial> treesOnResourceUnitBySpecies = resourceUnit.Trees.TreesBySpeciesID.Values;
+                this.ResourceUnitTreeSpecies = new ResourceUnitTreeSpecies[treesOnResourceUnitBySpecies.Count];
+                if (logIndividualTrees)
+                {
+                    this.IndividualTreeTrajectories = new ResourceUnitIndividualTreeTrajectories[treesOnResourceUnitBySpecies.Count];
+                }
+                if (logSpeciesStatistics)
+                {
+                    this.TreeSpeciesTrajectories = new ResourceUnitTreeSpeciesTrajectory[treesOnResourceUnitBySpecies.Count];
+                }
 
                 // for now, instantiate trajectories only for trees species which are initially present on the resource unit
-                for (int treeSpeciesIndex = 0; treeSpeciesIndex < treesOnResourceUnit.Count; ++treeSpeciesIndex)
+                for (int treeSpeciesIndex = 0; treeSpeciesIndex < treesOnResourceUnitBySpecies.Count; ++treeSpeciesIndex)
                 {
-                    TreeSpecies treeSpecies = treesOnResourceUnit[treeSpeciesIndex].Species;
+                    TreeSpecies treeSpecies = treesOnResourceUnitBySpecies[treeSpeciesIndex].Species;
                     ResourceUnitTreeSpecies resourceUnitTreeSpecies = resourceUnit.Trees.GetResourceUnitSpecies(treeSpecies);
-                    this.TreeSpeciesTrajectories.Add(new ResourceUnitTreeSpeciesTrajectory(resourceUnitTreeSpecies, initialCapacityInYears));
+                    this.ResourceUnitTreeSpecies[treeSpeciesIndex] = resourceUnitTreeSpecies;
+
+                    if (logIndividualTrees)
+                    {
+                        this.IndividualTreeTrajectories![treeSpeciesIndex] = new ResourceUnitIndividualTreeTrajectories(initialCapacityInYears);
+                    }
+                    if (logSpeciesStatistics)
+                    {
+                        this.TreeSpeciesTrajectories![treeSpeciesIndex] = new ResourceUnitTreeSpeciesTrajectory(initialCapacityInYears);
+                    }
                 }
-            }
-            else 
-            {
-                this.TreeSpeciesTrajectories = null;
             }
         }
 
         [MemberNotNullWhen(true, nameof(ResourceUnitTrajectory.AllTreeSpeciesTrajectory))]
         public bool HasAllTreeSpeciesStatistics 
         { 
-            get { return this.AllTreeSpeciesTrajectory != null; }
+            get 
+            {
+                return this.AllTreeSpeciesTrajectory != null; 
+            }
         }
 
-        [MemberNotNullWhen(true, nameof(ResourceUnitTrajectory.TreeSpeciesTrajectories))]
-        public bool HasIndividualTreeSpeciesStatistics
+        [MemberNotNullWhen(true, nameof(ResourceUnitTrajectory.IndividualTreeTrajectories), nameof(ResourceUnitTrajectory.ResourceUnitTreeSpecies))]
+        public bool HasIndividualTreeTrajectories
         {
-            get { return (this.TreeSpeciesTrajectories) != null && (this.TreeSpeciesTrajectories.Count > 0); }
+            get 
+            {
+                bool hasIndividualTreeTrajectories = (this.IndividualTreeTrajectories != null) && (this.IndividualTreeTrajectories.Length > 0);
+                Debug.Assert((hasIndividualTreeTrajectories == false) || (this.ResourceUnitTreeSpecies != null));
+                return hasIndividualTreeTrajectories; 
+            }
+        }
+
+        [MemberNotNullWhen(true, nameof(ResourceUnitTrajectory.ResourceUnitTreeSpecies), nameof(ResourceUnitTrajectory.TreeSpeciesTrajectories))]
+        public bool HasTreeSpeciesStatistics
+        {
+            get
+            {
+                bool hasTreeSpeciesStatistics = (this.TreeSpeciesTrajectories != null) && (this.TreeSpeciesTrajectories.Length > 0);
+                Debug.Assert((hasTreeSpeciesStatistics == false) || (this.ResourceUnitTreeSpecies != null));
+                return hasTreeSpeciesStatistics;
+            }
         }
 
         public void AddYear()
@@ -57,26 +96,31 @@ namespace iLand.Output.Memory
                 this.AllTreeSpeciesTrajectory.AddYear(endOfYearResourceUnitTreeStatistics);
             }
 
-            if (this.HasIndividualTreeSpeciesStatistics)
+            bool hasIndividualTreeSpeciesStatistics = this.HasTreeSpeciesStatistics;
+            bool hasIndividualTreeTrajectories = this.HasIndividualTreeTrajectories;
+            if (hasIndividualTreeSpeciesStatistics || hasIndividualTreeTrajectories)
             {
-                IList<Trees> treesOnResourceUnit = this.ResourceUnit.Trees.TreesBySpeciesID.Values;
-                if (treesOnResourceUnit.Count > this.TreeSpeciesTrajectories.Count)
+                Debug.Assert(this.ResourceUnitTreeSpecies != null);
+
+                IList<TreeListSpatial> treesOnResourceUnit = this.ResourceUnit.Trees.TreesBySpeciesID.Values;
+                if (treesOnResourceUnit.Count > this.ResourceUnitTreeSpecies.Length)
                 {
                     // TODO: support species ingrowth
-                    throw new NotSupportedException("Expected " + this.TreeSpeciesTrajectories.Count + " tree species on resource unit " + this.ResourceUnit.ID + " but " + treesOnResourceUnit.Count + " species are present. Did a species grow into the resource unit?");
+                    throw new NotSupportedException("Expected " + this.ResourceUnitTreeSpecies.Length + " tree species on resource unit " + this.ResourceUnit.ID + " but " + treesOnResourceUnit.Count + " species are present. Did a species grow into the resource unit?");
                 }
 
                 int treeSpeciesSourceIndex = 0;
-                for (int treeSpeciesDestinationIndex = 0; treeSpeciesDestinationIndex < this.TreeSpeciesTrajectories.Count; ++treeSpeciesDestinationIndex)
+                for (int treeSpeciesDestinationIndex = 0; treeSpeciesDestinationIndex < this.ResourceUnitTreeSpecies.Length; ++treeSpeciesDestinationIndex)
                 {
-                    ResourceUnitTreeSpeciesTrajectory speciesTrajectory = this.TreeSpeciesTrajectories[treeSpeciesSourceIndex];
-                    ResourceUnitTreeSpecies? resourceUnitTreeSpecies = null; // all trees on the resource unit may have died
+                    ResourceUnitTreeSpecies? sourceTreeSpeciesCurrentlyOnResourceUnit = null; // all trees on the resource unit may have died
                     if (treesOnResourceUnit.Count > treeSpeciesSourceIndex)
                     {
                         TreeSpecies treeSpecies = treesOnResourceUnit[treeSpeciesSourceIndex].Species;
-                        resourceUnitTreeSpecies = this.ResourceUnit.Trees.GetResourceUnitSpecies(treeSpecies);
+                        sourceTreeSpeciesCurrentlyOnResourceUnit = this.ResourceUnit.Trees.GetResourceUnitSpecies(treeSpecies);
                     }
-                    if (Object.ReferenceEquals(speciesTrajectory.TreeSpecies, resourceUnitTreeSpecies) == false)
+
+                    ResourceUnitTreeSpecies destinationTreeSpeciesForLogging = this.ResourceUnitTreeSpecies[treeSpeciesDestinationIndex];
+                    if (Object.ReferenceEquals(destinationTreeSpeciesForLogging, sourceTreeSpeciesCurrentlyOnResourceUnit) == false)
                     {
                         // if a tree species dies out of the resource unit it's removed from the resource unit's list of trees
                         // Thus, there are no statistics for the species and either 1) years could be no longer added to the trajectory,
@@ -86,11 +130,30 @@ namespace iLand.Output.Memory
                         // clearly save enough space to be worth its complexity.
                         // For now, assume species only die out of the resource unit and, thus, that statistics can be recorded for all
                         // species by walking through all source indices.
-                        speciesTrajectory.AddYearWithoutSpecies();
+                        if (hasIndividualTreeSpeciesStatistics)
+                        {
+                            ResourceUnitTreeSpeciesTrajectory speciesTrajectory = this.TreeSpeciesTrajectories![treeSpeciesDestinationIndex];
+                            speciesTrajectory.AddYearWithoutSpecies();
+                        }
+                        if (hasIndividualTreeTrajectories)
+                        {
+                            ResourceUnitIndividualTreeTrajectories treeTrajectories = this.IndividualTreeTrajectories![treeSpeciesDestinationIndex];
+                            treeTrajectories.AddYearWithoutSpecies(destinationTreeSpeciesForLogging);
+                        }
                     }
                     else
                     {
-                        speciesTrajectory.AddYear(resourceUnitTreeSpecies);
+                        if (hasIndividualTreeSpeciesStatistics)
+                        {
+                            ResourceUnitTreeSpeciesTrajectory speciesTrajectory = this.TreeSpeciesTrajectories![treeSpeciesDestinationIndex];
+                            speciesTrajectory.AddYear(sourceTreeSpeciesCurrentlyOnResourceUnit);
+                        }
+                        if (hasIndividualTreeTrajectories)
+                        {
+                            ResourceUnitIndividualTreeTrajectories treeTrajectories = this.IndividualTreeTrajectories![treeSpeciesDestinationIndex];
+                            treeTrajectories.AddYear(treesOnResourceUnit[treeSpeciesSourceIndex]);
+                        }
+
                         ++treeSpeciesSourceIndex;
                     }
                 }

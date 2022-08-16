@@ -45,7 +45,7 @@ namespace iLand.Test
             this.ObservedNppByYear.Add(npp);
 
             float stemVolume = 0.0F;
-            foreach (Trees treesOfSpecies in resourceUnit.Trees.TreesBySpeciesID.Values)
+            foreach (TreeListSpatial treesOfSpecies in resourceUnit.Trees.TreesBySpeciesID.Values)
             {
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {

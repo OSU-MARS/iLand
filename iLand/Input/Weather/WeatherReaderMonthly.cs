@@ -4,6 +4,11 @@ using System.Diagnostics;
 
 namespace iLand.Input.Weather
 {
+    /// <summary>
+    /// Convert monthly weather time series from ClimateNA (https://climatena.ca/) or a similar downscaling tool (ClimateAP, etc.) to 
+    /// iLand input variables: daily mean minimum, average, and maximum temperatures, total monthly precipitation (rain and snow), 
+    /// total monthly solar radiation, and vapor pressure deficit (estimated from temperatures and relative humidity at load time).
+    /// </summary>
     internal class WeatherReaderMonthly
     {
         public Dictionary<string, WeatherTimeSeriesMonthly> MonthlyWeatherByID { get; private init; }
