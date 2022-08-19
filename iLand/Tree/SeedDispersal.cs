@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿using iLand.Extensions;
+using iLand.Input.ProjectFile;
 using iLand.Tool;
 using iLand.World;
 using System;
@@ -574,7 +575,7 @@ namespace iLand.Tree
             this.probabalisticDispersal = false;
 
             // setup of seed map
-            this.SeedMap.Setup(model.Landscape.HeightGrid.ProjectExtent, Constant.SeedmapCellSizeInM);
+            this.SeedMap.Setup(model.Landscape.VegetationHeightGrid.ProjectExtent, Constant.SeedmapCellSizeInM);
             this.SeedMap.Fill(0.0F);
             if (this.probabalisticDispersal == false)
             {
@@ -611,7 +612,7 @@ namespace iLand.Tree
             if (this.Species.FecunditySerotiny > 0.0F)
             {
                 // an extra seed map is used for storing information related to post-fire seed rain
-                this.seedMapSerotiny.Setup(model.Landscape.HeightGrid.ProjectExtent, Constant.SeedmapCellSizeInM);
+                this.seedMapSerotiny.Setup(model.Landscape.VegetationHeightGrid.ProjectExtent, Constant.SeedmapCellSizeInM);
                 this.seedMapSerotiny.Fill(0.0F);
 
                 // set up the special seed kernel for post fire seed rain
@@ -727,9 +728,9 @@ namespace iLand.Tree
             // setup of base map
             float seedmap_size = 20.0F;
             this.externalSeedBaseMap = new();
-            this.externalSeedBaseMap.Setup(model.Landscape.HeightGrid.ProjectExtent, seedmap_size);
+            this.externalSeedBaseMap.Setup(model.Landscape.VegetationHeightGrid.ProjectExtent, seedmap_size);
             this.externalSeedBaseMap.Fill(0.0F);
-            if (this.externalSeedBaseMap.CellCount * 4 != model.Landscape.HeightGrid.CellCount)
+            if (this.externalSeedBaseMap.CellCount * 4 != model.Landscape.VegetationHeightGrid.CellCount)
             {
                 throw new NotSupportedException("Width and height of the project area need to be a multiple of 20m when external seeds are enabled.");
             }
@@ -739,7 +740,7 @@ namespace iLand.Tree
             {
                 for (int indexX = 0; indexX < externalSeedBaseMap.SizeX; ++indexX)
                 {
-                    bool cellIsInWorld = model.Landscape.HeightGrid[2 * indexX, 2 * indexY].IsOnLandscape();
+                    bool cellIsInWorld = model.Landscape.VegetationHeightFlags[2 * indexX, 2 * indexY].IsInResourceUnit();
                     this.externalSeedBaseMap[indexX, indexY] = cellIsInWorld ? -1.0F : 1.0F;
                 }
             }

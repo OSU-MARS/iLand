@@ -76,12 +76,12 @@ namespace iLand.Output.Memory
         {
             int newCapacityInMonths = this.CapacityInMonths + Constant.MonthsInYear * Constant.Data.AnnualAllocationIncrement;
             this.SolarRadiationTotal = this.SolarRadiationTotal.Resize(newCapacityInMonths);
-            this.UtilizablePar = this.SolarRadiationTotal.Resize(newCapacityInMonths);
-            this.MonthlyGpp = this.SolarRadiationTotal.Resize(newCapacityInMonths);
-            this.CO2Modifier = this.SolarRadiationTotal.Resize(newCapacityInMonths);
-            this.SoilWaterModifier = this.SolarRadiationTotal.Resize(newCapacityInMonths);
-            this.TemperatureModifier = this.SolarRadiationTotal.Resize(newCapacityInMonths);
-            this.VpdModifier = this.SolarRadiationTotal.Resize(newCapacityInMonths);
+            this.UtilizablePar = this.UtilizablePar.Resize(newCapacityInMonths);
+            this.MonthlyGpp = this.MonthlyGpp.Resize(newCapacityInMonths);
+            this.CO2Modifier = this.CO2Modifier.Resize(newCapacityInMonths);
+            this.SoilWaterModifier = this.SoilWaterModifier.Resize(newCapacityInMonths);
+            this.TemperatureModifier = this.TemperatureModifier.Resize(newCapacityInMonths);
+            this.VpdModifier = this.VpdModifier.Resize(newCapacityInMonths);
         }
     }
 }

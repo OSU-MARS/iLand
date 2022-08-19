@@ -42,14 +42,12 @@ namespace iLand.World
         /// daily amount of water that actually reaches the ground (i.e., after interception)
         public float[] WaterReachingSoilByWeatherTimestep { get; private init; }
 
-        public WaterCycle(Project projectFile, ResourceUnit resourceUnit)
+        public WaterCycle(Project projectFile, ResourceUnit resourceUnit, int weatherTimestepsPerYear)
         {
             this.residualSoilWater = Single.NaN;
             this.resourceUnit = resourceUnit;
             this.soilWaterRetention = null;
             this.snowPack = new();
-
-            int weatherTimestepsPerYear = resourceUnit.Weather.TimeSeries.GetTimestepsPerYear();
 
             this.Canopy = new(projectFile.Model.Ecosystem.AirDensity);
             this.FieldCapacity = Single.NaN;

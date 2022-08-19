@@ -1,4 +1,5 @@
-﻿using iLand.Input;
+﻿using iLand.Extensions;
+using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Tree;
 using System;
@@ -17,16 +18,16 @@ namespace iLand.World
         */
     public class ResourceUnit
     {
-        private int heightCellsOnLandscape; // count of on landscape height grid cells within the RU
         private int heightCellsWithTrees;  // count of pixels that are stocked with trees
 
         public float AreaInLandscapeInM2 { get; set; } // total stockable area in m² at height grid (10 m) resolution
         public float AreaWithTreesInM2 { get; private set; } // the stocked area in m² at height grid (10 m) resolution
-        public RectangleF ProjectExtent { get; set; }
-        public ResourceUnitCarbonFluxes CarbonCycle { get; private init; }
-        public Weather Weather { get; set; }
+        public int HeightCellsOnLandscape { get; set; } // count of on landscape height grid cells within the RU
         public int ID { get; set; }
+        public RectangleF ProjectExtent { get; set; }
         public int ResourceUnitGridIndex { get; private init; }
+
+        public ResourceUnitCarbonFluxes CarbonCycle { get; private init; }
         public ResourceUnitSnags? Snags { get; private set; }
         public ResourceUnitSoil? Soil { get; private set; }
         // TODO: should be Grid<SaplingCell> rather than an array
@@ -34,48 +35,53 @@ namespace iLand.World
         public Point MinimumLightIndexXY { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
         public ResourceUnitTrees Trees { get; private init; }
         public WaterCycle WaterCycle { get; private init; }
+        public Weather Weather { get; set; }
 
         public ResourceUnit(Project projectFile, Weather weather, TreeSpeciesSet speciesSet, int ruGridIndex)
         {
-            this.heightCellsOnLandscape = 0;
             this.heightCellsWithTrees = 0;
 
             this.AreaInLandscapeInM2 = 0.0F;
             this.AreaWithTreesInM2 = 0.0F;
             this.CarbonCycle = new();
-            this.Weather = weather;
+            this.HeightCellsOnLandscape = 0;
             this.ID = 0;
             this.ResourceUnitGridIndex = ruGridIndex;
             this.SaplingCells = null;
             this.Snags = null;
             this.Soil = null;
             this.Trees = new(this, speciesSet);
-            this.WaterCycle = new(projectFile, this);
+            this.WaterCycle = new(projectFile, this, weather.TimeSeries.GetTimestepsPerYear());
+            this.Weather = weather;
         }
 
-        public float GetAreaWithinLandscape() { return Constant.HeightCellAreaInM2 * this.heightCellsOnLandscape; } // get the on-landscape part of resource unit's area in m2
+        public float GetAreaWithinLandscapeInM2() 
+        {
+            // get the on-landscape part of resource unit's area in m²
+            return Constant.HeightCellAreaInM2 * this.HeightCellsOnLandscape; 
+        }
+
         // TODO: why does this variant of LAI calculation use stockable area instead of stocked area?
-        public float GetLeafAreaIndex() { return this.AreaInLandscapeInM2 != 0.0F ? this.Trees.TotalLeafArea / this.AreaInLandscapeInM2 : 0.0F; }
+        public float GetLeafAreaIndex() 
+        {
+            return this.AreaInLandscapeInM2 != 0.0F ? this.Trees.TotalLeafArea / this.AreaInLandscapeInM2 : 0.0F; 
+        }
 
         // stocked area calculation
         public void CountHeightCellsContainingTrees(Landscape landscape) 
         {
-            // counts are zeroed in OnStartYear()
-            GridWindowEnumerator<HeightCell> ruHeightGridEnumerator = new(landscape.HeightGrid, this.ProjectExtent);
-            while (ruHeightGridEnumerator.MoveNext())
+            // this.heightCell counts are zeroed in OnStartYear()
+            GridWindowEnumerator<float> ruVegetationHeightEnumerator = new(landscape.VegetationHeightGrid, this.ProjectExtent);
+            while (ruVegetationHeightEnumerator.MoveNext())
             {
-                HeightCell currentHeightCell = ruHeightGridEnumerator.Current;
-                if (currentHeightCell.IsOnLandscape())
-                {
-                    ++this.heightCellsOnLandscape; // TODO: this is invariant and need not be recalculated every year
-                }
-                if (currentHeightCell.TreeCount > 0)
+                float maximumVegetationHeightInM = ruVegetationHeightEnumerator.Current;
+                if (maximumVegetationHeightInM > Constant.RegenerationLayerHeight)
                 {
                     ++this.heightCellsWithTrees;
                 }
             }
 
-            Debug.Assert((this.heightCellsOnLandscape > 0) && ((this.heightCellsWithTrees > 0) || (this.Trees.TreesBySpeciesID.Count == 0)));
+            Debug.Assert((this.heightCellsWithTrees <= this.HeightCellsOnLandscape) && ((this.heightCellsWithTrees > 0) || (this.Trees.TreesBySpeciesID.Count == 0)));
         }
 
         public void AddSprout(Model model, TreeListSpatial trees, int treeIndex)
@@ -261,7 +267,7 @@ namespace iLand.World
         {
             Debug.Assert(this.SaplingCells != null, "GrowSaplings() called on resource unit where regeneration isn't enabled.");
 
-            Grid<HeightCell> heightGrid = model.Landscape.HeightGrid;
+            Grid<float> vegetationHeightGrid = model.Landscape.VegetationHeightGrid;
             Grid<float> lightGrid = model.Landscape.LightGrid;
 
             Point ruOrigin = this.MinimumLightIndexXY;
@@ -280,10 +286,10 @@ namespace iLand.World
                             if (saplingCell.Saplings[index].IsOccupied())
                             {
                                 // growth of this sapling tree
-                                HeightCell heightCell = heightGrid[heightGrid.LightIndexToHeightIndex(lightIndex)];
+                                float maximumVegetationHeightInM = vegetationHeightGrid[vegetationHeightGrid.LightIndexToHeightIndex(lightIndex)];
                                 float lightValue = lightGrid[lightIndex];
 
-                                checkCellState |= this.GrowSaplings(model, saplingCell, saplingCell.Saplings[index], lightIndex, heightCell.MaximumVegetationHeightInM, lightValue, nSaplings);
+                                checkCellState |= this.GrowSaplings(model, saplingCell, saplingCell.Saplings[index], lightIndex, maximumVegetationHeightInM, lightValue, nSaplings);
                             }
                         }
                         if (checkCellState)
@@ -471,7 +477,6 @@ namespace iLand.World
 
         public void OnStartYear()
         {
-            this.heightCellsOnLandscape = 0;
             this.heightCellsWithTrees = 0;
 
             this.Trees.OnStartYear();
@@ -495,7 +500,7 @@ namespace iLand.World
             see also: http://iland-model.org/individual+tree+light+availability */
         public void CalculateWaterAndBiomassGrowthForYear(Model model)
         {
-            if ((this.Trees.TotalLightWeightedLeafArea == 0.0F) || (this.heightCellsOnLandscape == 0))
+            if ((this.Trees.TotalLightWeightedLeafArea == 0.0F) || (this.HeightCellsOnLandscape == 0))
             {
                 // clear statistics of resource unit species
                 for (int species = 0; species < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++species)
@@ -556,7 +561,7 @@ namespace iLand.World
 
                 // calculate the total weighted leaf area on this RU:
                 this.Trees.AverageLightRelativeIntensity = this.Trees.PhotosyntheticallyActiveArea / this.Trees.TotalLightWeightedLeafArea; // p_WLA
-                Debug.Assert(this.Trees.AverageLightRelativeIntensity >= 0.0F && this.Trees.AverageLightRelativeIntensity < 2.0F); // sanity upper bound
+                Debug.Assert((this.Trees.AverageLightRelativeIntensity >= 0.0F) && (this.Trees.AverageLightRelativeIntensity < 4.5F), "Average light relative intensity of " + this.Trees.AverageLightRelativeIntensity + "."); // sanity upper bound, denser stands produce higher intensities
 
                 //if (this.LriModifier == 0.0F)
                 //{

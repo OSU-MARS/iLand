@@ -3,7 +3,7 @@ using System.Drawing;
 
 namespace iLand.World
 {
-    internal class GridWindowEnumerator<T>
+    internal class GridWindowEnumerator<T> where T : struct
     {
         private readonly Grid<T> grid;
         private readonly int firstIndex; // index of first cell to enumerate, inclusive
@@ -80,7 +80,7 @@ namespace iLand.World
         /// get pointers the the 4-neighborhood
         /// north, east, west, south
         /// 0-pointers are returned for edge pixels.
-        public void GetNeighbors4(T?[] neighborIndices)
+        public void GetNeighbors4(Span<T> neighborIndices)
         {
             // north:
             neighborIndices[0] = this.CurrentIndex + columnsInWindow + columnsNotInWindow > lastIndex ? default : this.grid[CurrentIndex + columnsInWindow + columnsNotInWindow];
@@ -94,7 +94,7 @@ namespace iLand.World
         /// get pointers to the 8-neighbor-hood
         /// north/east/west/south/NE/NW/SE/SW
         /// 0-pointers are returned for edge pixels.
-        public void GetNeighbors8(T?[] neighborIndices)
+        public void GetNeighbors8(Span<T> neighborIndices)
         {
             this.GetNeighbors4(neighborIndices);
             // north-east

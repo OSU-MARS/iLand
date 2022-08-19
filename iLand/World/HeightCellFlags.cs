@@ -3,9 +3,10 @@
 namespace iLand.World
 {
     [Flags]
-    public enum HeightCellFlags
+    public enum HeightCellFlags : byte
     {
-        OnLandscape,
-        Radiating
+        Default = 0x0,
+        AdjacentToResourceUnit = 0x1,
+        InResourceUnit = 0x2
     }
 }

@@ -66,7 +66,7 @@ namespace iLand.Tree
             else
             {
                 this.NitrogenModifierForYear = this.Species.GetNitrogenModifier(this.resourceUnit.Soil.PlantAvailableNitrogen);
-                Debug.Assert(this.NitrogenModifierForYear >= 0.0F);
+                Debug.Assert((this.NitrogenModifierForYear >= 0.0F) && (this.NitrogenModifierForYear <= 1.0F));
             }
 
             // calculate monthly modifiers for the current simulation year (January-December calendar year)
@@ -139,18 +139,18 @@ namespace iLand.Tree
 
             // convert sums of daily values to monthly, accumulate annual variables, and find CO₂ modifier
             bool isLeapYear = dailyWeatherSeries.IsCurrentlyLeapYear();
-            for (int monthIndex = 0, co2timestepIndex = co2timeSeries.CurrentYearStartIndex; monthIndex < Constant.MonthsInYear; ++co2timestepIndex, ++monthIndex)
+            for (int monthOfYearIndex = 0, co2timestepIndex = co2timeSeries.CurrentYearStartIndex; monthOfYearIndex < Constant.MonthsInYear; ++co2timestepIndex, ++monthOfYearIndex)
             {
-                float daysInMonth = (float)DateTimeExtensions.GetDaysInMonth(monthIndex, isLeapYear);
-                float soilWaterModifier = this.SoilWaterModifierByMonth[monthIndex] / daysInMonth;
-                this.SoilWaterModifierByMonth[monthIndex] = soilWaterModifier;
-                this.TemperatureModifierByMonth[monthIndex] /= daysInMonth;
-                this.VpdModifierByMonth[monthIndex] /= daysInMonth;
+                float daysInMonth = (float)DateTimeExtensions.GetDaysInMonth(monthOfYearIndex, isLeapYear);
+                float soilWaterModifier = this.SoilWaterModifierByMonth[monthOfYearIndex] / daysInMonth;
+                this.SoilWaterModifierByMonth[monthOfYearIndex] = soilWaterModifier;
+                this.TemperatureModifierByMonth[monthOfYearIndex] /= daysInMonth;
+                this.VpdModifierByMonth[monthOfYearIndex] /= daysInMonth;
 
-                this.UtilizableRadiationForYear += this.UtilizableRadiationByMonth[monthIndex];
+                this.UtilizableRadiationForYear += this.UtilizableRadiationByMonth[monthOfYearIndex];
 
                 float atmosphericCO2 = co2timeSeries.CO2ConcentrationInPpm[co2timestepIndex];
-                this.CO2ModifierByMonth[monthIndex] = this.Species.SpeciesSet.GetCarbonDioxideModifier(atmosphericCO2, this.NitrogenModifierForYear, soilWaterModifier);
+                this.CO2ModifierByMonth[monthOfYearIndex] = this.Species.SpeciesSet.GetCarbonDioxideModifier(atmosphericCO2, this.NitrogenModifierForYear, soilWaterModifier);
             }
         }
 

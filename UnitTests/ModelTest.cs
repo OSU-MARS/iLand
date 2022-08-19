@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using Weather = iLand.World.Weather;
 using Model = iLand.Simulation.Model;
 using SQLitePCL;
+using Newtonsoft.Json.Linq;
 
 namespace iLand.Test
 {
@@ -50,7 +51,7 @@ namespace iLand.Test
                 ObservedResourceUnitTrajectory observedTrajectory82597 = new() // wholly contained within stand 78
                 {
                     NonmonotonicGrowthTolerance = 0.02F,
-                    NppTolerance = 0.02F,
+                    NppTolerance = 0.04F,
                     StemVolumeTolerance = 0.02F,
                     TreeNppTolerance = 0.05F
                 };
@@ -88,18 +89,18 @@ namespace iLand.Test
                 // changes to random number generation appear likely to require expected values be updated.
                 List<float> expectedGppBySimulationYear = new()
                 {
-                    0.0F, 15.450F, 15.564F, 15.453F, 15.706F, 15.383F, // 0...5 
-                    15.701F, 15.846F, 15.707F, 15.792F, 15.869F // 6...10
+                    0.0F, 15.450F, 15.564F, 15.453F, 15.706F, 15.383F, 
+                    15.701F, 15.846F, 15.707F, 15.792F, 15.869F
                 };
                 List<float> expectedNppBySimulationYear = new()
                 {
-                    0.0F, 43965.105F, 44613.445F, 44506.644F, 45409.55F, 44584.406F, 
-                    45573.472F, 46075.98F, 45226.242F, 45500.94F, 45728.82F
+                    0.0F, 50746.117F, 51789.003F, 51903.867F, 53107.093F, 52297.18F, 
+                    53638F, 54336.765F, 53995.175F, 54398.253F, 54749.98F
                 };
                 List<float> expectedStemVolumeBySimulationYear = new()
                 {
-                    1166.786F, 1212.667F, 1258.672F, 1304.184F, 1350.813F, 1395.704F, 
-                    1441.934F, 1488.567F, 1533.374F, 1578.614F, 1623.986F
+                    1166.786F, 1221.545F, 1276.808F, 1331.800F, 1388.283F, 1442.904F, 
+                    1499.338F, 1556.354F, 1612.148F, 1668.454F, 1725.025F
                 };
                     
                 ResourceUnitAllSpeciesTrajectory? resourceUnit82597trajectory = elliott.Output.ResourceUnitTrajectories[resourceUnit82597index].AllTreeSpeciesTrajectory;
@@ -238,31 +239,23 @@ namespace iLand.Test
             {
                 // with input data in NAD83 / BC Albers (EPSG:3005) and Douglas-fir light stamps updated to iLand 1.0 height:diameter
                 // ratio spacing
-		        0.0F, 10.332F, 11.127F, 14.006F, 11.293F, 
-                13.499F, 10.485F, 12.300F, 12.765F, 12.985F, 
-                11.228F, 11.635F, 10.082F, 11.101F, 10.116F, 
-                12.787F, 11.434F, 11.739F, 10.434F, 8.511F, 
-                9.685F, 12.073F, 9.255F, 11.569F, 10.235F, 
-                13.578F, 11.275F, 12.252F, 12.749F
+                0.0F,10.332F, 11.101F, 13.942F, 11.197F, 13.367F, 10.300F, 12.123F, 12.582F, 12.812F, 
+                10.991F, 11.269F, 9.763F, 10.914F, 9.690F, 12.477F, 11.038F, 11.317F, 10.039F, 8.122F, 
+                9.139F, 11.834F, 8.867F, 11.034F, 10.034F, 13.091F, 10.851F, 12.163F, 12.639F
             };
             List<float> expectedNppByYear = new()
             {
-                0.0F, 13684.821F, 14940.425F, 19006.632F, 15489.729F, 
-                18599.152F, 14516.396F, 17060.335F, 17741.918F, 18075.494F, 
-                15648.194F, 16224.157F, 14065.715F, 15485.601F, 14099.393F, 
-                17821.793F, 15931.987F, 16357.532F, 14536.842F, 11848.887F, 
-                13483.324F, 16802.791F, 12877.411F, 16096.574F, 14217.430F, 
-                18877.298F, 15662.865F, 17005.162F, 17702.162F
+                0.0F, 15121.153F, 16567.48F, 21124.502F, 17659.486F, 21233.345F, 16907.064F, 19966.412F, 20802.783F, 22333.103F, 
+                19217.291F, 20211.252F, 17536.902F, 19613.64F, 17416.525F, 22425.482F, 19859.281F, 20366.093F, 18062.011F, 14609.35F, 
+                16428.11F, 21257.44F, 15932.751F, 19820.877F, 18021.93F, 23516.998F, 19478.73F, 21812.896F, 22652.115F
             };
             List<float> expectedStemVolumeByYear = new()
             {
-                107.503F, 118.549F, 131.204F, 150.159F, 163.025F, 
-                181.023F, 192.070F, 207.464F, 222.573F, 239.532F, 
-                250.646F, 263.835F, 273.116F, 281.226F, 286.867F, 
-                300.482F, 309.976F, 320.539F, 324.897F, 328.141F, 
-                334.496F, 347.910F, 353.992F, 366.416F, 370.173F, 
-                386.721F, 394.456F, 405.953F, 421.018F
+                107.503F, 120.144F, 134.572F, 155.985F, 171.044F, 191.837F, 205.168F, 223.533F, 243.057F, 263.543F, 
+                278.798F, 295.564F, 307.320F, 321.637F, 331.338F, 347.055F, 362.951F, 377.981F, 385.101F, 389.623F, 
+                394.295F, 410.941F, 417.181F, 433.390F, 443.233F, 465.463F, 475.591F, 484.418F, 500.627F
             };
+
             observedTrajectory.Verify(plot14.Output.ResourceUnitTrajectories[0].AllTreeSpeciesTrajectory, 222.0F, expectedGppByYear, expectedNppByYear, expectedStemVolumeByYear); ;
         }
 
@@ -502,12 +495,12 @@ namespace iLand.Test
         private static void VerifyKalkalpenModel(Model model)
         {
             float worldBufferWidthInM = 60.0F;
-            Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.Height == 200.0F + 2.0F * worldBufferWidthInM);
-            Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.Width == 100.0F + 2.0F * worldBufferWidthInM);
-            Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.X == 0.0F);
-            Assert.IsTrue(model.Landscape.HeightGrid.ProjectExtent.Y == 0.0F);
-            Assert.IsTrue(model.Landscape.HeightGrid.SizeX == 22);
-            Assert.IsTrue(model.Landscape.HeightGrid.SizeY == 32);
+            Assert.IsTrue(model.Landscape.VegetationHeightGrid.ProjectExtent.Height == 200.0F + 2.0F * worldBufferWidthInM);
+            Assert.IsTrue(model.Landscape.VegetationHeightGrid.ProjectExtent.Width == 100.0F + 2.0F * worldBufferWidthInM);
+            Assert.IsTrue(model.Landscape.VegetationHeightGrid.ProjectExtent.X == 0.0F);
+            Assert.IsTrue(model.Landscape.VegetationHeightGrid.ProjectExtent.Y == 0.0F);
+            Assert.IsTrue(model.Landscape.VegetationHeightGrid.SizeX == 22);
+            Assert.IsTrue(model.Landscape.VegetationHeightGrid.SizeY == 32);
             Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.Height == 200.0F + 2.0F * worldBufferWidthInM); // 100 x 200 m world + 60 m buffering = 220 x 320 m
             Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.Width == 100.0F + 2.0F * worldBufferWidthInM);
             Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.X == 0.0F);
@@ -647,7 +640,7 @@ namespace iLand.Test
                 averageDiameterGrowth += finalDiameter - initialDiameter;
                 averageHeightGrowth += finalHeight - initialHeight;
                 Assert.IsTrue(finalDiameter >= initialDiameter);
-                Assert.IsTrue(finalDiameter < 1.1F * initialDiameter);
+                Assert.IsTrue(finalDiameter < 1.2F * initialDiameter);
                 Assert.IsTrue(finalHeight >= initialHeight);
                 Assert.IsTrue(finalHeight < 1.1F * initialHeight);
             }
@@ -660,7 +653,7 @@ namespace iLand.Test
             Assert.IsTrue(averageHeightGrowth > MathF.Max(0.2F - 0.01F * simulationYear, 0.0F), "Average height growth is " + averageHeightGrowth + " m.");
 
             // trees on resource units
-            int minimumTreeCount = 30 - 2 * simulationYear - 4; // TODO: wide tolerance required due to stochastic mortality
+            int minimumTreeCount = 30 - 6 - 2 * simulationYear; // TODO: wide tolerance required due to stochastic mortality
             for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnits.Count; ++resourceUnitIndex)
             {
                 ResourceUnit resourceUnit = resourceUnits[resourceUnitIndex];
@@ -716,10 +709,9 @@ namespace iLand.Test
                     Assert.IsTrue(treesOfSpecies.Capacity == 4);
                     Assert.IsTrue(treesOfSpecies.Count == (treesOfSpecies.Species.ID == "psme" ? 2 : 1), "Expected one or two living trees of species '" + treesOfSpecies.Species.ID + "'.");
                 }
-                // Salix caprea and Robinia pseudoacacia aren't viable as placed on the resource unit and should stress out of the stand in the
-                // first timestep. They should therefore be dropped as tree species on the resource unit.
+                // Salix caprea is viable as placed on the resource unit and should stress out of the stand in the first timestep. It
+                // should therefore be dropped as tree species on the resource unit.
                 Assert.IsTrue(resourceUnitTrees.ContainsKey("saca") == false, "Salix caprea did not die out of stand.");
-                Assert.IsTrue(resourceUnitTrees.ContainsKey("rops") == false, "Robinia pseudoacacia did not die out of stand.");
             }
         }
 
@@ -744,16 +736,16 @@ namespace iLand.Test
             Assert.IsTrue(maxLight == 1.0F);
 
             // height grid
-            Grid<HeightCell> heightGrid = landscape.HeightGrid;
+            Grid<float> heightGrid = landscape.VegetationHeightGrid;
             float maxGridHeight = Single.MinValue;
             float meanGridHeight = 0.0F;
             float minGridHeight = Single.MaxValue;
             for (int heightIndex = 0; heightIndex < heightGrid.CellCount; ++heightIndex)
             {
-                float height = heightGrid[heightIndex].MaximumVegetationHeightInM;
-                maxGridHeight = MathF.Max(height, maxGridHeight);
-                meanGridHeight += height;
-                minGridHeight = MathF.Min(height, minGridHeight);
+                float vegetationHeightInM = heightGrid[heightIndex];
+                maxGridHeight = MathF.Max(vegetationHeightInM, maxGridHeight);
+                meanGridHeight += vegetationHeightInM;
+                minGridHeight = MathF.Min(vegetationHeightInM, minGridHeight);
             }
             meanGridHeight /= heightGrid.CellCount;
 

@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿using iLand.Extensions;
+using iLand.Input.ProjectFile;
 using iLand.Tool;
 using System;
 using System.Collections.Generic;
@@ -72,7 +73,7 @@ namespace iLand.World
             // mask out out-of-project areas
             for (int lightIndex = 0; lightIndex < this.CoverOrOnOffGrid.CellCount; ++lightIndex)
             {
-                if (landscape.HeightGrid[this.CoverOrOnOffGrid.LightIndexToHeightIndex(lightIndex)].IsOnLandscape() == false)
+                if (landscape.VegetationHeightFlags[this.CoverOrOnOffGrid.LightIndexToHeightIndex(lightIndex)].IsInResourceUnit() == false)
                 {
                     this.CoverOrOnOffGrid[lightIndex] = -1;
                 }
@@ -209,18 +210,19 @@ namespace iLand.World
             {
                 for (int lightIndex = 0; lightIndex < lightGrid.CellCount; ++lightIndex)
                 {
-                    Debug.Assert(this.CoverOrOnOffGrid[lightIndex] >= 0);
-                    if (this.CoverOrOnOffGrid[lightIndex] > 1)
+                    int grassCover = this.CoverOrOnOffGrid[lightIndex];
+                    Debug.Assert(grassCover >= -1);
+
+                    if (grassCover > 1)
                     {
                         --this.CoverOrOnOffGrid[lightIndex]; // count down the years (until gr=1)
                     }
-
-                    if (this.CoverOrOnOffGrid[lightIndex] == 0 && lightGrid[lightIndex] > this.cellLifThreshold)
+                    else if ((grassCover == 0) && (lightGrid[lightIndex] > this.cellLifThreshold))
                     {
                         // enable grass cover
                         this.CoverOrOnOffGrid[lightIndex] = (Int16)(MathF.Max(this.cellProbabilityDensityFunction.GetRandomValue(randomGenerator), 0.0F) + 1); // switch on...
                     }
-                    if (this.CoverOrOnOffGrid[lightIndex] == 1 && lightGrid[lightIndex] < this.cellLifThreshold)
+                    else if ((grassCover == 1) && (lightGrid[lightIndex] < this.cellLifThreshold))
                     {
                         // now LIF is below the threshold - this enables the pixel to get grassy again
                         this.CoverOrOnOffGrid[lightIndex] = 0;

@@ -6,7 +6,7 @@ namespace iLand.Extensions
 {
     internal static class GridExtensions
     {
-        private static void ExportToGeoTiff<T>(this Grid<T> grid, float[] gridData, string geoTiffFilePath, string projection, PointF gisOrigin)
+        public static void ExportToGeoTiff(this Grid<float> grid, string geoTiffFilePath, string projection, PointF gisOrigin)
         {
             // https://gdal.org/api/csharp/csharp_raster.html - out of date as of August 2022, but potentially useful
             // https://gdal.org/tutorials/geotransforms_tut.html
@@ -18,23 +18,7 @@ namespace iLand.Extensions
             // GDAL documentation indicates the upper left corner but this is incorrect
             raster.SetGeoTransform(new double[] { gisOrigin.X + grid.ProjectExtent.X, grid.CellSizeInM, 0.0, gisOrigin.Y + grid.ProjectExtent.Y, 0.0, grid.CellSizeInM });
             raster.SetProjection(projection);
-            raster.WriteRaster(xOff: 0, yOff: 0, grid.SizeX, grid.SizeY, gridData, grid.SizeX, grid.SizeY, bandCount: 1, null, pixelSpace: 0, lineSpace: 0, bandSpace: 0);
-        }
-
-        public static void ExportToGeoTiff(this Grid<float> grid, string geoTiffFilePath, string projection, PointF gisOrigin)
-        {
-            grid.ExportToGeoTiff(grid.Data, geoTiffFilePath, projection, gisOrigin);
-        }
-
-        public static void ExportToGeoTiff(this Grid<HeightCell> heightGrid, string geoTiffFilePath, string projection, PointF gisOrigin)
-        {
-            float[] maximumHeights = new float[heightGrid.CellCount];
-            for (int heightGridIndex = 0; heightGridIndex < heightGrid.CellCount; ++heightGridIndex)
-            {
-                maximumHeights[heightGridIndex] = heightGrid[heightGridIndex].MaximumVegetationHeightInM;
-            }
-
-            heightGrid.ExportToGeoTiff(maximumHeights, geoTiffFilePath, projection, gisOrigin);
+            raster.WriteRaster(xOff: 0, yOff: 0, grid.SizeX, grid.SizeY, grid.Data, grid.SizeX, grid.SizeY, bandCount: 1, null, pixelSpace: 0, lineSpace: 0, bandSpace: 0);
         }
     }
 }

@@ -209,8 +209,8 @@ namespace iLand.Output
             {
                 string? coordinateSystem = model.Project.Model.Settings.CoordinateSystem;
                 Debug.Assert(coordinateSystem != null); // should be guaranteed by project deserialization
-                string heigthGridFilePath = model.Project.GetFilePath(ProjectDirectory.Output, "height grid " + model.SimulationState.CurrentCalendarYear + ".tif");
-                model.Landscape.HeightGrid.ExportToGeoTiff(heigthGridFilePath, coordinateSystem, model.Landscape.ProjectOriginInGisCoordinates);
+                string heightGridFilePath = model.Project.GetFilePath(ProjectDirectory.Output, "height grid " + model.SimulationState.CurrentCalendarYear + ".tif");
+                model.Landscape.VegetationHeightGrid.ExportToGeoTiff(heightGridFilePath, coordinateSystem, model.Landscape.ProjectOriginInGisCoordinates);
             }
             if (model.Project.Output.Logging.LightGrid.Enabled)
             {

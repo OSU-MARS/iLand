@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿using iLand.Extensions;
+using iLand.Input.ProjectFile;
 using iLand.Input.Tree;
 using iLand.Tool;
 using iLand.Tree;
@@ -357,7 +358,7 @@ namespace iLand.World
             for (int heightCellIndex = 0; heightCellIndex < Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth; ++heightCellIndex)
             {
                 PointF heightCellProjectCentroid = resourceUnit.ProjectExtent.Location.Add(new PointF(Constant.HeightCellSizeInM * (heightCellIndex / Constant.HeightCellSizeInM + 0.5F), Constant.HeightCellSizeInM * (heightCellIndex % Constant.HeightCellSizeInM + 0.5F)));
-                if (landscape.HeightGrid[heightCellProjectCentroid].IsOnLandscape() == false)
+                if (landscape.VegetationHeightFlags[heightCellProjectCentroid].IsInResourceUnit() == false)
                 {
                     throw new NotSupportedException("Resource unit contains trees which are outside of landscpe.");
                     // no trees on that pixel: let trees die
@@ -387,7 +388,7 @@ namespace iLand.World
                 // locate tree
                 float treeProjectX = individualTreeReader.GisX[treeIndexInFile] - landscape.ProjectOriginInGisCoordinates.X + translationToPlaceTreeOnResourceUnit.X;
                 float treeProjectY = individualTreeReader.GisY[treeIndexInFile] - landscape.ProjectOriginInGisCoordinates.Y + translationToPlaceTreeOnResourceUnit.Y;
-                if (landscape.HeightGrid[treeProjectX, treeProjectY].IsOnLandscape() == false)
+                if (landscape.VegetationHeightFlags[treeProjectX, treeProjectY].IsInResourceUnit() == false)
                 {
                     throw new NotSupportedException("Individual tree " + individualTreeReader.TreeID[treeIndexInFile] + " (line " + (treeIndexInFile + 1) + ") is not located in project simulation area after being displaced to resource unit " + resourceUnit.ID + ". Tree coordinates are (" + treeProjectX + ", " + treeProjectY + ")");
                 }
@@ -611,7 +612,7 @@ namespace iLand.World
 
                     // get position from fixed lists (one for even, one for uneven resource units)
                     int positionInResourceUnit = heightCell.ResourceUnit.ResourceUnitGridIndex % Constant.LightCellSizeInM != 0 ? EvenHeightCellPositions[index] : UnevenHeightCellPositions[index];
-                    Point heightCellIndexXY = landscape.HeightGrid.GetCellXYIndex(heightCell.GridCellIndex);
+                    Point heightCellIndexXY = landscape.VegetationHeightGrid.GetCellXYIndex(heightCell.GridCellIndex);
                     Point lightCellIndex = new(heightCellIndexXY.X * Constant.LightCellsPerHeightCellWidth + positionInResourceUnit / Constant.LightCellsPerHeightCellWidth, // convert to LIF index
                                                heightCellIndexXY.Y * Constant.LightCellsPerHeightCellWidth + positionInResourceUnit % Constant.LightCellsPerHeightCellWidth);
                     if (landscape.LightGrid.Contains(lightCellIndex) == false)

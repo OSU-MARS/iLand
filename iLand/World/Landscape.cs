@@ -1,4 +1,5 @@
-﻿using iLand.Input;
+﻿using iLand.Extensions;
+using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Input.Tree;
 using iLand.Input.Weather;
@@ -17,7 +18,6 @@ namespace iLand.World
     {
         public GrassCover GrassCover { get; private init; }
         public Grid<float> LightGrid { get; private init; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
-        public Grid<HeightCell> HeightGrid { get; private init; } // stores maximum heights of trees and some flags (currently 10x10m)
         public PointF ProjectOriginInGisCoordinates { get; private init; }
 
         public Grid<ResourceUnit?> ResourceUnitGrid { get; private init; }
@@ -26,6 +26,8 @@ namespace iLand.World
         public GridRaster10m StandRaster { get; private init; } // retrieve the spatial grid that defines the stands (10m resolution)
 
         public float TotalStockableHectares { get; private set; } // total stockable area of the landscape (ha)
+        public Grid<float> VegetationHeightGrid { get; private init; } // stores maximum height of vegetation in m, currently 10 x 10 m cells
+        public Grid<HeightCellFlags> VegetationHeightFlags { get; private init; } // flags for height cells, currently 10 x 10 m
         public Dictionary<string, Weather> WeatherByID { get; private init; }
         public int WeatherFirstCalendarYear { get; private init; }
 
@@ -98,41 +100,9 @@ namespace iLand.World
             // resource units are created below, so grid contains only nulls at this point
 
             RectangleF bufferedExtent = new(0.0F, 0.0F, resourceUnitGisExtent.Width + 2 * worldBufferWidth, resourceUnitGisExtent.Height + 2 * worldBufferWidth);
-            this.HeightGrid = new(bufferedExtent, Constant.HeightCellSizeInM);
-            for (int index = 0; index < this.HeightGrid.CellCount; ++index)
-            {
-                this.HeightGrid[index] = new HeightCell();
-            }
-
             this.LightGrid = new(bufferedExtent, Constant.LightCellSizeInM); // (re)initialized by Model at start of every timestep
-
-            string? standRasterFile = projectFile.World.Initialization.StandRasterFile;
-            if (String.IsNullOrEmpty(standRasterFile) == false)
-            {
-                string filePath = projectFile.GetFilePath(ProjectDirectory.Gis, standRasterFile);
-                this.StandRaster.LoadFromFile(filePath);
-                this.StandRaster.CreateIndex(this);
-
-                for (int standIndex = 0; standIndex < this.StandRaster.Grid.CellCount; ++standIndex)
-                {
-                    int standID = this.StandRaster.Grid[standIndex];
-                    this.HeightGrid[standIndex].SetOnLandscape(standID >= Constant.DefaultStandID);
-                }
-            }
-            else
-            {
-                if (projectFile.World.Geometry.IsTorus == false)
-                {
-                    for (int heightGridIndex = 0; heightGridIndex < this.HeightGrid.CellCount; ++heightGridIndex)
-                    {
-                        PointF heightPosition = this.HeightGrid.GetCellProjectCentroid(heightGridIndex);
-                        if ((heightPosition.X < 0.0F) || (heightPosition.Y < 0.0F) || (heightPosition.X > resourceUnitGisExtent.Width) || (heightPosition.Y > resourceUnitGisExtent.Width))
-                        {
-                            this.HeightGrid[heightGridIndex].SetOnLandscape(false);
-                        }
-                    }
-                }
-            }
+            this.VegetationHeightGrid = new(bufferedExtent, Constant.HeightCellSizeInM);
+            this.VegetationHeightFlags = new(bufferedExtent, Constant.HeightCellSizeInM);
 
             // instantiate resource units only where defined in resource unit file
             string weatherFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.WeatherFile);
@@ -204,7 +174,49 @@ namespace iLand.World
                 throw new NotSupportedException("No resource units present!");
             }
 
-            this.MarkHeightPixelsAndScaleSnags();
+            // mark height cells as on landscape (in a resource unit or stand) or leave height flags as default (off landscape)
+            // On landscape marking is required before marking edge height cells as radiating because, otherwise, there no on-landscape,
+            // off-landscape edges exist to detect.
+            string? standRasterFile = projectFile.World.Initialization.StandRasterFile;
+            if (String.IsNullOrEmpty(standRasterFile) == false)
+            {
+                string filePath = projectFile.GetFilePath(ProjectDirectory.Gis, standRasterFile);
+                this.StandRaster.LoadFromFile(filePath);
+                if ((this.StandRaster.Grid.CellCount != this.VegetationHeightFlags.CellCount) || (this.StandRaster.Grid.ProjectExtent != this.VegetationHeightFlags.ProjectExtent))
+                {
+                    throw new NotSupportedException("Extent of stand raster does not match extent of vegetation height grid.");
+                }
+                this.StandRaster.CreateIndex(this);
+
+                for (int standCellIndex = 0; standCellIndex < this.StandRaster.Grid.CellCount; ++standCellIndex)
+                {
+                    int standID = this.StandRaster.Grid[standCellIndex];
+                    if (standID >= Constant.DefaultStandID)
+                    {
+                        this.VegetationHeightFlags[standCellIndex] = HeightCellFlags.InResourceUnit;
+                    }
+                }
+            }
+            else
+            {
+                // if no stand raster is applied, mark all height cells in resource units as on landscape
+                // If the resource unit grid is fully populated marking could be done as a set of larger array fills but, as
+                // many study areas aren't rectangular, use a more conservative approach of filling resource units one by one.
+                for (int resourceUnitIndex = 0; resourceUnitIndex < this.ResourceUnits.Count; ++resourceUnitIndex)
+                {
+                    ResourceUnit resourceUnit = this.ResourceUnits[resourceUnitIndex];
+
+                    // easy to count height cells on landscape here but not with a stand raster, so counting is done in
+                    // MarkRadiatingHeightCellsAndScaleSnags()
+                    GridWindowEnumerator<HeightCellFlags> vegetationFlagsEnumerator = new(this.VegetationHeightFlags, resourceUnit.ProjectExtent);
+                    while (vegetationFlagsEnumerator.MoveNext())
+                    {
+                        this.VegetationHeightFlags[vegetationFlagsEnumerator.CurrentIndex] = HeightCellFlags.InResourceUnit;
+                    }
+                }
+            }
+
+            this.MarkRadiatingHeightCellsAndScaleSnags();
 
             if (projectFile.Model.Settings.RegenerationEnabled)
             {
@@ -215,8 +227,8 @@ namespace iLand.World
                     SaplingCell? saplingCell = this.GetSaplingCell(this.LightGrid.GetCellXYIndex(lightGridEnumerator.CurrentIndex), false, out ResourceUnit _); // false: retrieve also invalid cells
                     if (saplingCell != null)
                     {
-                        HeightCell heightCell = this.HeightGrid[this.LightGrid.LightIndexToHeightIndex(lightGridEnumerator.CurrentIndex)];
-                        if (heightCell.IsOnLandscape() == false)
+                        HeightCellFlags heightCellFlags = this.VegetationHeightFlags[this.LightGrid.LightIndexToHeightIndex(lightGridEnumerator.CurrentIndex)];
+                        if (heightCellFlags.IsInResourceUnit() == false)
                         {
                             saplingCell.State = SaplingCellState.NotOnLandscape;
                         }
@@ -237,7 +249,7 @@ namespace iLand.World
           "stockability" is determined by the isValid flag of resource units which in turn
           is derived from stand grid values.
           */
-        private void MarkHeightPixelsAndScaleSnags() // calculate the stockable area for each RU (i.e.: with stand grid values <> -1)
+        private void MarkRadiatingHeightCellsAndScaleSnags() // calculate the stockable area for each RU (i.e.: with stand grid values <> -1)
         {
             this.TotalStockableHectares = 0.0F;
             foreach (ResourceUnit resourceUnit in this.ResourceUnits)
@@ -246,13 +258,13 @@ namespace iLand.World
                 //            ru.setStockableArea(0.);
                 //            continue;
                 //        }
-                GridWindowEnumerator<HeightCell> ruHeightGridEnumerator = new(this.HeightGrid, resourceUnit.ProjectExtent);
+                GridWindowEnumerator<HeightCellFlags> ruHeightGridEnumerator = new(this.VegetationHeightFlags, resourceUnit.ProjectExtent);
                 int heightCellsInLandscape = 0;
                 int heightCellsInResourceUnit = 0;
                 while (ruHeightGridEnumerator.MoveNext())
                 {
-                    HeightCell currentHeightCell = ruHeightGridEnumerator.Current;
-                    if (currentHeightCell.IsOnLandscape())
+                    HeightCellFlags currentHeightFlags = ruHeightGridEnumerator.Current;
+                    if (currentHeightFlags.IsInResourceUnit())
                     {
                         ++heightCellsInLandscape;
                     }
@@ -270,6 +282,7 @@ namespace iLand.World
                 }
 
                 resourceUnit.AreaInLandscapeInM2 = Constant.HeightCellAreaInM2 * heightCellsInLandscape; // in m²
+                resourceUnit.HeightCellsOnLandscape = heightCellsInLandscape;
                 if (resourceUnit.Snags != null)
                 {
                     resourceUnit.Snags.ScaleInitialState();
@@ -277,23 +290,24 @@ namespace iLand.World
                 this.TotalStockableHectares += Constant.HeightCellAreaInM2 * heightCellsInLandscape / Constant.ResourceUnitAreaInM2; // in ha
             }
 
-            // mark those pixels that are at the edge of a "forest-out-of-area"
+            // mark height cells that are at the edge of a "forest-out-of-area"
             // Use GridWindowEnumerator rather than cell indexing in order to be able to access neighbors.
-            GridWindowEnumerator<HeightCell> heightGridEnumerator = new(this.HeightGrid, this.HeightGrid.ProjectExtent);
-            HeightCell[] neighbors = new HeightCell[8];
+            GridWindowEnumerator<HeightCellFlags> heightGridEnumerator = new(this.VegetationHeightFlags, this.VegetationHeightGrid.ProjectExtent);
+            Span<HeightCellFlags> neighbors = stackalloc HeightCellFlags[8];
             while (heightGridEnumerator.MoveNext())
             {
-                HeightCell currentHeightCell = heightGridEnumerator.Current;
-                if (currentHeightCell.IsOnLandscape() == false)
+                HeightCellFlags currentHeightFlags = heightGridEnumerator.Current;
+                if (currentHeightFlags.IsInResourceUnit() == false)
                 {
                     // if the current pixel is a "radiating" border pixel,
                     // then check the neighbors and set a flag if the pixel is a neighbor of a in-project-area pixel.
                     heightGridEnumerator.GetNeighbors8(neighbors);
                     for (int neighborIndex = 0; neighborIndex < neighbors.Length; ++neighborIndex)
                     {
-                        if (neighbors[neighborIndex] != null && neighbors[neighborIndex].IsOnLandscape())
+                        if (neighbors[neighborIndex].IsInResourceUnit())
                         {
-                            currentHeightCell.SetIsRadiating();
+                            this.VegetationHeightFlags[heightGridEnumerator.CurrentIndex] = currentHeightFlags |= HeightCellFlags.AdjacentToResourceUnit;
+                            break;
                         }
                     }
                 }

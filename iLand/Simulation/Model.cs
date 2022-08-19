@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿using iLand.Extensions;
+using iLand.Input.ProjectFile;
 using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
@@ -147,10 +148,7 @@ namespace iLand.Simulation
             //   1) site prep, clearcut, and plant
             //   2) severe fire
             // where no vegetation of Constant.RegenerationLayerHeight is present?
-            for (int heightIndex = 0; heightIndex < this.Landscape.HeightGrid.CellCount; ++heightIndex)
-            {
-                this.Landscape.HeightGrid[heightIndex].ClearTrees(); // set count = 0, but do not touch the flags
-            }
+            this.Landscape.VegetationHeightGrid.Fill(Constant.RegenerationLayerHeight);
 
             // current limitations of parallel resource unit evaluation:
             //
@@ -170,40 +168,22 @@ namespace iLand.Simulation
                         // apply toroidal light pattern
                         int worldBufferWidth = this.Project.World.Geometry.BufferWidth;
                         int heightBufferTranslationInCells = worldBufferWidth / Constant.HeightCellSizeInM;
-                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
-                        {
-                            treesOfSpecies.CalculateDominantHeightFieldTorus(treeIndex, heightBufferTranslationInCells);
-                        }
+                        treesOfSpecies.CalculateDominantHeightFieldTorus(this.Landscape, treesOfSpecies, heightBufferTranslationInCells);
 
                         int lightBufferTranslationInCells = worldBufferWidth / Constant.LightCellSizeInM;
-                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
-                        {
-                            treesOfSpecies.ApplyLightIntensityPatternTorus(treeIndex, lightBufferTranslationInCells);
-                        }
+                        treesOfSpecies.ApplyLightIntensityPatternTorus(this.Landscape, treesOfSpecies, lightBufferTranslationInCells);
 
                         // read toroidal pattern: LIP value calculation
-                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
-                        {
-                            treesOfSpecies.ReadLightInfluenceFieldTorus(treeIndex, lightBufferTranslationInCells); // multiplicative approach
-                        }
+                        treesOfSpecies.ReadLightInfluenceFieldTorus(this.Landscape, treesOfSpecies, lightBufferTranslationInCells); // multiplicative approach
                     }
                     else
                     {
                         // apply light pattern
-                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
-                        {
-                            treesOfSpecies.CalculateDominantHeightField(treeIndex);
-                        }
-                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
-                        {
-                            treesOfSpecies.ApplyLightIntensityPattern(treeIndex);
-                        }
+                        treesOfSpecies.CalculateDominantHeightField(this.Landscape, treesOfSpecies);
+                        treesOfSpecies.ApplyLightIntensityPattern(this.Landscape, treesOfSpecies);
 
                         // read pattern: LIP value calculation
-                        for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
-                        {
-                            treesOfSpecies.ReadLightInfluenceField(treeIndex); // multiplicative approach
-                        }
+                        treesOfSpecies.ReadLightInfluenceField(this.Landscape, treesOfSpecies); // multiplicative approach
                     }
                 }
             });
@@ -243,15 +223,15 @@ namespace iLand.Simulation
             const int maxRadiationDistanceInHeightCells = 7;
             float edgeInfluenceTaperCoefficient = 1.0F / maxRadiationDistanceInHeightCells;
             // int radiatingHeightCellCount = 0; // count of border height cells, maybe useful for debugging
-            for (int heightGridIndex = 0; heightGridIndex < this.Landscape.HeightGrid.CellCount; ++heightGridIndex)
+            for (int heightGridIndex = 0; heightGridIndex < this.Landscape.VegetationHeightGrid.CellCount; ++heightGridIndex)
             {
-                HeightCell heightCell = this.Landscape.HeightGrid[heightGridIndex];
-                if (heightCell.IsRadiating() == false)
+                HeightCellFlags heightCellFlags = this.Landscape.VegetationHeightFlags[heightGridIndex];
+                if (heightCellFlags.IsAdjacentToResourceUnit() == false)
                 {
                     continue;
                 }
 
-                Point heightCellIndexXY = this.Landscape.HeightGrid.GetCellXYIndex(heightGridIndex);
+                Point heightCellIndexXY = this.Landscape.VegetationHeightGrid.GetCellXYIndex(heightGridIndex);
                 int minLightX = heightCellIndexXY.X * Constant.LightCellsPerHeightCellWidth - maxRadiationDistanceInHeightCells + lightOffset;
                 int maxLightX = minLightX + 2 * maxRadiationDistanceInHeightCells + 1;
                 int centerLightX = minLightX + maxRadiationDistanceInHeightCells;
@@ -262,7 +242,7 @@ namespace iLand.Simulation
                 {
                     for (int lightX = minLightX; lightX <= maxLightX; ++lightX)
                     {
-                        if (!this.Landscape.LightGrid.Contains(lightX, lightY) || !this.Landscape.HeightGrid[lightX, lightY, Constant.LightCellsPerHeightCellWidth].IsOnLandscape())
+                        if (!this.Landscape.LightGrid.Contains(lightX, lightY) || !this.Landscape.VegetationHeightFlags[lightX, lightY, Constant.LightCellsPerHeightCellWidth].IsInResourceUnit())
                         {
                             continue;
                         }
