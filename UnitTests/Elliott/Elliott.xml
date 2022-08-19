@@ -2,12 +2,18 @@
 <project>
   <model>
     <settings>
-      <regenerationEnabled>false</regenerationEnabled> <!-- disabled due to high computational cost -->
+      <coordinateSystem>EPSG:6556</coordinateSystem>
+      <regenerationEnabled>false</regenerationEnabled>
+      <!-- disabled due to high computational cost -->
       <maxThreads>16</maxThreads>
       <randomSeed>0</randomSeed>
     </settings>
   </model>
   <output>
+    <logging>
+      <heightGrid enabled="false" />
+      <lightGrid enabled="false" />
+    </logging>
     <memory>
       <resourceUnitTrajectories>AllTreeSpeciesStatistics, IndividualTrees, IndividualTreeSpeciesStatistics, ThreePG</resourceUnitTrajectories>
       <standTrajectories enabled="true" />

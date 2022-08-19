@@ -158,7 +158,7 @@ namespace iLand.Tree
           */
         public void OnStartYear(Model model)
         {
-            if (model.ModelSettings.RegenerationEnabled == false)
+            if (model.Project.Model.Settings.RegenerationEnabled == false)
             {
                 return;
             }

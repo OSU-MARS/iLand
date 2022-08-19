@@ -62,6 +62,8 @@
       </externalSeedBelt>
     </seedDispersal>
     <settings>
+      <!-- GIS CRS used for project; implicit in input files so must be specified here if spatial logging is enabled -->
+      <!--<coordinateSystem>EPSG:31287</coordinateSystem>-->
       <carbonCycleEnabled>true</carbonCycleEnabled>
       <expressionLinearizationEnabled>true</expressionLinearizationEnabled>
       <growthEnabled>true</growthEnabled>
@@ -225,9 +227,20 @@
   </world>
   <output>
     <logging>
+      <!-- setting to true forces debug output to be written immediately but, due to the nature of .NET tracing, affects all logging in the
+           C# app domain iLand is running in (<autoFlush> applies only when <logFile> is specified) -->
+      <autoFlush>false</autoFlush>
+      <!-- whether or not to log the height grid to an annual set of GeoTIFFs 
+           GeoTIFFs are written to the output folder as 'height grid <calendar year>.tif' with deflate compression. (As of Windows 10 2022H1,
+           deflate is not supported by Windows Photo Viewer; use a more capable tool for viewing such as IrfanView or QGIS.) -->
+      <heightGrid enabled="false" />
+      <!-- whether or not to log the light grid to an annual set of GeoTIFFs 
+           GeoTIFFs are written to the output folder as 'light grid <calendar year>.tif', also with deflate compression. -->
+      <lightGrid enabled="false" />
+      <!-- name of log file to write diagnostic tracing information to -->
+      <!--<logFile>log.txt</logFile>-->
+      <!-- verbosity of log file, values are System.Diagnostics.Tracing.EventLevel (logAlways, critical, error, warning, informational, verbose), default is warning -->
       <logLevel>warning</logLevel>
-      <!-- setting to true forces debug output to be written immediately (can help for debugging) -->
-      <flush>false</flush>
     </logging>
     <memory>
       <!-- hint as to the expected simulation length in years

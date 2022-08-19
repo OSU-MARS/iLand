@@ -1,8 +1,12 @@
-﻿namespace iLand.Simulation
+﻿using System.Diagnostics;
+
+namespace iLand.Simulation
 {
     public class SimulationState
     {
         public int CurrentCalendarYear { get; set; }
+        public bool TraceAutoFlushValueToRestore { get; init; }
+        public TraceListener? TraceListener { get; init; }
 
         public SimulationState(int initialCalendarYear)
         {

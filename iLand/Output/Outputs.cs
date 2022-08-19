@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿using iLand.Extensions;
+using iLand.Input.ProjectFile;
 using iLand.Output.Memory;
 using iLand.Output.Sql;
 using iLand.Simulation;
@@ -203,7 +204,23 @@ namespace iLand.Output
 
         public void LogYear(Model model)
         {
-            // in memory
+            // log files
+            if (model.Project.Output.Logging.HeightGrid.Enabled)
+            {
+                string? coordinateSystem = model.Project.Model.Settings.CoordinateSystem;
+                Debug.Assert(coordinateSystem != null); // should be guaranteed by project deserialization
+                string heigthGridFilePath = model.Project.GetFilePath(ProjectDirectory.Output, "height grid " + model.SimulationState.CurrentCalendarYear + ".tif");
+                model.Landscape.HeightGrid.ExportToGeoTiff(heigthGridFilePath, coordinateSystem, model.Landscape.ProjectOriginInGisCoordinates);
+            }
+            if (model.Project.Output.Logging.LightGrid.Enabled)
+            {
+                string? coordinateSystem = model.Project.Model.Settings.CoordinateSystem;
+                Debug.Assert(coordinateSystem != null); // should be guaranteed by project deserialization
+                string lightGridFilePath = model.Project.GetFilePath(ProjectDirectory.Output, "light grid " + model.SimulationState.CurrentCalendarYear + ".tif");
+                model.Landscape.LightGrid.ExportToGeoTiff(lightGridFilePath, coordinateSystem, model.Landscape.ProjectOriginInGisCoordinates);
+            }
+
+            // memory outputs
             bool logResourceUnitTrajectories = this.ResourceUnitTrajectories.Count > 0;
             bool logStandTrajectories = this.StandTrajectoriesByID.Count > 0;
             if (logResourceUnitTrajectories || logStandTrajectories)
@@ -242,7 +259,7 @@ namespace iLand.Output
                 }
             }
 
-            // SQL
+            // SQL outputs
             if (this.sqlOutputs.Count > 0)
             {
                 int currentCalendarYear = model.SimulationState.CurrentCalendarYear;

@@ -26,9 +26,17 @@ namespace iLand.Input.ProjectFile
 			using XmlReader reader = XmlReader.Create(stream);
 			reader.MoveToContent();
 			this.ReadXml(reader);
-		}
 
-		public string GetFilePath(ProjectDirectory directory, string? fileName)
+			// check project settings for consistency
+			// For now, no set of Validate() APIs as there's only one check.
+            if ((this.Output.Logging.HeightGrid.Enabled || this.Output.Logging.LightGrid.Enabled) && 
+				String.IsNullOrWhiteSpace(this.Model.Settings.CoordinateSystem))
+            {
+                throw new XmlException("Height or light grid logging is enabled but no projection string is specified. Include a <projection>EPSG:nnnn</projection> element in /model/settings to geolocate light grid GeoTIFFs.");
+            }
+        }
+
+        public string GetFilePath(ProjectDirectory directory, string? fileName)
         {
 			if (String.IsNullOrEmpty(fileName))
             {

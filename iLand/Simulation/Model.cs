@@ -2,6 +2,7 @@
 using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
+using MaxRev.Gdal.Core;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -15,7 +16,6 @@ namespace iLand.Simulation
 
         public Landscape Landscape { get; private init; }
         public Management? Management { get; private init; }
-        public ModelSettings ModelSettings { get; private init; }
         public Plugin.Modules Modules { get; private init; }
         public Output.Outputs Output { get; private init; }
         public Project Project { get; private init; }
@@ -25,6 +25,28 @@ namespace iLand.Simulation
 
         public Model(Project projectFile)
         {
+            // initialize tracing
+            bool initialAutoFlushSetting = Trace.AutoFlush;
+            string? logFileName = projectFile.Output.Logging.LogFile;
+            TextWriterTraceListener? traceListener = null;
+            if (logFileName != null)
+            {
+                string logFilePath = projectFile.GetFilePath(ProjectDirectory.Output, logFileName);
+                traceListener = new TextWriterTraceListener(logFilePath);
+                Trace.Listeners.Add(traceListener);
+                if (Trace.AutoFlush != projectFile.Output.Logging.AutoFlush)
+                {
+                    Trace.AutoFlush = projectFile.Output.Logging.AutoFlush;
+                }
+            }
+            // setup GDAL if grid logging to GeoTiff is enabled
+            if (projectFile.Output.Logging.HeightGrid.Enabled || projectFile.Output.Logging.LightGrid.Enabled)
+            {
+                // https://github.com/MaxRev-Dev/gdal.netcore - how to use
+                GdalBase.ConfigureAll();
+            }
+
+            // setup of object model
             this.isDisposed = false;
             if (projectFile.Model.Settings.RandomSeed.HasValue)
             {
@@ -38,12 +60,15 @@ namespace iLand.Simulation
 
             this.Landscape = new(projectFile);
             this.Management = null;
-            this.ModelSettings = new();
             this.Modules = new();
             // construction of this.Output is deferred until trees have been loaded onto resource units
             this.Project = projectFile;
             this.ScheduledEvents = null;
-            this.SimulationState = new(this.Landscape.WeatherFirstCalendarYear - 1);
+            this.SimulationState = new(this.Landscape.WeatherFirstCalendarYear - 1)
+            {
+                TraceAutoFlushValueToRestore = initialAutoFlushSetting,
+                TraceListener = traceListener
+            };
 
             if (projectFile.World.Geometry.IsTorus && (this.Landscape.ResourceUnits.Count != 1))
             {
@@ -78,7 +103,7 @@ namespace iLand.Simulation
 
             // (3) additional issues
             // (3.2) setup of regeneration
-            if (this.ModelSettings.RegenerationEnabled)
+            if (this.Project.Model.Settings.RegenerationEnabled)
             {
                 foreach (TreeSpeciesSet speciesSet in this.Landscape.SpeciesSetsByTableName.Values)
                 {
@@ -198,6 +223,11 @@ namespace iLand.Simulation
                 if (disposing)
                 {
                     this.Output.Dispose();
+                    if (this.SimulationState.TraceListener != null)
+                    {
+                        Trace.Listeners.Remove(this.SimulationState.TraceListener);
+                        Trace.AutoFlush = this.SimulationState.TraceAutoFlushValueToRestore;
+                    }
                 }
                 this.isDisposed = true;
             }
@@ -351,7 +381,7 @@ namespace iLand.Simulation
             this.Landscape.GrassCover.UpdateCoverage(this.Landscape, this.RandomGenerator); // evaluate the grass / herb cover (and its effect on regeneration)
 
             // regeneration
-            if (this.ModelSettings.RegenerationEnabled)
+            if (this.Project.Model.Settings.RegenerationEnabled)
             {
                 // seed dispersal
                 foreach (TreeSpeciesSet speciesSet in this.Landscape.SpeciesSetsByTableName.Values)
@@ -385,7 +415,7 @@ namespace iLand.Simulation
                 }
 
                 // calculate soil / snag dynamics
-                if (this.ModelSettings.CarbonCycleEnabled)
+                if (this.Project.Model.Settings.CarbonCycleEnabled)
                 {
                     // (1) do calculations on snag dynamics for the resource unit
                     // (2) do the soil carbon and nitrogen dynamics calculations (ICBM/2N)

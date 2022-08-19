@@ -19,10 +19,9 @@ namespace iLand.World
     /// </remarks>
     public class Grid<T>
     {
-        private T[] data;
-
         /// get the length of one pixel of the grid
         public float CellSizeInM { get; private set; }
+        public T[] Data { get; private set; }
         /// bounding box in project coordinates
         public RectangleF ProjectExtent { get; private set; }
         public int SizeX { get; private set; }
@@ -30,9 +29,8 @@ namespace iLand.World
 
         public Grid()
         {
-            this.data = Array.Empty<T>();
-
             this.CellSizeInM = 0.0F;
+            this.Data = Array.Empty<T>();
             this.ProjectExtent = default;
             this.SizeX = 0;
             this.SizeY = 0;
@@ -47,31 +45,31 @@ namespace iLand.World
         public Grid(Grid<T> other)
             : this()
         {
-            if (other.data == null)
+            if (other.Data == null)
             {
                 throw new ArgumentOutOfRangeException(nameof(other));
             }
 
             this.Setup(other.ProjectExtent, other.CellSizeInM);
-            Array.Copy(other.data, 0, this.data, 0, other.data.Length);
+            Array.Copy(other.Data, 0, this.Data, 0, other.Data.Length);
         }
 
         // returns the number of elements of the grid
         public int CellCount 
         { 
-            get { return this.data.Length; }
+            get { return this.Data.Length; }
         }
 
         public T this[int index]
         {
-            get { return this.data![index]; }
-            set { this.data![index] = value; }
+            get { return this.Data[index]; }
+            set { this.Data[index] = value; }
         }
 
         public T this[int indexX, int indexY]
         {
-            get { return this.data![indexY * this.SizeX + indexX]; }
-            set { this.data![indexY * this.SizeX + indexX] = value; }
+            get { return this.Data[indexY * this.SizeX + indexX]; }
+            set { this.Data[indexY * this.SizeX + indexX] = value; }
         }
 
         public T this[int indexX, int indexY, int divisor]
@@ -189,7 +187,7 @@ namespace iLand.World
 
         public bool IsSetup()
         { 
-            return this.data.Length > 0; 
+            return this.Data.Length > 0; 
         }
         
         /// returns the index of an aligned grid (the same size) with 5 times bigger cells (e.g. convert from a 2 m grid to a 10 m grid)
@@ -227,7 +225,7 @@ namespace iLand.World
                 throw new ArgumentOutOfRangeException(nameof(other));
             }
             this.ProjectExtent = other.ProjectExtent;
-            Array.Copy(other.data!, 0, this.data!, 0, other.data!.Length);
+            Array.Copy(other.Data, 0, this.Data, 0, other.Data.Length);
         }
 
         public void Fill(T value)
@@ -236,7 +234,7 @@ namespace iLand.World
             {
                 throw new NotSupportedException();
             }
-            Array.Fill(this.data, value);
+            Array.Fill(this.Data, value);
         }
 
         public float GetCenterToCenterDistance(Point cellIndexXY1, Point cellIndexXY2)
@@ -302,7 +300,7 @@ namespace iLand.World
             int newCount = cellsX * cellsY;
             if (newCount > this.CellCount)
             {
-                this.data = new T[newCount];
+                this.Data = new T[newCount];
             }
 
             this.CellSizeInM = cellSizeInM;
