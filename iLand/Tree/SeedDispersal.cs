@@ -99,7 +99,7 @@ namespace iLand.Tree
             {
                 // if external seed input is enabled, the buffer area of the seed maps is
                 // "turned on", i.e. set to 1.
-                int bufferWidth = (int)(model.Project.World.Geometry.BufferWidth / seedMap.CellSizeInM);
+                int bufferWidth = (int)(model.Project.World.Geometry.BufferWidthInM / seedMap.CellSizeInM);
                 // if a special buffer is defined, reduce the size of the input
                 if (this.externalSeedBufferWidth > 0)
                 {
@@ -583,7 +583,7 @@ namespace iLand.Tree
                 this.sourceMap.Fill(0.0F);
             }
 
-            if ((model.Project.World.Geometry.BufferWidth % Constant.SeedmapCellSizeInM) != 0)
+            if ((model.Project.World.Geometry.BufferWidthInM % Constant.SeedmapCellSizeInM) != 0)
             {
                 throw new NotSupportedException("The world buffer width (/project/model/world/geometry/bufferWidth) must be a integer multiple of the seed cell size (currently 20m, e.g. 20,40,60,...)).");
             }

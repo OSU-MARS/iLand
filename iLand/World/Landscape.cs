@@ -37,10 +37,10 @@ namespace iLand.World
             {
                 throw new NotSupportedException("Project file does not specify a resource unit file (/project/model/world/initialization/resourceUnitFile).");
             }
-            float worldBufferWidth = projectFile.World.Geometry.BufferWidth;
+            float worldBufferWidth = projectFile.World.Geometry.BufferWidthInM;
             if ((worldBufferWidth < Constant.HeightCellSizeInM) || (worldBufferWidth % Constant.HeightCellSizeInM != 0))
             {
-                throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + projectFile.World.Geometry.BufferWidth + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.HeightCellSizeInM + " m).");
+                throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + projectFile.World.Geometry.BufferWidthInM + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.HeightCellSizeInM + " m).");
             }
 
             // this.Extent is set below

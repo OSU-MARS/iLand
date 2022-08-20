@@ -1,10 +1,11 @@
-﻿using System.Xml;
+﻿using iLand.Tree;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
 	public class WorldGeometry : XmlSerializable
 	{
-		public int BufferWidth { get; private set; }
+		public int BufferWidthInM { get; private set; }
 
 		// special mode that treats each resource unit as a "torus" (light calculation, seed distribution)
 		public bool IsTorus { get; private set; }
@@ -14,7 +15,7 @@ namespace iLand.Input.ProjectFile
 		public WorldGeometry()
 		{
 			// default to a single resource unit
-			this.BufferWidth = (int)(0.6F * Constant.ResourceUnitSizeInM);
+			this.BufferWidthInM = 3 * Constant.SeedmapCellSizeInM;
 			this.Latitude = 48.0F;
 			this.IsTorus = false;
 		}
@@ -29,10 +30,10 @@ namespace iLand.Input.ProjectFile
 			switch (reader.Name)
 			{
 				case "bufferWidth":
-					this.BufferWidth = reader.ReadElementContentAsInt();
-					if ((this.BufferWidth < Constant.LightCellSizeInM) || (this.BufferWidth % Constant.LightCellSizeInM != 0))
+					this.BufferWidthInM = reader.ReadElementContentAsInt();
+					if ((this.BufferWidthInM < Constant.HeightCellSizeInM) || (this.BufferWidthInM % Constant.LightCellSizeInM != 0) || (this.BufferWidthInM % Constant.HeightCellSizeInM != 0))
 					{
-						throw new XmlException("Light buffer width must be a positive,integer multiple of the light cell size (" + Constant.LightCellSizeInM + " m).");
+						throw new XmlException("Light buffer width must be a positive, integer multiple of the light and height cell sizes (" + Constant.LightCellSizeInM + " and " + Constant.HeightCellSizeInM + " m, respectively) which is greater than the radius of the largest tree stamp used by the model (potentially up to " + ((int)LightStampSize.Grid64x64 / 2 * Constant.LightCellSizeInM) + " m). If regeneration is enabled integer multiples of the seedmap cell size (" + Constant.SeedmapCellSizeInM + " m) are also required.");
 					}
 					break;
 				case "geometry":

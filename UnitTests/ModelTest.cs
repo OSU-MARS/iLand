@@ -540,8 +540,8 @@ namespace iLand.Test
                 //ru.Variables;
                 Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.Contains(resourceUnit.ProjectExtent));
                 Assert.IsTrue((resourceUnit.ProjectExtent.Height == Constant.ResourceUnitSizeInM) && (resourceUnit.ProjectExtent.Width == Constant.ResourceUnitSizeInM) &&
-                                (resourceUnit.ProjectExtent.X == model.Project.World.Geometry.BufferWidth) &&
-                                (MathF.Abs(resourceUnit.ProjectExtent.Y % 100.0F - model.Project.World.Geometry.BufferWidth) < 0.001F));
+                              (resourceUnit.ProjectExtent.X == model.Project.World.Geometry.BufferWidthInM) &&
+                              (MathF.Abs(resourceUnit.ProjectExtent.Y % 100.0F - model.Project.World.Geometry.BufferWidthInM) < 0.001F));
                 Assert.IsTrue((resourceUnit.ID == 1) || (resourceUnit.ID == 10));
                 Assert.IsTrue((resourceUnit.ResourceUnitGridIndex == 0) || (resourceUnit.ResourceUnitGridIndex == 1));
                 Assert.IsTrue(resourceUnit.AreaInLandscapeInM2 == Constant.ResourceUnitAreaInM2);

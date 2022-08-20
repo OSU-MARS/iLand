@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- More details on iland-model.org/ProjectFile -->
+<!-- documentation for iLand C++ at https://iland-model.org/ProjectFile is frequently also relevant -->
 <project>
   <system>
     <paths>
+      <!-- adjustment to project's root path (default is the directory containing the project file) -->
       <home></home>
+      <!-- location of tree species parameters SQLite database, weather SQLite database or feather time series, and CO₂ time series 
+           Default is database. -->
       <database>database</database>
+      <!-- location of tree initialization files, default is init -->
       <init>init</init>
+      <!-- location of species' light stamps, default is lip -->
       <lip>lip</lip>
+      <!-- location of output log files and SQLite database, default is output -->
       <output>..\..\TestResults</output>
+      <!-- location of agent and event scripts, default is script -->
       <script>script</script>
+      <!-- location of temporary files, default is temp, not currently used -->
       <temp>temp</temp>
     </paths>
     <!-- not supported in this iLand version -->
@@ -125,10 +133,12 @@
       <qh>14.5</qh>
     </defaultSoil>
     <geometry>
-      <!-- buffer width must be multiple of seed map cell size, which is hard coded to 20 m, if regeneration is enabled -->
+      <!-- buffer width must be an integer multiple of light grid cell size (2 m), height grid cell size (10 m), and greater than the radius
+           of the largest light stamp used (potentially 64 m if large trees are present)
+           Buffer width must also be an integer multiple of the seed map cell size (20 m) if regeneration is enabled. Values of 40, 60, or 80
+           m are therefore suggested. The default is 60 m. -->
       <bufferWidth>60</bufferWidth>
       <torus>false</torus>
-      <!-- location of the model's origin (0, 0 point) in GIS inputs, used to transform GIS grids to model coordinates -->
     </geometry>
     <grass enabled="true">
       <!-- 'pixel' or 'continuous' -->

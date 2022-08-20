@@ -160,38 +160,34 @@ namespace iLand.Simulation
             //
             this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
             {
-                for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+                ResourceUnitTrees treesOnResourceUnit = resourceUnit.Trees;
+                if (this.Project.World.Geometry.IsTorus)
                 {
-                    TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
-                    if (this.Project.World.Geometry.IsTorus)
-                    {
-                        // apply toroidal light pattern
-                        int worldBufferWidth = this.Project.World.Geometry.BufferWidth;
-                        int heightBufferTranslationInCells = worldBufferWidth / Constant.HeightCellSizeInM;
-                        treesOfSpecies.CalculateDominantHeightFieldTorus(this.Landscape, treesOfSpecies, heightBufferTranslationInCells);
+                    // apply toroidal light pattern
+                    int worldBufferWidth = this.Project.World.Geometry.BufferWidthInM;
+                    int heightBufferTranslationInCells = worldBufferWidth / Constant.HeightCellSizeInM;
+                    treesOnResourceUnit.CalculateDominantHeightFieldTorus(this.Landscape, heightBufferTranslationInCells);
 
-                        int lightBufferTranslationInCells = worldBufferWidth / Constant.LightCellSizeInM;
-                        treesOfSpecies.ApplyLightIntensityPatternTorus(this.Landscape, treesOfSpecies, lightBufferTranslationInCells);
+                    int lightBufferTranslationInCells = worldBufferWidth / Constant.LightCellSizeInM;
+                    treesOnResourceUnit.ApplyLightIntensityPatternTorus(this.Landscape, lightBufferTranslationInCells);
 
-                        // read toroidal pattern: LIP value calculation
-                        treesOfSpecies.ReadLightInfluenceFieldTorus(this.Landscape, treesOfSpecies, lightBufferTranslationInCells); // multiplicative approach
-                    }
-                    else
-                    {
-                        // apply light pattern
-                        treesOfSpecies.CalculateDominantHeightField(this.Landscape, treesOfSpecies);
-                        treesOfSpecies.ApplyLightIntensityPattern(this.Landscape, treesOfSpecies);
+                    // read toroidal pattern: LIP value calculation
+                    treesOnResourceUnit.ReadLightInfluenceFieldTorus(this.Landscape, lightBufferTranslationInCells); // multiplicative approach
+                }
+                else
+                {
+                    // apply light pattern
+                    treesOnResourceUnit.CalculateDominantHeightField(this.Landscape);
+                    treesOnResourceUnit.ApplyLightIntensityPattern(this.Landscape);
 
-                        // read pattern: LIP value calculation
-                        treesOfSpecies.ReadLightInfluenceField(this.Landscape, treesOfSpecies); // multiplicative approach
-                    }
+                    // read pattern: LIP value calculation
+                    treesOnResourceUnit.ReadLightInfluenceField(this.Landscape); // multiplicative approach
                 }
             });
         }
 
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             this.Dispose(true);
             GC.SuppressFinalize(this);
         }
