@@ -172,6 +172,7 @@ namespace iLand.Input
             this.UseDynamicAvailableNitrogen = defaultEnvironment.UseDynamicAvailableNitrogen;
         }
 
+        // create default environment from project settings
         public ResourceUnitEnvironment(ProjectFile.World world)
         {
             this.WeatherID = world.Weather.DefaultDatabaseTable ?? String.Empty;

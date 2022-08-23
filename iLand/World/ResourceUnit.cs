@@ -68,7 +68,7 @@ namespace iLand.World
         }
 
         // stocked area calculation
-        public void CountHeightCellsContainingTrees(Landscape landscape) 
+        public void CountHeightCellsContainingTreesTallerThanTheRegenerationLayer(Landscape landscape) 
         {
             // this.heightCell counts are zeroed in OnStartYear()
             GridWindowEnumerator<float> ruVegetationHeightEnumerator = new(landscape.VegetationHeightGrid, this.ProjectExtent);
@@ -702,7 +702,7 @@ namespace iLand.World
 
         public void SetupTreesAndSaplings(Landscape landscape)
         {
-            this.CountHeightCellsContainingTrees(landscape);
+            this.CountHeightCellsContainingTreesTallerThanTheRegenerationLayer(landscape);
             this.Trees.SetupStatistics();
 
             if (this.SaplingCells == null)

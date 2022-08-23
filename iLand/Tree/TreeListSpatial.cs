@@ -48,11 +48,11 @@ namespace iLand.Tree
                 // if it's not specified, estimate the tree's from its height
                 ageInYears = this.Species.EstimateAgeFromHeight(heightInM);
             }
-            if (dbhInCm <= 0.0F || dbhInCm > 500.0F)
+            if ((dbhInCm <= 0.0F) || (dbhInCm > 500.0F))
             {
                 throw new ArgumentOutOfRangeException(nameof(dbhInCm), "Attempt to add tree of species " + this.Species.ID + " with invalid diameter of " + dbhInCm + " cm to resource unit " + this.ResourceUnit.ID + ".");
             }
-            if (heightInM <= 0.0F || heightInM > 150.0F)
+            if ((heightInM <= 0.0F) || (heightInM > 150.0F))
             {
                 throw new ArgumentOutOfRangeException(nameof(heightInM), "Attempt to add tree of species " + this.Species.ID + " with invalid height of " + heightInM + " m to resource unit " + this.ResourceUnit.ID + ".");
             }

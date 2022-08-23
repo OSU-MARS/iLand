@@ -75,6 +75,10 @@ and parameterizations.
   and y = 0 row of the light grid, leading to competition overestimation and growth underestimation of trees in this row and column.
 * The last day of a leap year was a leaf off day for evergreen species, meaning no photosynthesis would occur that day.
 * State mishandling in SummaryStatistics allowed invalid median values and standard deviations.
+* Due to numerical precision and interpretations of geometrical semantics, GIS tools and iLand may differ over which resource unit contains trees
+  on a boundary within the resource unit grid. In many cases this is of little importance as resource units are present on both sides of the edge.
+  However, edge trees may fall off the populated portion of the resource unit grid. Such trees are detected and nudged by 1 cm to move them onto
+  the populated side of the edge.
 
 Decoupling from Qt additionally exempts iLand development from Qt licensing terms (minimum US$ 302/month, as of July 2022, or Qt code contributions
 in kind), reducing the cost of open source software.

@@ -9,6 +9,7 @@ using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.IO;
 
@@ -370,12 +371,13 @@ namespace iLand.World
 
         public ResourceUnit GetResourceUnit(PointF projectCoordinate) // resource unit at given project coordinates
         {
-            ResourceUnit? ru = this.ResourceUnitGrid[projectCoordinate];
-            if (ru == null)
+            Point resourceUnitIndexXY = this.ResourceUnitGrid.GetCellXYIndex(projectCoordinate);
+            ResourceUnit? resourceUnit = this.ResourceUnitGrid[resourceUnitIndexXY.X, resourceUnitIndexXY.Y];
+            if (resourceUnit == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(projectCoordinate));
+                throw new ArgumentOutOfRangeException(nameof(projectCoordinate), "No resource unit is present at project coordinate x = " + projectCoordinate.X + ", y = " + projectCoordinate.Y + " m.");
             }
-            return ru;
+            return resourceUnit;
         }
 
         /// return the SaplingCell (i.e. container for the ind. saplings) for the given 2x2m coordinates

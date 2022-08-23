@@ -327,7 +327,7 @@ namespace iLand.Simulation
             this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
             {
                 // stocked area
-                resourceUnit.CountHeightCellsContainingTrees(this.Landscape);
+                resourceUnit.CountHeightCellsContainingTreesTallerThanTheRegenerationLayer(this.Landscape);
                 // 3-PG tree growth
                 resourceUnit.CalculateWaterAndBiomassGrowthForYear(this);
 

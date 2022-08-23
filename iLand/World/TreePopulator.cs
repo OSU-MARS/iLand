@@ -284,15 +284,81 @@ namespace iLand.World
 
         private static void PopulateResourceUnitsWithIndividualTrees(Project projectFile, Landscape landscape, IndividualTreeReader individualTreeReader)
         {
+            float projectOriginGisCoordinatesX = landscape.ProjectOriginInGisCoordinates.X;
+            float projectOriginGisCoordinatesY = landscape.ProjectOriginInGisCoordinates.Y;
+            float resourceUnitMinimumX = landscape.ResourceUnitGrid.ProjectExtent.X;
+            float resourceUnitMaximumX = resourceUnitMinimumX + landscape.ResourceUnitGrid.ProjectExtent.Width;
+            float resourceUnitMinimumY = landscape.ResourceUnitGrid.ProjectExtent.Y;
+            float resourceUnitMaximumY = resourceUnitMinimumX + landscape.ResourceUnitGrid.ProjectExtent.Height;
             for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.DbhInCm.Count; ++treeIndexInFile)
             {
                 //if (dbh<5.)
                 //    continue;
 
                 // translate tree into project coordinates
-                float treeProjectX = individualTreeReader.GisX[treeIndexInFile] - landscape.ProjectOriginInGisCoordinates.X;
-                float treeProjectY = individualTreeReader.GisY[treeIndexInFile] - landscape.ProjectOriginInGisCoordinates.Y;
-                ResourceUnit resourceUnit = landscape.GetResourceUnit(new PointF(treeProjectX, treeProjectY));
+                int treeID = individualTreeReader.TreeID[treeIndexInFile];
+                float treeGisX = individualTreeReader.GisX[treeIndexInFile];
+                float treeGisY = individualTreeReader.GisY[treeIndexInFile];
+                float treeProjectX = treeGisX - projectOriginGisCoordinatesX;
+                float treeProjectY = treeGisY - projectOriginGisCoordinatesY;
+                if ((treeProjectX < resourceUnitMinimumX) || (treeProjectY < resourceUnitMinimumY) ||
+                    (treeProjectX > resourceUnitMaximumX) || (treeProjectY > resourceUnitMaximumY))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(individualTreeReader), "Tree " + treeID + " at GIS coordinates x = " + treeGisX + ", y = " + treeGisY + " m is positioned beyond the extent of the resource unit grid (xmin = " + (resourceUnitMinimumX + projectOriginGisCoordinatesX) + ", ymin = " + (resourceUnitMinimumY + projectOriginGisCoordinatesY) + ", xmax = " + (resourceUnitMaximumX + projectOriginGisCoordinatesX) + ", ymax = " + (resourceUnitMaximumY + projectOriginGisCoordinatesY) + " m) and, therefore, cannot be simulated. Verify trees and resource units are being specified in the same coordinate system and adjust the set of trees and resource units so all trees are within resource units.");
+                }
+
+                // find resource unit tree is on
+                Point resourceUnitIndexXY = landscape.ResourceUnitGrid.GetCellXYIndex(treeProjectX, treeProjectY);
+                int resourceUnitIndexX = resourceUnitIndexXY.X;
+                int resourceUnitIndexY = resourceUnitIndexXY.Y;
+                ResourceUnit? resourceUnit = landscape.ResourceUnitGrid[resourceUnitIndexX, resourceUnitIndexY];
+                if (resourceUnit == null)
+                {
+                    // trees may sometimes be positioned exactly on a resource unit boundary
+                    // In this case QGIS 3.22 will, and other tools may, consider the tree to be within a given resource unit grid
+                    // cell while iLand will consider the tree to be in an adjacent cell of the resource unit grid. If both cells
+                    // are populated with resource units then there is no difficulty within the numerical limits of resource unit
+                    // bookkeeping. However, if the cell iLand resolves to is unpopulated then iLand has the options of either
+                    //
+                    //   1) rejecting well formed GIS input due to mathematical details, which is undesirable
+                    //   2) handling the edge case and tipping the tree into the resource unit seen by GIS
+                    //
+                    // The latter approach is adopted here. There appears to be approximately a one in two million chance these
+                    // cases will be hit.
+                    if ((treeProjectX - landscape.ResourceUnitGrid.ProjectExtent.X) % Constant.ResourceUnitSizeInM == 0.0F)
+                    {
+                        resourceUnit = landscape.ResourceUnitGrid[resourceUnitIndexX - 1, resourceUnitIndexY];
+                        if (resourceUnit == null)
+                        {
+                            if (resourceUnitIndexXY.Y % Constant.ResourceUnitSizeInM == 0.0F)
+                            {
+                                resourceUnit = landscape.ResourceUnitGrid[resourceUnitIndexX - 1, resourceUnitIndexY - 1];
+                                if (resourceUnit != null)
+                                {
+                                    treeProjectX -= Constant.TreeNudgeIntoResourceUnitInM;
+                                    treeProjectY -= Constant.TreeNudgeIntoResourceUnitInM;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            treeProjectX -= Constant.TreeNudgeIntoResourceUnitInM;
+                        }
+                    }
+                    else if ((treeProjectY - landscape.ResourceUnitGrid.ProjectExtent.Y) % Constant.ResourceUnitSizeInM == 0.0F)
+                    {
+                        resourceUnit = landscape.ResourceUnitGrid[resourceUnitIndexX, resourceUnitIndexY - 1];
+                        if (resourceUnit != null)
+                        {
+                            treeProjectY -= Constant.TreeNudgeIntoResourceUnitInM;
+                        }
+                    }
+                }
+                if (resourceUnit == null)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(individualTreeReader), "Tree " + treeID + " at GIS coordinates x = " + treeGisX + ", y = " + treeGisY + " m falls within the extents of the resource unit grid but is not positioned on a resource unit and, therefore, cannot be simulated. Verify trees and resource units are being specified in the same coordinate system and adjust the set of trees and resource units so all trees are within resource units.");
+                }
+
                 Point lightCellIndexXY = landscape.LightGrid.GetCellXYIndex(treeProjectX, treeProjectY);
                 Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
@@ -304,7 +370,7 @@ namespace iLand.World
                 int treeIndexInResourceUnitTreeList = resourceUnit.Trees.AddTree(projectFile, landscape, speciesID, dbhInCm, heightInM, lightCellIndexXY, ageInYears, out TreeListSpatial treesOfSpecies);
 
                 treesOfSpecies.StandID[treeIndexInResourceUnitTreeList] = individualTreeReader.StandID[treeIndexInFile];
-                treesOfSpecies.TreeID[treeIndexInResourceUnitTreeList] = individualTreeReader.TreeID[treeIndexInFile];
+                treesOfSpecies.TreeID[treeIndexInResourceUnitTreeList] = treeID;
             }
         }
 

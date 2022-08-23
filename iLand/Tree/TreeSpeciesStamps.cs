@@ -170,11 +170,16 @@ namespace iLand.Tree
             return this.lightStampsWithTreeSizes.Count; 
         }
 
-        /// getKey: decodes a floating point piar of dbh and hd-ratio to indices for the
+        /// getKey: decodes a floating point pair of dbh and hd-ratio to indices for the
         /// lookup table containing pointers to the actual stamps.
         private static (int diameterClass, int heightDiameterClass) GetClasses(float dbhInCm, float heightDiameterRatio)
         {
             int heightDiameterClass = (int)((heightDiameterRatio - Constant.LightStamp.HeightDiameterClassMinimum) / Constant.LightStamp.HeightDiameterClassSize);
+            if (heightDiameterClass < 0)
+            {
+                heightDiameterClass = 0; // all trees with height:diameter ratios less than HeightDiameterClassMinimum are in height:diameter class zero
+            }
+
             // dbh_class = int(dbh - cBHDclassLow) / cBHDclassWidth;
             // fixed scheme: smallest classification scheme for tree-diameters:
             // 1 cm width from 5 up to 9 cm,

@@ -31,6 +31,7 @@ namespace iLand
         public const int ResourceUnitSizeInM = 100; // size of resource unit, m
         public const int SeedmapCellSizeInM = 20; // size of seedmap cell, m
         public const int TimeStepInYears = 1;
+        public const float TreeNudgeIntoResourceUnitInM = 0.01F;
 
         public const float Ln2 = 0.693147180559945F;
         public const int MonthsInYear = 12;
