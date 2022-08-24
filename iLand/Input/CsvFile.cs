@@ -1,4 +1,5 @@
-﻿using System;
+﻿using iLand.Tool;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -11,8 +12,8 @@ namespace iLand.Input
     public class CsvFile : IDisposable
     {
         private bool isDisposed;
-        private readonly char separator;
         private readonly StreamReader reader;
+        private readonly SplitString splitString;
 
         public List<string> Columns { get; private init; }
 
@@ -42,6 +43,7 @@ namespace iLand.Input
             int semicolonIndex = header.IndexOf(';');
             int commaIndex = header.IndexOf(',');
             int spaceIndex = header.IndexOf(' ');
+            char separator;
             if (tabIndex != -1)
             {
                 separator = '\t';
@@ -64,8 +66,9 @@ namespace iLand.Input
             }
 
             // parse header
-            Columns = new();
-            Columns.AddRange(header.Split(separator, StringSplitOptions.None)); // C++ iLand removes \ characters here for an undocumented reason
+            this.Columns = new();
+            this.Columns.AddRange(header.Split(separator, StringSplitOptions.None)); // C++ iLand removes \ characters here for an undocumented reason
+            this.splitString = new(separator, this.Columns.Count, stream.Length);
         }
 
         public void Dispose()
@@ -93,7 +96,7 @@ namespace iLand.Input
             return this.Columns.IndexOf(columnName);
         }
 
-        public void Parse(Action<string[]> parseRow)
+        public void Parse(Action<SplitString> parseRow)
         {
             for (string? line = reader.ReadLine(); line != null; line = reader.ReadLine())
             {
@@ -101,14 +104,14 @@ namespace iLand.Input
                 //   empty lines
                 //   comments (lines beginning with '#')
                 //   Picus closing </trees>
-                if (String.IsNullOrWhiteSpace(line) || line[0] == '#' || String.Equals(line, "</trees>", StringComparison.OrdinalIgnoreCase))
+                if (String.IsNullOrWhiteSpace(line) || (line[0] == '#') || String.Equals(line, "</trees>", StringComparison.Ordinal))
                 {
                     continue;
                 }
 
                 // should whitespace be trimmed? repeated spaces treated as a single delimiter?
-                string[] row = line.Split(separator, StringSplitOptions.None);
-                parseRow.Invoke(row);
+                this.splitString.Parse(line, reader.BaseStream.Position);
+                parseRow.Invoke(this.splitString);
             }
         }
 

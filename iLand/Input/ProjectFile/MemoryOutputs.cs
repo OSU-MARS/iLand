@@ -11,7 +11,7 @@ namespace iLand.Input.ProjectFile
 
 		public MemoryOutputs()
 		{
-			this.InitialTrajectoryLengthInYears = Constant.Data.AnnualAllocationIncrement;
+			this.InitialTrajectoryLengthInYears = Constant.Data.DefaultAnnualAllocationIncrement;
 			this.ResourceUnitTrajectories = ResourceUnitMemoryOutputs.None;
 			this.StandTrajectories = new("standTrajectories");
 		}

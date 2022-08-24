@@ -110,7 +110,7 @@ namespace iLand.World
             string? isDebugTreeExpressionString = projectFile.World.Debug.DebugTree;
             if (string.IsNullOrEmpty(isDebugTreeExpressionString) == false)
             {
-                if (String.Equals(isDebugTreeExpressionString, "debugstamp", StringComparison.OrdinalIgnoreCase))
+                if (String.Equals(isDebugTreeExpressionString, "debugstamp", StringComparison.Ordinal))
                 {
                     // check for trees which aren't correctly placed
                     AllTreesEnumerator treeIterator = new(landscape);
@@ -547,7 +547,7 @@ namespace iLand.World
                         }
                     }
 
-                    if (String.Equals(treeSizeRange.TreeSpecies, previousSpecies, StringComparison.OrdinalIgnoreCase) == false)
+                    if (String.Equals(treeSizeRange.TreeSpecies, previousSpecies, StringComparison.Ordinal) == false)
                     {
                         previousSpecies = treeSizeRange.TreeSpecies;
                         heightCells.Sort(TreePopulator.CompareInitPixelUnlocked);

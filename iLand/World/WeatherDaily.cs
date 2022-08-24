@@ -16,7 +16,7 @@ namespace iLand.World
         private readonly WeatherReaderDailySql weatherReader;
 
         public WeatherDaily(string weatherDatabaseFilePath, string weatherTableName, Project projectFile)
-            : base(projectFile, new(Timestep.Daily, Constant.DaysInLeapYear)) // one year minimum capacity
+            : base(projectFile, new(Timestep.Daily))
         {
             this.monthDayIndices = new(Constant.MonthsInYear + 1); // one year minimum capacity
             this.weatherReader = new(weatherDatabaseFilePath, weatherTableName, projectFile);

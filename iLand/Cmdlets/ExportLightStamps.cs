@@ -48,7 +48,7 @@ namespace iLand.Cmdlets
             {
                 string? iLandAssemblyFilePath = Path.GetDirectoryName(typeof(TreeSpeciesSet).Assembly.Location);
                 Debug.Assert(iLandAssemblyFilePath != null);
-                TreeSpeciesStamps readerStamps = new(Path.Combine(iLandAssemblyFilePath, "readerstamp.feather"));
+                TreeSpeciesStamps readerStamps = new(Path.Combine(iLandAssemblyFilePath, Constant.File.ReaderStampFileName));
                 readerStamps.WriteToCsv(Path.Combine(this.CsvDirectory, "readerstamp.csv"));
             }
         }

@@ -17,11 +17,11 @@ namespace iLand.Input.Tree
             treeFile.Parse((row) =>
             {
                 ++lineNumber;
-                int standID = Int32.Parse(row[treeFileIndexHeader.StandID], CultureInfo.InvariantCulture);
-                string treeFileName = row[treeFileIndexHeader.TreeFileName];
-                if (String.IsNullOrWhiteSpace(treeFileName) == false)
+                int standID = Int32.Parse(row[treeFileIndexHeader.StandID], NumberStyles.Integer);
+                ReadOnlySpan<char> treeFileName = row[treeFileIndexHeader.TreeFileName];
+                if (MemoryExtensions.IsWhiteSpace(treeFileName) == false)
                 {
-                    this.TreeFileNameByStandID.Add((standID, treeFileName));
+                    this.TreeFileNameByStandID.Add((standID, treeFileName.ToString()));
                 }
             });
         }

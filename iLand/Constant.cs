@@ -41,9 +41,10 @@ namespace iLand
 
         public static class Data
         {
-            public const int AnnualAllocationIncrement = 25; // 25 years
+            public const double CsvFileSizeEstimationThreshold = 0.2; // minimum fraction of .csv file to read before file size estimation is attempted
+            public const int DefaultAnnualAllocationIncrement = 25; // 25 years
+            public const int DefaultMonthlyAllocationIncrement = 12 * 25; // also 25 years
             public const string DefaultSpeciesTable = "species";
-            public const int MonthlyAllocationIncrement = 12 * 25; // 25 years
         }
 
         public static class File

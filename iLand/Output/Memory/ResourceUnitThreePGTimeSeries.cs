@@ -74,7 +74,7 @@ namespace iLand.Output.Memory
 
         private void Extend()
         {
-            int newCapacityInMonths = this.CapacityInMonths + Constant.MonthsInYear * Constant.Data.AnnualAllocationIncrement;
+            int newCapacityInMonths = this.CapacityInMonths + Constant.Data.DefaultMonthlyAllocationIncrement;
             this.SolarRadiationTotal = this.SolarRadiationTotal.Resize(newCapacityInMonths);
             this.UtilizablePar = this.UtilizablePar.Resize(newCapacityInMonths);
             this.MonthlyGpp = this.MonthlyGpp.Resize(newCapacityInMonths);

@@ -10,8 +10,6 @@ using System;
 using System.Collections.Generic;
 using Weather = iLand.World.Weather;
 using Model = iLand.Simulation.Model;
-using SQLitePCL;
-using Newtonsoft.Json.Linq;
 
 namespace iLand.Test
 {
@@ -129,9 +127,10 @@ namespace iLand.Test
 
                 // in the interests of test runtime, limit larger file testing to release builds
                 #if !DEBUG
-                int availableResourceUnits = 34494;
-                int availableWeatherIDs4km = 81; // 81 4 km weather cells in input, 37 of which cover the unbuffered Elliott
-                int availableWeatherTimesteps = 12 * (2100 - 2011 + 1);
+                const int availableCO2months = 12 * (2100 - 2015 + 1);
+                const int availableResourceUnits = 34494;
+                const int availableWeatherIDs4km = 81; // 81 4 km weather cells in input, 37 of which cover the unbuffered Elliott
+                const int availableWeatherTimesteps = 12 * (2100 - 2011 + 1);
 
                 // check full resource unit reads (basic .csv functionality is covered on Kalkalpen, Elliot project uses .feather subset)
                 ResourceUnitEnvironment defaultEnvironment = new(elliott.Project.World);
@@ -144,11 +143,16 @@ namespace iLand.Test
                 ResourceUnitReaderFeather resourceUnitFeatherReader = new(resourceUnitFeatherPath, defaultEnvironment);
                 Assert.IsTrue(resourceUnitFeatherReader.Environments.Count == availableResourceUnits);
 
-                // check monthly .csv weather read
-                string weatherFeatherFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "weather 4 km 2011-2100 13GCMssp370.csv");
-                WeatherReaderMonthlyCsv weatherFeatherReader = new(weatherFeatherFilePath, startYear: 2010); // should have no effect: actual start year in file is 2011
-                Assert.IsTrue(weatherFeatherReader.MonthlyWeatherByID.Count == availableWeatherIDs4km);
-                foreach (WeatherTimeSeriesMonthly monthlyWeatherTimeSeries in weatherFeatherReader.MonthlyWeatherByID.Values)
+                // check monthly CO₂ .csv read
+                string co2csvFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "co2 ssp370.csv");
+                CO2ReaderMonthlyCsv co2csvReader = new(co2csvFilePath, startYear: 2010); // should have no effect: actual start year in file is 2015
+                Assert.IsTrue(co2csvReader.MonthlyCO2.Count == availableCO2months);
+
+                // check monthly weather .csv read
+                string weatherCsvFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "weather 4 km 2011-2100 13GCMssp370.csv");
+                WeatherReaderMonthlyCsv weatherCsvReader = new(weatherCsvFilePath, startYear: 2010); // should have no effect: actual start year in file is 2011
+                Assert.IsTrue(weatherCsvReader.MonthlyWeatherByID.Count == availableWeatherIDs4km);
+                foreach (WeatherTimeSeriesMonthly monthlyWeatherTimeSeries in weatherCsvReader.MonthlyWeatherByID.Values)
                 {
                     Assert.IsTrue(monthlyWeatherTimeSeries.Count == availableWeatherTimesteps);
                 }
@@ -296,7 +300,7 @@ namespace iLand.Test
             Assert.IsTrue(MathF.Abs(douglasFir.FinerootFoliageRatio - 1.0F) < 0.001F);
             // HDlow   145.0998 * 1 * 0.8 * (1 - 0.28932) * d ^ -0.28932
             // HDhigh  100 / d + 25 + 100 * exp(-0.3 * (0.08 * d) ^ 1.5) + 120 * exp(-0.01 * d)
-            Assert.IsTrue(String.Equals(douglasFir.ID, "psme", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(String.Equals(douglasFir.ID, "psme", StringComparison.Ordinal));
             Assert.IsTrue(douglasFir.Index == 0);
             Assert.IsTrue(douglasFir.IsConiferous == true);
             Assert.IsTrue(douglasFir.IsEvergreen == true);
@@ -304,7 +308,7 @@ namespace iLand.Test
             Assert.IsTrue(douglasFir.IsTreeSerotinousRandom(model.RandomGenerator, 40) == false);
             // lightResponseClass  2.78
             Assert.IsTrue(MathF.Abs(douglasFir.MaxCanopyConductance - 0.017F) < 0.001F);
-            Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menziesii", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menziesii", StringComparison.Ordinal));
             Assert.IsTrue(MathF.Abs(douglasFir.NonMastYearFraction - 0.25F) < 0.001F);
             Assert.IsTrue(douglasFir.LeafPhenologyID == 0);
             Assert.IsTrue(MathF.Abs(douglasFir.MinimumSoilWaterPotential + 1.234F) < 0.001F);
@@ -320,7 +324,7 @@ namespace iLand.Test
             // seedKernel_ks0  0.2
             Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.BrowsingProbability - 0.5F) < 0.001F);
             Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.HeightDiameterRatio - 112.0F) < 0.001F);
-            Assert.IsTrue(String.Equals(douglasFir.SaplingGrowth.HeightGrowthPotential.ExpressionString, "1.2*72.2*(1-(1-(h/72.2)^(1/3))*exp(-0.0427))^3", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(String.Equals(douglasFir.SaplingGrowth.HeightGrowthPotential.ExpressionString, "1.2*72.2*(1-(1-(h/72.2)^(1/3))*exp(-0.0427))^3", StringComparison.Ordinal));
             Assert.IsTrue(douglasFir.SaplingGrowth.MaxStressYears == 2);
             Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.ReferenceRatio - 0.503F) < 0.001F);
             Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.ReinekeR - 164.0F) < 0.001F);

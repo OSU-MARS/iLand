@@ -4,6 +4,7 @@ using iLand.Tree;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -43,7 +44,13 @@ namespace iLand.World
             this.YearsToLoad = projectFile.World.Weather.DailyWeatherChunkSizeInYears;
 
             string co2filePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.CO2File);
-            CO2ReaderMonthlyCsv co2reader = new(co2filePath, Constant.Data.MonthlyAllocationIncrement);
+            string? co2fileExtension = Path.GetExtension(projectFile.World.Weather.CO2File);
+            CO2ReaderMonthly co2reader = co2fileExtension switch
+            {
+                Constant.File.CsvExtension => new CO2ReaderMonthlyCsv(co2filePath, Constant.Data.DefaultMonthlyAllocationIncrement),
+                Constant.File.FeatherExtension => new CO2ReaderMonthlyFeather(co2filePath, Constant.Data.DefaultMonthlyAllocationIncrement),
+                _ => throw new NotSupportedException("Unhandled CO₂ file extension '" + co2fileExtension + "'.")
+            };
 
             this.CO2ByMonth = co2reader.MonthlyCO2;
             this.PrecipitationByMonth = new float[Constant.MonthsInYear];

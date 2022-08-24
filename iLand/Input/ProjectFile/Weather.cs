@@ -11,7 +11,7 @@ namespace iLand.Input.ProjectFile
         public float PrecipitationMultiplier { get; private set; }
         public bool RandomSamplingEnabled { get; private set; }
         public string? RandomSamplingList { get; private set; }
-        public int StartYear { get; private set; }
+        public Int16 StartYear { get; private set; }
         public float TemperatureShift { get; private set; }
         public string? WeatherFile { get; private set; }
 
@@ -23,7 +23,7 @@ namespace iLand.Input.ProjectFile
             this.PrecipitationMultiplier = 1.0F;
             this.RandomSamplingEnabled = false;
             this.RandomSamplingList = null;
-            this.StartYear = Int32.MinValue; // min value so all years are included by default (no SQL query string default in C++)
+            this.StartYear = Int16.MinValue; // min value so all years are included by default (no SQL query string default in C++)
             this.TemperatureShift = 0.0F;
             this.WeatherFile = null;
         }
@@ -65,7 +65,7 @@ namespace iLand.Input.ProjectFile
                     this.RandomSamplingList = reader.ReadElementContentAsString().Trim();
                     break;
                 case "startYear":
-                    this.StartYear = reader.ReadElementContentAsInt();
+                    this.StartYear = (Int16)reader.ReadElementContentAsInt();
                     break;
                 case "weather":
                     reader.Read();

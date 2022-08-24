@@ -17,15 +17,16 @@ namespace iLand.Input.Tree
             : base(treeFilePath)
         {
             int treeCount = -1;
+            string? mostRecentSpeciesID = null;
             treeFile.Parse((row) =>
             {
                 ++treeCount;
-                this.DbhInCm.Add(Single.Parse(row[individualTreeHeader.Dbh], CultureInfo.InvariantCulture));
-                this.GisX.Add(Single.Parse(row[individualTreeHeader.X], CultureInfo.InvariantCulture));
-                this.GisY.Add(Single.Parse(row[individualTreeHeader.Y], CultureInfo.InvariantCulture));
+                this.DbhInCm.Add(Single.Parse(row[individualTreeHeader.Dbh], NumberStyles.Float));
+                this.GisX.Add(Single.Parse(row[individualTreeHeader.X], NumberStyles.Float));
+                this.GisY.Add(Single.Parse(row[individualTreeHeader.Y], NumberStyles.Float));
 
-                string speciesID = row[individualTreeHeader.Species];
-                if (int.TryParse(speciesID, out int picusID))
+                ReadOnlySpan<char> speciesID = row[individualTreeHeader.Species];
+                if (Int32.TryParse(speciesID, out int picusID))
                 {
                     int speciesIndex = PicusSpeciesIDs.IndexOf(picusID);
                     if (speciesIndex == -1)
@@ -34,7 +35,11 @@ namespace iLand.Input.Tree
                     }
                     speciesID = iLandSpeciesIDs[speciesIndex];
                 }
-                this.SpeciesID.Add(speciesID);
+                if (MemoryExtensions.Equals(speciesID, mostRecentSpeciesID, StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    mostRecentSpeciesID = speciesID.ToString();
+                }
+                this.SpeciesID.Add(mostRecentSpeciesID!); // ID string reuse can be made more sophisticated if needed
 
                 int treeID = treeCount;
                 if (individualTreeHeader.TreeID >= 0)
@@ -58,20 +63,20 @@ namespace iLand.Input.Tree
                 this.TreeID.Add(treeID);
 
                 // convert from Picus-cm to m if necessary
-                float height = individualTreeHeader.HeightConversionFactor * Single.Parse(row[individualTreeHeader.Height], CultureInfo.InvariantCulture);
+                float height = individualTreeHeader.HeightConversionFactor * Single.Parse(row[individualTreeHeader.Height], NumberStyles.Float);
                 this.HeightInM.Add(height);
 
                 UInt16 age = 0;
                 if (individualTreeHeader.Age >= 0)
                 {
-                    age = UInt16.Parse(row[individualTreeHeader.Age], CultureInfo.InvariantCulture);
+                    age = UInt16.Parse(row[individualTreeHeader.Age], NumberStyles.Integer);
                 }
                 this.AgeInYears.Add(age);
 
                 int standID = Constant.DefaultStandID;
                 if (individualTreeHeader.StandID >= 0)
                 {
-                    standID = Int32.Parse(row[individualTreeHeader.StandID], CultureInfo.InvariantCulture);
+                    standID = Int32.Parse(row[individualTreeHeader.StandID], NumberStyles.Integer);
                 }
                 this.StandID.Add(standID);
             });

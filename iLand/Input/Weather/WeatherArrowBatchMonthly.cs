@@ -90,7 +90,7 @@ namespace iLand.Input.Weather
         public FloatArray TemperatureMin10 { get; private init; }
         public FloatArray TemperatureMin11 { get; private init; }
         public FloatArray TemperatureMin12 { get; private init; }
-        public Int32Array Year { get; private init; }
+        public Int16Array Year { get; private init; }
 
         public WeatherArrowBatchMonthly(RecordBatch arrowBatch)
         {
@@ -182,7 +182,7 @@ namespace iLand.Input.Weather
             this.TemperatureMin10 = ArrowBatch.GetArray<FloatArray>("Tmin10", schema, fields);
             this.TemperatureMin11 = ArrowBatch.GetArray<FloatArray>("Tmin11", schema, fields);
             this.TemperatureMin12 = ArrowBatch.GetArray<FloatArray>("Tmin12", schema, fields);
-            this.Year = ArrowBatch.GetArray<Int32Array>("Year", schema, fields);
+            this.Year = ArrowBatch.GetArray<Int16Array>("Year", schema, fields);
         }
     }
 }

@@ -92,7 +92,7 @@ namespace iLand.Tree
                 treesOfSpecies = new TreeListSpatial(landscape, this.resourceUnit, this.SpeciesAvailableOnResourceUnit[speciesIndex].Species);
                 this.TreesBySpeciesID.Add(speciesID, treesOfSpecies);
             }
-            Debug.Assert(String.Equals(treesOfSpecies.Species.ID, speciesID, StringComparison.OrdinalIgnoreCase));
+            Debug.Assert(String.Equals(treesOfSpecies.Species.ID, speciesID, StringComparison.Ordinal));
 
             // create tree
             float lightStampBeerLambertK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;

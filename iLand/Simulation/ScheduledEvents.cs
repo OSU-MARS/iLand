@@ -1,5 +1,6 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
+using iLand.Tool;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -21,20 +22,20 @@ namespace iLand.Simulation
                 throw new NotSupportedException(String.Format("TimeEvents: input file '{0}' has no 'year' column.", eventFilePath));
             }
 
-            eventFile.Parse((string[] row) =>
+            eventFile.Parse((SplitString row) =>
             {
-                int year = Int32.Parse(row[yearIndex], CultureInfo.InvariantCulture);
+                int year = Int32.Parse(row[yearIndex], NumberStyles.Integer);
                 if (this.eventsByYear.TryGetValue(year, out List<(string Name, string Value)>? eventsOfYear) == false)
                 {
                     eventsOfYear = new();
                     this.eventsByYear.Add(year, eventsOfYear);
                 }
 
-                for (int column = 0; column < row.Length; column++)
+                for (int column = 0; column < row.Count; column++)
                 {
                     if (column != yearIndex)
                     {
-                        (string Name, string Value) eventInYear = new(eventFile.Columns[column], row[column]);
+                        (string Name, string Value) eventInYear = new(eventFile.Columns[column], row[column].ToString());
                         eventsOfYear.Add(eventInYear);
                     }
                 }
@@ -54,7 +55,7 @@ namespace iLand.Simulation
             {
                 string key = eventInYear.Name; // key
                 // special values: if (key=="xxx" ->
-                if (String.Equals(key, "script", StringComparison.OrdinalIgnoreCase) || String.Equals(key, "javascript", StringComparison.OrdinalIgnoreCase))
+                if (String.Equals(key, "script", StringComparison.Ordinal) || String.Equals(key, "javascript", StringComparison.Ordinal))
                 {
                     // execute as javascript expression within the management script context...
                     if (String.IsNullOrEmpty(eventInYear.Value.ToString()) == false)

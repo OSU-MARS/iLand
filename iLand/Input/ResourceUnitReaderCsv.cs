@@ -1,4 +1,5 @@
-﻿using System;
+﻿using iLand.Tool;
+using System;
 
 namespace iLand.Input
 {
@@ -25,7 +26,7 @@ namespace iLand.Input
                 throw new NotSupportedException("Environment file must have a species table column if /project/model/world/species/databaseTable is not specified in the project file.");
             }
 
-            resourceUnitEnvironmentFile.Parse((string[] row) =>
+            resourceUnitEnvironmentFile.Parse((SplitString row) =>
             {
                 ResourceUnitEnvironment resourceUnitEnvironment = new(environmentHeader, row, defaultEnvironment);
 

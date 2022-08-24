@@ -43,7 +43,7 @@ namespace iLand.Output.Memory
 
         private void Extend()
         {
-            int newCapacityInYears = this.CapacityInYears + Constant.Data.AnnualAllocationIncrement;
+            int newCapacityInYears = this.CapacityInYears + Constant.Data.DefaultAnnualAllocationIncrement;
 
             this.TreesByYear = this.TreesByYear.Resize(newCapacityInYears);
         }

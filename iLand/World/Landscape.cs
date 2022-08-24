@@ -93,7 +93,7 @@ namespace iLand.World
                 // for now, assume .csv and .feather weather is monthly and all weather tables in SQLite databases are daily
                 Constant.File.CsvExtension => new ResourceUnitReaderCsv(resourceUnitFilePath, defaultEnvironment),
                 Constant.File.FeatherExtension => new ResourceUnitReaderFeather(resourceUnitFilePath, defaultEnvironment),
-                _ => throw new NotSupportedException("Unhandled resource unit environment file type '" + resourceUnitExtension + "'.")
+                _ => throw new NotSupportedException("Unhandled resource unit environment file extension '" + resourceUnitExtension + "'.")
             };
             RectangleF resourceUnitGisExtent = resourceUnitReader.GetBoundingBox();
             this.ProjectOriginInGisCoordinates = new(resourceUnitGisExtent.X - worldBufferWidth, resourceUnitGisExtent.Y - worldBufferWidth);
@@ -114,7 +114,7 @@ namespace iLand.World
                 Constant.File.CsvExtension => new WeatherReaderMonthlyCsv(weatherFilePath, projectFile.World.Weather.StartYear),
                 Constant.File.FeatherExtension => new WeatherReaderMonthlyFeather(weatherFilePath, projectFile.World.Weather.StartYear),
                 Constant.File.SqliteExtension => null,
-                _ => throw new NotSupportedException("Unhandled weather file type '" + weatherFileExtension + "'.")
+                _ => throw new NotSupportedException("Unhandled weather file extension '" + weatherFileExtension + "'.")
             };
 
             for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitReader.Environments.Count; ++resourceUnitIndex)
@@ -543,7 +543,7 @@ namespace iLand.World
 
             // TODO: should this be sorted by stand ID?
             List<StandSaplings> saplingsInStands = new();
-            saplingFile.Parse((string[] row) =>
+            saplingFile.Parse((SplitString row) =>
             {
                 StandSaplings saplings = new(saplingHeader, row);
                 saplingsInStands.Add(saplings);

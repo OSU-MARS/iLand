@@ -1,4 +1,5 @@
-﻿using System;
+﻿using iLand.Input.ProjectFile;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 
@@ -14,14 +15,21 @@ namespace iLand.Input.Tree
             this.TreeSizeDistribution = new();
 
             int lineNumber = 0;
+            string? mostRecentSpecies = null;
             treeFile.Parse((row) =>
             {
-                TreeSizeRange sizeRange = new(row[treeSizeHeader.Species])
+                ReadOnlySpan<char> species = row[treeSizeHeader.Species];
+                if (MemoryExtensions.Equals(species, mostRecentSpecies, StringComparison.OrdinalIgnoreCase) == false)
                 {
-                    Count = Single.Parse(row[treeSizeHeader.Count], CultureInfo.InvariantCulture),
-                    DbhFrom = Single.Parse(row[treeSizeHeader.MinimumDbh], CultureInfo.InvariantCulture),
-                    DbhTo = Single.Parse(row[treeSizeHeader.MaximumDbh], CultureInfo.InvariantCulture),
-                    HeightDiameterRatio = Single.Parse(row[treeSizeHeader.HeightDiameterRatio], CultureInfo.InvariantCulture)
+                    mostRecentSpecies = species.ToString();
+                }
+
+                TreeSizeRange sizeRange = new(mostRecentSpecies!)
+                {
+                    Count = Single.Parse(row[treeSizeHeader.Count], NumberStyles.Integer),
+                    DbhFrom = Single.Parse(row[treeSizeHeader.MinimumDbh], NumberStyles.Float),
+                    DbhTo = Single.Parse(row[treeSizeHeader.MaximumDbh], NumberStyles.Float),
+                    HeightDiameterRatio = Single.Parse(row[treeSizeHeader.HeightDiameterRatio], NumberStyles.Float)
                 };
                 ++lineNumber;
 
@@ -48,7 +56,7 @@ namespace iLand.Input.Tree
 
                 if (treeSizeHeader.Density >= 0)
                 {
-                    sizeRange.Density = Single.Parse(row[treeSizeHeader.Density], CultureInfo.InvariantCulture);
+                    sizeRange.Density = Single.Parse(row[treeSizeHeader.Density], NumberStyles.Float);
                 }
                 else
                 {

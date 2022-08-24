@@ -8,10 +8,10 @@ namespace iLand.Input.Weather
     {
         public float[] SnowTotalInMM { get; private set; }
 
-        public WeatherTimeSeriesMonthly(Timestep timestep, int capacityInMonths)
-            : base(timestep, capacityInMonths)
+        public WeatherTimeSeriesMonthly(Timestep timestep)
+            : base(timestep)
         {
-            this.SnowTotalInMM = new float[capacityInMonths];
+            this.SnowTotalInMM = Array.Empty<float>();
         }
 
         public override void Resize(int newSize)
@@ -21,16 +21,20 @@ namespace iLand.Input.Weather
             this.SnowTotalInMM = this.SnowTotalInMM.Resize(newSize);
         }
 
-        public override void Validate(int monthIndex)
+        public override void Validate(int startMonthIndex, int monthCount)
         {
-            base.Validate(monthIndex);
+            base.Validate(startMonthIndex, monthCount);
 
-            float totalPrecipitationInMM = this.PrecipitationTotalInMM[monthIndex];
-            float totalSnowInMM = this.SnowTotalInMM[monthIndex];
-            if (Single.IsNaN(totalSnowInMM) || (totalSnowInMM < 0.0F) || (totalSnowInMM > totalPrecipitationInMM))
+            int endMonthIndex = startMonthIndex + monthCount;
+            for (int monthIndex = startMonthIndex; monthIndex < endMonthIndex; ++monthIndex)
             {
-                DateTime date = new(this.Year[monthIndex], this.Month[monthIndex], 1);
-                throw new NotSupportedException("Total monthly snowfall of " + totalSnowInMM + " mm in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture)  + " is NaN, negative, or exceeds the total monthly precipitation of " + totalPrecipitationInMM + " mm (time series chunk index " + monthIndex + ").");
+                float totalPrecipitationInMM = this.PrecipitationTotalInMM[monthIndex];
+                float totalSnowInMM = this.SnowTotalInMM[monthIndex];
+                if (Single.IsNaN(totalSnowInMM) || (totalSnowInMM < 0.0F) || (totalSnowInMM > totalPrecipitationInMM))
+                {
+                    DateTime date = new(this.Year[monthIndex], this.Month[monthIndex], 1);
+                    throw new NotSupportedException("Total monthly snowfall of " + totalSnowInMM + " mm in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is NaN, negative, or exceeds the total monthly precipitation of " + totalPrecipitationInMM + " mm (time series chunk index " + monthIndex + ").");
+                }
             }
         }
     }

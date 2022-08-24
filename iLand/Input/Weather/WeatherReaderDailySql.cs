@@ -65,10 +65,10 @@ namespace iLand.Input.Weather
             int dayIndex = 0;
             int previousMonth = -1;
             int previousYear = -1;
-            bool daysAvailableInQuery = true;
+            bool queryHasDaysAvailable = true;
             dailyWeather.Count = 0;
             monthDayIndices.Clear();
-            for (int yearLoadIndex = 0; daysAvailableInQuery && (yearLoadIndex < yearsToLoad); ++yearLoadIndex)
+            for (int yearLoadIndex = 0; queryHasDaysAvailable && (yearLoadIndex < yearsToLoad); ++yearLoadIndex)
             {
                 // check for year-specific temperature or precipitation modifier
                 float precipitationMultiplier = this.precipitationMultiplier;
@@ -98,7 +98,7 @@ namespace iLand.Input.Weather
                 //    }
                 //}
 
-                for (int daysLoaded = 0; daysAvailableInQuery = weatherReader.Read(); ++dayIndex) // mStore.begin();
+                for (int daysLoaded = 0; queryHasDaysAvailable = weatherReader.Read(); ++dayIndex) // mStore.begin();
                 {
                     ++daysLoaded;
                     if (daysLoaded > Constant.DaysInLeapYear)
@@ -108,12 +108,13 @@ namespace iLand.Input.Weather
 
                     if (dailyWeather.Count == dailyWeather.Capacity)
                     {
+                        // TODO: include row count in query and use it to set capacity
                         dailyWeather.Resize(dailyWeather.Capacity + Constant.DaysInDecade);
                     }
 
-                    int year = weatherReader.GetInt32(0);
-                    int month = weatherReader.GetInt32(1);
-                    int dayOfMonth = weatherReader.GetInt32(2);
+                    Int16 year = weatherReader.GetInt16(0);
+                    byte month = weatherReader.GetByte(1);
+                    byte dayOfMonth = weatherReader.GetByte(2);
                     float minTemperature = weatherReader.GetFloat(3) + temperatureShift;
                     float maxTemperature = weatherReader.GetFloat(4) + temperatureShift;
 
@@ -133,7 +134,6 @@ namespace iLand.Input.Weather
                     dailyWeather.SolarRadiationTotal[dayIndex] = weatherReader.GetFloat(6);
                     dailyWeather.VpdMeanInKPa[dayIndex] = weatherReader.GetFloat(7);
                     ++dailyWeather.Count;
-                    dailyWeather.Validate(dayIndex);
 
                     if (month != previousMonth)
                     {
@@ -161,6 +161,8 @@ namespace iLand.Input.Weather
                     }
                 }
             }
+
+            dailyWeather.Validate(0, dailyWeather.Count); // would be more efficient if done prior to database insert
 
             monthDayIndices.Add(dayIndex); // the absolute last day...
             this.nextYearToLoad += yearsToLoad;

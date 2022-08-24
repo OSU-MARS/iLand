@@ -74,7 +74,7 @@
       </nitrogenResponseClasses>
     </species>
     <weather>
-      <co2file>co2 ssp370.csv</co2file>
+      <co2file>co2 ssp370.feather</co2file>
       <weatherFile>unit test weather 200 m 2011-2100 13GCMssp370.feather</weatherFile>
       <startYear>2022</startYear>
     </weather>

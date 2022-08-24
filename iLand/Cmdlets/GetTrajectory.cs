@@ -1,5 +1,6 @@
 ﻿using iLand.Input.ProjectFile;
 using System;
+using System.Diagnostics;
 using System.Management.Automation;
 using Model = iLand.Simulation.Model;
 
@@ -13,7 +14,7 @@ namespace iLand.Cmdlets
         public string? Project { get; set; }
 
         [Parameter]
-        [ValidateRange(ValidateRangeKind.Positive)]
+        [ValidateRange(0, 25000)] // allow zero years to load a model and get only trajectory's initial (simulation year zero) values
         public int Years { get; set; }
 
         public GetTrajectory()
@@ -23,8 +24,12 @@ namespace iLand.Cmdlets
 
         protected override void ProcessRecord()
         {
+            Stopwatch stopwatch = new();
+            stopwatch.Start();
+
             Project projectFile = new(this.Project!);
             Model model = new(projectFile); // up to the caller to dispose
+            TimeSpan setupTime = stopwatch.Elapsed;
 
             DateTime mostRecentProgressUpdate = DateTime.UtcNow;
             ProgressRecord progressRecord = new(0, "Simulating trajectory", "year 0/" + this.Years + "...");
@@ -41,8 +46,11 @@ namespace iLand.Cmdlets
                     mostRecentProgressUpdate = utcNow;
                 }
             }
-
             this.WriteObject(model);
+
+            stopwatch.Stop();
+            double totalSeconds = stopwatch.Elapsed.TotalSeconds;
+            this.WriteVerbose("Trajectory obtained in " + totalSeconds.ToString("0.0") + " s (" + setupTime.TotalSeconds.ToString("0.0") + " s load, " + (totalSeconds - setupTime.TotalSeconds).ToString("0.0") +" s simulation).");
         }
     }
 }

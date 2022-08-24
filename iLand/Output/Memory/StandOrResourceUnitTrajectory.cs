@@ -113,7 +113,7 @@ namespace iLand.Output.Memory
 
         protected void Extend()
         {
-            int newCapacity = this.CapacityInYears + Constant.Data.AnnualAllocationIncrement;
+            int newCapacity = this.CapacityInYears + Constant.Data.DefaultAnnualAllocationIncrement;
 
             this.AverageDbhByYear = this.AverageDbhByYear.Resize(newCapacity);
             this.AverageHeightByYear = this.AverageHeightByYear.Resize(newCapacity);
