@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿using iLand.Extensions;
+using iLand.Input.ProjectFile;
 using iLand.Input.Tree;
 using iLand.Tool;
 using Microsoft.Data.Sqlite;
@@ -9,11 +10,10 @@ using Model = iLand.Simulation.Model;
 
 namespace iLand.Tree
 {
-    /** @class Species
-      The behavior and general properties of tree species.
+    /** The behavior and general properties of tree species.
       Because the individual trees are designed as leightweight as possible, lots of stuff is done by the Species.
       Inter alia, Species do:
-      - store all the precalcualted patterns for light competition (LIP, stamps)
+      - store all the precalculated patterns for light competition (LIP, stamps)
       - do most of the growth (3-PG) calculation
       */
     public class TreeSpecies
@@ -53,8 +53,6 @@ namespace iLand.Tree
         private float treeMigKappaS; // seed dispersal parameters (TreeMig)
 
         public TreeList EmptyTreeList { get; private init; }
-        /// 4-character unique identification of the tree species
-        public string ID { get; private init; }
         public int Index { get; private init; } // unique index of species within current species set
         public bool IsConiferous { get; private set; }
         public bool IsEvergreen { get; private set; }
@@ -62,6 +60,8 @@ namespace iLand.Tree
         public int LeafPhenologyID { get; private set; } // leaf phenology defined in project file or Constant.EvergreenLeafPhenologyID
         /// the full name (e.g. Picea abies) of the species
         public string Name { get; private init; }
+        public WorldFloraID WorldFloraID { get; private init; }
+
         // carbon:nitrogen ratios
         public float CarbonNitrogenRatioFoliage { get; private set; }
         public float CarbonNitrogenRatioFineRoot { get; private set; }
@@ -95,7 +95,7 @@ namespace iLand.Tree
         public SeedDispersal? SeedDispersal { get; set; }
         public TreeSpeciesSet SpeciesSet { get; private init; }
 
-        private TreeSpecies(TreeSpeciesSet speciesSet, string id, string name, string stampFilePath)
+        private TreeSpecies(TreeSpeciesSet speciesSet, WorldFloraID speciesID, string name, string stampFilePath)
         {
             if (speciesSet == null)
             {
@@ -109,13 +109,13 @@ namespace iLand.Tree
             this.serotinyFormula = new();
 
             this.EmptyTreeList = new(this);
-            this.ID = id;
             this.Index = speciesSet.Count;
             this.Name = name;
             this.SaplingEstablishment = new();
             this.SaplingGrowth = new();
             this.SeedDispersal = null;
             this.SpeciesSet = speciesSet;
+            this.WorldFloraID = speciesID;
 
             // attach writer stamps to reader stamps
             this.lightIntensityProfiles.AttachReaderStamps(speciesSet.ReaderStamps);
@@ -300,7 +300,7 @@ namespace iLand.Tree
         public static TreeSpecies Load(Project projectFile, TreeSpeciesReader reader, TreeSpeciesSet speciesSet)
         {
             string stampFilePath = projectFile.GetFilePath(ProjectDirectory.LightIntensityProfile, reader.LipFile());
-            TreeSpecies species = new(speciesSet, reader.ID(), reader.Name(), stampFilePath)
+            TreeSpecies species = new(speciesSet, WorldFloraIDExtensions.Parse(reader.ID()), reader.Name(), stampFilePath)
             {
                 Active = reader.Active(),
 
@@ -336,7 +336,7 @@ namespace iLand.Tree
                 (species.CarbonNitrogenRatioFoliage <= 0.0F) || (species.CarbonNitrogenRatioFoliage > 1000.0F) ||
                 (species.CarbonNitrogenRatioWood <= 0.0F) || (species.CarbonNitrogenRatioFoliage > 1000.0F))
             {
-                throw new SqliteException("Error reading " + species.ID + ": at least one carbon-nitrogen ratio is zero, negative, or improbably high.", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error reading " + species.WorldFloraID + ": at least one carbon-nitrogen ratio is zero, negative, or improbably high.", (int)SqliteErrorCode.Error);
             }
 
             // turnover rates
@@ -356,12 +356,12 @@ namespace iLand.Tree
             species.WoodDensity = reader.WoodDensity();
             if ((species.WoodDensity <= 50.0F) || (species.WoodDensity > 2000.0F)) // balsa 100-250 kg/m³, black ironwood 1355 kg/m³
             {
-                throw new SqliteException("Error loading '" + species.ID + "': wood density must be in the range of [50.0, 2000.0] kg/m³.", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error loading '" + species.WorldFloraID + "': wood density must be in the range of [50.0, 2000.0] kg/m³.", (int)SqliteErrorCode.Error);
             }
             float formFactor = reader.FormFactor();
             if ((formFactor <= 0.0F) || (formFactor > 1.0F)) // 0 = disc, 1 = cylinder
             {
-                throw new SqliteException("Error loading '" + species.ID + "': taper form factor must be in the range (0.0, 1.0).", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error loading '" + species.WorldFloraID + "': taper form factor must be in the range (0.0, 1.0).", (int)SqliteErrorCode.Error);
             }
             species.VolumeFactor = Constant.QuarterPi * formFactor; // volume = formfactor*pi/4 *d^2*h -> volume = volumefactor * d^2 * h
 
@@ -382,7 +382,7 @@ namespace iLand.Tree
                 (species.SpecificLeafArea <= 0.0F) || (species.SpecificLeafArea > 300.0F) || // nominal upper bound from mosses
                 (species.FinerootFoliageRatio <= 0.0F))
             {
-                throw new SqliteException("Error loading '" + species.ID + "': at least one biomass parameter is zero, negative, or improbably high.", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error loading '" + species.WorldFloraID + "': at least one biomass parameter is zero, negative, or improbably high.", (int)SqliteErrorCode.Error);
             }
 
             // aging
@@ -396,7 +396,7 @@ namespace iLand.Tree
             if ((species.maximumAgeInYears <= 0.0F) || (species.maximumAgeInYears > 1000.0F * 1000.0F) ||
                 (species.maximumHeightInM <= 0.0) || (species.maximumHeightInM > 200.0)) // Sequoia semperivirens (Hyperion) 115.7 m
             {
-                throw new SqliteException("Error loading '" + species.ID + "': at least one aging parameter is zero, negative, or improbably high.", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error loading '" + species.WorldFloraID + "': at least one aging parameter is zero, negative, or improbably high.", (int)SqliteErrorCode.Error);
             }
 
             // mortality
@@ -406,7 +406,7 @@ namespace iLand.Tree
             float stressMortalityCoefficient = reader.ProbStress();
             if ((fixedMortalityBase < 0.0F) || (stressMortalityCoefficient < 0.0F) || (stressMortalityCoefficient > 1000.0F)) // sanity upper bound
             {
-                throw new SqliteException("Error loading '" + species.ID + "': invalid mortality parameters.", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error loading '" + species.WorldFloraID + "': invalid mortality parameters.", (int)SqliteErrorCode.Error);
             }
 
             // TODO: probability of senescence as a function of age
@@ -419,17 +419,17 @@ namespace iLand.Tree
             species.modifierTempMax = reader.RespTempMax();
             if (species.modifierVpdK >= 0.0F)
             {
-                throw new SqliteException("Error loading '" + species.ID + "': VPD exponent greater than or equal to zero.", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error loading '" + species.WorldFloraID + "': VPD exponent greater than or equal to zero.", (int)SqliteErrorCode.Error);
             }
             if (species.modifierTempMax <= 0.0F || species.modifierTempMin >= species.modifierTempMax)
             {
-                throw new SqliteException("Error loading '" + species.ID + "': invalid temperature response parameters.", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error loading '" + species.WorldFloraID + "': invalid temperature response parameters.", (int)SqliteErrorCode.Error);
             }
 
             species.nitrogenResponseClass = reader.RespNitrogenClass();
             if (species.nitrogenResponseClass < 1.0F || species.nitrogenResponseClass > 3.0F)
             {
-                throw new SqliteException("Error loading '" + species.ID + "': nitrogen response class must be in range [1.0 3.0].", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error loading '" + species.WorldFloraID + "': nitrogen response class must be in range [1.0 3.0].", (int)SqliteErrorCode.Error);
             }
 
             // phenology
@@ -443,7 +443,7 @@ namespace iLand.Tree
             species.lightResponseClass = reader.LightResponseClass();
             if (species.lightResponseClass < 1.0F || species.lightResponseClass > 5.0F)
             {
-                throw new SqliteException("Error loading '" + species.ID + "': light response class must be in range [1.0 5.0].", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error loading '" + species.WorldFloraID + "': light response class must be in range [1.0 5.0].", (int)SqliteErrorCode.Error);
             }
 
             // regeneration
@@ -451,7 +451,7 @@ namespace iLand.Tree
             int mastYearInterval = reader.MastYearInterval();
             if (mastYearInterval < 1)
             {
-                throw new SqliteException("Error loading '" + species.ID + "': seed year interval must be positive.", (int)SqliteErrorCode.Error);
+                throw new SqliteException("Error loading '" + species.WorldFloraID + "': seed year interval must be positive.", (int)SqliteErrorCode.Error);
             }
             species.mastYearProbability = 1.0F / mastYearInterval;
             species.minimumAgeInYearsForSeedProduction = reader.MaturityYears();
@@ -512,7 +512,7 @@ namespace iLand.Tree
                 this.IsMastYear = (model.RandomGenerator.GetRandomProbability() < mastYearProbability);
                 if (this.IsMastYear && (model.Project.Output.Logging.LogLevel >= EventLevel.Informational))
                 {
-                    Trace.TraceInformation("Seed year for " + this.ID + ".");
+                    Trace.TraceInformation("Seed year for " + this.WorldFloraID + ".");
                 }
                 // clear seed map
                 this.SeedDispersal.Clear(model);

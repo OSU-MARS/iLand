@@ -84,7 +84,7 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                     insertRow.Parameters[1].Value = trees.ResourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = trees.ResourceUnit.ID;
-                    insertRow.Parameters[3].Value = trees.Species.ID;
+                    insertRow.Parameters[3].Value = trees.Species.WorldFloraID;
                     insertRow.Parameters[4].Value = trees.TreeID[treeIndex];
                     insertRow.Parameters[5].Value = (int)removedTreesOfSpecies.Removals[treeIndex];
                     insertRow.Parameters[6].Value = trees.GetCellCenterPoint(treeIndex).X;

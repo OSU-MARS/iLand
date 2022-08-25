@@ -75,7 +75,7 @@ namespace iLand.Output.Sql
                                     insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                                     insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
                                     insertRow.Parameters[2].Value = resourceUnit.ID;
-                                    insertRow.Parameters[3].Value = ruSpecies.Species.ID;
+                                    insertRow.Parameters[3].Value = ruSpecies.Species.WorldFloraID;
                                     insertRow.Parameters[4].Value = n_repr;
                                     insertRow.Parameters[5].Value = dbh;
                                     insertRow.Parameters[6].Value = saplingCell.Saplings[index].HeightInM;

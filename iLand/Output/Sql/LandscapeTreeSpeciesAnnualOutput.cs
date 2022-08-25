@@ -13,12 +13,12 @@ namespace iLand.Output.Sql
     public class LandscapeTreeSpeciesAnnualOutput : AnnualOutput
     {
         private readonly Expression filter;
-        private readonly SortedList<string, LandscapeTreeSpeciesStatistics> treeStatisticsBySpeciesID;
+        private readonly SortedList<WorldFloraID, LandscapeTreeSpeciesStatistics> treeStatisticsBySpecies;
 
         public LandscapeTreeSpeciesAnnualOutput()
         {
             this.filter = new();
-            this.treeStatisticsBySpeciesID = new();
+            this.treeStatisticsBySpecies = new();
 
             this.Name = "Landscape aggregates per species";
             this.TableName = "landscape";
@@ -60,9 +60,9 @@ namespace iLand.Output.Sql
             }
 
             // clear landscape stats
-            for (int treeSpeciesIndex = 0; treeSpeciesIndex < this.treeStatisticsBySpeciesID.Count; ++treeSpeciesIndex)
+            for (int treeSpeciesIndex = 0; treeSpeciesIndex < this.treeStatisticsBySpecies.Count; ++treeSpeciesIndex)
             {
-                this.treeStatisticsBySpeciesID.Values[treeSpeciesIndex].Zero();
+                this.treeStatisticsBySpecies.Values[treeSpeciesIndex].Zero();
             }
 
             foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
@@ -79,19 +79,19 @@ namespace iLand.Output.Sql
                     {
                         continue;
                     }
-                    if (this.treeStatisticsBySpeciesID.TryGetValue(ruSpecies.Species.ID, out LandscapeTreeSpeciesStatistics? speciesStatistics) == false)
+                    if (this.treeStatisticsBySpecies.TryGetValue(ruSpecies.Species.WorldFloraID, out LandscapeTreeSpeciesStatistics? speciesStatistics) == false)
                     {
                         speciesStatistics = new();
-                        this.treeStatisticsBySpeciesID.Add(ruSpecies.Species.ID, speciesStatistics);
+                        this.treeStatisticsBySpecies.Add(ruSpecies.Species.WorldFloraID, speciesStatistics);
                     }
                     speciesStatistics.AddResourceUnit(resourceUnit, ruLiveTreeStatisticsForSpecies, totalStemVolumeInM3PerHa);
                 }
             }
 
             // write species to output stream
-            foreach (KeyValuePair<string, LandscapeTreeSpeciesStatistics> species in this.treeStatisticsBySpeciesID)
+            for (int treeSpeciesIndex = 0; treeSpeciesIndex < this.treeStatisticsBySpecies.Count; ++treeSpeciesIndex)
             {
-                LandscapeTreeSpeciesStatistics speciesStats = species.Value;
+                LandscapeTreeSpeciesStatistics speciesStats = this.treeStatisticsBySpecies.Values[treeSpeciesIndex];
                 if (speciesStats.TreeCount > 0.0F)
                 {
                     // species may have died out of landscape, in which case tree count and all other properties should be zero
@@ -99,7 +99,7 @@ namespace iLand.Output.Sql
                 }
 
                 insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
-                insertRow.Parameters[1].Value = species.Key; // keys: year, species
+                insertRow.Parameters[1].Value = this.treeStatisticsBySpecies.Keys[treeSpeciesIndex];
                 insertRow.Parameters[2].Value = speciesStats.TreeCount;
                 insertRow.Parameters[3].Value = speciesStats.AverageDbh;
                 insertRow.Parameters[4].Value = speciesStats.AverageHeight;

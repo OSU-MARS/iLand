@@ -4,41 +4,39 @@ using System.Threading.Tasks;
 
 namespace iLand.Simulation
 {
-    /** @class ThreadRunner
-        Encapsulates the invokation of multiple threads for paralellized tasks.
+    /** Encapsulates the invokation of multiple threads for paralellized tasks.
         To avoid lost updates during the light influence pattern application, all the resourceUnits
         are divided in two lists based on the index (even vs. uneven). These (for almost all cases)
         ensures, that no directly neighboring resourceUnits are processed.
         */
-    public class MaybeParallel<TLocal>
+    public class MaybeParallel<TItem>
     {
-        private readonly List<TLocal> parallelizableItems;
+        private readonly List<TItem> parallelizableItems;
+        private readonly ParallelOptions parallelOptions;
 
-        public int MaximumThreads { get; set; }
-
-        public MaybeParallel(List<TLocal> parallelizableItems)
+        public MaybeParallel(List<TItem> parallelizableItems, int maximumThreads)
         {
             this.parallelizableItems = parallelizableItems;
+            this.parallelOptions = new()
+            {
+                MaxDegreeOfParallelism = maximumThreads
+            };
         }
 
         // run an action in parallel
-        public void ForEach(Action<TLocal> action)
+        public void For(Action<TItem> action)
         {
-            if ((this.MaximumThreads > 1) && (this.parallelizableItems.Count > 3))
+            if ((this.parallelOptions.MaxDegreeOfParallelism > 1) && (this.parallelizableItems.Count > 3))
             {
-                ParallelOptions parallelOptions = new()
+                Parallel.For(0, this.parallelizableItems.Count, this.parallelOptions, (int index) =>
                 {
-                    MaxDegreeOfParallelism = this.MaximumThreads
-                };
-                Parallel.ForEach(this.parallelizableItems, parallelOptions, (TLocal workUnit) =>
-                {
-                    action.Invoke(workUnit);
+                    action.Invoke(this.parallelizableItems[index]);
                 });
             }
             else
             {
                 // single threaded operation
-                foreach (TLocal workUnit in this.parallelizableItems)
+                foreach (TItem workUnit in this.parallelizableItems)
                 {
                     action.Invoke(workUnit);
                 }

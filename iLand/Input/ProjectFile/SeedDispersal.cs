@@ -1,4 +1,6 @@
-﻿using System;
+﻿using iLand.Extensions;
+using iLand.Tree;
+using System.Collections.Generic;
 using System.Xml;
 
 namespace iLand.Input.ProjectFile
@@ -9,7 +11,7 @@ namespace iLand.Input.ProjectFile
 		public string? ExternalSeedBackgroundInput { get; private set; }
 		public bool ExternalSeedEnabled { get; private set; }
 		public string? ExternalSeedDirection { get; private set; }
-		public string? ExternalSeedSpecies { get; private set; }
+		public List<WorldFloraID> ExternalSeedSpecies { get; private set; }
 		public string? ExternalSeedBuffer { get; private set; }
 		public float RecruitmentDimensionVariation { get; private set; }
 
@@ -24,7 +26,7 @@ namespace iLand.Input.ProjectFile
 			this.ExternalSeedBuffer = null;
 			this.ExternalSeedEnabled = false;
 			this.ExternalSeedDirection = null;
-			this.ExternalSeedSpecies = null;
+			this.ExternalSeedSpecies = new();
 			this.LongDistanceDispersal = new();
 			this.RecruitmentDimensionVariation = 0.1F; // +/- 10%
         }
@@ -62,7 +64,7 @@ namespace iLand.Input.ProjectFile
 						this.ExternalSeedDirection = reader.ReadElementContentAsString().Trim();
 						break;
 					case "externalSeedSpecies":
-						this.ExternalSeedSpecies = reader.ReadElementContentAsString().Trim();
+                        this.ExternalSeedSpecies.Add(WorldFloraIDExtensions.Parse(reader.ReadElementContentAsString()));
 						break;
 					case "externalSeedBuffer":
 						this.ExternalSeedBuffer = reader.ReadElementContentAsString().Trim();

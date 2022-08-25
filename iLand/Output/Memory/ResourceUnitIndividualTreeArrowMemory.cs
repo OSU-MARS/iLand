@@ -80,7 +80,7 @@ namespace iLand.Output.Memory
             {
                 { "year", "Calendar year." },
                 { "standID", "ID number of stand tree is assigned to." },
-                { "species", "Integer code for tree species, typically either a USFS FIA code (US Forest Service Forest Inventory and Analysis, 16 bit) or ITIS TSN (Integrated Taxonomic Information System taxonmic serial number, 32 bit)." },
+                { "species", "Integer code for tree species, typically either a USFS FIA code (US Forest Service Forest Inventory and Analysis, 16 bit) or WFO ID (World Flora Online identifier, 32 bit)." },
                 { "id", "Tree's tag number or other unique identifier." },
                 { "dbh", "Diameter of tree, cm." },
                 { "height", "Height of tree, m." },
@@ -125,7 +125,7 @@ namespace iLand.Output.Memory
             this.RecordBatch = new(schema, arrowArrays, batchLength);
         }
 
-        public void Add(ResourceUnitIndividualTreeTrajectories trajectories, int treeSpeciesCode, int calendarYearBeforeFirstSimulationTimestep)
+        public void Add(ResourceUnitIndividualTreeTrajectories trajectories, UInt32 treeSpeciesCode, int calendarYearBeforeFirstSimulationTimestep)
         {
             Int16 calendarYear = (Int16)calendarYearBeforeFirstSimulationTimestep;
             for (int simulationYear = 0; simulationYear < trajectories.TreesByYear.Length; ++calendarYear, ++simulationYear)

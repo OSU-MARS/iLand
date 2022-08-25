@@ -1,4 +1,5 @@
-﻿using System;
+﻿using iLand.Tree;
+using System;
 
 namespace iLand.Input.Tree
 {
@@ -10,11 +11,11 @@ namespace iLand.Input.Tree
         public float DbhFrom { get; set; }
         public float DbhTo { get; set; }
         public float HeightDiameterRatio { get; set; }
-        public string TreeSpecies { get; set; }
+        public WorldFloraID SpeciesID { get; set; }
 
-        public TreeSizeRange(string treeSpecies)
+        public TreeSizeRange(WorldFloraID treeSpeciesID)
         {
-            TreeSpecies = treeSpecies;
+            SpeciesID = treeSpeciesID;
         }
     }
 }

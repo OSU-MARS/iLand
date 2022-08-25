@@ -22,13 +22,13 @@ namespace iLand.Input.Weather
                 {
                     // default to expanding capacity by DefaultMonthlyAllocationIncrement
                     int estimatedNewCapacity = this.MonthlyCO2.Capacity + Constant.Data.DefaultMonthlyAllocationIncrement;
-                    double positionInFile = row.GetPositionInFile();
-                    if (positionInFile > Constant.Data.CsvFileSizeEstimationThreshold)
+                    if (this.MonthlyCO2.Count >= 2 * Constant.Data.DefaultMonthlyAllocationIncrement)
                     {
                         // CO₂ .csv file contains a single ordered time series so, once enough of file has been read, attempt to
                         // estimate required capacity from the file's read position in order to limit reallocations of data arrays.
                         // Estimation accuracy can be poor due to read position quantization due to buffered reading and variation
                         // in file content.
+                        double positionInFile = row.GetPositionInFile();
                         int estimatedCapacityFromFilePosition = (int)Math.Ceiling((double)this.MonthlyCO2.Capacity / positionInFile);
                         if (estimatedCapacityFromFilePosition > estimatedNewCapacity)
                         {

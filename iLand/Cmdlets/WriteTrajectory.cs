@@ -3,7 +3,6 @@ using Apache.Arrow.Ipc;
 using Apache.Arrow.Types;
 using iLand.Extensions;
 using iLand.Output.Memory;
-using iLand.Tool;
 using iLand.Tree;
 using System;
 using System.Collections.Generic;
@@ -11,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Management.Automation;
 using Model = iLand.Simulation.Model;
+
 namespace iLand.Cmdlets
 {
     [Cmdlet(VerbsCommunications.Write, "Trajectory")]
@@ -45,7 +45,7 @@ namespace iLand.Cmdlets
             this.Trajectory = null;
         }
 
-        private static void AccumulateTreeSpeciesPresent(ResourceUnitTrajectory resourceUnitTrajectory, List<string> treeSpeciesPresent)
+        private static void AccumulateTreeSpeciesPresent(ResourceUnitTrajectory resourceUnitTrajectory, List<WorldFloraID> treeSpeciesPresent)
         {
             Debug.Assert(resourceUnitTrajectory.ResourceUnitTreeSpecies != null);
 
@@ -58,11 +58,11 @@ namespace iLand.Cmdlets
             // this will fail when multiple species sets are used.
             for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.ResourceUnitTreeSpecies.Length; ++treeSpeciesIndex)
             {
-                string treeSpeciesID = resourceUnitTrajectory.ResourceUnitTreeSpecies[treeSpeciesIndex].Species.ID;
+                WorldFloraID treeSpeciesID = resourceUnitTrajectory.ResourceUnitTreeSpecies[treeSpeciesIndex].Species.WorldFloraID;
                 bool isKnownTreeSpecies = false;
                 for (int knownTreeSpeciesIndex = 0; knownTreeSpeciesIndex < treeSpeciesPresent.Count; ++knownTreeSpeciesIndex)
                 {
-                    if (String.Equals(treeSpeciesID, treeSpeciesPresent[knownTreeSpeciesIndex], StringComparison.Ordinal))
+                    if (treeSpeciesID == treeSpeciesPresent[knownTreeSpeciesIndex])
                     {
                         isKnownTreeSpecies = true;
                         break;
@@ -79,7 +79,7 @@ namespace iLand.Cmdlets
         {
             // find batch length and tree species codes
             int batchLength = 0;
-            List<string> treeSpeciesPresent = new();
+            List<WorldFloraID> treeSpeciesPresent = new();
             for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
@@ -106,7 +106,7 @@ namespace iLand.Cmdlets
                 throw new ParameterOutOfRangeException(nameof(WriteTrajectory.IndividualTreeFile), "An individual tree file was specified but no individual tree trajectories were logged. Is memory output of individual trees enabled?");
             }
 
-            List<int> treeSpeciesCodesAsIntegers = WriteTrajectory.GetTreeSpeciesCodes(treeSpeciesPresent, out IntegerType treeSpeciesFieldType);
+            List<UInt32> treeSpeciesCodesAsIntegers = WriteTrajectory.GetTreeSpeciesCodes(treeSpeciesPresent, out IntegerType treeSpeciesFieldType);
 
             // copy data from resource units
             ResourceUnitIndividualTreeArrowMemory arrowMemory = new(treeSpeciesFieldType, batchLength);
@@ -118,7 +118,7 @@ namespace iLand.Cmdlets
                     for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.IndividualTreeTrajectories.Length; ++treeSpeciesIndex)
                     {
                         ResourceUnitIndividualTreeTrajectories treeTrajectoriesOfSpecies = resourceUnitTrajectory.IndividualTreeTrajectories[treeSpeciesIndex];
-                        int treeSpeciesCode = WriteTrajectory.GetTreeSpeciesCode(resourceUnitTrajectory.ResourceUnitTreeSpecies[treeSpeciesIndex], treeSpeciesPresent, treeSpeciesCodesAsIntegers);
+                        UInt32 treeSpeciesCode = WriteTrajectory.GetTreeSpeciesCode(resourceUnitTrajectory.ResourceUnitTreeSpecies[treeSpeciesIndex], treeSpeciesPresent, treeSpeciesCodesAsIntegers);
                         arrowMemory.Add(treeTrajectoriesOfSpecies, treeSpeciesCode, calendarYearBeforeFirstSimulationTimestep);
                     }
                 }
@@ -132,7 +132,7 @@ namespace iLand.Cmdlets
             // find batch length and tree species present
             int batchLength = 0;
             int maxTrajectoryLengthInYears = Int32.MinValue;
-            List<string> treeSpeciesPresent = new();
+            List<WorldFloraID> treeSpeciesPresent = new();
             for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
@@ -170,7 +170,7 @@ namespace iLand.Cmdlets
                 throw new ParameterOutOfRangeException(nameof(WriteTrajectory.ResourceUnitFile), "A resource unit trajectory file was specified but no resource unit trajectories were logged. Is memory output of resource unit statistics enabled?");
             }
 
-            List<int> treeSpeciesCodesAsIntegers = WriteTrajectory.GetTreeSpeciesCodes(treeSpeciesPresent, out IntegerType treeSpeciesFieldType);
+            List<UInt32> treeSpeciesCodesAsIntegers = WriteTrajectory.GetTreeSpeciesCodes(treeSpeciesPresent, out IntegerType treeSpeciesFieldType);
 
             // copy data from resource units
             // StandOrResourceUnitTrajectoryArrowMemory arrowMemory = new("resourceUnit", treeSpeciesPresent, batchLength);
@@ -191,9 +191,9 @@ namespace iLand.Cmdlets
                     {
                         ResourceUnitTreeSpecies treeSpecies = resourceUnitTrajectory.ResourceUnitTreeSpecies[treeSpeciesIndex];
                         ResourceUnitTreeSpeciesTrajectory treeSpeciesTrajectory = resourceUnitTrajectory.TreeSpeciesTrajectories[treeSpeciesIndex];
-                        string treeSpeciesID = treeSpecies.Species.ID;
+                        WorldFloraID treeSpeciesID = treeSpecies.Species.WorldFloraID;
                         int treeSpeciesCodeIndex = treeSpeciesPresent.IndexOf(treeSpeciesID);
-                        int treeSpeciesCode = treeSpeciesCodesAsIntegers[treeSpeciesCodeIndex];
+                        UInt32 treeSpeciesCode = treeSpeciesCodesAsIntegers[treeSpeciesCodeIndex];
                         arrowMemory.Add(treeSpeciesTrajectory, resourceUnitTrajectory.ResourceUnit.ID, treeSpeciesCode, yearSource);
                     }
                 }
@@ -236,7 +236,7 @@ namespace iLand.Cmdlets
         {
             // find batch length and tree species codes
             int batchLength = 0;
-            List<string> treeSpeciesPresent = new();
+            List<WorldFloraID> treeSpeciesPresent = new();
             for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
@@ -258,7 +258,7 @@ namespace iLand.Cmdlets
                 throw new ParameterOutOfRangeException(nameof(WriteTrajectory.ThreePGFile), "A 3-PG file was specified but no 3-PG trajectory was logged on any resource unit. Are 3-PG memory outputs enabled?");
             }
 
-            List<int> treeSpeciesCodesAsIntegers = WriteTrajectory.GetTreeSpeciesCodes(treeSpeciesPresent, out IntegerType treeSpeciesFieldType);
+            List<UInt32> treeSpeciesCodesAsIntegers = WriteTrajectory.GetTreeSpeciesCodes(treeSpeciesPresent, out IntegerType treeSpeciesFieldType);
 
             // copy data from resource units
             ResourceUnitThreePGArrowMemory arrowMemory = new(treeSpeciesFieldType, batchLength);
@@ -271,7 +271,7 @@ namespace iLand.Cmdlets
                     for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.ThreePGTimeSeries.Length; ++treeSpeciesIndex)
                     {
                         ResourceUnitThreePGTimeSeries threePGtimeSeries = resourceUnitTrajectory.ThreePGTimeSeries[treeSpeciesIndex];
-                        int treeSpeciesCode = WriteTrajectory.GetTreeSpeciesCode(resourceUnitTrajectory.ResourceUnitTreeSpecies[treeSpeciesIndex], treeSpeciesPresent, treeSpeciesCodesAsIntegers);
+                        UInt32 treeSpeciesCode = WriteTrajectory.GetTreeSpeciesCode(resourceUnitTrajectory.ResourceUnitTreeSpecies[treeSpeciesIndex], treeSpeciesPresent, treeSpeciesCodesAsIntegers);
                         arrowMemory.Add(threePGtimeSeries, resourceUnitID, treeSpeciesCode, calendarYearBeforeFirstSimulationTimestep);
                     }
                 }
@@ -280,22 +280,22 @@ namespace iLand.Cmdlets
             return arrowMemory;
         }
 
-        private static int GetTreeSpeciesCode(ResourceUnitTreeSpecies treeSpecies, IList<string> treeSpeciesPresent, IList<int> treeSpeciesCodesAsIntegers)
+        private static UInt32 GetTreeSpeciesCode(ResourceUnitTreeSpecies treeSpecies, IList<WorldFloraID> treeSpeciesPresent, IList<UInt32> treeSpeciesCodesAsUInt32)
         {
-            string treeSpeciesID = treeSpecies.Species.ID;
+            WorldFloraID treeSpeciesID = treeSpecies.Species.WorldFloraID;
             int treeSpeciesCodeIndex = treeSpeciesPresent.IndexOf(treeSpeciesID);
-            return treeSpeciesCodesAsIntegers[treeSpeciesCodeIndex];
+            return treeSpeciesCodesAsUInt32[treeSpeciesCodeIndex];
         }
 
-        private static List<int> GetTreeSpeciesCodes(List<string> treeSpeciesPresent, out IntegerType treeSpeciesFieldType)
+        private static List<UInt32> GetTreeSpeciesCodes(List<WorldFloraID> treeSpeciesPresent, out IntegerType treeSpeciesFieldType)
         {
             // map tree species to integers for string table encoding
             // Because Apache 9.0.0 does not support replacement dictionary interoperability between C# and R
             // (https://issues.apache.org/jira/browse/ARROW-17391), mapping to USFS FIA codes is attempted first and, if this fails, then
-            // mapping to ITIS TSNs. This species coding workaround makes the species column written in the output somewhat human friendly
-            // as it contains well defined species identifiers rather than an arbitrary mapping. 
+            // mapping to World Flora Online idenifiers. This species coding workaround makes the species column written in the output
+            // somewhat human friendly as it contains well defined species identifiers rather than an arbitrary mapping. 
             //
-            // For now, all species statistics are logged with FiaCode or ItisTsn = Default. 
+            // For now, all species statistics are logged with FiaCode or WorldFloraID = Default. 
             // This is a reasomable compromise for multispecies models. For single species models there are three options
             //
             // 1) omit the species column for minimum file size
@@ -312,47 +312,40 @@ namespace iLand.Cmdlets
             //
             // It is unclear if read_feather() can deserialize a field into a tibble factor column, so factorization in R may be 
             // remain desirable even if ARROW-17391 is fixed.
-            List<int> treeSpeciesCodesAsIntegers = new(treeSpeciesPresent.Count);
+            List<UInt32> treeSpeciesCodesAsUInt32 = new(treeSpeciesPresent.Count);
             treeSpeciesFieldType = UInt16Type.Default;
-            bool useItisTsns = false;
+            bool useWorldFloraIDs = false;
             for (int presentSpeciesIndex = 0; presentSpeciesIndex < treeSpeciesPresent.Count; ++presentSpeciesIndex)
             {
-                string treeSpeciesID = treeSpeciesPresent[presentSpeciesIndex];
-                if (FiaCodeExtensions.TryParse(treeSpeciesID, out FiaCode fiaCode))
+                WorldFloraID treeSpeciesID = treeSpeciesPresent[presentSpeciesIndex];
+                if (FiaCodeExtensions.TryConvert(treeSpeciesID, out FiaCode fiaCode))
                 {
-                    treeSpeciesCodesAsIntegers.Add((int)fiaCode);
+                    treeSpeciesCodesAsUInt32.Add((UInt32)fiaCode);
                 }
                 else
                 {
-                    useItisTsns = true;
+                    useWorldFloraIDs = true;
                     break;
                 }
             }
-            if (useItisTsns)
+            if (useWorldFloraIDs)
             {
                 treeSpeciesFieldType = Int32Type.Default;
                 for (int presentSpeciesIndex = 0; presentSpeciesIndex < treeSpeciesPresent.Count; ++presentSpeciesIndex)
                 {
-                    string treeSpeciesID = treeSpeciesPresent[presentSpeciesIndex];
-                    if (ItisTsnExtensions.TryParse(treeSpeciesID, out ItisTsn itisTsn))
+                    WorldFloraID treeSpeciesID = treeSpeciesPresent[presentSpeciesIndex];
+                    if (presentSpeciesIndex >= treeSpeciesCodesAsUInt32.Count)
                     {
-                        if (presentSpeciesIndex >= treeSpeciesCodesAsIntegers.Count)
-                        {
-                            treeSpeciesCodesAsIntegers.Add((int)itisTsn);
-                        }
-                        else
-                        {
-                            treeSpeciesCodesAsIntegers[presentSpeciesIndex] = (int)itisTsn;
-                        }
+                        treeSpeciesCodesAsUInt32.Add((UInt32)treeSpeciesID);
                     }
                     else
                     {
-                        throw new NotSupportedException("An ITIS TSN isn't known for the species '" + treeSpeciesID + "'.");
+                        treeSpeciesCodesAsUInt32[presentSpeciesIndex] = (UInt32)treeSpeciesID;
                     }
                 }
             }
 
-            return treeSpeciesCodesAsIntegers;
+            return treeSpeciesCodesAsUInt32;
         }
 
         protected override void ProcessRecord()

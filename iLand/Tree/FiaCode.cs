@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace iLand.Tool
+namespace iLand.Tree
 {
     /// <summary>
     /// USFS FIA species codes

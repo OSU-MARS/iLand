@@ -8,7 +8,7 @@ namespace iLand.Tree
     {
         private readonly Landscape landscape;
         private int resourceUnitIndex;
-        private IEnumerator<KeyValuePair<string, TreeListSpatial>>? treeSpeciesEnumerator;
+        private IEnumerator<KeyValuePair<WorldFloraID, TreeListSpatial>>? treeSpeciesEnumerator;
 
         public int CurrentTreeIndex { get; private set; }
 

@@ -59,21 +59,18 @@ namespace iLand.World
 
             if (this.DoRandomSampling)
             {
-                string? list = projectFile.World.Weather.RandomSamplingList;
-                if (String.IsNullOrEmpty(list) == false)
+                string? yearsToSampleFrom = projectFile.World.Weather.RandomSamplingList;
+                if (String.IsNullOrEmpty(yearsToSampleFrom) == false)
                 {
-                    List<string> strlist = Regex.Split(list, "\\W+").ToList();
-                    foreach (string s in strlist)
+                    string[] simulationYearList = yearsToSampleFrom.Split(' ');
+                    for (int index = 0; index < simulationYearList.Length; ++index)
                     {
-                        this.RandomYearList.Add(Int32.Parse(s, CultureInfo.InvariantCulture));
-                    }
-                    // check for validity
-                    foreach (int year in this.RandomYearList)
-                    {
-                        if (year < 0 || year >= this.YearsToLoad)
+                        int simulationYear = Int32.Parse(simulationYearList[index], CultureInfo.InvariantCulture);
+                        if ((simulationYear < 0) || (simulationYear >= this.YearsToLoad))
                         {
-                            throw new NotSupportedException("Invalid randomSamplingList! Year numbers are 0-based and must to between 0 and batchYears-1 (check value of batchYears)!!!");
+                            throw new NotSupportedException("Invalid randomSamplingList. Year numbers must between 0 and batchYears - 1 (check value of batchYears).");
                         }
+                        this.RandomYearList.Add(simulationYear);
                     }
                 }
             }

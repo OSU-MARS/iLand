@@ -1,4 +1,5 @@
-﻿using iLand.Tool;
+﻿using iLand.Extensions;
+using iLand.Tree;
 using System;
 using System.Globalization;
 
@@ -15,17 +16,13 @@ namespace iLand.Input.Tree
         public float MinHeight { get; private init; }
         public float MinLightIntensity { get; private init; }
         public int StandID { get; private init; }
-        public string Species { get; private init; }
+        public WorldFloraID SpeciesID { get; private init; }
 
         public StandSaplings(StandSaplingsCsvHeader saplingHeader, SplitString row)
         {
             // required fields
             this.StandID = Int32.Parse(row[saplingHeader.StandID], NumberStyles.Integer); // no restrictions
-            this.Species = row[saplingHeader.Species].ToString();
-            if (String.IsNullOrWhiteSpace(Species))
-            {
-                throw new NotSupportedException("Sapling species (column 'species') for stand '" + StandID + "' is missing.");
-            }
+            this.SpeciesID = WorldFloraIDExtensions.Parse(row[saplingHeader.Species].ToString());
 
             // TODO: constants for default values?
             this.Age = 1;

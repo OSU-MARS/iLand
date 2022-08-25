@@ -117,7 +117,7 @@ namespace iLand.World
                 _ => throw new NotSupportedException("Unhandled weather file extension '" + weatherFileExtension + "'.")
             };
 
-            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitReader.Environments.Count; ++resourceUnitIndex)
+            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitReader.Count; ++resourceUnitIndex)
             {
                 ResourceUnitEnvironment environment = resourceUnitReader.Environments[resourceUnitIndex];
 
@@ -489,7 +489,7 @@ namespace iLand.World
                     SaplingCell? saplingCell = this.GetSaplingCell(lightCellIndex, true, out ResourceUnit resourceUnit);
                     if (saplingCell != null)
                     {
-                        TreeSpecies species = resourceUnit.Trees.TreeSpeciesSet[saplingsInStand.Species];
+                        TreeSpecies species = resourceUnit.Trees.TreeSpeciesSet[saplingsInStand.SpeciesID];
                         Sapling? sapling = saplingCell.AddSaplingIfSlotFree(height, age, species.Index);
                         if (sapling != null)
                         {

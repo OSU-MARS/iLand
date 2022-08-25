@@ -111,7 +111,7 @@ namespace iLand.Output.Memory
             {
                 { idFieldName, idFieldDescription },
                 { "year", "Calendar year." },
-                { "species", "Integer code for tree species, typically " + Constant.AllTreeSpeciesCode + " to indicate all tree species present, a USFS FIA code (US Forest Service Forest Inventory and Analysis, 16 bit), or ITIS TSN (Integrated Taxonomic Information System taxonmic serial number, 32 bit)." },
+                { "species", "Integer code for tree species, typically " + Constant.AllTreeSpeciesCode + " to indicate all tree species present, a USFS FIA code (US Forest Service Forest Inventory and Analysis, 16 bit), or WFO ID (World Flora Online identifier, 32 bit)." },
                 { "averageDbh", "Arithmetic mean diameter of trees, cm." },
                 { "averageHeight", "Arithmetic mean height of trees, m." },
                 { "basalArea", "Basal area of trees, m²/ha." },
@@ -183,7 +183,7 @@ namespace iLand.Output.Memory
         /// <param name="polygonID">Resource unit or stand ID.</param>
         /// <param name="treeSpeciesCode">Index of tree species in tree species string table.</param>
         /// <param name="calendarYearSource">Sequential array of calendar years, starting with simulation year zero.</param>
-        public void Add(StandOrResourceUnitTrajectory trajectory, int polygonID, int treeSpeciesCode, Span<Int16> calendarYearSource)
+        public void Add(StandOrResourceUnitTrajectory trajectory, int polygonID, UInt32 treeSpeciesCode, Span<Int16> calendarYearSource)
         {
             int trajectoryLengthInYears = trajectory.LengthInYears;
 

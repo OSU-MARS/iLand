@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace iLand.Tool
+namespace iLand.Input
 {
     /// <summary>
     /// ReadOnlySpan<char> version of String.Split().

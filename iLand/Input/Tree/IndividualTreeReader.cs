@@ -1,30 +1,50 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using iLand.Extensions;
+using iLand.Tree;
+using System;
 
 namespace iLand.Input.Tree
 {
     public class IndividualTreeReader : TreeReader
     {
-        public List<UInt16> AgeInYears { get; private init; }
-        public List<float> DbhInCm { get; private init; }
-        public List<float> GisX { get; private init; }
-        public List<float> GisY { get; private init; }
-        public List<float> HeightInM { get; private init; }
-        public List<string> SpeciesID { get; private init; }
-        public List<int> StandID { get; private init; }
-        public List<int> TreeID { get; private init; }
+        public int Count { get; protected set; }
+
+        public UInt16[] AgeInYears { get; private set; }
+        public float[] DbhInCm { get; private set; }
+        public float[] GisX { get; private set; }
+        public float[] GisY { get; private set; }
+        public float[] HeightInM { get; private set; }
+        public WorldFloraID[] SpeciesID { get; private set; }
+        public int[] StandID { get; private set; }
+        public int[] TreeID { get; private set; }
 
         public IndividualTreeReader(string individualTreeFilePath)
             : base(individualTreeFilePath)
         {
-            this.AgeInYears = new();
-            this.DbhInCm = new();
-            this.GisX = new();
-            this.GisY = new();
-            this.HeightInM = new();
-            this.SpeciesID = new();
-            this.StandID = new();
-            this.TreeID = new();
+            this.AgeInYears = Array.Empty<UInt16>();
+            this.DbhInCm = Array.Empty<float>();
+            this.GisX = Array.Empty<float>();
+            this.GisY = Array.Empty<float>();
+            this.HeightInM = Array.Empty<float>();
+            this.SpeciesID = Array.Empty<WorldFloraID>();
+            this.StandID = Array.Empty<int>();
+            this.TreeID = Array.Empty<int>();
+        }
+
+        public int Capacity
+        {
+            get { return this.AgeInYears.Length; }
+        }
+
+        protected void Resize(int newSize)
+        {
+            this.AgeInYears = this.AgeInYears.Resize(newSize);
+            this.DbhInCm = this.DbhInCm.Resize(newSize);
+            this.GisX = this.GisX.Resize(newSize);
+            this.GisY = this.GisY.Resize(newSize);
+            this.HeightInM = this.HeightInM.Resize(newSize);
+            this.SpeciesID = this.SpeciesID.Resize(newSize);
+            this.StandID = this.StandID.Resize(newSize);
+            this.TreeID = this.TreeID.Resize(newSize);
         }
     }
 }

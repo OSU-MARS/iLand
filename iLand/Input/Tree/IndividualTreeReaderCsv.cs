@@ -1,7 +1,8 @@
-﻿using System;
+﻿using iLand.Extensions;
+using iLand.Tree;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 
 namespace iLand.Input.Tree
@@ -16,14 +17,29 @@ namespace iLand.Input.Tree
         public IndividualTreeReaderCsv(string treeFilePath, IndividualTreeCsvHeader individualTreeHeader, CsvFile treeFile)
             : base(treeFilePath)
         {
-            int treeCount = -1;
-            string? mostRecentSpeciesID = null;
+            string? mostRecentSpeciesName = null;
+            WorldFloraID mostRecentSpeciesID = WorldFloraID.Unknown;
             treeFile.Parse((row) =>
             {
-                ++treeCount;
-                this.DbhInCm.Add(Single.Parse(row[individualTreeHeader.Dbh], NumberStyles.Float));
-                this.GisX.Add(Single.Parse(row[individualTreeHeader.X], NumberStyles.Float));
-                this.GisY.Add(Single.Parse(row[individualTreeHeader.Y], NumberStyles.Float));
+                if (this.Count >= this.Capacity)
+                {
+                    int estimatedNewCapacity = this.Capacity + Constant.Data.DefaultTreeAllocationIncrement;
+                    if (this.Count >= 2 * Constant.Data.DefaultTreeAllocationIncrement)
+                    {
+                        double positionInFile = row.GetPositionInFile();
+                        int estimatedCapacityFromFilePosition = (int)Math.Ceiling((double)this.Capacity / positionInFile);
+                        if (estimatedCapacityFromFilePosition > estimatedNewCapacity)
+                        {
+                            estimatedNewCapacity = estimatedCapacityFromFilePosition;
+                        }
+                    }
+                    this.Resize(estimatedNewCapacity);
+                }
+
+                int treeIndex = this.Count;
+                this.DbhInCm[treeIndex] = Single.Parse(row[individualTreeHeader.Dbh], NumberStyles.Float);
+                this.GisX[treeIndex] = Single.Parse(row[individualTreeHeader.X], NumberStyles.Float);
+                this.GisY[treeIndex] = Single.Parse(row[individualTreeHeader.Y], NumberStyles.Float);
 
                 ReadOnlySpan<char> speciesID = row[individualTreeHeader.Species];
                 if (Int32.TryParse(speciesID, out int picusID))
@@ -35,13 +51,14 @@ namespace iLand.Input.Tree
                     }
                     speciesID = iLandSpeciesIDs[speciesIndex];
                 }
-                if (MemoryExtensions.Equals(speciesID, mostRecentSpeciesID, StringComparison.OrdinalIgnoreCase) == false)
+                if (MemoryExtensions.Equals(speciesID, mostRecentSpeciesName, StringComparison.OrdinalIgnoreCase) == false)
                 {
-                    mostRecentSpeciesID = speciesID.ToString();
+                    mostRecentSpeciesName = speciesID.ToString();
+                    mostRecentSpeciesID = WorldFloraIDExtensions.Parse(mostRecentSpeciesName);
                 }
-                this.SpeciesID.Add(mostRecentSpeciesID!); // ID string reuse can be made more sophisticated if needed
+                this.SpeciesID[treeIndex] = mostRecentSpeciesID; // ID string reuse can be made more sophisticated if needed
 
-                int treeID = treeCount;
+                int treeID = treeIndex;
                 if (individualTreeHeader.TreeID >= 0)
                 {
                     // override default of ID = count of trees currently on resource unit
@@ -52,7 +69,7 @@ namespace iLand.Input.Tree
                     ReadOnlySpan<char> treeIDAsString = row[individualTreeHeader.TreeID];
                     if (treeIDAsString.Length < 1)
                     {
-                        throw new NotSupportedException("Tree ID at line " + (treeCount + 1) + " is empty."); // +1 for header row
+                        throw new NotSupportedException("Tree ID at line " + (this.Count + 1) + " is empty."); // +1 for header row
                     }
                     if ((treeIDAsString[0] == '"') && (treeIDAsString.Length > 1) && (treeIDAsString[^1] == '"'))
                     {
@@ -60,34 +77,30 @@ namespace iLand.Input.Tree
                     }
                     treeID = Int32.Parse(treeIDAsString, NumberStyles.Integer, CultureInfo.InvariantCulture);
                 }
-                this.TreeID.Add(treeID);
+                this.TreeID[treeIndex] = treeID;
 
                 // convert from Picus-cm to m if necessary
                 float height = individualTreeHeader.HeightConversionFactor * Single.Parse(row[individualTreeHeader.Height], NumberStyles.Float);
-                this.HeightInM.Add(height);
+                this.HeightInM[treeIndex] = height;
 
                 UInt16 age = 0;
                 if (individualTreeHeader.Age >= 0)
                 {
                     age = UInt16.Parse(row[individualTreeHeader.Age], NumberStyles.Integer);
                 }
-                this.AgeInYears.Add(age);
+                this.AgeInYears[treeIndex] = age;
 
                 int standID = Constant.DefaultStandID;
                 if (individualTreeHeader.StandID >= 0)
                 {
                     standID = Int32.Parse(row[individualTreeHeader.StandID], NumberStyles.Integer);
                 }
-                this.StandID.Add(standID);
+                this.StandID[treeIndex] = standID;
+
+                ++this.Count;
             });
 
-            Debug.Assert(this.AgeInYears.Count == this.DbhInCm.Count &&
-                         this.AgeInYears.Count == this.GisX.Count &&
-                         this.AgeInYears.Count == this.GisY.Count &&
-                         this.AgeInYears.Count == this.HeightInM.Count &&
-                         this.AgeInYears.Count == this.SpeciesID.Count &&
-                         this.AgeInYears.Count == this.StandID.Count &&
-                         this.AgeInYears.Count == this.TreeID.Count);
+            // no read time validation as it's done when trees are added to resource units
         }
     }
 }

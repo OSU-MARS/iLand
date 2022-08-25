@@ -17,7 +17,12 @@
         public IndividualTreeCsvHeader(CsvFile treeFile)
         {
             this.StandID = treeFile.GetColumnIndex("standID"); // optional
-            this.TreeID = treeFile.GetColumnIndex("id"); // optional
+            this.TreeID = treeFile.GetColumnIndex("treeID"); // optional
+            if (this.TreeID == -1)
+            {
+                this.TreeID = treeFile.GetColumnIndex("id"); // also optional but expected in Picus files
+            }
+
             this.X = treeFile.GetColumnIndex("x");
             this.Y = treeFile.GetColumnIndex("y");
             this.Dbh = treeFile.GetColumnIndex("bhdfrom");

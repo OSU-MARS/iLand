@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿using iLand.Extensions;
+using iLand.Tree;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -15,16 +16,18 @@ namespace iLand.Input.Tree
             this.TreeSizeDistribution = new();
 
             int lineNumber = 0;
-            string? mostRecentSpecies = null;
+            string? mostRecentSpeciesAbbreviation = null;
+            WorldFloraID mostRecentSpeciesID = WorldFloraID.Unknown;
             treeFile.Parse((row) =>
             {
                 ReadOnlySpan<char> species = row[treeSizeHeader.Species];
-                if (MemoryExtensions.Equals(species, mostRecentSpecies, StringComparison.OrdinalIgnoreCase) == false)
+                if (MemoryExtensions.Equals(species, mostRecentSpeciesAbbreviation, StringComparison.OrdinalIgnoreCase) == false)
                 {
-                    mostRecentSpecies = species.ToString();
+                    mostRecentSpeciesAbbreviation = species.ToString();
+                    mostRecentSpeciesID = WorldFloraIDExtensions.Parse(mostRecentSpeciesAbbreviation);
                 }
 
-                TreeSizeRange sizeRange = new(mostRecentSpecies!)
+                TreeSizeRange sizeRange = new(mostRecentSpeciesID)
                 {
                     Count = Single.Parse(row[treeSizeHeader.Count], NumberStyles.Integer),
                     DbhFrom = Single.Parse(row[treeSizeHeader.MinimumDbh], NumberStyles.Float),
@@ -65,11 +68,6 @@ namespace iLand.Input.Tree
                 if (sizeRange.Density < -1)
                 {
                     throw new NotSupportedException("Invalid density " + sizeRange.Density + " in file '" + treeFilePath + "', line " + lineNumber + ". Allowed range is -1..1.");
-                }
-
-                if (string.IsNullOrEmpty(sizeRange.TreeSpecies))
-                {
-                    throw new NotSupportedException("Missing species in file '" + treeFilePath + ", line " + lineNumber + ".");
                 }
 
                 this.TreeSizeDistribution.Add(sizeRange);

@@ -1,5 +1,4 @@
-﻿using iLand.Tool;
-using System;
+﻿using System;
 
 namespace iLand.Input
 {
@@ -28,9 +27,20 @@ namespace iLand.Input
 
             resourceUnitEnvironmentFile.Parse((SplitString row) =>
             {
-                ResourceUnitEnvironment resourceUnitEnvironment = new(environmentHeader, row, defaultEnvironment);
+                if (this.Count >= this.Capacity)
+                {
+                    int estimatedNewSize = this.Count + Constant.Data.DefaultResourceUnitAllocationIncrement;
+                    int doublingSize = 2 * this.Count;
+                    if (doublingSize > estimatedNewSize)
+                    {
+                        estimatedNewSize = doublingSize;
+                    }
+                    this.Resize(estimatedNewSize);
+                }
 
-                this.Environments.Add(resourceUnitEnvironment);
+                ResourceUnitEnvironment resourceUnitEnvironment = new(environmentHeader, row, defaultEnvironment);
+                this.Environments[this.Count] = resourceUnitEnvironment;
+                ++this.Count;
 
                 if (resourceUnitEnvironment.GisCenterX > this.MaximumCenterCoordinateX)
                 {
@@ -50,7 +60,7 @@ namespace iLand.Input
                 }
             });
 
-            if (this.Environments.Count < 1)
+            if (this.Count < 1)
             {
                 throw new NotSupportedException("Resource unit environment file '" + resourceUnitFilePath + "' is empty or has only headers.");
             }

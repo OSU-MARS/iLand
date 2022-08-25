@@ -31,6 +31,8 @@ namespace iLand.Input.Weather
                 int monthsRemainingInBatch = batch.Length - sourceIndex;
                 if (this.MonthlyCO2.Capacity <= this.MonthlyCO2.Count + monthsRemainingInBatch)
                 {
+                    // for now, assume CO₂ time series fits in a single record batch
+                    // Monthly time series up to 5461 years fit in default R arrow::write_feather() batch length of 65536.
                     this.MonthlyCO2.Resize(this.MonthlyCO2.Count + monthsRemainingInBatch);
                 }
 

@@ -61,7 +61,7 @@ namespace iLand.Output.Memory
             Dictionary<string, string> metadata = new()
             {
                 { "_esourceUnit", "Resource unit's numeric ID." }, // work around https://issues.apache.org/jira/browse/ARROW-17466
-                { "species", "Integer code for tree species, typically either a USFS FIA code (US Forest Service Forest Inventory and Analysis, 16 bit) or ITIS TSN (Integrated Taxonomic Information System taxonmic serial number, 32 bit)." },
+                { "species", "Integer code for tree species, typically either a USFS FIA code (US Forest Service Forest Inventory and Analysis, 16 bit) or WFO ID (World Flora Online identifier, 32 bit)." },
                 { "year", "Calendar year." },
                 { "month", "Month of year." },
                 { "solarRadiation", "Monthly total radiation sum in MJ/m²." },
@@ -95,7 +95,7 @@ namespace iLand.Output.Memory
             this.RecordBatch = new(schema, arrowArrays, batchLength);
         }
 
-        public void Add(ResourceUnitThreePGTimeSeries threePGtimeSeries, int resourceUnitID, int treeSpeciesCode, int calendarYearBeforeFirstSimulationTimestep)
+        public void Add(ResourceUnitThreePGTimeSeries threePGtimeSeries, int resourceUnitID, UInt32 treeSpeciesCode, int calendarYearBeforeFirstSimulationTimestep)
         {
             int monthsInTimeSeries = threePGtimeSeries.LengthInMonths;
 

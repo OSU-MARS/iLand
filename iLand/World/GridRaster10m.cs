@@ -123,7 +123,7 @@ namespace iLand.World
             IReadOnlyCollection<(ResourceUnit, float _)> resourceUnitsInStand = this.resourceUnitsByRasterizedPolygonID[standID];
             foreach ((ResourceUnit ResourceUnit, float _) unitInStand in resourceUnitsInStand)
             {
-                SortedList<string, TreeListSpatial> treesBySpeciesID = unitInStand.ResourceUnit.Trees.TreesBySpeciesID;
+                SortedList<WorldFloraID, TreeListSpatial> treesBySpeciesID = unitInStand.ResourceUnit.Trees.TreesBySpeciesID;
                 for (int speciesIndex = 0; speciesIndex < treesBySpeciesID.Count; ++speciesIndex)
                 {
                     TreeListSpatial treesOfSpecies = treesBySpeciesID.Values[speciesIndex];

@@ -70,7 +70,7 @@ namespace iLand.Output.Sql
                 insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                 insertRow.Parameters[1].Value = treesOfSpecies.ResourceUnit.ResourceUnitGridIndex;
                 insertRow.Parameters[2].Value = treesOfSpecies.ResourceUnit.ID;
-                insertRow.Parameters[3].Value = treesOfSpecies.Species.ID;
+                insertRow.Parameters[3].Value = treesOfSpecies.Species.WorldFloraID;
                 insertRow.Parameters[4].Value = treesOfSpecies.TreeID[treeIndex];
                 insertRow.Parameters[5].Value = treesOfSpecies.GetCellCenterPoint(treeIndex).X;
                 insertRow.Parameters[6].Value = treesOfSpecies.GetCellCenterPoint(treeIndex).Y;

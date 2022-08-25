@@ -37,47 +37,45 @@ namespace iLand.Output.Memory
             source[..count].CopyTo(MemoryMarshal.Cast<byte, UInt16>(field.Span).Slice(this.Count, count));
         }
 
-        protected void Fill(Memory<byte> field, IntegerType fieldType, int value, int count)
+        protected void Fill(Memory<byte> field, IntegerType fieldType, Int32 value, int count)
         {
-            if (fieldType.IsSigned)
+            switch (fieldType.BitWidth)
             {
-                switch (fieldType.BitWidth)
-                {
-                    case 8:
-                        MemoryMarshal.Cast<byte, sbyte>(field.Span).Slice(this.Count, count).Fill((sbyte)value);
-                        break;
-                    case 16:
-                        MemoryMarshal.Cast<byte, Int16>(field.Span).Slice(this.Count, count).Fill((Int16)value);
-                        break;
-                    case 32:
-                        MemoryMarshal.Cast<byte, Int32>(field.Span).Slice(this.Count, count).Fill(value);
-                        break;
-                    case 64:
-                        MemoryMarshal.Cast<byte, Int64>(field.Span).Slice(this.Count, count).Fill((Int64)value);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(fieldType));
-                }
+                case 8:
+                    MemoryMarshal.Cast<byte, sbyte>(field.Span).Slice(this.Count, count).Fill((sbyte)value);
+                    break;
+                case 16:
+                    MemoryMarshal.Cast<byte, Int16>(field.Span).Slice(this.Count, count).Fill((Int16)value);
+                    break;
+                case 32:
+                    MemoryMarshal.Cast<byte, Int32>(field.Span).Slice(this.Count, count).Fill(value);
+                    break;
+                case 64:
+                    MemoryMarshal.Cast<byte, Int64>(field.Span).Slice(this.Count, count).Fill((Int64)value);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(fieldType));
             }
-            else
+        }
+
+        protected void Fill(Memory<byte> field, IntegerType fieldType, UInt32 value, int count)
+        {
+            switch (fieldType.BitWidth)
             {
-                switch (fieldType.BitWidth)
-                {
-                    case 8:
-                        MemoryMarshal.Cast<byte, byte>(field.Span).Slice(this.Count, count).Fill((byte)value);
-                        break;
-                    case 16:
-                        MemoryMarshal.Cast<byte, UInt16>(field.Span).Slice(this.Count, count).Fill((UInt16)value);
-                        break;
-                    case 32:
-                        MemoryMarshal.Cast<byte, UInt32>(field.Span).Slice(this.Count, count).Fill((UInt32)value);
-                        break;
-                    case 64:
-                        MemoryMarshal.Cast<byte, UInt64>(field.Span).Slice(this.Count, count).Fill((UInt64)value);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(fieldType));
-                }
+                case 8:
+                    MemoryMarshal.Cast<byte, byte>(field.Span).Slice(this.Count, count).Fill((byte)value);
+                    break;
+                case 16:
+                    MemoryMarshal.Cast<byte, UInt16>(field.Span).Slice(this.Count, count).Fill((UInt16)value);
+                    break;
+                case 32:
+                    MemoryMarshal.Cast<byte, UInt32>(field.Span).Slice(this.Count, count).Fill((UInt32)value);
+                    break;
+                case 64:
+                    MemoryMarshal.Cast<byte, UInt64>(field.Span).Slice(this.Count, count).Fill((UInt64)value);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(fieldType));
             }
         }
 

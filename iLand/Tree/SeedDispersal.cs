@@ -40,7 +40,7 @@ namespace iLand.Tree
         private Grid<float> externalSeedBaseMap; // intermediate data while setting up external seeds
         private int externalSeedBufferWidth; // how many 20 m pixels away from the model area should the seeding start?
         // TODO: can this be made species specific?
-        private readonly SortedList<string, List<float>> externalSeedData; // holds definition of species and percentages for external seed input
+        private readonly SortedList<WorldFloraID, List<float>> externalSeedData; // holds definition of species and percentages for external seed input
         private int externalSeedDirection; // direction of external seeds
         private int externalSeedSectorX = 0; // size of the sectors used to specify external seed input
         private int externalSeedSectorY = 0;
@@ -626,11 +626,12 @@ namespace iLand.Tree
             if (this.writeSeedMapsToImages)
             {
                 string seedmapPath = model.Project.GetFilePath(ProjectDirectory.Home, model.Project.Model.SeedDispersal.DumpSeedMapsPath);
-                File.WriteAllText(Path.Combine(seedmapPath, this.Species.ID + "KernelMastYear.csv"), this.kernelMastYear.ToString());
-                File.WriteAllText(Path.Combine(seedmapPath, this.Species.ID + "KernelNonmastYear.csv"), this.kernelNonMastYear.ToString());
+                string fourLetterSpeciesCode = this.Species.WorldFloraID.ToSpeciesAbbreviation();
+                File.WriteAllText(Path.Combine(seedmapPath, fourLetterSpeciesCode + "KernelMastYear.csv"), this.kernelMastYear.ToString());
+                File.WriteAllText(Path.Combine(seedmapPath, fourLetterSpeciesCode + "KernelNonmastYear.csv"), this.kernelNonMastYear.ToString());
                 if (this.kernelSerotiny.IsSetup())
                 {
-                    File.WriteAllText(Path.Combine(seedmapPath, this.Species.ID + "KernelSerotiny.csv", seedmapPath, Species.ID), this.kernelSerotiny.ToString());
+                    File.WriteAllText(Path.Combine(seedmapPath, fourLetterSpeciesCode + "KernelSerotiny.csv"), this.kernelSerotiny.ToString());
                 }
             }
 
@@ -653,34 +654,35 @@ namespace iLand.Tree
                     if (String.IsNullOrWhiteSpace(seedDispersal.ExternalSeedBackgroundInput) ||
                         String.IsNullOrWhiteSpace(seedDispersal.ExternalSeedBuffer) ||
                         String.IsNullOrWhiteSpace(seedDispersal.ExternalSeedDirection) ||
-                        String.IsNullOrWhiteSpace(seedDispersal.ExternalSeedSpecies))
+                        (seedDispersal.ExternalSeedSpecies.Count == 0))
                     {
                         throw new NotSupportedException("An external seed species, source, buffer, and background input must be specified when external seed is enabled but the seed belt is disabled.");
                     }
 
                     // external seeds specified fixedly per cardinal direction
                     // current species in list??
-                    this.hasExternalSeedInput = seedDispersal.ExternalSeedSpecies.Contains(this.Species.ID);
+                    this.hasExternalSeedInput = seedDispersal.ExternalSeedSpecies.Contains(this.Species.WorldFloraID);
                     string direction = seedDispersal.ExternalSeedDirection.ToLowerInvariant();
                     // encode cardinal positions as bits: e.g: "e,w" = 6
                     this.externalSeedDirection += direction.Contains('n', StringComparison.Ordinal) ? 0x1 : 0x0;
                     this.externalSeedDirection += direction.Contains('e', StringComparison.Ordinal) ? 0x2 : 0x0;
                     this.externalSeedDirection += direction.Contains('s', StringComparison.Ordinal) ? 0x4 : 0x0;
                     this.externalSeedDirection += direction.Contains('w', StringComparison.Ordinal) ? 0x8 : 0x0;
-                    List<string> buffer_list = Regex.Matches(seedDispersal.ExternalSeedBuffer, "([^\\.\\w]+)").Select(match => match.Value).ToList();
-                    int index = buffer_list.IndexOf(this.Species.ID);
+                    List<string> seedBufferTokens = Regex.Matches(seedDispersal.ExternalSeedBuffer, "([^\\.\\w]+)").Select(match => match.Value).ToList();
+                    string speciesAbbreviation = this.Species.WorldFloraID.ToSpeciesAbbreviation();
+                    int index = seedBufferTokens.IndexOf(speciesAbbreviation);
                     if (index >= 0)
                     {
-                        this.externalSeedBufferWidth = Int32.Parse(buffer_list[index + 1], CultureInfo.InvariantCulture);
+                        this.externalSeedBufferWidth = Int32.Parse(seedBufferTokens[index + 1], CultureInfo.InvariantCulture);
                         // Debug.WriteLine("enabled special buffer for species " + Species.ID + ": distance of " + mExternalSeedBuffer + " pixels = " + mExternalSeedBuffer * 20.0 + " m");
                     }
 
                     // background seed rain (i.e. for the full landscape), use regexp
-                    List<string> background_input_list = Regex.Matches(seedDispersal.ExternalSeedBackgroundInput, "([^\\.\\w]+)").Select(match => match.Value).ToList();
-                    index = background_input_list.IndexOf(this.Species.ID);
+                    List<string> backgroundInputList = Regex.Matches(seedDispersal.ExternalSeedBackgroundInput, "([^\\.\\w]+)").Select(match => match.Value).ToList();
+                    index = backgroundInputList.IndexOf(speciesAbbreviation);
                     if (index >= 0)
                     {
-                        this.externalSeedBackgroundInput = Single.Parse(background_input_list[index + 1], CultureInfo.InvariantCulture);
+                        this.externalSeedBackgroundInput = Single.Parse(backgroundInputList[index + 1], CultureInfo.InvariantCulture);
                         // Debug.WriteLine("enabled background seed input (for full area) for species " + Species.ID + ": p=" + mExternalSeedBackgroundInput);
                     }
 
@@ -873,7 +875,8 @@ namespace iLand.Tree
                 List<string> speciesIDs = species.SpeciesIDs.Split(" ").ToList();
                 for (int speciesIndex = 0; speciesIndex < speciesIDs.Count; ++speciesIndex)
                 {
-                    List<float> space = this.externalSeedData[speciesIDs[speciesIndex]];
+                    WorldFloraID treeSpeciesID = WorldFloraIDExtensions.Parse(speciesIDs[speciesIndex]);
+                    List<float> space = this.externalSeedData[treeSpeciesID];
                     if (space.Count == 0)
                     {
                         space.Capacity = sectorsX * sectorsY; // are initialized to 0s
@@ -889,7 +892,7 @@ namespace iLand.Tree
 
         private void SetupExternalSeedsForSpecies(Model model, TreeSpecies species)
         {
-            if (this.externalSeedData.TryGetValue(species.ID, out List<float>? pcts) == false)
+            if (this.externalSeedData.TryGetValue(species.WorldFloraID, out List<float>? pcts) == false)
             {
                 return; // nothing to do
             }

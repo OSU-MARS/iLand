@@ -81,10 +81,7 @@ namespace iLand.Simulation
             treePopulator.SetupTrees(projectFile, this.Landscape, this.RandomGenerator);
 
             // setup the helper that does the multithreading
-            this.resourceUnitParallel = new(this.Landscape.ResourceUnits)
-            {
-                MaximumThreads = this.Project.Model.Settings.MaxThreads
-            };
+            this.resourceUnitParallel = new(this.Landscape.ResourceUnits, this.Project.Model.Settings.MaxThreads);
 
             // initialize light pattern and then saplings and grass
             // Sapling and grass state depends on light pattern so overstory setup must complete before understory setup.
@@ -127,7 +124,7 @@ namespace iLand.Simulation
             }
 
             // calculate initial stand statistics
-            this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
+            this.resourceUnitParallel.For((ResourceUnit resourceUnit) =>
             {
                 resourceUnit.SetupTreesAndSaplings(this.Landscape);
                 resourceUnit.OnEndYear(); // call OnEndYear() to finalize initial resource unit and, if present, and stand statistics for logging
@@ -158,7 +155,7 @@ namespace iLand.Simulation
             // - Light stamping does not lock light grid areas and race conditions therefore exist between threads stamping adjacent
             //   resource units.
             //
-            this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
+            this.resourceUnitParallel.For((ResourceUnit resourceUnit) =>
             {
                 ResourceUnitTrees treesOnResourceUnit = resourceUnit.Trees;
                 if (this.Project.World.Geometry.IsTorus)
@@ -324,7 +321,7 @@ namespace iLand.Simulation
                (4) cleanup of tree lists (remove dead trees)
               */
             // let the trees grow (growth on stand-level, tree-level, mortality)
-            this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
+            this.resourceUnitParallel.For((ResourceUnit resourceUnit) =>
             {
                 // stocked area
                 resourceUnit.CountHeightCellsContainingTreesTallerThanTheRegenerationLayer(this.Landscape);
@@ -362,14 +359,14 @@ namespace iLand.Simulation
                 // seed dispersal
                 foreach (TreeSpeciesSet speciesSet in this.Landscape.SpeciesSetsByTableName.Values)
                 {
-                    MaybeParallel<TreeSpecies> speciesParallel = new(speciesSet.ActiveSpecies);
-                    speciesParallel.ForEach((TreeSpecies species) =>
+                    MaybeParallel<TreeSpecies> speciesParallel = new(speciesSet.ActiveSpecies, this.Project.Model.Settings.MaxThreads);
+                    speciesParallel.For((TreeSpecies species) =>
                     {
                         Debug.Assert(species.SeedDispersal != null, "Attempt to disperse seeds from a tree species not configured for seed dispersal.");
                         species.SeedDispersal.DisperseSeeds(this);
                     });
                 }
-                this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
+                this.resourceUnitParallel.For((ResourceUnit resourceUnit) =>
                 {
                     resourceUnit.EstablishSaplings(this);
                     resourceUnit.GrowSaplings(this);
@@ -381,7 +378,7 @@ namespace iLand.Simulation
             // need only be recalculated once?
             this.Modules.RunYear();
 
-            this.resourceUnitParallel.ForEach((ResourceUnit resourceUnit) =>
+            this.resourceUnitParallel.For((ResourceUnit resourceUnit) =>
             {
                 // clean tree lists again and recalculate statistcs if external modules removed trees
                 if (resourceUnit.Trees.HasDeadTrees)

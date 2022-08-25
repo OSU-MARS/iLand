@@ -24,7 +24,7 @@ namespace iLand.Tree
         public ResourceUnitTreeStatistics TreeAndSaplingStatisticsForAllSpecies { get; private init; }
         public TreeSpeciesSet TreeSpeciesSet { get; private init; } // get SpeciesSet this RU links to.
         public SortedList<int, ResourceUnitTreeStatistics> TreeStatisticsByStandID { get; private init; }
-        public SortedList<string, TreeListSpatial> TreesBySpeciesID { get; private init; } // reference to the tree list.
+        public SortedList<WorldFloraID, TreeListSpatial> TreesBySpeciesID { get; private init; } // reference to the tree list.
 
         public ResourceUnitTrees(ResourceUnit resourceUnit, TreeSpeciesSet treeSpeciesSet)
         {
@@ -66,7 +66,7 @@ namespace iLand.Tree
             this.AggregatedLightWeightedLeafArea += leafArea * lightResponse; 
         }
 
-        public int AddTree(Project projectFile, Landscape landscape, string speciesID, float dbhInCm, float heightInM, Point lightCellIndexXY, UInt16 ageInYears, out TreeListSpatial treesOfSpecies)
+        public int AddTree(Project projectFile, Landscape landscape, WorldFloraID speciesID, float dbhInCm, float heightInM, Point lightCellIndexXY, UInt16 ageInYears, out TreeListSpatial treesOfSpecies)
         {
             // get or create tree's species
             if (this.TreesBySpeciesID.TryGetValue(speciesID, out TreeListSpatial? nullableTreesOfSpecies))
@@ -78,7 +78,7 @@ namespace iLand.Tree
                 int speciesIndex = -1;
                 foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
                 {
-                    if (String.Equals(speciesID, ruSpecies.Species.ID))
+                    if (String.Equals(speciesID, ruSpecies.Species.WorldFloraID))
                     {
                         speciesIndex = ruSpecies.Species.Index;
                         break;
@@ -92,7 +92,7 @@ namespace iLand.Tree
                 treesOfSpecies = new TreeListSpatial(landscape, this.resourceUnit, this.SpeciesAvailableOnResourceUnit[speciesIndex].Species);
                 this.TreesBySpeciesID.Add(speciesID, treesOfSpecies);
             }
-            Debug.Assert(String.Equals(treesOfSpecies.Species.ID, speciesID, StringComparison.Ordinal));
+            Debug.Assert(treesOfSpecies.Species.WorldFloraID == speciesID);
 
             // create tree
             float lightStampBeerLambertK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;

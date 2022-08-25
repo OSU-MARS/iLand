@@ -1,5 +1,4 @@
-﻿using iLand.Extensions;
-using iLand.Input;
+﻿using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Tree;
 using System;
@@ -424,7 +423,7 @@ namespace iLand.World
                     // add variation: add +/-N% to DBH and *independently* to height.
                     float dbhInCm = centralDbh * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
                     float heightInM = sapling.HeightInM * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
-                    int treeIndex = this.Trees.AddTree(model.Project, model.Landscape, species.ID, dbhInCm, heightInM, lightCellIndexXY, sapling.Age, out TreeListSpatial treesOfSpecies);
+                    int treeIndex = this.Trees.AddTree(model.Project, model.Landscape, species.WorldFloraID, dbhInCm, heightInM, lightCellIndexXY, sapling.Age, out TreeListSpatial treesOfSpecies);
                     Debug.Assert(treesOfSpecies.IsDead(treeIndex) == false);
                     ruSpecies.StatisticsLive.Add(treesOfSpecies, treeIndex); // capture newly acknowledged tree into tree statistics
                 }

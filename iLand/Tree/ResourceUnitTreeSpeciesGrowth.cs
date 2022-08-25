@@ -84,7 +84,7 @@ namespace iLand.Tree
             {
                 if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.5F) // error on large deviations TODO: why a threshold of 1.5 instead of ~1.000001?
                 {
-                    throw new NotSupportedException("fEnvYear > 1 for " + this.Modifiers.Species.ID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Ecosystem.LightUseEpsilon + this.Modifiers.TotalRadiationForYear + siteEnvironmentHeightDivisor
+                    throw new NotSupportedException("fEnvYear > 1 for " + this.Modifiers.Species.WorldFloraID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Ecosystem.LightUseEpsilon + this.Modifiers.TotalRadiationForYear + siteEnvironmentHeightDivisor
                              + " check calibration of the sapReferenceRatio (fref) for this species!");
                 }
                 this.SiteEnvironmentSaplingHeightGrowthMultiplier = 1.0F;

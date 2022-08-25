@@ -32,10 +32,16 @@ namespace iLand.Input
                     throw new NotSupportedException("Environment file must have a species table column if /project/model/world/species/databaseTable is not specified in the project file.");
                 }
 
+                if (this.Capacity - this.Count < batch.Length)
+                {
+                    this.Resize(this.Count + batch.Length);
+                }
+
                 for (int index = 0; index < batch.Length; ++index)
                 {
                     ResourceUnitEnvironment resourceUnitEnvironment = new(fields, index, defaultEnvironment);
-                    this.Environments.Add(resourceUnitEnvironment);
+                    this.Environments[this.Count] = resourceUnitEnvironment;
+                    ++this.Count;
 
                     if (resourceUnitEnvironment.GisCenterX > this.MaximumCenterCoordinateX)
                     {
@@ -56,7 +62,7 @@ namespace iLand.Input
                 }
             }
 
-            if (this.Environments.Count < 1)
+            if (this.Count < 1)
             {
                 throw new NotSupportedException("Resource unit environment file '" + resourceUnitFilePath + "' is empty or has only headers.");
             }

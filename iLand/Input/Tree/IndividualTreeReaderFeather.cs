@@ -1,7 +1,12 @@
 ﻿using Apache.Arrow;
 using Apache.Arrow.Ipc;
+using iLand.Extensions;
+using iLand.Tree;
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
+using Array = System.Array;
 
 namespace iLand.Input.Tree
 {
@@ -13,38 +18,92 @@ namespace iLand.Input.Tree
             using FileStream individualTreeStream = new(individualTreeFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, Constant.File.DefaultBufferSize);
             using ArrowFileReader individualTreeFile = new(individualTreeStream); // ArrowFileReader.IsFileValid is false until a batch is read
 
+            // no clear advantage to reading batches asynchronously at 9.2 Mtrees (Apache 9.0.0, .NET 6.0, AMD Zen 3 @ 4.8 GHz, PCIe 3.0 x4 SSD)
             for (RecordBatch? batch = individualTreeFile.ReadNextRecordBatch(); batch != null; batch = individualTreeFile.ReadNextRecordBatch())
             {
                 IndividualTreeArrowBatch fields = new(batch);
-                for (int treeIndex = 0; treeIndex < batch.Length; ++treeIndex)
+                ReadOnlySpan<float> dbhField = fields.DbhInCm.Values;
+                ReadOnlySpan<UInt16> fiaCodeField = Array.Empty<UInt16>();
+                if (fields.FiaCode != null)
                 {
-                    this.SpeciesID.Add(fields.Species.GetString(treeIndex));
-                    this.DbhInCm.Add(fields.DbhInCm.Values[treeIndex]);
-                    this.HeightInM.Add(fields.HeightInM.Values[treeIndex]);
-                    this.GisX.Add(fields.GisX.Values[treeIndex]);
-                    this.GisY.Add(fields.GisY.Values[treeIndex]);
-
-                    UInt16 age = 0;
-                    if (fields.AgeInYears != null)
-                    {
-                        age = fields.AgeInYears.Values[treeIndex];
-                    }
-                    this.AgeInYears.Add(age);
-
-                    int standID = Constant.DefaultStandID;
-                    if (fields.StandID != null)
-                    {
-                        standID = fields.StandID.Values[treeIndex];
-                    }
-                    this.StandID.Add(standID);
-
-                    int treeID = this.TreeID.Count;
-                    if (fields.TreeID != null)
-                    {
-                        treeID = fields.TreeID.Values[treeIndex];
-                    }
-                    this.TreeID.Add(treeID);
+                    fiaCodeField = fields.FiaCode.Values;
                 }
+                ReadOnlySpan<float> heightField = fields.HeightInM.Values;
+                ReadOnlySpan<UInt32> wfoIDfield = Array.Empty<UInt32>();
+                if (fields.WorldFloraID != null)
+                {
+                    wfoIDfield = fields.WorldFloraID.Values;
+                }
+                ReadOnlySpan<float> gisXield = fields.GisX.Values;
+                ReadOnlySpan<float> gisYield = fields.GisY.Values;
+
+                if (this.Capacity - this.Count < batch.Length)
+                {
+                    int estimatedNewCapacity = this.Count + batch.Length; // minimal capacity
+                    // estimate capacity from file size, assuming uncompressed feather since compression is not supported in Apache 9.0.0 C#
+                    double uncompressedBatchSizeInBytes = batch.Length * fields.GetBytesPerRecord();
+                    double uncompressedBytesPerTree = uncompressedBatchSizeInBytes / batch.Length;
+                    int estimatedCapacityFromFileSize = (int)Math.Ceiling(individualTreeStream.Length / uncompressedBytesPerTree); // should be slightly high as ~2.1 kB of file is identifiers, schema, and batch markers
+                    if (estimatedCapacityFromFileSize > estimatedNewCapacity)
+                    {
+                        estimatedNewCapacity = estimatedCapacityFromFileSize;
+                    }
+                    this.Resize(estimatedNewCapacity);
+                }
+
+                if (fields.FiaCode != null)
+                {
+                    FiaCode previousFiaCode = FiaCode.Unknown;
+                    WorldFloraID treeSpeciesID = WorldFloraID.Unknown;
+                    for (int destinationIndex = this.Count, sourceIndex = 0; sourceIndex < batch.Length; ++destinationIndex, ++sourceIndex)
+                    {
+                        FiaCode fiaCode = (FiaCode)fiaCodeField[sourceIndex];
+                        if (fiaCode != previousFiaCode)
+                        {
+                            treeSpeciesID = WorldFloraIDExtensions.Convert(fiaCode);
+                        }
+                        this.SpeciesID[destinationIndex] = treeSpeciesID;
+                    }
+                }
+                else
+                {
+                    wfoIDfield.CopyTo(MemoryMarshal.Cast<WorldFloraID, UInt32>(this.SpeciesID.AsSpan())[this.Count..]);
+                }
+                dbhField.CopyTo(this.DbhInCm.AsSpan()[this.Count..]);
+                heightField.CopyTo(this.HeightInM.AsSpan()[this.Count..]);
+                gisXield.CopyTo(this.GisX.AsSpan()[this.Count..]);
+                gisYield.CopyTo(this.GisY.AsSpan()[this.Count..]);
+
+                if (fields.AgeInYears != null)
+                {
+                    fields.AgeInYears.Values.CopyTo(this.AgeInYears.AsSpan()[this.Count..]);
+                }
+                // else { leave this.AgeInYears as zero}
+
+                if (fields.StandID != null)
+                {
+                    fields.StandID.Values.CopyTo(this.StandID.AsSpan()[this.Count..]);
+                }
+                else
+                {
+                    Debug.Assert(Constant.DefaultStandID == 0);
+                    // this.StandID.AsSpan()[this.Count..].Fill(Constant.DefaultStandID);
+                }
+
+                if (fields.TreeID != null)
+                {
+                    fields.TreeID.Values.CopyTo(this.TreeID.AsSpan()[this.Count..]);
+                }
+                else
+                {
+                    for (int destinationIndex = this.Count, sourceIndex = 0; sourceIndex < batch.Length; ++destinationIndex, ++sourceIndex)
+                    {
+                        this.TreeID[destinationIndex] = destinationIndex; // default "unique" tree ID is its sequential number in the tree file
+                    }
+                }
+
+                // no read time validation as it's done when trees are added to resource units
+                this.Count += batch.Length;
             }
         }
     }

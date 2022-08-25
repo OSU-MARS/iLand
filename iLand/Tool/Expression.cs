@@ -6,9 +6,7 @@ using System.Text;
 
 namespace iLand.Tool
 {
-    /** @class Expression
-      An expression engine for mathematical expressions provided as strings.
-      The main purpose is fast execution speed.
+    /** An expression engine for mathematical expressions provided as strings.
       notes regarding the syntax:
       +,-,*,/ as expected, additionally "^" for power.
       mod(x,y): modulo division, gets remainder of x/y
@@ -53,7 +51,7 @@ namespace iLand.Tool
             "sin", "cos", "tan", "exp", "ln", "sqrt", "min", "max", "if", "incsum", "polygon", "mod", "sigmoid", "rnd", "rndg", "in", "round"
         }.AsReadOnly();
 
-        private static readonly int[] MaxArgCount = new int[] { 1, 1, 1, 1, 1, 1, -1, -1, 3, 1, -1, 2, 4, 2, 2, -1, 1 };
+        private static readonly int[] MathFunctionArgumentCount = new int[] { 1, 1, 1, 1, 1, 1, -1, -1, 3, 1, -1, 2, 4, 2, 2, -1, 1 };
 
         // inc-sum
         private float incrementalSum;
@@ -552,9 +550,10 @@ namespace iLand.Tool
                             this.NextToken();
                         }
                     }
-                    if (MaxArgCount[functionIndex] > 0 && MaxArgCount[functionIndex] != argumentCount)
+                    int maxArgumentCount = Expression.MathFunctionArgumentCount[functionIndex];
+                    if ((maxArgumentCount > 0) && (maxArgumentCount != argumentCount))
                     {
-                        throw new NotSupportedException(String.Format("Function {0} assumes {1} arguments!", functionName, MaxArgCount[functionIndex]));
+                        throw new NotSupportedException("Function " + functionName + " requires " + maxArgumentCount + " arguments.");
                     }
                     //throw std::logic_error("Funktion " + func + " erwartet " + std::string(MaxArgCount[idx]) + " Parameter!");
                     tokens[executeIndex].Type = ExpressionTokenType.Function;

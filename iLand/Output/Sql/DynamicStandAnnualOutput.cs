@@ -205,7 +205,7 @@ namespace iLand.Output.Sql
                         insertRow.Parameters[2].Value = -1;
                         if (logBySpecies)
                         {
-                            insertRow.Parameters[3].Value = species.ID;
+                            insertRow.Parameters[3].Value = species.WorldFloraID;
                         }
                         else
                         {
@@ -293,7 +293,7 @@ namespace iLand.Output.Sql
                         }
                         fieldData.Clear();
                         bool hasTrees = false;
-                        TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID[ruSpecies.Species.ID];
+                        TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID[ruSpecies.Species.WorldFloraID];
                         treeWrapper.Trees = treesOfSpecies;
                         for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                         {
@@ -341,7 +341,7 @@ namespace iLand.Output.Sql
                             insertRow.Parameters[2].Value = resourceUnit.ID;
                             if (bySpecies)
                             {
-                                insertRow.Parameters[3].Value = ruSpecies.Species.ID;
+                                insertRow.Parameters[3].Value = ruSpecies.Species.WorldFloraID;
                             }
                             else
                             {

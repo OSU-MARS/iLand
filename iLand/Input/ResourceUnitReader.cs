@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using iLand.Extensions;
+using System;
 using System.Drawing;
 
 namespace iLand.Input
@@ -11,7 +11,8 @@ namespace iLand.Input
         protected float MinimumCenterCoordinateX { get; set; }
         protected float MinimumCenterCoordinateY { get; set; }
 
-        public List<ResourceUnitEnvironment> Environments { get; private init; }
+        public int Count { get; set; }
+        public ResourceUnitEnvironment[] Environments { get; private set; }
 
         protected ResourceUnitReader()
         {
@@ -20,7 +21,12 @@ namespace iLand.Input
             this.MinimumCenterCoordinateX = Single.MaxValue;
             this.MinimumCenterCoordinateY = Single.MaxValue;
 
-            this.Environments = new();
+            this.Environments = Array.Empty<ResourceUnitEnvironment>();
+        }
+
+        public int Capacity
+        {
+            get { return this.Environments.Length; }
         }
 
         public RectangleF GetBoundingBox()
@@ -31,6 +37,11 @@ namespace iLand.Input
             float width = this.MaximumCenterCoordinateX - this.MinimumCenterCoordinateX + resourceUnitSize;
             float height = this.MaximumCenterCoordinateY - this.MinimumCenterCoordinateY + resourceUnitSize;
             return new RectangleF(x, y, width, height);
+        }
+
+        public void Resize(int newSize)
+        {
+            this.Environments = this.Environments.Resize(newSize);
         }
     }
 }

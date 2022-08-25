@@ -106,23 +106,24 @@ namespace iLand.Test
 
                 // verify Pacific Northwest tree species loading
                 TreeSpeciesSet pnwSpecies = elliott.Landscape.SpeciesSetsByTableName[Constant.Data.DefaultSpeciesTable];
-                TreeSpecies abam = pnwSpecies["abam"];
-                TreeSpecies abgr = pnwSpecies["abgr"];
-                TreeSpecies abpr = pnwSpecies["abpr"];
-                TreeSpecies acma = pnwSpecies["acma"];
-                TreeSpecies alru = pnwSpecies["alru"];
-                TreeSpecies pisi = pnwSpecies["pisi"];
-                TreeSpecies pipo = pnwSpecies["pipo"]; // TODO: what ecoregion are parameters for?
-                TreeSpecies psme = pnwSpecies["psme"];
-                TreeSpecies tshe = pnwSpecies["tshe"];
-                TreeSpecies tsme = pnwSpecies["tsme"];
-                TreeSpecies thpl = pnwSpecies["thpl"];
+                TreeSpecies abam = pnwSpecies[WorldFloraID.AbiesAmabilis];
+                TreeSpecies abgr = pnwSpecies[WorldFloraID.AbiesGrandis];
+                TreeSpecies abpr = pnwSpecies[WorldFloraID.AbiesProcera];
+                TreeSpecies acma = pnwSpecies[WorldFloraID.AcerMacrophyllum];
+                TreeSpecies alru = pnwSpecies[WorldFloraID.AlnusRubra];
+                TreeSpecies pisi = pnwSpecies[WorldFloraID.PiceaSitchensis];
+                TreeSpecies pipo = pnwSpecies[WorldFloraID.PinusPonderosa]; // TODO: what ecoregion are parameters for?
+                TreeSpecies psme = pnwSpecies[WorldFloraID.PseudotsugaMenziesii];
+                TreeSpecies tshe = pnwSpecies[WorldFloraID.TsugaHeterophylla];
+                TreeSpecies tsme = pnwSpecies[WorldFloraID.TsugaMertensiana];
+                TreeSpecies thpl = pnwSpecies[WorldFloraID.ThujaPlicata];
 
                 Assert.IsTrue(pnwSpecies.ActiveSpecies.Count == 11);
                 Assert.IsTrue(pnwSpecies.Count == 11);
-                Assert.IsTrue((abam.ID == "abam") && (abgr.ID == "abgr") && (abpr.ID == "abpr") && (acma.ID == "acma") && (alru.ID == "alru") && 
-                              (pisi.ID == "pisi") && (pipo.ID == "pipo") && (psme.ID == "psme") && (tshe.ID == "tshe") && (tsme.ID == "tsme") && 
-                              (thpl.ID == "thpl"));
+                Assert.IsTrue((abam.WorldFloraID == WorldFloraID.AbiesAmabilis) && (abgr.WorldFloraID == WorldFloraID.AbiesGrandis) && (abpr.WorldFloraID == WorldFloraID.AbiesProcera) && 
+                              (acma.WorldFloraID == WorldFloraID.AcerMacrophyllum) && (alru.WorldFloraID == WorldFloraID.AlnusRubra) &&  (pisi.WorldFloraID == WorldFloraID.PiceaSitchensis) && 
+                              (pipo.WorldFloraID == WorldFloraID.PinusPonderosa) && (psme.WorldFloraID == WorldFloraID.PseudotsugaMenziesii) && (thpl.WorldFloraID == WorldFloraID.ThujaPlicata) && 
+                              (tshe.WorldFloraID == WorldFloraID.TsugaHeterophylla) && (tsme.WorldFloraID == WorldFloraID.TsugaMertensiana));
                 ModelTest.VerifyDouglasFirPacificNorthwest(elliott);
 
                 // in the interests of test runtime, limit larger file testing to release builds
@@ -137,11 +138,11 @@ namespace iLand.Test
 
                 string resourceUnitCsvPath = elliott.Project.GetFilePath(ProjectDirectory.Gis, "resource units unbuffered 4 km weather.csv");
                 ResourceUnitReaderCsv resourceUnitCsvReader = new(resourceUnitCsvPath, defaultEnvironment);
-                Assert.IsTrue(resourceUnitCsvReader.Environments.Count == availableResourceUnits);
+                Assert.IsTrue(resourceUnitCsvReader.Count == availableResourceUnits);
 
                 string resourceUnitFeatherPath = elliott.Project.GetFilePath(ProjectDirectory.Gis, "resource units unbuffered 4 km weather.feather");
                 ResourceUnitReaderFeather resourceUnitFeatherReader = new(resourceUnitFeatherPath, defaultEnvironment);
-                Assert.IsTrue(resourceUnitFeatherReader.Environments.Count == availableResourceUnits);
+                Assert.IsTrue(resourceUnitFeatherReader.Count == availableResourceUnits);
 
                 // check monthly CO₂ .csv read
                 string co2csvFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "co2 ssp370.csv");
@@ -160,7 +161,7 @@ namespace iLand.Test
                 // check individual tree .csv read for a tile (Elliott project uses .feather)
                 string individualTreeTilePath = elliott.Project.GetFilePath(ProjectDirectory.Init, "TSegD_H10Cr20h10A50MD7_s04110w07020.csv");
                 IndividualTreeReader individualTreeReader = (IndividualTreeReader)TreeReader.Create(individualTreeTilePath);
-                Assert.IsTrue(individualTreeReader.HeightInM.Count == 13124);
+                Assert.IsTrue(individualTreeReader.Count == 13124);
                 #endif
             }
         }
@@ -267,7 +268,7 @@ namespace iLand.Test
         {
             TreeSpecies douglasFir = model.Landscape.ResourceUnits[0].Trees.TreeSpeciesSet[0];
             Assert.IsTrue(douglasFir.Active);
-            Assert.IsTrue(String.Equals(douglasFir.ID, "psme", StringComparison.Ordinal));
+            Assert.IsTrue(douglasFir.WorldFloraID == WorldFloraID.PseudotsugaMenziesii);
             // maximumHeight   100
             // aging   1 / (1 + (x/0.95)^4)
             // douglasFir.Aging();
@@ -300,7 +301,7 @@ namespace iLand.Test
             Assert.IsTrue(MathF.Abs(douglasFir.FinerootFoliageRatio - 1.0F) < 0.001F);
             // HDlow   145.0998 * 1 * 0.8 * (1 - 0.28932) * d ^ -0.28932
             // HDhigh  100 / d + 25 + 100 * exp(-0.3 * (0.08 * d) ^ 1.5) + 120 * exp(-0.01 * d)
-            Assert.IsTrue(String.Equals(douglasFir.ID, "psme", StringComparison.Ordinal));
+            Assert.IsTrue(douglasFir.WorldFloraID == WorldFloraID.PseudotsugaMenziesii);
             Assert.IsTrue(douglasFir.Index == 0);
             Assert.IsTrue(douglasFir.IsConiferous == true);
             Assert.IsTrue(douglasFir.IsEvergreen == true);
@@ -670,7 +671,7 @@ namespace iLand.Test
                 Assert.IsTrue(endOfYearTrees.HeightInMByTreeID.Count >= minimumTreeCount);
 
                 // check living trees
-                SortedList<string, TreeListSpatial> resourceUnitTrees = resourceUnit.Trees.TreesBySpeciesID;
+                SortedList<WorldFloraID, TreeListSpatial> resourceUnitTrees = resourceUnit.Trees.TreesBySpeciesID;
                 foreach (TreeListSpatial treesOfSpecies in resourceUnitTrees.Values)
                 {
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
@@ -711,11 +712,11 @@ namespace iLand.Test
                     }
 
                     Assert.IsTrue(treesOfSpecies.Capacity == 4);
-                    Assert.IsTrue(treesOfSpecies.Count == (treesOfSpecies.Species.ID == "psme" ? 2 : 1), "Expected one or two living trees of species '" + treesOfSpecies.Species.ID + "'.");
+                    Assert.IsTrue(treesOfSpecies.Count == (treesOfSpecies.Species.WorldFloraID == WorldFloraID.PseudotsugaMenziesii ? 2 : 1), "Expected one or two living trees of species '" + treesOfSpecies.Species.WorldFloraID + "'.");
                 }
                 // Salix caprea is viable as placed on the resource unit and should stress out of the stand in the first timestep. It
                 // should therefore be dropped as tree species on the resource unit.
-                Assert.IsTrue(resourceUnitTrees.ContainsKey("saca") == false, "Salix caprea did not die out of stand.");
+                Assert.IsTrue(resourceUnitTrees.ContainsKey(WorldFloraID.SalixCaprea) == false, "Salix caprea did not die out of stand.");
             }
         }
 
@@ -871,7 +872,7 @@ namespace iLand.Test
 
         private static void VerifyNorwaySpruce(Model model)
         {
-            TreeSpecies species = model.Landscape.ResourceUnits[0].Trees.TreeSpeciesSet["piab"];
+            TreeSpecies species = model.Landscape.ResourceUnits[0].Trees.TreeSpeciesSet[WorldFloraID.PiceaAbies];
             AssertNullable.IsNotNull(species);
 
             // PIAB: 1/(1 + (x/0.55)^2)
@@ -885,7 +886,7 @@ namespace iLand.Test
 
             // PIAB: mf = 0.095565 * dbh^1.56
             // round(0.095565 * c(2, 20, 50, 100) ^ 1.56, 5)
-            Assert.IsTrue(String.Equals(species.ID, "piab", StringComparison.Ordinal));
+            Assert.IsTrue(species.WorldFloraID == WorldFloraID.PiceaAbies);
             Assert.IsTrue(MathF.Abs(species.GetBiomassFoliage(2) - 0.281777F) < 0.001F);
             Assert.IsTrue(MathF.Abs(species.GetBiomassFoliage(20) - 10.23070F) < 0.001F);
             Assert.IsTrue(MathF.Abs(species.GetBiomassFoliage(50) - 42.72598F) < 0.001F);

@@ -1,26 +1,25 @@
 ﻿using iLand.Input.ProjectFile;
+using iLand.Input.Tree;
 using iLand.World;
 using iLand.Tool;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Xml;
 using Model = iLand.Simulation.Model;
-using iLand.Input.Tree;
-using System.IO;
 
 namespace iLand.Tree
 {
-    /** @class SpeciesSet
-        A SpeciesSet acts as a container for individual Species objects. In iLand, theoretically,
+    /** A SpeciesSet acts as a container for individual Species objects. In iLand, theoretically,
         multiple species sets can be used in parallel.
         */
     public class TreeSpeciesSet
     {
         private const int RandomSets = 20;
 
-        private readonly SortedList<string, TreeSpecies> treeSpeciesByID;
+        private readonly SortedList<WorldFloraID, TreeSpecies> treeSpeciesByID;
         // nitrogen response classes
         private readonly float class1K, class1minimum; // parameters of nitrogen response class 1
         private readonly float class2K, class2minimum; // parameters of nitrogen response class 2
@@ -73,7 +72,7 @@ namespace iLand.Tree
                 TreeSpecies species = Tree.TreeSpecies.Load(projectFile, speciesReader, this);
                 Debug.Assert(species.Active);
                 this.ActiveSpecies.Add(species);
-                this.treeSpeciesByID.Add(species.ID, species);
+                this.treeSpeciesByID.Add(species.WorldFloraID, species);
             }
 
             // setup nitrogen response
@@ -123,7 +122,7 @@ namespace iLand.Tree
             }
         }
 
-        public TreeSpecies this[string speciesID]
+        public TreeSpecies this[WorldFloraID speciesID]
         {
             get { return this.treeSpeciesByID[speciesID]; }
         }

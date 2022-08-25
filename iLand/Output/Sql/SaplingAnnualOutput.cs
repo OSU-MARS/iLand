@@ -66,7 +66,7 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                     insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
                     insertRow.Parameters[2].Value = resourceUnit.ID;
-                    insertRow.Parameters[3].Value = ruSpecies.Species.ID; // keys
+                    insertRow.Parameters[3].Value = ruSpecies.Species.WorldFloraID; // keys
 
                     // calculate statistics based on the number of represented trees per cohort
                     // float n = sap.livingStemNumber(rus.species(), out float avg_dbh, out float avg_height, out float avg_age;

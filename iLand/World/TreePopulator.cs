@@ -104,39 +104,35 @@ namespace iLand.World
         //    // }
         //}
 
-        public static void EvaluateDebugTrees(Project projectFile, Landscape landscape)
+        private static void EvaluateDebugTrees(Landscape landscape, string debugTreeExpressionString)
         {
             // evaluate debugging
-            string? isDebugTreeExpressionString = projectFile.World.Debug.DebugTree;
-            if (string.IsNullOrEmpty(isDebugTreeExpressionString) == false)
+            if (String.Equals(debugTreeExpressionString, "debugstamp", StringComparison.Ordinal))
             {
-                if (String.Equals(isDebugTreeExpressionString, "debugstamp", StringComparison.Ordinal))
+                // check for trees which aren't correctly placed
+                AllTreesEnumerator treeEnumerator = new(landscape);
+                while (treeEnumerator.MoveNext())
                 {
-                    // check for trees which aren't correctly placed
-                    AllTreesEnumerator treeIterator = new(landscape);
-                    while (treeIterator.MoveNext())
+                    if (landscape.LightGrid.Contains(treeEnumerator.CurrentTrees.LightCellIndexXY[treeEnumerator.CurrentTreeIndex]) == false)
                     {
-                        if (landscape.LightGrid.Contains(treeIterator.CurrentTrees.LightCellIndexXY[treeIterator.CurrentTreeIndex]) == false)
-                        {
-                            throw new NotSupportedException("debugstamp: invalid tree position found.");
-                        }
+                        throw new NotSupportedException("debugstamp: invalid tree position found.");
                     }
-                    return;
                 }
+                return;
+            }
 
-                TreeVariableAccessor treeWrapper = new(null);
-                Expression debugTreeExpression = new(isDebugTreeExpressionString, treeWrapper); // load expression dbg_str and enable external model variables
-                AllTreesEnumerator allTreeEnumerator = new(landscape);
-                while (allTreeEnumerator.MoveNext())
+            TreeVariableAccessor treeWrapper = new(null);
+            Expression debugTreeExpression = new(debugTreeExpressionString, treeWrapper); // load expression dbg_str and enable external model variables
+            AllTreesEnumerator allTreeEnumerator = new(landscape);
+            while (allTreeEnumerator.MoveNext())
+            {
+                // TODO: why is debug expression evaluated for all trees rather than just trees marked for debugging?
+                treeWrapper.Trees = allTreeEnumerator.CurrentTrees;
+                treeWrapper.TreeIndex = allTreeEnumerator.CurrentTreeIndex;
+                float result = debugTreeExpression.Execute();
+                if (result != 0.0F)
                 {
-                    // TODO: why is debug expression evaluated for all trees rather than just trees marked for debugging?
-                    treeWrapper.Trees = allTreeEnumerator.CurrentTrees;
-                    treeWrapper.TreeIndex = allTreeEnumerator.CurrentTreeIndex;
-                    float result = debugTreeExpression.Execute();
-                    if (result != 0.0F)
-                    {
-                        allTreeEnumerator.CurrentTrees.SetDebugging(allTreeEnumerator.CurrentTreeIndex);
-                    }
+                    allTreeEnumerator.CurrentTrees.SetDebugging(allTreeEnumerator.CurrentTreeIndex);
                 }
             }
         }
@@ -290,7 +286,7 @@ namespace iLand.World
             float resourceUnitMaximumX = resourceUnitMinimumX + landscape.ResourceUnitGrid.ProjectExtent.Width;
             float resourceUnitMinimumY = landscape.ResourceUnitGrid.ProjectExtent.Y;
             float resourceUnitMaximumY = resourceUnitMinimumX + landscape.ResourceUnitGrid.ProjectExtent.Height;
-            for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.DbhInCm.Count; ++treeIndexInFile)
+            for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.Count; ++treeIndexInFile)
             {
                 //if (dbh<5.)
                 //    continue;
@@ -363,7 +359,7 @@ namespace iLand.World
                 Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
                 // add tree
-                string speciesID = individualTreeReader.SpeciesID[treeIndexInFile];
+                WorldFloraID speciesID = individualTreeReader.SpeciesID[treeIndexInFile];
                 float dbhInCm = individualTreeReader.DbhInCm[treeIndexInFile];
                 float heightInM = individualTreeReader.HeightInM[treeIndexInFile];
                 UInt16 ageInYears = individualTreeReader.AgeInYears[treeIndexInFile];
@@ -390,7 +386,7 @@ namespace iLand.World
             //int totalTreeCount = 0;
             foreach (TreeSizeRange sizeRange in treeSizeDistribution)
             {
-                TreeSpecies treeSpecies = resourceUnit.Trees.TreeSpeciesSet[sizeRange.TreeSpecies];
+                TreeSpecies treeSpecies = resourceUnit.Trees.TreeSpeciesSet[sizeRange.SpeciesID];
                 for (int index = 0; index < sizeRange.Count; ++index)
                 {
                     // create tree
@@ -399,7 +395,7 @@ namespace iLand.World
                     (Point lightCellIndexXY, int heightCellIndex) = this.FindLightCellIndexXYForNewTree(landscape, resourceUnit, treeIndexByHeightCellIndex, sizeRange, ref treePlacementState, randomGenerator);
                     Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
-                    int treeIndex = resourceUnit.Trees.AddTree(projectFile, landscape, treeSpecies.ID, dbhInCm, heightInM, lightCellIndexXY, sizeRange.Age, out TreeListSpatial treesOfSpecies);
+                    int treeIndex = resourceUnit.Trees.AddTree(projectFile, landscape, treeSpecies.WorldFloraID, dbhInCm, heightInM, lightCellIndexXY, sizeRange.Age, out TreeListSpatial treesOfSpecies);
                     //++totalTreeCount;
 
                     if (treeIndexByHeightCellIndex.TryGetValue(heightCellIndex, out (TreeListSpatial Trees, List<int> TreeIndices) treesInHeightCell) == false)
@@ -446,7 +442,7 @@ namespace iLand.World
             Point ruPositionInResourceUnitGrid = landscape.ResourceUnitGrid.GetCellXYIndex(resourceUnit.ResourceUnitGridIndex);
             PointF translationToPlaceTreeOnResourceUnit = new(Constant.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.X, Constant.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.Y);
 
-            for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.DbhInCm.Count; ++treeIndexInFile)
+            for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.Count; ++treeIndexInFile)
             {
                 //if (dbh<5.)
                 //    continue;
@@ -462,7 +458,7 @@ namespace iLand.World
                 Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
                 // add tree
-                string speciesID = individualTreeReader.SpeciesID[treeIndexInFile];
+                WorldFloraID speciesID = individualTreeReader.SpeciesID[treeIndexInFile];
                 float dbhInCm = individualTreeReader.DbhInCm[treeIndexInFile];
                 float heightInM = individualTreeReader.HeightInM[treeIndexInFile];
                 UInt16 ageInYears = individualTreeReader.AgeInYears[treeIndexInFile];
@@ -514,7 +510,7 @@ namespace iLand.World
             }
             float standAreaInResourceUnits = standRaster.GetAreaInSquareMeters(standID) / Constant.ResourceUnitAreaInM2;
 
-            if (initialHeightGrid.IsSetup() && heightGridResponse == null)
+            if (initialHeightGrid.IsSetup() && (heightGridResponse == null))
             {
                 throw new NotSupportedException("Attempt to initialize from height grid but without response function.");
             }
@@ -522,7 +518,7 @@ namespace iLand.World
             Debug.Assert(this.treeSizeDistribution != null);
             Debug.Assert(heightGridResponse != null);
             int heightCellIndex = 0;
-            string? previousSpecies = null;
+            WorldFloraID previousSpeciesID = WorldFloraID.Unknown;
             int treeCount = 0;
             (int TreePlacementBits, int TreePlacementIndex) treePlacementState = (0, -1);
             int totalTries = 0;
@@ -547,16 +543,16 @@ namespace iLand.World
                         }
                     }
 
-                    if (String.Equals(treeSizeRange.TreeSpecies, previousSpecies, StringComparison.Ordinal) == false)
+                    if (treeSizeRange.SpeciesID != previousSpeciesID)
                     {
-                        previousSpecies = treeSizeRange.TreeSpecies;
+                        previousSpeciesID = treeSizeRange.SpeciesID;
                         heightCells.Sort(TreePopulator.CompareInitPixelUnlocked);
                     }
                 }
                 else
                 {
                     heightCells.Sort(TreePopulator.CompareHeightInitCells);
-                    previousSpecies = null;
+                    previousSpeciesID = WorldFloraID.Unknown;
                 }
 
                 float randomFraction = treeSizeRange.Density;
@@ -592,18 +588,21 @@ namespace iLand.World
 
                         if (initialHeightGrid.IsSetup())
                         {
-                            // calculate how good the selected pixel fits w.r.t. the predefined height
-                            float p_value = heightCells[heightCellIndex].MaxHeight > 0.0F ? (float)heightGridResponse.Evaluate(init_max_height / heightCells[heightCellIndex].MaxHeight) : 0.0F;
-                            if (randomGenerator.GetRandomProbability() < p_value)
+                            // calculate how well the selected pixel fits w.r.t. the predefined height
+                            if (heightCells[heightCellIndex].MaxHeight > 0.0F)
                             {
-                                found = true;
+                                float heightResponse = heightGridResponse.Evaluate(init_max_height / heightCells[heightCellIndex].MaxHeight);
+                                if (randomGenerator.GetRandomProbability() < heightResponse)
+                                {
+                                    found = true;
+                                }
                             }
                         }
                         else
                         {
                             found = true;
                         }
-                        if (previousSpecies != null && heightCells[heightCellIndex].IsSingleSpecies)
+                        if ((previousSpeciesID != WorldFloraID.Unknown) && heightCells[heightCellIndex].IsSingleSpecies)
                         {
                             found = false;
                         }
@@ -615,13 +614,13 @@ namespace iLand.World
 
                     // create a tree
                     ResourceUnit resourceUnit = heightCells[heightCellIndex].ResourceUnit;
-                    TreeSpecies treeSpecies = resourceUnit.Trees.TreeSpeciesSet[treeSizeRange.TreeSpecies];
+                    TreeSpecies treeSpecies = resourceUnit.Trees.TreeSpeciesSet[treeSizeRange.SpeciesID];
 
                     float dbhInCm = randomGenerator.GetRandomFloat(treeSizeRange.DbhFrom, treeSizeRange.DbhTo);
                     float heightInM = 0.01F * dbhInCm * treeSizeRange.HeightDiameterRatio;
                     (Point lightCellIndexXY, int _) = this.FindLightCellIndexXYForNewTree(landscape, resourceUnit, treeIndicesByHeightCellIndex, treeSizeRange, ref treePlacementState, randomGenerator);
                     UInt16 ageInYears = treeSizeRange.Age;
-                    int treeIndex = resourceUnit.Trees.AddTree(projectFile, landscape, treeSpecies.ID, dbhInCm, heightInM, lightCellIndexXY, ageInYears, out TreeListSpatial treesOfSpecies);
+                    int treeIndex = resourceUnit.Trees.AddTree(projectFile, landscape, treeSpecies.WorldFloraID, dbhInCm, heightInM, lightCellIndexXY, ageInYears, out TreeListSpatial treesOfSpecies);
                     ++treeCount;
 
                     // store in the multiHash the position of the pixel and the tree_idx in the resepctive resource unit
@@ -633,13 +632,13 @@ namespace iLand.World
                     treeIndexByHeightCellIndex.TreeIndices.Add(treeIndex);
 
                     heightCells[heightCellIndex].BasalArea += treesOfSpecies.GetBasalArea(treeIndex); // aggregate the basal area for each 10m pixel
-                    if (previousSpecies != null)
+                    if (previousSpeciesID != WorldFloraID.Unknown)
                     {
                         heightCells[heightCellIndex].IsSingleSpecies = true;
                     }
 
                     // resort list
-                    if (previousSpecies == null && (treeCount < 20 && treesAdded % 2 == 0 || treeCount < 100 && treesAdded % 10 == 0 || treesAdded % 30 == 0))
+                    if ((previousSpeciesID == WorldFloraID.Unknown) && (treeCount < 20 && (treesAdded % 2 == 0) || (treeCount < 100) && (treesAdded % 10 == 0) || (treesAdded % 30 == 0)))
                     {
                         heightCells.Sort(TreePopulator.CompareHeightInitCells);
                     }
@@ -695,7 +694,7 @@ namespace iLand.World
         public void SetupTrees(Project projectFile, Landscape landscape, RandomGenerator randomGenerator)
         {
             string? initialHeightGridFile = projectFile.World.Initialization.HeightGrid.FileName;
-            if (string.IsNullOrEmpty(initialHeightGridFile) == false)
+            if (String.IsNullOrEmpty(initialHeightGridFile) == false)
             {
                 string initialHeightGridPath = projectFile.GetFilePath(ProjectDirectory.Home, initialHeightGridFile);
                 this.initialHeightGrid = new(initialHeightGridPath);
@@ -776,7 +775,11 @@ namespace iLand.World
                 }
             }
 
-            TreePopulator.EvaluateDebugTrees(projectFile, landscape);
+            string? debugTreeExpressionString = projectFile.World.Debug.DebugTree;
+            if (String.IsNullOrEmpty(debugTreeExpressionString) == false)
+            {
+                TreePopulator.EvaluateDebugTrees(landscape, debugTreeExpressionString);
+            }
         }
 
         private class HeightInitCell
