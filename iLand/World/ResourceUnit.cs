@@ -1,5 +1,6 @@
 ﻿using iLand.Input;
 using iLand.Input.ProjectFile;
+using iLand.Tool;
 using iLand.Tree;
 using System;
 using System.Diagnostics;
@@ -89,6 +90,7 @@ namespace iLand.World
             {
                 return;
             }
+
             SaplingCell? saplingCell = model.Landscape.GetSaplingCell(trees.LightCellIndexXY[treeIndex], true, out ResourceUnit _);
             if (saplingCell == null)
             {
@@ -112,7 +114,7 @@ namespace iLand.World
             {
                 ReadOnlySpan<int> offsetsX = stackalloc int[] { 1, 1, 0, -1, -1, -1, 0, 1 };
                 ReadOnlySpan<int> offsetsY = stackalloc int[] { 0, 1, 1, 1, 0, -1, -1, -1 };
-                int neighbor = model.RandomGenerator.GetRandomInteger(0, 8);
+                int neighbor = model.RandomGenerator.Value!.GetRandomInteger(0, 8);
                 for (; lightCellsInCrown > 0; --lightCellsInCrown)
                 {
                     saplingCell = model.Landscape.GetSaplingCell(trees.LightCellIndexXY[treeIndex].Add(new Point(offsetsX[neighbor], offsetsY[neighbor])), true, out ResourceUnit _);
@@ -156,9 +158,11 @@ namespace iLand.World
             {
                 this.Trees.SpeciesAvailableOnResourceUnit[species].SaplingStats.ZeroStatistics();
             }
+
+            RandomGenerator random = model.RandomGenerator.Value!;
             if (this.Trees.TreeSpeciesSet.RandomSpeciesOrder.Count < 1)
             {
-                this.Trees.TreeSpeciesSet.CreateRandomSpeciesOrder(model.RandomGenerator);
+                this.Trees.TreeSpeciesSet.CreateRandomSpeciesOrder(random);
             }
 
             float[] lightCorrection = new float[Constant.LightCellsPerHectare];
@@ -166,7 +170,7 @@ namespace iLand.World
 
             Point ruOrigin = this.MinimumLightIndexXY; // offset on LIF/saplings grid
             Point seedmapOrigin = new(ruOrigin.X / Constant.LightCellsPerSeedmapCellWidth, ruOrigin.Y / Constant.LightCellsPerSeedmapCellWidth); // seed-map has 20m resolution, LIF 2m . factor 10
-            this.Trees.TreeSpeciesSet.GetRandomSpeciesSampleIndices(model.RandomGenerator, out int sampleBegin, out int sampleEnd);
+            this.Trees.TreeSpeciesSet.GetRandomSpeciesSampleIndices(random, out int sampleBegin, out int sampleEnd);
             for (int sampleIndex = sampleBegin; sampleIndex != sampleEnd; ++sampleIndex)
             {
                 // start from a random species (and cycle through the available species)
@@ -192,7 +196,7 @@ namespace iLand.World
                 }
 
                 // calculate the abiotic environment (TACA)
-                float frostAndWaterModifier = ruSpecies.SaplingEstablishment.CalculateFrostAndWaterModifier(model.Project, this.Weather, ruSpecies);
+                float frostAndWaterModifier = ruSpecies.SaplingEstablishment.CalculateFrostAndWaterModifier(model.Project, model.Landscape, this.Weather, ruSpecies);
                 if (frostAndWaterModifier == 0.0F)
                 {
                     // ruSpecies.Establishment.WriteDebugOutputs();
@@ -246,9 +250,9 @@ namespace iLand.World
 
                                 // check for the combination of seed availability and light on the forest floor
                                 float pGermination = seedMapValue * lriCorrection * frostAndWaterModifier;
-                                if (model.RandomGenerator.GetRandomProbability() < pGermination)
+                                if (random.GetRandomProbability() < pGermination)
                                 {
-                                    // ok, lets add a sapling at the given position (age is incremented later)
+                                    // add a sapling at the given position (age is incremented later)
                                     sapling.SetSapling(Constant.Sapling.MinimumHeight, 0, speciesIndex);
                                     saplingCell.CheckState();
                                     ++ruSpecies.SaplingStats.NewCohorts;
@@ -349,7 +353,7 @@ namespace iLand.World
             float lriCorrection = species.SpeciesSet.GetLriCorrection(lif_value, relativeHeight); // correction based on height
             float lightResponse = species.GetLightResponse(lriCorrection); // species specific light response (LUI, light utilization index)
 
-            ruSpecies.CalculateBiomassGrowthForYear(model.Project, fromSaplingEstablishmentOrGrowth: true); // calculate the 3-PG module (this is done only once per RU); true: call comes from regeneration
+            ruSpecies.CalculateBiomassGrowthForYear(model.Project, model.Landscape, fromSaplingEstablishmentOrGrowth: true); // calculate the 3-PG module (this is done only once per RU); true: call comes from regeneration
             float siteEnvironmentHeightMultiplier = ruSpecies.TreeGrowth.SiteEnvironmentSaplingHeightGrowthMultiplier;
             float heightGrowthFactor = siteEnvironmentHeightMultiplier * lightResponse; // relative growth
 
@@ -369,7 +373,7 @@ namespace iLand.World
                 // calculate modifed annual browsing probability via odds-ratios
                 // odds = p/(1-p) . odds_mod = odds * browsingPressure . p_mod = odds_mod /( 1 + odds_mod) === p*pressure/(1-p+p*pressure)
                 float pBrowsed = pBrowsing * browsingPressure / (1.0F - pBrowsing + pBrowsing * browsingPressure);
-                if (model.RandomGenerator.GetRandomProbability() < pBrowsed)
+                if (model.RandomGenerator.Value!.GetRandomProbability() < pBrowsed)
                 {
                     heightGrowthFactor = 0.0F;
                 }
@@ -400,7 +404,7 @@ namespace iLand.World
             // recruitment?
             if (sapling.HeightInM > 4.0F)
             {
-                ruSpecies.SaplingStats.RecruitedCohorts++;
+                ++ruSpecies.SaplingStats.RecruitedCohorts;
 
                 float centralDbh = 100.0F * sapling.HeightInM / species.SaplingGrowth.HeightDiameterRatio;
                 // the number of trees to create (result is in trees per pixel)
@@ -408,8 +412,10 @@ namespace iLand.World
 
                 // if number of saplings to establish as treees is not an integer, choose randomly if we should add a tree.
                 // For example, if n_trees = 2.3, add 2 trees with 70% probability, and add 3 trees with 30% probability.
+                RandomGenerator random = model.RandomGenerator.Value!;
                 int saplingsToEstablishAsTrees = (int)saplingsToEstablishAsTreesAsFloat;
-                if (model.RandomGenerator.GetRandomProbability() < (saplingsToEstablishAsTreesAsFloat - saplingsToEstablishAsTrees) || saplingsToEstablishAsTrees == 0)
+                if ((saplingsToEstablishAsTrees == 0) ||
+                    (random.GetRandomProbability() < (saplingsToEstablishAsTreesAsFloat - saplingsToEstablishAsTrees)))
                 {
                     ++saplingsToEstablishAsTrees;
                 }
@@ -421,8 +427,8 @@ namespace iLand.World
                 for (int saplingIndex = 0; saplingIndex < saplingsToEstablishAsTrees; ++saplingIndex)
                 {
                     // add variation: add +/-N% to DBH and *independently* to height.
-                    float dbhInCm = centralDbh * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
-                    float heightInM = sapling.HeightInM * model.RandomGenerator.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
+                    float dbhInCm = centralDbh * random.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
+                    float heightInM = sapling.HeightInM * random.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
                     int treeIndex = this.Trees.AddTree(model.Project, model.Landscape, species.WorldFloraID, dbhInCm, heightInM, lightCellIndexXY, sapling.Age, out TreeListSpatial treesOfSpecies);
                     Debug.Assert(treesOfSpecies.IsDead(treeIndex) == false);
                     ruSpecies.StatisticsLive.Add(treesOfSpecies, treeIndex); // capture newly acknowledged tree into tree statistics
@@ -442,6 +448,7 @@ namespace iLand.World
                 }
                 return true; // need cleanup
             }
+
             // book keeping (only for survivors) for the sapling of the resource unit / species
             SaplingStatistics saplingStats = ruSpecies.SaplingStats;
             float n_repr = species.SaplingGrowth.RepresentedStemNumberFromHeight(sapling.HeightInM) / cohorts_on_px;
@@ -598,7 +605,7 @@ namespace iLand.World
             // invoke species specific calculation (3-PG)
             for (int speciesIndex = 0; speciesIndex < this.Trees.SpeciesAvailableOnResourceUnit.Count; ++speciesIndex)
             {
-                this.Trees.SpeciesAvailableOnResourceUnit[speciesIndex].CalculateBiomassGrowthForYear(model.Project, fromSaplingEstablishmentOrGrowth: false); // CALCULATE 3-PG
+                this.Trees.SpeciesAvailableOnResourceUnit[speciesIndex].CalculateBiomassGrowthForYear(model.Project, model.Landscape, fromSaplingEstablishmentOrGrowth: false); // CALCULATE 3-PG
 
                 // debug output related to production
                 //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.StandGpp) && Species[speciesIndex].LaiFraction > 0.0)

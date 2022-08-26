@@ -26,7 +26,7 @@ namespace iLand.Input.ProjectFile
 		// if false, trees will apply/read light patterns, but do not grow
 		public bool GrowthEnabled { get; private set; }
 
-		public int MaxThreads { get; private set; }
+		public int MaxComputeThreads { get; private set; }
 
 		// if false, no natural (intrinsic+stress) mortality occurs
 		public bool MortalityEnabled { get; private set; }
@@ -52,7 +52,7 @@ namespace iLand.Input.ProjectFile
 			this.ExpressionLinearizationEnabled = false;
 			this.GrowthEnabled = true;
 			this.MortalityEnabled = true;
-			this.MaxThreads = Environment.ProcessorCount / 2; // one thread per core, assuming a hyperthreaded processor with only p-cores
+			this.MaxComputeThreads = Environment.ProcessorCount / 2; // one thread per core, assuming a hyperthreaded processor with only p-cores
 			this.OverrideGppPerYear = Constant.NoDataFloat;
             this.CoordinateSystem = null;
             this.RandomSeed = null;
@@ -91,8 +91,8 @@ namespace iLand.Input.ProjectFile
                 case "growthEnabled":
 					this.GrowthEnabled = reader.ReadElementContentAsBoolean();
 					break;
-                case "maxThreads":
-                    this.MaxThreads = reader.ReadElementContentAsInt();
+                case "maxComputeThreads":
+                    this.MaxComputeThreads = reader.ReadElementContentAsInt();
                     break;
                 case "mortalityEnabled":
                     this.MortalityEnabled = reader.ReadElementContentAsBoolean();

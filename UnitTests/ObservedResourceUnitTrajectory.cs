@@ -18,8 +18,9 @@ namespace iLand.Test
         public List<float> ObservedGppByYear { get; private init; }
         public List<float> ObservedNppByYear { get; private init; }
         public List<float> ObservedStemVolumeByYear { get; private init; }
+        public List<float> ObservedTreesPerHectareByYear { get; private init; }
 
-        public ObservedResourceUnitTrajectory()
+        public ObservedResourceUnitTrajectory(int capacity)
         {
             this.GppTolerance = 0.02F;
             this.NonmonotonicGrowthTolerance = 0.05F;
@@ -27,9 +28,10 @@ namespace iLand.Test
             this.StemVolumeTolerance = 0.02F;
             this.TreeNppTolerance = 0.33F;
 
-            this.ObservedGppByYear = new();
-            this.ObservedNppByYear = new();
-            this.ObservedStemVolumeByYear = new();
+            this.ObservedGppByYear = new(capacity);
+            this.ObservedNppByYear = new(capacity);
+            this.ObservedStemVolumeByYear = new(capacity);
+            this.ObservedTreesPerHectareByYear = new(capacity);
         }
 
         public void AddYear(ResourceUnit resourceUnit)
@@ -43,6 +45,7 @@ namespace iLand.Test
             }
             this.ObservedGppByYear.Add(gpp);
             this.ObservedNppByYear.Add(npp);
+            this.ObservedTreesPerHectareByYear.Add(resourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.TreesPerHa);
 
             float stemVolume = 0.0F;
             foreach (TreeListSpatial treesOfSpecies in resourceUnit.Trees.TreesBySpeciesID.Values)
@@ -56,16 +59,16 @@ namespace iLand.Test
             this.ObservedStemVolumeByYear.Add(stemVolume);
         }
 
-        public void Verify(StandOrResourceUnitTrajectory? actualTrajectory, float maximumTreeCount, List<float> expectedGppByYear, List<float> expectedNppByYear, List<float> expectedVolumeByYear)
+        public void Verify(StandOrResourceUnitTrajectory? actualTrajectory, float maximumTreeCount, ExpectedResourceUnitTrajectory expectedTrajectory)
         {
             Assert.IsTrue(actualTrajectory != null);
             float growthMultiplier = 1.0F - this.NonmonotonicGrowthTolerance;
             float treeNppMultiplier = 1.0F - this.TreeNppTolerance;
 
-            for (int simulationYear = 0; simulationYear < expectedVolumeByYear.Count; ++simulationYear)
+            for (int simulationYear = 0; simulationYear < expectedTrajectory.LengthInYears; ++simulationYear)
             {
                 float observedGpp = this.ObservedGppByYear[simulationYear];
-                float expectedGpp = expectedGppByYear[simulationYear];
+                float expectedGpp = expectedTrajectory.GppByYear[simulationYear];
                 float relativeGppError;
                 if (expectedGpp != 0.0F)
                 {
@@ -77,7 +80,7 @@ namespace iLand.Test
                 }
 
                 float observedNpp = this.ObservedNppByYear[simulationYear];
-                float expectedNpp = expectedNppByYear[simulationYear];
+                float expectedNpp = expectedTrajectory.NppByYear[simulationYear];
                 float recordedNpp = actualTrajectory.TreeNppByYear[simulationYear];
                 float relativeNppError;
                 if (expectedNpp != 0.0F)
@@ -90,7 +93,7 @@ namespace iLand.Test
                 }
 
                 float observedStemVolume = this.ObservedStemVolumeByYear[simulationYear];
-                float expectedStemVolume = expectedVolumeByYear[simulationYear];
+                float expectedStemVolume = expectedTrajectory.StemVolumeByYear[simulationYear];
                 float recordedVolume = actualTrajectory.LiveStemVolumeByYear[simulationYear];
                 float relativeVolumeError = MathF.Abs(1.0F - observedStemVolume / expectedStemVolume);
 

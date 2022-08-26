@@ -2,6 +2,7 @@
 using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Input.Weather;
+using iLand.Tool;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -47,9 +48,10 @@ namespace iLand.World
                     int currentSimulationYear = model.SimulationState.CurrentCalendarYear - model.Landscape.WeatherFirstCalendarYear + 1;
                     if (this.SampledYears.Count < currentSimulationYear)
                     {
+                        RandomGenerator random = model.RandomGenerator.Value!;
                         while (this.SampledYears.Count - 1 < currentSimulationYear)
                         {
-                            this.SampledYears.Add(model.RandomGenerator.GetRandomInteger(0, this.YearsToLoad));
+                            this.SampledYears.Add(random.GetRandomInteger(0, this.YearsToLoad));
                         }
                     }
 
@@ -87,8 +89,6 @@ namespace iLand.World
             }
             int currentJanuaryIndex = this.CurrentDataYear * Constant.MonthsInYear;
             int nextJanuaryIndex = currentJanuaryIndex + Constant.MonthsInYear;
-            this.CO2ByMonth.CurrentYearStartIndex = currentJanuaryIndex;
-            this.CO2ByMonth.NextYearStartIndex = nextJanuaryIndex;
             this.TimeSeries.CurrentYearStartIndex = this.monthDayIndices[currentJanuaryIndex];
             this.TimeSeries.NextYearStartIndex = this.monthDayIndices[nextJanuaryIndex];
 

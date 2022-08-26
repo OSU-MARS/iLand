@@ -2,11 +2,11 @@
 {
     public class CO2ReaderMonthly
     {
-        public CO2TimeSeriesMonthly MonthlyCO2 { get; private init; }   
+        public CO2TimeSeriesMonthly TimeSeries { get; private init; }   
 
         public CO2ReaderMonthly()
         {
-            this.MonthlyCO2 = new();
+            this.TimeSeries = new();
         }
     }
 }

@@ -29,24 +29,24 @@ namespace iLand.Input.Weather
                 }
 
                 int monthsRemainingInBatch = batch.Length - sourceIndex;
-                if (this.MonthlyCO2.Capacity <= this.MonthlyCO2.Count + monthsRemainingInBatch)
+                if (this.TimeSeries.Capacity <= this.TimeSeries.Count + monthsRemainingInBatch)
                 {
                     // for now, assume CO₂ time series fits in a single record batch
                     // Monthly time series up to 5461 years fit in default R arrow::write_feather() batch length of 65536.
-                    this.MonthlyCO2.Resize(this.MonthlyCO2.Count + monthsRemainingInBatch);
+                    this.TimeSeries.Resize(this.TimeSeries.Count + monthsRemainingInBatch);
                 }
 
                 int monthsInBatch = batch.Length - sourceIndex;
                 ReadOnlySpan<byte> monthField = batchFields.Month.Values;
                 ReadOnlySpan<float> co2field = batchFields.CO2.Values;
 
-                int destinationIndex = this.MonthlyCO2.Count;
-                yearField[sourceIndex..].CopyTo(this.MonthlyCO2.Year.AsSpan()[destinationIndex..]);
-                monthField[sourceIndex..].CopyTo(this.MonthlyCO2.Month.AsSpan()[destinationIndex..]);
-                co2field[sourceIndex..].CopyTo(this.MonthlyCO2.CO2ConcentrationInPpm.AsSpan()[destinationIndex..]);
+                int destinationIndex = this.TimeSeries.Count;
+                yearField[sourceIndex..].CopyTo(this.TimeSeries.Year.AsSpan()[destinationIndex..]);
+                monthField[sourceIndex..].CopyTo(this.TimeSeries.Month.AsSpan()[destinationIndex..]);
+                co2field[sourceIndex..].CopyTo(this.TimeSeries.CO2ConcentrationInPpm.AsSpan()[destinationIndex..]);
 
-                this.MonthlyCO2.Count += monthsInBatch;
-                this.MonthlyCO2.Validate(destinationIndex, monthsInBatch);
+                this.TimeSeries.Count += monthsInBatch;
+                this.TimeSeries.Validate(destinationIndex, monthsInBatch);
             }
         }
     }

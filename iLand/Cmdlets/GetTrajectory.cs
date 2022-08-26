@@ -50,7 +50,10 @@ namespace iLand.Cmdlets
 
             stopwatch.Stop();
             double totalSeconds = stopwatch.Elapsed.TotalSeconds;
-            this.WriteVerbose("Trajectory obtained in " + totalSeconds.ToString("0.0") + " s (" + setupTime.TotalSeconds.ToString("0.0") + " s load, " + (totalSeconds - setupTime.TotalSeconds).ToString("0.0") +" s simulation).");
+            double setupSeconds = setupTime.TotalSeconds;
+            double simulationSeconds = totalSeconds - setupSeconds;
+            double meanSecondsPerYear = this.Years > 0 ? simulationSeconds / this.Years : 0.0;
+            this.WriteVerbose("Trajectory obtained in " + totalSeconds.ToString("0") + " s (" + setupSeconds.ToString("0.00") + " s load, " + simulationSeconds.ToString("0") +" s simulation, " + meanSecondsPerYear.ToString("0.00") + " s/year).");
         }
     }
 }

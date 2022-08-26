@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Management.Automation;
+using System.Threading.Tasks;
 using Model = iLand.Simulation.Model;
 
 namespace iLand.Cmdlets
@@ -91,7 +92,7 @@ namespace iLand.Cmdlets
                         ResourceUnitIndividualTreeTrajectories treeSpeciesTrajectory = resourceUnitTrajectory.IndividualTreeTrajectories[treeSpeciesIndex];
                         for (int simulationYear = 0; simulationYear < treeSpeciesTrajectory.LengthInYears; ++simulationYear)
                         {
-                            TreeList? treesOfSpecies = treeSpeciesTrajectory.TreesByYear[simulationYear];
+                            TreeListBiometric? treesOfSpecies = treeSpeciesTrajectory.TreesByYear[simulationYear];
                             Debug.Assert(treesOfSpecies != null);
                             batchLength += treesOfSpecies.Count;
                         }
@@ -351,12 +352,22 @@ namespace iLand.Cmdlets
         protected override void ProcessRecord()
         {
             Debug.Assert(this.Trajectory != null);
+            Stopwatch stopwatch = new();
+            stopwatch.Start();
+
             int calendarYearBeforeFirstSimulationTimestep = this.Trajectory!.Landscape.WeatherFirstCalendarYear - 1;
+            //int yearsSimulated = this.Trajectory.SimulationState.CurrentCalendarYear - calendarYearBeforeFirstSimulationTimestep;
+            //int resourceUnitYearsToLog = this.Trajectory.Landscape.ResourceUnits.Count * yearsSimulated;
 
             // there's no requirement to log resource unit and stand trajectories just because they're present
+            // Debatable whether write parallelism be constrained by this.Trajectory.Project.Model.Settings.MaxThreads. For now,
+            // it's not.
             bool logIndividualTrees = String.IsNullOrWhiteSpace(this.IndividualTreeFile) == false;
             bool logResourceUnitStatistics = String.IsNullOrWhiteSpace(this.ResourceUnitFile) == false;
             bool logThreePG = String.IsNullOrWhiteSpace(this.ThreePGFile) == false;
+            Task<long>? writeIndividualTrees = null;
+            Task<long>? writeResourceUnits = null;
+            Task<long>? writeThreePG = null;
             if (logIndividualTrees || logResourceUnitStatistics || logThreePG)
             {
                 IList<ResourceUnitTrajectory> trajectories = this.Trajectory.Output.ResourceUnitTrajectories;
@@ -366,21 +377,31 @@ namespace iLand.Cmdlets
                 }
                 if (logIndividualTrees)
                 {
-                    ResourceUnitIndividualTreeArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForIndividualTrees(trajectories, calendarYearBeforeFirstSimulationTimestep);
-                    WriteTrajectory.WriteTrajectories(this.IndividualTreeFile!, arrowMemory.RecordBatch);
+                    writeIndividualTrees = Task.Run(() =>
+                    {
+                        ResourceUnitIndividualTreeArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForIndividualTrees(trajectories, calendarYearBeforeFirstSimulationTimestep);
+                        return WriteTrajectory.WriteTrajectories(this.IndividualTreeFile!, arrowMemory.RecordBatch);
+                    });
                 }
                 if (logResourceUnitStatistics)
                 {
-                    StandOrResourceUnitArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForResourceUnitStatistics(trajectories, calendarYearBeforeFirstSimulationTimestep);
-                    WriteTrajectory.WriteTrajectories(this.ResourceUnitFile!, arrowMemory.RecordBatch);
+                    writeResourceUnits = Task.Run(() =>
+                    {
+                        StandOrResourceUnitArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForResourceUnitStatistics(trajectories, calendarYearBeforeFirstSimulationTimestep);
+                        return WriteTrajectory.WriteTrajectories(this.ResourceUnitFile!, arrowMemory.RecordBatch);
+                    });
                 }
                 if (logThreePG)
                 {
-                    ResourceUnitThreePGArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForThreePGTimeSeries(trajectories, calendarYearBeforeFirstSimulationTimestep);
-                    WriteTrajectory.WriteTrajectories(this.ThreePGFile!, arrowMemory.RecordBatch);
+                    writeThreePG = Task.Run(() =>
+                    {
+                        ResourceUnitThreePGArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForThreePGTimeSeries(trajectories, calendarYearBeforeFirstSimulationTimestep);
+                        return WriteTrajectory.WriteTrajectories(this.ThreePGFile!, arrowMemory.RecordBatch);
+                    });
                 }
             }
 
+            Task<long>? writeStands = null;
             if (String.IsNullOrWhiteSpace(this.StandFile) == false)
             {
                 IList<StandTrajectory> trajectories = this.Trajectory.Output.StandTrajectoriesByID.Values;
@@ -388,12 +409,42 @@ namespace iLand.Cmdlets
                 {
                     throw new ParameterOutOfRangeException(nameof(this.StandFile), "A stand file was specified but no stand trajectories were logged.");
                 }
-                StandOrResourceUnitArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForStandStatistics(trajectories, calendarYearBeforeFirstSimulationTimestep);
-                WriteTrajectory.WriteTrajectories(this.StandFile, arrowMemory.RecordBatch);
+                writeStands = Task.Run(() =>
+                {
+                    StandOrResourceUnitArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForStandStatistics(trajectories, calendarYearBeforeFirstSimulationTimestep);
+                    return WriteTrajectory.WriteTrajectories(this.StandFile, arrowMemory.RecordBatch);
+                });
             }
+
+            long bytesWritten = 0;
+            int tasks = 0;
+            if (writeIndividualTrees != null)
+            {
+                bytesWritten += writeIndividualTrees.GetAwaiter().GetResult();
+                ++tasks;
+            }
+            if (writeResourceUnits != null)
+            {
+                bytesWritten += writeResourceUnits.GetAwaiter().GetResult();
+                ++tasks;
+            }
+            if (writeThreePG != null)
+            {
+                bytesWritten += writeThreePG.GetAwaiter().GetResult();
+                ++tasks;
+            }
+            if (writeStands != null)
+            {
+                bytesWritten += writeStands.GetAwaiter().GetResult();
+                ++tasks;
+            }
+
+            stopwatch.Stop();
+            double totalSeconds = stopwatch.Elapsed.TotalSeconds;
+            this.WriteVerbose("Trajectories written in " + totalSeconds.ToString("0.0") + " s (" + (bytesWritten / (1000 * 1000 * totalSeconds)).ToString("0") + " MB/s from " + tasks + " concurrent tasks).");
         }
 
-        private static void WriteTrajectories(string trajectoryFilePath, RecordBatch recordBatch)
+        private static long WriteTrajectories(string trajectoryFilePath, RecordBatch recordBatch)
         {
             // for now, all weather time series should start in January of the first simulation year
             using FileStream stream = new(trajectoryFilePath, FileMode.Create, FileAccess.Write, FileShare.None, Constant.File.DefaultBufferSize, FileOptions.SequentialScan);
@@ -401,6 +452,7 @@ namespace iLand.Cmdlets
             writer.WriteStart();
             writer.WriteRecordBatch(recordBatch);
             writer.WriteEnd();
+            return stream.Length;
         }
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Xml;
 using Model = iLand.Simulation.Model;
 
@@ -26,11 +27,11 @@ namespace iLand.Output
         private SqliteTransaction? sqlOutputTransaction;
 
         public LandscapeRemovedAnnualOutput? LandscapeRemovedSql { get; private init; }
-        public List<ResourceUnitTrajectory> ResourceUnitTrajectories { get; private init; } // in same order as Landscape.ResourceUnits
+        public ResourceUnitTrajectory[] ResourceUnitTrajectories { get; private init; } // in same order as Landscape.ResourceUnits, array for simplicity of multithreaded population
         public SortedList<int, StandTrajectory> StandTrajectoriesByID { get; private init; }
         public TreeRemovedAnnualOutput? TreeRemovedSql { get; private init; }
 
-        public Outputs(Project projectFile, Landscape landscape, Model model) // TODO: remove model
+        public Outputs(Project projectFile, Landscape landscape, SimulationState simulationState, ParallelOptions parallelComputeOptions)
         {
             this.currentYearStandStatistics = new();
             this.mostRecentSimulationYearCommittedToDatabase = -1;
@@ -41,7 +42,7 @@ namespace iLand.Output
             this.sqlOutputTransaction = null; // managed in LogYear()
 
             this.LandscapeRemovedSql = null;
-            this.ResourceUnitTrajectories = new();
+            this.ResourceUnitTrajectories = Array.Empty<ResourceUnitTrajectory>();
             this.StandTrajectoriesByID = new();
             this.TreeRemovedSql = null;
 
@@ -51,37 +52,46 @@ namespace iLand.Output
             bool logStandTrajectories = projectFile.Output.Memory.StandTrajectories.Enabled;
             if (logAnyTypeOfResourceUnitTrajectory || logStandTrajectories)
             {
-                List<ResourceUnit> resourceUnits = landscape.ResourceUnits;
+                IList<ResourceUnit> resourceUnits = landscape.ResourceUnits;
+                int resourceUnitCount = landscape.ResourceUnits.Count;
                 if (logAnyTypeOfResourceUnitTrajectory)
                 {
-                    this.ResourceUnitTrajectories.Capacity = resourceUnits.Count;
+                    this.ResourceUnitTrajectories = new ResourceUnitTrajectory[resourceUnitCount];
                 }
 
                 int initialCapacityInYears = projectFile.Output.Memory.InitialTrajectoryLengthInYears;
-                int previousStandID = Constant.NoDataInt32;
-                for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnits.Count; ++resourceUnitIndex)
+                (int partitions, int resourceUnitsPerPartition) = parallelComputeOptions.GetUniformPartitioning(resourceUnitCount, Constant.Data.MinimumResourceUnitsPerLoggingThread);
+                Parallel.For(0, partitions, parallelComputeOptions, (int partitionIndex) =>
                 {
-                    ResourceUnit resourceUnit = resourceUnits[resourceUnitIndex];
-                    if (logAnyTypeOfResourceUnitTrajectory)
+                    (int startResourceUnitIndex, int endResourceUnitIndex) = ParallelOptionsExtensions.GetUniformPartitionRange(partitionIndex, resourceUnitsPerPartition, resourceUnitCount);
+                    for (int resourceUnitIndex = startResourceUnitIndex; resourceUnitIndex < endResourceUnitIndex; ++resourceUnitIndex)
                     {
-                        this.ResourceUnitTrajectories.Add(new ResourceUnitTrajectory(resourceUnit, resourceUnitMemoryOutputs, initialCapacityInYears));
-                    }
-                    if (logStandTrajectories)
-                    {
-                        SortedList<int, ResourceUnitTreeStatistics> standsInResourceUnit = resourceUnit.Trees.TreeStatisticsByStandID;
-                        for (int standIndex = 0; standIndex < standsInResourceUnit.Count; ++standIndex)
+                        ResourceUnit resourceUnit = resourceUnits[resourceUnitIndex];
+                        if (logAnyTypeOfResourceUnitTrajectory)
                         {
-                            int standID = standsInResourceUnit.Keys[standIndex];
-                            if ((previousStandID != standID) && (this.currentYearStandStatistics.ContainsKey(standID) == false))
+                            this.ResourceUnitTrajectories[resourceUnitIndex] = new ResourceUnitTrajectory(resourceUnit, resourceUnitMemoryOutputs, initialCapacityInYears);
+                        }
+                        if (logStandTrajectories)
+                        {
+                            SortedList<int, ResourceUnitTreeStatistics> standsInResourceUnit = resourceUnit.Trees.TreeStatisticsByStandID;
+                            for (int standIndex = 0; standIndex < standsInResourceUnit.Count; ++standIndex)
                             {
-                                this.currentYearStandStatistics.Add(standID, new StandTreeStatistics(standID));
-                                this.StandTrajectoriesByID.Add(standID, new StandTrajectory(standID, initialCapacityInYears));
+                                int standID = standsInResourceUnit.Keys[standIndex];
+                                if (this.currentYearStandStatistics.ContainsKey(standID) == false)
+                                {
+                                    lock (this.currentYearStandStatistics)
+                                    {
+                                        if (this.currentYearStandStatistics.ContainsKey(standID) == false)
+                                        {
+                                            this.currentYearStandStatistics.Add(standID, new StandTreeStatistics(standID));
+                                            this.StandTrajectoriesByID.Add(standID, new StandTrajectory(standID, initialCapacityInYears));
+                                        }
+                                    }
+                                }
                             }
-
-                            previousStandID = standID;
                         }
                     }
-                }
+                });
             }
 
             // SQL outputs
@@ -165,9 +175,9 @@ namespace iLand.Output
                 this.sqlDatabaseConnection = Landscape.GetDatabaseConnection(outputDatabasePath, openReadOnly: false);
 
                 using SqliteTransaction outputTableCreationTransaction = this.sqlDatabaseConnection.BeginTransaction();
-                SimulationState simulationState = model.SimulationState;
-                foreach (AnnualOutput output in this.sqlOutputs)
+                for (int outputIndex = 0; outputIndex < sqlOutputs.Count; ++outputIndex)
                 {
+                    AnnualOutput output = this.sqlOutputs[outputIndex];
                     output.Setup(projectFile, simulationState);
                     output.Open(outputTableCreationTransaction);
                 }
@@ -221,42 +231,56 @@ namespace iLand.Output
             }
 
             // memory outputs
-            bool logResourceUnitTrajectories = this.ResourceUnitTrajectories.Count > 0;
+            bool logResourceUnitTrajectories = this.ResourceUnitTrajectories.Length > 0;
             bool logStandTrajectories = this.StandTrajectoriesByID.Count > 0;
             if (logResourceUnitTrajectories || logStandTrajectories)
             {
-                for (int resourceUnitIndex = 0; resourceUnitIndex < this.ResourceUnitTrajectories.Count; ++ resourceUnitIndex)
+                int resourceUnitTrajectoryCount = this.ResourceUnitTrajectories.Length;
+                (int partitions, int resourceUnitsPerPartition) = model.ParallelComputeOptions.GetUniformPartitioning(resourceUnitTrajectoryCount, Constant.Data.MinimumResourceUnitsPerLoggingThread);
+                Parallel.For(0, partitions, model.ParallelComputeOptions, (int partitionIndex) =>
                 {
-                    if (logResourceUnitTrajectories)
+                    (int startTrajectoryIndex, int endTrajectoryIndex) = ParallelOptionsExtensions.GetUniformPartitionRange(partitionIndex, resourceUnitsPerPartition, resourceUnitTrajectoryCount);
+                    for (int resourceUnitIndex = startTrajectoryIndex; resourceUnitIndex < endTrajectoryIndex; ++resourceUnitIndex)
                     {
-                        ResourceUnitTrajectory trajectory = this.ResourceUnitTrajectories[resourceUnitIndex];
-                        trajectory.AddYear();
-                    }
-                    if (logStandTrajectories)
-                    {
-                        SortedList<int, ResourceUnitTreeStatistics> resourceUnitStandStatisticsByID = model.Landscape.ResourceUnits[resourceUnitIndex].Trees.TreeStatisticsByStandID;
-                        for (int resourceUnitStandIndex = 0; resourceUnitStandIndex < resourceUnitStandStatisticsByID.Count; ++resourceUnitStandIndex)
+                        if (logResourceUnitTrajectories)
                         {
-                            int standID = resourceUnitStandStatisticsByID.Keys[resourceUnitStandIndex];
-                            ResourceUnitTreeStatistics resourceUnitStandStatistics = resourceUnitStandStatisticsByID.Values[resourceUnitStandIndex];
+                            ResourceUnitTrajectory trajectory = this.ResourceUnitTrajectories[resourceUnitIndex];
+                            trajectory.AddYear();
+                        }
+                        if (logStandTrajectories)
+                        {
+                            SortedList<int, ResourceUnitTreeStatistics> resourceUnitStandStatisticsByID = model.Landscape.ResourceUnits[resourceUnitIndex].Trees.TreeStatisticsByStandID;
+                            for (int resourceUnitStandIndex = 0; resourceUnitStandIndex < resourceUnitStandStatisticsByID.Count; ++resourceUnitStandIndex)
+                            {
+                                int standID = resourceUnitStandStatisticsByID.Keys[resourceUnitStandIndex];
+                                ResourceUnitTreeStatistics resourceUnitStandStatistics = resourceUnitStandStatisticsByID.Values[resourceUnitStandIndex];
 
-                            StandTreeStatistics standStatistics = this.currentYearStandStatistics[standID];
-                            standStatistics.Add(resourceUnitStandStatistics);
+                                StandTreeStatistics standStatistics = this.currentYearStandStatistics[standID];
+                                standStatistics.Add(resourceUnitStandStatistics);
+                            }
                         }
                     }
-                }
-                for (int standIndex = 0; standIndex < this.currentYearStandStatistics.Count; ++standIndex)
-                {
-                    int standID = this.currentYearStandStatistics.Keys[standIndex];
-                    StandTreeStatistics standStatistics = this.currentYearStandStatistics.Values[standIndex];
-                    standStatistics.OnAdditionsComplete();
-                    
-                    Debug.Assert(standID == this.StandTrajectoriesByID.Keys[standIndex]);
-                    StandTrajectory standTrajectory = this.StandTrajectoriesByID[standID];
-                    standTrajectory.AddYear(standStatistics);
+                });
 
-                    standStatistics.Zero(); // reset accumulation for next year
-                }
+
+                int standUnitTrajectoryCount = this.currentYearStandStatistics.Count;
+                (partitions, int standsPerPartition) = model.ParallelComputeOptions.GetUniformPartitioning(standUnitTrajectoryCount, Constant.Data.MinimumStandsPerLoggingThread);
+                Parallel.For(0, partitions, model.ParallelComputeOptions, (int partitionIndex) =>
+                {
+                    (int startStandIndex, int endStandIndex) = ParallelOptionsExtensions.GetUniformPartitionRange(partitionIndex, standsPerPartition, standUnitTrajectoryCount);
+                    for (int standIndex = startStandIndex; standIndex < endStandIndex; ++standIndex)
+                    {
+                        int standID = this.currentYearStandStatistics.Keys[standIndex];
+                        StandTreeStatistics standStatistics = this.currentYearStandStatistics.Values[standIndex];
+                        standStatistics.OnAdditionsComplete();
+
+                        Debug.Assert(standID == this.StandTrajectoriesByID.Keys[standIndex]);
+                        StandTrajectory standTrajectory = this.StandTrajectoriesByID[standID];
+                        standTrajectory.AddYear(standStatistics);
+
+                        standStatistics.Zero(); // reset accumulation for next year
+                    }
+                });
             }
 
             // SQL outputs

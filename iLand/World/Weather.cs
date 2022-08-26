@@ -5,8 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
 using System.Xml;
 using LeafPhenology = iLand.Tree.LeafPhenology;
 using Model = iLand.Simulation.Model;
@@ -26,11 +24,10 @@ namespace iLand.World
         protected List<LeafPhenology> TreeSpeciesPhenology { get; private init; } // phenology calculations
         protected int YearsToLoad { get; private init; } // number of years to load from database
 
-        public CO2TimeSeriesMonthly CO2ByMonth { get; protected init; } // ppm
-        public float MeanAnnualTemperature { get; protected set; } // °C
+        public float[] DaytimeMeanTemperatureByMonth { get; private init; } // °C
         public float[] PrecipitationByMonth { get; private init; } // mm
         public Sun Sun { get; private init; } // solar radiation class
-        public float[] DaytimeMeanTemperatureByMonth { get; private init; } // °C
+        public float MeanAnnualTemperature { get; protected set; } // °C
         public float TotalAnnualRadiation { get; protected set; } // return radiation sum (MJ/m²) of the whole year
 
         protected Weather(Project projectFile)
@@ -43,19 +40,9 @@ namespace iLand.World
             this.SampledYears = new();
             this.YearsToLoad = projectFile.World.Weather.DailyWeatherChunkSizeInYears;
 
-            string co2filePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.CO2File);
-            string? co2fileExtension = Path.GetExtension(projectFile.World.Weather.CO2File);
-            CO2ReaderMonthly co2reader = co2fileExtension switch
-            {
-                Constant.File.CsvExtension => new CO2ReaderMonthlyCsv(co2filePath, Constant.Data.DefaultMonthlyAllocationIncrement),
-                Constant.File.FeatherExtension => new CO2ReaderMonthlyFeather(co2filePath, Constant.Data.DefaultMonthlyAllocationIncrement),
-                _ => throw new NotSupportedException("Unhandled CO₂ file extension '" + co2fileExtension + "'.")
-            };
-
-            this.CO2ByMonth = co2reader.MonthlyCO2;
+            this.DaytimeMeanTemperatureByMonth = new float[Constant.MonthsInYear];
             this.PrecipitationByMonth = new float[Constant.MonthsInYear];
             this.Sun = new(projectFile.World.Geometry.Latitude);
-            this.DaytimeMeanTemperatureByMonth = new float[Constant.MonthsInYear];
 
             if (this.DoRandomSampling)
             {

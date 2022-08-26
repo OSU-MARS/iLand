@@ -5,7 +5,7 @@
       <coordinateSystem>EPSG:6556</coordinateSystem>
       <!-- disabled due to high computational cost -->
       <regenerationEnabled>false</regenerationEnabled>
-      <maxThreads>16</maxThreads>
+      <maxComputeThreads>8</maxComputeThreads>
       <randomSeed>0</randomSeed>
     </settings>
   </model>

@@ -345,6 +345,7 @@ namespace iLand.Tree
                     if (this.longDistanceDispersalSeedsByRing.Count != 0)
                     {
                         float yearScaling = this.Species.IsMastYear ? 1.0F : this.nonMastYearFraction;
+                        RandomGenerator random = model.RandomGenerator.Value!;
                         for (int distanceIndex = 0; distanceIndex < this.longDistanceDispersalSeedsByRing.Count; ++distanceIndex)
                         {
                             float lddProbability = this.longDistanceDispersalSeedlingsPerCell; // pixels will have this probability
@@ -352,8 +353,8 @@ namespace iLand.Tree
                             for (int cell = 0; cell < nCells; ++cell)
                             {
                                 // distance and direction:
-                                float radius = model.RandomGenerator.GetRandomFloat(longDispersalDistance[distanceIndex], longDispersalDistance[distanceIndex + 1]) / seedmap.CellSizeInM; // choose a random distance (in pixels)
-                                float phi = model.RandomGenerator.GetRandomProbability() * 2.0F * MathF.PI; // choose a random direction
+                                float radius = random.GetRandomFloat(longDispersalDistance[distanceIndex], longDispersalDistance[distanceIndex + 1]) / seedmap.CellSizeInM; // choose a random distance (in pixels)
+                                float phi = random.GetRandomProbability() * 2.0F * MathF.PI; // choose a random direction
                                 Point ldd = new((int)(pt.X + radius * MathF.Cos(phi)), (int)(pt.Y + radius * MathF.Sin(phi)));
                                 if (seedmap.Contains(ldd))
                                 {
@@ -439,6 +440,7 @@ namespace iLand.Tree
                         // long distance dispersal
                         if (this.longDistanceDispersalSeedsByRing.Count > 0)
                         {
+                            RandomGenerator random = model.RandomGenerator.Value!;
                             Point sourceCellIndex = sourceMap.GetCellXYIndex(sourceIndex);
                             for (int ringIndex = 0; ringIndex < this.longDistanceDispersalSeedsByRing.Count; ++ringIndex)
                             {
@@ -446,7 +448,7 @@ namespace iLand.Tree
                                 int nSeeds;
                                 if (this.longDistanceDispersalSeedsByRing[ringIndex] < 1)
                                 {
-                                    nSeeds = model.RandomGenerator.GetRandomProbability() < this.longDistanceDispersalSeedsByRing[ringIndex] ? 1 : 0;
+                                    nSeeds = random.GetRandomProbability() < this.longDistanceDispersalSeedsByRing[ringIndex] ? 1 : 0;
                                 }
                                 else
                                 {
@@ -455,8 +457,8 @@ namespace iLand.Tree
                                 for (int seedIndex = 0; seedIndex < nSeeds; ++seedIndex)
                                 {
                                     // distance and direction:
-                                    float radiusInCells = model.RandomGenerator.GetRandomFloat(this.longDispersalDistance[ringIndex], this.longDispersalDistance[ringIndex + 1]) / this.SeedMap.CellSizeInM; // choose a random distance (in pixels)
-                                    float phi = 2.0F * MathF.PI * model.RandomGenerator.GetRandomProbability(); // choose a random direction
+                                    float radiusInCells = random.GetRandomFloat(this.longDispersalDistance[ringIndex], this.longDispersalDistance[ringIndex + 1]) / this.SeedMap.CellSizeInM; // choose a random distance (in pixels)
+                                    float phi = 2.0F * MathF.PI * random.GetRandomProbability(); // choose a random direction
                                     Point seedCellPosition = new(sourceCellIndex.X + (int)(radiusInCells * MathF.Cos(phi)), sourceCellIndex.Y + (int)(radiusInCells * MathF.Sin(phi)));
                                     if (this.SeedMap.Contains(seedCellPosition))
                                     {
@@ -472,6 +474,7 @@ namespace iLand.Tree
             else
             {
                 // **** seed distribution in torus mode ***
+                RandomGenerator random = model.RandomGenerator.Value!;
                 int seedmapOffset = sourceMap.GetCellXYIndex(new PointF(0.0F, 0.0F)).X; // the seed maps have x extra rows/columns
                 int seedCellsPerRU = (int)(Constant.ResourceUnitSizeInM / sourceMap.CellSizeInM);
                 for (int sourceIndex = 0; sourceIndex < sourceMap.CellCount; ++sourceIndex)
@@ -505,7 +508,7 @@ namespace iLand.Tree
                                 int nSeeds;
                                 if (longDistanceDispersalSeedsByRing[densityIndex] < 1)
                                 {
-                                    nSeeds = model.RandomGenerator.GetRandomProbability() < longDistanceDispersalSeedsByRing[densityIndex] ? 1 : 0;
+                                    nSeeds = random.GetRandomProbability() < longDistanceDispersalSeedsByRing[densityIndex] ? 1 : 0;
                                 }
                                 else
                                 {
@@ -514,8 +517,8 @@ namespace iLand.Tree
                                 for (int seed = 0; seed < nSeeds; ++seed)
                                 {
                                     // distance and direction:
-                                    float radius = model.RandomGenerator.GetRandomFloat(longDispersalDistance[densityIndex], longDispersalDistance[densityIndex + 1]) / SeedMap.CellSizeInM; // choose a random distance (in pixels)
-                                    float phi = model.RandomGenerator.GetRandomProbability() * 2.0F * MathF.PI; // choose a random direction
+                                    float radius = random.GetRandomFloat(longDispersalDistance[densityIndex], longDispersalDistance[densityIndex + 1]) / SeedMap.CellSizeInM; // choose a random distance (in pixels)
+                                    float phi = random.GetRandomProbability() * 2.0F * MathF.PI; // choose a random direction
                                     Point ldd = new((int)(radius * MathF.Cos(phi)), (int)(radius * MathF.Sin(phi))); // destination (offset)
                                     Point torusIndex = ruOffset.Add(new Point(Maths.Modulo((offsetInRU.X + ldd.X), seedCellsPerRU), Maths.Modulo((offsetInRU.Y + ldd.Y), seedCellsPerRU)));
 
@@ -725,31 +728,25 @@ namespace iLand.Tree
 
         private void SetupExternalSeeds(Model model)
         {
-            int seedbeltWidth = model.Project.Model.SeedDispersal.ExternalSeedBelt.WidthInM;
-            // setup of sectors
-            // setup of base map
-            float seedmap_size = 20.0F;
+            // make a copy of the 10m height grid in lower resolution and mark pixels which are on resource units
             this.externalSeedBaseMap = new();
-            this.externalSeedBaseMap.Setup(model.Landscape.VegetationHeightGrid.ProjectExtent, seedmap_size);
-            this.externalSeedBaseMap.Fill(0.0F);
-            if (this.externalSeedBaseMap.CellCount * 4 != model.Landscape.VegetationHeightGrid.CellCount)
+            this.externalSeedBaseMap.Setup(model.Landscape.VegetationHeightGrid.ProjectExtent, Constant.SeedmapCellSizeInM);
+            this.externalSeedBaseMap.Fill(-1.0F); // default all cells to of project area
+            if (4 * this.externalSeedBaseMap.CellCount != model.Landscape.VegetationHeightGrid.CellCount)
             {
-                throw new NotSupportedException("Width and height of the project area need to be a multiple of 20m when external seeds are enabled.");
+                // not quite the same as checking 2 * Constant.HeightCellSizeInM != Constant.SeedmapCellSizeInM
+                throw new NotSupportedException("Width and height of the project area need to be a multiple of " + Constant.SeedmapCellSizeInM + " m when external seeds are enabled.");
             }
-            // make a copy of the 10m height grid in lower resolution and mark pixels that are forested and outside of
-            // the project area.
-            for (int indexY = 0; indexY < externalSeedBaseMap.SizeY; ++indexY)
+            for (int resourceUnitIndex = 0; resourceUnitIndex < model.Landscape.ResourceUnits.Count; ++resourceUnitIndex)
             {
-                for (int indexX = 0; indexX < externalSeedBaseMap.SizeX; ++indexX)
-                {
-                    bool cellIsInWorld = model.Landscape.VegetationHeightFlags[2 * indexX, 2 * indexY].IsInResourceUnit();
-                    this.externalSeedBaseMap[indexX, indexY] = cellIsInWorld ? -1.0F : 1.0F;
-                }
+                ResourceUnit resourceUnit = model.Landscape.ResourceUnits[resourceUnitIndex];
+                Point resourceUnitSeedmapIndexXY = this.externalSeedBaseMap.GetCellXYIndex(resourceUnit.ProjectExtent.X, resourceUnit.ProjectExtent.Y);
+                this.externalSeedBaseMap.Fill(resourceUnitSeedmapIndexXY.X, resourceUnitSeedmapIndexXY.Y, Constant.SeedmapCellsPerRUWidth, Constant.SeedmapCellsPerRUWidth, 1.0F);
             }
-            //string path = model.GlobalSettings.Path(model.GlobalSettings.Settings.GetString("Model.SeedDispersal.dumpSeedMapsPath"));
 
             // now scan the pixels of the belt: paint all pixels that are close to the project area
             // we do this 4 times (for all cardinal direcitons)
+            int externalSeedbeltWidth = model.Project.Model.SeedDispersal.ExternalSeedBelt.WidthInM;
             for (int indexY = 0; indexY < this.externalSeedBaseMap.SizeY; ++indexY)
             {
                 for (int indexX = 0; indexX < this.externalSeedBaseMap.SizeX; ++indexX)
@@ -759,7 +756,7 @@ namespace iLand.Tree
                         continue;
                     }
 
-                    int lookForward = Math.Min(indexX + seedbeltWidth, this.externalSeedBaseMap.SizeX - 1);
+                    int lookForward = Math.Min(indexX + externalSeedbeltWidth, this.externalSeedBaseMap.SizeX - 1);
                     if (this.externalSeedBaseMap[lookForward, indexY] == -1.0F)
                     {
                         // fill pixels
@@ -783,7 +780,7 @@ namespace iLand.Tree
                     {
                         continue;
                     }
-                    int lookForward = Math.Max(indexX - seedbeltWidth, 0);
+                    int lookForward = Math.Max(indexX - externalSeedbeltWidth, 0);
                     if (this.externalSeedBaseMap[lookForward, indexY] == -1.0F)
                     {
                         // fill pixels
@@ -808,7 +805,7 @@ namespace iLand.Tree
                     {
                         continue;
                     }
-                    int lookForward = Math.Min(indexY + seedbeltWidth, this.externalSeedBaseMap.SizeY - 1);
+                    int lookForward = Math.Min(indexY + externalSeedbeltWidth, this.externalSeedBaseMap.SizeY - 1);
                     if (this.externalSeedBaseMap[indexX, lookForward] == -1.0F)
                     {
                         // fill pixels
@@ -832,7 +829,7 @@ namespace iLand.Tree
                     {
                         continue;
                     }
-                    int lookForward = Math.Max(indexY - seedbeltWidth, 0);
+                    int lookForward = Math.Max(indexY - externalSeedbeltWidth, 0);
                     if (externalSeedBaseMap[indexX, lookForward] == -1.0)
                     {
                         // fill pixels
@@ -848,6 +845,7 @@ namespace iLand.Tree
                 }
             }
 
+            // setup of sectors
             this.externalSeedData.Clear();
             int sectorsX = model.Project.Model.SeedDispersal.ExternalSeedBelt.SectorsX;
             int sectorsY = model.Project.Model.SeedDispersal.ExternalSeedBelt.SectorsY;
@@ -875,8 +873,8 @@ namespace iLand.Tree
                 List<string> speciesIDs = species.SpeciesIDs.Split(" ").ToList();
                 for (int speciesIndex = 0; speciesIndex < speciesIDs.Count; ++speciesIndex)
                 {
-                    WorldFloraID treeSpeciesID = WorldFloraIDExtensions.Parse(speciesIDs[speciesIndex]);
-                    List<float> space = this.externalSeedData[treeSpeciesID];
+                    WorldFloraID speciesTsn = WorldFloraIDExtensions.Parse(speciesIDs[speciesIndex]);
+                    List<float> space = this.externalSeedData[speciesTsn];
                     if (space.Count == 0)
                     {
                         space.Capacity = sectorsX * sectorsY; // are initialized to 0s
@@ -902,6 +900,7 @@ namespace iLand.Tree
             int cellsY = this.externalSeedMap.SizeY / this.externalSeedSectorY; // number of cells per sector
             this.externalSeedMap.Setup(this.SeedMap);
             this.externalSeedMap.Fill(0.0F);
+            RandomGenerator random = model.RandomGenerator.Value!;
             for (int sectorX = 0; sectorX < this.externalSeedSectorX; ++sectorX)
             {
                 for (int sectorY = 0; sectorY < this.externalSeedSectorY; ++sectorY)
@@ -920,7 +919,7 @@ namespace iLand.Tree
                             // check
                             if (this.externalSeedBaseMap[indexX, indexY] == 2.0F)
                             {
-                                if (model.RandomGenerator.GetRandomProbability() < p)
+                                if (random.GetRandomProbability() < p)
                                 {
                                     externalSeedMap[indexX, indexY] = 1.0F; // flag
                                 }

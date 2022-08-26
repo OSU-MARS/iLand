@@ -234,7 +234,17 @@ namespace iLand.World
             {
                 throw new NotSupportedException();
             }
-            Array.Fill(this.Data, value);
+            this.Data.AsSpan().Fill(value);
+        }
+
+        public void Fill(int startIndexX, int startIndexY, int sizeX, int sizeY, T value)
+        {
+            int endY = startIndexY + sizeY + 1;
+            for (int indexY = startIndexY; indexY < endY; ++indexY)
+            {
+                int index = this.IndexXYToIndex(startIndexX, startIndexY);
+                this.Data.AsSpan().Slice(index, sizeX).Fill(value);
+            }
         }
 
         public float GetCenterToCenterDistance(Point cellIndexXY1, Point cellIndexXY2)

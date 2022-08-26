@@ -65,7 +65,7 @@ namespace iLand.Output.Sql
 
             if (this.removedTreesByResourceUnit.TryGetValue(trees.ResourceUnit, out (TreeListSpatial Trees, List<MortalityCause> Removals) removedTreesOfSpecies) == false)
             {
-                removedTreesOfSpecies = new(new TreeListSpatial(model.Landscape, trees.ResourceUnit, trees.Species), new List<MortalityCause>());
+                removedTreesOfSpecies = new(new TreeListSpatial(model.Landscape, trees.ResourceUnit, trees.Species, trees.Capacity), new List<MortalityCause>());
                 this.removedTreesByResourceUnit.Add(trees.ResourceUnit, removedTreesOfSpecies);
             }
 

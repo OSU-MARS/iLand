@@ -24,7 +24,7 @@ namespace iLand.Output.Memory
         private readonly byte[] stressIndex;
         private readonly byte[] nppReserveInKg;
         private readonly byte[] opacity;
-        private readonly byte[] age;
+        private readonly byte[] ageInYears;
         private readonly byte[] coarseRootMassInKg;
         private readonly byte[] fineRootMassInKg;
         private readonly byte[] foliageMassInKg;
@@ -48,7 +48,7 @@ namespace iLand.Output.Memory
             this.stressIndex = new byte[batchLength * sizeof(float)];
             this.nppReserveInKg = new byte[batchLength * sizeof(float)];
             this.opacity = new byte[batchLength * sizeof(float)];
-            this.age = new byte[batchLength * sizeof(UInt16)];
+            this.ageInYears = new byte[batchLength * sizeof(UInt16)];
             this.coarseRootMassInKg = new byte[batchLength * sizeof(float)];
             this.fineRootMassInKg = new byte[batchLength * sizeof(float)];
             this.foliageMassInKg = new byte[batchLength * sizeof(float)];
@@ -115,7 +115,7 @@ namespace iLand.Output.Memory
                 ArrowArrayExtensions.WrapInFloat(this.stressIndex),
                 ArrowArrayExtensions.WrapInFloat(this.nppReserveInKg),
                 ArrowArrayExtensions.WrapInFloat(this.opacity),
-                ArrowArrayExtensions.WrapInUInt16(this.age),
+                ArrowArrayExtensions.WrapInUInt16(this.ageInYears),
                 ArrowArrayExtensions.WrapInFloat(this.coarseRootMassInKg),
                 ArrowArrayExtensions.WrapInFloat(this.fineRootMassInKg),
                 ArrowArrayExtensions.WrapInFloat(this.foliageMassInKg),
@@ -130,7 +130,7 @@ namespace iLand.Output.Memory
             Int16 calendarYear = (Int16)calendarYearBeforeFirstSimulationTimestep;
             for (int simulationYear = 0; simulationYear < trajectories.TreesByYear.Length; ++calendarYear, ++simulationYear)
             {
-                TreeList? treesOfSpecies = trajectories.TreesByYear[simulationYear];
+                TreeListBiometric? treesOfSpecies = trajectories.TreesByYear[simulationYear];
                 if (treesOfSpecies == null)
                 {
                     break;
@@ -150,7 +150,7 @@ namespace iLand.Output.Memory
                 this.CopyFirstN(treesOfSpecies.StressIndex, this.stressIndex, trees);
                 this.CopyFirstN(treesOfSpecies.NppReserveInKg, this.nppReserveInKg, trees);
                 this.CopyFirstN(treesOfSpecies.Opacity, this.opacity, trees);
-                this.CopyFirstN(treesOfSpecies.Age, this.age, trees);
+                this.CopyFirstN(treesOfSpecies.AgeInYears, this.ageInYears, trees);
                 this.CopyFirstN(treesOfSpecies.CoarseRootMassInKg, this.coarseRootMassInKg, trees);
                 this.CopyFirstN(treesOfSpecies.FineRootMassInKg, this.fineRootMassInKg, trees);
                 this.CopyFirstN(treesOfSpecies.FoliageMassInKg, this.foliageMassInKg, trees);

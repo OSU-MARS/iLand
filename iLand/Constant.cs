@@ -30,6 +30,7 @@ namespace iLand
         public const float ResourceUnitAreaInM2 = 10000.0F; // area of a resource unit, m²
         public const int ResourceUnitSizeInM = 100; // size of resource unit, m
         public const int SeedmapCellSizeInM = 20; // size of seedmap cell, m
+        public const int SeedmapCellsPerRUWidth = 5; // 100 m / 20 m
         public const int TimeStepInYears = 1;
         public const float TreeNudgeIntoResourceUnitInM = 0.01F;
 
@@ -46,6 +47,10 @@ namespace iLand
             public const int DefaultResourceUnitAllocationIncrement = 256;
             public const string DefaultSpeciesTable = "species";
             public const int DefaultTreeAllocationIncrement = 1000;
+            public const int MaxResourceUnitTreeBatchSize = 200;
+            public const int MinimumResourceUnitsPerLoggingThread = 100;
+            public const int MinimumStandsPerLoggingThread = 100;
+            public const int MinimumTreesPerThread = 100 * 1000;
         }
 
         public static class File

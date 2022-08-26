@@ -28,9 +28,33 @@ namespace iLand.Test
         {
             // 4 km: 81 weather cells in available, 37 of which cover the unbuffered Elliott
             // 200 m: 20,440 weather cells available, 50 of which fall within unit test window
-            int expectedWeatherIDs200m = 50;
-            int expectedWeatherTimesteps = 12 * (2100 - 2022 + 1); // data files start in 2011 but Elliott.xml sets start year to 2022
-            int expectedResourceUnitCount = 190; // unit test window covers 190 resource units, 34494 resource units cover the Elliott (unbuffered)
+            const int expectedWeatherIDs200m = 50;
+            const int expectedWeatherTimesteps = 12 * (2100 - 2022 + 1); // data files start in 2011 but Elliott.xml sets start year to 2022
+            const int expectedResourceUnitCount = 190; // unit test window covers 190 resource units, 34494 resource units cover the Elliott (unbuffered)
+            const int yearsToSimulate = 11;
+
+            // regex for reformatting copy/paste of values from watch window: "\s+\[\d+]\s+(\d+.\d{1,3})\d*\s+float\r?\n" -> "$1F, "
+            // Values are relatively sensitive to stochastic mortality's influences on stand trajectory. Test should reliably pass but
+            // changes to random number generation appear likely to require expected values be updated.
+            ExpectedResourceUnitTrajectory expectedTrajectory82597 = new()
+            {
+                GppByYear = new float[]
+                {
+                    0.0F, 15.450F, 15.564F, 15.453F, 15.706F, 15.383F,
+                    15.701F, 15.846F, 15.707F, 15.792F, 15.869F
+                },
+                NppByYear = new float[]
+                {
+                    0.0F, 50746.117F, 51789.003F, 51903.867F, 53107.093F, 52297.18F,
+                    53638F, 54336.765F, 53995.175F, 54398.253F, 54749.98F
+                },
+                StemVolumeByYear = new float[]
+                {
+                    1166.786F, 1221.545F, 1276.808F, 1331.800F, 1388.283F, 1442.904F,
+                    1499.338F, 1556.354F, 1612.148F, 1668.454F, 1725.025F
+                }
+            };
+                    
             for (int reliabilityIteration = 0; reliabilityIteration < 1; ++reliabilityIteration)
             {
                 using Model elliott = LandTest.LoadProject(LandTest.GetElliottProjectPath(this.TestContext!)); // ~4 seconds in debug
@@ -46,7 +70,7 @@ namespace iLand.Test
                 }
 
                 // located tracked resource units
-                ObservedResourceUnitTrajectory observedTrajectory82597 = new() // wholly contained within stand 78
+                ObservedResourceUnitTrajectory observedTrajectory82597 = new(yearsToSimulate) // wholly contained within stand 78
                 {
                     NonmonotonicGrowthTolerance = 0.02F,
                     NppTolerance = 0.04F,
@@ -71,7 +95,7 @@ namespace iLand.Test
 
                 // run as many singlethreaded timesteps as are resonable for a unit test with debug build performance
                 // 10 years, two tree tiles: ~1.3 Zen 3 core-seconds per iteration in debug (most of time is in project loading)
-                for (int simulationYear = 1; simulationYear < 11; ++simulationYear)
+                for (int simulationYear = 1; simulationYear < yearsToSimulate; ++simulationYear)
                 {
                     elliott.RunYear();
                     observedTrajectory82597.AddYear(resourceUnit82597);
@@ -82,27 +106,8 @@ namespace iLand.Test
                 ModelTest.VerifyElliottResourceUnits(elliott);
                 ModelTest.VerifyElliottWeather(elliott);
 
-                // regex for reformatting copy/paste of values from watch window: "\s+\[\d+]\s+(\d+.\d{1,3})\d*\s+float\r?\n" -> "$1F, "
-                // Values are relatively sensitive to stochastic mortality's influences on stand trajectory. Test should reliably pass but
-                // changes to random number generation appear likely to require expected values be updated.
-                List<float> expectedGppBySimulationYear = new()
-                {
-                    0.0F, 15.450F, 15.564F, 15.453F, 15.706F, 15.383F, 
-                    15.701F, 15.846F, 15.707F, 15.792F, 15.869F
-                };
-                List<float> expectedNppBySimulationYear = new()
-                {
-                    0.0F, 50746.117F, 51789.003F, 51903.867F, 53107.093F, 52297.18F, 
-                    53638F, 54336.765F, 53995.175F, 54398.253F, 54749.98F
-                };
-                List<float> expectedStemVolumeBySimulationYear = new()
-                {
-                    1166.786F, 1221.545F, 1276.808F, 1331.800F, 1388.283F, 1442.904F, 
-                    1499.338F, 1556.354F, 1612.148F, 1668.454F, 1725.025F
-                };
-                    
                 ResourceUnitAllSpeciesTrajectory? resourceUnit82597trajectory = elliott.Output.ResourceUnitTrajectories[resourceUnit82597index].AllTreeSpeciesTrajectory;
-                observedTrajectory82597.Verify(resourceUnit82597trajectory, 126.0F, expectedGppBySimulationYear, expectedNppBySimulationYear, expectedStemVolumeBySimulationYear);
+                observedTrajectory82597.Verify(resourceUnit82597trajectory, 126.0F, expectedTrajectory82597);
 
                 // verify Pacific Northwest tree species loading
                 TreeSpeciesSet pnwSpecies = elliott.Landscape.SpeciesSetsByTableName[Constant.Data.DefaultSpeciesTable];
@@ -147,7 +152,7 @@ namespace iLand.Test
                 // check monthly CO₂ .csv read
                 string co2csvFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "co2 ssp370.csv");
                 CO2ReaderMonthlyCsv co2csvReader = new(co2csvFilePath, startYear: 2010); // should have no effect: actual start year in file is 2015
-                Assert.IsTrue(co2csvReader.MonthlyCO2.Count == availableCO2months);
+                Assert.IsTrue(co2csvReader.TimeSeries.Count == availableCO2months);
 
                 // check monthly weather .csv read
                 string weatherCsvFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "weather 4 km 2011-2100 13GCMssp370.csv");
@@ -219,11 +224,12 @@ namespace iLand.Test
             using Model plot14 = LandTest.LoadProject(LandTest.GetMalcolmKnappProjectPath(TestConstant.MalcolmKnapp.Plot14));
             ModelTest.VerifyMalcolmKnappResourceUnit(plot14);
 
-            ObservedResourceUnitTrajectory observedTrajectory = new();
+            const int yearsToSimulate = 29;
+            ObservedResourceUnitTrajectory observedTrajectory = new(yearsToSimulate);
 
             ResourceUnit resourceUnit = plot14.Landscape.ResourceUnits[0];
             observedTrajectory.AddYear(resourceUnit);
-            for (int simulationYear = 1; simulationYear < 29; ++simulationYear)
+            for (int simulationYear = 1; simulationYear < yearsToSimulate; ++simulationYear)
             {
                 plot14.RunYear();
 
@@ -240,28 +246,31 @@ namespace iLand.Test
             // regex for reformatting copy/paste of values from watch window: "\s+\[\d+]\s+(\d+.\d{1,3})\d*\s+float\r?\n" -> "$1F, "
             // Values are relatively sensitive to stochastic mortality's influences on stand trajectory. Test should reliably pass but
             // changes to random number generation appear likely to require expected values be updated.
-            List<float> expectedGppByYear = new()
+            ExpectedResourceUnitTrajectory expectedTrajectory = new()
             {
                 // with input data in NAD83 / BC Albers (EPSG:3005) and Douglas-fir light stamps updated to iLand 1.0 height:diameter
                 // ratio spacing
-                0.0F,10.332F, 11.101F, 13.942F, 11.197F, 13.367F, 10.300F, 12.123F, 12.582F, 12.812F, 
-                10.991F, 11.269F, 9.763F, 10.914F, 9.690F, 12.477F, 11.038F, 11.317F, 10.039F, 8.122F, 
-                9.139F, 11.834F, 8.867F, 11.034F, 10.034F, 13.091F, 10.851F, 12.163F, 12.639F
-            };
-            List<float> expectedNppByYear = new()
-            {
-                0.0F, 15121.153F, 16567.48F, 21124.502F, 17659.486F, 21233.345F, 16907.064F, 19966.412F, 20802.783F, 22333.103F, 
-                19217.291F, 20211.252F, 17536.902F, 19613.64F, 17416.525F, 22425.482F, 19859.281F, 20366.093F, 18062.011F, 14609.35F, 
-                16428.11F, 21257.44F, 15932.751F, 19820.877F, 18021.93F, 23516.998F, 19478.73F, 21812.896F, 22652.115F
-            };
-            List<float> expectedStemVolumeByYear = new()
-            {
-                107.503F, 120.144F, 134.572F, 155.985F, 171.044F, 191.837F, 205.168F, 223.533F, 243.057F, 263.543F, 
-                278.798F, 295.564F, 307.320F, 321.637F, 331.338F, 347.055F, 362.951F, 377.981F, 385.101F, 389.623F, 
-                394.295F, 410.941F, 417.181F, 433.390F, 443.233F, 465.463F, 475.591F, 484.418F, 500.627F
+                GppByYear = new float[]
+                {
+                    0.0F,10.332F, 11.101F, 13.942F, 11.197F, 13.367F, 10.300F, 12.123F, 12.582F, 12.812F,
+                    10.991F, 11.269F, 9.763F, 10.914F, 9.690F, 12.477F, 11.038F, 11.317F, 10.039F, 8.122F,
+                    9.139F, 11.834F, 8.867F, 11.034F, 10.034F, 13.091F, 10.851F, 12.163F, 12.639F
+                },
+                NppByYear = new float[]
+                {
+                    0.0F, 15121.153F, 16567.48F, 21124.502F, 17659.486F, 21233.345F, 16907.064F, 19966.412F, 20802.783F, 22333.103F,
+                    19217.291F, 20211.252F, 17536.902F, 19613.64F, 17416.525F, 22425.482F, 19859.281F, 20366.093F, 18062.011F, 14609.35F,
+                    16428.11F, 21257.44F, 15932.751F, 19820.877F, 18021.93F, 23516.998F, 19478.73F, 21812.896F, 22652.115F
+                },
+                StemVolumeByYear = new float[]
+                {
+                    107.503F, 120.144F, 134.572F, 155.985F, 171.044F, 191.837F, 205.168F, 223.533F, 243.057F, 263.543F,
+                    278.798F, 295.564F, 307.320F, 321.637F, 331.338F, 347.055F, 362.951F, 377.981F, 385.101F, 389.623F,
+                    394.295F, 410.941F, 417.181F, 433.390F, 443.233F, 465.463F, 475.591F, 484.418F, 500.627F
+                }
             };
 
-            observedTrajectory.Verify(plot14.Output.ResourceUnitTrajectories[0].AllTreeSpeciesTrajectory, 222.0F, expectedGppByYear, expectedNppByYear, expectedStemVolumeByYear); ;
+            observedTrajectory.Verify(plot14.Output.ResourceUnitTrajectories[0].AllTreeSpeciesTrajectory, 222.0F, expectedTrajectory);
         }
 
         private static void VerifyDouglasFirPacificNorthwest(Model model)
@@ -306,7 +315,7 @@ namespace iLand.Test
             Assert.IsTrue(douglasFir.IsConiferous == true);
             Assert.IsTrue(douglasFir.IsEvergreen == true);
             Assert.IsTrue(douglasFir.IsMastYear == false);
-            Assert.IsTrue(douglasFir.IsTreeSerotinousRandom(model.RandomGenerator, 40) == false);
+            Assert.IsTrue(douglasFir.IsTreeSerotinousRandom(model.RandomGenerator.Value!, 40) == false);
             // lightResponseClass  2.78
             Assert.IsTrue(MathF.Abs(douglasFir.MaxCanopyConductance - 0.017F) < 0.001F);
             Assert.IsTrue(String.Equals(douglasFir.Name, "Pseudotsuga menziesii", StringComparison.Ordinal));
@@ -357,7 +366,7 @@ namespace iLand.Test
         private static void VerifyElliottModel(Model model)
         {
             Assert.IsTrue(model.Landscape.WeatherFirstCalendarYear == 2022);
-            Assert.IsTrue(model.Output.ResourceUnitTrajectories.Count == model.Landscape.ResourceUnits.Count);
+            Assert.IsTrue(model.Output.ResourceUnitTrajectories.Length == model.Landscape.ResourceUnits.Count);
             Assert.IsTrue(model.Output.StandTrajectoriesByID.Count == 14);
             Assert.IsTrue(model.Project.Model.Ecosystem.AirDensity == 1.2041F);
             Assert.IsTrue(model.Project.Model.Ecosystem.BoundaryLayerConductance == 0.2F);
@@ -522,7 +531,7 @@ namespace iLand.Test
             Assert.IsTrue(model.Landscape.StandRaster.IsSetup() == false);
             Assert.IsTrue(model.Landscape.WeatherByID.Count == 1);
             Assert.IsTrue(model.Landscape.WeatherFirstCalendarYear == 1950);
-            Assert.IsTrue(model.Project.Model.Settings.MaxThreads == 1);
+            Assert.IsTrue(model.Project.Model.Settings.MaxComputeThreads == 1);
             Assert.IsTrue(model.SimulationState.CurrentCalendarYear == 1949);
         }
 
@@ -676,7 +685,7 @@ namespace iLand.Test
                 {
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                     {
-                        Assert.IsTrue((treesOfSpecies.Age[treeIndex] > 0 + simulationYear) && (treesOfSpecies.Age[treeIndex] < 100 + simulationYear));
+                        Assert.IsTrue((treesOfSpecies.AgeInYears[treeIndex] > 0 + simulationYear) && (treesOfSpecies.AgeInYears[treeIndex] < 100 + simulationYear));
                         Assert.IsTrue(treesOfSpecies.GetBasalArea(treeIndex) > 0.0);
                         Assert.IsTrue((treesOfSpecies.CoarseRootMassInKg[treeIndex] >= 0.0F) && (treesOfSpecies.CoarseRootMassInKg[treeIndex] < 1E6F));
                         Assert.IsTrue((treesOfSpecies.DbhInCm[treeIndex] > 0.0F) && (treesOfSpecies.DbhInCm[treeIndex] < 200.0F));

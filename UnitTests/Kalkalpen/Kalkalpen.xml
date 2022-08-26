@@ -75,8 +75,9 @@
       <carbonCycleEnabled>true</carbonCycleEnabled>
       <expressionLinearizationEnabled>true</expressionLinearizationEnabled>
       <growthEnabled>true</growthEnabled>
-      <!-- maximum number of compute threads to run in parallel when timestepping, default is half the number of threads supported by the processor -->
-      <maxThreads>1</maxThreads>
+      <!-- maximum number of compute threads to run in parallel, default is half the number of threads supported by the processor 
+           Landscape and Model instantiation and logging may use additional IO threads. -->
+      <maxComputeThreads>1</maxComputeThreads>
       <mortalityEnabled>true</mortalityEnabled>
       <regenerationEnabled>true</regenerationEnabled>
       <!-- the default soil permanent wilt potential is -4000 kPa -->

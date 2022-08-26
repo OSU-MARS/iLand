@@ -1,5 +1,4 @@
-﻿using iLand.Extensions;
-using iLand.Input;
+﻿using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Input.Tree;
 using iLand.Input.Weather;
@@ -9,14 +8,15 @@ using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace iLand.World
 {
     public class Landscape
     {
+        public CO2TimeSeriesMonthly CO2ByMonth { get; private init; }
         public GrassCover GrassCover { get; private init; }
         public Grid<float> LightGrid { get; private init; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
         public PointF ProjectOriginInGisCoordinates { get; private init; }
@@ -26,13 +26,11 @@ namespace iLand.World
         public Dictionary<string, TreeSpeciesSet> SpeciesSetsByTableName { get; private init; }
         public GridRaster10m StandRaster { get; private init; } // retrieve the spatial grid that defines the stands (10m resolution)
 
-        public float TotalStockableHectares { get; private set; } // total stockable area of the landscape (ha)
         public Grid<float> VegetationHeightGrid { get; private init; } // stores maximum height of vegetation in m, currently 10 x 10 m cells
-        public Grid<HeightCellFlags> VegetationHeightFlags { get; private init; } // flags for height cells, currently 10 x 10 m
         public Dictionary<string, Weather> WeatherByID { get; private init; }
         public int WeatherFirstCalendarYear { get; private init; }
 
-        public Landscape(Project projectFile)
+        public Landscape(Project projectFile, ParallelOptions parallelComputeOptions)
         {
             if (String.IsNullOrWhiteSpace(projectFile.World.Initialization.ResourceUnitFile))
             {
@@ -44,6 +42,31 @@ namespace iLand.World
                 throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + projectFile.World.Geometry.BufferWidthInM + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.HeightCellSizeInM + " m).");
             }
 
+            // if available, read monthly weather data in parallel with resource unit setup
+            string weatherFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.WeatherFile);
+            string? weatherFileExtension = Path.GetExtension(weatherFilePath);
+            Func<WeatherReaderMonthly>? readMonthlyWeatherFromFile = weatherFileExtension switch
+            {
+                // for now, assume .csv and .feather weather is monthly and all weather tables in SQLite databases are daily
+                Constant.File.CsvExtension => () => new WeatherReaderMonthlyCsv(weatherFilePath, projectFile.World.Weather.StartYear),
+                Constant.File.FeatherExtension => () => new WeatherReaderMonthlyFeather(weatherFilePath, projectFile.World.Weather.StartYear),
+                Constant.File.SqliteExtension => null,
+                _ => throw new NotSupportedException("Unhandled weather file extension '" + weatherFileExtension + "'.")
+            };
+
+            Task<WeatherReaderMonthly>? readMonthlyWeather = readMonthlyWeatherFromFile != null ? Task.Run(readMonthlyWeatherFromFile) : null;
+
+            // read monthly CO₂ in parallel with resource unit setup
+            string co2filePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.CO2File);
+            string? co2fileExtension = Path.GetExtension(projectFile.World.Weather.CO2File);
+            CO2ReaderMonthly monthlyCO2reader = co2fileExtension switch
+            {
+                Constant.File.CsvExtension => new CO2ReaderMonthlyCsv(co2filePath, Constant.Data.DefaultMonthlyAllocationIncrement),
+                Constant.File.FeatherExtension => new CO2ReaderMonthlyFeather(co2filePath, Constant.Data.DefaultMonthlyAllocationIncrement),
+                _ => throw new NotSupportedException("Unhandled CO₂ file extension '" + co2fileExtension + "'.")
+            };
+
+            this.CO2ByMonth = monthlyCO2reader.TimeSeries;
             // this.Extent is set below
             this.GrassCover = new();
             // this.LightGrid is set below
@@ -103,20 +126,9 @@ namespace iLand.World
             RectangleF bufferedExtent = new(0.0F, 0.0F, resourceUnitGisExtent.Width + 2 * worldBufferWidth, resourceUnitGisExtent.Height + 2 * worldBufferWidth);
             this.LightGrid = new(bufferedExtent, Constant.LightCellSizeInM); // (re)initialized by Model at start of every timestep
             this.VegetationHeightGrid = new(bufferedExtent, Constant.HeightCellSizeInM);
-            this.VegetationHeightFlags = new(bufferedExtent, Constant.HeightCellSizeInM);
 
             // instantiate resource units only where defined in resource unit file
-            string weatherFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.WeatherFile);
-            string? weatherFileExtension = Path.GetExtension(weatherFilePath);
-            WeatherReaderMonthly? monthlyWeatherReader = weatherFileExtension switch
-            {
-                // for now, assume .csv and .feather weather is monthly and all weather tables in SQLite databases are daily
-                Constant.File.CsvExtension => new WeatherReaderMonthlyCsv(weatherFilePath, projectFile.World.Weather.StartYear),
-                Constant.File.FeatherExtension => new WeatherReaderMonthlyFeather(weatherFilePath, projectFile.World.Weather.StartYear),
-                Constant.File.SqliteExtension => null,
-                _ => throw new NotSupportedException("Unhandled weather file extension '" + weatherFileExtension + "'.")
-            };
-
+            WeatherReaderMonthly? monthlyWeatherReader = readMonthlyWeather?.GetAwaiter().GetResult();
             for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitReader.Count; ++resourceUnitIndex)
             {
                 ResourceUnitEnvironment environment = resourceUnitReader.Environments[resourceUnitIndex];
@@ -183,63 +195,16 @@ namespace iLand.World
             {
                 string filePath = projectFile.GetFilePath(ProjectDirectory.Gis, standRasterFile);
                 this.StandRaster.LoadFromFile(filePath);
-                if ((this.StandRaster.Grid.CellCount != this.VegetationHeightFlags.CellCount) || (this.StandRaster.Grid.ProjectExtent != this.VegetationHeightFlags.ProjectExtent))
+                if ((this.StandRaster.Grid.CellCount != this.VegetationHeightGrid.CellCount) || (this.StandRaster.Grid.ProjectExtent != this.VegetationHeightGrid.ProjectExtent))
                 {
                     throw new NotSupportedException("Extent of stand raster does not match extent of vegetation height grid.");
                 }
                 this.StandRaster.CreateIndex(this);
 
-                for (int standCellIndex = 0; standCellIndex < this.StandRaster.Grid.CellCount; ++standCellIndex)
-                {
-                    int standID = this.StandRaster.Grid[standCellIndex];
-                    if (standID >= Constant.DefaultStandID)
-                    {
-                        this.VegetationHeightFlags[standCellIndex] = HeightCellFlags.InResourceUnit;
-                    }
-                }
-            }
-            else
-            {
-                // if no stand raster is applied, mark all height cells in resource units as on landscape
-                // If the resource unit grid is fully populated marking could be done as a set of larger array fills but, as
-                // many study areas aren't rectangular, use a more conservative approach of filling resource units one by one.
-                for (int resourceUnitIndex = 0; resourceUnitIndex < this.ResourceUnits.Count; ++resourceUnitIndex)
-                {
-                    ResourceUnit resourceUnit = this.ResourceUnits[resourceUnitIndex];
-
-                    // easy to count height cells on landscape here but not with a stand raster, so counting is done in
-                    // MarkRadiatingHeightCellsAndScaleSnags()
-                    GridWindowEnumerator<HeightCellFlags> vegetationFlagsEnumerator = new(this.VegetationHeightFlags, resourceUnit.ProjectExtent);
-                    while (vegetationFlagsEnumerator.MoveNext())
-                    {
-                        this.VegetationHeightFlags[vegetationFlagsEnumerator.CurrentIndex] = HeightCellFlags.InResourceUnit;
-                    }
-                }
+                throw new NotSupportedException("Stand raster is not currently applied to resource units' height cells.");
             }
 
-            this.MarkRadiatingHeightCellsAndScaleSnags();
-
-            if (projectFile.Model.Settings.RegenerationEnabled)
-            {
-                // mask off out of model areas in resource units' sapling grids
-                GridWindowEnumerator<float> lightGridEnumerator = new(this.LightGrid, this.ResourceUnitGrid.ProjectExtent);
-                while (lightGridEnumerator.MoveNext())
-                {
-                    SaplingCell? saplingCell = this.GetSaplingCell(this.LightGrid.GetCellXYIndex(lightGridEnumerator.CurrentIndex), false, out ResourceUnit _); // false: retrieve also invalid cells
-                    if (saplingCell != null)
-                    {
-                        HeightCellFlags heightCellFlags = this.VegetationHeightFlags[this.LightGrid.LightIndexToHeightIndex(lightGridEnumerator.CurrentIndex)];
-                        if (heightCellFlags.IsInResourceUnit() == false)
-                        {
-                            saplingCell.State = SaplingCellState.NotOnLandscape;
-                        }
-                        else
-                        {
-                            saplingCell.State = SaplingCellState.Free;
-                        }
-                    }
-                }
-            }
+            this.MarkSaplingCellsAndScaleSnags(parallelComputeOptions);
 
             // setup of grass cover configuration
             // Initialization of grass cover values is done subsequently from GrassCover.SetInitialValues()
@@ -250,69 +215,31 @@ namespace iLand.World
           "stockability" is determined by the isValid flag of resource units which in turn
           is derived from stand grid values.
           */
-        private void MarkRadiatingHeightCellsAndScaleSnags() // calculate the stockable area for each RU (i.e.: with stand grid values <> -1)
+        private void MarkSaplingCellsAndScaleSnags(ParallelOptions parallelComputeOptions)
         {
-            this.TotalStockableHectares = 0.0F;
-            foreach (ResourceUnit resourceUnit in this.ResourceUnits)
+            Parallel.For(0, this.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
             {
-                //        if (ru.id()==-1) {
-                //            ru.setStockableArea(0.);
-                //            continue;
-                //        }
-                GridWindowEnumerator<HeightCellFlags> ruHeightGridEnumerator = new(this.VegetationHeightFlags, resourceUnit.ProjectExtent);
-                int heightCellsInLandscape = 0;
-                int heightCellsInResourceUnit = 0;
-                while (ruHeightGridEnumerator.MoveNext())
-                {
-                    HeightCellFlags currentHeightFlags = ruHeightGridEnumerator.Current;
-                    if (currentHeightFlags.IsInResourceUnit())
-                    {
-                        ++heightCellsInLandscape;
-                    }
-                    ++heightCellsInResourceUnit;
-                }
-
-                if (heightCellsInLandscape == 0)
-                {
-                    throw new NotSupportedException("Valid resource unit has no height cells in world.");
-                }
-                if (heightCellsInResourceUnit < 1)
-                {
-                    // TODO: check against Constant.HeightSizePerRU * Constant.HeightSizePerRU?
-                    throw new NotSupportedException("No height cells found in resource unit.");
-                }
-
-                resourceUnit.AreaInLandscapeInM2 = Constant.HeightCellAreaInM2 * heightCellsInLandscape; // in m²
+                ResourceUnit resourceUnit = this.ResourceUnits[resourceUnitIndex];
+                // calculate the stockable area for each RU (i.e.: with stand grid values <> -1)
+                // for now, all height cells in a resource unit are on landscape
+                int heightCellsInLandscape = Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth;
+                resourceUnit.AreaInLandscapeInM2 = Constant.HeightCellAreaInM2 * heightCellsInLandscape;
                 resourceUnit.HeightCellsOnLandscape = heightCellsInLandscape;
+
+                if (resourceUnit.SaplingCells != null)
+                {
+                    // for now, all sapling cells in resource unit are available for germination
+                    for (int saplingCellIndex = 0; saplingCellIndex < resourceUnit.SaplingCells.Length; ++saplingCellIndex)
+                    {
+                        SaplingCell saplingCell = resourceUnit.SaplingCells[saplingCellIndex];
+                        saplingCell.State = SaplingCellState.Free;
+                    }
+                }
                 if (resourceUnit.Snags != null)
                 {
                     resourceUnit.Snags.ScaleInitialState();
                 }
-                this.TotalStockableHectares += Constant.HeightCellAreaInM2 * heightCellsInLandscape / Constant.ResourceUnitAreaInM2; // in ha
-            }
-
-            // mark height cells that are at the edge of a "forest-out-of-area"
-            // Use GridWindowEnumerator rather than cell indexing in order to be able to access neighbors.
-            GridWindowEnumerator<HeightCellFlags> heightGridEnumerator = new(this.VegetationHeightFlags, this.VegetationHeightGrid.ProjectExtent);
-            Span<HeightCellFlags> neighbors = stackalloc HeightCellFlags[8];
-            while (heightGridEnumerator.MoveNext())
-            {
-                HeightCellFlags currentHeightFlags = heightGridEnumerator.Current;
-                if (currentHeightFlags.IsInResourceUnit() == false)
-                {
-                    // if the current pixel is a "radiating" border pixel,
-                    // then check the neighbors and set a flag if the pixel is a neighbor of a in-project-area pixel.
-                    heightGridEnumerator.GetNeighbors8(neighbors);
-                    for (int neighborIndex = 0; neighborIndex < neighbors.Length; ++neighborIndex)
-                    {
-                        if (neighbors[neighborIndex].IsInResourceUnit())
-                        {
-                            this.VegetationHeightFlags[heightGridEnumerator.CurrentIndex] = currentHeightFlags |= HeightCellFlags.AdjacentToResourceUnit;
-                            break;
-                        }
-                    }
-                }
-            }
+            });
         }
 
         private static int CompareLifValue((int Index, float LightValue) a, (int Index, float LightValue) b)

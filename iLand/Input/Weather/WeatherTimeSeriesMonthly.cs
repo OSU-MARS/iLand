@@ -11,6 +11,11 @@ namespace iLand.Input.Weather
         public WeatherTimeSeriesMonthly(Timestep timestep)
             : base(timestep)
         {
+            // position time series year indices one year before the first year in the series so that they become valid on
+            // the first call to OnStartYear()
+            this.CurrentYearStartIndex = -Constant.MonthsInYear;
+            this.NextYearStartIndex = 0;
+
             this.SnowTotalInMM = Array.Empty<float>();
         }
 

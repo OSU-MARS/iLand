@@ -6,12 +6,12 @@ namespace iLand.Output.Memory
     public class ResourceUnitIndividualTreeTrajectories
     {
         public int LengthInYears { get; private set; }
-        public TreeList?[] TreesByYear { get; private set; }
+        public TreeListBiometric?[] TreesByYear { get; private set; }
 
         public ResourceUnitIndividualTreeTrajectories(int initialCapacityInYears)
         {
             this.LengthInYears = 0;
-            this.TreesByYear = new TreeList[initialCapacityInYears];
+            this.TreesByYear = new TreeListBiometric[initialCapacityInYears];
         }
 
         public int CapacityInYears
@@ -26,7 +26,7 @@ namespace iLand.Output.Memory
                 this.Extend();
             }
 
-            this.TreesByYear[this.LengthInYears] = new TreeList(treesOfSpecies);
+            this.TreesByYear[this.LengthInYears] = new TreeListBiometric(treesOfSpecies);
             ++this.LengthInYears;
         }
 

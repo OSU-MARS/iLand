@@ -89,7 +89,7 @@ namespace iLand.Tree
                     throw new ArgumentOutOfRangeException(nameof(speciesID));
                 }
 
-                treesOfSpecies = new TreeListSpatial(landscape, this.resourceUnit, this.SpeciesAvailableOnResourceUnit[speciesIndex].Species);
+                treesOfSpecies = new TreeListSpatial(landscape, this.resourceUnit, this.SpeciesAvailableOnResourceUnit[speciesIndex].Species, Constant.Simd128.Width32);
                 this.TreesBySpeciesID.Add(speciesID, treesOfSpecies);
             }
             Debug.Assert(treesOfSpecies.Species.WorldFloraID == speciesID);
@@ -99,6 +99,16 @@ namespace iLand.Tree
             int treeIndex = treesOfSpecies.Count;
             treesOfSpecies.Add(dbhInCm, heightInM, ageInYears, lightCellIndexXY, lightStampBeerLambertK);
             return treeIndex;
+        }
+
+        public void AddTrees(Project projectFile, Landscape landscape, TreeListMultispecies treesToAdd)
+        {
+            for (int treeIndex = 0; treeIndex < treesToAdd.Count; ++treeIndex)
+            {
+                int addedTreeIndex = this.AddTree(projectFile, landscape, treesToAdd.SpeciesID[treeIndex], treesToAdd.DbhInCm[treeIndex], treesToAdd.HeightInM[treeIndex], treesToAdd.LightCellIndexXY[treeIndex], treesToAdd.AgeInYears[treeIndex], out TreeListSpatial treesOfSpecies);
+                treesOfSpecies.StandID[addedTreeIndex] = treesToAdd.StandID[treeIndex];
+                treesOfSpecies.TreeID[addedTreeIndex] = treesToAdd.TreeID[treeIndex];
+            }
         }
 
         /// called from Trees.ReadLightInfluenceField(): each tree to added to the total weighted leaf area on a unit
@@ -472,11 +482,8 @@ namespace iLand.Tree
           */
         public void ReadLightInfluenceField(Landscape landscape)
         {
-            const float outOfLandscapeInfluenceReduction = 0.1F;
-
             Grid<float> lightGrid = landscape.LightGrid;
             Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
-            Grid<HeightCellFlags> heightFlags = landscape.VegetationHeightFlags;
             for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
             {
                 TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
@@ -510,11 +517,6 @@ namespace iLand.Tree
                             treeValue = MathF.Max(treeValue, 0.02F);
                             float value = lightValue / treeValue; // remove impact of focal tree
 
-                            // additional punishment if pixel is outside
-                            if (heightFlags[lightIndexX + readerX, lightIndexY, Constant.LightCellsPerHeightCellWidth].IsInResourceUnit() == false)
-                            {
-                                value *= outOfLandscapeInfluenceReduction;
-                            }
                             // Debug.WriteLine(x + y + local_dom + z + z_zstar + own_value + value + *(grid_value-1) + (*reader)(x,y) + mStamp.offsetValue(x,y,d_offset);
                             // if (value>0.)
                             lightResourceIndex += value * reader[readerX, readerY];
@@ -756,7 +758,7 @@ namespace iLand.Tree
                 ResourceUnitTreeSpecies speciesOnRU = this.GetResourceUnitSpecies(treesOfSpecies.Species);
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    float agingFactor = treesOfSpecies.Species.GetAgingFactor(treesOfSpecies.HeightInM[treeIndex], treesOfSpecies.Age[treeIndex]);
+                    float agingFactor = treesOfSpecies.Species.GetAgingFactor(treesOfSpecies.HeightInM[treeIndex], treesOfSpecies.AgeInYears[treeIndex]);
                     this.AddAging(treesOfSpecies.LeafAreaInM2[treeIndex], agingFactor);
 
                     Debug.Assert(treesOfSpecies.IsDead(treeIndex) == false);

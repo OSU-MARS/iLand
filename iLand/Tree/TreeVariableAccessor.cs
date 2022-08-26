@@ -61,7 +61,7 @@ namespace iLand.Tree
                 10 => this.Trees.StemMassInKg[this.TreeIndex],
                 11 => this.Trees.CoarseRootMassInKg[this.TreeIndex] + this.Trees.FineRootMassInKg[this.TreeIndex],// sum of coarse and fine roots
                 12 => this.Trees.FoliageMassInKg[this.TreeIndex],
-                13 => this.Trees.Age[this.TreeIndex],
+                13 => this.Trees.AgeInYears[this.TreeIndex],
                 14 => this.Trees.Opacity[this.TreeIndex],
                 15 => this.Trees.IsDead(this.TreeIndex) ? 1.0F : 0.0F,
                 16 => this.Trees.StressIndex[this.TreeIndex],

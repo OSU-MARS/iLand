@@ -12,6 +12,11 @@ namespace iLand.Input.Weather
             : base(Timestep.Monthly)
         {
             this.CO2ConcentrationInPpm = Array.Empty<float>();
+
+            // position time series year indices one year before the first year in the series so that they become valid on
+            // the first call to OnStartYear()
+            this.CurrentYearStartIndex = -Constant.MonthsInYear;
+            this.NextYearStartIndex = 0;
         }
 
         public override void Resize(int newSize)

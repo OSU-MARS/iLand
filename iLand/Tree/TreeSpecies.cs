@@ -45,14 +45,14 @@ namespace iLand.Tree
         private float nitrogenResponseClass; // nitrogen response class (1..3). fractional values (e.g. 1.2) are interpolated.
         // regeneration
         private float mastYearProbability; // probability that a year is a seed year (=1/avg. timespan between seed years)
-        private int minimumAgeInYearsForSeedProduction; // a tree produces seeds if it is older than this parameter
+        private UInt16 minimumAgeInYearsForSeedProduction; // a tree produces seeds if it is older than this parameter
         // regeneration - seed dispersal
         private readonly Expression serotinyFormula; // function that decides (probabilistic) if a tree is serotinous; empty: serotiny not active
         private float treeMigAlphaS1; // seed dispersal parameters (TreeMig)
         private float treeMigAlphaS2; // seed dispersal parameters (TreeMig)
         private float treeMigKappaS; // seed dispersal parameters (TreeMig)
 
-        public TreeList EmptyTreeList { get; private init; }
+        public TreeListBiometric EmptyTreeList { get; private init; }
         public int Index { get; private init; } // unique index of species within current species set
         public bool IsConiferous { get; private set; }
         public bool IsEvergreen { get; private set; }
@@ -108,7 +108,7 @@ namespace iLand.Tree
             this.heightDiameterRatioLowerBound = new();
             this.serotinyFormula = new();
 
-            this.EmptyTreeList = new(this);
+            this.EmptyTreeList = new(this, 0);
             this.Index = speciesSet.Count;
             this.Name = name;
             this.SaplingEstablishment = new();
@@ -136,13 +136,13 @@ namespace iLand.Tree
             }
 
             // if the tree is considered as serotinous (i.e. seeds need external trigger such as fire)
-            if (this.IsTreeSerotinousRandom(randomGenerator, tree.Age[treeIndex]))
+            if (this.IsTreeSerotinousRandom(randomGenerator, tree.AgeInYears[treeIndex]))
             {
                 return;
             }
 
             // no seed production if maturity age is not reached (species parameter) or if tree height is below 4m.
-            if (tree.Age[treeIndex] > minimumAgeInYearsForSeedProduction && tree.HeightInM[treeIndex] > 4.0F)
+            if ((tree.AgeInYears[treeIndex] > this.minimumAgeInYearsForSeedProduction) && (tree.HeightInM[treeIndex] > 4.0F))
             {
                 this.SeedDispersal.SetMatureTree(tree.LightCellIndexXY[treeIndex], tree.LeafAreaInM2[treeIndex]);
             }
@@ -455,7 +455,7 @@ namespace iLand.Tree
                 throw new SqliteException("Error loading '" + species.WorldFloraID + "': seed year interval must be positive.", (int)SqliteErrorCode.Error);
             }
             species.mastYearProbability = 1.0F / mastYearInterval;
-            species.minimumAgeInYearsForSeedProduction = reader.MaturityYears();
+            species.minimumAgeInYearsForSeedProduction = (UInt16)reader.MaturityYears();
             species.treeMigAlphaS1 = reader.SeedKernelAs1();
             species.treeMigAlphaS2 = reader.SeedKernelAs2();
             species.treeMigKappaS = reader.SeedKernelKs0();
@@ -510,7 +510,7 @@ namespace iLand.Tree
             {
                 // decide whether current year is a seed year
                 // TODO: link to weather conditions and time since last seed year/
-                this.IsMastYear = (model.RandomGenerator.GetRandomProbability() < mastYearProbability);
+                this.IsMastYear = model.RandomGenerator.Value!.GetRandomProbability() < mastYearProbability;
                 if (this.IsMastYear && (model.Project.Output.Logging.LogLevel >= EventLevel.Informational))
                 {
                     Trace.TraceInformation("Seed year for " + this.WorldFloraID + ".");

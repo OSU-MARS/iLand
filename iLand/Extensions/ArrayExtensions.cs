@@ -19,6 +19,11 @@ namespace iLand.Extensions
         // of ~300 Int32 or float values.
         public static T[] Resize<T>(this T[] array, int newSize)
         {
+            if (newSize == 0)
+            {
+                return Array.Empty<T>();
+            }
+
             T[] resizedArray = new T[newSize];
 
             int maxLength = Math.Min(array.Length, newSize);

@@ -1,4 +1,5 @@
 ﻿using iLand.Input.ProjectFile;
+using iLand.Input.Weather;
 using iLand.World;
 using System;
 
@@ -57,7 +58,7 @@ namespace iLand.Tree
             }
         }
 
-        public void CalculateBiomassGrowthForYear(Project projectFile, bool fromSaplingEstablishmentOrGrowth = false)
+        public void CalculateBiomassGrowthForYear(Project projectFile, Landscape landscape, bool fromSaplingEstablishmentOrGrowth = false)
         {
             // if *not* called from establishment, clear the species-level-stats
             if (fromSaplingEstablishmentOrGrowth == false)
@@ -67,8 +68,9 @@ namespace iLand.Tree
 
             if ((this.LaiFraction > 0.0F) || (fromSaplingEstablishmentOrGrowth == true))
             {
+                // calculate environmental responses per species (vpd, temperature, ...)
                 // assumes the water cycle is already updated for the current year
-                this.TreeGrowth.Modifiers.CalculateMonthlyGrowthModifiers(this.ResourceUnit.Weather);// calculate environmental responses per species (vpd, temperature, ...)
+                this.TreeGrowth.Modifiers.CalculateMonthlyGrowthModifiers(landscape);
                 this.TreeGrowth.CalculateGppForYear(projectFile);// production of NPP
             }
             else

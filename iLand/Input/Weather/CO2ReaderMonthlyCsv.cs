@@ -18,38 +18,38 @@ namespace iLand.Input.Weather
                     return;
                 }
 
-                if (this.MonthlyCO2.Capacity - 12 < this.MonthlyCO2.Count)
+                if (this.TimeSeries.Capacity - 12 < this.TimeSeries.Count)
                 {
                     // default to expanding capacity by DefaultMonthlyAllocationIncrement
-                    int estimatedNewCapacity = this.MonthlyCO2.Capacity + Constant.Data.DefaultMonthlyAllocationIncrement;
-                    if (this.MonthlyCO2.Count >= 2 * Constant.Data.DefaultMonthlyAllocationIncrement)
+                    int estimatedNewCapacity = this.TimeSeries.Capacity + Constant.Data.DefaultMonthlyAllocationIncrement;
+                    if (this.TimeSeries.Count >= 2 * Constant.Data.DefaultMonthlyAllocationIncrement)
                     {
                         // CO₂ .csv file contains a single ordered time series so, once enough of file has been read, attempt to
                         // estimate required capacity from the file's read position in order to limit reallocations of data arrays.
                         // Estimation accuracy can be poor due to read position quantization due to buffered reading and variation
                         // in file content.
                         double positionInFile = row.GetPositionInFile();
-                        int estimatedCapacityFromFilePosition = (int)Math.Ceiling((double)this.MonthlyCO2.Capacity / positionInFile);
+                        int estimatedCapacityFromFilePosition = (int)Math.Ceiling((double)this.TimeSeries.Capacity / positionInFile);
                         if (estimatedCapacityFromFilePosition > estimatedNewCapacity)
                         {
                             estimatedNewCapacity = estimatedCapacityFromFilePosition;
                         }
                     }
-                    this.MonthlyCO2.Resize(estimatedNewCapacity);
+                    this.TimeSeries.Resize(estimatedNewCapacity);
                 }
 
                 byte month = byte.Parse(row[co2header.Month], NumberStyles.Integer);
                 float co2concentration = Single.Parse(row[co2header.CO2], NumberStyles.Float);
 
-                int monthIndex = this.MonthlyCO2.Count;
-                this.MonthlyCO2.Year[monthIndex] = year;
-                this.MonthlyCO2.Month[monthIndex] = month;
-                this.MonthlyCO2.CO2ConcentrationInPpm[monthIndex] = co2concentration;
+                int monthIndex = this.TimeSeries.Count;
+                this.TimeSeries.Year[monthIndex] = year;
+                this.TimeSeries.Month[monthIndex] = month;
+                this.TimeSeries.CO2ConcentrationInPpm[monthIndex] = co2concentration;
 
-                this.MonthlyCO2.Count = monthIndex + 1;
+                this.TimeSeries.Count = monthIndex + 1;
             });
 
-            this.MonthlyCO2.Validate(0, this.MonthlyCO2.Count);
+            this.TimeSeries.Validate(0, this.TimeSeries.Count);
         }
     }
 }

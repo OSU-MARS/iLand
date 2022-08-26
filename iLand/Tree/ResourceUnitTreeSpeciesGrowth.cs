@@ -40,8 +40,9 @@ namespace iLand.Tree
 
             // Radiation: sum over all days of each month with foliage
             // conversion from gC to kg Biomass: C/Biomass=0.5
-            float resourceUnitGppForYear = 0.0F;
             const float gramsCarbonToKilogramsBiomass = 0.001F / Constant.DryBiomassCarbonFraction;
+            float lightUseEpsilon = projectFile.Model.Ecosystem.LightUseEpsilon;
+            float resourceUnitGppForYear = 0.0F;
             for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
             {
                 // This is based on the utilizable photosynthetic active radiation.
@@ -60,7 +61,7 @@ namespace iLand.Tree
                 // calculate the alphac (=photosynthetic efficiency) for the given month, gC/MJ radiation
                 //  this is based on a global efficiency, and modified per species
                 // maximum radiation use efficiency
-                float epsilon = projectFile.Model.Ecosystem.LightUseEpsilon * this.Modifiers.NitrogenModifierForYear * this.Modifiers.CO2ModifierByMonth[monthIndex];
+                float epsilon = lightUseEpsilon * this.Modifiers.NitrogenModifierForYear * this.Modifiers.CO2ModifierByMonth[monthIndex];
 
                 this.UtilizableParByMonth[monthIndex] = utilizableRadiation;
                 this.MonthlyGpp[monthIndex] = utilizableRadiation * epsilon * gramsCarbonToKilogramsBiomass; // ... results in GPP of the month kg Biomass/m2 (converted from gC/m2)
@@ -79,7 +80,7 @@ namespace iLand.Tree
             // the factor f_ref: parameter that scales response values to the range 0..1 (1 for best growth conditions) (species parameter)
             float siteEnvironmentHeightDivisor = this.Modifiers.Species.SaplingGrowth.ReferenceRatio;
             // f_env,yr=(uapar*epsilon_eff) / (APAR * epsilon_0 * fref)
-            this.SiteEnvironmentSaplingHeightGrowthMultiplier = f_sum / (projectFile.Model.Ecosystem.LightUseEpsilon * this.Modifiers.TotalRadiationForYear * siteEnvironmentHeightDivisor);
+            this.SiteEnvironmentSaplingHeightGrowthMultiplier = f_sum / (lightUseEpsilon * this.Modifiers.TotalRadiationForYear * siteEnvironmentHeightDivisor);
             if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.0F)
             {
                 if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.5F) // error on large deviations TODO: why a threshold of 1.5 instead of ~1.000001?

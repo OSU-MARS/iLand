@@ -3,6 +3,7 @@ using iLand.Tool;
 using iLand.World;
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using Model = iLand.Simulation.Model;
 
@@ -14,7 +15,7 @@ namespace iLand.Tree
         A Tree has a height of at least 4m; trees below this threshold are covered by the regeneration layer (see Sapling).
         Trees are stored in lists managed at the resource unit level.
       */
-    public class TreeListSpatial : TreeList
+    public class TreeListSpatial : TreeListBiometric
     {
         private readonly Grid<float> lightGrid;
 
@@ -25,16 +26,14 @@ namespace iLand.Tree
         public LightStamp[] LightStamp { get; private set; }
         public ResourceUnit ResourceUnit { get; private set; } // pointer to the ressource unit the tree belongs to.
 
-        public TreeListSpatial(Landscape landscape, ResourceUnit resourceUnit, TreeSpecies species)
-            : base(species)
+        public TreeListSpatial(Landscape landscape, ResourceUnit resourceUnit, TreeSpecies species, int capacity)
+            : base(species, capacity)
         {
             this.lightGrid = landscape.LightGrid;
-            this.flags = new TreeFlags[Constant.Simd128.Width32];
+            this.flags = new TreeFlags[capacity];
 
-            this.DbhDeltaInCm = new float[Constant.Simd128.Width32];
-            this.LightCellIndexXY = new Point[Constant.Simd128.Width32];
+            this.Allocate(capacity);
             this.ResourceUnit = resourceUnit;
-            this.LightStamp = new LightStamp[Constant.Simd128.Width32];
         }
 
         public void Add(float dbhInCm, float heightInM, UInt16 ageInYears, Point lightCellIndexXY, float lightStampBeerLambertK)
@@ -64,12 +63,17 @@ namespace iLand.Tree
 
             if (this.Count == this.Capacity)
             {
-                this.Resize(2 * this.Capacity); // for now, default to same size doubling as List<T>
+                int newCapacity = 2 * this.Capacity; // for now, default to same size doubling as List<T>
+                if (newCapacity == 0)
+                {
+                    newCapacity = Constant.Simd128.Width32;
+                }
+                this.Resize(newCapacity);
             }
 
             this.flags[this.Count] = TreeFlags.None;
 
-            this.Age[this.Count] = ageInYears;
+            this.AgeInYears[this.Count] = ageInYears;
             this.CoarseRootMassInKg[this.Count] = this.Species.GetBiomassCoarseRoot(dbhInCm);
             this.DbhInCm[this.Count] = dbhInCm;
             this.DbhDeltaInCm[this.Count] = 0.1F; // initial value: used in growth() to estimate diameter increment
@@ -115,7 +119,7 @@ namespace iLand.Tree
 
             this.flags[this.Count] = other.flags[otherTreeIndex];
 
-            this.Age[this.Count] = other.Age[otherTreeIndex];
+            this.AgeInYears[this.Count] = other.AgeInYears[otherTreeIndex];
             this.CoarseRootMassInKg[this.Count] = other.CoarseRootMassInKg[otherTreeIndex];
             this.DbhInCm[this.Count] = other.DbhInCm[otherTreeIndex];
             this.DbhDeltaInCm[this.Count] = other.DbhDeltaInCm[otherTreeIndex];
@@ -137,7 +141,24 @@ namespace iLand.Tree
             ++this.Count;
         }
 
-        /** grow() is the main function of the yearly tree growth.
+        [MemberNotNull(nameof(TreeListSpatial.DbhDeltaInCm), nameof(TreeListSpatial.LightCellIndexXY), nameof(TreeListSpatial.LightStamp))]
+        private void Allocate(int capacity)
+        {
+            if (capacity == 0)
+            {
+                this.DbhDeltaInCm = Array.Empty<float>();
+                this.LightCellIndexXY = Array.Empty<Point>();
+                this.LightStamp = Array.Empty<LightStamp>();
+            }
+            else
+            {
+                this.DbhDeltaInCm = new float[capacity];
+                this.LightCellIndexXY = new Point[capacity];
+                this.LightStamp = new LightStamp[capacity];
+            }
+        }
+
+        /** Main function of yearly tree growth.
           The main steps are:
           - Production of GPP/NPP   @sa http://iland-model.org/primary+production http://iland-model.org/individual+tree+light+availability
           - Partitioning of NPP to biomass compartments of the tree @sa http://iland-model.org/allocation
@@ -145,7 +166,7 @@ namespace iLand.Tree
           Further activties: * the age of the tree is increased
                              * the mortality sub routine is executed
                              * seeds are produced */
-        public void CalculateAnnualGrowth(Model model)
+        public void CalculateAnnualGrowth(Model model, RandomGenerator random)
         {
             // get the GPP for a "unit area" of the tree species
             ResourceUnitTreeSpecies ruSpecies = this.ResourceUnit.Trees.GetResourceUnitSpecies(this.Species);
@@ -153,10 +174,12 @@ namespace iLand.Tree
             for (int treeIndex = 0; treeIndex < this.Count; ++treeIndex)
             {
                 // increase age
-                ++this.Age[treeIndex];
+                UInt16 ageInYears = this.AgeInYears[treeIndex];
+                ++ageInYears;
+                this.AgeInYears[treeIndex] = ageInYears;
 
                 // apply aging according to the state of the individal
-                float agingFactor = this.Species.GetAgingFactor(this.HeightInM[treeIndex], this.Age[treeIndex]);
+                float agingFactor = this.Species.GetAgingFactor(this.HeightInM[treeIndex], ageInYears);
                 this.ResourceUnit.Trees.AddAging(this.LeafAreaInM2[treeIndex], agingFactor);
 
                 // step 1: get "interception area" of the tree individual [m2]
@@ -194,7 +217,7 @@ namespace iLand.Tree
                 //#else
                 if (model.Project.Model.Settings.MortalityEnabled)
                 {
-                    this.CheckIntrinsicAndStressMortality(model, treeIndex, treeGrowthData);
+                    this.CheckIntrinsicAndStressMortality(model, treeIndex, treeGrowthData, random);
                 }
                 this.StressIndex[treeIndex] = treeGrowthData.StressIndex;
                 //#endif
@@ -210,7 +233,7 @@ namespace iLand.Tree
                 }
 
                 // regeneration
-                this.Species.DisperseSeeds(model.RandomGenerator, this, treeIndex);
+                this.Species.DisperseSeeds(model.RandomGenerator.Value!, this, treeIndex);
             }
         }
 
@@ -223,7 +246,7 @@ namespace iLand.Tree
             this.ResourceUnit.Trees.AddLightResponse(this.LeafAreaInM2[treeIndex], this.LightResponse[treeIndex]);
         }
 
-        private void CheckIntrinsicAndStressMortality(Model model, int treeIndex, TreeGrowthData growthData)
+        private void CheckIntrinsicAndStressMortality(Model model, int treeIndex, TreeGrowthData growthData, RandomGenerator random)
         {
             // death if leaf area is near zero
             if (this.FoliageMassInKg[treeIndex] < 0.00001F)
@@ -235,8 +258,8 @@ namespace iLand.Tree
             float pFixed = this.Species.DeathProbabilityFixed;
             float pStress = this.Species.GetMortalityProbability(growthData.StressIndex);
             float pMortality = pFixed + pStress;
-            float random = model.RandomGenerator.GetRandomProbability(); // 0..1
-            if (random < pMortality)
+            float probability = random.GetRandomProbability(); // 0..1
+            if (probability < pMortality)
             {
                 // die...
                 this.MarkTreeAsDead(model, treeIndex);
@@ -247,7 +270,7 @@ namespace iLand.Tree
         {
             this.flags[destinationIndex] = this.flags[sourceIndex];
 
-            this.Age[destinationIndex] = this.Age[sourceIndex];
+            this.AgeInYears[destinationIndex] = this.AgeInYears[sourceIndex];
             this.CoarseRootMassInKg[destinationIndex] = this.CoarseRootMassInKg[sourceIndex];
             this.DbhInCm[destinationIndex] = this.DbhInCm[sourceIndex];
             this.DbhDeltaInCm[destinationIndex] = this.DbhDeltaInCm[sourceIndex];
@@ -320,7 +343,9 @@ namespace iLand.Tree
         {
             /// @see Species::volumeFactor() for details
             float taperCoefficient = this.Species.VolumeFactor;
-            float volume = taperCoefficient * 0.0001F * this.DbhInCm[treeIndex] * this.DbhInCm[treeIndex] * this.HeightInM[treeIndex]; // dbh in cm: cm/100 * cm/100 = cm*cm * 0.0001 = m2
+            float dbhInCm = this.DbhInCm[treeIndex];
+            float heightInM = this.HeightInM[treeIndex];
+            float volume = taperCoefficient * 0.0001F * dbhInCm * dbhInCm * heightInM; // dbh in cm: cm/100 * cm/100 = cm*cm * 0.0001 = m2
             return volume;
         }
 

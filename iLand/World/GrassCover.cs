@@ -4,6 +4,7 @@ using iLand.Tool;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 
 namespace iLand.World
 {
@@ -69,14 +70,12 @@ namespace iLand.World
 
             // create the grid
             this.CoverOrOnOffGrid.Setup(landscape.LightGrid.ProjectExtent, landscape.LightGrid.CellSizeInM);
-            this.CoverOrOnOffGrid.Fill(0);
-            // mask out out-of-project areas
-            for (int lightIndex = 0; lightIndex < this.CoverOrOnOffGrid.CellCount; ++lightIndex)
-            {
-                if (landscape.VegetationHeightFlags[this.CoverOrOnOffGrid.LightIndexToHeightIndex(lightIndex)].IsInResourceUnit() == false)
-                {
-                    this.CoverOrOnOffGrid[lightIndex] = -1;
-                }
+            this.CoverOrOnOffGrid.Fill(-1); // default all grass cells to being outside of a resource unit
+            for (int resourceUnitIndex = 0; resourceUnitIndex < landscape.ResourceUnits.Count; ++resourceUnitIndex)
+            { 
+                ResourceUnit resourceUnit = landscape.ResourceUnits[resourceUnitIndex];
+                Point seedmapIndexXY = this.CoverOrOnOffGrid.GetCellXYIndex(resourceUnit.ProjectExtent.X, resourceUnit.ProjectExtent.Y);
+                this.CoverOrOnOffGrid.Fill(seedmapIndexXY.X, seedmapIndexXY.Y, Constant.LightCellsPerRUWidth, Constant.LightCellsPerRUWidth, 0);
             }
 
             this.algorithm = projectFile.World.Grass.Algorithm;

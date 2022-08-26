@@ -53,7 +53,7 @@ namespace iLand.Tree
         }
 
         /// Main function that calculates monthly / annual species responses
-        public void CalculateMonthlyGrowthModifiers(Weather weather)
+        public void CalculateMonthlyGrowthModifiers(Landscape landscape)
         {
             this.ZeroMonthlyAndAnnualModifiers(); // reset values
 
@@ -72,7 +72,7 @@ namespace iLand.Tree
             // calculate monthly modifiers for the current simulation year (January-December calendar year)
             LeafPhenology leafPhenology = this.resourceUnit.Weather.GetPhenology(this.Species.LeafPhenologyID);
             WaterCycle ruWaterCycle = this.resourceUnit.WaterCycle;
-            CO2TimeSeriesMonthly co2timeSeries = this.resourceUnit.Weather.CO2ByMonth;
+            CO2TimeSeriesMonthly co2timeSeries = landscape.CO2ByMonth;
             WeatherTimeSeries weatherTimeSeries = this.resourceUnit.Weather.TimeSeries;
             if (weatherTimeSeries.Timestep == Timestep.Daily)
             {

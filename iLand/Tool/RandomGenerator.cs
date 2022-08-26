@@ -1,8 +1,6 @@
 ﻿using MersenneTwister;
 using System;
 using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Threading;
 
 namespace iLand.Tool
 {
@@ -12,11 +10,6 @@ namespace iLand.Tool
         private readonly int[] buffer;
         private int bufferPosition;
         private readonly Random pseudorandom;
-
-        public RandomGenerator(bool mersenneTwister)
-            : this(mersenneTwister, RandomNumberGenerator.GetInt32(Int32.MaxValue))
-        {
-        }
 
         public RandomGenerator(bool mersenneTwister, int seed)
         {
@@ -38,16 +31,12 @@ namespace iLand.Tool
         // get a random integer in [Int32.MinValue, Int32.MaxValue]
         public int GetRandomInteger()
         {
-            int index = Interlocked.Increment(ref this.bufferPosition);
-            while (index >= this.buffer.Length) // loop is unlikely to be entered and extremely unlikely to be reentered
+            ++this.bufferPosition;
+            if (this.bufferPosition >= this.buffer.Length) // loop is unlikely to be entered and extremely unlikely to be reentered
             {
-                lock (this.buffer)
-                {
-                    this.RefillBuffer();
-                }
-                index = Interlocked.Increment(ref this.bufferPosition);
+                this.RefillBuffer();
             }
-            return this.buffer[index];
+            return this.buffer[this.bufferPosition];
         }
 
         public int GetRandomInteger(int maxValue) 

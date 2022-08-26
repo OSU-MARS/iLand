@@ -45,11 +45,11 @@ namespace iLand.Tree
          more details: http://iland-model.org/establishment#abiotic_environment
          a model mockup in R: script_establishment.r
          */
-        public float CalculateFrostAndWaterModifier(Project projectFile, Weather weather, ResourceUnitTreeSpecies ruSpecies)
+        public float CalculateFrostAndWaterModifier(Project projectFile, Landscape landscape, Weather weather, ResourceUnitTreeSpecies ruSpecies)
         {
             // make sure that required calculations (e.g. watercycle are already performed)
             // TODO: why is CalculateBiomassGrowthForYear() called from three places?
-            ruSpecies.CalculateBiomassGrowthForYear(projectFile, fromSaplingEstablishmentOrGrowth: true); // calculate the 3-PG module and run the water cycle (this is done only if that did not happen up to now)
+            ruSpecies.CalculateBiomassGrowthForYear(projectFile, landscape, fromSaplingEstablishmentOrGrowth: true); // calculate the 3-PG module and run the water cycle (this is done only if that did not happen up to now)
 
             // get start of fall chilling days: leaf off for deciduous species, 10.5 hour day length for evergreen species
             // TODO: why is a 10.5 hour day defined as the end of the growing seasion for all evergreens?

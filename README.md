@@ -11,11 +11,25 @@ due to [Entity Framework issue 19396](https://github.com/dotnet/efcore/issues/19
 
 ### Dependencies
 This port of iLand is a .NET 6.0 assembly whose PowerShell cmdlets require [Powershell 7.2](https://github.com/PowerShell/PowerShell) or newer. 
-Use of .NET 6.0 also motivates the use of Microsoft.Data.Sqlite rather than System.Data.Sqlite due to a smaller set of dependencies.
+Feather files and SQLite databases are both input and output formats, resulting in use of Microsoft.Data.Sqlite (which, as of .NET 6.0, has
+fewer dependencies than System.Data.Sqlite) and Apache Arrow. GDAL is also used for logging light and height grids to GeoTIFF.
+
+Elements of weather and CO₂ time series must be provided in chronological order. While not required, weather files are read somewhat more 
+quickly if they list time series of equal length sequentially (series ID 1: month 1, month 2..., series ID 2: month 1, month 2, ...) rather 
+than listing all values for a given time before moving to the next time (month 1: series ID 1, series ID 2, ..., month 2: series ID 1, series 
+ID 2, ...). As [ClimateNA](https://climatena.ca/) and related downscaling tools use the latter ordering, use of both [`dplyr::arrange()`](https://dplyr.tidyverse.org/reference/arrange.html)
+and [`arrow::write_feather()`](https://arrow.apache.org/docs/r/reference/write_feather.html) (or equivalents) is suggested to lower large file 
+read times. Similarly, runtimes may be slightly lower if resource units are ordered from east to west and south to north and trees are grouped
+by resource unit in input files. This matches the file's spatial ordering to iLand's internal spatial ordering and, while not enough of an
+advantage for it to be worth performing sorting iLand, a one time sort in R (`arrange(resourceUnitY, resourceUnitX, treeSpecies, treeY, treeX)`)
+may be worthwhile.
+
+As of Arrow 9.0.0, Apache C# bindings do not support compressed feather files and replacement dictionaries are broken. While iLand works around
+these limitations as best it can supporting use of `write_feather(compression = "uncompressed")` and `factor()` may be helpful in R.
 
 ### Relationship to iLand 1.0 (2016)
 Code in this repo derives from the [iLand 1.0](http://iland-model.org/) spatial growth and yield model. The official iLand 1.0 release has been
-used primarily for modeling in Europe and contains an example model from Kalkalpen National Park in Austria. The main code level changes in this 
+used primarily for modeling in Europe and contains an example model from Kalkalpen National Park in Austria. The main code changes in this 
 repo are
 
 * Separation of the landscape from the model which acts upon it. Corresponding rationalization of the project file schema to group settings 
@@ -25,8 +39,12 @@ repo are
   with R for iLand project setup and data analysis.
 * Separation of output objects and calculations from model calculations and objects, disentangling the object model and reducing unnecessary 
   calculation.
+* Faster timestepping from more consistent use of synchronous thread-level parallelism (~30% reduction in step time, depending on settings and
+  processor core availability). Overlapped IO threads are sometimes also used to reduce file read and write times.
+* Removal of fixed light reduction around model edges. This edge correction was inaccurate for open edges, such as bodies of water, as well as
+  for typical closed canopy forest. Larger trees would both stamp and and read beyond the correction width.
 * Removal of static state so that multiple iLand models can be instantiated in the same app domain. As a corollary, species names are no
-  longer replaced with their species set indices within expressions as this [management filtering feature](http://iland-model.org/Expression#Constants)
+  longer replaced with their species set indices within expressions as [management filtering](http://iland-model.org/Expression#Constants)
   relied on static lookups from deep within the parse stack.
 * Standardization on single precision rather than retaining the mixed and variable use of single and double precision of the C++ build. This 
   essentially halves the memory footprint of floating point data and reduces calculation and single precision exponentiation, logarithms, square 
@@ -55,6 +73,13 @@ is native to the Pacific Northwest and a European plantation species, so is supp
 and parameterizations.
 
 ### Known issues inherited from iLand 1.0 C++
+* Light stamping is not thread safe. Stamping is done in parallel at the resource unit level and, when a tree's stamp reaches into an adjacent
+  resource unit it is possible two threads may stamp the same grid cell at the same time, resulting in a race condition where one, or possibly 
+  more, trees' contributions being loast. If this happens, either the domininant height field is underestimated (albeit only when the tallest
+  tree is lost) or the cell's light level is overestimated by the extent of the lost shading. Currently, both risks are mitigated by 
+  [`Parallel.For()`](https://docs.microsoft.com/en-us/dotnet/api/system.threading.tasks.parallel.for)'s 
+  [default range partitioning](https://github.com/dotnet/runtime/blob/main/src/libraries/System.Threading.Tasks.Parallel/src/System/Threading/Tasks/Parallel.cs)
+  and stamping code structure which attempts to keep read-write cycles as close to atomic.
 * Leaf phenology is hard coded for northern hemisphere temperate and boreal sites, preventing support for deciduous species in the southern
   hemisphere and likely inhibiting modeling on tropical sites. Chilling day calculations for establishment of evergreen species are also likely 
   to be incorrect in these locations.

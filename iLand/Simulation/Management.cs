@@ -58,10 +58,11 @@ namespace iLand.Simulation
             }
             int treesToKill = livingTrees.Count - treesToRetain;
             // Debug.WriteLine(livingTrees + " standing, targetsize " + treesToRetain + ", hence " + treesToKill + " trees to remove");
+            RandomGenerator random = model.RandomGenerator.Value!;
             for (int treesKilled = 0; treesKilled < treesToKill; treesKilled++)
             {
                 // TODO: change from O(all trees in model) scaling to O(trees to kill) with data structure for more efficient removal?
-                int killIndex = model.RandomGenerator.GetRandomInteger(0, livingTrees.Count);
+                int killIndex = random.GetRandomInteger(0, livingTrees.Count);
                 livingTrees[killIndex].Trees.Remove(model, livingTrees[killIndex].TreeIndex);
                 livingTrees.RemoveAt(killIndex);
             }
@@ -240,6 +241,8 @@ namespace iLand.Simulation
             TreeVariableAccessor treeWrapper = new(model.SimulationState);
             Expression selectionExpression = new(treeSelectionExpressionString, treeWrapper);
             selectionExpression.EnableIncrementalSum();
+
+            RandomGenerator random = model.RandomGenerator.Value!;
             int treesRemoved = 0;
             for (int speciesIndex = 0; speciesIndex < treesInMostRecentlyLoadedStand.Count; ++speciesIndex)
             {
@@ -251,7 +254,7 @@ namespace iLand.Simulation
                 {
                     int treeIndex = treeIndices[removalIndex];
                     treeWrapper.TreeIndex = treeIndex;
-                    if (selectionExpression.Evaluate(treeWrapper) != 0.0 && model.RandomGenerator.GetRandomProbability() <= removalProbabilityIfSelected)
+                    if (selectionExpression.Evaluate(treeWrapper) != 0.0 && random.GetRandomProbability() <= removalProbabilityIfSelected)
                     {
                         if (management)
                         {
@@ -363,6 +366,7 @@ namespace iLand.Simulation
             Expression filterExpression = new(filter, treeWrapper);
             filterExpression.EnableIncrementalSum();
 
+            RandomGenerator random = model.RandomGenerator.Value!;
             for (int treesOfSpeciesIndex = 0; treesOfSpeciesIndex < this.treesInMostRecentlyLoadedStand.Count; ++treesOfSpeciesIndex)
             {
                 treeWrapper.Trees = this.treesInMostRecentlyLoadedStand[treesOfSpeciesIndex].Trees;
@@ -372,11 +376,11 @@ namespace iLand.Simulation
                     treeWrapper.TreeIndex = standTreeIndices[standTreeIndex];
                     float value = filterExpression.Evaluate(treeWrapper);
                     // keep if expression returns true (1)
-                    bool keep = value == 1.0;
+                    bool keep = value == 1.0F;
                     // if value is >0 (i.e. not "false"), then draw a random number
-                    if (!keep && value > 0.0)
+                    if (!keep && (value > 0.0F))
                     {
-                        keep = model.RandomGenerator.GetRandomProbability() < value;
+                        keep = random.GetRandomProbability() < value;
                     }
                     if (keep == false)
                     {
