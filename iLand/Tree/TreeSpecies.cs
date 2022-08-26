@@ -29,12 +29,12 @@ namespace iLand.Tree
         private float woodyA, woodyB; // allometry (biomass = a * dbh^b) for woody compartments aboveground
 
         // height-diameter-relationships
-        private readonly Expression heightDiameterRatioLowerBound; // minimum HD-relation as f(d) (open grown tree)
-        private readonly Expression heightDiameterRatioUpperBound; // maximum HD-relation as f(d)
+        private readonly ExpressionHeightDiameterRatioBounded heightDiameterRatioLowerBound; // minimum HD-relation as f(d) (open grown tree)
+        private readonly ExpressionHeightDiameterRatioBounded heightDiameterRatioUpperBound; // maximum HD-relation as f(d)
         // mortality
         private float stressMortalityCoefficient; // max. prob. of death per year when tree suffering maximum stress
         // aging
-        private readonly Expression aging;
+        private readonly ExpressionAging aging;
         private float maximumAgeInYears; // maximum age of species (years)
         private float maximumHeightInM; // maximum height of species (m) for aging
         // environmental responses
@@ -171,7 +171,7 @@ namespace iLand.Tree
             // harmonic mean: http://en.wikipedia.org/wiki/Harmonic_mean
             float x = 1.0F - 2.0F / (1.0F / (1.0F - relativeHeight) + 1.0F / (1.0F - relativeAge));
 
-            float agingFactor = (float)aging.Evaluate(x);
+            float agingFactor = aging.Evaluate(x);
 
             return Maths.Limit(agingFactor, 0.0F, 1.0F);
         }
@@ -201,10 +201,11 @@ namespace iLand.Tree
             return this.woodyA * MathF.Pow(dbhInCm, this.woodyB); 
         }
 
-        public void GetHeightDiameterRatioLimits(float dbh, out float hdRatioLowerBound, out float hdRatioUpperBound)
+        public (float hdRatioLowerBound, float hdRatioUpperBound) GetHeightDiameterRatioLimits(float dbh)
         {
-            hdRatioLowerBound = (float)heightDiameterRatioLowerBound.Evaluate(dbh);
-            hdRatioUpperBound = (float)heightDiameterRatioUpperBound.Evaluate(dbh);
+            float hdRatioLowerBound = heightDiameterRatioLowerBound.Evaluate(dbh);
+            float hdRatioUpperBound = heightDiameterRatioUpperBound.Evaluate(dbh);
+            return (hdRatioLowerBound, hdRatioUpperBound);
         }
 
         public float GetLightResponse(float lightResourceIndex)
@@ -289,7 +290,7 @@ namespace iLand.Tree
                 return false;
             }
             // the function result (e.g. from a logistic regression model, e.g. Schoennagel 2013) is interpreted as probability
-            float pSerotinous = (float)this.serotinyFormula.Evaluate(age);
+            float pSerotinous = this.serotinyFormula.Evaluate(age);
             return randomGenerator.GetRandomProbability() < pSerotinous;
         }
 
@@ -344,13 +345,13 @@ namespace iLand.Tree
             species.TurnoverFineRoot = reader.TurnoverRoot();
 
             // hd-relations
-            species.heightDiameterRatioLowerBound.SetAndParse(reader.HdLow());
-            species.heightDiameterRatioUpperBound.SetAndParse(reader.HdHigh());
-            if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
-            {
-                species.heightDiameterRatioLowerBound.Linearize(0.0F, 100.0F); // input: dbh (cm). above 100cm the formula will be directly executed
-                species.heightDiameterRatioUpperBound.Linearize(0.0F, 100.0F);
-            }
+            species.heightDiameterRatioLowerBound.Parse(reader.HdLow());
+            species.heightDiameterRatioUpperBound.Parse(reader.HdHigh());
+            //if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
+            //{
+            //    species.heightDiameterRatioLowerBound.Linearize(0.0F, 100.0F); // input: dbh (cm). above 100cm the formula will be directly executed
+            //    species.heightDiameterRatioUpperBound.Linearize(0.0F, 100.0F);
+            //}
 
             // form/density
             species.WoodDensity = reader.WoodDensity();
@@ -388,11 +389,11 @@ namespace iLand.Tree
             // aging
             species.maximumAgeInYears = reader.MaximumAge();
             species.maximumHeightInM = reader.MaximumHeight();
-            species.aging.SetAndParse(reader.Aging());
-            if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
-            {
-                species.aging.Linearize(0.0F, 1.0F); // input is harmonic mean of relative age and relative height
-            }
+            species.aging.Parse(reader.Aging());
+            //if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
+            //{
+            //    species.aging.Linearize(0.0F, 1.0F); // input is harmonic mean of relative age and relative height
+            //}
             if ((species.maximumAgeInYears <= 0.0F) || (species.maximumAgeInYears > 1000.0F * 1000.0F) ||
                 (species.maximumHeightInM <= 0.0) || (species.maximumHeightInM > 200.0)) // Sequoia semperivirens (Hyperion) 115.7 m
             {
@@ -476,7 +477,7 @@ namespace iLand.Tree
             species.SaplingEstablishment.DroughtMortalityPsiInMPa = reader.EstablishmentParametersPsiMin();
 
             // sapling and sapling growth parameters
-            species.SaplingGrowth.HeightGrowthPotential.SetAndParse(reader.SaplingGrowthParametersHeightGrowthPotential());
+            species.SaplingGrowth.HeightGrowthPotential.Parse(reader.SaplingGrowthParametersHeightGrowthPotential());
             species.SaplingGrowth.HeightDiameterRatio = reader.SaplingGrowthParametersHdSapling();
             species.SaplingGrowth.StressThreshold = reader.SaplingGrowthParametersStressThreshold();
             species.SaplingGrowth.MaxStressYears = reader.SaplingGrowthParametersMaxStressYears();

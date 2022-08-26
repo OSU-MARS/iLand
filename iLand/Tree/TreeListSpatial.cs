@@ -305,7 +305,7 @@ namespace iLand.Tree
         /// return the HD ratio of this year's increment based on the light status.
         private float GetRelativeHeightGrowth(int treeIndex)
         {
-            this.Species.GetHeightDiameterRatioLimits(this.DbhInCm[treeIndex], out float hdRatioLow, out float hdRatioHigh);
+            (float hdRatioLow, float hdRatioHigh) = this.Species.GetHeightDiameterRatioLimits(this.DbhInCm[treeIndex]);
             Debug.Assert(hdRatioLow < hdRatioHigh, "HD low higher than HD high.");
             Debug.Assert((hdRatioLow > 15.0F - 0.02F * this.DbhInCm[treeIndex]) && (hdRatioHigh < 250.0F), "HD ratio out of range. Low: " + hdRatioLow + ", high: " + hdRatioHigh);
 

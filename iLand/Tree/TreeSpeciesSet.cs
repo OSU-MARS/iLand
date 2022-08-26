@@ -104,14 +104,14 @@ namespace iLand.Tree
             }
 
             // setup light responses
-            this.lightResponseShadeTolerant.SetAndParse(projectFile.World.Species.LightResponse.ShadeTolerant);
-            this.lightResponseShadeIntolerant.SetAndParse(projectFile.World.Species.LightResponse.ShadeIntolerant);
+            this.lightResponseShadeTolerant.Parse(projectFile.World.Species.LightResponse.ShadeTolerant);
+            this.lightResponseShadeIntolerant.Parse(projectFile.World.Species.LightResponse.ShadeIntolerant);
             if (String.IsNullOrEmpty(lightResponseShadeTolerant.ExpressionString) || String.IsNullOrEmpty(lightResponseShadeIntolerant.ExpressionString))
             {
                 throw new NotSupportedException("At least one parameter of /project/model/species/lightResponse is missing.");
             }
             // lri-correction
-            this.relativeHeightModifer.SetAndParse(projectFile.World.Species.LightResponse.RelativeHeightLriModifier);
+            this.relativeHeightModifer.Parse(projectFile.World.Species.LightResponse.RelativeHeightLriModifier);
 
             if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
             {
@@ -137,42 +137,6 @@ namespace iLand.Tree
             get { return this.treeSpeciesByID.Count; }
         }
 
-        public float GetLriCorrection(float lightResourceIndex, float relativeHeight)
-        {
-            return (float)this.relativeHeightModifer.Evaluate(lightResourceIndex, relativeHeight);
-        }
-
-        public void SetupSeedDispersal(Model model)
-        {
-            foreach (TreeSpecies species in this.ActiveSpecies) 
-            {
-                species.SeedDispersal = new(species);
-                species.SeedDispersal.Setup(model); // setup memory for the seed map (grid)
-            }
-            // Debug.WriteLine("Setup of seed dispersal maps finished.");
-        }
-
-        /** newYear is called by Model::runYear at the beginning of a year before any growth occurs.
-          This is used for various initializations, e.g. to clear seed dispersal maps
-          */
-        public void OnStartYear(Model model)
-        {
-            if (model.Project.Model.Settings.RegenerationEnabled == false)
-            {
-                return;
-            }
-            foreach (TreeSpecies species in this.ActiveSpecies) 
-            {
-                species.OnStartYear(model);
-            }
-        }
-
-        public void GetRandomSpeciesSampleIndices(RandomGenerator randomGenerator, out int beginIndex, out int endIndex)
-        {
-            beginIndex = this.ActiveSpecies.Count * randomGenerator.GetRandomInteger(0, TreeSpeciesSet.RandomSets - 1);
-            endIndex = beginIndex + this.ActiveSpecies.Count;
-        }
-
         public void CreateRandomSpeciesOrder(RandomGenerator randomGenerator)
         {
             this.RandomSpeciesOrder.Clear();
@@ -193,51 +157,6 @@ namespace iLand.Tree
                     samples.RemoveAt(index);
                 }
             }
-        }
-
-        /// calculate nitrogen response for a given amount of available nitrogen and a response class
-        /// for fractional values, the response value is interpolated between the fixedly defined classes (1,2,3)
-        public float GetNitrogenModifier(float availableNitrogen, float responseClass)
-        {
-            if (responseClass > 2.0F)
-            {
-                if (responseClass == 3.0F)
-                {
-                    return TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class3K, this.class3minimum);
-                }
-                else
-                {
-                    // linear interpolation between 2 and 3
-                    float modifier2 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class2K, this.class2minimum);
-                    float modifier3 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class3K, this.class3minimum);
-                    return modifier2 + (responseClass - 2.0F) * (modifier3 - modifier2);
-                }
-            }
-            else if (responseClass == 2.0F)
-            {
-                return TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class2K, this.class2minimum);
-            }
-            else if (responseClass == 1.0F)
-            {
-                return TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class1K, this.class1minimum);
-            }
-            else
-            {
-                // linear interpolation between 1 and 2
-                float modifier1 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class1K, this.class1minimum);
-                float modifier2 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class2K, this.class2minimum);
-                return modifier1 + (responseClass - 1.0F) * (modifier2 - modifier1);
-            }
-        }
-
-        private static float GetNitrogenModifier(float availableNitrogen, float nitrogenK, float minimumNitrogen)
-        {
-            if (availableNitrogen <= minimumNitrogen)
-            {
-                return 0.0F;
-            }
-            float nitrogenModifier = 1.0F - MathF.Exp(nitrogenK * (availableNitrogen - minimumNitrogen));
-            return nitrogenModifier;
         }
 
         /// <summary>
@@ -287,10 +206,91 @@ namespace iLand.Tree
             @sa http://iland-model.org/allocation#reserve_and_allocation_to_stem_growth */
         public float GetLightResponse(float lightResourceIndex, float lightResponseClass)
         {
-            float intolerant = (float)this.lightResponseShadeIntolerant.Evaluate(lightResourceIndex);
-            float tolerant = (float)this.lightResponseShadeTolerant.Evaluate(lightResourceIndex);
+            float intolerant = this.lightResponseShadeIntolerant.Evaluate(lightResourceIndex);
+            float tolerant = this.lightResponseShadeTolerant.Evaluate(lightResourceIndex);
             float response = intolerant + 0.25F * (lightResponseClass - 1.0F) * (tolerant - intolerant);
             return Maths.Limit(response, 0.0F, 1.0F);
+        }
+
+        public float GetLriCorrection(float lightResourceIndex, float relativeHeight)
+        {
+            return this.relativeHeightModifer.Evaluate(lightResourceIndex, relativeHeight);
+        }
+
+        /// calculate nitrogen response for a given amount of available nitrogen and a response class
+        /// for fractional values, the response value is interpolated between the fixedly defined classes (1,2,3)
+        public float GetNitrogenModifier(float availableNitrogen, float responseClass)
+        {
+            if (responseClass > 2.0F)
+            {
+                if (responseClass == 3.0F)
+                {
+                    return TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class3K, this.class3minimum);
+                }
+                else
+                {
+                    // linear interpolation between 2 and 3
+                    float modifier2 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class2K, this.class2minimum);
+                    float modifier3 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class3K, this.class3minimum);
+                    return modifier2 + (responseClass - 2.0F) * (modifier3 - modifier2);
+                }
+            }
+            else if (responseClass == 2.0F)
+            {
+                return TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class2K, this.class2minimum);
+            }
+            else if (responseClass == 1.0F)
+            {
+                return TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class1K, this.class1minimum);
+            }
+            else
+            {
+                // linear interpolation between 1 and 2
+                float modifier1 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class1K, this.class1minimum);
+                float modifier2 = TreeSpeciesSet.GetNitrogenModifier(availableNitrogen, this.class2K, this.class2minimum);
+                return modifier1 + (responseClass - 1.0F) * (modifier2 - modifier1);
+            }
+        }
+
+        private static float GetNitrogenModifier(float availableNitrogen, float nitrogenK, float minimumNitrogen)
+        {
+            if (availableNitrogen <= minimumNitrogen)
+            {
+                return 0.0F;
+            }
+            float nitrogenModifier = 1.0F - MathF.Exp(nitrogenK * (availableNitrogen - minimumNitrogen));
+            return nitrogenModifier;
+        }
+
+        public void GetRandomSpeciesSampleIndices(RandomGenerator randomGenerator, out int beginIndex, out int endIndex)
+        {
+            beginIndex = this.ActiveSpecies.Count * randomGenerator.GetRandomInteger(0, TreeSpeciesSet.RandomSets - 1);
+            endIndex = beginIndex + this.ActiveSpecies.Count;
+        }
+
+        /** newYear is called by Model::runYear at the beginning of a year before any growth occurs.
+          This is used for various initializations, e.g. to clear seed dispersal maps
+          */
+        public void OnStartYear(Model model)
+        {
+            if (model.Project.Model.Settings.RegenerationEnabled == false)
+            {
+                return;
+            }
+            foreach (TreeSpecies species in this.ActiveSpecies)
+            {
+                species.OnStartYear(model);
+            }
+        }
+
+        public void SetupSeedDispersal(Model model)
+        {
+            foreach (TreeSpecies species in this.ActiveSpecies)
+            {
+                species.SeedDispersal = new(species);
+                species.SeedDispersal.Setup(model); // setup memory for the seed map (grid)
+            }
+            // Debug.WriteLine("Setup of seed dispersal maps finished.");
         }
     }
 }

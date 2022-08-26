@@ -126,7 +126,7 @@ namespace iLand.World
                 // set up the effect on regeneration in NSTEPS steps
                 for (int stepIndex = 0; stepIndex < GrassCover.FullCoverValue; ++stepIndex)
                 {
-                    float regenEffect = (float)continousRegenerationEffect.Evaluate(stepIndex / (float)(GrassCover.FullCoverValue - 1));
+                    float regenEffect = continousRegenerationEffect.Evaluate(stepIndex / (float)(GrassCover.FullCoverValue - 1));
                     this.continuousRegenerationEffectByCover[stepIndex] = Maths.Limit(regenEffect, 0.0F, 1.0F);
                 }
 

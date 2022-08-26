@@ -895,9 +895,9 @@ namespace iLand.Test
             // PIAB: HDlow = 170*(1)*d^-0.5, HDhigh = (195.547*1.004*(-0.2396+1)*d^-0.2396)*1
             // round(170*(1)*c(3.3, 10, 33)^-0.5, 2)
             // round((195.547*1.004*(-0.2396+1)*c(3.3, 10, 33)^-0.2396)*1, 2)
-            species.GetHeightDiameterRatioLimits(3.3F, out float lowLimitSmall, out float highLimitSmall);
-            species.GetHeightDiameterRatioLimits(10.0F, out float lowLimitMedium, out float highLimitMedium);
-            species.GetHeightDiameterRatioLimits(33.0F, out float lowLimitLarge, out float highLimitLarge);
+            (float lowLimitSmall, float highLimitSmall) = species.GetHeightDiameterRatioLimits(3.3F);
+            (float lowLimitMedium, float highLimitMedium) = species.GetHeightDiameterRatioLimits(10.0F);
+            (float lowLimitLarge, float highLimitLarge) = species.GetHeightDiameterRatioLimits(33.0F);
 
             Assert.IsTrue(MathF.Abs(lowLimitSmall - 93.58F) < 0.01F);
             Assert.IsTrue(MathF.Abs(lowLimitMedium - 53.76F) < 0.01F);

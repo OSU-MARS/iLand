@@ -55,8 +55,8 @@ namespace iLand.Tool
                 float x1 = this.lowerBound + step * this.deltaX;
                 float x2 = x1 + this.deltaX;
                 // p1, p2: werte der pdf bei unterer und oberer grenze des aktuellen schrittes
-                float p1 = (float)this.expression.Evaluate(x1);
-                float p2 = (float)this.expression.Evaluate(x2);
+                float p1 = this.expression.Evaluate(x1);
+                float p2 = this.expression.Evaluate(x2);
                 // areaval: numerische integration zwischen x1 und x2
                 float stepProbability = 0.5F * (p1 + p2) * stepWidth;
                 if (isSumFunc)

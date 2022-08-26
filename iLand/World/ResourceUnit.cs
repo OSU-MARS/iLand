@@ -336,7 +336,7 @@ namespace iLand.World
             TreeSpecies species = ruSpecies.Species;
 
             // (1) calculate height growth potential for the tree (uses linerization of expressions...)
-            float h_pot = (float)species.SaplingGrowth.HeightGrowthPotential.Evaluate(sapling.HeightInM);
+            float h_pot = species.SaplingGrowth.HeightGrowthPotential.Evaluate(sapling.HeightInM);
             float delta_h_pot = h_pot - sapling.HeightInM;
 
             // (2) reduce height growth potential with species growth response f_env_yr and with light state (i.e. LIF-value) of home-pixel.
