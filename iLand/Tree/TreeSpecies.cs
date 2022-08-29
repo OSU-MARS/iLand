@@ -364,7 +364,7 @@ namespace iLand.Tree
             {
                 throw new SqliteException("Error loading '" + species.WorldFloraID + "': taper form factor must be in the range (0.0, 1.0).", (int)SqliteErrorCode.Error);
             }
-            species.VolumeFactor = Constant.QuarterPi * formFactor; // volume = formfactor*pi/4 *d^2*h -> volume = volumefactor * d^2 * h
+            species.VolumeFactor = 0.25F * MathF.PI * formFactor; // volume = formfactor*pi/4 *d^2*h -> volume = volumefactor * d^2 * h
 
             // decomposition rates
             species.CoarseWoodyDebrisDecompositionRate = reader.SnagKyr(); // decay rate refractory matter

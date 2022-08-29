@@ -74,8 +74,8 @@ namespace iLand.Output.Sql
                 {
                     insertRow.Parameters[0].Value = currentCalendarYear;
                     insertRow.Parameters[1].Value = resourceUnit.ID;
-                    insertRow.Parameters[2].Value = resourceUnit.AreaWithTreesInM2 / Constant.ResourceUnitAreaInM2;
-                    insertRow.Parameters[3].Value = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2;
+                    insertRow.Parameters[2].Value = resourceUnit.AreaWithTreesInM2 / Constant.Grid.ResourceUnitAreaInM2;
+                    insertRow.Parameters[3].Value = resourceUnit.AreaInLandscapeInM2 / Constant.Grid.ResourceUnitAreaInM2;
                     insertRow.Parameters[4].Value = resourceUnit.Weather.GetTotalPrecipitationInCurrentYear();
                     insertRow.Parameters[5].Value = waterCycle.TotalAnnualEvapotranspirationInMM;
                     insertRow.Parameters[6].Value = waterCycle.TotalAnnualRunoffInMM;
@@ -103,8 +103,8 @@ namespace iLand.Output.Sql
             }
             insertRow.Parameters[0].Value = currentCalendarYear; // codes -1/-1 for landscape level
             insertRow.Parameters[1].Value = -1; // resource unit ID
-            insertRow.Parameters[2].Value = stockedAreaInM2 / (Constant.ResourceUnitAreaInM2 * resourceUnitCount);
-            insertRow.Parameters[3].Value = stockableAreaInM2 / (Constant.ResourceUnitAreaInM2 * resourceUnitCount);
+            insertRow.Parameters[2].Value = stockedAreaInM2 / (Constant.Grid.ResourceUnitAreaInM2 * resourceUnitCount);
+            insertRow.Parameters[3].Value = stockableAreaInM2 / (Constant.Grid.ResourceUnitAreaInM2 * resourceUnitCount);
             insertRow.Parameters[4].Value = totalAnnualPrecipitation / resourceUnitCount; // mean precip
             insertRow.Parameters[5].Value = totalEvapotranspiration / resourceUnitCount;
             insertRow.Parameters[6].Value = totalRunoff / resourceUnitCount;

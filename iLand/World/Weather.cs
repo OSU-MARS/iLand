@@ -40,8 +40,8 @@ namespace iLand.World
             this.SampledYears = new();
             this.YearsToLoad = projectFile.World.Weather.DailyWeatherChunkSizeInYears;
 
-            this.DaytimeMeanTemperatureByMonth = new float[Constant.MonthsInYear];
-            this.PrecipitationByMonth = new float[Constant.MonthsInYear];
+            this.DaytimeMeanTemperatureByMonth = new float[Constant.Time.MonthsInYear];
+            this.PrecipitationByMonth = new float[Constant.Time.MonthsInYear];
             this.Sun = new(projectFile.World.Geometry.Latitude);
 
             if (this.DoRandomSampling)
@@ -72,7 +72,7 @@ namespace iLand.World
         public float GetTotalPrecipitationInCurrentYear() 
         { 
             float totalPrecip = 0.0F;
-            for (int month = 0; month < Constant.MonthsInYear; ++month)
+            for (int month = 0; month < Constant.Time.MonthsInYear; ++month)
             {
                 totalPrecip += this.PrecipitationByMonth[month];
             }

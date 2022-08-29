@@ -75,7 +75,7 @@ namespace iLand.World
             { 
                 ResourceUnit resourceUnit = landscape.ResourceUnits[resourceUnitIndex];
                 Point seedmapIndexXY = this.CoverOrOnOffGrid.GetCellXYIndex(resourceUnit.ProjectExtent.X, resourceUnit.ProjectExtent.Y);
-                this.CoverOrOnOffGrid.Fill(seedmapIndexXY.X, seedmapIndexXY.Y, Constant.LightCellsPerRUWidth, Constant.LightCellsPerRUWidth, 0);
+                this.CoverOrOnOffGrid.Fill(seedmapIndexXY.X, seedmapIndexXY.Y, Constant.Grid.LightCellsPerRUWidth, Constant.Grid.LightCellsPerRUWidth, 0);
             }
 
             this.algorithm = projectFile.World.Grass.Algorithm;

@@ -1,9 +1,12 @@
 ﻿using iLand.Extensions;
+using iLand.Simulation;
 using iLand.World;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 
 namespace iLand.Tree
 {
@@ -102,19 +105,6 @@ namespace iLand.Tree
             this.TotalLeafArea += leafArea;
         }
 
-        // function is called immediately before the growth of individuals
-        public void BeforeTreeGrowth()
-        {
-            this.AverageLeafAreaWeightedAgingFactor = 0.0F;
-        }
-
-        // function is called after finishing the individual growth / mortality.
-        public void AfterTreeGrowth()
-        {
-            resourceUnit.Trees.RemoveDeadTrees();
-            this.AverageAging();
-        }
-
         private void AverageAging()
         {
             this.AverageLeafAreaWeightedAgingFactor = this.TotalLeafArea > 0.0F ? this.AverageLeafAreaWeightedAgingFactor / this.TotalLeafArea : 0.0F; // calculate aging value (calls to addAverageAging() by individual trees)
@@ -128,253 +118,381 @@ namespace iLand.Tree
             }
         }
 
-        public void ApplyLightIntensityPattern(Landscape landscape)
+        // function is called immediately before the growth of individuals
+        public void BeforeTreeGrowth()
         {
-            Grid<float> lightGrid = landscape.LightGrid;
-            Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
-            for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            this.AverageLeafAreaWeightedAgingFactor = 0.0F;
+        }
+
+        // function is called after finishing the individual growth / mortality.
+        public void AfterTreeGrowth()
+        {
+            this.resourceUnit.Trees.RemoveDeadTrees();
+            this.AverageAging();
+        }
+
+        public void ApplyLightIntensityPattern(Landscape landscape, ConcurrentQueue<LightBuffer> lightBuffers)
+        {
+            if (lightBuffers.TryDequeue(out LightBuffer? lightBuffer) == false)
             {
-                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                lightBuffer = new(isTorus: false);
+            }
+            lightBuffer.Fill(Constant.Grid.FullLightIntensity);
+
+            Point resourceUnitLightGridOrigin = landscape.LightGrid.GetCellXYIndex(this.resourceUnit.ProjectExtent.X, this.resourceUnit.ProjectExtent.Y);
+            int bufferLightOriginX = resourceUnitLightGridOrigin.X - Constant.Grid.MaxLightStampSizeInLightCells / 2;
+            int bufferLightOriginY = resourceUnitLightGridOrigin.Y - Constant.Grid.MaxLightStampSizeInLightCells / 2;
+            float dominantHeightInM = Single.NaN; // height of z*u,v on the current position
+            Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
+            for (int speciesIndex = 0; speciesIndex < this.resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            {
+                TreeListSpatial treesOfSpecies = this.resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    LightStamp stamp = treesOfSpecies.LightStamp[treeIndex]!;
                     Point treeLightCellIndexXY = treesOfSpecies.LightCellIndexXY[treeIndex];
-                    int stampOriginX = treeLightCellIndexXY.X - stamp.CenterCellIndex;
-                    int stampOriginY = treeLightCellIndexXY.Y - stamp.CenterCellIndex;
-                    int stampSize = stamp.GetSizeInLightCells();
-                    for (int lightY = stampOriginY, stampY = 0; stampY < stampSize; ++lightY, ++stampY)
+                    LightStamp treeLightStamp = treesOfSpecies.LightStamp[treeIndex]!;
+                    float treeHeightInM = treesOfSpecies.HeightInM[treeIndex];
+                    float treeOpacity = treesOfSpecies.Opacity[treeIndex];
+
+                    float[] stampData = treeLightStamp.Data;
+                    int stampDataSize = treeLightStamp.DataSize;
+                    int stampLightOriginX = treeLightCellIndexXY.X - treeLightStamp.CenterCellIndex;
+                    int stampLightOriginY = treeLightCellIndexXY.Y - treeLightStamp.CenterCellIndex;
+                    int stampBufferOriginX = stampLightOriginX - bufferLightOriginX;
+                    int stampBufferOriginY = stampLightOriginY - bufferLightOriginY;
+                    int stampHeightOriginX = stampLightOriginX / Constant.Grid.LightCellsPerHeightCellWidth;
+                    int stampHeightOriginY = stampLightOriginY / Constant.Grid.LightCellsPerHeightCellWidth;
+                    int stampSize = treeLightStamp.GetSizeInLightCells();
+                    for (int stampIndexY = 0; stampIndexY < stampSize; ++stampIndexY)
                     {
-                        int lightIndex = lightGrid.IndexXYToIndex(stampOriginX, lightY);
-                        for (int lightX = stampOriginX, stampX = 0; stampX < stampSize; ++lightX, ++lightIndex, ++stampX)
+                        int bufferIndex = lightBuffer.IndexXYToIndex(stampBufferOriginX, stampBufferOriginY + stampIndexY);
+                        int heightIndex = vegetationHeightGrid.IndexXYToIndex(stampHeightOriginX, stampHeightOriginY + stampIndexY / Constant.Grid.LightCellsPerHeightCellWidth);
+                        for (int stampIndex = stampDataSize * stampIndexY, stampIndexX = 0; stampIndexX < stampSize; ++bufferIndex, ++stampIndex, ++stampIndexX)
                         {
+                            if (stampIndexX % Constant.Grid.LightCellsPerHeightCellWidth == 0)
+                            {
+                                dominantHeightInM = vegetationHeightGrid[heightIndex++];
+                            }
+
                             // http://iland-model.org/competition+for+light
-                            float iXYJ = stamp[stampX, stampY]; // tree's light stamp value
+                            float iXYJ = stampData[stampIndex]; // tree's light stamp value
                             if (iXYJ != 0.0F) // zero = no tree shading => LIF intensity = 1 => no change in light grid
                             {
-                                float dominantHeightInM = vegetationHeightGrid[lightX, lightY, Constant.LightCellsPerHeightCellWidth]; // height of z*u,v on the current position
-                                float zStarXYJ = treesOfSpecies.HeightInM[treeIndex] - stamp.GetDistanceToCenter(stampX, stampY); // distance to center = height (45 degree line)
+                                float zStarXYJ = treeHeightInM - treeLightStamp.GetDistanceToCenterInM(stampIndexX, stampIndexY); // distance to center = height (45 degree line)
                                 if (zStarXYJ < 0.0F)
                                 {
                                     zStarXYJ = 0.0F;
                                 }
                                 float zStarMin = (zStarXYJ >= dominantHeightInM) ? 1.0F : zStarXYJ / dominantHeightInM; // tree influence height
-                                float iStarXYJ = 1.0F - treesOfSpecies.Opacity[treeIndex] * iXYJ * zStarMin; // this tree's Beer-Lambert contribution to shading of light grid cell
-                                if (iStarXYJ < 0.02F)
+                                float iStarXYJ = 1.0F - treeOpacity * iXYJ * zStarMin; // this tree's Beer-Lambert contribution to shading of light grid cell
+                                if (iStarXYJ < Constant.MinimumLightIntensity)
                                 {
-                                    iStarXYJ = 0.02F; // limit minimum value
+                                    iStarXYJ = Constant.MinimumLightIntensity; // limit minimum value
                                 }
 
-                                lightGrid[lightIndex] *= iStarXYJ; // compound LIF intensity, Eq. 4
+                                lightBuffer[bufferIndex] *= iStarXYJ; // compound LIF intensity, Eq. 4
                             }
                         }
                     }
                 }
             }
+
+            lock (landscape.LightGrid)
+            {
+                lightBuffer.ApplyToLightGrid(landscape.LightGrid, bufferLightOriginX, bufferLightOriginY);
+            }
+            lightBuffers.Enqueue(lightBuffer);
         }
 
         // Apply LIPs. This "torus" function wraps the influence at the edges of a 1 ha simulation area (each resource unit forms
         // its own indvidual torus).
-        public void ApplyLightIntensityPatternTorus(Landscape landscape, int lightBufferTranslationInCells)
+        public void ApplyLightIntensityPatternTorus(Landscape landscape, ConcurrentQueue<LightBuffer> lightBuffers)
         {
-            Grid<float> lightGrid = landscape.LightGrid;
-            Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
-            for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            if (lightBuffers.TryDequeue(out LightBuffer? lightBuffer) == false)
             {
-                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                lightBuffer = new(isTorus: true);
+            }
+            lightBuffer.Fill(Constant.Grid.FullLightIntensity);
+
+            Point resourceUnitLightGridOrigin = landscape.LightGrid.GetCellXYIndex(this.resourceUnit.ProjectExtent.X, this.resourceUnit.ProjectExtent.Y);
+            int resourceUnitLightGridOriginX = resourceUnitLightGridOrigin.X; // inclusive
+            int resourceUnitLightGridOriginY = resourceUnitLightGridOrigin.Y; // inclusive
+            int resourceUnitLightGridMaxX = resourceUnitLightGridOriginX + Constant.Grid.LightCellsPerRUWidth; // exclusive
+            int resourceUnitLightGridMaxY = resourceUnitLightGridOriginY + Constant.Grid.LightCellsPerRUWidth; // exclusive
+            Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
+            for (int speciesIndex = 0; speciesIndex < this.resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            {
+                TreeListSpatial treesOfSpecies = this.resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
                     Point treeLightCellIndexXY = treesOfSpecies.LightCellIndexXY[treeIndex];
-                    int treeResourceUnitIndexX = (treeLightCellIndexXY.X - lightBufferTranslationInCells) % Constant.LightCellsPerRUWidth + lightBufferTranslationInCells; // offset within the hectare
-                    int treeResourceUnitIndexY = (treeLightCellIndexXY.Y - lightBufferTranslationInCells) % Constant.LightCellsPerRUWidth + lightBufferTranslationInCells;
-                    int ruOffsetX = treeLightCellIndexXY.X - treeResourceUnitIndexX;
-                    int ruOffsetY = treeLightCellIndexXY.Y - treeResourceUnitIndexY; // offset of the corner of the resource index
+                    LightStamp treeLightStamp = treesOfSpecies.LightStamp[treeIndex];
+                    float treeHeightInM = treesOfSpecies.HeightInM[treeIndex];
+                    float treeOpacity = treesOfSpecies.Opacity[treeIndex];
 
-                    LightStamp stamp = treesOfSpecies.LightStamp[treeIndex];
-                    int stampOriginX = treeResourceUnitIndexX - stamp.CenterCellIndex;
-                    int stampOriginY = treeResourceUnitIndexY - stamp.CenterCellIndex;
-
-                    int stampSize = stamp.GetSizeInLightCells();
-                    for (int stampY = 0; stampY < stampSize; ++stampY)
+                    float[] stampData = treeLightStamp.Data;
+                    int stampDataSize = treeLightStamp.DataSize;
+                    int stampLightOriginX = treeLightCellIndexXY.X - treeLightStamp.CenterCellIndex;
+                    int stampLightOriginY = treeLightCellIndexXY.Y - treeLightStamp.CenterCellIndex;
+                    int stampBufferOriginX = stampLightOriginX - resourceUnitLightGridOriginX;
+                    int stampBufferOriginY = stampLightOriginY - resourceUnitLightGridOriginY;
+                    int stampSize = treeLightStamp.GetSizeInLightCells();
+                    for (int stampIndexY = 0; stampIndexY < stampSize; ++stampIndexY)
                     {
-                        int lightY = stampOriginY + stampY;
-                        int torusY = ResourceUnitTrees.GetTorusIndex(lightY, Constant.LightCellsPerRUWidth, lightBufferTranslationInCells, ruOffsetY); // 50 cells per 100m
-                        for (int stampX = 0; stampX < stampSize; ++stampX)
+                        int lightTorusY = ResourceUnitTrees.ToTorusLightIndex(stampLightOriginY + stampIndexY, resourceUnitLightGridOriginY, resourceUnitLightGridMaxY);
+                        int heightTorusY = lightTorusY / Constant.Grid.LightCellsPerHeightCellWidth;
+                        int stampTorusY = ResourceUnitTrees.ToTorusLightIndex(stampBufferOriginY + stampIndexY, 0, Constant.Grid.LightCellsPerRUWidth);
+                        for (int stampIndex = stampDataSize * stampIndexY, stampIndexX = 0; stampIndexX < stampSize; ++stampIndex, ++stampIndexX)
                         {
-                            float iXYJ = stamp[stampX, stampY]; // tree's light stamp value
+                            float iXYJ = stampData[stampIndex]; // tree's light stamp value
                             if (iXYJ != 0.0F) // zero = no tree shading => LIF intensity = 1 => no change in light grid
                             {
-                                int lightX = stampOriginX + stampX;
-                                int torusX = ResourceUnitTrees.GetTorusIndex(lightX, Constant.LightCellsPerRUWidth, lightBufferTranslationInCells, ruOffsetX);
-
-                                float dominantHeightInM = vegetationHeightGrid[torusX, torusY, Constant.LightCellsPerHeightCellWidth]; // height of Z* on the current position
-                                float zStarXYJ = treesOfSpecies.HeightInM[treeIndex] - stamp.GetDistanceToCenter(stampX, stampY); // distance to center = height (45 degree line)
+                                int lightTorusX = ResourceUnitTrees.ToTorusLightIndex(stampLightOriginX + stampIndexX, resourceUnitLightGridOriginX, resourceUnitLightGridMaxX);
+                                int heightTorusX = lightTorusX / Constant.Grid.LightCellsPerHeightCellWidth;
+                                float dominantHeightInM = vegetationHeightGrid[heightTorusX, heightTorusY]; // height of Z* on the current position
+                                float zStarXYJ = treeHeightInM - treeLightStamp.GetDistanceToCenterInM(stampIndexX, stampIndexY); // distance to center = height (45 degree line)
                                 if (zStarXYJ < 0.0F)
                                 {
                                     zStarXYJ = 0.0F;
                                 }
                                 float zStarMin = (zStarXYJ >= dominantHeightInM) ? 1.0F : zStarXYJ / dominantHeightInM;
                                 // old: value = 1. - value*mOpacity / local_dom;
-                                float iStarXYJ = 1.0F - iXYJ * treesOfSpecies.Opacity[treeIndex] * zStarMin;
-                                if (iStarXYJ < 0.02F)
+                                float iStarXYJ = 1.0F - iXYJ * treeOpacity * zStarMin;
+                                if (iStarXYJ < Constant.MinimumLightIntensity)
                                 {
-                                    iStarXYJ = 0.02F; // limit minimum value
+                                    iStarXYJ = Constant.MinimumLightIntensity; // limit minimum value
                                 }
 
-                                lightGrid[torusX, torusY] *= iStarXYJ; // use wraparound coordinates
+                                int stampTorusX = ResourceUnitTrees.ToTorusLightIndex(stampBufferOriginX + stampIndexX, 0, Constant.Grid.LightCellsPerRUWidth);
+                                lightBuffer[stampTorusX, stampTorusY] *= iStarXYJ; // use wraparound coordinates
                             }
                         }
                     }
                 }
             }
+
+            lightBuffer.ApplyToLightGrid(landscape.LightGrid, resourceUnitLightGridOriginX, resourceUnitLightGridOriginY);
+            lightBuffers.Enqueue(lightBuffer);
         }
 
-        // calculates the "dominant height field". This grid is coarser as the fine-scaled light-grid.
-        public void CalculateDominantHeightField(Landscape landscape)
+        /// <summary>
+        /// Calculates the resource unit's dominant height field on a local buffer and then uses the buffer to lift the vegetation 
+        /// height grid.
+        /// </summary>
+        /// <remarks>
+        /// Thread safe. Since the dominant height field may extend one height cell past the resource unit the dominant height
+        /// buffer is a 12 x 12 grid (100 m resource unit / 10 m height cell + one height cell margin on each side). A write lock
+        /// is therefore taken when evaluating max(vegetation height grid, dominant height buffer) to avoid race conditions between
+        /// threads concurrently finding the dominant height fields of spatially adjacent resource units.
+        /// </remarks>
+        public void CalculateDominantHeightField(Landscape landscape, ConcurrentQueue<DominantHeightBuffer> dominantHeightBuffers)
         {
-            Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
-            for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            if (dominantHeightBuffers.TryDequeue(out DominantHeightBuffer? dominantHeightBuffer) == false)
             {
-                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                dominantHeightBuffer = new(isTorus: false);
+            }
+            dominantHeightBuffer.Fill(Constant.RegenerationLayerHeight);
+
+            Point resourceUnitLightGridOrigin = landscape.LightGrid.GetCellXYIndex(this.resourceUnit.ProjectExtent.X, this.resourceUnit.ProjectExtent.Y);
+            int bufferLightOriginX = resourceUnitLightGridOrigin.X - Constant.Grid.LightCellsPerHeightCellWidth;
+            int bufferLightOriginY = resourceUnitLightGridOrigin.Y - Constant.Grid.LightCellsPerHeightCellWidth;
+            for (int speciesIndex = 0; speciesIndex < this.resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            {
+                TreeListSpatial treesOfSpecies = this.resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
                     LightStamp? readerStamp = treesOfSpecies.LightStamp[treeIndex].ReaderStamp;
                     Debug.Assert(readerStamp != null);
 
                     Point treeLightCellIndexXY = treesOfSpecies.LightCellIndexXY[treeIndex];
-                    int treeHeightCellIndexX = treeLightCellIndexXY.X / Constant.LightCellsPerHeightCellWidth;
-                    int treeHeightCellIndexY = treeLightCellIndexXY.Y / Constant.LightCellsPerHeightCellWidth;
+                    int treeBufferIndexX = (treeLightCellIndexXY.X - bufferLightOriginX) / Constant.Grid.LightCellsPerHeightCellWidth;
+                    int treeBufferIndexY = (treeLightCellIndexXY.Y - bufferLightOriginY) / Constant.Grid.LightCellsPerHeightCellWidth;
 
                     // count trees that are on height-grid cells (used for stockable area)
-                    int heightCellIndex = vegetationHeightGrid.IndexXYToIndex(treeHeightCellIndexX, treeHeightCellIndexY);
-                    float currentVegetationHeightInM = vegetationHeightGrid[heightCellIndex];
+                    int heightCellIndex = dominantHeightBuffer.IndexXYToIndex(treeBufferIndexX, treeBufferIndexY);
+                    float currentVegetationHeightInM = dominantHeightBuffer[heightCellIndex];
                     float treeHeightInM = treesOfSpecies.HeightInM[treeIndex];
                     if (treeHeightInM > currentVegetationHeightInM)
                     {
-                        vegetationHeightGrid[heightCellIndex] = treeHeightInM;
+                        dominantHeightBuffer[heightCellIndex] = treeHeightInM;
                     }
 
-                    int readerCenter = readerStamp.CenterCellIndex; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
-                    int indexEastWest = treeLightCellIndexXY.X % Constant.LightCellsPerHeightCellWidth; // 4: very east, 0 west edge
-                    int indexNorthSouth = treeLightCellIndexXY.Y % Constant.LightCellsPerHeightCellWidth; // 4: northern edge, 0: southern edge
-                    if (indexEastWest - readerCenter < 0)
-                    { // west
-                        int westNeighborIndex = vegetationHeightGrid.IndexXYToIndex(treeHeightCellIndexX - 1, treeHeightCellIndexY);
-                        currentVegetationHeightInM = vegetationHeightGrid[westNeighborIndex];
+                    // if tree is both large enough and close enough to an edge of the height cell it's within, consider it as a
+                    // dominant height in the neighboring height cell
+                    // For now this applies only to neighbors in the cardinal directions and doesn't consider diagonal neighbors.
+                    int readerRadiusInLightCells = readerStamp.CenterCellIndex; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
+                    int lightSubcellIndexEastWest = treeLightCellIndexXY.X % Constant.Grid.LightCellsPerHeightCellWidth; // 0 = west edge of height cell, 4 = east edge of height cell
+                    int lightSubcellIndexNorthSouth = treeLightCellIndexXY.Y % Constant.Grid.LightCellsPerHeightCellWidth; // 0 = southern edge of height cell, 4 = northern edge of height cell
+                    if (lightSubcellIndexEastWest - readerRadiusInLightCells < 0)
+                    {   
+                        // tree's reader stamp extends into height cell to the west
+                        int westNeighborIndex = dominantHeightBuffer.IndexXYToIndex(treeBufferIndexX - 1, treeBufferIndexY);
+                        currentVegetationHeightInM = dominantHeightBuffer[westNeighborIndex];
                         if (treeHeightInM > currentVegetationHeightInM)
                         {
-                            vegetationHeightGrid[westNeighborIndex] = treeHeightInM;
+                            dominantHeightBuffer[westNeighborIndex] = treeHeightInM;
                         }
                     }
-                    if (indexEastWest + readerCenter >= Constant.LightCellsPerHeightCellWidth)
-                    {  // east
-                        int eastNeighborIndex = vegetationHeightGrid.IndexXYToIndex(treeHeightCellIndexX + 1, treeHeightCellIndexY);
-                        currentVegetationHeightInM = vegetationHeightGrid[eastNeighborIndex];
+                    if (lightSubcellIndexEastWest + readerRadiusInLightCells >= Constant.Grid.LightCellsPerHeightCellWidth)
+                    {   
+                        // tree's reader stamp extends into height cell to the east
+                        int eastNeighborIndex = dominantHeightBuffer.IndexXYToIndex(treeBufferIndexX + 1, treeBufferIndexY);
+                        currentVegetationHeightInM = dominantHeightBuffer[eastNeighborIndex];
                         if (treeHeightInM > currentVegetationHeightInM)
                         {
-                            vegetationHeightGrid[eastNeighborIndex] = treeHeightInM;
+                            dominantHeightBuffer[eastNeighborIndex] = treeHeightInM;
                         }
                     }
-                    if (indexNorthSouth - readerCenter < 0)
-                    {  // south
-                        int southNeighborIndex = vegetationHeightGrid.IndexXYToIndex(treeHeightCellIndexX, treeHeightCellIndexY - 1);
-                        currentVegetationHeightInM = vegetationHeightGrid[southNeighborIndex];
+                    if (lightSubcellIndexNorthSouth - readerRadiusInLightCells < 0)
+                    {   // tree's reader stamp extends into height cell to the south
+                        int southNeighborIndex = dominantHeightBuffer.IndexXYToIndex(treeBufferIndexX, treeBufferIndexY - 1);
+                        currentVegetationHeightInM = dominantHeightBuffer[southNeighborIndex];
                         if (treeHeightInM > currentVegetationHeightInM)
                         {
-                            vegetationHeightGrid[southNeighborIndex] = treeHeightInM;
+                            dominantHeightBuffer[southNeighborIndex] = treeHeightInM;
                         }
                     }
-                    if (indexNorthSouth + readerCenter >= Constant.LightCellsPerHeightCellWidth)
-                    {  // north
-                        int northNeighborIndex = vegetationHeightGrid.IndexXYToIndex(treeHeightCellIndexX, treeHeightCellIndexY + 1);
-                        currentVegetationHeightInM = vegetationHeightGrid[northNeighborIndex];
+                    if (lightSubcellIndexNorthSouth + readerRadiusInLightCells >= Constant.Grid.LightCellsPerHeightCellWidth)
+                    {  
+                        // tree's reader stamp extends into height cell to the north
+                        int northNeighborIndex = dominantHeightBuffer.IndexXYToIndex(treeBufferIndexX, treeBufferIndexY + 1);
+                        currentVegetationHeightInM = dominantHeightBuffer[northNeighborIndex];
                         if (treeHeightInM > currentVegetationHeightInM)
                         {
-                            vegetationHeightGrid[northNeighborIndex] = treeHeightInM;
+                            dominantHeightBuffer[northNeighborIndex] = treeHeightInM;
                         }
                     }
                 }
             }
+
+            lock (landscape.VegetationHeightGrid)
+            {
+                dominantHeightBuffer.ApplyToHeightGrid(landscape.VegetationHeightGrid, bufferLightOriginX, bufferLightOriginY);
+            }
+            dominantHeightBuffers.Enqueue(dominantHeightBuffer);
         }
 
-        public void CalculateDominantHeightFieldTorus(Landscape landscape, int heightBufferTranslationInCells)
+        /// <summary>
+        /// Calculates the resource unit's dominant height field as wrapped onto a toroidal local buffer and then transfers the 
+        /// buffer to the vegetation height grid.
+        /// </summary>
+        /// <remarks>
+        /// Thread safe by default. Since the dominant height field is torus wrapped updates occur only within the spatial extent
+        /// of the resource unit being processed and no race conditions exist between threads. Use of a dominant height buffer
+        /// therefore isn't necessary (lifting could be performed directly on the vegetation height grid) but is retained as
+        /// profiling of the non-torus case suggests there is some locality advantage to using a buffer.
+        /// </remarks>
+        public void CalculateDominantHeightFieldTorus(Landscape landscape, ConcurrentQueue<DominantHeightBuffer> dominantHeightBuffers)
         {
-            Grid<float> heightGrid = landscape.VegetationHeightGrid;
-            for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            if (dominantHeightBuffers.TryDequeue(out DominantHeightBuffer? dominantHeightBuffer) == false)
             {
-                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                dominantHeightBuffer = new(isTorus: true);
+            }
+            dominantHeightBuffer.Fill(Constant.RegenerationLayerHeight);
+
+            Point resourceUnitLightGridOrigin = landscape.LightGrid.GetCellXYIndex(this.resourceUnit.ProjectExtent.X, this.resourceUnit.ProjectExtent.Y);
+            int bufferLightOriginX = resourceUnitLightGridOrigin.X;
+            int bufferLightOriginY = resourceUnitLightGridOrigin.Y;
+            for (int speciesIndex = 0; speciesIndex < this.resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            {
+                TreeListSpatial treesOfSpecies = this.resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
                     // height of Z*
                     Point treeLightCellIndexXY = treesOfSpecies.LightCellIndexXY[treeIndex];
-                    int heightCellIndexX = treeLightCellIndexXY.X / Constant.LightCellsPerHeightCellWidth; // position of tree on height grid
-                    int heightCellIndexY = treeLightCellIndexXY.Y / Constant.LightCellsPerHeightCellWidth;
-                    heightCellIndexX = (heightCellIndexX - heightBufferTranslationInCells) % Constant.HeightCellsPerRUWidth + heightBufferTranslationInCells; // 10: 10 x 10m pixeln in 100m
-                    heightCellIndexY = (heightCellIndexY - heightBufferTranslationInCells) % Constant.HeightCellsPerRUWidth + heightBufferTranslationInCells;
-
-                    // torus coordinates: ruOffset = coords of lower left corner of 1 ha patch
-                    Point ruOffset = new(treesOfSpecies.LightCellIndexXY[treeIndex].X / Constant.LightCellsPerHeightCellWidth - heightCellIndexX, treesOfSpecies.LightCellIndexXY[treeIndex].Y / Constant.LightCellsPerHeightCellWidth - heightCellIndexY);
+                    int treeBufferIndexX = (treeLightCellIndexXY.X - bufferLightOriginX) / Constant.Grid.LightCellsPerHeightCellWidth;
+                    if (treeBufferIndexX >= Constant.Grid.HeightCellsPerRUWidth)
+                    {
+                        treeBufferIndexX = 0 + treeBufferIndexX - Constant.Grid.HeightCellsPerRUWidth;
+                    }
+                    int treeBufferIndexY = (treeLightCellIndexXY.Y - bufferLightOriginY) / Constant.Grid.LightCellsPerHeightCellWidth;
+                    if (treeBufferIndexY >= Constant.Grid.HeightCellsPerRUWidth)
+                    {
+                        treeBufferIndexY = 0 + treeBufferIndexX - Constant.Grid.HeightCellsPerRUWidth;
+                    }
 
                     // count trees that are on height-grid cells (used for stockable area)
-                    int torusX = ResourceUnitTrees.GetTorusIndex(heightCellIndexX, 10, heightBufferTranslationInCells, ruOffset.X);
-                    int torusY = ResourceUnitTrees.GetTorusIndex(heightCellIndexY, 10, heightBufferTranslationInCells, ruOffset.Y);
-                    int heightCellIndex = heightGrid.IndexXYToIndex(torusX, torusY);
-                    float currentVegetationHeightInM = heightGrid[heightCellIndex];
+                    int heightCellIndex = dominantHeightBuffer.IndexXYToIndex(treeBufferIndexX, treeBufferIndexY);
+                    float currentVegetationHeightInM = dominantHeightBuffer[heightCellIndex];
                     float treeHeightInM = treesOfSpecies.HeightInM[treeIndex];
                     if (treeHeightInM > currentVegetationHeightInM)
                     {
-                        heightGrid[heightCellIndex] = treeHeightInM;
+                        dominantHeightBuffer[heightCellIndex] = treeHeightInM;
                     }
 
                     LightStamp reader = treesOfSpecies.LightStamp[treeIndex]!.ReaderStamp!;
-                    int readerCenter = reader.CenterCellIndex; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
-                    int indexEastWest = treeLightCellIndexXY.X % Constant.LightCellsPerHeightCellWidth; // 4: very east, 0 west edge
-                    int indexNorthSouth = treeLightCellIndexXY.Y % Constant.LightCellsPerHeightCellWidth; // 4: northern edge, 0: southern edge
-                    if (indexEastWest - readerCenter < 0)
-                    { // west
-                        int westNeighborIndex = heightGrid.IndexXYToIndex(ResourceUnitTrees.GetTorusIndex(heightCellIndexX - 1, Constant.HeightCellsPerRUWidth, heightBufferTranslationInCells, ruOffset.X),
-                                                                          ResourceUnitTrees.GetTorusIndex(heightCellIndexY, Constant.HeightCellsPerRUWidth, heightBufferTranslationInCells, ruOffset.Y));
-                        currentVegetationHeightInM = heightGrid[westNeighborIndex];
+                    int readerRadiusInLightCells = reader.CenterCellIndex; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
+                    int lightSubcellIndexEastWest = treeLightCellIndexXY.X % Constant.Grid.LightCellsPerHeightCellWidth; // 0 = west edge of height cell, 4 = east edge of height cell
+                    int lightSubcellIndexNorthSouth = treeLightCellIndexXY.Y % Constant.Grid.LightCellsPerHeightCellWidth; // 0 = southern edge of height cell, 4 = northern edge of height cell
+                    if (lightSubcellIndexEastWest - readerRadiusInLightCells < 0)
+                    {
+                        // tree's reader stamp extends into height cell to the west
+                        int westNeighborIndexX = treeBufferIndexX - 1;
+                        if (westNeighborIndexX < 0)
+                        {
+                            westNeighborIndexX = Constant.Grid.HeightCellsPerRUWidth;
+                        }
+                        int westNeighborIndex = dominantHeightBuffer.IndexXYToIndex(westNeighborIndexX, treeBufferIndexY);
+                        currentVegetationHeightInM = dominantHeightBuffer[westNeighborIndex];
                         treeHeightInM = treesOfSpecies.HeightInM[treeIndex];
                         if (treeHeightInM > currentVegetationHeightInM)
                         {
-                            heightGrid[westNeighborIndex] = treeHeightInM;
+                            dominantHeightBuffer[westNeighborIndex] = treeHeightInM;
                         }
                     }
-                    if (indexEastWest + readerCenter >= Constant.LightCellsPerHeightCellWidth)
-                    {  // east
-                        int eastNeighborIndex = heightGrid.IndexXYToIndex(ResourceUnitTrees.GetTorusIndex(heightCellIndexX + 1, Constant.HeightCellsPerRUWidth, heightBufferTranslationInCells, ruOffset.X),
-                                                                          ResourceUnitTrees.GetTorusIndex(heightCellIndexY, Constant.HeightCellsPerRUWidth, heightBufferTranslationInCells, ruOffset.Y));
-                        currentVegetationHeightInM = heightGrid[eastNeighborIndex];
+                    if (lightSubcellIndexEastWest + readerRadiusInLightCells >= Constant.Grid.LightCellsPerHeightCellWidth)
+                    {
+                        // tree's reader stamp extends into height cell to the east
+                        int eastNeighborIndexX = treeBufferIndexX + 1;
+                        if (eastNeighborIndexX >= Constant.Grid.HeightCellsPerRUWidth)
+                        {
+                            eastNeighborIndexX = 0;
+                        }
+                        int eastNeighborIndex = dominantHeightBuffer.IndexXYToIndex(eastNeighborIndexX, treeBufferIndexY);
+                        currentVegetationHeightInM = dominantHeightBuffer[eastNeighborIndex];
                         treeHeightInM = treesOfSpecies.HeightInM[treeIndex];
                         if (treeHeightInM > currentVegetationHeightInM)
                         {
-                            heightGrid[eastNeighborIndex] = treeHeightInM;
+                            dominantHeightBuffer[eastNeighborIndex] = treeHeightInM;
                         }
                     }
-                    if (indexNorthSouth - readerCenter < 0)
-                    {  // south
-                        int southNeighborIndex = heightGrid.IndexXYToIndex(ResourceUnitTrees.GetTorusIndex(heightCellIndexX, Constant.HeightCellsPerRUWidth, heightBufferTranslationInCells, ruOffset.X),
-                                                                           ResourceUnitTrees.GetTorusIndex(heightCellIndexY - 1, Constant.HeightCellsPerRUWidth, heightBufferTranslationInCells, ruOffset.Y));
-                        currentVegetationHeightInM = heightGrid[southNeighborIndex];
+                    if (lightSubcellIndexNorthSouth - readerRadiusInLightCells < 0)
+                    {
+                        // tree's reader stamp extends into height cell to the south
+                        int southNeighborIndexY = treeBufferIndexY - 1;
+                        if (southNeighborIndexY < 0)
+                        {
+                            southNeighborIndexY = Constant.Grid.HeightCellsPerRUWidth;
+                        }
+                        int southNeighborIndex = dominantHeightBuffer.IndexXYToIndex(treeBufferIndexX, southNeighborIndexY);
+                        currentVegetationHeightInM = dominantHeightBuffer[southNeighborIndex];
                         treeHeightInM = treesOfSpecies.HeightInM[treeIndex];
                         if (treeHeightInM > currentVegetationHeightInM)
                         {
-                            heightGrid[southNeighborIndex] = treeHeightInM;
+                            dominantHeightBuffer[southNeighborIndex] = treeHeightInM;
                         }
                     }
-                    if (indexNorthSouth + readerCenter >= Constant.LightCellsPerHeightCellWidth)
-                    {  // north
-                        int northNeighborIndex = heightGrid.IndexXYToIndex(ResourceUnitTrees.GetTorusIndex(heightCellIndexX, Constant.HeightCellsPerRUWidth, heightBufferTranslationInCells, ruOffset.X),
-                                                                           ResourceUnitTrees.GetTorusIndex(heightCellIndexY + 1, Constant.HeightCellsPerRUWidth, heightBufferTranslationInCells, ruOffset.Y));
-                        currentVegetationHeightInM = heightGrid[northNeighborIndex];
+                    if (lightSubcellIndexNorthSouth + readerRadiusInLightCells >= Constant.Grid.LightCellsPerHeightCellWidth)
+                    {
+                        // tree's reader stamp extends into height cell to the north
+                        int northNeighborIndexY = treeBufferIndexY + 1;
+                        if (northNeighborIndexY >= Constant.Grid.HeightCellsPerRUWidth)
+                        {
+                            northNeighborIndexY = 0;
+                        }
+                        int northNeighborIndex = dominantHeightBuffer.IndexXYToIndex(treeBufferIndexX, northNeighborIndexY);
+                        currentVegetationHeightInM = dominantHeightBuffer[northNeighborIndex];
                         treeHeightInM = treesOfSpecies.HeightInM[treeIndex];
                         if (treeHeightInM > currentVegetationHeightInM)
                         {
-                            heightGrid[northNeighborIndex] = treeHeightInM;
+                            dominantHeightBuffer[northNeighborIndex] = treeHeightInM;
                         }
                     }
                 }
             }
+
+            dominantHeightBuffer.ApplyToHeightGrid(landscape.VegetationHeightGrid, bufferLightOriginX, bufferLightOriginY);
+            dominantHeightBuffers.Enqueue(dominantHeightBuffer);
         }
 
         public void CalculatePhotosyntheticActivityRatio()
@@ -424,15 +542,6 @@ namespace iLand.Tree
         public ResourceUnitTreeSpecies GetResourceUnitSpecies(TreeSpecies species)
         {
             return this.SpeciesAvailableOnResourceUnit[species.Index];
-        }
-
-        /// helper function for gluing model area edges together to form a torus
-        /// index: index at light grid
-        /// count: number of pixels that are the model area (e.g. 100 m area with 2 m light pixel = 50)
-        /// buffer: size of buffer around simulation area (in light pixels)
-        private static int GetTorusIndex(int index, int count, int gridCellsPerResourceUnitWidth, int ruOffset)
-        {
-            return gridCellsPerResourceUnitWidth + ruOffset + (index - gridCellsPerResourceUnitWidth + count) % count;
         }
 
         public void OnEndYear()
@@ -491,51 +600,69 @@ namespace iLand.Tree
         {
             Grid<float> lightGrid = landscape.LightGrid;
             Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
-            for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            for (int speciesIndex = 0; speciesIndex < this.resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
             {
-                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                TreeListSpatial treesOfSpecies = this.resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    LightStamp reader = treesOfSpecies.LightStamp[treeIndex]!.ReaderStamp!;
+                    LightStamp treeLightStamp = treesOfSpecies.LightStamp[treeIndex]!;
+                    LightStamp treeReaderStamp = treesOfSpecies.LightStamp[treeIndex]!.ReaderStamp!;
+                    float treeHeightInM = treesOfSpecies.HeightInM[treeIndex];
+                    float treeOpacity = treesOfSpecies.Opacity[treeIndex];
                     Point treeLightCellIndexXY = treesOfSpecies.LightCellIndexXY[treeIndex];
+                    int treeLightCellIndexX = treeLightCellIndexXY.X;
+                    int treeLightCellIndexY = treeLightCellIndexXY.Y;
 
-                    int readerOffset = reader.CenterCellIndex;
-                    int writerOffset = treesOfSpecies.LightStamp[treeIndex]!.CenterCellIndex;
-                    int writerReaderOffset = writerOffset - readerOffset; // offset on the *stamp* to the crown-cells
+                    int lightStampSize = treeLightStamp.DataSize;
+                    float[] lightStampData = treeLightStamp.Data;
 
-                    int readerOriginX = treeLightCellIndexXY.X - readerOffset;
-                    int readerOriginY = treeLightCellIndexXY.Y - readerOffset;
+                    int readerStampCenterIndex = treeReaderStamp.CenterCellIndex;
+                    int readerToLightShift = treeLightStamp.CenterCellIndex - readerStampCenterIndex;
+                    float[] readerStampData = treeReaderStamp.Data;
+                    int readerStampDataSize = treeReaderStamp.DataSize;
+                    int readerStampOriginX = treeLightCellIndexX - readerStampCenterIndex;
+                    int readerStampOriginY = treeLightCellIndexY - readerStampCenterIndex;
+                    int readerStampSize = treeReaderStamp.GetSizeInLightCells();
 
-                    int lightIndexX = readerOriginX;
-                    int lightIndexY = readerOriginY;
-
-                    int readerSize = reader.GetSizeInLightCells();
                     float lightResourceIndex = 0.0F;
-                    for (int readerY = 0; readerY < readerSize; ++readerY, ++lightIndexY)
+                    for (int readerIndexY = 0; readerIndexY < readerStampSize; ++readerIndexY)
                     {
-                        float lightValue = lightGrid[lightIndexX, lightIndexY];
-                        for (int readerX = 0; readerX < readerSize; ++readerX)
+                        int lightIndexY = readerStampOriginY + readerIndexY;
+                        int heightRowOrigin = vegetationHeightGrid.IndexXYToIndex(0, lightIndexY / Constant.Grid.LightCellsPerHeightCellWidth);
+                        for (int lightStampIndex = (readerIndexY + readerToLightShift) * lightStampSize + readerToLightShift, readerIndex = readerStampDataSize * readerIndexY, readerIndexX = 0; readerIndexX < readerStampSize; ++lightStampIndex, ++readerIndex, ++readerIndexX)
                         {
-                            float vegetationHeightInM = vegetationHeightGrid[lightIndexX + readerX, lightIndexY, Constant.LightCellsPerHeightCellWidth];
-                            float z = MathF.Max(treesOfSpecies.HeightInM[treeIndex] - reader.GetDistanceToCenter(readerX, readerY), 0.0F); // distance to center = height (45 degree line)
-                            float z_zstar = (z >= vegetationHeightInM) ? 1.0F : z / vegetationHeightInM;
+                            int lightIndexX = readerStampOriginX + readerIndexX;
+                            int heightIndex = heightRowOrigin + lightIndexX / Constant.Grid.LightCellsPerHeightCellWidth;
+                            float vegetationHeightInM = vegetationHeightGrid[heightIndex];
+                            float influenceZ = treeHeightInM - treeReaderStamp.GetDistanceToCenterInM(readerIndexX, readerIndexY); // distance to center = height (45 degree line)
+                            if (influenceZ < 0.0F)
+                            {
+                                influenceZ = 0.0F;
+                            }
+                            float influenceZstar = (influenceZ >= vegetationHeightInM) ? 1.0F : influenceZ / vegetationHeightInM;
 
-                            float treeValue = 1.0F - treesOfSpecies.LightStamp[treeIndex]![readerX, readerY, writerReaderOffset] * treesOfSpecies.Opacity[treeIndex] * z_zstar;
-                            treeValue = MathF.Max(treeValue, 0.02F);
-                            float value = lightValue / treeValue; // remove impact of focal tree
+                            float cellLightIntensity = 1.0F - lightStampData[lightStampIndex] * treeOpacity * influenceZstar;
+                            if (cellLightIntensity < Constant.MinimumLightIntensity)
+                            {
+                                cellLightIntensity = Constant.MinimumLightIntensity;
+                            }
+                            float lightValue = lightGrid[lightIndexX, lightIndexY];
+                            float cellLightResourceIndex = lightValue / cellLightIntensity; // remove impact of focal tree
 
                             // Debug.WriteLine(x + y + local_dom + z + z_zstar + own_value + value + *(grid_value-1) + (*reader)(x,y) + mStamp.offsetValue(x,y,d_offset);
                             // if (value>0.)
-                            lightResourceIndex += value * reader[readerX, readerY];
+                            lightResourceIndex += cellLightResourceIndex * readerStampData[readerIndex];
                         }
                     }
 
                     // LRI correction...
-                    float relativeHeight = treesOfSpecies.HeightInM[treeIndex] / vegetationHeightGrid[treeLightCellIndexXY.X, treeLightCellIndexXY.Y, Constant.LightCellsPerHeightCellWidth];
+                    float relativeHeight = treeHeightInM / vegetationHeightGrid[treeLightCellIndexX, treeLightCellIndexY, Constant.Grid.LightCellsPerHeightCellWidth];
                     if (relativeHeight < 1.0F)
                     {
                         lightResourceIndex = treesOfSpecies.Species.SpeciesSet.GetLriCorrection(lightResourceIndex, relativeHeight);
                     }
+
+                    Debug.Assert((Single.IsNaN(lightResourceIndex) == false) && (lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F)); // sanity upper bound
                     if (lightResourceIndex > 1.0F)
                     {
                         lightResourceIndex = 1.0F;
@@ -549,75 +676,80 @@ namespace iLand.Tree
         }
 
         /// Torus version of read stamp (glued edges)
-        public void ReadLightInfluenceFieldTorus(Landscape landscape, int lightBufferWidthInCells)
+        public void ReadLightInfluenceFieldTorus(Landscape landscape)
         {
             Grid<float> lightGrid = landscape.LightGrid;
             Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
-            for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            Point resourceUnitLightGridOrigin = landscape.LightGrid.GetCellXYIndex(this.resourceUnit.ProjectExtent.X, this.resourceUnit.ProjectExtent.Y);
+            int resourceUnitLightGridOriginX = resourceUnitLightGridOrigin.X; // inclusive
+            int resourceUnitLightGridOriginY = resourceUnitLightGridOrigin.Y; // inclusive
+            int resourceUnitLightGridMaxX = resourceUnitLightGridOriginX + Constant.Grid.LightCellsPerRUWidth; // exclusive
+            int resourceUnitLightGridMaxY = resourceUnitLightGridOriginY + Constant.Grid.LightCellsPerRUWidth; // exclusive
+            for (int speciesIndex = 0; speciesIndex < this.resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
             {
-                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                TreeListSpatial treesOfSpecies = this.resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    LightStamp stampReader = treesOfSpecies.LightStamp[treeIndex]!.ReaderStamp!;
+                    LightStamp treeLightStamp = treesOfSpecies.LightStamp[treeIndex]!;
+                    LightStamp treeReaderStamp = treeLightStamp.ReaderStamp!;
+                    float treeHeightInM = treesOfSpecies.HeightInM[treeIndex];
+                    float treeOpacity = treesOfSpecies.Opacity[treeIndex];
                     Point treeLightCellIndexXY = treesOfSpecies.LightCellIndexXY[treeIndex];
-                    int treeResourceUnitIndexX = (treeLightCellIndexXY.X - lightBufferWidthInCells) % Constant.LightCellsPerRUWidth + lightBufferWidthInCells; // offset within the hectare
-                    int treeResourceUnitIndexY = (treeLightCellIndexXY.Y - lightBufferWidthInCells) % Constant.LightCellsPerRUWidth + lightBufferWidthInCells;
-                    int ruOffsetX = treeLightCellIndexXY.X - treeResourceUnitIndexX; // offset from the corner of the resource unit
-                    int ruOffsetY = treeLightCellIndexXY.Y - treeResourceUnitIndexY;
+                    int treeLightCellIndexX = treeLightCellIndexXY.X;
+                    int treeLightCellIndexY = treeLightCellIndexXY.Y;
+
+                    int lightStampSize = treeLightStamp.DataSize;
+                    float[] lightStampData = treeLightStamp.Data;
+
+                    int readerStampCenterIndex = treeReaderStamp.CenterCellIndex;
+                    int readerToLightShift = treeLightStamp.CenterCellIndex - readerStampCenterIndex;
+                    float[] readerStampData = treeReaderStamp.Data;
+                    int readerStampDataSize = treeReaderStamp.DataSize;
+                    int readerStampOriginX = treeLightCellIndexX - readerStampCenterIndex;
+                    int readerStampOriginY = treeLightCellIndexY - readerStampCenterIndex;
+                    int readerStampSize = treeReaderStamp.GetSizeInLightCells();
 
                     float lightResourceIndex = 0.0F;
-                    int readerSize = stampReader.GetSizeInLightCells();
-                    int readerOriginX = treeResourceUnitIndexX - stampReader.CenterCellIndex;
-                    int readerOriginY = treeResourceUnitIndexY - stampReader.CenterCellIndex;
-                    int writerReaderOffset = treesOfSpecies.LightStamp[treeIndex]!.CenterCellIndex - stampReader.CenterCellIndex; // offset on the *stamp* to the crown (light?) cells
-                    for (int readerY = 0; readerY < readerSize; ++readerY)
+                    for (int readerIndexY = 0; readerIndexY < readerStampSize; ++readerIndexY)
                     {
-                        int yTorus = ResourceUnitTrees.GetTorusIndex(readerOriginY + readerY, Constant.LightCellsPerRUWidth, lightBufferWidthInCells, ruOffsetY);
-                        for (int readerX = 0; readerX < readerSize; ++readerX)
+                        int readerTorusY = ResourceUnitTrees.ToTorusLightIndex(readerStampOriginY + readerIndexY, resourceUnitLightGridOriginY, resourceUnitLightGridMaxY);
+                        int heightRowOrigin = vegetationHeightGrid.IndexXYToIndex(0, readerTorusY / Constant.Grid.LightCellsPerHeightCellWidth);
+                        for (int lightStampIndex = (readerIndexY + readerToLightShift) * lightStampSize + readerToLightShift, readerIndex = readerStampDataSize * readerIndexY, readerIndexX = 0; readerIndexX < readerStampSize; ++lightStampIndex, ++readerIndex, ++readerIndexX)
                         {
                             // see http://iland-model.org/competition+for+light 
-                            int xTorus = ResourceUnitTrees.GetTorusIndex(readerOriginX + readerX, Constant.LightCellsPerRUWidth, lightBufferWidthInCells, ruOffsetX);
-                            float vegetationHeightInM = vegetationHeightGrid[xTorus, yTorus, Constant.LightCellsPerHeightCellWidth];
-                            float influenceZ = MathF.Max(treesOfSpecies.HeightInM[treeIndex] - stampReader.GetDistanceToCenter(readerX, readerY), 0.0F); // distance to center = height (45 degree line)
+                            int readerTorusX = ResourceUnitTrees.ToTorusLightIndex(readerStampOriginX + readerIndexX, resourceUnitLightGridOriginX, resourceUnitLightGridMaxX);
+                            int heightIndex = heightRowOrigin + readerTorusX / Constant.Grid.LightCellsPerHeightCellWidth;
+                            float vegetationHeightInM = vegetationHeightGrid[heightIndex];
+                            float influenceZ = treeHeightInM - treeReaderStamp.GetDistanceToCenterInM(readerIndexX, readerIndexY); // distance to center = height (45 degree line)
+                            if (influenceZ < 0.0F)
+                            {
+                                influenceZ = 0.0F;
+                            }
                             float influenceZstar = (influenceZ >= vegetationHeightInM) ? 1.0F : influenceZ / vegetationHeightInM;
 
                             // TODO: why a nonzero floor as opposed to skipping division?
-                            float focalIntensity = MathF.Max(1.0F - treesOfSpecies.LightStamp[treeIndex]![readerX, readerY, writerReaderOffset] * treesOfSpecies.Opacity[treeIndex] * influenceZstar, 0.02F);
+                            float cellLightIntensity = 1.0F - lightStampData[lightStampIndex] * treeOpacity * influenceZstar;
+                            if (cellLightIntensity < Constant.MinimumLightIntensity)
+                            {
+                                cellLightIntensity = Constant.MinimumLightIntensity;
+                            }
                             // C++ code is actually Tree.LightGrid[Tree.LightGrid.IndexOf(xTorus, yTorus) + 1], which appears to be an off by
                             // one error corrected by Qt build implementing precdence in *ptr++ incorrectly.
-                            float cellIntensity = lightGrid[xTorus, yTorus];
-                            float cellIndex = cellIntensity / focalIntensity; // remove impact of focal tree
+                            float lightValue = lightGrid[readerTorusX, readerTorusY];
+                            float cellLightResourceIndex = lightValue / cellLightIntensity; // remove impact of focal tree
 
-                            // debug for one tree in HJA
-                            // if (id()==178020)
-                            //     Debug.WriteLine(x + y + xt + yt + *grid_value + local_dom + own_value + value + (*reader)(x,y);
-                            // if (_isnan(value))
-                            //     Debug.WriteLine("isnan" + id();
-                            // if (cellIndex * reader[readerX, readerY] > 1.0)
-                            // {
-                            //     Debug.WriteLine("LIFTorus: value > 1.0.");
-                            // }
-                            lightResourceIndex += cellIndex * stampReader[readerX, readerY];
-                            //} // isIndexValid
+                            lightResourceIndex += cellLightResourceIndex * readerStampData[readerIndex];
                         }
                     }
 
                     // LRI correction...
-                    float relativeHeight = treesOfSpecies.HeightInM[treeIndex] / vegetationHeightGrid[treeLightCellIndexXY.X, treeLightCellIndexXY.Y, Constant.LightCellsPerHeightCellWidth];
+                    float relativeHeight = treeHeightInM / vegetationHeightGrid[treeLightCellIndexX, treeLightCellIndexY, Constant.Grid.LightCellsPerHeightCellWidth];
                     if (relativeHeight < 1.0F)
                     {
                         lightResourceIndex = treesOfSpecies.Species.SpeciesSet.GetLriCorrection(lightResourceIndex, relativeHeight);
                     }
 
-                    if (Single.IsNaN(lightResourceIndex))
-                    {
-                        throw new InvalidOperationException("Light resource index unexpectedly NaN.");
-                        // Debug.WriteLine("LRI invalid (nan) " + ID);
-                        // this.LightResourceIndex[treeIndex] = 0.0F;
-                        // Debug.WriteLine(reader.dump();
-                    }
-
-                    Debug.Assert((lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F)); // sanity upper bound
+                    Debug.Assert((Single.IsNaN(lightResourceIndex) == false) && (lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F)); // sanity upper bound
                     if (lightResourceIndex > 1.0F)
                     {
                         lightResourceIndex = 1.0F; // TODO: why clamp?
@@ -654,9 +786,9 @@ namespace iLand.Tree
                 }
             }
 
-            for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            for (int speciesIndex = 0; speciesIndex < this.resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
             {
-                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                TreeListSpatial treesOfSpecies = this.resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 ResourceUnitTreeSpecies speciesOnRU = this.GetResourceUnitSpecies(treesOfSpecies.Species);
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
@@ -759,9 +891,9 @@ namespace iLand.Tree
             // add all trees to the statistics objects of the species
             ResourceUnitTreeStatistics? currentStandStatistics = null;
             int previousStandID = Int32.MinValue;
-            for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+            for (int speciesIndex = 0; speciesIndex < this.resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
             {
-                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                TreeListSpatial treesOfSpecies = this.resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 ResourceUnitTreeSpecies speciesOnRU = this.GetResourceUnitSpecies(treesOfSpecies.Species);
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
@@ -787,6 +919,25 @@ namespace iLand.Tree
             }
 
             this.AverageAging();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int ToTorusLightIndex(int lightIndex, int torusOriginIndex, int torusMaximumIndex)
+        {
+            if (lightIndex < torusOriginIndex)
+            {
+                // if reader is past -y edge of resource unit reflect below +y edge
+                // Origin index is inclusive.
+                lightIndex = torusMaximumIndex + lightIndex - torusOriginIndex;
+            }
+            else if (lightIndex >= torusMaximumIndex)
+            {
+                // if reader is past +y edge of resource unit reflect to above -y edge
+                // Max index is exclusive.
+                lightIndex = torusOriginIndex + lightIndex - torusMaximumIndex;
+            }
+            Debug.Assert((lightIndex >= torusOriginIndex) && (lightIndex <= torusMaximumIndex));
+            return lightIndex;
         }
     }
 }

@@ -126,7 +126,6 @@ namespace iLand.World
                 throw new NotSupportedException("Climate decomposition factor is zero for resource unit " + ResourceUnit.ResourceUnitGridIndex + ".");
             }
 
-            float timestep = Constant.TimeStepInYears; // 1 year (annual)
             CarbonNitrogenTuple totalBefore = this.YoungLabile + this.YoungRefractory + this.OrganicMatter;
             CarbonNitrogenTuple totalInput = this.InputLabile + this.InputRefractory;
             if (Single.IsNaN(totalInput.C) || Single.IsNaN(this.Parameters.Kyr))
@@ -166,6 +165,7 @@ namespace iLand.World
 
             // update of state variables
             // precalculations
+            float timestep = Constant.Time.TimeStepInYears; // 1 year (annual)
             float lfactor = MathF.Exp(-kyl * this.ClimateDecompositionFactor * timestep);
             float rfactor = MathF.Exp(-kyr * this.ClimateDecompositionFactor * timestep);
             // young labile pool

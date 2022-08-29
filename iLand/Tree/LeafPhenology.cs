@@ -36,9 +36,9 @@ namespace iLand.Tree
             }
 
             this.ID = id;
-            this.LeafOnFractionByMonth = new float[Constant.MonthsInYear]; // left as 0 since populated in RunYear()
+            this.LeafOnFractionByMonth = new float[Constant.Time.MonthsInYear]; // left as 0 since populated in RunYear()
             this.LeafOnStartDayOfYearIndex = 0; // default to leaf on at start of year
-            this.LeafOnEndDayOfYearIndex = Constant.DaysInYear; // updated in RunYear() for leap years
+            this.LeafOnEndDayOfYearIndex = Constant.Time.DaysInYear; // updated in RunYear() for leap years
 
             if (id == Constant.EvergreenLeafPhenologyID)
             {

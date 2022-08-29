@@ -458,7 +458,7 @@ namespace iLand.Test
                 Assert.IsTrue((resourceUnit.WaterCycle.CanopyConductance > 0.001F) && (resourceUnit.WaterCycle.CanopyConductance < 0.1F), "Water cycle: canopy conductance"); // initially zero
                 Assert.IsTrue((resourceUnit.WaterCycle.CurrentSoilWater >= 0.0F) && (resourceUnit.WaterCycle.CurrentSoilWater <= resourceUnit.WaterCycle.FieldCapacity), "Water cycle: current water content of " + resourceUnit.WaterCycle.CurrentSoilWater + " mm is negative or greater than the field capacity of " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
                 Assert.IsTrue((resourceUnit.WaterCycle.FieldCapacity > 300.0F) && (resourceUnit.WaterCycle.FieldCapacity < 1000.0F), "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
-                Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.MonthsInYear, "Water cycle: water potential length");
+                Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.Time.MonthsInYear, "Water cycle: water potential length");
                 foreach (float psi in resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear)
                 {
                     Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential of " + psi + " kpa.");
@@ -508,26 +508,27 @@ namespace iLand.Test
 
         private static void VerifyKalkalpenModel(Model model)
         {
-            float worldBufferWidthInM = 60.0F;
-            Assert.IsTrue(model.Landscape.VegetationHeightGrid.ProjectExtent.Height == 200.0F + 2.0F * worldBufferWidthInM);
-            Assert.IsTrue(model.Landscape.VegetationHeightGrid.ProjectExtent.Width == 100.0F + 2.0F * worldBufferWidthInM);
+            const int expectedProjectExtentX = 100 + 2 * Constant.Grid.DefaultWorldBufferWidthInM;
+            const int expectedProjectExtentY = 200 + 2 * Constant.Grid.DefaultWorldBufferWidthInM;
+            Assert.IsTrue(model.Landscape.VegetationHeightGrid.ProjectExtent.Height == expectedProjectExtentY);
+            Assert.IsTrue(model.Landscape.VegetationHeightGrid.ProjectExtent.Width == expectedProjectExtentX);
             Assert.IsTrue(model.Landscape.VegetationHeightGrid.ProjectExtent.X == 0.0F);
             Assert.IsTrue(model.Landscape.VegetationHeightGrid.ProjectExtent.Y == 0.0F);
-            Assert.IsTrue(model.Landscape.VegetationHeightGrid.SizeX == 22);
-            Assert.IsTrue(model.Landscape.VegetationHeightGrid.SizeY == 32);
-            Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.Height == 200.0F + 2.0F * worldBufferWidthInM); // 100 x 200 m world + 60 m buffering = 220 x 320 m
-            Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.Width == 100.0F + 2.0F * worldBufferWidthInM);
+            Assert.IsTrue(model.Landscape.VegetationHeightGrid.CellsX == expectedProjectExtentX / Constant.Grid.HeightCellSizeInM);
+            Assert.IsTrue(model.Landscape.VegetationHeightGrid.CellsY == expectedProjectExtentY / Constant.Grid.HeightCellSizeInM);
+            Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.Height == 200.0F + 2.0F * Constant.Grid.DefaultWorldBufferWidthInM); // 100 x 200 m world + 60 m buffering = 220 x 320 m
+            Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.Width == 100.0F + 2.0F * Constant.Grid.DefaultWorldBufferWidthInM);
             Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.X == 0.0F);
             Assert.IsTrue(model.Landscape.LightGrid.ProjectExtent.Y == 0.0F);
-            Assert.IsTrue(model.Landscape.LightGrid.SizeX == 110);
-            Assert.IsTrue(model.Landscape.LightGrid.SizeY == 160);
+            Assert.IsTrue(model.Landscape.LightGrid.CellsX == expectedProjectExtentX / Constant.Grid.LightCellSizeInM);
+            Assert.IsTrue(model.Landscape.LightGrid.CellsY == expectedProjectExtentY / Constant.Grid.LightCellSizeInM);
             Assert.IsTrue(model.Landscape.ResourceUnits.Count == 2);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.Height == 200.0F);
             Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.Width == 100.0F);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.X == worldBufferWidthInM);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.Y == worldBufferWidthInM);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.SizeX == 1);
-            Assert.IsTrue(model.Landscape.ResourceUnitGrid.SizeY == 2);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.X == Constant.Grid.DefaultWorldBufferWidthInM);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.Y == Constant.Grid.DefaultWorldBufferWidthInM);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.CellsX == 1);
+            Assert.IsTrue(model.Landscape.ResourceUnitGrid.CellsY == 2);
             Assert.IsTrue(model.Landscape.StandRaster.IsSetup() == false);
             Assert.IsTrue(model.Landscape.WeatherByID.Count == 1);
             Assert.IsTrue(model.Landscape.WeatherFirstCalendarYear == 1950);
@@ -553,15 +554,15 @@ namespace iLand.Test
                 //ru.Trees;
                 //ru.Variables;
                 Assert.IsTrue(model.Landscape.ResourceUnitGrid.ProjectExtent.Contains(resourceUnit.ProjectExtent));
-                Assert.IsTrue((resourceUnit.ProjectExtent.Height == Constant.ResourceUnitSizeInM) && (resourceUnit.ProjectExtent.Width == Constant.ResourceUnitSizeInM) &&
+                Assert.IsTrue((resourceUnit.ProjectExtent.Height == Constant.Grid.ResourceUnitSizeInM) && (resourceUnit.ProjectExtent.Width == Constant.Grid.ResourceUnitSizeInM) &&
                               (resourceUnit.ProjectExtent.X == model.Project.World.Geometry.BufferWidthInM) &&
                               (MathF.Abs(resourceUnit.ProjectExtent.Y % 100.0F - model.Project.World.Geometry.BufferWidthInM) < 0.001F));
                 Assert.IsTrue((resourceUnit.ID == 1) || (resourceUnit.ID == 10));
                 Assert.IsTrue((resourceUnit.ResourceUnitGridIndex == 0) || (resourceUnit.ResourceUnitGridIndex == 1));
-                Assert.IsTrue(resourceUnit.AreaInLandscapeInM2 == Constant.ResourceUnitAreaInM2);
+                Assert.IsTrue(resourceUnit.AreaInLandscapeInM2 == Constant.Grid.ResourceUnitAreaInM2);
                 if (afterTimestep)
                 {
-                    Assert.IsTrue((resourceUnit.AreaWithTreesInM2 > 0.0F) && (resourceUnit.AreaWithTreesInM2 <= Constant.ResourceUnitAreaInM2));
+                    Assert.IsTrue((resourceUnit.AreaWithTreesInM2 > 0.0F) && (resourceUnit.AreaWithTreesInM2 <= Constant.Grid.ResourceUnitAreaInM2), "Expected resource unit " + resourceUnit.ID + " to have 100-10,000 m² of tree cover rather than " + resourceUnit.AreaWithTreesInM2 + " m².");
                 }
                 else
                 {
@@ -610,9 +611,9 @@ namespace iLand.Test
                 Assert.IsTrue((resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor > 0.0F) && (resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor < 1.0F));
                 if (afterTimestep)
                 {
-                    Assert.IsTrue((resourceUnit.Trees.AverageLightRelativeIntensity > 0.0F) && (resourceUnit.Trees.AverageLightRelativeIntensity <= 1.0F));
-                    Assert.IsTrue((resourceUnit.Trees.PhotosyntheticallyActiveArea > 0.0F) && (resourceUnit.Trees.PhotosyntheticallyActiveArea <= Constant.ResourceUnitAreaInM2));
-                    Assert.IsTrue((resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea > 0.0F) && (resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea <= 1.0F));
+                    Assert.IsTrue((resourceUnit.Trees.AverageLightRelativeIntensity > 0.0F) && (resourceUnit.Trees.AverageLightRelativeIntensity <= 1.0F), "Resource unit " + resourceUnit.ID + " has average relative light intensity is " + resourceUnit.Trees.AverageLightRelativeIntensity + ".");
+                    Assert.IsTrue((resourceUnit.Trees.PhotosyntheticallyActiveArea > 0.0F) && (resourceUnit.Trees.PhotosyntheticallyActiveArea <= Constant.Grid.ResourceUnitAreaInM2), "Resource unit " + resourceUnit.ID + " has a photosynthetically active area of " + resourceUnit.Trees.PhotosyntheticallyActiveArea + " m².");
+                    Assert.IsTrue((resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea > 0.0F) && (resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea <= 1.0F), "Resource unit " + resourceUnit.ID + " has a photosyntheticaly active area to leaf area ratio of " + resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea + ".");
                 }
                 else
                 {
@@ -622,18 +623,18 @@ namespace iLand.Test
                 }
                 Assert.IsTrue(resourceUnit.Trees.TreeStatisticsByStandID.Count == 1, "Expected tree statistics for one stand but got statistics for " + resourceUnit.Trees.TreeStatisticsByStandID.Count + " stands.");
                 Assert.IsTrue(resourceUnit.Trees.TreeStatisticsByStandID.ContainsKey(Constant.DefaultStandID), "Expected zero tree statistics by stand ID but got " + resourceUnit.Trees.TreeStatisticsByStandID.Count + ".");
-                Assert.IsTrue((resourceUnit.Trees.TotalLeafArea > 0.0F) && (resourceUnit.Trees.TotalLeafArea < 20.0F * Constant.ResourceUnitAreaInM2));
+                Assert.IsTrue((resourceUnit.Trees.TotalLeafArea > 0.0F) && (resourceUnit.Trees.TotalLeafArea < 20.0F * Constant.Grid.ResourceUnitAreaInM2));
 
                 //Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
                 //Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity), "Water cycle: current water content of " + ru.WaterCycle.CurrentSoilWaterContent + " mm is negative or greater than the field capacity of " + ru.WaterCycle.FieldCapacity + " mm.");
                 //Assert.IsTrue(MathF.Abs(ru.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity");
-                //Assert.IsTrue(ru.WaterCycle.SoilWaterPotentialByDay.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
+                //Assert.IsTrue(ru.WaterCycle.SoilWaterPotentialByDay.Length == Constant.Time.DaysInLeapYear, "Water cycle: water potential length");
                 //foreach (float psi in ru.WaterCycle.SoilWaterPotentialByDay)
                 //{
                 //    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential");
                 //}
                 //Assert.IsTrue((ru.WaterCycle.SnowDayRadiation >= 0.0F) && (ru.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
-                //Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0F) && (ru.WaterCycle.SnowDays <= Constant.DaysInLeapYear), "Water cycle: snow days");
+                //Assert.IsTrue((ru.WaterCycle.SnowDays >= 0.0F) && (ru.WaterCycle.SnowDays <= Constant.Time.DaysInLeapYear), "Water cycle: snow days");
                 //Assert.IsTrue(MathF.Abs(ru.WaterCycle.SoilPlantAccessibleDepthInMM - 1340.0F) < 0.001F, "Soil: depth");
                 //Assert.IsTrue(ru.WaterCycle.TotalEvapotranspiration == 0.0F, "Soil: evapotranspiration"); // zero at initialization
                 //Assert.IsTrue(ru.WaterCycle.TotalRunoff == 0.0F, "Soil: runoff"); // zero at initialization
@@ -723,9 +724,6 @@ namespace iLand.Test
                     Assert.IsTrue(treesOfSpecies.Capacity == 4, "Expected tree capacity for species " + treesOfSpecies.Species.WorldFloraID + " is four trees but " + treesOfSpecies.Capacity + " trees' capacity was allocated.");
                     Assert.IsTrue(treesOfSpecies.Count == (treesOfSpecies.Species.WorldFloraID == WorldFloraID.PseudotsugaMenziesii ? 2 : 1), "Expected one or two living trees of species '" + treesOfSpecies.Species.WorldFloraID + "'.");
                 }
-                // Salix caprea is viable as placed on the resource unit and should stress out of the stand in the first timestep. It
-                // should therefore be dropped as tree species on the resource unit.
-                Assert.IsTrue(resourceUnitTrees.ContainsKey(WorldFloraID.SalixCaprea) == false, "Salix caprea did not die out of stand.");
             }
         }
 
@@ -831,13 +829,13 @@ namespace iLand.Test
                 Assert.IsTrue(resourceUnit.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
                 Assert.IsTrue((resourceUnit.WaterCycle.CurrentSoilWater >= 0.0) && (resourceUnit.WaterCycle.CurrentSoilWater <= resourceUnit.WaterCycle.FieldCapacity), "Water cycle: current water content of " + resourceUnit.WaterCycle.CurrentSoilWater + " mm is negative or greater than the field capacity of " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
                 Assert.IsTrue(MathF.Abs(resourceUnit.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
-                Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.DaysInLeapYear, "Water cycle: water potential length");
+                Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.Time.DaysInLeapYear, "Water cycle: water potential length");
                 foreach (float psi in resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear)
                 {
                     Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential");
                 }
                 Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
-                Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= Constant.DaysInLeapYear), "Water cycle: snow days");
+                Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= Constant.Time.DaysInLeapYear), "Water cycle: snow days");
                 Assert.IsTrue(resourceUnit.WaterCycle.TotalAnnualEvapotranspirationInMM == 0.0F, "Soil: evapotranspiration"); // zero at initialization
                 Assert.IsTrue(resourceUnit.WaterCycle.TotalAnnualRunoffInMM == 0.0F, "Soil: runoff"); // zero at initialization
             }

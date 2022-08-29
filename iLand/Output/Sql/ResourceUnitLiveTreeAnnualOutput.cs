@@ -72,7 +72,7 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                     insertRow.Parameters[1].Value = resourceUnit.ID;
                     insertRow.Parameters[2].Value = ruSpecies.Species.WorldFloraID;
-                    insertRow.Parameters[3].Value = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2;
+                    insertRow.Parameters[3].Value = resourceUnit.AreaInLandscapeInM2 / Constant.Grid.ResourceUnitAreaInM2;
                     // insertRow.Parameters[3].Value = ru.boundingBox().center().x() << ru.boundingBox().center().y();  // temp
                     insertRow.Parameters[4].Value = ruLiveTreeStatisticsForSpecies.TreesPerHa;
                     insertRow.Parameters[5].Value = ruLiveTreeStatisticsForSpecies.AverageDbhInCm;

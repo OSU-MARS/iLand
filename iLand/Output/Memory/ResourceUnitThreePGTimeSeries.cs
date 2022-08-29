@@ -20,7 +20,7 @@ namespace iLand.Output.Memory
         {
             this.LengthInMonths = 0;
 
-            int initialCapacityInMonths = Constant.MonthsInYear * initialCapacityInYears;
+            int initialCapacityInMonths = Constant.Time.MonthsInYear * initialCapacityInYears;
             this.SolarRadiationTotal = new float[initialCapacityInMonths];
             this.UtilizablePar = new float[initialCapacityInMonths];
             this.MonthlyGpp = new float[initialCapacityInMonths];
@@ -50,7 +50,7 @@ namespace iLand.Output.Memory
             treeSpecies.TreeGrowth.Modifiers.TemperatureModifierByMonth.CopyTo(this.TemperatureModifier, this.LengthInMonths);
             treeSpecies.TreeGrowth.Modifiers.VpdModifierByMonth.CopyTo(this.VpdModifier, this.LengthInMonths);
 
-            this.LengthInMonths += Constant.MonthsInYear;
+            this.LengthInMonths += Constant.Time.MonthsInYear;
         }
 
         public void AddYearWithoutSpecies()
@@ -60,7 +60,7 @@ namespace iLand.Output.Memory
                 this.Extend();
             }
 
-            Span<float> zero = stackalloc float[Constant.MonthsInYear];
+            Span<float> zero = stackalloc float[Constant.Time.MonthsInYear];
             zero.CopyTo(this.SolarRadiationTotal.AsSpan()[this.LengthInMonths..]);
             zero.CopyTo(this.UtilizablePar.AsSpan()[this.LengthInMonths..]);
             zero.CopyTo(this.MonthlyGpp.AsSpan()[this.LengthInMonths..]);
@@ -69,7 +69,7 @@ namespace iLand.Output.Memory
             zero.CopyTo(this.TemperatureModifier.AsSpan()[this.LengthInMonths..]);
             zero.CopyTo(this.VpdModifier.AsSpan()[this.LengthInMonths..]);
 
-            this.LengthInMonths += Constant.MonthsInYear;
+            this.LengthInMonths += Constant.Time.MonthsInYear;
         }
 
         private void Extend()

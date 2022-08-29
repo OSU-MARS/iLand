@@ -81,7 +81,7 @@ namespace iLand.Input.ProjectFile
                         break;
                     case "dayOfYear":
                         this.DayOfYear = reader.ReadElementContentAsInt();
-                        if ((this.DayOfYear < 0) || (this.DayOfYear > Constant.DaysInLeapYear))
+                        if ((this.DayOfYear < 0) || (this.DayOfYear > Constant.Time.DaysInLeapYear))
                         {
                             throw new XmlException("Day of year on which windstorm occurs is negative or greater than the number of days in a leap year.");
                         }

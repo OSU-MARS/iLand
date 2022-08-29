@@ -1,5 +1,4 @@
-﻿using iLand.World;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 
@@ -13,7 +12,7 @@ namespace iLand.Tree
     public class LightStamp
     {
         // grid holding precalculated distances to the stamp center
-        private static Grid<float> DistanceFromCenterGrid { get; set; }
+        // private static Grid<float> DistanceFromCenterGrid { get; set; }
 
         // delta between edge of the stamp and the logical center point of the tree (same in x and y). E.g., a 5x5 stamp in an 8x8-grid has an offset from 2.
         public int CenterCellIndex { get; set; }
@@ -22,29 +21,29 @@ namespace iLand.Tree
         public float[] Data { get; private init; }
         // width of the stamp's data in light cells; e.g. 4 -> 4x4 stamp with 16 pixels.
         public int DataSize { get; private init; }
-        public int HeightDiameterRatio { get; private init; }
         public float DbhInCm { get; private set; }
+        public int HeightDiameterRatio { get; private init; }
         // pointer to the appropriate reader stamp (if available)
         public LightStamp? ReaderStamp { get; private set; }
 
-        static LightStamp()
-        {
-            LightStamp.DistanceFromCenterGrid = new();
+        //static LightStamp()
+        //{
+        //    LightStamp.DistanceFromCenterGrid = new();
 
-            float lightCellSize = Constant.LightCellSizeInM;
-            int halfOfMaxStampSize = ((int)LightStampSize.Grid64x64) / 2; // distance from center, so only need to cover the maximum radius possible in the largest stamp
-            LightStamp.DistanceFromCenterGrid.Setup(halfOfMaxStampSize, halfOfMaxStampSize, lightCellSize);
-            for (int indexX = 0; indexX < halfOfMaxStampSize; ++indexX)
-            {
-                for (int indexY = 0; indexY <= indexX; ++indexY)
-                {
-                    // distance grid (matrix) is symmetric, so calculate once and assign twice
-                    float distanceInM = lightCellSize * MathF.Sqrt(indexX * indexX + indexY * indexY);
-                    LightStamp.DistanceFromCenterGrid[indexX, indexY] = distanceInM;
-                    LightStamp.DistanceFromCenterGrid[indexY, indexX] = distanceInM;
-                }
-            }
-        }
+        //    float lightCellSize = Constant.Grid.LightCellSizeInM;
+        //    const int halfOfMaxStampSize = Constant.Grid.MaxLightStampSizeInLightCells / 2; // distance from center, so only need to cover the maximum radius possible in the largest stamp
+        //    LightStamp.DistanceFromCenterGrid.Setup(halfOfMaxStampSize, halfOfMaxStampSize, lightCellSize);
+        //    for (int indexX = 0; indexX < halfOfMaxStampSize; ++indexX)
+        //    {
+        //        for (int indexY = 0; indexY <= indexX; ++indexY)
+        //        {
+        //            // distance grid (matrix) is symmetric, so calculate once and assign twice
+        //            float distanceInM = lightCellSize * MathF.Sqrt(indexX * indexX + indexY * indexY);
+        //            LightStamp.DistanceFromCenterGrid[indexX, indexY] = distanceInM;
+        //            LightStamp.DistanceFromCenterGrid[indexY, indexX] = distanceInM;
+        //        }
+        //    }
+        //}
 
         public LightStamp(float dbhInCm, int heightDiameterRatio, float crownRadiusInM, int centerIndex, int dataSize)
         {
@@ -56,7 +55,7 @@ namespace iLand.Tree
             {
                 throw new ArgumentOutOfRangeException(nameof(centerIndex));
             }
-            if ((crownRadiusInM <= 0.0F) || (crownRadiusInM > 0.5F * Constant.LightCellSizeInM * dataSize))
+            if ((crownRadiusInM <= 0.0F) || (crownRadiusInM > 0.5F * Constant.Grid.LightCellSizeInM * dataSize))
             {
                 throw new ArgumentOutOfRangeException(nameof(crownRadiusInM));
             }
@@ -79,30 +78,22 @@ namespace iLand.Tree
             this.ReaderStamp = null;
         }
 
-        // retrieve the value of the stamp at given indices x and y
-        public float this[int indexX, int indexY]
+        public float GetDistanceToCenterInM(int indexX, int indexY)
         {
-            get { return this.Data[this.IndexOf(indexX, indexY)]; }
-            set { this.Data[this.IndexOf(indexX, indexY)] = value; }
-        }
-
-        public float this[int indexX, int indexY, int offsetXY]
-        {
-            get { return this[indexX + offsetXY, indexY + offsetXY]; }
-        }
-
-        public float GetDistanceToCenter(int indexX, int indexY)
-        {
-            return LightStamp.DistanceFromCenterGrid[Math.Abs(indexX - this.CenterCellIndex), Math.Abs(indexY - this.CenterCellIndex)];
+            // caculating distance each time profiles about 10% faster than using a lookup table
+            int distanceX = indexX - this.CenterCellIndex;
+            int distanceY = indexY - this.CenterCellIndex;
+            return Constant.Grid.LightCellSizeInM * MathF.Sqrt(distanceX * distanceX + distanceY * distanceY);
+            // return LightStamp.DistanceFromCenterGrid[Math.Abs(indexX - this.CenterCellIndex), Math.Abs(indexY - this.CenterCellIndex)];
         }
 
         public int GetSizeInLightCells() // width or height of the stamp in light cells
         {
-            return Constant.LightCellSizeInM * this.CenterCellIndex + 1;
+            return Constant.Grid.LightCellSizeInM * this.CenterCellIndex + 1;
         }
 
         /// get index (e.g. for data()[index]) for indices x and y
-        private int IndexOf(int indexX, int indexY) 
+        private int IndexXYToIndex(int indexX, int indexY) 
         { 
             Debug.Assert((indexY * this.DataSize + indexX) < this.Data.Length); 
             return indexY * this.DataSize + indexX; 
@@ -121,11 +112,12 @@ namespace iLand.Tree
             string linePrefix = classPrefix + "," +
                                 this.DataSize + "," +
                                 this.CenterCellIndex;
-            for (int stampX = 0; stampX < this.DataSize; ++stampX)
+            for (int indexX = 0; indexX < this.DataSize; ++indexX)
             {
-                for (int stampY = 0; stampY < this.DataSize; ++stampY)
+                for (int indexY = 0; indexY < this.DataSize; ++indexY)
                 {
-                    writer.WriteLine(linePrefix + "," + stampX + "," + stampY + "," + this[stampX, stampY].ToString());
+                    int index = this.IndexXYToIndex(indexX, indexY);
+                    writer.WriteLine(linePrefix + "," + indexX + "," + indexY + "," + this.Data[index].ToString());
                 }
             }
         }

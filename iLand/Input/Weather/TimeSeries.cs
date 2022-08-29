@@ -53,7 +53,7 @@ namespace iLand.Input.Weather
                 }
 
                 int month = this.Month[index];
-                if ((month < 1) || (month > Constant.MonthsInYear))
+                if ((month < 1) || (month > Constant.Time.MonthsInYear))
                 {
                     throw new NotSupportedException(month + " is not a valid month number in year " + year + " (at time series chunk index " + index + ").");
                 }

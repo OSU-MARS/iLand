@@ -31,7 +31,7 @@ namespace iLand.Input
 
         public RectangleF GetBoundingBox()
         {
-            float resourceUnitSize = Constant.ResourceUnitSizeInM;
+            float resourceUnitSize = Constant.Grid.ResourceUnitSizeInM;
             float x = this.MinimumCenterCoordinateX - 0.5F * resourceUnitSize;
             float y = this.MinimumCenterCoordinateY - 0.5F * resourceUnitSize;
             float width = this.MaximumCenterCoordinateX - this.MinimumCenterCoordinateX + resourceUnitSize;

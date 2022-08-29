@@ -60,7 +60,7 @@ namespace iLand.World
         public float GetAreaWithinLandscapeInM2() 
         {
             // get the on-landscape part of resource unit's area in m²
-            return Constant.HeightCellAreaInM2 * this.HeightCellsOnLandscape; 
+            return Constant.Grid.HeightCellAreaInM2 * this.HeightCellsOnLandscape; 
         }
 
         // TODO: why does this variant of LAI calculation use stockable area instead of stocked area?
@@ -111,7 +111,7 @@ namespace iLand.World
             float crownArea = MathF.PI * crownRadius * crownRadius; //m2
             // calculate how many cells on the ground are covered by the crown (this is a rather rough estimate)
             // n_cells: in addition to the original cell
-            int lightCellsInCrown = (int)MathF.Round(crownArea / (Constant.LightCellSizeInM * Constant.LightCellSizeInM) - 1.0F);
+            int lightCellsInCrown = (int)MathF.Round(crownArea / (Constant.Grid.LightCellSizeInM * Constant.Grid.LightCellSizeInM) - 1.0F);
             if (lightCellsInCrown > 0)
             {
                 ReadOnlySpan<int> offsetsX = stackalloc int[] { 1, 1, 0, -1, -1, -1, 0, 1 };
@@ -167,11 +167,11 @@ namespace iLand.World
                 this.Trees.TreeSpeciesSet.CreateRandomSpeciesOrder(random);
             }
 
-            float[] lightCorrection = new float[Constant.LightCellsPerHectare];
+            float[] lightCorrection = new float[Constant.Grid.LightCellsPerHectare];
             Array.Fill(lightCorrection, -1.0F);
 
             Point ruOrigin = this.MinimumLightIndexXY; // offset on LIF/saplings grid
-            Point seedmapOrigin = new(ruOrigin.X / Constant.LightCellsPerSeedmapCellWidth, ruOrigin.Y / Constant.LightCellsPerSeedmapCellWidth); // seed-map has 20m resolution, LIF 2m . factor 10
+            Point seedmapOrigin = new(ruOrigin.X / Constant.Grid.LightCellsPerSeedmapCellWidth, ruOrigin.Y / Constant.Grid.LightCellsPerSeedmapCellWidth); // seed-map has 20m resolution, LIF 2m . factor 10
             this.Trees.TreeSpeciesSet.GetRandomSpeciesSampleIndices(random, out int sampleBegin, out int sampleEnd);
             for (int sampleIndex = sampleBegin; sampleIndex != sampleEnd; ++sampleIndex)
             {
@@ -207,12 +207,12 @@ namespace iLand.World
 
                 // loop over all 2m cells on this resource unit
                 Grid<float> lightGrid = model.Landscape.LightGrid;
-                for (int lightIndexY = 0; lightIndexY < Constant.LightCellsPerRUWidth; ++lightIndexY)
+                for (int lightIndexY = 0; lightIndexY < Constant.Grid.LightCellsPerRUWidth; ++lightIndexY)
                 {
                     int lightIndex = lightGrid.IndexXYToIndex(ruOrigin.X, ruOrigin.Y + lightIndexY); // index on 2m cell
-                    for (int lightIndexX = 0; lightIndexX < Constant.LightCellsPerRUWidth; ++lightIndexX, ++lightIndex)
+                    for (int lightIndexX = 0; lightIndexX < Constant.Grid.LightCellsPerRUWidth; ++lightIndexX, ++lightIndex)
                     {
-                        SaplingCell saplingCell = this.SaplingCells[lightIndexY * Constant.LightCellsPerRUWidth + lightIndexX]; // pointer to a row
+                        SaplingCell saplingCell = this.SaplingCells[lightIndexY * Constant.Grid.LightCellsPerRUWidth + lightIndexX]; // pointer to a row
                         if (saplingCell.State == SaplingCellState.Free)
                         {
                             // is a sapling of the current species already on the pixel?
@@ -242,7 +242,7 @@ namespace iLand.World
                                 }
 
                                 float lightValue = lightGrid[lightIndex];
-                                float lriCorrection = lightCorrection[lightIndexY * Constant.LightCellsPerRUWidth + lightIndexX];
+                                float lriCorrection = lightCorrection[lightIndexY * Constant.Grid.LightCellsPerRUWidth + lightIndexX];
                                 // calculate the LIFcorrected only once per pixel; the relative height is 0 (light level on the forest floor)
                                 if (lriCorrection < 0.0F)
                                 {
@@ -276,12 +276,12 @@ namespace iLand.World
             Grid<float> lightGrid = model.Landscape.LightGrid;
 
             Point ruOrigin = this.MinimumLightIndexXY;
-            for (int lightIndexY = 0; lightIndexY < Constant.LightCellsPerRUWidth; ++lightIndexY)
+            for (int lightIndexY = 0; lightIndexY < Constant.Grid.LightCellsPerRUWidth; ++lightIndexY)
             {
                 int lightIndex = lightGrid.IndexXYToIndex(ruOrigin.X, ruOrigin.Y + lightIndexY);
-                for (int lightIndexX = 0; lightIndexX < Constant.LightCellsPerRUWidth; ++lightIndexX, ++lightIndex)
+                for (int lightIndexX = 0; lightIndexX < Constant.Grid.LightCellsPerRUWidth; ++lightIndexX, ++lightIndex)
                 {
-                    SaplingCell saplingCell = this.SaplingCells[lightIndexY * Constant.LightCellsPerRUWidth + lightIndexX]; // ptr to row
+                    SaplingCell saplingCell = this.SaplingCells[lightIndexY * Constant.Grid.LightCellsPerRUWidth + lightIndexX]; // ptr to row
                     if (saplingCell.State != SaplingCellState.NotOnLandscape)
                     {
                         bool checkCellState = false;
@@ -492,10 +492,10 @@ namespace iLand.World
             Debug.Assert(this.SaplingCells != null, "GetSaplingCell() called on resource unit where regeneration isn't enabled.");
 
             // LIF-Coordinates are global, we here need (RU-)local coordinates
-            int indexX = lightCellPosition.X % Constant.LightCellsPerRUWidth;
-            int indexY = lightCellPosition.Y % Constant.LightCellsPerRUWidth;
-            int index = indexY * Constant.LightCellsPerRUWidth + indexX;
-            Debug.Assert(index >= 0 && index < Constant.LightCellsPerHectare);
+            int indexX = lightCellPosition.X % Constant.Grid.LightCellsPerRUWidth;
+            int indexY = lightCellPosition.Y % Constant.Grid.LightCellsPerRUWidth;
+            int index = indexY * Constant.Grid.LightCellsPerRUWidth + indexX;
+            Debug.Assert(index >= 0 && index < Constant.Grid.LightCellsPerHectare);
             return this.SaplingCells[index];
         }
 
@@ -538,7 +538,7 @@ namespace iLand.World
             else
             {
                 // height pixels are counted during the height-grid-calculations
-                this.AreaWithTreesInM2 = Constant.HeightCellSizeInM * Constant.HeightCellSizeInM * this.heightCellsWithTrees; // m² (1 height grid pixel = 10x10m)
+                this.AreaWithTreesInM2 = Constant.Grid.HeightCellSizeInM * Constant.Grid.HeightCellSizeInM * this.heightCellsWithTrees; // m² (1 height grid pixel = 10x10m)
                 float laiBasedOnRUAreaWithinLandscape = this.GetLeafAreaIndex();
                 if (laiBasedOnRUAreaWithinLandscape < 3.0F)
                 {
@@ -650,13 +650,13 @@ namespace iLand.World
                 this.CarbonCycle.Npp = this.Trees.TreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa * Constant.DryBiomassCarbonFraction;
                 this.CarbonCycle.Npp += this.Trees.TreeAndSaplingStatisticsForAllSpecies.SaplingNppPerHa * Constant.DryBiomassCarbonFraction;
 
-                float area_factor = this.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2; //conversion factor
+                float area_factor = this.AreaInLandscapeInM2 / Constant.Grid.ResourceUnitAreaInM2; //conversion factor
                 float to_atm = this.Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha
-                to_atm += 0.1F * this.Soil.FluxToAtmosphere.C * Constant.ResourceUnitAreaInM2; // soil: t/ha * 0.0001 ha/m2 * 1000 kg/ton = 0.1 kg/m2
+                to_atm += 0.1F * this.Soil.FluxToAtmosphere.C * Constant.Grid.ResourceUnitAreaInM2; // soil: t/ha * 0.0001 ha/m2 * 1000 kg/ton = 0.1 kg/m2
                 this.CarbonCycle.CarbonToAtmosphere = to_atm;
 
                 float to_dist = this.Snags.FluxToDisturbance.C / area_factor;
-                to_dist += 0.1F * this.Soil.FluxToDisturbance.C * Constant.ResourceUnitAreaInM2;
+                to_dist += 0.1F * this.Soil.FluxToDisturbance.C * Constant.Grid.ResourceUnitAreaInM2;
                 float to_harvest = this.Snags.FluxToExtern.C / area_factor;
 
                 this.CarbonCycle.Nep = this.CarbonCycle.Npp - to_atm - to_dist - to_harvest; // kgC/ha
@@ -707,7 +707,7 @@ namespace iLand.World
 
             if (projectFile.Model.Settings.RegenerationEnabled)
             {
-                this.SaplingCells = new SaplingCell[Constant.LightCellsPerHectare];
+                this.SaplingCells = new SaplingCell[Constant.Grid.LightCellsPerHectare];
                 for (int cellIndex = 0; cellIndex < this.SaplingCells.Length; ++cellIndex)
                 {
                     // TODO: SoA instead of AoS storage
@@ -734,7 +734,7 @@ namespace iLand.World
                 return;
             }
 
-            for (int lightCellIndex = 0; lightCellIndex < Constant.LightCellsPerHectare; ++lightCellIndex)
+            for (int lightCellIndex = 0; lightCellIndex < Constant.Grid.LightCellsPerHectare; ++lightCellIndex)
             {
                 SaplingCell saplingCell = this.SaplingCells[lightCellIndex];
                 if (saplingCell.State != SaplingCellState.NotOnLandscape)

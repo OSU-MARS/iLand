@@ -4,6 +4,7 @@ namespace iLand.Simulation
 {
     public class PerformanceCounters
     {
+        public TimeSpan LightFill { get; set; }
         public TimeSpan LightPattern { get; set; }
         public TimeSpan Logging { get; set; }
         public TimeSpan ObjectInstantiation { get; set; }
@@ -14,6 +15,7 @@ namespace iLand.Simulation
 
         public PerformanceCounters()
         {
+            this.LightFill = TimeSpan.Zero;
             this.LightPattern = TimeSpan.Zero;
             this.Logging = TimeSpan.Zero;
             this.ObjectInstantiation = TimeSpan.Zero;

@@ -1,7 +1,11 @@
 ﻿namespace iLand.Tree
 {
-    /// @enum StampType defines different grid sizes for stamps (4x4 floats, ... 48x48 floats).
-    /// the numeric value indicates also the size of the grid.
+    /// <summary>
+    /// <see cref="LightStampSize"/>  defines different light grid sizes for stamps.
+    /// </summary>
+    /// <remarks>
+    /// The numeric value is the dimension of the stamp in light grid cells.
+    /// </remarks>
     public enum LightStampSize
     { 
         Grid4x4 = 4, 
@@ -11,6 +15,6 @@
         Grid24x24 = 24, 
         Grid32x32 = 32, 
         Grid48x48 = 48, 
-        Grid64x64 = 64 
+        Grid64x64 = 64 // update Constant.Grid.MaxLightStampSize if stamps larger than 64x64 are added
     }
 }

@@ -31,7 +31,7 @@ namespace iLand.Output
         public SortedList<int, StandTrajectory> StandTrajectoriesByID { get; private init; }
         public TreeRemovedAnnualOutput? TreeRemovedSql { get; private init; }
 
-        public Outputs(Project projectFile, Landscape landscape, SimulationState simulationState, ParallelOptions parallelComputeOptions)
+        public Outputs(Project projectFile, Landscape landscape, SimulationState simulationState)
         {
             this.currentYearStandStatistics = new();
             this.mostRecentSimulationYearCommittedToDatabase = -1;
@@ -60,6 +60,7 @@ namespace iLand.Output
                 }
 
                 int initialCapacityInYears = projectFile.Output.Memory.InitialTrajectoryLengthInYears;
+                ParallelOptions parallelComputeOptions = simulationState.ParallelComputeOptions;
                 (int partitions, int resourceUnitsPerPartition) = parallelComputeOptions.GetUniformPartitioning(resourceUnitCount, Constant.Data.MinimumResourceUnitsPerLoggingThread);
                 Parallel.For(0, partitions, parallelComputeOptions, (int partitionIndex) =>
                 {
@@ -234,11 +235,12 @@ namespace iLand.Output
             // Partitioning advantage is minor to negligible.
             bool logResourceUnitTrajectories = this.ResourceUnitTrajectories.Length > 0;
             bool logStandTrajectories = this.StandTrajectoriesByID.Count > 0;
+            ParallelOptions parallelComputeOptions = model.SimulationState.ParallelComputeOptions;
             if (logResourceUnitTrajectories || logStandTrajectories)
             {
                 int resourceUnitTrajectoryCount = this.ResourceUnitTrajectories.Length;
-                (int partitions, int resourceUnitsPerPartition) = model.ParallelComputeOptions.GetUniformPartitioning(resourceUnitTrajectoryCount, Constant.Data.MinimumResourceUnitsPerLoggingThread);
-                Parallel.For(0, partitions, model.ParallelComputeOptions, (int partitionIndex) =>
+                (int partitions, int resourceUnitsPerPartition) = parallelComputeOptions.GetUniformPartitioning(resourceUnitTrajectoryCount, Constant.Data.MinimumResourceUnitsPerLoggingThread);
+                Parallel.For(0, partitions, parallelComputeOptions, (int partitionIndex) =>
                 {
                     (int startTrajectoryIndex, int endTrajectoryIndex) = ParallelOptionsExtensions.GetUniformPartitionRange(partitionIndex, resourceUnitsPerPartition, resourceUnitTrajectoryCount);
                     for (int resourceUnitIndex = startTrajectoryIndex; resourceUnitIndex < endTrajectoryIndex; ++resourceUnitIndex)
@@ -264,8 +266,8 @@ namespace iLand.Output
                 });
 
                 int standUnitTrajectoryCount = this.currentYearStandStatistics.Count;
-                (partitions, int standsPerPartition) = model.ParallelComputeOptions.GetUniformPartitioning(standUnitTrajectoryCount, Constant.Data.MinimumStandsPerLoggingThread);
-                Parallel.For(0, partitions, model.ParallelComputeOptions, (int partitionIndex) =>
+                (partitions, int standsPerPartition) = parallelComputeOptions.GetUniformPartitioning(standUnitTrajectoryCount, Constant.Data.MinimumStandsPerLoggingThread);
+                Parallel.For(0, partitions, parallelComputeOptions, (int partitionIndex) =>
                 {
                     (int startStandIndex, int endStandIndex) = ParallelOptionsExtensions.GetUniformPartitionRange(partitionIndex, standsPerPartition, standUnitTrajectoryCount);
                     for (int standIndex = startStandIndex; standIndex < endStandIndex; ++standIndex)

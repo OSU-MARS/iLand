@@ -55,11 +55,11 @@ namespace iLand.World
                 if (this.boundingBoxByRasterizedPolygonID.TryGetValue(rasterizedPolygonID, out (RectangleF BoundingBox, int OccupiedAreaInM2) data))
                 {
                     data.BoundingBox = RectangleF.Union(data.BoundingBox, cellExtent);
-                    data.OccupiedAreaInM2 += Constant.HeightCellAreaInM2;
+                    data.OccupiedAreaInM2 += Constant.Grid.HeightCellAreaInM2;
                 }
                 else
                 {
-                    data = (cellExtent, Constant.HeightCellAreaInM2);
+                    data = (cellExtent, Constant.Grid.HeightCellAreaInM2);
                     this.boundingBoxByRasterizedPolygonID.Add(rasterizedPolygonID, data);
                 }
                 
@@ -74,8 +74,8 @@ namespace iLand.World
 
                 // look for the resource unit 'ru'
                 bool ruFound = false;
-                Debug.Assert(Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth == 100); // 100 height cells per RU -> 1% RU area per height cell
-                Debug.Assert(this.Grid.CellSizeInM == Constant.HeightCellsPerRUWidth);
+                Debug.Assert(Constant.Grid.HeightCellsPerRUWidth * Constant.Grid.HeightCellsPerRUWidth == 100); // 100 height cells per RU -> 1% RU area per height cell
+                Debug.Assert(this.Grid.CellSizeInM == Constant.Grid.HeightCellsPerRUWidth);
                 for (int index = 0; index < resourceUnitsInStand.Count; ++index)
                 {
                     (ResourceUnit ResourceUnit, float OccupiedAreaInRU) candidate = resourceUnitsInStand[index];
@@ -106,7 +106,7 @@ namespace iLand.World
         /// return the grid value (stand ID, in typical use) at the coordinates *from* the LIF-Grid (i.e., 2m grid).
         public int GetPolygonIDFromLightGridIndex(Point lightGridXYIndex)
         {
-            return this.Grid[lightGridXYIndex.X, lightGridXYIndex.Y, Constant.LightCellsPerHeightCellWidth];
+            return this.Grid[lightGridXYIndex.X, lightGridXYIndex.Y, Constant.Grid.LightCellsPerHeightCellWidth];
         }
 
         /// returns a list with resource units and area factors per 'id'.

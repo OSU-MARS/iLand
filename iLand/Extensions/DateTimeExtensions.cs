@@ -116,7 +116,7 @@
 
         public static int GetDaysInYear(bool isLeapYear)
         {
-            return isLeapYear ? Constant.DaysInLeapYear : Constant.DaysInYear;
+            return isLeapYear ? Constant.Time.DaysInLeapYear : Constant.Time.DaysInYear;
         }
 
         public static int GetMidmonthDayIndex(int monthIndex, bool isLeapYear)

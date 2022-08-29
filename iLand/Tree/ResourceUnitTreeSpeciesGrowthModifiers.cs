@@ -41,15 +41,15 @@ namespace iLand.Tree
             this.resourceUnit = resourceUnit;
             this.Species = ruSpecies.Species;
 
-            this.CO2ModifierByMonth = new float[Constant.MonthsInYear];
-            this.SolarRadiationTotalByMonth = new float[Constant.MonthsInYear];
+            this.CO2ModifierByMonth = new float[Constant.Time.MonthsInYear];
+            this.SolarRadiationTotalByMonth = new float[Constant.Time.MonthsInYear];
             this.NitrogenModifierForYear = 0.0F;
-            this.SoilWaterModifierByMonth = new float[Constant.MonthsInYear];
-            this.TemperatureModifierByMonth = new float[Constant.MonthsInYear];
+            this.SoilWaterModifierByMonth = new float[Constant.Time.MonthsInYear];
+            this.TemperatureModifierByMonth = new float[Constant.Time.MonthsInYear];
             this.TotalRadiationForYear = 0.0F;
-            this.UtilizableRadiationByMonth = new float[Constant.MonthsInYear];
+            this.UtilizableRadiationByMonth = new float[Constant.Time.MonthsInYear];
             this.UtilizableRadiationForYear = 0.0F;
-            this.VpdModifierByMonth = new float[Constant.MonthsInYear];
+            this.VpdModifierByMonth = new float[Constant.Time.MonthsInYear];
         }
 
         /// Main function that calculates monthly / annual species responses
@@ -89,7 +89,7 @@ namespace iLand.Tree
 
             // checks
             #if DEBUG
-            for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
+            for (int monthIndex = 0; monthIndex < Constant.Time.MonthsInYear; ++monthIndex)
             {
                 Debug.Assert((this.CO2ModifierByMonth[monthIndex] > 0.0F) && (this.CO2ModifierByMonth[monthIndex] <= 1.3F));
                 Debug.Assert((this.SoilWaterModifierByMonth[monthIndex] >= 0.0F) && (this.SoilWaterModifierByMonth[monthIndex] <= 1.000001F));
@@ -139,7 +139,7 @@ namespace iLand.Tree
 
             // convert sums of daily values to monthly, accumulate annual variables, and find CO₂ modifier
             bool isLeapYear = dailyWeatherSeries.IsCurrentlyLeapYear();
-            for (int monthOfYearIndex = 0, co2timestepIndex = co2timeSeries.CurrentYearStartIndex; monthOfYearIndex < Constant.MonthsInYear; ++co2timestepIndex, ++monthOfYearIndex)
+            for (int monthOfYearIndex = 0, co2timestepIndex = co2timeSeries.CurrentYearStartIndex; monthOfYearIndex < Constant.Time.MonthsInYear; ++co2timestepIndex, ++monthOfYearIndex)
             {
                 float daysInMonth = (float)DateTimeExtensions.GetDaysInMonth(monthOfYearIndex, isLeapYear);
                 float soilWaterModifier = this.SoilWaterModifierByMonth[monthOfYearIndex] / daysInMonth;

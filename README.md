@@ -76,7 +76,8 @@ and parameterizations.
 * Light stamping is not thread safe. Stamping is done in parallel at the resource unit level and, when a tree's stamp reaches into an adjacent
   resource unit it is possible two threads may stamp the same grid cell at the same time, resulting in a race condition where one, or possibly 
   more, trees' contributions being loast. If this happens, either the domininant height field is underestimated (albeit only when the tallest
-  tree is lost) or the cell's light level is overestimated by the extent of the lost shading. Currently, both risks are mitigated by 
+  tree is lost), which results in light level underestimation due to lost shading, or the cell's light level is overestimated by the extent of
+  the shading lost in dropping a tree's light multiplication. Currently, both risks are mitigated by 
   [`Parallel.For()`](https://docs.microsoft.com/en-us/dotnet/api/system.threading.tasks.parallel.for)'s 
   [default range partitioning](https://github.com/dotnet/runtime/blob/main/src/libraries/System.Threading.Tasks.Parallel/src/System/Threading/Tasks/Parallel.cs)
   and stamping code structure which attempts to keep read-write cycles as close to atomic.

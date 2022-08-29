@@ -187,7 +187,7 @@ namespace iLand.Tree
             }
 
             float beta = this.co2beta0 * (2.0F - soilWaterModifier) * nitrogenModifier;
-            float r = 1.0F + Constant.Ln2 * beta; // NPP increase for a doubling of atmospheric CO2 (Eq. 17)
+            float r = 1.0F + Constant.Math.Ln2 * beta; // NPP increase for a doubling of atmospheric CO2 (Eq. 17)
 
             // fertilization function (Farquhar 1980) based on Michaelis-Menten expressions
             // Farquhar GD, von Caemmerer S, Berry JA. 1980. A biochemical model of photosynthetic CO₂ assimilation in leaves of C₃ species.

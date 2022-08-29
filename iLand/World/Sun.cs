@@ -21,7 +21,7 @@ namespace iLand.World
                 throw new ArgumentOutOfRangeException(nameof(latitudeInDegrees), "Latitude is beyond 90° north or south.");
             }
 
-            this.dayLengthInHours = new float[Constant.DaysInLeapYear];
+            this.dayLengthInHours = new float[Constant.Time.DaysInLeapYear];
             this.latitudeInRadians = Maths.ToRadians(latitudeInDegrees);
 
             // calculate length of day using the approximation formulae of

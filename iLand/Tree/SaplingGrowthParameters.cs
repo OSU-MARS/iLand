@@ -39,7 +39,7 @@ namespace iLand.Tree
         /// represented stem number by one cohort (using Reinekes Law):
         public float RepresentedStemNumberFromDiameter(float dbh)
         {
-            return this.ReinekeR * MathF.Pow(dbh / 25.0F, -1.605F) / Constant.LightCellsPerHectare;
+            return this.ReinekeR * MathF.Pow(dbh / 25.0F, -1.605F) / Constant.Grid.LightCellsPerHectare;
         }
 
         /// browsing probability

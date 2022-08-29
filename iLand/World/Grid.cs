@@ -21,20 +21,27 @@ namespace iLand.World
     {
         /// get the length of one pixel of the grid
         public float CellSizeInM { get; private set; }
+        public int CellsX { get; private set; }
+        public int CellsY { get; private set; }
         public T[] Data { get; private set; }
         /// bounding box in project coordinates
         public RectangleF ProjectExtent { get; private set; }
-        public int SizeX { get; private set; }
-        public int SizeY { get; private set; }
 
         public Grid()
         {
             this.CellSizeInM = 0.0F;
+            this.CellsX = 0;
+            this.CellsY = 0;
             this.Data = Array.Empty<T>();
             this.ProjectExtent = default;
-            this.SizeX = 0;
-            this.SizeY = 0;
         }
+
+        public Grid(int cellsX, int cellsY, float cellSize)
+            : this()
+        {
+            this.Setup(cellsX, cellsY, cellSize);
+        }
+
 
         public Grid(RectangleF extent, float cellSize)
             : this()
@@ -68,8 +75,8 @@ namespace iLand.World
 
         public T this[int indexX, int indexY]
         {
-            get { return this.Data[indexY * this.SizeX + indexX]; }
-            set { this.Data[indexY * this.SizeX + indexX] = value; }
+            get { return this.Data[indexY * this.CellsX + indexX]; }
+            set { this.Data[indexY * this.CellsX + indexX] = value; }
         }
 
         public T this[int indexX, int indexY, int divisor]
@@ -115,7 +122,7 @@ namespace iLand.World
         // return true if index is within the grid
         public bool Contains(int indexX, int indexY)
         {
-            return (indexX >= 0) && (indexX < this.SizeX) && (indexY >= 0) && (indexY < this.SizeY);
+            return (indexX >= 0) && (indexX < this.CellsX) && (indexY >= 0) && (indexY < this.CellsY);
         }
 
         public bool Contains(Point projectCoordinate)
@@ -182,7 +189,7 @@ namespace iLand.World
         /// get index (x/y) of the (linear) index 'index' (0..count-1)
         public Point GetCellXYIndex(int index)
         {
-            return new Point(index % this.SizeX, index / this.SizeX);
+            return new Point(index % this.CellsX, index / this.CellsX);
         }
 
         public bool IsSetup()
@@ -193,25 +200,25 @@ namespace iLand.World
         /// returns the index of an aligned grid (the same size) with 5 times bigger cells (e.g. convert from a 2 m grid to a 10 m grid)
         public int LightIndexToHeightIndex(int lightIndex) 
         { 
-            return ((lightIndex / this.SizeX) / Constant.LightCellsPerHeightCellWidth) * (this.SizeX / Constant.LightCellsPerHeightCellWidth) + (lightIndex % this.SizeX) / Constant.LightCellsPerHeightCellWidth;
+            return ((lightIndex / this.CellsX) / Constant.Grid.LightCellsPerHeightCellWidth) * (this.CellsX / Constant.Grid.LightCellsPerHeightCellWidth) + (lightIndex % this.CellsX) / Constant.Grid.LightCellsPerHeightCellWidth;
         }
 
         /// returns the index of an aligned grid (the same size) with 10 times bigger cells (e.g. convert from a 2 m grid to a 20 m grid)
         public int LightIndexToSeedIndex(int lightIndex) 
         { 
-            return ((lightIndex / this.SizeX) / Constant.LightCellsPerSeedmapCellWidth) * (this.SizeX / Constant.LightCellsPerSeedmapCellWidth) + (lightIndex % this.SizeX) / Constant.LightCellsPerSeedmapCellWidth; 
+            return ((lightIndex / this.CellsX) / Constant.Grid.LightCellsPerSeedmapCellWidth) * (this.CellsX / Constant.Grid.LightCellsPerSeedmapCellWidth) + (lightIndex % this.CellsX) / Constant.Grid.LightCellsPerSeedmapCellWidth; 
         }
 
         public int IndexXYToIndex(int indexX, int indexY) 
         {
             // get the 0-based index of the cell with indices ix and iy.
-            return indexY * this.SizeX + indexX; 
+            return indexY * this.CellsX + indexX; 
         }
 
         public int IndexXYToIndex(Point indexXY) 
         {
             // get the 0-based index of the cell at 'pos'.
-            return indexXY.Y * this.SizeX + indexXY.X; 
+            return indexXY.Y * this.CellsX + indexXY.X; 
         }
 
         public void CopyFrom(Grid<T> other)
@@ -220,7 +227,7 @@ namespace iLand.World
             {
                 throw new NotSupportedException("Either target or destination grid is not setup.");
             }
-            if ((this.CellSizeInM != other.CellSizeInM) || (this.SizeX != other.SizeX) || (this.SizeY != other.SizeY) || (other.CellCount != this.CellCount))
+            if ((this.CellSizeInM != other.CellSizeInM) || (this.CellsX != other.CellsX) || (this.CellsY != other.CellsY) || (other.CellCount != this.CellCount))
             {
                 throw new ArgumentOutOfRangeException(nameof(other));
             }
@@ -262,32 +269,23 @@ namespace iLand.World
             this.Setup(source.ProjectExtent, source.CellSizeInM);
         }
 
-        public void Setup(RectangleF extent, float cellSizeInM)
+        public void Setup(RectangleF projectExtent, float cellSizeInM)
         {
-            if (cellSizeInM <= 0.0F)
-            {
-                throw new ArgumentOutOfRangeException(nameof(cellSizeInM));
-            }
-            if ((extent.Width <= 0.0F) || (extent.Height <= 0.0F))
-            {
-                throw new ArgumentOutOfRangeException(nameof(extent));
-            }
-
-            this.ProjectExtent = extent;
+            this.ProjectExtent = projectExtent;
 
             // if needed pad for numerical error
-            int cellsX = (int)(extent.Width / cellSizeInM);
-            if (this.ProjectExtent.X + cellSizeInM * cellsX < extent.X + extent.Width)
+            int cellsX = (int)(projectExtent.Width / cellSizeInM);
+            if (this.ProjectExtent.X + cellSizeInM * cellsX < projectExtent.X + projectExtent.Width)
             {
                 ++cellsX;
             }
-            int cellsY = (int)(extent.Height / cellSizeInM);
-            if (this.ProjectExtent.Y + cellSizeInM * cellsY < extent.Y + extent.Height)
+            int cellsY = (int)(projectExtent.Height / cellSizeInM);
+            if (this.ProjectExtent.Y + cellSizeInM * cellsY < projectExtent.Y + projectExtent.Height)
             {
                 ++cellsY;
             }
 
-            this.Setup(cellsX, cellsY, cellSizeInM);
+            this.Setup(cellsX, cellsY, cellSizeInM); // validates cellsX, cellsY, and cellSizeInM
         }
 
         public void Setup(int cellsX, int cellsY, float cellSizeInM)
@@ -314,8 +312,8 @@ namespace iLand.World
             }
 
             this.CellSizeInM = cellSizeInM;
-            this.SizeX = cellsX;
-            this.SizeY = cellsY;
+            this.CellsX = cellsX;
+            this.CellsY = cellsY;
             this.ProjectExtent = new(this.ProjectExtent.X, this.ProjectExtent.Y, cellSizeInM * cellsX, cellSizeInM * cellsY);
         }
 

@@ -25,10 +25,10 @@ namespace iLand.Tree
         {
             this.AnnualGpp = 0.0F;
             this.Modifiers = new(resourceUnit, ruSpecies);
-            this.MonthlyGpp = new float[Constant.MonthsInYear];
+            this.MonthlyGpp = new float[Constant.Time.MonthsInYear];
             this.RootFraction = 0.0F;
             this.SiteEnvironmentSaplingHeightGrowthMultiplier = 0.0F;
-            this.UtilizableParByMonth = new float[Constant.MonthsInYear];
+            this.UtilizableParByMonth = new float[Constant.Time.MonthsInYear];
         }
 
         /** calculate a resource unit's GPP
@@ -43,7 +43,7 @@ namespace iLand.Tree
             const float gramsCarbonToKilogramsBiomass = 0.001F / Constant.DryBiomassCarbonFraction;
             float lightUseEpsilon = projectFile.Model.Ecosystem.LightUseEpsilon;
             float resourceUnitGppForYear = 0.0F;
-            for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
+            for (int monthIndex = 0; monthIndex < Constant.Time.MonthsInYear; ++monthIndex)
             {
                 // This is based on the utilizable photosynthetic active radiation.
                 // http://iland-model.org/primary+production
@@ -72,7 +72,7 @@ namespace iLand.Tree
 
             // calculate f_env,yr: see http://iland-model.org/sapling+growth+and+competition
             float f_sum = 0.0F;
-            for (int month = 0; month < Constant.MonthsInYear; ++month)
+            for (int month = 0; month < Constant.Time.MonthsInYear; ++month)
             {
                 f_sum += this.MonthlyGpp[month] / gramsCarbonToKilogramsBiomass; // == uAPar * epsilon_eff
             }

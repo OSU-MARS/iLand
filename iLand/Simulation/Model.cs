@@ -5,6 +5,7 @@ using iLand.Tree;
 using iLand.World;
 using MaxRev.Gdal.Core;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Threading;
@@ -21,7 +22,6 @@ namespace iLand.Simulation
         public Management? Management { get; private init; }
         public Plugin.Modules Modules { get; private init; }
         public Output.Outputs Output { get; private init; }
-        public ParallelOptions ParallelComputeOptions { get; private init; }
         public PerformanceCounters PerformanceCounters { get; private init; }
         public Project Project { get; private init; }
         public ThreadLocal<RandomGenerator> RandomGenerator { get; private init; }
@@ -57,23 +57,21 @@ namespace iLand.Simulation
 
             // setup of object model
             this.isDisposed = false;
-
-            this.ParallelComputeOptions = new()
-            {
-                MaxDegreeOfParallelism = projectFile.Model.Settings.MaxComputeThreads
-            };
-
             int randomSeed = projectFile.Model.Settings.RandomSeed ?? RandomNumberGenerator.GetInt32(Int32.MaxValue);
             this.RandomGenerator = new(() => { return new RandomGenerator(mersenneTwister: true, randomSeed); });
 
-            this.Landscape = new(projectFile, this.ParallelComputeOptions);
+            ParallelOptions parallelComputeOptions = new()
+            {
+                MaxDegreeOfParallelism = projectFile.Model.Settings.MaxComputeThreads
+            };
+            this.Landscape = new(projectFile, parallelComputeOptions);
             this.Management = null;
             this.Modules = new();
             // construction of this.Output is deferred until trees have been loaded onto resource units
             this.PerformanceCounters = new();
             this.Project = projectFile;
             this.ScheduledEvents = null;
-            this.SimulationState = new(this.Landscape.WeatherFirstCalendarYear - 1)
+            this.SimulationState = new(this.Landscape.WeatherFirstCalendarYear - 1, parallelComputeOptions)
             {
                 TraceAutoFlushValueToRestore = initialAutoFlushSetting,
                 TraceListener = traceListener
@@ -89,7 +87,7 @@ namespace iLand.Simulation
             // setup of trees
             this.stopwatch.Restart();
             TreePopulator treePopulator = new();
-            treePopulator.SetupTrees(projectFile, this.Landscape, this.ParallelComputeOptions, this.RandomGenerator);
+            treePopulator.SetupTrees(projectFile, this.Landscape, parallelComputeOptions, this.RandomGenerator);
             this.PerformanceCounters.TreeInstantiation = this.stopwatch.Elapsed;
 
             // initialize light pattern and then saplings and grass
@@ -134,7 +132,7 @@ namespace iLand.Simulation
             }
 
             // calculate initial stand statistics
-            Parallel.For(0, this.Landscape.ResourceUnits.Count, this.ParallelComputeOptions, (int resourceUnitIndex) =>
+            Parallel.For(0, this.Landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
             {
                 ResourceUnit resourceUnit = this.Landscape.ResourceUnits[resourceUnitIndex];
                 resourceUnit.SetupTreesAndSaplings(this.Landscape);
@@ -145,7 +143,7 @@ namespace iLand.Simulation
 
             // log initial state in year zero
             this.stopwatch.Restart();
-            this.Output = new(projectFile, this.Landscape, this.SimulationState, this.ParallelComputeOptions);
+            this.Output = new(projectFile, this.Landscape, this.SimulationState);
             this.Output.LogYear(this);
             this.PerformanceCounters.Logging += this.stopwatch.Elapsed;
         }
@@ -154,15 +152,18 @@ namespace iLand.Simulation
         {
             this.stopwatch.Restart();
 
-            // fill the whole grid with a value of 1.0
-            this.Landscape.LightGrid.Fill(1.0F);
-
             // reset height grid to the height of the regeneration layer, which is always assumed to be present
             // TODO: does this influence predictions following
             //   1) site prep, clearcut, and plant
             //   2) severe fire
             // where no vegetation of Constant.RegenerationLayerHeight is present?
-            this.Landscape.VegetationHeightGrid.Fill(Constant.RegenerationLayerHeight);
+            Landscape landscape = this.Landscape;
+            landscape.VegetationHeightGrid.Fill(Constant.RegenerationLayerHeight);
+
+            // reset light grid to no shade
+            // If necessary, this can be moved into CalculateDominantHeightField*().
+            this.Landscape.LightGrid.Fill(Constant.Grid.FullLightIntensity);
+            this.PerformanceCounters.LightFill = stopwatch.Elapsed; // fills are fast but done single threaded
 
             // current limitations of parallel resource unit evaluation:
             //
@@ -172,44 +173,51 @@ namespace iLand.Simulation
             // - Light stamping does not lock light grid areas and race conditions therefore exist between threads stamping adjacent
             //   resource units.
             //
+            // Explicit resource unit partitioning shows no profiling advantage over Parallel.For()'s default behavior.
+            this.stopwatch.Restart();
+            ConcurrentQueue<DominantHeightBuffer> dominantHeightBuffers = this.SimulationState.DominantHeightBuffers;
+            ConcurrentQueue<LightBuffer> lightBuffers = this.SimulationState.LightBuffers;
+            ParallelOptions parallelComputeOptions = this.SimulationState.ParallelComputeOptions;
             if (this.Project.World.Geometry.IsTorus)
             {
                 // apply toroidal light pattern
-                int worldBufferWidth = this.Project.World.Geometry.BufferWidthInM;
-                int heightBufferTranslationInCells = worldBufferWidth / Constant.HeightCellSizeInM;
-                int lightBufferTranslationInCells = worldBufferWidth / Constant.LightCellSizeInM;
-                Parallel.For(0, this.Landscape.ResourceUnits.Count, this.ParallelComputeOptions, (int resourceUnitIndex) =>
+                Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
                 {
-                    ResourceUnit resourceUnit = this.Landscape.ResourceUnits[resourceUnitIndex];
-                    ResourceUnitTrees treesOnResourceUnit = resourceUnit.Trees;
-                    treesOnResourceUnit.CalculateDominantHeightFieldTorus(this.Landscape, heightBufferTranslationInCells);
-                    treesOnResourceUnit.ApplyLightIntensityPatternTorus(this.Landscape, lightBufferTranslationInCells);
+                    ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
+                    treesOnResourceUnit.CalculateDominantHeightFieldTorus(landscape, dominantHeightBuffers);
+                });
+                Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
+                {
+                    ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
+                    treesOnResourceUnit.ApplyLightIntensityPatternTorus(landscape, lightBuffers);
                 });
 
                 // read toroidal pattern: LIP value calculation
-                Parallel.For(0, this.Landscape.ResourceUnits.Count, this.ParallelComputeOptions, (int resourceUnitIndex) =>
+                Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
                 {
-                    ResourceUnit resourceUnit = this.Landscape.ResourceUnits[resourceUnitIndex];
-                    ResourceUnitTrees treesOnResourceUnit = resourceUnit.Trees;
-                    treesOnResourceUnit.ReadLightInfluenceFieldTorus(this.Landscape, lightBufferTranslationInCells); // multiplicative approach
+                    ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
+                    treesOnResourceUnit.ReadLightInfluenceFieldTorus(landscape); // multiplicative approach
                 });
             }
             else
             {
                 // apply light pattern
-                Parallel.For(0, this.Landscape.ResourceUnits.Count, this.ParallelComputeOptions, (int resourceUnitIndex) =>
+                Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
                 {
-                    ResourceUnit resourceUnit = this.Landscape.ResourceUnits[resourceUnitIndex];
-                    ResourceUnitTrees treesOnResourceUnit = resourceUnit.Trees;
-                    treesOnResourceUnit.CalculateDominantHeightField(this.Landscape);
-                    treesOnResourceUnit.ApplyLightIntensityPattern(this.Landscape);
+                    ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
+                    treesOnResourceUnit.CalculateDominantHeightField(landscape, dominantHeightBuffers);
                 });
-                // read pattern: LIP value calculation
-                Parallel.For(0, this.Landscape.ResourceUnits.Count, this.ParallelComputeOptions, (int resourceUnitIndex) =>
+                Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
                 {
-                    ResourceUnit resourceUnit = this.Landscape.ResourceUnits[resourceUnitIndex];
-                    ResourceUnitTrees treesOnResourceUnit = resourceUnit.Trees;
-                    treesOnResourceUnit.ReadLightInfluenceField(this.Landscape); // multiplicative approach
+                    ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
+                    treesOnResourceUnit.ApplyLightIntensityPattern(landscape, lightBuffers);
+                });
+
+                // read pattern: LIP value calculation
+                Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
+                {
+                    ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
+                    treesOnResourceUnit.ReadLightInfluenceField(landscape); // multiplicative approach
                 });
             }
 
@@ -268,8 +276,8 @@ namespace iLand.Simulation
             }
             // move CO₂ and weather time series to this year
             CO2TimeSeriesMonthly co2byMonth = this.Landscape.CO2ByMonth;
-            co2byMonth.CurrentYearStartIndex += Constant.MonthsInYear;
-            co2byMonth.NextYearStartIndex += Constant.MonthsInYear;
+            co2byMonth.CurrentYearStartIndex += Constant.Time.MonthsInYear;
+            co2byMonth.NextYearStartIndex += Constant.Time.MonthsInYear;
             if (co2byMonth.NextYearStartIndex >= co2byMonth.Count)
             {
                 throw new NotSupportedException("CO₂ for calendar year " + this.SimulationState.CurrentCalendarYear + " is not present in the CO₂ time series '" + this.Project.World.Weather.CO2File + ".");
@@ -320,7 +328,8 @@ namespace iLand.Simulation
               */
             // let the trees grow (growth on stand-level, tree-level, mortality)
             this.stopwatch.Restart();
-            Parallel.For(0, this.Landscape.ResourceUnits.Count, this.ParallelComputeOptions, (int resourceUnitIndex) =>
+            ParallelOptions parallelComputeOptions = this.SimulationState.ParallelComputeOptions;
+            Parallel.For(0, this.Landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
             {
                 ResourceUnit resourceUnit = this.Landscape.ResourceUnits[resourceUnitIndex];
                 // stocked area
@@ -360,14 +369,14 @@ namespace iLand.Simulation
                 // seed dispersal
                 foreach (TreeSpeciesSet speciesSet in this.Landscape.SpeciesSetsByTableName.Values)
                 {
-                    Parallel.For(0, speciesSet.ActiveSpecies.Count, this.ParallelComputeOptions, (int speciesIndex) =>
+                    Parallel.For(0, speciesSet.ActiveSpecies.Count, parallelComputeOptions, (int speciesIndex) =>
                     {
                         TreeSpecies species = speciesSet.ActiveSpecies[speciesIndex];
                         Debug.Assert(species.SeedDispersal != null, "Attempt to disperse seeds from a tree species not configured for seed dispersal.");
                         species.SeedDispersal.DisperseSeeds(this);
                     });
                 }
-                Parallel.For(0, this.Landscape.ResourceUnits.Count, this.ParallelComputeOptions, (int resourceUnitIndex) =>
+                Parallel.For(0, this.Landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
                 {
                     ResourceUnit resourceUnit = this.Landscape.ResourceUnits[resourceUnitIndex];
                     resourceUnit.EstablishSaplings(this);
@@ -380,7 +389,7 @@ namespace iLand.Simulation
             // need only be recalculated once?
             this.Modules.RunYear();
 
-            Parallel.For(0, this.Landscape.ResourceUnits.Count, this.ParallelComputeOptions, (int resourceUnitIndex) =>
+            Parallel.For(0, this.Landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
             {
                 ResourceUnit resourceUnit = this.Landscape.ResourceUnits[resourceUnitIndex];
                 // clean tree lists again and recalculate statistcs if external modules removed trees

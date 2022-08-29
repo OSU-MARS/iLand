@@ -135,10 +135,10 @@
     </defaultSoil>
     <geometry>
       <!-- buffer width must be an integer multiple of light grid cell size (2 m), height grid cell size (10 m), and greater than the radius
-           of the largest light stamp used (potentially 64 m if large trees are present)
-           Buffer width must also be an integer multiple of the seed map cell size (20 m) if regeneration is enabled. Values of 40, 60, or 80
-           m are therefore suggested. The default is 60 m. -->
-      <bufferWidth>60</bufferWidth>
+           of the largest light stamp available (64 m)
+           Buffer width must also be an integer multiple of the seed map cell size (20 m) if regeneration is enabled. The default value of 
+           80 m is therefore suggested. -->
+      <bufferWidth>80</bufferWidth>
       <torus>false</torus>
     </geometry>
     <grass enabled="true">

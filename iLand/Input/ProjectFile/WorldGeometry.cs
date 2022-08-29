@@ -1,5 +1,4 @@
-﻿using iLand.Tree;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
@@ -14,8 +13,7 @@ namespace iLand.Input.ProjectFile
 
 		public WorldGeometry()
 		{
-			// default to a single resource unit
-			this.BufferWidthInM = 3 * Constant.SeedmapCellSizeInM;
+			this.BufferWidthInM = Constant.Grid.DefaultWorldBufferWidthInM;
 			this.Latitude = 48.0F;
 			this.IsTorus = false;
 		}
@@ -30,11 +28,13 @@ namespace iLand.Input.ProjectFile
 			switch (reader.Name)
 			{
 				case "bufferWidth":
-					this.BufferWidthInM = reader.ReadElementContentAsInt();
-					if ((this.BufferWidthInM < Constant.HeightCellSizeInM) || (this.BufferWidthInM % Constant.LightCellSizeInM != 0) || (this.BufferWidthInM % Constant.HeightCellSizeInM != 0))
+					int bufferWidthInM = reader.ReadElementContentAsInt();
+					int maxLightStampSizeInM = Constant.Grid.MaxLightStampSizeInLightCells / 2 * Constant.Grid.LightCellSizeInM;
+                    if ((bufferWidthInM < maxLightStampSizeInM) || (bufferWidthInM % Constant.Grid.LightCellSizeInM != 0) || (bufferWidthInM % Constant.Grid.HeightCellSizeInM != 0))
 					{
-						throw new XmlException("Light buffer width must be a positive, integer multiple of the light and height cell sizes (" + Constant.LightCellSizeInM + " and " + Constant.HeightCellSizeInM + " m, respectively) which is greater than the radius of the largest tree stamp used by the model (potentially up to " + ((int)LightStampSize.Grid64x64 / 2 * Constant.LightCellSizeInM) + " m). If regeneration is enabled integer multiples of the seedmap cell size (" + Constant.SeedmapCellSizeInM + " m) are also required.");
+						throw new XmlException("Buffer width of " + bufferWidthInM + " m is not a positive, integer multiple of the light and height cell sizes (" + Constant.Grid.LightCellSizeInM + " and " + Constant.Grid.HeightCellSizeInM + " m, respectively) which is greater than the " + maxLightStampSizeInM + " m radius of the largest tree stamp available. If regeneration is enabled an integer multiple of the seedmap cell size (" + Constant.Grid.SeedmapCellSizeInM + " m) is also required. The default buffer width of 80 m meets all of these criteria and, typically, there is little reason to change it.");
 					}
+					this.BufferWidthInM = bufferWidthInM;
 					break;
 				case "geometry":
 					reader.Read();

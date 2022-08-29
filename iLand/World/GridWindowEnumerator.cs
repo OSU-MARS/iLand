@@ -32,7 +32,7 @@ namespace iLand.World
             {
                 throw new ArgumentOutOfRangeException(nameof(cellExtentToRun), "Rectangle extends beyond grid.");
             }
-            this.columnsNotInWindow = grid.SizeX - this.columnsInWindow;
+            this.columnsNotInWindow = grid.CellsX - this.columnsInWindow;
 
             this.CurrentIndex = firstIndex - 1; // point to first element - 1 for first MoveNext() call
             this.currentColumnIndexInWindow = -1;

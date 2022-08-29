@@ -40,7 +40,7 @@ namespace iLand.Input.Weather
             // and precipitation may be useful additional predictors here.
             //
             // HJ Andrews dataset MS00101 version 9 (October 2019), https://andlter.forestry.oregonstate.edu/data/catalog/datacatalog.aspx.
-            for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
+            for (int monthIndex = 0; monthIndex < Constant.Time.MonthsInYear; ++monthIndex)
             {
                 daytimeMeanAirTemperatureByMonth[monthIndex] =  -0.89905F - 0.22593F * minTempByMonth[monthIndex] + 1.20802F * meanTempByMonth[monthIndex] + 0.07674F * maxTempByMonth[monthIndex];
             }
@@ -72,7 +72,7 @@ namespace iLand.Input.Weather
             // Based on multiple linear regression of the primary and secondary meteorology stations on the HJ Andrews Research Forest, p < 0.001,
             // adjR² = 0.990, MAE = 21 Pa. Error appears likely to increase more or less linearly with VPD due to differences among stations'
             // response slopes.
-            for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
+            for (int monthIndex = 0; monthIndex < Constant.Time.MonthsInYear; ++monthIndex)
             {
                 float minTemp = minTempByMonth[monthIndex];
                 float expTmin = MathF.Exp(17.27F * minTemp / (minTemp + 237.3F));

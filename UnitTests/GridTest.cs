@@ -11,19 +11,19 @@ namespace iLand.Test
         private static Grid<float> CreateAveragedGrid(int cellSize)
         {
             Grid<float> grid = new();
-            grid.Setup(Constant.ResourceUnitSizeInM / cellSize, Constant.ResourceUnitSizeInM / cellSize, cellSize);
-            for (int xIndex = 0; xIndex < grid.SizeX; xIndex++)
+            grid.Setup(Constant.Grid.ResourceUnitSizeInM / cellSize, Constant.Grid.ResourceUnitSizeInM / cellSize, cellSize);
+            for (int xIndex = 0; xIndex < grid.CellsX; xIndex++)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; yIndex++)
+                for (int yIndex = 0; yIndex < grid.CellsY; yIndex++)
                 {
                     grid[xIndex, yIndex] += xIndex + yIndex; // include initialization to 0.0F in test coverage
                 }
             }
 
             float cellArea = cellSize * cellSize;
-            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     grid[xIndex, yIndex] /= cellArea;
                 }

@@ -40,7 +40,7 @@ namespace iLand.Tree
         {
             this.airDensity = airDensity; // kg/m³
 
-            this.ReferenceEvapotranspirationByMonth = new float[Constant.MonthsInYear];
+            this.ReferenceEvapotranspirationByMonth = new float[Constant.Time.MonthsInYear];
         }
 
         /// <returns>Total throughfall during timestep in mm.</returns>
@@ -102,7 +102,7 @@ namespace iLand.Tree
             this.laiTotal = laiNeedle + laiBroadleaf;
             this.meanMaxCanopyConductance = meanMaxCanopyConductance;
 
-            for (int month = 0; month < Constant.MonthsInYear; ++month)
+            for (int month = 0; month < Constant.Time.MonthsInYear; ++month)
             {
                 this.ReferenceEvapotranspirationByMonth[month] = 0.0F;
             }

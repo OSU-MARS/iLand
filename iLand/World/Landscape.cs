@@ -37,9 +37,9 @@ namespace iLand.World
                 throw new NotSupportedException("Project file does not specify a resource unit file (/project/model/world/initialization/resourceUnitFile).");
             }
             float worldBufferWidth = projectFile.World.Geometry.BufferWidthInM;
-            if ((worldBufferWidth < Constant.HeightCellSizeInM) || (worldBufferWidth % Constant.HeightCellSizeInM != 0))
+            if ((worldBufferWidth < Constant.Grid.HeightCellSizeInM) || (worldBufferWidth % Constant.Grid.HeightCellSizeInM != 0))
             {
-                throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + projectFile.World.Geometry.BufferWidthInM + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.HeightCellSizeInM + " m).");
+                throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + projectFile.World.Geometry.BufferWidthInM + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.Grid.HeightCellSizeInM + " m).");
             }
 
             // if available, read monthly weather data in parallel with resource unit setup
@@ -120,12 +120,12 @@ namespace iLand.World
             };
             RectangleF resourceUnitGisExtent = resourceUnitReader.GetBoundingBox();
             this.ProjectOriginInGisCoordinates = new(resourceUnitGisExtent.X - worldBufferWidth, resourceUnitGisExtent.Y - worldBufferWidth);
-            this.ResourceUnitGrid.Setup(new RectangleF(worldBufferWidth, worldBufferWidth, resourceUnitGisExtent.Width, resourceUnitGisExtent.Height), Constant.ResourceUnitSizeInM);
+            this.ResourceUnitGrid.Setup(new RectangleF(worldBufferWidth, worldBufferWidth, resourceUnitGisExtent.Width, resourceUnitGisExtent.Height), Constant.Grid.ResourceUnitSizeInM);
             // resource units are created below, so grid contains only nulls at this point
 
             RectangleF bufferedExtent = new(0.0F, 0.0F, resourceUnitGisExtent.Width + 2 * worldBufferWidth, resourceUnitGisExtent.Height + 2 * worldBufferWidth);
-            this.LightGrid = new(bufferedExtent, Constant.LightCellSizeInM); // (re)initialized by Model at start of every timestep
-            this.VegetationHeightGrid = new(bufferedExtent, Constant.HeightCellSizeInM);
+            this.LightGrid = new(bufferedExtent, Constant.Grid.LightCellSizeInM); // (re)initialized by Model at start of every timestep
+            this.VegetationHeightGrid = new(bufferedExtent, Constant.Grid.HeightCellSizeInM);
 
             // instantiate resource units only where defined in resource unit file
             WeatherReaderMonthly? monthlyWeatherReader = readMonthlyWeather?.GetAwaiter().GetResult();
@@ -170,11 +170,11 @@ namespace iLand.World
                 int ruGridIndex = this.ResourceUnitGrid.IndexXYToIndex(ruGridIndexXY);
                 Debug.Assert((ruGridIndex >= 0) && (ruGridIndex < this.ResourceUnitGrid.CellCount));
 
-                float ruMinProjectX = ruProjectCentroidX - 0.5F * Constant.ResourceUnitSizeInM;
-                float ruMinProjectY = ruProjectCentroidY - 0.5F * Constant.ResourceUnitSizeInM;
+                float ruMinProjectX = ruProjectCentroidX - 0.5F * Constant.Grid.ResourceUnitSizeInM;
+                float ruMinProjectY = ruProjectCentroidY - 0.5F * Constant.Grid.ResourceUnitSizeInM;
                 ResourceUnit newRU = new(projectFile, weather, treeSpeciesSet, ruGridIndex)
                 {
-                    ProjectExtent = new RectangleF(ruMinProjectX, ruMinProjectY, Constant.ResourceUnitSizeInM, Constant.ResourceUnitSizeInM),
+                    ProjectExtent = new RectangleF(ruMinProjectX, ruMinProjectY, Constant.Grid.ResourceUnitSizeInM, Constant.Grid.ResourceUnitSizeInM),
                     ID = environment.ResourceUnitID,
                     MinimumLightIndexXY = this.LightGrid.GetCellXYIndex(ruMinProjectX, ruMinProjectY)
                 };
@@ -222,8 +222,8 @@ namespace iLand.World
                 ResourceUnit resourceUnit = this.ResourceUnits[resourceUnitIndex];
                 // calculate the stockable area for each RU (i.e.: with stand grid values <> -1)
                 // for now, all height cells in a resource unit are on landscape
-                int heightCellsInLandscape = Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth;
-                resourceUnit.AreaInLandscapeInM2 = Constant.HeightCellAreaInM2 * heightCellsInLandscape;
+                int heightCellsInLandscape = Constant.Grid.HeightCellsPerRUWidth * Constant.Grid.HeightCellsPerRUWidth;
+                resourceUnit.AreaInLandscapeInM2 = Constant.Grid.HeightCellAreaInM2 * heightCellsInLandscape;
                 resourceUnit.HeightCellsOnLandscape = heightCellsInLandscape;
 
                 if (resourceUnit.SaplingCells != null)
@@ -344,16 +344,16 @@ namespace iLand.World
             }
 
             // prepare space for LIF-pointers (2m cells)
-            List<(int CellIndex, float LightValue)> lightCellIndicesAndValues = new(standGridIndices.Count * Constant.LightCellsPerHeightCellWidth * Constant.LightCellsPerHeightCellWidth);
+            List<(int CellIndex, float LightValue)> lightCellIndicesAndValues = new(standGridIndices.Count * Constant.Grid.LightCellsPerHeightCellWidth * Constant.Grid.LightCellsPerHeightCellWidth);
             Grid<float> lightGrid = this.LightGrid;
             for (int standGridIndex = 0; standGridIndex < standGridIndices.Count; ++standGridIndex)
             {
                 Point cellOrigin = standGrid.Grid.GetCellXYIndex(standGridIndices[standGridIndex]);
-                cellOrigin.X *= Constant.LightCellsPerHeightCellWidth; // index of 10m patch -> to lif pixel coordinates
-                cellOrigin.Y *= Constant.LightCellsPerHeightCellWidth;
-                for (int lightY = 0; lightY < Constant.LightCellsPerHeightCellWidth; ++lightY)
+                cellOrigin.X *= Constant.Grid.LightCellsPerHeightCellWidth; // index of 10m patch -> to lif pixel coordinates
+                cellOrigin.Y *= Constant.Grid.LightCellsPerHeightCellWidth;
+                for (int lightY = 0; lightY < Constant.Grid.LightCellsPerHeightCellWidth; ++lightY)
                 {
-                    for (int lightX = 0; lightX < Constant.LightCellsPerHeightCellWidth; ++lightX)
+                    for (int lightX = 0; lightX < Constant.Grid.LightCellsPerHeightCellWidth; ++lightX)
                     {
                         int modelIndex = lightGrid.IndexXYToIndex(cellOrigin.X + lightX, cellOrigin.Y + lightY);
                         (int, float) indexAndValue = new(modelIndex, lightGrid[modelIndex]);
@@ -364,7 +364,7 @@ namespace iLand.World
             // sort based on LIF-Value
             lightCellIndicesAndValues.Sort(Landscape.CompareLifValue); // higher: highest values first
 
-            float standAreaInHa = standGrid.GetAreaInSquareMeters(standID) / Constant.ResourceUnitAreaInM2; // multiplier for grid (e.g. 2 if stand has area of 2 hectare)
+            float standAreaInHa = standGrid.GetAreaInSquareMeters(standID) / Constant.Grid.ResourceUnitAreaInM2; // multiplier for grid (e.g. 2 if stand has area of 2 hectare)
 
             int grassCoverPercentage = -1;
             for (int rowIndexInStand = standStartIndex; rowIndexInStand <= standEndIndex; ++rowIndexInStand)

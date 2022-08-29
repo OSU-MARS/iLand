@@ -90,7 +90,7 @@ namespace iLand.Output.Sql
                 Debug.Assert(resourceUnit.Soil != null, "Resource unit has null soil when its snags are non-null.");
 
                 ResourceUnitTreeStatistics ruTreeStatistics = resourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies;
-                float areaFactor = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2; // conversion factor from real area to per ha values
+                float areaFactor = resourceUnit.AreaInLandscapeInM2 / Constant.Grid.ResourceUnitAreaInM2; // conversion factor from real area to per ha values
                 if (logResourceUnitDetails)
                 {
                     insertRow.Parameters[0].Value = currentCalendarYear;

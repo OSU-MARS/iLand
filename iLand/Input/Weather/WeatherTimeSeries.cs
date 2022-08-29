@@ -36,8 +36,8 @@ namespace iLand.Input.Weather
         {
             return this.Timestep switch
             {
-                Timestep.Daily => Constant.DaysInLeapYear,
-                Timestep.Monthly => Constant.MonthsInYear,
+                Timestep.Daily => Constant.Time.DaysInLeapYear,
+                Timestep.Monthly => Constant.Time.MonthsInYear,
                 _ => throw new NotSupportedException("Unhandled weather timestep " + this.Timestep + ".")
             };
         }

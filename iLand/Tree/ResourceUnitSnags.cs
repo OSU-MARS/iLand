@@ -166,7 +166,7 @@ namespace iLand.Tree
 
         public void ScaleInitialState()
         {
-            float areaFactor = this.ResourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2; // fraction stockable area
+            float areaFactor = this.ResourceUnit.AreaInLandscapeInM2 / Constant.Grid.ResourceUnitAreaInM2; // fraction stockable area
             // avoid huge snag pools on very small resource units (see also soil.cpp)
             // area_factor = std::max(area_factor, 0.1);
             this.StandingWoodyDebrisByClass[1] *= areaFactor;
@@ -241,8 +241,8 @@ namespace iLand.Tree
             // calculate the water-factor for each month
             // Adair CE, Parton WJ, del Grosso SL, et al. 2008. Simple three-pool model accurately describes patterns of long-term litter
             //   decomposition in diverse climates. Global Change Biology 14(11):2636-2660. https://doi.org/10.1111/j.1365-2486.2008.01674.x
-            Span<float> waterFactorByMonth = stackalloc float[Constant.MonthsInYear];
-            for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
+            Span<float> waterFactorByMonth = stackalloc float[Constant.Time.MonthsInYear];
+            for (int monthIndex = 0; monthIndex < Constant.Time.MonthsInYear; ++monthIndex)
             {
                 float precipET0ratio;
                 if (this.ResourceUnit.WaterCycle.Canopy.ReferenceEvapotranspirationByMonth[monthIndex] > 0.0F)
@@ -273,7 +273,7 @@ namespace iLand.Tree
             float weatherTimestepsInYear = weatherTimeSeries.Timestep switch
             {
                 Timestep.Daily => DateTimeExtensions.GetDaysInYear(this.ResourceUnit.Weather.TimeSeries.IsCurrentlyLeapYear()),
-                Timestep.Monthly => Constant.MonthsInYear,
+                Timestep.Monthly => Constant.Time.MonthsInYear,
                 _ => throw new NotSupportedException("Unhandled weather timestep " + weatherTimeSeries.Timestep + ".")
             };
             this.WeatherFactor = weatherFactorSumForYear / weatherTimestepsInYear;
@@ -340,7 +340,7 @@ namespace iLand.Tree
                     // As weights here we use stem number, as the processes here pertain individual snags
                     // calculate the transition probability of SWD to downed dead wood
                     float halfLife = this.HalfLifeByClass[diameterClass] / weatherFactor;
-                    float rate = -Constant.Ln2 / halfLife;
+                    float rate = -Constant.Math.Ln2 / halfLife;
 
                     // higher decay rate for the class with smallest diameters
                     if (diameterClass == 0)

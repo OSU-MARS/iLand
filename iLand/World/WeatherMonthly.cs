@@ -20,8 +20,8 @@ namespace iLand.World
             }
 
             ++this.CurrentDataYear;
-            this.TimeSeries.CurrentYearStartIndex += Constant.MonthsInYear;
-            this.TimeSeries.NextYearStartIndex += Constant.MonthsInYear;
+            this.TimeSeries.CurrentYearStartIndex += Constant.Time.MonthsInYear;
+            this.TimeSeries.NextYearStartIndex += Constant.Time.MonthsInYear;
             if (this.TimeSeries.NextYearStartIndex >= this.TimeSeries.Count)
             {
                 throw new NotSupportedException("Weather for simulation year " + this.CurrentDataYear + " is not present in weather data file '" + model.Project.World.Weather.WeatherFile + "' for at least some weather IDs."); // can't report problematic weather ID here as it's not accessible
@@ -42,7 +42,7 @@ namespace iLand.World
                 this.TotalAnnualRadiation += this.TimeSeries.SolarRadiationTotal[weatherMonthIndex];
             }
 
-            this.MeanAnnualTemperature /= Constant.MonthsInYear;
+            this.MeanAnnualTemperature /= Constant.Time.MonthsInYear;
 
             // calculate leaf on-off phenology for deciduous species
             for (int index = 0; index < this.TreeSpeciesPhenology.Count; ++index)

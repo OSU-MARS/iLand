@@ -61,7 +61,7 @@ namespace iLand.Input.Weather
                 Span<float> vaporPressureDeficitMeanInKPa = stackalloc float[12];
 
                 int januaryDestinationIndex = monthlyWeather.Count;
-                monthlyWeather.Year.AsSpan().Slice(januaryDestinationIndex, Constant.MonthsInYear).Fill(year);
+                monthlyWeather.Year.AsSpan().Slice(januaryDestinationIndex, Constant.Time.MonthsInYear).Fill(year);
                 monthOfYear.CopyTo(monthlyWeather.Month.AsSpan()[januaryDestinationIndex..]);
 
                 precipitationTotalByMonthInMM[0] = Single.Parse(row[weatherHeader.Precipitation01], NumberStyles.Float);
@@ -168,7 +168,7 @@ namespace iLand.Input.Weather
                 vaporPressureDeficitMeanInKPa.CopyTo(monthlyWeather.VpdMeanInKPa.AsSpan()[januaryDestinationIndex..]);
 
                 // complete year
-                monthlyWeather.Validate(monthlyWeather.Count, Constant.MonthsInYear);
+                monthlyWeather.Validate(monthlyWeather.Count, Constant.Time.MonthsInYear);
 
                 monthlyWeather.Count += 12;
                 if (monthlyWeather.Count > longestTimeSeriesLengthInMonths)

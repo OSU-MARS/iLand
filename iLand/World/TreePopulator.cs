@@ -154,7 +154,7 @@ namespace iLand.World
             randomValue = randomValue * sizeRange.Density + randomGenerator.GetRandomProbability() * (1.0F - sizeRange.Density);
 
             // pick a randomized light cell to place this tree in
-            int heightCellIndex = Maths.Limit((int)(Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth * randomValue), 0, Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth - 1); // get from random number generator
+            int heightCellIndex = Maths.Limit((int)(Constant.Grid.HeightCellsPerRUWidth * Constant.Grid.HeightCellsPerRUWidth * randomValue), 0, Constant.Grid.HeightCellsPerRUWidth * Constant.Grid.HeightCellsPerRUWidth - 1); // get from random number generator
 
             int treesAlreadyPresentInCell = treeCountByHeightCell[heightCellIndex];
             if (treesAlreadyPresentInCell > 18)
@@ -181,12 +181,12 @@ namespace iLand.World
             }
 
             // get position from fixed lists (one for even, one for uneven resource units)
-            int lightCellIndexWithinHeightCell = resourceUnit.ResourceUnitGridIndex % Constant.LightCellSizeInM != 0 ? TreePopulator.EvenHeightCellPositions[treePlacementState.TreePlacementIndex] : TreePopulator.UnevenHeightCellPositions[treePlacementState.TreePlacementIndex];
+            int lightCellIndexWithinHeightCell = resourceUnit.ResourceUnitGridIndex % Constant.Grid.LightCellSizeInM != 0 ? TreePopulator.EvenHeightCellPositions[treePlacementState.TreePlacementIndex] : TreePopulator.UnevenHeightCellPositions[treePlacementState.TreePlacementIndex];
             // position of resource unit + position of 10x10m pixel + position within 10x10m pixel
             PointF ruGridOriginInProjectCoordinates = resourceUnit.ProjectExtent.Location;
             Point ruLightIndexXY = landscape.LightGrid.GetCellXYIndex(ruGridOriginInProjectCoordinates);
-            Point lightCellIndexXY = new(ruLightIndexXY.X + Constant.LightCellsPerHeightCellWidth * (heightCellIndex / Constant.HeightCellSizeInM) + lightCellIndexWithinHeightCell / Constant.LightCellsPerHeightCellWidth,
-                                         ruLightIndexXY.Y + Constant.LightCellsPerHeightCellWidth * (heightCellIndex % Constant.HeightCellSizeInM) + lightCellIndexWithinHeightCell % Constant.LightCellsPerHeightCellWidth);
+            Point lightCellIndexXY = new(ruLightIndexXY.X + Constant.Grid.LightCellsPerHeightCellWidth * (heightCellIndex / Constant.Grid.HeightCellSizeInM) + lightCellIndexWithinHeightCell / Constant.Grid.LightCellsPerHeightCellWidth,
+                                         ruLightIndexXY.Y + Constant.Grid.LightCellsPerHeightCellWidth * (heightCellIndex % Constant.Grid.HeightCellSizeInM) + lightCellIndexWithinHeightCell % Constant.Grid.LightCellsPerHeightCellWidth);
             Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
             treeCountByHeightCell[heightCellIndex] = treesAlreadyPresentInCell + 1;
@@ -333,32 +333,32 @@ namespace iLand.World
                         //
                         // The latter approach is adopted here. There appears to be approximately a one in two million chance these
                         // cases will be hit.
-                        if ((treeProjectX - landscape.ResourceUnitGrid.ProjectExtent.X) % Constant.ResourceUnitSizeInM == 0.0F)
+                        if ((treeProjectX - landscape.ResourceUnitGrid.ProjectExtent.X) % Constant.Grid.ResourceUnitSizeInM == 0.0F)
                         {
                             resourceUnit = landscape.ResourceUnitGrid[resourceUnitIndexX - 1, resourceUnitIndexY];
                             if (resourceUnit == null)
                             {
-                                if (resourceUnitIndexXY.Y % Constant.ResourceUnitSizeInM == 0.0F)
+                                if (resourceUnitIndexXY.Y % Constant.Grid.ResourceUnitSizeInM == 0.0F)
                                 {
                                     resourceUnit = landscape.ResourceUnitGrid[resourceUnitIndexX - 1, resourceUnitIndexY - 1];
                                     if (resourceUnit != null)
                                     {
-                                        treeProjectX -= Constant.TreeNudgeIntoResourceUnitInM;
-                                        treeProjectY -= Constant.TreeNudgeIntoResourceUnitInM;
+                                        treeProjectX -= Constant.Grid.TreeNudgeIntoResourceUnitInM;
+                                        treeProjectY -= Constant.Grid.TreeNudgeIntoResourceUnitInM;
                                     }
                                 }
                             }
                             else
                             {
-                                treeProjectX -= Constant.TreeNudgeIntoResourceUnitInM;
+                                treeProjectX -= Constant.Grid.TreeNudgeIntoResourceUnitInM;
                             }
                         }
-                        else if ((treeProjectY - landscape.ResourceUnitGrid.ProjectExtent.Y) % Constant.ResourceUnitSizeInM == 0.0F)
+                        else if ((treeProjectY - landscape.ResourceUnitGrid.ProjectExtent.Y) % Constant.Grid.ResourceUnitSizeInM == 0.0F)
                         {
                             resourceUnit = landscape.ResourceUnitGrid[resourceUnitIndexX, resourceUnitIndexY - 1];
                             if (resourceUnit != null)
                             {
-                                treeProjectY -= Constant.TreeNudgeIntoResourceUnitInM;
+                                treeProjectY -= Constant.Grid.TreeNudgeIntoResourceUnitInM;
                             }
                         }
                     }
@@ -408,7 +408,7 @@ namespace iLand.World
         private void PopulateResourceUnitTreesFromSizeDistribution(Project projectFile, Landscape landscape, ResourceUnit resourceUnit, List<TreeSizeRange> treeSizeDistribution, RandomGenerator randomGenerator)
         {
             float lightStampBeerLambertK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
-            int[] treeCountByHeightCell = new int[Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth];
+            int[] treeCountByHeightCell = new int[Constant.Grid.HeightCellsPerRUWidth * Constant.Grid.HeightCellsPerRUWidth];
             (int TreePlacementBits, int TreePlacementIndex) treePlacementState = (0, -1);
             TreeListForAddition treesToAdd = new(0);
             int uniqueTreeIDonResourceUnit = -1;
@@ -451,8 +451,8 @@ namespace iLand.World
         private static void PopulateResourceUnitWithIndividualTrees(Landscape landscape, ResourceUnit resourceUnit, IndividualTreeReader individualTreeReader, float lightStampBeerLambertK)
         {
             Point ruPositionInResourceUnitGrid = landscape.ResourceUnitGrid.GetCellXYIndex(resourceUnit.ResourceUnitGridIndex);
-            float translationToPlaceTreeOnResourceUnitX = Constant.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.X;
-            float translationToPlaceTreeOnResourceUnitY = Constant.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.Y;
+            float translationToPlaceTreeOnResourceUnitX = Constant.Grid.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.X;
+            float translationToPlaceTreeOnResourceUnitY = Constant.Grid.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.Y;
             Point[] treePositions = new Point[individualTreeReader.Count];
 
             for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.Count; ++treeIndexInFile)
@@ -514,7 +514,7 @@ namespace iLand.World
                 }
                 heightCellsInStand.Add(heightCell);
             }
-            float standAreaInResourceUnits = standRaster.GetAreaInSquareMeters(standID) / Constant.ResourceUnitAreaInM2;
+            float standAreaInResourceUnits = standRaster.GetAreaInSquareMeters(standID) / Constant.Grid.ResourceUnitAreaInM2;
 
             if (initialHeightGrid.IsSetup() && (heightGridResponse == null))
             {

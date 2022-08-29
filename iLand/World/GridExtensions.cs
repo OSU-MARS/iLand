@@ -7,9 +7,9 @@ namespace iLand.World
     {
         public static void Limit(this Grid<int> grid, int min_value, int max_value)
         {
-            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     int value = grid[xIndex, yIndex];
                     if (value > max_value)
@@ -27,9 +27,9 @@ namespace iLand.World
         public static float Max(this Grid<float> grid)
         {
             float maxValue = Single.MinValue;
-            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     maxValue = MathF.Max(maxValue, grid[xIndex, yIndex]);
                 }
@@ -39,9 +39,9 @@ namespace iLand.World
 
         public static void Multiply(this Grid<float> grid, float factor)
         {
-            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     grid[xIndex, yIndex] *= factor;
                 }
@@ -51,9 +51,9 @@ namespace iLand.World
         public static float Sum(this Grid<float> grid)
         {
             float total = 0;
-            for (int xIndex = 0; xIndex < grid.SizeX; ++xIndex)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.SizeY; ++yIndex)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     total += grid[xIndex, yIndex];
                 }

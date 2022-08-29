@@ -19,7 +19,7 @@ namespace iLand.World
         public WeatherDaily(string weatherDatabaseFilePath, string weatherTableName, Project projectFile)
             : base(projectFile, new(Timestep.Daily))
         {
-            this.monthDayIndices = new(Constant.MonthsInYear + 1); // one year minimum capacity
+            this.monthDayIndices = new(Constant.Time.MonthsInYear + 1); // one year minimum capacity
             this.weatherReader = new(weatherDatabaseFilePath, weatherTableName, projectFile);
             this.weatherReader.LoadGroupOfYears(this.YearsToLoad, this.TimeSeries, this.monthDayIndices);
         }
@@ -81,14 +81,14 @@ namespace iLand.World
             //{
             //    Trace.TraceInformation(this.currentDataYear + " CO₂ concentration: " + this.CarbonDioxidePpm + " ppm.");
             //}
-            int currentJanuary1dayIndex = Constant.MonthsInYear * this.CurrentDataYear;
-            int nextJanuary1dayIndex = currentJanuary1dayIndex + Constant.MonthsInYear;
+            int currentJanuary1dayIndex = Constant.Time.MonthsInYear * this.CurrentDataYear;
+            int nextJanuary1dayIndex = currentJanuary1dayIndex + Constant.Time.MonthsInYear;
             if ((currentJanuary1dayIndex > this.monthDayIndices.Count) || (nextJanuary1dayIndex > this.monthDayIndices.Count))
             {
                 throw new NotSupportedException("Weather data is not available for simulation year " + this.CurrentDataYear + ".");
             }
-            int currentJanuaryIndex = this.CurrentDataYear * Constant.MonthsInYear;
-            int nextJanuaryIndex = currentJanuaryIndex + Constant.MonthsInYear;
+            int currentJanuaryIndex = this.CurrentDataYear * Constant.Time.MonthsInYear;
+            int nextJanuaryIndex = currentJanuaryIndex + Constant.Time.MonthsInYear;
             this.TimeSeries.CurrentYearStartIndex = this.monthDayIndices[currentJanuaryIndex];
             this.TimeSeries.NextYearStartIndex = this.monthDayIndices[nextJanuaryIndex];
 
@@ -96,7 +96,7 @@ namespace iLand.World
             // calculate radiation sum of the year and monthly precipitation
             this.TotalAnnualRadiation = 0.0F;
             this.MeanAnnualTemperature = 0.0F;
-            for (int monthIndex = 0; monthIndex < Constant.MonthsInYear; ++monthIndex)
+            for (int monthIndex = 0; monthIndex < Constant.Time.MonthsInYear; ++monthIndex)
             {
                 this.PrecipitationByMonth[monthIndex] = 0.0F;
                 this.DaytimeMeanTemperatureByMonth[monthIndex] = 0.0F;
@@ -114,7 +114,7 @@ namespace iLand.World
             }
 
             bool isLeapYear = this.TimeSeries.IsCurrentlyLeapYear();
-            for (int month = 0; month < Constant.MonthsInYear; ++month)
+            for (int month = 0; month < Constant.Time.MonthsInYear; ++month)
             {
                 this.DaytimeMeanTemperatureByMonth[month] /= (float)DateTimeExtensions.GetDaysInMonth(month, isLeapYear);
             }

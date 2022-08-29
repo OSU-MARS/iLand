@@ -105,10 +105,10 @@ namespace iLand.Output.Memory
             Span<byte> monthsOfYear = stackalloc byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
             Int16 calendarYear = (Int16)calendarYearBeforeFirstSimulationTimestep;
             int yearsInTimeSeries = monthsInTimeSeries / 12;
-            for (int simulationYear = 0, yearStartIndex = this.Count; simulationYear < yearsInTimeSeries; ++calendarYear, ++simulationYear, yearStartIndex += Constant.MonthsInYear)
+            for (int simulationYear = 0, yearStartIndex = this.Count; simulationYear < yearsInTimeSeries; ++calendarYear, ++simulationYear, yearStartIndex += Constant.Time.MonthsInYear)
             {
-                MemoryMarshal.Cast<byte, Int16>(this.calendarYear.AsSpan()).Slice(yearStartIndex, Constant.MonthsInYear).Fill(calendarYear);
-                monthsOfYear.CopyTo(this.month.AsSpan().Slice(yearStartIndex, Constant.MonthsInYear));
+                MemoryMarshal.Cast<byte, Int16>(this.calendarYear.AsSpan()).Slice(yearStartIndex, Constant.Time.MonthsInYear).Fill(calendarYear);
+                monthsOfYear.CopyTo(this.month.AsSpan().Slice(yearStartIndex, Constant.Time.MonthsInYear));
             }
 
             this.CopyFirstN(threePGtimeSeries.SolarRadiationTotal, this.solarRadiation, monthsInTimeSeries);

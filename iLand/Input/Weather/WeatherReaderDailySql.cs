@@ -101,15 +101,15 @@ namespace iLand.Input.Weather
                 for (int daysLoaded = 0; queryHasDaysAvailable = weatherReader.Read(); ++dayIndex) // mStore.begin();
                 {
                     ++daysLoaded;
-                    if (daysLoaded > Constant.DaysInLeapYear)
+                    if (daysLoaded > Constant.Time.DaysInLeapYear)
                     {
-                        throw new NotSupportedException("Error in reading daily weather file: attempt to read more than " + Constant.DaysInLeapYear + " days in year.");
+                        throw new NotSupportedException("Error in reading daily weather file: attempt to read more than " + Constant.Time.DaysInLeapYear + " days in year.");
                     }
 
                     if (dailyWeather.Count == dailyWeather.Capacity)
                     {
                         // TODO: include row count in query and use it to set capacity
-                        dailyWeather.Resize(dailyWeather.Capacity + Constant.DaysInDecade);
+                        dailyWeather.Resize(dailyWeather.Capacity + Constant.Time.DaysInDecade);
                     }
 
                     Int16 year = weatherReader.GetInt16(0);
@@ -152,7 +152,7 @@ namespace iLand.Input.Weather
                     }
 
                     previousYear = year;
-                    if ((month == Constant.MonthsInYear) && (dayOfMonth == 31)) // check is specific to December, so 31 days
+                    if ((month == Constant.Time.MonthsInYear) && (dayOfMonth == 31)) // check is specific to December, so 31 days
                     {
                         // increment day insert point since break statement skips this inner loop's increment
                         // Prevents the next iteration of the outer loop from overwriting the last day of the year.
