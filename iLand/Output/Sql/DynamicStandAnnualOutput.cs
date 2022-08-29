@@ -54,9 +54,8 @@ namespace iLand.Output.Sql
                                "mean, sum, min, max, p25, p50, p75, p5, 10, p90, p95 (pXX=XXth percentile), sd (std.dev.)." + Environment.NewLine +
                                "Complex expression are allowed, e.g: if(dbh>50,1,0).sum (-> counts trees with dbh>50)";
             this.Columns.Add(SqlColumn.CreateYear());
-            this.Columns.Add(SqlColumn.CreateResourceUnit());
-            this.Columns.Add(SqlColumn.CreateID());
-            this.Columns.Add(SqlColumn.CreateSpecies());
+            this.Columns.Add(SqlColumn.CreateResourceUnitID());
+            this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
             // other colums are added during setup...
         }
 
@@ -71,8 +70,8 @@ namespace iLand.Output.Sql
             this.resourceUnitFilter.SetExpression(projectFile.Output.Sql.DynamicStand.ResourceUnitFilter);
             this.treeFilter.SetExpression(projectFile.Output.Sql.DynamicStand.TreeFilter);
             this.yearFilter.SetExpression(projectFile.Output.Sql.DynamicStand.Condition);
-            // remove any columns following the four columns added in the constructor
-            this.Columns.RemoveRange(4, this.Columns.Count - 4);
+            // remove any columns following the three columns added in the constructor
+            this.Columns.RemoveRange(3, this.Columns.Count - 3);
             this.fieldList.Clear();
 
             // setup fields
@@ -337,17 +336,16 @@ namespace iLand.Output.Sql
                         if (columnIndex == 0)
                         {
                             insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
-                            insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
-                            insertRow.Parameters[2].Value = resourceUnit.ID;
+                            insertRow.Parameters[1].Value = resourceUnit.ID;
                             if (bySpecies)
                             {
-                                insertRow.Parameters[3].Value = ruSpecies.Species.WorldFloraID;
+                                insertRow.Parameters[2].Value = ruSpecies.Species.WorldFloraID;
                             }
                             else
                             {
-                                insertRow.Parameters[3].Value = String.Empty;
+                                insertRow.Parameters[2].Value = String.Empty;
                             }
-                            columnIndex = 3;
+                            columnIndex = 2;
                         }
 
                         // calculate statistics

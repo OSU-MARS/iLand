@@ -32,7 +32,7 @@ namespace iLand.Output.Sql
                                "Set the setting in the XML project file 'includeNatural' to 'true' to include trees that died due to natural mortality, " +
                                "the setting 'includeHarvest' controls whether to include ('true') or exclude ('false') harvested trees.";
             this.Columns.Add(SqlColumn.CreateYear());
-            this.Columns.Add(SqlColumn.CreateSpecies());
+            this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
             this.Columns.Add(new SqlColumn("reason", "Resaon for tree death: 'N': Natural mortality, 'H': Harvest (removed from the forest), 'D': Disturbance (not salvage-harvested), 'S': Salvage harvesting (i.e. disturbed trees which are harvested), 'C': killed/cut down by management", SqliteType.Text));
             this.Columns.Add(new SqlColumn("count", "number of died trees (living, >4m height) ", SqliteType.Integer));
             this.Columns.Add(new SqlColumn("volume_m3", "sum of volume (geomery, taper factor) in m3", SqliteType.Real));

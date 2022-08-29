@@ -28,7 +28,7 @@ namespace iLand.Output.Sql
                                "year 2000.0 The initial state (without any growth) is indicated by the year 'startyear-1'." +
                                "You can use the 'condition' to control if the output should be created for the current year(see also dynamic stand output)";
             this.Columns.Add(SqlColumn.CreateYear());
-            this.Columns.Add(SqlColumn.CreateSpecies());
+            this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
             this.Columns.Add(new("count_ha", "tree count (living, >4m height) per ha", SqliteType.Integer));
             this.Columns.Add(new("dbh_avg_cm", "average dbh (cm)", SqliteType.Real));
             this.Columns.Add(new("height_avg_m", "average tree height (m)", SqliteType.Real));

@@ -31,8 +31,7 @@ namespace iLand.Output.Sql
                                "The 'conditionRU' can be used to suppress resource-unit-level details; eg. specifying 'in(year,100,200,300)' limits output on reosurce unit level to the years 100,200,300 " +
                                "(leaving 'conditionRU' blank enables details per default).";
             this.Columns.Add(SqlColumn.CreateYear());
-            this.Columns.Add(SqlColumn.CreateResourceUnit());
-            this.Columns.Add(SqlColumn.CreateID());
+            this.Columns.Add(SqlColumn.CreateResourceUnitID());
             this.Columns.Add(new("area_ha", "total stockable area of the resource unit (ha)", SqliteType.Real));
             this.Columns.Add(new("stem_c", "Stem carbon kg/ha", SqliteType.Real));
             this.Columns.Add(new("stem_n", "Stem nitrogen kg/ha", SqliteType.Real));
@@ -95,54 +94,53 @@ namespace iLand.Output.Sql
                 if (logResourceUnitDetails)
                 {
                     insertRow.Parameters[0].Value = currentCalendarYear;
-                    insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = resourceUnit.ID;
-                    insertRow.Parameters[3].Value = areaFactor;
+                    insertRow.Parameters[1].Value = resourceUnit.ID;
+                    insertRow.Parameters[2].Value = areaFactor;
                     // biomass from trees (scaled to 1ha already)
-                    insertRow.Parameters[4].Value = ruTreeStatistics.StemCarbonInKgPerHa;
-                    insertRow.Parameters[5].Value = ruTreeStatistics.StemNitrogenInKgPerHa;
-                    insertRow.Parameters[6].Value = ruTreeStatistics.BranchCarbonInKgPerHa;
-                    insertRow.Parameters[7].Value = ruTreeStatistics.BranchNitrogenInKgPerHa;
-                    insertRow.Parameters[8].Value = ruTreeStatistics.FoliageCarbonInKgPerHa;
-                    insertRow.Parameters[9].Value = ruTreeStatistics.FoliageNitrogenInKgPerHa;
-                    insertRow.Parameters[10].Value = ruTreeStatistics.CoarseRootCarbonInKgPerHa;
-                    insertRow.Parameters[11].Value = ruTreeStatistics.CoarseRootNitrogenInKgPerHa;
-                    insertRow.Parameters[12].Value = ruTreeStatistics.FineRootCarbonInKgPerHa;
-                    insertRow.Parameters[13].Value = ruTreeStatistics.FineRootNitrogenInKgPerHa;
+                    insertRow.Parameters[3].Value = ruTreeStatistics.StemCarbonInKgPerHa;
+                    insertRow.Parameters[4].Value = ruTreeStatistics.StemNitrogenInKgPerHa;
+                    insertRow.Parameters[5].Value = ruTreeStatistics.BranchCarbonInKgPerHa;
+                    insertRow.Parameters[6].Value = ruTreeStatistics.BranchNitrogenInKgPerHa;
+                    insertRow.Parameters[7].Value = ruTreeStatistics.FoliageCarbonInKgPerHa;
+                    insertRow.Parameters[8].Value = ruTreeStatistics.FoliageNitrogenInKgPerHa;
+                    insertRow.Parameters[9].Value = ruTreeStatistics.CoarseRootCarbonInKgPerHa;
+                    insertRow.Parameters[10].Value = ruTreeStatistics.CoarseRootNitrogenInKgPerHa;
+                    insertRow.Parameters[11].Value = ruTreeStatistics.FineRootCarbonInKgPerHa;
+                    insertRow.Parameters[12].Value = ruTreeStatistics.FineRootNitrogenInKgPerHa;
 
                     // biomass from regeneration
-                    insertRow.Parameters[14].Value = ruTreeStatistics.RegenerationCarbonInKgPerHa;
-                    insertRow.Parameters[15].Value = ruTreeStatistics.RegenerationNitrogenInKgPerHa;
+                    insertRow.Parameters[13].Value = ruTreeStatistics.RegenerationCarbonInKgPerHa;
+                    insertRow.Parameters[14].Value = ruTreeStatistics.RegenerationNitrogenInKgPerHa;
 
                     // biomass from standing dead woods
                     if (resourceUnit.Snags.TotalStanding == null) // expected in year 0
                     {
+                        insertRow.Parameters[15].Value = 0.0;
                         insertRow.Parameters[16].Value = 0.0;
-                        insertRow.Parameters[17].Value = 0.0;
                     }
                     else
                     {
-                        insertRow.Parameters[16].Value = resourceUnit.Snags.TotalStanding.C / areaFactor;
-                        insertRow.Parameters[17].Value = resourceUnit.Snags.TotalStanding.N / areaFactor;   // snags
+                        insertRow.Parameters[15].Value = resourceUnit.Snags.TotalStanding.C / areaFactor;
+                        insertRow.Parameters[16].Value = resourceUnit.Snags.TotalStanding.N / areaFactor;   // snags
                     }
                     if (resourceUnit.Snags.TotalBranchesAndRoots == null)
                     {
+                        insertRow.Parameters[17].Value = 0.0;
                         insertRow.Parameters[18].Value = 0.0;
-                        insertRow.Parameters[19].Value = 0.0;
                     }
                     else
                     {
-                        insertRow.Parameters[18].Value = resourceUnit.Snags.TotalBranchesAndRoots.C / areaFactor;
-                        insertRow.Parameters[19].Value = resourceUnit.Snags.TotalBranchesAndRoots.N / areaFactor;   // snags, other (branch + coarse root)
+                        insertRow.Parameters[17].Value = resourceUnit.Snags.TotalBranchesAndRoots.C / areaFactor;
+                        insertRow.Parameters[18].Value = resourceUnit.Snags.TotalBranchesAndRoots.N / areaFactor;   // snags, other (branch + coarse root)
                     }
 
                     // biomass from soil (convert from t/ha . kg/ha)
-                    insertRow.Parameters[20].Value = resourceUnit.Soil!.YoungRefractory.C * 1000.0; // wood, 16.8.0 nullable analysis misses RU consistency check above
-                    insertRow.Parameters[21].Value = resourceUnit.Soil.YoungRefractory.N * 1000.0;
-                    insertRow.Parameters[22].Value = resourceUnit.Soil.YoungLabile.C * 1000.0; // litter
-                    insertRow.Parameters[23].Value = resourceUnit.Soil.YoungLabile.N * 1000.0;
-                    insertRow.Parameters[24].Value = resourceUnit.Soil.OrganicMatter.C * 1000.0; // soil
-                    insertRow.Parameters[25].Value = resourceUnit.Soil.OrganicMatter.N * 1000.0;
+                    insertRow.Parameters[19].Value = resourceUnit.Soil!.YoungRefractory.C * 1000.0; // wood, 16.8.0 nullable analysis misses RU consistency check above
+                    insertRow.Parameters[20].Value = resourceUnit.Soil.YoungRefractory.N * 1000.0;
+                    insertRow.Parameters[21].Value = resourceUnit.Soil.YoungLabile.C * 1000.0; // litter
+                    insertRow.Parameters[22].Value = resourceUnit.Soil.YoungLabile.N * 1000.0;
+                    insertRow.Parameters[23].Value = resourceUnit.Soil.OrganicMatter.C * 1000.0; // soil
+                    insertRow.Parameters[24].Value = resourceUnit.Soil.OrganicMatter.N * 1000.0;
 
                     insertRow.ExecuteNonQuery();
                 }
@@ -191,7 +189,7 @@ namespace iLand.Output.Sql
             insertRow.Parameters[3].Value = accumulatedValues[0]; // stockable area [m2]
             for (int valueIndex = 1; valueIndex < accumulatedValues.Length; ++valueIndex)
             {
-                insertRow.Parameters[3 + valueIndex].Value = accumulatedValues[valueIndex] / totalStockableArea;
+                insertRow.Parameters[2 + valueIndex].Value = accumulatedValues[valueIndex] / totalStockableArea;
             }
             insertRow.ExecuteNonQuery();
         }

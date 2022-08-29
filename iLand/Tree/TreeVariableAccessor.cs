@@ -18,7 +18,7 @@ namespace iLand.Tree
         {
             TreeVariableAccessor.TreeVariableNames = new List<string>(ExpressionVariableAccessor.BaseVariableNames)
             {
-                "id", "dbh", "height", "ruindex", "x", "y", "volume", "lri", "leafarea", "lightresponse", // fields 0-9
+                "id", "dbh", "height", "resourceUnit", "x", "y", "volume", "lri", "leafarea", "lightresponse", // fields 0-9
                 "woodymass", "rootmass", "foliagemass", "age", "opacity" /* 10-14 */, "dead", "stress", "deltad", // 15-17
                 "afoliagemass", "species", "basalarea", "crownarea" /* 20, 21 */, "markharvest", "markcut", "markcrop", "markcompetitor" // 18-25
             }.AsReadOnly();
@@ -46,35 +46,63 @@ namespace iLand.Tree
         {
             Debug.Assert(this.Trees != null);
 
-            return (variableIndex - ExpressionVariableAccessor.BaseVariableNames.Count) switch
+            switch (variableIndex - ExpressionVariableAccessor.BaseVariableNames.Count)
             {
-                0 => this.Trees.TreeID[this.TreeIndex],// id
-                1 => this.Trees.DbhInCm[this.TreeIndex],// dbh
-                2 => this.Trees.HeightInM[this.TreeIndex],// height
-                3 => this.Trees.ResourceUnit.ResourceUnitGridIndex,// ruindex
-                4 => this.Trees.GetCellCenterPoint(this.TreeIndex).X,// x
-                5 => this.Trees.GetCellCenterPoint(this.TreeIndex).Y,// y
-                6 => this.Trees.GetStemVolume(this.TreeIndex),// volume
-                7 => this.Trees.LightResourceIndex[this.TreeIndex],// lri
-                8 => this.Trees.LeafAreaInM2[this.TreeIndex],
-                9 => this.Trees.LightResponse[this.TreeIndex],
-                10 => this.Trees.StemMassInKg[this.TreeIndex],
-                11 => this.Trees.CoarseRootMassInKg[this.TreeIndex] + this.Trees.FineRootMassInKg[this.TreeIndex],// sum of coarse and fine roots
-                12 => this.Trees.FoliageMassInKg[this.TreeIndex],
-                13 => this.Trees.AgeInYears[this.TreeIndex],
-                14 => this.Trees.Opacity[this.TreeIndex],
-                15 => this.Trees.IsDead(this.TreeIndex) ? 1.0F : 0.0F,
-                16 => this.Trees.StressIndex[this.TreeIndex],
-                17 => this.Trees.DbhDeltaInCm[this.TreeIndex],// increment of last year
-                18 => this.Trees.Species.GetBiomassFoliage(this.Trees.DbhInCm[this.TreeIndex]),// allometric foliage
-                19 => this.Trees.Species.Index,
-                20 => this.Trees.GetBasalArea(this.TreeIndex),
-                21 => this.Trees.GetCrownRadius(this.TreeIndex) * this.Trees.GetCrownRadius(this.TreeIndex) * MathF.PI,// area (m2) of the crown
-                22 => this.Trees.IsMarkedForHarvest(this.TreeIndex) ? 1 : 0,// markharvest
-                23 => this.Trees.IsMarkedForCut(this.TreeIndex) ? 1 : 0,// markcut
-                24 => this.Trees.IsMarkedAsCropTree(this.TreeIndex) ? 1 : 0,// markcrop
-                25 => this.Trees.IsMarkedAsCropCompetitor(this.TreeIndex) ? 1 : 0,// markcompetitor
-                _ => base.GetValue(variableIndex),
+                case 0: 
+                    return this.Trees.TreeID[this.TreeIndex];
+                case 1: 
+                    return this.Trees.DbhInCm[this.TreeIndex];
+                case 2: 
+                    return this.Trees.HeightInM[this.TreeIndex];
+                case 3: 
+                    return this.Trees.ResourceUnit.ID;
+                case 4: 
+                    return this.Trees.LightCellIndexXY[this.TreeIndex].X;
+                case 5: 
+                    return this.Trees.LightCellIndexXY[this.TreeIndex].Y;
+                case 6: 
+                    return this.Trees.GetStemVolume(this.TreeIndex);
+                case 7: 
+                    return this.Trees.LightResourceIndex[this.TreeIndex];
+                case 8: 
+                    return this.Trees.LeafAreaInM2[this.TreeIndex];
+                case 9: 
+                    return this.Trees.LightResponse[this.TreeIndex];
+                case 10: 
+                    return this.Trees.StemMassInKg[this.TreeIndex];
+                case 11: 
+                    return this.Trees.CoarseRootMassInKg[this.TreeIndex] + this.Trees.FineRootMassInKg[this.TreeIndex];
+                case 12: 
+                    return this.Trees.FoliageMassInKg[this.TreeIndex];
+                case 13: 
+                    return this.Trees.AgeInYears[this.TreeIndex];
+                case 14: 
+                    return this.Trees.Opacity[this.TreeIndex];
+                case 15: 
+                    return this.Trees.IsDead(this.TreeIndex) ? 1.0F : 0.0F;
+                case 16: 
+                    return this.Trees.StressIndex[this.TreeIndex];
+                case 17: 
+                    return this.Trees.DbhDeltaInCm[this.TreeIndex]; // diameter increment of most recent year simulated
+                case 18: 
+                    return this.Trees.Species.GetBiomassFoliage(this.Trees.DbhInCm[this.TreeIndex]); 
+                case 19: 
+                    return this.Trees.Species.Index;
+                case 20: 
+                    return this.Trees.GetBasalArea(this.TreeIndex);
+                case 21: 
+                    float crownRadiusInM = this.Trees.GetCrownRadius(this.TreeIndex);
+                    return MathF.PI * crownRadiusInM * crownRadiusInM; // area (m²) of the crown
+                case 22: 
+                    return this.Trees.IsMarkedForHarvest(this.TreeIndex) ? 1 : 0;
+                case 23: 
+                    return this.Trees.IsMarkedForCut(this.TreeIndex) ? 1 : 0;
+                case 24: 
+                    return this.Trees.IsMarkedAsCropTree(this.TreeIndex) ? 1 : 0;
+                case 25: 
+                    return this.Trees.IsMarkedAsCropCompetitor(this.TreeIndex) ? 1 : 0;
+                default:
+                    return base.GetValue(variableIndex);
             };
         }
     }

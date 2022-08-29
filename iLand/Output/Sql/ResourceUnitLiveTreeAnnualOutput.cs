@@ -26,9 +26,8 @@ namespace iLand.Output.Sql
                                "year 2000.0 The initial state (without any growth) is indicated by the year 'startyear-1'. " +
                                "You can use the 'condition' to control if the output should be created for the current year(see dynamic stand output)";
             this.Columns.Add(SqlColumn.CreateYear());
-            this.Columns.Add(SqlColumn.CreateResourceUnit());
-            this.Columns.Add(SqlColumn.CreateID());
-            this.Columns.Add(SqlColumn.CreateSpecies());
+            this.Columns.Add(SqlColumn.CreateResourceUnitID());
+            this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
             this.Columns.Add(new("area_ha", "stockable forest area on the resource unit (in ha).", SqliteType.Real));
             //columns().Add(new("x_m", "x-coord", OutInteger)
             //columns().Add(new("y_m", "y-coord", OutInteger) // temp
@@ -71,23 +70,22 @@ namespace iLand.Output.Sql
                     }
 
                     insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
-                    insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = resourceUnit.ID;
-                    insertRow.Parameters[3].Value = ruSpecies.Species.WorldFloraID;
-                    insertRow.Parameters[4].Value = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2;
-                    // insertRow.Parameters[4].Value = ru.boundingBox().center().x() << ru.boundingBox().center().y();  // temp
-                    insertRow.Parameters[5].Value = ruLiveTreeStatisticsForSpecies.TreesPerHa;
-                    insertRow.Parameters[6].Value = ruLiveTreeStatisticsForSpecies.AverageDbhInCm;
-                    insertRow.Parameters[7].Value = ruLiveTreeStatisticsForSpecies.AverageHeightInM;
-                    insertRow.Parameters[8].Value = ruLiveTreeStatisticsForSpecies.StemVolumeInM3PerHa;
-                    insertRow.Parameters[9].Value = ruLiveTreeStatisticsForSpecies.GetTotalCarbon();
+                    insertRow.Parameters[1].Value = resourceUnit.ID;
+                    insertRow.Parameters[2].Value = ruSpecies.Species.WorldFloraID;
+                    insertRow.Parameters[3].Value = resourceUnit.AreaInLandscapeInM2 / Constant.ResourceUnitAreaInM2;
+                    // insertRow.Parameters[3].Value = ru.boundingBox().center().x() << ru.boundingBox().center().y();  // temp
+                    insertRow.Parameters[4].Value = ruLiveTreeStatisticsForSpecies.TreesPerHa;
+                    insertRow.Parameters[5].Value = ruLiveTreeStatisticsForSpecies.AverageDbhInCm;
+                    insertRow.Parameters[6].Value = ruLiveTreeStatisticsForSpecies.AverageHeightInM;
+                    insertRow.Parameters[7].Value = ruLiveTreeStatisticsForSpecies.StemVolumeInM3PerHa;
+                    insertRow.Parameters[8].Value = ruLiveTreeStatisticsForSpecies.GetTotalCarbon();
                     float totalStemVolumeInM3PerHa = ruLiveTreeStatisticsForSpecies.StemVolumeInM3PerHa + ruSpecies.StatisticsManagement.StemVolumeInM3PerHa + ruSpecies.StatisticsSnag.StemVolumeInM3PerHa;
-                    insertRow.Parameters[10].Value = totalStemVolumeInM3PerHa;
-                    insertRow.Parameters[11].Value = ruLiveTreeStatisticsForSpecies.BasalAreaInM2PerHa;
-                    insertRow.Parameters[12].Value = ruLiveTreeStatisticsForSpecies.TreeNppPerHa;
-                    insertRow.Parameters[13].Value = ruLiveTreeStatisticsForSpecies.TreeNppPerHaAboveground;
-                    insertRow.Parameters[14].Value = ruLiveTreeStatisticsForSpecies.LeafAreaIndex;
-                    insertRow.Parameters[15].Value = ruLiveTreeStatisticsForSpecies.SaplingCohortsPerHa;
+                    insertRow.Parameters[9].Value = totalStemVolumeInM3PerHa;
+                    insertRow.Parameters[10].Value = ruLiveTreeStatisticsForSpecies.BasalAreaInM2PerHa;
+                    insertRow.Parameters[11].Value = ruLiveTreeStatisticsForSpecies.TreeNppPerHa;
+                    insertRow.Parameters[12].Value = ruLiveTreeStatisticsForSpecies.TreeNppPerHaAboveground;
+                    insertRow.Parameters[13].Value = ruLiveTreeStatisticsForSpecies.LeafAreaIndex;
+                    insertRow.Parameters[14].Value = ruLiveTreeStatisticsForSpecies.SaplingCohortsPerHa;
                     insertRow.ExecuteNonQuery();
                 }
             }

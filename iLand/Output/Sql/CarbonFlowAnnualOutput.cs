@@ -31,8 +31,7 @@ namespace iLand.Output.Sql
                                "(leaving 'conditionRU' blank enables details per default).";
 
             this.Columns.Add(SqlColumn.CreateYear());
-            this.Columns.Add(SqlColumn.CreateResourceUnit());
-            this.Columns.Add(SqlColumn.CreateID());
+            this.Columns.Add(SqlColumn.CreateResourceUnitID());
             this.Columns.Add(new("area_ha", "total stockable area of the resource unit (or landscape) (ha)", SqliteType.Real));
             this.Columns.Add(new("GPP", "actually realized gross primary production, kg C; ((primary production|GPP)) including " +
                                         "the effect of decreasing productivity with age; note that a rough estimate of " +
@@ -103,18 +102,17 @@ namespace iLand.Output.Sql
                 if (logIndividualResourceUnits)
                 {
                     insertRow.Parameters[0].Value = currentCalendarYear;
-                    insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = resourceUnit.ID;
-                    insertRow.Parameters[3].Value = areaFactor;
-                    insertRow.Parameters[4].Value = npp / model.Project.Model.Ecosystem.AutotrophicRespirationMultiplier; // GPP_act
-                    insertRow.Parameters[5].Value = npp; // NPP
-                    insertRow.Parameters[6].Value = -toAtmosphere; // rh
-                    insertRow.Parameters[7].Value = -toDisturbance; // disturbance
-                    insertRow.Parameters[8].Value = -toHarvest; // management loss
-                    insertRow.Parameters[9].Value = nep; // nep
-                    insertRow.Parameters[10].Value = resourceUnit.CarbonCycle.TotalNpp;
-                    insertRow.Parameters[11].Value = resourceUnit.CarbonCycle.TotalCarbonToAtmosphere;
-                    insertRow.Parameters[12].Value = resourceUnit.CarbonCycle.TotalNep;
+                    insertRow.Parameters[1].Value = resourceUnit.ID;
+                    insertRow.Parameters[2].Value = areaFactor;
+                    insertRow.Parameters[3].Value = npp / model.Project.Model.Ecosystem.AutotrophicRespirationMultiplier; // GPP_act
+                    insertRow.Parameters[4].Value = npp; // NPP
+                    insertRow.Parameters[5].Value = -toAtmosphere; // rh
+                    insertRow.Parameters[6].Value = -toDisturbance; // disturbance
+                    insertRow.Parameters[7].Value = -toHarvest; // management loss
+                    insertRow.Parameters[8].Value = nep; // nep
+                    insertRow.Parameters[9].Value = resourceUnit.CarbonCycle.TotalNpp;
+                    insertRow.Parameters[10].Value = resourceUnit.CarbonCycle.TotalCarbonToAtmosphere;
+                    insertRow.Parameters[11].Value = resourceUnit.CarbonCycle.TotalNep;
                     insertRow.ExecuteNonQuery();
                 }
 
@@ -138,12 +136,11 @@ namespace iLand.Output.Sql
                 return;
             }
             insertRow.Parameters[0].Value = currentCalendarYear;
-            insertRow.Parameters[1].Value = -1;
-            insertRow.Parameters[2].Value = -1; // codes -1/-1 for landscape level
-            insertRow.Parameters[3].Value = accumulatedValues[0]; // stockable area [m2]
+            insertRow.Parameters[1].Value = -1; // codes -1/-1 for landscape level
+            insertRow.Parameters[2].Value = accumulatedValues[0]; // stockable area, m²
             for (int valueIndex = 1; valueIndex < accumulatedValues.Length; ++valueIndex)
             {
-                insertRow.Parameters[3 + valueIndex].Value = accumulatedValues[valueIndex] / totalStockableArea;
+                insertRow.Parameters[2 + valueIndex].Value = accumulatedValues[valueIndex] / totalStockableArea;
             }
             insertRow.ExecuteNonQuery();
         }

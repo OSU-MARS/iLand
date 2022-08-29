@@ -25,9 +25,8 @@ namespace iLand.Output.Sql
                                "the tree diameter is below the 'minDbh' threshold (cm). " +
                                "You can further specify a 'condition' to limit execution for specific time/ area with the variables 'ru' (resource unit id) and 'year' (the current year).";
             this.Columns.Add(SqlColumn.CreateYear());
-            this.Columns.Add(SqlColumn.CreateResourceUnit());
-            this.Columns.Add(SqlColumn.CreateID());
-            this.Columns.Add(SqlColumn.CreateSpecies());
+            this.Columns.Add(SqlColumn.CreateResourceUnitID());
+            this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
             this.Columns.Add(new("n_represented", "number of trees that are represented by the cohort (Reineke function).", SqliteType.Real));
             this.Columns.Add(new("dbh", "diameter of the cohort (cm).", SqliteType.Real));
             this.Columns.Add(new("height", "height of the cohort (m).", SqliteType.Real));
@@ -73,13 +72,12 @@ namespace iLand.Output.Sql
                                     float n_repr = treeSpecies.SaplingGrowth.RepresentedStemNumberFromHeight(saplingCell.Saplings[index].HeightInM) / n_on_px;
 
                                     insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
-                                    insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
-                                    insertRow.Parameters[2].Value = resourceUnit.ID;
-                                    insertRow.Parameters[3].Value = ruSpecies.Species.WorldFloraID;
-                                    insertRow.Parameters[4].Value = n_repr;
-                                    insertRow.Parameters[5].Value = dbh;
-                                    insertRow.Parameters[6].Value = saplingCell.Saplings[index].HeightInM;
-                                    insertRow.Parameters[7].Value = saplingCell.Saplings[index].Age;
+                                    insertRow.Parameters[1].Value = resourceUnit.ID;
+                                    insertRow.Parameters[2].Value = ruSpecies.Species.WorldFloraID;
+                                    insertRow.Parameters[3].Value = n_repr;
+                                    insertRow.Parameters[4].Value = dbh;
+                                    insertRow.Parameters[5].Value = saplingCell.Saplings[index].HeightInM;
+                                    insertRow.Parameters[6].Value = saplingCell.Saplings[index].Age;
                                     insertRow.ExecuteNonQuery();
                                 }
                             }

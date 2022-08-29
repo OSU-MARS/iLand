@@ -24,9 +24,8 @@ namespace iLand.Output.Sql
                                "Cohorts with a dbh < 1cm are counted in 'cohort_count_ha' but not used for average calculations." + System.Environment.NewLine + System.Environment.NewLine +
                                "You can specify a 'condition' to limit execution for specific time/ area with the variables 'ru' (resource unit id) and 'year' (the current year)";
             this.Columns.Add(SqlColumn.CreateYear());
-            this.Columns.Add(SqlColumn.CreateResourceUnit());
-            this.Columns.Add(SqlColumn.CreateID());
-            this.Columns.Add(SqlColumn.CreateSpecies());
+            this.Columns.Add(SqlColumn.CreateResourceUnitID());
+            this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
             this.Columns.Add(new("count_ha", "number of represented individuals per ha (tree height >1.3m).", SqliteType.Integer));
             this.Columns.Add(new("count_small_ha", "number of represented individuals per ha (with height <=1.3m).", SqliteType.Integer));
             this.Columns.Add(new("cohort_count_ha", "number of cohorts per ha.", SqliteType.Integer));
@@ -64,17 +63,16 @@ namespace iLand.Output.Sql
 
                     SaplingStatistics saplingStatisticsForSpecies = ruSpecies.SaplingStats;
                     insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
-                    insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = resourceUnit.ID;
-                    insertRow.Parameters[3].Value = ruSpecies.Species.WorldFloraID; // keys
+                    insertRow.Parameters[1].Value = resourceUnit.ID;
+                    insertRow.Parameters[2].Value = ruSpecies.Species.WorldFloraID; // keys
 
                     // calculate statistics based on the number of represented trees per cohort
                     // float n = sap.livingStemNumber(rus.species(), out float avg_dbh, out float avg_height, out float avg_age;
-                    insertRow.Parameters[4].Value = saplingStatisticsForSpecies.LivingSaplings;
-                    insertRow.Parameters[5].Value = saplingStatisticsForSpecies.LivingSaplingsSmall;
-                    insertRow.Parameters[6].Value = saplingStatisticsForSpecies.LivingCohorts;
-                    insertRow.Parameters[7].Value = saplingStatisticsForSpecies.AverageHeight;
-                    insertRow.Parameters[8].Value = saplingStatisticsForSpecies.AverageAgeInYears;
+                    insertRow.Parameters[3].Value = saplingStatisticsForSpecies.LivingSaplings;
+                    insertRow.Parameters[4].Value = saplingStatisticsForSpecies.LivingSaplingsSmall;
+                    insertRow.Parameters[5].Value = saplingStatisticsForSpecies.LivingCohorts;
+                    insertRow.Parameters[6].Value = saplingStatisticsForSpecies.AverageHeight;
+                    insertRow.Parameters[7].Value = saplingStatisticsForSpecies.AverageAgeInYears;
                     insertRow.ExecuteNonQuery();
                 }
             }

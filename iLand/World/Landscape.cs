@@ -501,5 +501,10 @@ namespace iLand.World
             }
             // nothing to do: sapling file is empty
         }
+
+        public PointF ToGisCoordinate(PointF projectCoordinate)
+        {
+            return new PointF(projectCoordinate.X + this.ProjectOriginInGisCoordinates.X, projectCoordinate.Y + this.ProjectOriginInGisCoordinates.Y);
+        }
     }
 }

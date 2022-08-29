@@ -15,19 +15,14 @@ namespace iLand.Output.Sql
             this.SqlType = sqlType;
         }
 
-        public static SqlColumn CreateID()
+        public static SqlColumn CreateResourceUnitID()
         {
-            return new SqlColumn("rid", "id of ressource unit (-1: no ids set)", SqliteType.Integer);
+            return new SqlColumn("resourceUnit", "id of resource unit (-1: no ids set)", SqliteType.Integer);
         }
 
-        public static SqlColumn CreateResourceUnit()
+        public static SqlColumn CreateTreeSpeciesID()
         {
-            return new SqlColumn("ru", "index of ressource unit", SqliteType.Integer);
-        }
-
-        public static SqlColumn CreateSpecies()
-        {
-            return new SqlColumn("species", "tree species", SqliteType.Text);
+            return new SqlColumn("species", "tree species' World Flora Online identifier", SqliteType.Integer);
         }
 
         public static SqlColumn CreateYear() 

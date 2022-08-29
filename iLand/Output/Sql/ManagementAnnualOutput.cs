@@ -16,9 +16,8 @@ namespace iLand.Output.Sql
                                "i.e. the growth of the year in which trees are dying, is included!";
 
             this.Columns.Add(SqlColumn.CreateYear());
-            this.Columns.Add(SqlColumn.CreateResourceUnit());
-            this.Columns.Add(SqlColumn.CreateID());
-            this.Columns.Add(SqlColumn.CreateSpecies());
+            this.Columns.Add(SqlColumn.CreateResourceUnitID());
+            this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
             this.Columns.Add(new("count_ha", "tree count (living)", SqliteType.Integer));
             this.Columns.Add(new("dbh_avg_cm", "average dbh (cm)", SqliteType.Real));
             this.Columns.Add(new("height_avg_m", "average tree height (m)", SqliteType.Real));
@@ -39,14 +38,13 @@ namespace iLand.Output.Sql
                     }
 
                     insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
-                    insertRow.Parameters[1].Value = resourceUnit.ResourceUnitGridIndex;
-                    insertRow.Parameters[2].Value = resourceUnit.ID;
-                    insertRow.Parameters[3].Value = ruSpecies.Species.WorldFloraID; // keys
-                    insertRow.Parameters[4].Value = ruManagementEffects.TreesPerHa;
-                    insertRow.Parameters[5].Value = ruManagementEffects.AverageDbhInCm;
-                    insertRow.Parameters[6].Value = ruManagementEffects.AverageHeightInM;
-                    insertRow.Parameters[7].Value = ruManagementEffects.StemVolumeInM3PerHa;
-                    insertRow.Parameters[8].Value = ruManagementEffects.BasalAreaInM2PerHa;
+                    insertRow.Parameters[1].Value = resourceUnit.ID;
+                    insertRow.Parameters[2].Value = ruSpecies.Species.WorldFloraID; // keys
+                    insertRow.Parameters[3].Value = ruManagementEffects.TreesPerHa;
+                    insertRow.Parameters[4].Value = ruManagementEffects.AverageDbhInCm;
+                    insertRow.Parameters[5].Value = ruManagementEffects.AverageHeightInM;
+                    insertRow.Parameters[6].Value = ruManagementEffects.StemVolumeInM3PerHa;
+                    insertRow.Parameters[7].Value = ruManagementEffects.BasalAreaInM2PerHa;
 
                     insertRow.ExecuteNonQuery();
                 }

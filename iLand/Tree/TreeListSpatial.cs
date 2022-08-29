@@ -17,8 +17,6 @@ namespace iLand.Tree
       */
     public class TreeListSpatial : TreeListBiometric
     {
-        private readonly Grid<float> lightGrid;
-
         private TreeFlags[] flags; // mortality and harvest flags
 
         public float[] DbhDeltaInCm { get; private set; } // diameter growth [cm]
@@ -26,10 +24,9 @@ namespace iLand.Tree
         public LightStamp[] LightStamp { get; private set; }
         public ResourceUnit ResourceUnit { get; private set; } // pointer to the ressource unit the tree belongs to.
 
-        public TreeListSpatial(Landscape landscape, ResourceUnit resourceUnit, TreeSpecies species, int capacity)
+        public TreeListSpatial(ResourceUnit resourceUnit, TreeSpecies species, int capacity)
             : base(species, capacity)
         {
-            this.lightGrid = landscape.LightGrid;
             this.flags = new TreeFlags[capacity];
 
             this.Allocate(capacity);
@@ -310,13 +307,6 @@ namespace iLand.Tree
         public float GetBranchBiomass(int treeIndex)
         {
             return this.Species.GetBiomassBranch(this.DbhInCm[treeIndex]);
-        }
-
-        // the tree list does not store the tree's exact GIS coordinates, only the index of pixel on the light grid
-        public PointF GetCellCenterPoint(int treeIndex)
-        {
-            Debug.Assert(this.lightGrid != null);
-            return this.lightGrid.GetCellProjectCentroid(this.LightCellIndexXY[treeIndex]);
         }
 
         public float GetCrownRadius(int treeIndex)
@@ -761,12 +751,6 @@ namespace iLand.Tree
         public void SetDeathReasonWind(int treeIndex)
         {
             this.SetOrClearFlag(treeIndex, TreeFlags.DeadFromWind, true);
-        }
-
-        public void SetLightCellIndex(int treeIndex, PointF pos)
-        {
-            Debug.Assert(this.lightGrid != null);
-            this.LightCellIndexXY[treeIndex] = this.lightGrid.GetCellXYIndex(pos);
         }
 
         // private bool IsDebugging() { return this.flags[treeIndex].HasFlag(TreeFlags.Debugging); }
