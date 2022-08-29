@@ -43,7 +43,8 @@ namespace iLand.World
         {
             if (treeReader is IndividualTreeReader individualTreeReader)
             {
-                TreePopulator.PopulateResourceUnitWithIndividualTrees(projectFile, landscape, resourceUnit, individualTreeReader);
+                float lightStampBeerLambertK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
+                TreePopulator.PopulateResourceUnitWithIndividualTrees(landscape, resourceUnit, individualTreeReader, lightStampBeerLambertK);
             }
             else if (treeReader is TreeSizeDistributionReaderCsv sizeDistributionReader)
             {
@@ -55,7 +56,7 @@ namespace iLand.World
             }
         }
 
-        private static int CompareHeightInitCells(HeightInitCell s1, HeightInitCell s2)
+        private static int CompareHeightInitCells(StandHeightInitCell s1, StandHeightInitCell s2)
         {
             if (s1.BasalArea < s2.BasalArea)
             {
@@ -68,7 +69,7 @@ namespace iLand.World
             return 0;
         }
 
-        private static int CompareInitPixelUnlocked(HeightInitCell s1, HeightInitCell s2)
+        private static int CompareInitPixelUnlocked(StandHeightInitCell s1, StandHeightInitCell s2)
         {
             if (!s1.IsSingleSpecies && s2.IsSingleSpecies)
             {
@@ -140,7 +141,7 @@ namespace iLand.World
         }
 
         // high risk member: likely to require debugging and additional test coverage
-        private (Point lightCellIndexXY, int heightCellIndex) FindLightCellIndexXYForNewTree(Landscape landscape, ResourceUnit resourceUnit, Dictionary<int, (TreeListSpatial Trees, List<int> TreeIndices)> treeIndexByHeightCellIndex, TreeSizeRange sizeRange, ref (int TreePlacementBits, int TreePlacementIndex) treePlacementState, RandomGenerator randomGenerator)
+        private Point FindLightCellIndexXYForNewTree(Landscape landscape, ResourceUnit resourceUnit, int[] treeCountByHeightCell, TreeSizeRange sizeRange, ref (int TreePlacementBits, int TreePlacementIndex) treePlacementState, RandomGenerator randomGenerator)
         {
             Debug.Assert(this.treeSizeDistribution != null);
 
@@ -155,12 +156,7 @@ namespace iLand.World
             // pick a randomized light cell to place this tree in
             int heightCellIndex = Maths.Limit((int)(Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth * randomValue), 0, Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth - 1); // get from random number generator
 
-            int treesAlreadyPresentInCell = 0;
-            if (treeIndexByHeightCellIndex.TryGetValue(heightCellIndex, out (TreeListSpatial Trees, List<int> TreeIndices) treesInHeightCell))
-            {
-                treesAlreadyPresentInCell = treesInHeightCell.TreeIndices.Count;
-            }
-
+            int treesAlreadyPresentInCell = treeCountByHeightCell[heightCellIndex];
             if (treesAlreadyPresentInCell > 18)
             {
                 treePlacementState.TreePlacementIndex = (treePlacementState.TreePlacementIndex + 1) % 25;
@@ -183,6 +179,7 @@ namespace iLand.World
 
                 Maths.SetBit(ref treePlacementState.TreePlacementBits, treePlacementState.TreePlacementIndex, true); // mark position as used
             }
+
             // get position from fixed lists (one for even, one for uneven resource units)
             int lightCellIndexWithinHeightCell = resourceUnit.ResourceUnitGridIndex % Constant.LightCellSizeInM != 0 ? TreePopulator.EvenHeightCellPositions[treePlacementState.TreePlacementIndex] : TreePopulator.UnevenHeightCellPositions[treePlacementState.TreePlacementIndex];
             // position of resource unit + position of 10x10m pixel + position within 10x10m pixel
@@ -192,7 +189,8 @@ namespace iLand.World
                                          ruLightIndexXY.Y + Constant.LightCellsPerHeightCellWidth * (heightCellIndex % Constant.HeightCellSizeInM) + lightCellIndexWithinHeightCell % Constant.LightCellsPerHeightCellWidth);
             Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
-            return (lightCellIndexXY, heightCellIndex);
+            treeCountByHeightCell[heightCellIndex] = treesAlreadyPresentInCell + 1;
+            return lightCellIndexXY;
         }
 
         /// a (hacky) way of adding saplings of a certain age to a stand defined by 'stand_id'.
@@ -282,6 +280,7 @@ namespace iLand.World
 
         private static void PopulateResourceUnitsWithIndividualTrees(Project projectFile, Landscape landscape, IndividualTreeReader individualTreeReader, ParallelOptions parallelComputeOptions)
         {
+            float lightStampBeerLambertK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
             float projectOriginGisCoordinatesX = landscape.ProjectOriginInGisCoordinates.X;
             float projectOriginGisCoordinatesY = landscape.ProjectOriginInGisCoordinates.Y;
             float resourceUnitMinimumX = landscape.ResourceUnitGrid.ProjectExtent.X;
@@ -294,8 +293,10 @@ namespace iLand.World
             Parallel.For(0, partitions, parallelComputeOptions, (int partitionIndex) =>
             {
                 (int startTreeIndexInFile, int endTreeIndexInFile) = ParallelOptionsExtensions.GetUniformPartitionRange(partitionIndex, treesPerPartion, treeCount);
-                TreeListMultispecies treesToAdd = new(Constant.Data.MaxResourceUnitTreeBatchSize);
                 ResourceUnit? previousResourceUnit = null;
+                int treeAddStartIndex = startTreeIndexInFile;
+                Point[] treePositions = new Point[Constant.Data.MaxResourceUnitTreeBatchSize];
+                int treesToAdd = 0;
                 for (int treeIndexInFile = startTreeIndexInFile; treeIndexInFile < endTreeIndexInFile; ++treeIndexInFile)
                 {
                     // if needed, trees of sapling size could be converted to saplings rather than added as treees
@@ -370,38 +371,34 @@ namespace iLand.World
                     Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
                     // add batch to resource unit when resource unit changes or when batch capacity is reached
-                    if ((Object.ReferenceEquals(previousResourceUnit, resourceUnit) == false) || (treesToAdd.Count == treesToAdd.Capacity))
+                    if ((Object.ReferenceEquals(previousResourceUnit, resourceUnit) == false) || (treesToAdd == treePositions.Length))
                     {
                         if (previousResourceUnit != null)
                         {
-                            lock (resourceUnit)
+                            lock (previousResourceUnit)
                             {
-                                previousResourceUnit.Trees.AddTrees(projectFile, landscape, treesToAdd);
+                                TreeSpanForAddition resourceUnitSlice = new(individualTreeReader, treePositions, treeAddStartIndex, treesToAdd);
+                                previousResourceUnit.Trees.AddTrees(resourceUnitSlice, lightStampBeerLambertK);
                             }
-                            treesToAdd.Count = 0;
+                            treeAddStartIndex = treeIndexInFile;
+                            treesToAdd = 0;
                         }
                     }
 
-                    // add tree to batch
-                    int treeAddIndex = treesToAdd.Count;
-                    treesToAdd.StandID[treeAddIndex] = individualTreeReader.StandID[treeIndexInFile];
-                    treesToAdd.TreeID[treeAddIndex] = individualTreeReader.TreeID[treeIndexInFile];
-                    treesToAdd.SpeciesID[treeAddIndex] = individualTreeReader.SpeciesID[treeIndexInFile];
-                    treesToAdd.DbhInCm[treeAddIndex] = individualTreeReader.DbhInCm[treeIndexInFile];
-                    treesToAdd.HeightInM[treeAddIndex] = individualTreeReader.HeightInM[treeIndexInFile];
-                    treesToAdd.LightCellIndexXY[treeAddIndex] = lightCellIndexXY;
-                    treesToAdd.AgeInYears[treeAddIndex] = individualTreeReader.AgeInYears[treeIndexInFile];
-                    ++treesToAdd.Count;
+                    // capture tree's position
+                    treePositions[treesToAdd] = lightCellIndexXY;
+                    ++treesToAdd;
 
                     previousResourceUnit = resourceUnit;
                 }
 
                 // commit final batch
-                if ((previousResourceUnit != null) && (treesToAdd.Count > 0))
+                if ((previousResourceUnit != null) && (treesToAdd > 0))
                 {
                     lock (previousResourceUnit)
                     {
-                        previousResourceUnit.Trees.AddTrees(projectFile, landscape, treesToAdd);
+                        TreeSpanForAddition resourceUnitSlice = new(individualTreeReader, treePositions, treeAddStartIndex, treesToAdd);
+                        previousResourceUnit.Trees.AddTrees(resourceUnitSlice, lightStampBeerLambertK);
                     }
                     // treeBatch.Count = 0; // not necessary as this is the batch's last use
                 }
@@ -410,74 +407,53 @@ namespace iLand.World
 
         private void PopulateResourceUnitTreesFromSizeDistribution(Project projectFile, Landscape landscape, ResourceUnit resourceUnit, List<TreeSizeRange> treeSizeDistribution, RandomGenerator randomGenerator)
         {
-            //List<MutableTuple<int, float>> resourceUnitBasalAreaByHeightCellIndex = new();
-            //for (int heightCellIndex = 0; heightCellIndex < Constant.HeightSizePerRU * Constant.HeightSizePerRU; ++heightCellIndex)
-            //{
-            //    resourceUnitBasalAreaByHeightCellIndex.Add(new MutableTuple<int, float>(heightCellIndex, 0.0F));
-            //}
-
-            // a multimap holds a list for all trees.
-            // key is the index of a 10x10m pixel within the resource unit
-
-            Dictionary<int, (TreeListSpatial Trees, List<int> TreeIndices)> treeIndexByHeightCellIndex = new();
+            float lightStampBeerLambertK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
+            int[] treeCountByHeightCell = new int[Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth];
             (int TreePlacementBits, int TreePlacementIndex) treePlacementState = (0, -1);
-            //int totalTreeCount = 0;
-            foreach (TreeSizeRange sizeRange in treeSizeDistribution)
+            TreeListForAddition treesToAdd = new(0);
+            int uniqueTreeIDonResourceUnit = -1;
+            for (int distributionIndex = 0; distributionIndex < treeSizeDistribution.Count; ++distributionIndex)
             {
-                TreeSpecies treeSpecies = resourceUnit.Trees.TreeSpeciesSet[sizeRange.SpeciesID];
-                for (int index = 0; index < sizeRange.Count; ++index)
+                TreeSizeRange sizeRange = treeSizeDistribution[distributionIndex];
+                int requiredCapacity = Simd128.RoundUpToWidth32(sizeRange.TreesPerResourceUnit);
+                if (treesToAdd.Capacity < requiredCapacity)
                 {
-                    // create tree
-                    float dbhInCm = randomGenerator.GetRandomFloat(sizeRange.DbhFrom, sizeRange.DbhTo);
-                    float heightInM = 0.01F * dbhInCm * sizeRange.HeightDiameterRatio; // dbh from cm->m, *hd-ratio -> meter height
-                    (Point lightCellIndexXY, int heightCellIndex) = this.FindLightCellIndexXYForNewTree(landscape, resourceUnit, treeIndexByHeightCellIndex, sizeRange, ref treePlacementState, randomGenerator);
-                    Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
-
-                    int treeIndex = resourceUnit.Trees.AddTree(projectFile, landscape, treeSpecies.WorldFloraID, dbhInCm, heightInM, lightCellIndexXY, sizeRange.Age, out TreeListSpatial treesOfSpecies);
-                    //++totalTreeCount;
-
-                    if (treeIndexByHeightCellIndex.TryGetValue(heightCellIndex, out (TreeListSpatial Trees, List<int> TreeIndices) treesInHeightCell) == false)
-                    {
-                        treesInHeightCell = new(treesOfSpecies, new List<int>());
-                        treeIndexByHeightCellIndex.Add(heightCellIndex, treesInHeightCell);
-                    }
-                    treesInHeightCell.TreeIndices.Add(treesOfSpecies.TreeID[treeIndex]); // store tree in map
-
-                    //MutableTuple<int, float> resourceUnitBasalArea = resourceUnitBasalAreaByHeightCellIndex[randomHeightCellIndex];
-                    //resourceUnitBasalArea.Item2 += treesOfSpecies.GetBasalArea(treeIndex); // aggregate the basal area for each 10m pixel
-                    //if ((totalTreeCount < 20 && index % 2 == 0) ||
-                    //    (totalTreeCount < 100 && index % 10 == 0) ||
-                    //    (index % 30 == 0))
-                    //{
-                    //    resourceUnitBasalAreaByHeightCellIndex.Sort(StandReader.SortPairLessThan);
-                    //}
+                    treesToAdd.Resize(requiredCapacity);
                 }
-                //resourceUnitBasalAreaByHeightCellIndex.Sort(StandReader.SortPairLessThan);
-            }
 
-            //for (int heightCellIndex = 0; heightCellIndex < Constant.HeightCellsPerRUWidth * Constant.HeightCellsPerRUWidth; ++heightCellIndex)
-            //{
-            //    PointF heightCellProjectCentroid = resourceUnit.ProjectExtent.Location.Add(new PointF(Constant.HeightCellSizeInM * (heightCellIndex / Constant.HeightCellSizeInM + 0.5F), Constant.HeightCellSizeInM * (heightCellIndex % Constant.HeightCellSizeInM + 0.5F)));
-            //    if (landscape.VegetationHeightFlags[heightCellProjectCentroid].IsInResourceUnit() == false)
-            //    {
-            //        // no trees on that pixel: let trees die
-            //        trees trees = treesinheightcell.trees;
-            //        foreach (int treeindex in treesinheightcell.treeindices)
-            //        {
-            //            trees.die(model, treeindex);
-            //        }
-            //        continue;
-            //    }
-            //}
+                TreeSpecies treeSpecies = resourceUnit.Trees.TreeSpeciesSet[sizeRange.SpeciesID];
+                WorldFloraID treeSpeciesID = treeSpecies.WorldFloraID;
+                for (int treeIndex = 0; treeIndex < sizeRange.TreesPerResourceUnit; ++treeIndex)
+                {
+                    treesToAdd.AgeInYears[treeIndex] = sizeRange.Age;
+
+                    float dbhInCm = randomGenerator.GetRandomFloat(sizeRange.DbhFrom, sizeRange.DbhTo);
+                    treesToAdd.DbhInCm[treeIndex] = dbhInCm;
+
+                    float heightInM = 0.01F * dbhInCm * sizeRange.HeightDiameterRatio; // dbh from cm->m, *hd-ratio -> meter height
+                    treesToAdd.HeightInM[treeIndex] = heightInM;
+
+                    Point lightCellIndexXY = this.FindLightCellIndexXYForNewTree(landscape, resourceUnit, treeCountByHeightCell, sizeRange, ref treePlacementState, randomGenerator);
+                    Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
+                    treesToAdd.LightCellIndexXY[treeIndex] = lightCellIndexXY;
+
+                    treesToAdd.SpeciesID[treeIndex] = treeSpeciesID;
+                    treesToAdd.StandID[treeIndex] = Constant.DefaultStandID;
+                    treesToAdd.TreeID[treeIndex] = ++uniqueTreeIDonResourceUnit;
+                }
+                treesToAdd.Count = sizeRange.TreesPerResourceUnit;
+
+                resourceUnit.Trees.AddTrees(treesToAdd.AsSpan(), lightStampBeerLambertK);
+            }
         }
 
-        /** load a list of trees (given by content) to a resource unit. Param fileName is just for error reporting.
-            returns the number of loaded trees.
-          */
-        private static void PopulateResourceUnitWithIndividualTrees(Project projectFile, Landscape landscape, ResourceUnit resourceUnit, IndividualTreeReader individualTreeReader)
+        // clones a list of trees (given by content) to a resource unit
+        private static void PopulateResourceUnitWithIndividualTrees(Landscape landscape, ResourceUnit resourceUnit, IndividualTreeReader individualTreeReader, float lightStampBeerLambertK)
         {
             Point ruPositionInResourceUnitGrid = landscape.ResourceUnitGrid.GetCellXYIndex(resourceUnit.ResourceUnitGridIndex);
-            PointF translationToPlaceTreeOnResourceUnit = new(Constant.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.X, Constant.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.Y);
+            float translationToPlaceTreeOnResourceUnitX = Constant.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.X;
+            float translationToPlaceTreeOnResourceUnitY = Constant.ResourceUnitSizeInM * ruPositionInResourceUnitGrid.Y;
+            Point[] treePositions = new Point[individualTreeReader.Count];
 
             for (int treeIndexInFile = 0; treeIndexInFile < individualTreeReader.Count; ++treeIndexInFile)
             {
@@ -485,8 +461,8 @@ namespace iLand.World
                 //    continue;
 
                 // locate tree
-                float treeProjectX = individualTreeReader.GisX[treeIndexInFile] - landscape.ProjectOriginInGisCoordinates.X + translationToPlaceTreeOnResourceUnit.X;
-                float treeProjectY = individualTreeReader.GisY[treeIndexInFile] - landscape.ProjectOriginInGisCoordinates.Y + translationToPlaceTreeOnResourceUnit.Y;
+                float treeProjectX = individualTreeReader.GisX[treeIndexInFile] - landscape.ProjectOriginInGisCoordinates.X + translationToPlaceTreeOnResourceUnitX;
+                float treeProjectY = individualTreeReader.GisY[treeIndexInFile] - landscape.ProjectOriginInGisCoordinates.Y + translationToPlaceTreeOnResourceUnitY;
                 //if (landscape.VegetationHeightFlags[treeProjectX, treeProjectY].IsInResourceUnit() == false)
                 //{
                 //    throw new NotSupportedException("Individual tree " + individualTreeReader.TreeID[treeIndexInFile] + " (line " + (treeIndexInFile + 1) + ") is not located in project simulation area after being displaced to resource unit " + resourceUnit.ID + ". Tree coordinates are (" + treeProjectX + ", " + treeProjectY + ")");
@@ -494,16 +470,11 @@ namespace iLand.World
                 Point lightCellIndexXY = landscape.LightGrid.GetCellXYIndex(treeProjectX, treeProjectY);
                 Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
 
-                // add tree
-                WorldFloraID speciesID = individualTreeReader.SpeciesID[treeIndexInFile];
-                float dbhInCm = individualTreeReader.DbhInCm[treeIndexInFile];
-                float heightInM = individualTreeReader.HeightInM[treeIndexInFile];
-                UInt16 ageInYears = individualTreeReader.AgeInYears[treeIndexInFile];
-                int treeIndexInResourceUnitTreeList = resourceUnit.Trees.AddTree(projectFile, landscape, speciesID, dbhInCm, heightInM, lightCellIndexXY, ageInYears, out TreeListSpatial treesOfSpecies);
-
-                treesOfSpecies.StandID[treeIndexInResourceUnitTreeList] = individualTreeReader.StandID[treeIndexInFile];
-                treesOfSpecies.TreeID[treeIndexInResourceUnitTreeList] = individualTreeReader.TreeID[treeIndexInFile];
+                treePositions[treeIndexInFile] = lightCellIndexXY;
             }
+
+            TreeSpanForAddition treeSpan = new(individualTreeReader, treePositions, 0, individualTreeReader.Count);
+            resourceUnit.Trees.AddTrees(treeSpan, lightStampBeerLambertK);
         }
 
         // Initialization routine based on a stand map.
@@ -528,22 +499,20 @@ namespace iLand.World
                 }
                 return;
             }
-            // a multiHash holds a list for all trees.
-            // key is the location of the 10x10m pixel
-            Dictionary<int, (TreeListSpatial Trees, List<int> TreeIndices)> treeIndicesByHeightCellIndex = new();
-            List<HeightInitCell> heightCells = new(heightCellIndicesInStand.Count); // working list of all 10m pixels
+
+            List<StandHeightInitCell> heightCellsInStand = new(heightCellIndicesInStand.Count); // working list of all 10m pixels
             for (int heightCellsInstantiated = 0; heightCellsInstantiated < heightCellIndicesInStand.Count; ++heightCellsInstantiated)
             {
                 ResourceUnit resourceUnit = landscape.GetResourceUnit(standRaster.Grid.GetCellProjectCentroid(heightCellsInstantiated));
-                HeightInitCell heightCell = new(resourceUnit)
+                StandHeightInitCell heightCell = new(resourceUnit)
                 {
-                    GridCellIndex = heightCellsInstantiated // index in the 10m grid
+                    HeightGridIndex = heightCellsInstantiated // index in the 10m grid
                 };
                 if (initialHeightGrid.IsSetup())
                 {
-                    heightCell.MaxHeight = initialHeightGrid.Grid[heightCell.GridCellIndex];
+                    heightCell.MaxHeight = initialHeightGrid.Grid[heightCell.HeightGridIndex];
                 }
-                heightCells.Add(heightCell);
+                heightCellsInStand.Add(heightCell);
             }
             float standAreaInResourceUnits = standRaster.GetAreaInSquareMeters(standID) / Constant.ResourceUnitAreaInM2;
 
@@ -555,47 +524,52 @@ namespace iLand.World
             Debug.Assert(this.treeSizeDistribution != null);
             Debug.Assert(heightGridResponse != null);
             int heightCellIndex = 0;
+            float lightStampBeerLambertK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
+            int maxHeightFittingAttempts = projectFile.World.Initialization.HeightGrid.MaxTries;
+            ResourceUnit? previousResourceUnit = null;
             WorldFloraID previousSpeciesID = WorldFloraID.Unknown;
             int treeCount = 0;
             (int TreePlacementBits, int TreePlacementIndex) treePlacementState = (0, -1);
             int totalTries = 0;
             int totalMisses = 0;
-            foreach (TreeSizeRange treeSizeRange in treeSizeDistribution)
+            int[] treeCountByHeightCell = new int[heightCellIndicesInStand.Count];
+            TreeListForAddition treesToAddToMostRecentResourceUnit = new(100);
+            for (int distributionIndex = 0; distributionIndex < treeSizeDistribution.Count; ++distributionIndex)
             {
+                TreeSizeRange treeSizeRange = treeSizeDistribution[distributionIndex];
                 if (treeSizeRange.Density > 1.0)
                 {
                     // special case with single-species-area
                     if (treeCount == 0)
                     {
                         // randomize the pixels
-                        for (int heightIndex = 0; heightIndex < heightCells.Count; ++heightIndex)
+                        for (int heightIndex = 0; heightIndex < heightCellsInStand.Count; ++heightIndex)
                         {
-                            heightCells[heightIndex].BasalArea = randomGenerator.GetRandomProbability();
+                            heightCellsInStand[heightIndex].BasalArea = randomGenerator.GetRandomProbability();
                         }
-                        heightCells.Sort(TreePopulator.CompareHeightInitCells);
+                        heightCellsInStand.Sort(TreePopulator.CompareHeightInitCells);
 
-                        for (int heightIndex = 0; heightIndex < heightCells.Count; ++heightIndex)
+                        for (int heightIndex = 0; heightIndex < heightCellsInStand.Count; ++heightIndex)
                         {
-                            heightCells[heightIndex].BasalArea = 0.0F;
+                            heightCellsInStand[heightIndex].BasalArea = 0.0F;
                         }
                     }
 
                     if (treeSizeRange.SpeciesID != previousSpeciesID)
                     {
                         previousSpeciesID = treeSizeRange.SpeciesID;
-                        heightCells.Sort(TreePopulator.CompareInitPixelUnlocked);
+                        heightCellsInStand.Sort(TreePopulator.CompareInitPixelUnlocked);
                     }
                 }
                 else
                 {
-                    heightCells.Sort(TreePopulator.CompareHeightInitCells);
+                    heightCellsInStand.Sort(TreePopulator.CompareHeightInitCells);
                     previousSpeciesID = WorldFloraID.Unknown;
                 }
 
                 float randomFraction = treeSizeRange.Density;
-                int treesToAdd = (int)(treeSizeRange.Count * standAreaInResourceUnits + 0.5F); // round
-                float init_max_height = treeSizeRange.DbhTo / 100.0F * treeSizeRange.HeightDiameterRatio;
-                int maxHeightFittingAttempts = projectFile.World.Initialization.HeightGrid.MaxTries;
+                float maxHeightInM = 0.01F * treeSizeRange.DbhTo * treeSizeRange.HeightDiameterRatio;
+                int treesToAdd = (int)(treeSizeRange.TreesPerResourceUnit * standAreaInResourceUnits + 0.5F); // round
                 for (int treesAdded = 0; treesAdded < treesToAdd; ++treesAdded)
                 {
                     bool found = false;
@@ -621,14 +595,14 @@ namespace iLand.World
                         ++totalTries;
 
                         // key: rank of target pixel
-                        heightCellIndex = Maths.Limit((int)(heightCells.Count * randomValue), 0, heightCells.Count - 1); // get from random number generator
+                        heightCellIndex = Maths.Limit((int)(heightCellsInStand.Count * randomValue), 0, heightCellsInStand.Count - 1); // get from random number generator
 
                         if (initialHeightGrid.IsSetup())
                         {
                             // calculate how well the selected pixel fits w.r.t. the predefined height
-                            if (heightCells[heightCellIndex].MaxHeight > 0.0F)
+                            if (heightCellsInStand[heightCellIndex].MaxHeight > 0.0F)
                             {
-                                float heightResponse = heightGridResponse.Evaluate(init_max_height / heightCells[heightCellIndex].MaxHeight);
+                                float heightResponse = heightGridResponse.Evaluate(maxHeightInM / heightCellsInStand[heightCellIndex].MaxHeight);
                                 if (randomGenerator.GetRandomProbability() < heightResponse)
                                 {
                                     found = true;
@@ -639,7 +613,7 @@ namespace iLand.World
                         {
                             found = true;
                         }
-                        if ((previousSpeciesID != WorldFloraID.Unknown) && heightCells[heightCellIndex].IsSingleSpecies)
+                        if ((previousSpeciesID != WorldFloraID.Unknown) && heightCellsInStand[heightCellIndex].IsSingleSpecies)
                         {
                             found = false;
                         }
@@ -649,81 +623,56 @@ namespace iLand.World
                         ++totalMisses;
                     }
 
-                    // create a tree
-                    ResourceUnit resourceUnit = heightCells[heightCellIndex].ResourceUnit;
-                    TreeSpecies treeSpecies = resourceUnit.Trees.TreeSpeciesSet[treeSizeRange.SpeciesID];
+                    // add trees when resource unit changes
+                    ResourceUnit resourceUnit = heightCellsInStand[heightCellIndex].ResourceUnit;
+                    if ((Object.ReferenceEquals(resourceUnit, previousResourceUnit) == false) && (previousResourceUnit != null))
+                    {
+                        lock (previousResourceUnit)
+                        {
+                            previousResourceUnit.Trees.AddTrees(treesToAddToMostRecentResourceUnit.AsSpan(), lightStampBeerLambertK);
+                            treesToAddToMostRecentResourceUnit.Count = 0;
+                        }
+                    }
+
+                    int treeIndex = treesToAddToMostRecentResourceUnit.Count;
+                    treesToAddToMostRecentResourceUnit.SpeciesID[treeIndex] = treeSizeRange.SpeciesID;
 
                     float dbhInCm = randomGenerator.GetRandomFloat(treeSizeRange.DbhFrom, treeSizeRange.DbhTo);
+                    treesToAddToMostRecentResourceUnit.DbhInCm[treeIndex] = dbhInCm;
+
                     float heightInM = 0.01F * dbhInCm * treeSizeRange.HeightDiameterRatio;
-                    (Point lightCellIndexXY, int _) = this.FindLightCellIndexXYForNewTree(landscape, resourceUnit, treeIndicesByHeightCellIndex, treeSizeRange, ref treePlacementState, randomGenerator);
+                    treesToAddToMostRecentResourceUnit.HeightInM[treeIndex] = heightInM;
+
+                    Point lightCellIndexXY = this.FindLightCellIndexXYForNewTree(landscape, resourceUnit, treeCountByHeightCell, treeSizeRange, ref treePlacementState, randomGenerator);
+                    treesToAddToMostRecentResourceUnit.LightCellIndexXY[treeIndex] = lightCellIndexXY;
+
                     UInt16 ageInYears = treeSizeRange.Age;
-                    int treeIndex = resourceUnit.Trees.AddTree(projectFile, landscape, treeSpecies.WorldFloraID, dbhInCm, heightInM, lightCellIndexXY, ageInYears, out TreeListSpatial treesOfSpecies);
+                    treesToAddToMostRecentResourceUnit.AgeInYears[treeIndex] = ageInYears;
+                    
+                    ++treesToAddToMostRecentResourceUnit.Count;
                     ++treeCount;
 
-                    // store in the multiHash the position of the pixel and the tree_idx in the resepctive resource unit
-                    if (treeIndicesByHeightCellIndex.TryGetValue(heightCells[heightCellIndex].GridCellIndex, out (TreeListSpatial Trees, List<int> TreeIndices) treeIndexByHeightCellIndex) == false)
-                    {
-                        treeIndexByHeightCellIndex = new(treesOfSpecies, new List<int>());
-                        treeIndicesByHeightCellIndex.Add(heightCells[heightCellIndex].GridCellIndex, treeIndexByHeightCellIndex);
-                    }
-                    treeIndexByHeightCellIndex.TreeIndices.Add(treeIndex);
-
-                    heightCells[heightCellIndex].BasalArea += treesOfSpecies.GetBasalArea(treeIndex); // aggregate the basal area for each 10m pixel
+                    heightCellsInStand[heightCellIndex].BasalArea += 0.25F * MathF.PI * 0.0001F * dbhInCm * dbhInCm; // aggregate the basal area for each 10m pixel
                     if (previousSpeciesID != WorldFloraID.Unknown)
                     {
-                        heightCells[heightCellIndex].IsSingleSpecies = true;
+                        heightCellsInStand[heightCellIndex].IsSingleSpecies = true;
                     }
 
                     // resort list
                     if ((previousSpeciesID == WorldFloraID.Unknown) && (treeCount < 20 && (treesAdded % 2 == 0) || (treeCount < 100) && (treesAdded % 10 == 0) || (treesAdded % 30 == 0)))
                     {
-                        heightCells.Sort(TreePopulator.CompareHeightInitCells);
+                        heightCellsInStand.Sort(TreePopulator.CompareHeightInitCells);
                     }
                 }
-            }
 
-            foreach (HeightInitCell heightCell in heightCells)
-            {
-                (TreeListSpatial Trees, List<int> TreeIndices) treesInHeightCell = treeIndicesByHeightCellIndex[heightCell.GridCellIndex];
-                int index = -1;
-                foreach (int treeIndex in treesInHeightCell.TreeIndices)
+                if (treesToAddToMostRecentResourceUnit.Count > 0)
                 {
-                    if (treesInHeightCell.TreeIndices.Count > 18)
+                    Debug.Assert(previousResourceUnit != null);
+                    lock (previousResourceUnit)
                     {
-                        index = (index + 1) % 25;
+                        previousResourceUnit.Trees.AddTrees(treesToAddToMostRecentResourceUnit.AsSpan(), lightStampBeerLambertK);
+                        treesToAddToMostRecentResourceUnit.Count = 0; // needed as this may not be the 
                     }
-                    else
-                    {
-                        int bits = 0;
-                        int stop = 1000;
-                        index = 0;
-                        do
-                        {
-                            // search a random position
-                            float random = randomGenerator.GetRandomProbability();
-                            index = Maths.Limit((int)(25 * random * random), 0, 24); // use rnd()^2 to search for locations -> higher number of low indices (i.e. 50% of lookups in first 25% of locations)
-                        }
-                        while (Maths.IsBitSet(bits, index) == true && stop-- != 0);
-
-                        if (stop == 0 && projectFile.Output.Logging.LogLevel >= EventLevel.Informational)
-                        {
-                            Trace.TraceInformation("InitializeStand(): found no free bit.");
-                        }
-                        Maths.SetBit(ref bits, index, true); // mark position as used
-                    }
-
-                    // get position from fixed lists (one for even, one for uneven resource units)
-                    int positionInResourceUnit = heightCell.ResourceUnit.ResourceUnitGridIndex % Constant.LightCellSizeInM != 0 ? EvenHeightCellPositions[index] : UnevenHeightCellPositions[index];
-                    Point heightCellIndexXY = landscape.VegetationHeightGrid.GetCellXYIndex(heightCell.GridCellIndex);
-                    Point lightCellIndex = new(heightCellIndexXY.X * Constant.LightCellsPerHeightCellWidth + positionInResourceUnit / Constant.LightCellsPerHeightCellWidth, // convert to LIF index
-                                               heightCellIndexXY.Y * Constant.LightCellsPerHeightCellWidth + positionInResourceUnit % Constant.LightCellsPerHeightCellWidth);
-                    if (landscape.LightGrid.Contains(lightCellIndex) == false)
-                    {
-                        throw new NotSupportedException("Tree is positioned outside of the light grid.");
-                    }
-
-                    TreeListSpatial trees = treesInHeightCell.Trees;
-                    trees.LightCellIndexXY[treeIndex] = lightCellIndex;
                 }
             }
         }
@@ -790,7 +739,7 @@ namespace iLand.World
                     // The tree file can be either individual trees or a size distribution.
                     if ((landscape.StandRaster == null) || (landscape.StandRaster.IsSetup() == false))
                     {
-                        throw new NotSupportedException("/project/model/world/initialization/trees is 'standRaster' but no stand raster (/project/model/world/initialization/standRasterFile) is present.");
+                        throw new NotSupportedException("/project/model/world/initialization/treeFile '" + treeFilePath + "' lists other tree files by stand ID but no stand raster file (/project/model/world/initialization/standRasterFile) is indicated.");
                     }
 
                     Parallel.For(0, treeFileByStandIDReader.TreeFileNameByStandID.Count, parallelComputeOptions, (int standIndex) =>
@@ -823,15 +772,15 @@ namespace iLand.World
             }
         }
 
-        private class HeightInitCell
+        private class StandHeightInitCell
         {
             public float BasalArea { get; set; } // accumulated basal area
-            public int GridCellIndex { get; init; } // location of the pixel
+            public int HeightGridIndex { get; init; } // height grid location of the cell
+            public bool IsSingleSpecies { get; set; } // pixel is dedicated to a single species
             public float MaxHeight { get; set; } // predefined maximum height at given pixel (if available from LIDAR or so)
             public ResourceUnit ResourceUnit { get; private init; } // pointer to the resource unit the pixel belongs to
-            public bool IsSingleSpecies { get; set; } // pixel is dedicated to a single species
 
-            public HeightInitCell(ResourceUnit resourceUnit)
+            public StandHeightInitCell(ResourceUnit resourceUnit)
             {
                 this.BasalArea = 0.0F;
                 this.IsSingleSpecies = false;

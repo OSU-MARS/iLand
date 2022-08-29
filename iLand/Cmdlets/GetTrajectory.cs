@@ -53,7 +53,7 @@ namespace iLand.Cmdlets
             double setupSeconds = setupTime.TotalSeconds;
             double simulationSeconds = totalSeconds - setupSeconds;
             double meanSecondsPerYear = this.Years > 0 ? simulationSeconds / this.Years : 0.0;
-            this.WriteVerbose("Trajectory obtained in " + totalSeconds.ToString("0") + " s (" + setupSeconds.ToString("0.00") + " s load, " + simulationSeconds.ToString("0") +" s simulation, " + meanSecondsPerYear.ToString("0.00") + " s/year).");
+            this.WriteVerbose("Trajectory obtained in " + totalSeconds.ToString("0") + " s (" + setupSeconds.ToString("0.00") + " s project load, " + simulationSeconds.ToString("0") +" s simulation; " + meanSecondsPerYear.ToString("0.00") + " s/year).");
         }
     }
 }

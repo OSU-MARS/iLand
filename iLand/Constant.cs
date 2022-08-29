@@ -48,9 +48,9 @@ namespace iLand
             public const string DefaultSpeciesTable = "species";
             public const int DefaultTreeAllocationIncrement = 1000;
             public const int MaxResourceUnitTreeBatchSize = 200;
-            public const int MinimumResourceUnitsPerLoggingThread = 100;
-            public const int MinimumStandsPerLoggingThread = 100;
-            public const int MinimumTreesPerThread = 100 * 1000;
+            public const int MinimumResourceUnitsPerLoggingThread = 50;
+            public const int MinimumStandsPerLoggingThread = 50;
+            public const int MinimumTreesPerThread = 50 * 1000;
         }
 
         public static class File
@@ -87,11 +87,6 @@ namespace iLand
             public const float HeightClassSize = 0.1F; // m
             public const float MaximumHeight = 4.0F; // m
             public const float MinimumHeight = 0.05F; // m
-        }
-
-        public static class Simd128
-        {
-            public const int Width32 = 4;
         }
     }
 }

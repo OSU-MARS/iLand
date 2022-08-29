@@ -37,7 +37,7 @@ namespace iLand.Tree
         {
             if (ageInYears < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(ageInYears), "Tree age is zero or negative rather than being a positive number of years.");
+                throw new ArgumentOutOfRangeException(nameof(ageInYears), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid age of " + ageInYears + ". Specify a positive number of years or use zero to indicate the tree's age should be estimated from its height.");
             }
             else if (ageInYears == 0)
             {
@@ -52,18 +52,14 @@ namespace iLand.Tree
             {
                 throw new ArgumentOutOfRangeException(nameof(heightInM), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid height of " + heightInM + " m to resource unit " + this.ResourceUnit.ID + ".");
             }
-            if ((lightCellIndexXY.X < 0) || (lightCellIndexXY.Y < 0))
-            {
-                // TODO: check light cell is on resource unit or at least sanity check an upper bound
-                throw new ArgumentOutOfRangeException(nameof(lightCellIndexXY));
-            }
+            // no checking of light cell as it's assumed the caller verified this tree is on the resource unit
 
             if (this.Count == this.Capacity)
             {
                 int newCapacity = 2 * this.Capacity; // for now, default to same size doubling as List<T>
                 if (newCapacity == 0)
                 {
-                    newCapacity = Constant.Simd128.Width32;
+                    newCapacity = Simd128.Width32;
                 }
                 this.Resize(newCapacity);
             }
@@ -105,6 +101,81 @@ namespace iLand.Tree
             this.TreeID[this.Count] = this.Count;
 
             ++this.Count;
+        }
+
+        public void Add(TreeSpanForAddition treesToAdd, int startIndex, int treesToCopy, float lightStampBeerLambertK)
+        {
+            int endIndex = this.Count + treesToCopy;
+            if (this.Capacity < endIndex)
+            {
+                int simdCompatibleCapacity = Simd128.RoundUpToWidth32(endIndex);
+                this.Resize(simdCompatibleCapacity);
+            }
+
+            for (int sourceIndex = startIndex, treeListDestination = this.Count; treeListDestination < endIndex; ++sourceIndex, ++treeListDestination)
+            {
+                // copy or complete input fields
+                // no meaningful checks of stand or tree IDs
+                this.StandID[treeListDestination] = treesToAdd.StandID[sourceIndex];
+                this.TreeID[treeListDestination] = treesToAdd.TreeID[sourceIndex];
+
+                float dbhInCm = treesToAdd.DbhInCm[sourceIndex];
+                if (Single.IsNaN(dbhInCm) || (dbhInCm <= 0.0F) || (dbhInCm > 500.0F))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(treesToAdd), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid diameter of " + dbhInCm + " cm to resource unit " + this.ResourceUnit.ID + ".");
+                }
+                this.DbhInCm[treeListDestination] = dbhInCm;
+
+                float heightInM = treesToAdd.HeightInM[sourceIndex];
+                if (Single.IsNaN(heightInM) || (heightInM <= 0.0F) || (heightInM > 150.0F))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(treesToAdd), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid height of " + heightInM + " m to resource unit " + this.ResourceUnit.ID + ".");
+                }
+                this.HeightInM[treeListDestination] = heightInM;
+
+                // no checking of light cell as it's assumed the caller verified this tree is on the resource unit
+                this.LightCellIndexXY[treeListDestination] = treesToAdd.LightCellIndexXY[sourceIndex];
+
+                UInt16 ageInYears = treesToAdd.AgeInYears[sourceIndex];
+                if (ageInYears < 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(treesToAdd), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid age of " + ageInYears + ". Specify a positive number of years or use zero to indicate the tree's age should be estimated from its height.");
+                }
+                else if (ageInYears == 0)
+                {
+                    // if it's not specified, estimate the tree's from its height
+                    ageInYears = this.Species.EstimateAgeFromHeight(heightInM);
+                }
+                this.AgeInYears[treeListDestination] = ageInYears;
+
+                // set remaining fields
+                this.flags[treeListDestination] = TreeFlags.None;
+                this.CoarseRootMassInKg[treeListDestination] = this.Species.GetBiomassCoarseRoot(dbhInCm);
+                this.DbhDeltaInCm[treeListDestination] = 0.1F; // initial value: used in growth() to estimate diameter increment
+
+                float foliageBiomass = this.Species.GetBiomassFoliage(dbhInCm);
+                this.FineRootMassInKg[treeListDestination] = this.Species.FinerootFoliageRatio * foliageBiomass;
+                this.FoliageMassInKg[treeListDestination] = foliageBiomass;
+
+                float leafAreaInM2 = this.Species.SpecificLeafArea * foliageBiomass; // leafArea [m²] = specificLeafArea [m²/kg] * leafMass [kg]
+                this.LeafAreaInM2[treeListDestination] = leafAreaInM2;
+
+                this.LightResourceIndex[treeListDestination] = 0.0F;
+                this.LightResponse[treeListDestination] = 0.0F;
+
+                float nppReserve = (1.0F + this.Species.FinerootFoliageRatio) * foliageBiomass; // initial value
+                this.NppReserveInKg[treeListDestination] = nppReserve;
+
+                LightStamp stamp = this.Species.GetStamp(dbhInCm, heightInM);
+                float opacity = 1.0F - MathF.Exp(-lightStampBeerLambertK * leafAreaInM2 / stamp.CrownAreaInM2);
+                this.Opacity[treeListDestination] = opacity;
+
+                this.LightStamp[treeListDestination] = stamp;
+                this.StemMassInKg[treeListDestination] = this.Species.GetBiomassStem(dbhInCm);
+                this.StressIndex[treeListDestination] = 0.0F;
+            }
+
+            this.Count += treesToCopy;
         }
 
         public void Add(TreeListSpatial other, int otherTreeIndex)

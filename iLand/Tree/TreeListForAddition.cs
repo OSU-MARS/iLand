@@ -5,18 +5,18 @@ using System.Drawing;
 
 namespace iLand.Tree
 {
-    public class TreeListMultispecies : TreeList
+    public class TreeListForAddition : TreeList
     {
         public Point[] LightCellIndexXY { get; private set; }
         public WorldFloraID[] SpeciesID { get; private set; }
 
-        public TreeListMultispecies(int capacity)
+        public TreeListForAddition(int capacity)
             : base(capacity)
         {
             this.Allocate(capacity);
         }
 
-        [MemberNotNull(nameof(TreeListMultispecies.LightCellIndexXY), nameof(TreeListMultispecies.SpeciesID))]
+        [MemberNotNull(nameof(TreeListForAddition.LightCellIndexXY), nameof(TreeListForAddition.SpeciesID))]
         private void Allocate(int capacity)
         {
             if (capacity == 0)
@@ -29,6 +29,20 @@ namespace iLand.Tree
                 this.LightCellIndexXY = new Point[capacity];
                 this.SpeciesID = new WorldFloraID[capacity];
             }
+        }
+
+        public TreeSpanForAddition AsSpan()
+        {
+            return new TreeSpanForAddition()
+            {
+                AgeInYears = this.AgeInYears.Slice(0, this.Count),
+                DbhInCm = this.DbhInCm.Slice(0, this.Count),
+                HeightInM = this.HeightInM.Slice(0, this.Count),
+                LightCellIndexXY = this.LightCellIndexXY.Slice(0, this.Count),
+                SpeciesID = this.SpeciesID.Slice(0, this.Count),
+                StandID = this.StandID.Slice(0, this.Count),
+                TreeID = this.TreeID.Slice(0, this.Count)
+            };
         }
 
         public override void Resize(int newSize)

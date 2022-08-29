@@ -19,6 +19,7 @@ namespace iLand.World
     public class ResourceUnit
     {
         private int heightCellsWithTrees;  // count of pixels that are stocked with trees
+        private int saplingsRecruited;
 
         public float AreaInLandscapeInM2 { get; set; } // total stockable area in m² at height grid (10 m) resolution
         public float AreaWithTreesInM2 { get; private set; } // the stocked area in m² at height grid (10 m) resolution
@@ -40,6 +41,7 @@ namespace iLand.World
         public ResourceUnit(Project projectFile, Weather weather, TreeSpeciesSet speciesSet, int ruGridIndex)
         {
             this.heightCellsWithTrees = 0;
+            this.saplingsRecruited = 0;
 
             this.AreaInLandscapeInM2 = 0.0F;
             this.AreaWithTreesInM2 = 0.0F;
@@ -421,17 +423,33 @@ namespace iLand.World
                 }
 
                 // add a new tree
+                TreeListForAddition saplingsToRecruit = new(saplingsToEstablishAsTrees);
                 float heightOrDiameterVariation = model.Project.Model.SeedDispersal.RecruitmentDimensionVariation;
+                int ingrowthBaseTreeID = 100000 * this.ID + this.saplingsRecruited;
                 Point lightCellIndexXY = model.Landscape.LightGrid.GetCellXYIndex(lightCellIndex);
                 Debug.Assert(this.ProjectExtent.Contains(model.Landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
                 for (int saplingIndex = 0; saplingIndex < saplingsToEstablishAsTrees; ++saplingIndex)
                 {
                     // add variation: add +/-N% to DBH and *independently* to height.
                     float dbhInCm = centralDbh * random.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
+                    saplingsToRecruit.DbhInCm[saplingIndex] = dbhInCm;
                     float heightInM = sapling.HeightInM * random.GetRandomFloat(1.0F - heightOrDiameterVariation, 1.0F + heightOrDiameterVariation);
-                    int treeIndex = this.Trees.AddTree(model.Project, model.Landscape, species.WorldFloraID, dbhInCm, heightInM, lightCellIndexXY, sapling.Age, out TreeListSpatial treesOfSpecies);
-                    Debug.Assert(treesOfSpecies.IsDead(treeIndex) == false);
-                    ruSpecies.StatisticsLive.Add(treesOfSpecies, treeIndex); // capture newly acknowledged tree into tree statistics
+                    saplingsToRecruit.HeightInM[saplingIndex] = heightInM;
+
+                    saplingsToRecruit.AgeInYears[saplingIndex] = 0;
+                    saplingsToRecruit.LightCellIndexXY[saplingIndex] = lightCellIndexXY;
+                    saplingsToRecruit.SpeciesID[saplingIndex] = species.WorldFloraID;
+                    saplingsToRecruit.StandID[saplingIndex] = Constant.DefaultStandID; // TODO
+                    saplingsToRecruit.TreeID[saplingIndex] = ingrowthBaseTreeID + saplingIndex;
+                }
+                saplingsToRecruit.Count = saplingsToEstablishAsTrees;
+                this.saplingsRecruited += saplingsToEstablishAsTrees;
+
+                float lightStampBeerLambertK = model.Project.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
+                TreeListSpatial treesOfSpecies = this.Trees.AddTrees(saplingsToRecruit.AsSpan(), lightStampBeerLambertK);
+                for (int treeIndex = treesOfSpecies.Count - saplingsToEstablishAsTrees; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                {
+                    ruSpecies.StatisticsLive.Add(treesOfSpecies, treeIndex); // capture newly recruited tree into tree statistics
                 }
 
                 // clear all regeneration from this pixel (including this tree)

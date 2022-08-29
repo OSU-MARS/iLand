@@ -231,6 +231,7 @@ namespace iLand.Output
             }
 
             // memory outputs
+            // Partitioning advantage is minor to negligible.
             bool logResourceUnitTrajectories = this.ResourceUnitTrajectories.Length > 0;
             bool logStandTrajectories = this.StandTrajectoriesByID.Count > 0;
             if (logResourceUnitTrajectories || logStandTrajectories)
@@ -261,7 +262,6 @@ namespace iLand.Output
                         }
                     }
                 });
-
 
                 int standUnitTrajectoryCount = this.currentYearStandStatistics.Count;
                 (partitions, int standsPerPartition) = model.ParallelComputeOptions.GetUniformPartitioning(standUnitTrajectoryCount, Constant.Data.MinimumStandsPerLoggingThread);

@@ -720,7 +720,7 @@ namespace iLand.Test
                         Assert.IsTrue((treesOfSpecies.StressIndex[treeIndex] >= 0.0) && (treesOfSpecies.CoarseRootMassInKg[treeIndex] < 1E6));
                     }
 
-                    Assert.IsTrue(treesOfSpecies.Capacity == 4);
+                    Assert.IsTrue(treesOfSpecies.Capacity == 4, "Expected tree capacity for species " + treesOfSpecies.Species.WorldFloraID + " is four trees but " + treesOfSpecies.Capacity + " trees' capacity was allocated.");
                     Assert.IsTrue(treesOfSpecies.Count == (treesOfSpecies.Species.WorldFloraID == WorldFloraID.PseudotsugaMenziesii ? 2 : 1), "Expected one or two living trees of species '" + treesOfSpecies.Species.WorldFloraID + "'.");
                 }
                 // Salix caprea is viable as placed on the resource unit and should stress out of the stand in the first timestep. It

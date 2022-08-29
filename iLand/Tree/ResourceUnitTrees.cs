@@ -1,5 +1,4 @@
 ﻿using iLand.Extensions;
-using iLand.Input.ProjectFile;
 using iLand.World;
 using System;
 using System.Collections.Generic;
@@ -66,49 +65,34 @@ namespace iLand.Tree
             this.AggregatedLightWeightedLeafArea += leafArea * lightResponse; 
         }
 
-        public int AddTree(Project projectFile, Landscape landscape, WorldFloraID speciesID, float dbhInCm, float heightInM, Point lightCellIndexXY, UInt16 ageInYears, out TreeListSpatial treesOfSpecies)
+        public TreeListSpatial AddTrees(TreeSpanForAddition treesToAdd, float lightStampBeerLambertK)
         {
-            // get or create tree's species
-            if (this.TreesBySpeciesID.TryGetValue(speciesID, out TreeListSpatial? nullableTreesOfSpecies))
+            int speciesAddSourceIndex = 0;
+            WorldFloraID previousTreeSpeciesID = treesToAdd.SpeciesID[0];
+            int speciesAddCount;
+            TreeListSpatial treesOfSpecies;
+            for (int treeIndex = 0 + 1; treeIndex < treesToAdd.Length; ++treeIndex)
             {
-                treesOfSpecies = nullableTreesOfSpecies;
-            }
-            else
-            {
-                int speciesIndex = -1;
-                foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
+                WorldFloraID treeSpeciesID = treesToAdd.SpeciesID[treeIndex];
+                if (treeSpeciesID != previousTreeSpeciesID)
                 {
-                    if (String.Equals(speciesID, ruSpecies.Species.WorldFloraID))
-                    {
-                        speciesIndex = ruSpecies.Species.Index;
-                        break;
-                    }
-                }
-                if (speciesIndex < 0)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(speciesID));
+                    // add this tree species to resource unit
+                    // Trees can be grouped by species for more efficient addition. Currently, it's suggested this be done when writing tree data files (see README.md).
+                    speciesAddCount = treeIndex - speciesAddSourceIndex;
+                    treesOfSpecies = this.GetOrAddTreeSpecies(previousTreeSpeciesID, speciesAddCount);
+                    treesOfSpecies.Add(treesToAdd, speciesAddSourceIndex, speciesAddCount, lightStampBeerLambertK);
+
+                    speciesAddSourceIndex = treeIndex;
                 }
 
-                treesOfSpecies = new TreeListSpatial(landscape, this.resourceUnit, this.SpeciesAvailableOnResourceUnit[speciesIndex].Species, Constant.Simd128.Width32);
-                this.TreesBySpeciesID.Add(speciesID, treesOfSpecies);
+                previousTreeSpeciesID = treeSpeciesID;
             }
-            Debug.Assert(treesOfSpecies.Species.WorldFloraID == speciesID);
 
-            // create tree
-            float lightStampBeerLambertK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
-            int treeIndex = treesOfSpecies.Count;
-            treesOfSpecies.Add(dbhInCm, heightInM, ageInYears, lightCellIndexXY, lightStampBeerLambertK);
-            return treeIndex;
-        }
-
-        public void AddTrees(Project projectFile, Landscape landscape, TreeListMultispecies treesToAdd)
-        {
-            for (int treeIndex = 0; treeIndex < treesToAdd.Count; ++treeIndex)
-            {
-                int addedTreeIndex = this.AddTree(projectFile, landscape, treesToAdd.SpeciesID[treeIndex], treesToAdd.DbhInCm[treeIndex], treesToAdd.HeightInM[treeIndex], treesToAdd.LightCellIndexXY[treeIndex], treesToAdd.AgeInYears[treeIndex], out TreeListSpatial treesOfSpecies);
-                treesOfSpecies.StandID[addedTreeIndex] = treesToAdd.StandID[treeIndex];
-                treesOfSpecies.TreeID[addedTreeIndex] = treesToAdd.TreeID[treeIndex];
-            }
+            // add last (or only) species to resource unit
+            speciesAddCount = treesToAdd.Length - speciesAddSourceIndex;
+            treesOfSpecies = this.GetOrAddTreeSpecies(previousTreeSpeciesID, speciesAddCount);
+            treesOfSpecies.Add(treesToAdd, speciesAddSourceIndex, speciesAddCount, lightStampBeerLambertK);
+            return treesOfSpecies;
         }
 
         /// called from Trees.ReadLightInfluenceField(): each tree to added to the total weighted leaf area on a unit
@@ -407,6 +391,29 @@ namespace iLand.Tree
             //{
             //    Debug.WriteLine("RU: aggregated lightresponse: " + mAggregatedLR + " eff.area./wla: " + mEffectiveArea_perWLA);
             //}
+        }
+
+        private TreeListSpatial GetOrAddTreeSpecies(WorldFloraID speciesID, int treesToAdd)
+        {
+            if (this.TreesBySpeciesID.TryGetValue(speciesID, out TreeListSpatial? treesOfSpecies))
+            {
+                return treesOfSpecies;
+            }
+
+            foreach (ResourceUnitTreeSpecies ruSpecies in this.SpeciesAvailableOnResourceUnit)
+            {
+                TreeSpecies treeSpecies = ruSpecies.Species;
+                if (speciesID == treeSpecies.WorldFloraID)
+                {
+                    int treeCapacity = Simd128.RoundUpToWidth32(treesToAdd);
+                    treesOfSpecies = new(this.resourceUnit, treeSpecies, treeCapacity);
+                    this.TreesBySpeciesID.Add(speciesID, treesOfSpecies);
+                    Debug.Assert(treesOfSpecies.Species.WorldFloraID == speciesID);
+                    return treesOfSpecies;
+                }
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(speciesID));
         }
 
         public float GetPhotosyntheticallyActiveArea(float leafArea, float lightResponse) 
@@ -732,7 +739,7 @@ namespace iLand.Tree
                             //     Debug.WriteLine("reduce tree storage of RU " + Index + " from " + Trees.Capacity + " to " + Trees.Count);
                             // }
 
-                            int simdCompatibleTreeCapacity = Constant.Simd128.Width32 * (treesOfSpecies.Count / Constant.Simd128.Width32 + 1);
+                            int simdCompatibleTreeCapacity = Simd128.RoundUpToWidth32(treesOfSpecies.Count);
                             treesOfSpecies.Resize(simdCompatibleTreeCapacity);
                         }
                     }

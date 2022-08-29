@@ -16,7 +16,7 @@ namespace iLand.Tree
 
         public TreeList(int capacity)
         {
-            if ((capacity < 0) || (capacity % Constant.Simd128.Width32 != 0))
+            if ((capacity < 0) || (capacity % Simd128.Width32 != 0))
             {
                 throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity of " + capacity + " is not a positive integer multiple of SIMD width.");
             }
@@ -66,7 +66,7 @@ namespace iLand.Tree
 
         public virtual void Resize(int newSize)
         {
-            if ((newSize < this.Count) || (newSize % Constant.Simd128.Width32 != 0)) // enforces positive size (unless a bug allows Count to become negative)
+            if ((newSize < this.Count) || (newSize % Simd128.Width32 != 0)) // enforces positive size (unless a bug allows Count to become negative)
             {
                 throw new ArgumentOutOfRangeException(nameof(newSize), "New size of " + newSize + " is smaller than the current number of live trees (" + this.Count + ") or is not an integer multiple of SIMD width.");
             }

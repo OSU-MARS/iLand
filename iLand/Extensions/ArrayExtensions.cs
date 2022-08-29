@@ -30,5 +30,15 @@ namespace iLand.Extensions
             Array.Copy(array, resizedArray, maxLength);
             return resizedArray;
         }
+
+        public static Span<T> Slice<T>(this T[] array, int start)
+        {
+            return array.AsSpan().Slice(start);
+        }
+
+        public static Span<T> Slice<T>(this T[] array, int start, int length)
+        {
+            return array.AsSpan().Slice(start, length);
+        }
     }
 }

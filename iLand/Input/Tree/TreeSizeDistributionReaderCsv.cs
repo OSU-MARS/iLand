@@ -29,7 +29,7 @@ namespace iLand.Input.Tree
 
                 TreeSizeRange sizeRange = new(mostRecentSpeciesID)
                 {
-                    Count = Single.Parse(row[treeSizeHeader.Count], NumberStyles.Integer),
+                    TreesPerResourceUnit = Int32.Parse(row[treeSizeHeader.Count], NumberStyles.Integer),
                     DbhFrom = Single.Parse(row[treeSizeHeader.MinimumDbh], NumberStyles.Float),
                     DbhTo = Single.Parse(row[treeSizeHeader.MaximumDbh], NumberStyles.Float),
                     HeightDiameterRatio = Single.Parse(row[treeSizeHeader.HeightDiameterRatio], NumberStyles.Float)
