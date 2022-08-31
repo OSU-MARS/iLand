@@ -26,7 +26,7 @@ elliottThreePG = read_feather("TestResults/Elliott 3-PG.feather", mmap = FALSE) 
 # Reineke stand density diagrams by resource unit and stand (with workaround for https://github.com/tidyverse/ggplot2/issues/4935)
 logBreaks = c(1, 2, 3, 4, 5, 6, 8, 10, 20, 30, 40, 50, 60, 80, 100, 200, 300, 400, 500, 600, 800, 1000, 2000, 3000, 4000)
 logMinorBreaks = c(1.5, 7, 9, 15, 70, 90, 150, 700, 900)
-sdi = crossing(tph = c(1, 4000), sdi = c(100, 200, 300, 400, 500, 600, 700, 800, 900, 1000)) %>% mutate(qmd = 25.4 * (sdi / tph)^(1/1.605))
+sdi = crossing(tph = c(1, 220, 4000), sdi = c(100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000)) %>% mutate(qmd = 25.4 * (sdi / tph)^(1/1.605))
 
 ggplot(elliottResourceUnitTrajectories %>% filter(species == "all")) +
   geom_path(aes(x = tph, y = qmd, group = sdi), sdi, color = "grey70", linetype = "longdash") +
@@ -50,6 +50,7 @@ ggplot() +
   geom_path(aes(x = tph, y = qmd, group = sdi), sdi, color = "grey70", linetype = "longdash") +
   geom_path(aes(x = treesPerHectare, y = qmd, group = stand), elliottStandTrajectories, arrow = arrow(length = unit(0.25, "line"), type = "closed")) +
   geom_path(aes(x = treesPerHectare, y = qmd, color = liveStemVolume, group = stand), elliottStandTrajectories) +
+  geom_label(aes(x = tph, y = qmd, label = sdi), sdi %>% filter(tph == 220, sdi %in% c(700, 900, 1500) == FALSE), color = "grey70", label.padding = unit(0.2, "line"), label.size = NA, size = 3.0) +
   labs(x = "stand TPH", y = "stand QMD, cm", color = bquote("live stem\nvolume, m"^3*" ha"^-1)) +
   coord_cartesian(xlim = c(4, 200), ylim = c(10, 150)) +
   scale_x_log10(breaks = logBreaks, minor_breaks = logMinorBreaks) +

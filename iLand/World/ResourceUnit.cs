@@ -83,7 +83,7 @@ namespace iLand.World
                 }
             }
 
-            Debug.Assert((this.heightCellsWithTrees <= this.HeightCellsOnLandscape) && ((this.heightCellsWithTrees > 0) || (this.Trees.TreesBySpeciesID.Count == 0)));
+            Debug.Assert((this.heightCellsWithTrees <= this.HeightCellsOnLandscape) && ((this.heightCellsWithTrees > 0) || (this.Trees.TreesBySpeciesID.Count == 0) || ((this.Trees.TreesBySpeciesID.Count == 1) && (this.Trees.TreesBySpeciesID.Values[0].Count == 1) && (this.Trees.TreesBySpeciesID.Values[0].HeightInM[0] > 0.0F))));
         }
 
         public void AddSprout(Model model, TreeListSpatial trees, int treeIndex)
@@ -538,7 +538,7 @@ namespace iLand.World
             else
             {
                 // height pixels are counted during the height-grid-calculations
-                this.AreaWithTreesInM2 = Constant.Grid.HeightCellSizeInM * Constant.Grid.HeightCellSizeInM * this.heightCellsWithTrees; // m² (1 height grid pixel = 10x10m)
+                this.AreaWithTreesInM2 = Constant.Grid.HeightCellAreaInM2 * this.heightCellsWithTrees; // m² (1 height grid pixel = 10x10m)
                 float laiBasedOnRUAreaWithinLandscape = this.GetLeafAreaIndex();
                 if (laiBasedOnRUAreaWithinLandscape < 3.0F)
                 {
@@ -574,7 +574,7 @@ namespace iLand.World
                     }
                 }
 
-                Debug.Assert(this.AreaWithTreesInM2 > 0.0F);
+                Debug.Assert((this.AreaWithTreesInM2 >= 0.0F) && (this.AreaWithTreesInM2 <= Constant.Grid.ResourceUnitAreaInM2));
 
                 // calculate the leaf area index (LAI)
                 float ruLeafAreaIndex = this.Trees.TotalLeafArea / this.AreaWithTreesInM2;

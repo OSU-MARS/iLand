@@ -1,4 +1,6 @@
-﻿using System;
+﻿using iLand.Extensions;
+using System;
+using System.Runtime.Intrinsics;
 
 namespace iLand
 {
@@ -11,6 +13,8 @@ namespace iLand
         public const int EvergreenLeafPhenologyID = 0;
 
         public const float MinimumLightIntensity = 0.02F;
+        public static readonly Vector128<float> MinimumLightIntensity128 = Avx2Extensions.BroadcastScalarToVector128(Constant.MinimumLightIntensity);
+        public static readonly Vector256<float> MinimumLightIntensity256 = Avx2Extensions.BroadcastScalarToVector256(Constant.MinimumLightIntensity);
         public const int NoDataInt32 = Int32.MinValue;
         public const float NoDataFloat = Single.NaN;
 
@@ -59,6 +63,16 @@ namespace iLand
             public const int SeedmapCellSizeInM = 20; // size of seedmap cell, m
             public const int SeedmapCellsPerRUWidth = 5; // 100 m / 20 m
             public const float TreeNudgeIntoResourceUnitInM = 0.01F;
+        }
+
+        public static class Grid128F
+        {
+            public static readonly Vector128<float> LightCellSizeInM = Avx2Extensions.BroadcastScalarToVector128((float)Constant.Grid.LightCellSizeInM);
+        }
+
+        public static class Grid256F
+        {
+            public static readonly Vector256<float> LightCellSizeInM = Avx2Extensions.BroadcastScalarToVector256((float)Constant.Grid.LightCellSizeInM);
         }
 
         public static class LightStamp

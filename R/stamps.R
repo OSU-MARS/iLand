@@ -215,14 +215,23 @@ ggplot(readerStamps %>% filter(size == 16) %>% mutate(value = na_if(value, 0))) 
   scale_fill_viridis_c(trans = "log10") +
   facet_wrap(vars(crownRadius))
 
-## remove lower iLand 0.8 bigleaf maple crown radii 
-acma = read_feather("R/stamps/Pacific Northwest/acma iLand 0.8.feather", mmap = FALSE)
-
-ggplot(acma) +
-  geom_abline(intercept = 0.93, slope = 0.035, color = "grey70", linetype = "longdash") +
-  geom_abline(intercept = 1.22, slope = 0.058, color = "grey70", linetype = "longdash") +
-  geom_line(aes(x = dbh, y = crownRadius, color = "acma", group = heightDiameterRatio)) +
-  labs(x = "DBH, cm", y = "crown radius, m", color = NULL)
+## SIMD 256 bit stamp size handling for ResourceUniTrees.ApplyLightIntensityPattern256()
+stamp256 = tibble(stampSize = seq(1, 64),
+                  stampDataSize = if_else(stampSize <= 16, 4 * ceiling(stampSize / 4), if_else(stampSize <= 24, 24, 16 * ceiling(stampSize / 16))),
+                  stampSize256 = 8 * as.integer((stampSize + 3) / 8),
+                  stamp128 = stampSize > stampSize256)
+ggplot(stamp256) +
+  geom_segment(x = 0, y = 0, xend = 64, yend = 64, color = "grey70", linetype = "longdash") +
+  geom_step(aes(x = stampSize, y = stampDataSize, color = "stamp data size"), direction = "mid") +
+  geom_step(aes(x = stampSize, y = stampSize, color = "stamp size"), direction = "mid") +
+  geom_step(aes(x = stampSize, y = stampSize256, color = "256 bit stamping"), direction = "mid") +
+  geom_step(aes(x = stampSize, y = stampSize256 + 4 * as.integer(stamp128), color = "with 128 bit step"), direction = "mid") +
+  labs(x = "stamp size", y = "stamp data size or stamp SIMD size", color = NULL) +
+  scale_color_discrete(breaks = c("stamp data size", "stamp size", "256 bit stamping", "with 128 bit step")) +
+  scale_x_continuous(breaks = seq(0, 64, by = 8)) +
+  scale_y_continuous(breaks = seq(0, 64, by = 8)) +
+  theme(legend.justification = c(0, 1), legend.position = c(0.02, 1))
+print(stamp256, n = 64)
 
 
 ## remove obsolete iLand 0.8 Douglas-fir and western hemlock height:diameter ratios

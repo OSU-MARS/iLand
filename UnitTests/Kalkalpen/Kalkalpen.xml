@@ -88,6 +88,9 @@
       <!--<overrideGppPerYear>0</overrideGppPerYear>--> <!-- force GPP to a specific value -->
       <randomSeed>0</randomSeed>
       <scheduledEventsFileName>empty time event script.csv</scheduledEventsFileName>
+      <!-- preferred width for SIMD (single instruction, multiple data) operations in bits: must be 32 (scalar), 128, or 256
+           Default is 256 bits but is set to 128 here for broader test coverage (Elliott.xml uses 256 bits). -->
+      <!--<simdWidth>128</simdWidth>-->
     </settings>
   </model>
   <world>

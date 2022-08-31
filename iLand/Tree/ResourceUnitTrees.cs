@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace iLand.Tree
 {
@@ -191,6 +193,8 @@ namespace iLand.Tree
                                 }
 
                                 lightBuffer[bufferIndex] *= iStarXYJ; // compound LIF intensity, Eq. 4
+                                // useful for checking correctness of calculations
+                                // Debug.Assert(iStarXYJ > 0.0F);
                             }
                         }
                     }
@@ -200,6 +204,322 @@ namespace iLand.Tree
             lock (landscape.LightGrid)
             {
                 lightBuffer.ApplyToLightGrid(landscape.LightGrid, bufferLightOriginX, bufferLightOriginY);
+            }
+            lightBuffers.Enqueue(lightBuffer);
+        }
+
+        public unsafe void ApplyLightIntensityPattern128(Landscape landscape, ConcurrentQueue<LightBuffer> lightBuffers)
+        {
+            if (lightBuffers.TryDequeue(out LightBuffer? lightBuffer) == false)
+            {
+                lightBuffer = new(isTorus: false);
+            }
+            lightBuffer.Fill(Constant.Grid.FullLightIntensity);
+
+            Point resourceUnitLightGridOrigin = landscape.LightGrid.GetCellXYIndex(this.resourceUnit.ProjectExtent.X, this.resourceUnit.ProjectExtent.Y);
+            int bufferLightOriginX = resourceUnitLightGridOrigin.X - Constant.Grid.MaxLightStampSizeInLightCells / 2;
+            int bufferLightOriginY = resourceUnitLightGridOrigin.Y - Constant.Grid.MaxLightStampSizeInLightCells / 2;
+            Vector128<float> dominantHeightInM = Vector128<float>.Zero; // height of z*u,v on the current position
+            Vector128<float> one = Avx2Extensions.BroadcastScalarToVector128(1.0F);
+            Vector128<int> four = Avx2Extensions.BroadcastScalarToVector128(Simd128.Width32);
+            Vector128<int> zeroOneTwoThree = Vector128.Create(0, 1, 2, 3);
+            Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
+            fixed (float* lightBufferCells = &lightBuffer.Data[0], vegetationHeightCells = &vegetationHeightGrid.Data[0])
+            {
+                for (int speciesIndex = 0; speciesIndex < this.resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+                {
+                    TreeListSpatial treesOfSpecies = this.resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                    for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                    {
+                        Point treeLightCellIndexXY = treesOfSpecies.LightCellIndexXY[treeIndex];
+                        LightStamp treeLightStamp = treesOfSpecies.LightStamp[treeIndex]!;
+                        Vector128<float> treeHeightInM = Avx2Extensions.BroadcastScalarToVector128(treesOfSpecies.HeightInM[treeIndex]);
+                        Vector128<float> treeOpacity = Avx2Extensions.BroadcastScalarToVector128(treesOfSpecies.Opacity[treeIndex]);
+
+                        fixed (float* stampCells = &treeLightStamp.Data[0])
+                        {
+                            int stampDataSize = treeLightStamp.DataSize;
+                            int stampLightOriginX = treeLightCellIndexXY.X - treeLightStamp.CenterCellIndex;
+                            int stampLightOriginY = treeLightCellIndexXY.Y - treeLightStamp.CenterCellIndex;
+                            int stampBufferOriginX = stampLightOriginX - bufferLightOriginX;
+                            int stampBufferOriginY = stampLightOriginY - bufferLightOriginY;
+                            int stampHeightOriginX = stampLightOriginX / Constant.Grid.LightCellsPerHeightCellWidth;
+                            int stampHeightOriginY = stampLightOriginY / Constant.Grid.LightCellsPerHeightCellWidth;
+                            int stampSize = treeLightStamp.GetSizeInLightCells(); // last SIMD step in each row may reach past stamp size and take zeros from [stampSize..stampDataSize]
+                            for (int stampIndexY = 0; stampIndexY < stampSize; ++stampIndexY)
+                            {
+                                int bufferRowStartIndex = lightBuffer.IndexXYToIndex(stampBufferOriginX, stampBufferOriginY + stampIndexY);
+                                int heightIndex = vegetationHeightGrid.IndexXYToIndex(stampHeightOriginX, stampHeightOriginY + stampIndexY / Constant.Grid.LightCellsPerHeightCellWidth);
+                                int heightLoadModulus = 0;
+                                int stampRowStartIndex = stampDataSize * stampIndexY;
+                                float *stampRowEndAddress = stampCells + stampRowStartIndex + stampSize;
+                                Vector128<int> stampIndexX128 = zeroOneTwoThree;
+                                Vector128<int> stampIndexY128 = Avx2Extensions.BroadcastScalarToVector128(stampIndexY);
+                                for (float* bufferAddress = lightBufferCells + bufferRowStartIndex, stampAddress = stampCells + stampRowStartIndex; stampAddress < stampRowEndAddress; bufferAddress += Simd128.Width32, stampAddress += Simd128.Width32)
+                                {
+                                    // light grid index:   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 ... (cycle repeats)
+                                    // height grid index:  0  0  0  0  0  1  1  1  1  1  2  2  2  2  2  3  3  3  3  3
+                                    // height load step:   0           1           2           3           4
+                                    // Vector128 index:    0  1  2  3  0  1  2  3  0  1  2  3  0  1  2  3  0  1  2  3 
+                                    switch (heightLoadModulus)
+                                    {
+                                        case 0:
+                                            dominantHeightInM = Avx.BroadcastScalarToVector128(vegetationHeightCells + heightIndex);
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 1:
+                                            Vector128<float> dominantHeightInM1 = Avx.BroadcastScalarToVector128(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM = Avx.Blend(dominantHeightInM, dominantHeightInM1, Simd128.Blend32_123);
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 2:
+                                            Vector128<float> dominantHeightInM2 = Avx.BroadcastScalarToVector128(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM = Avx.Shuffle(dominantHeightInM, dominantHeightInM2, Simd128.Shuffle32_1to0);
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 3:
+                                            Vector128<float> dominantHeightInM3 = Avx.BroadcastScalarToVector128(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM = Avx.Shuffle(dominantHeightInM, dominantHeightInM3, Simd128.Shuffle32_2to01);
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 4:
+                                            dominantHeightInM = Avx.Shuffle(dominantHeightInM, dominantHeightInM, Simd128.Shuffle32_3to012);
+                                            heightLoadModulus = 0;
+                                            break;
+                                        default:
+                                            throw new NotSupportedException(nameof(heightLoadModulus));
+                                    };
+
+                                    // http://iland-model.org/competition+for+light
+                                    Vector128<float> iXYJ = Avx.LoadVector128(stampAddress); // tree's light stamp value
+                                    Vector128<float> zStarXYJ = Avx.Subtract(treeHeightInM, treeLightStamp.GetDistanceToCenterInM(stampIndexX128, stampIndexY128)); // distance to center = height (45 degree line)
+                                    zStarXYJ = Avx.Max(zStarXYJ, Vector128<float>.Zero);
+                                    byte zStarBlend = (byte)Avx.MoveMask(Avx.CompareLessThan(zStarXYJ, dominantHeightInM));
+                                    Vector128<float> zStarMin = Avx.Blend(one, Avx.Divide(zStarXYJ, dominantHeightInM), zStarBlend); // tree influence height
+                                    Vector128<float> iStarXYJ = Avx.Subtract(one, Avx.Multiply(treeOpacity, Avx.Multiply(iXYJ, zStarMin))); // this tree's Beer-Lambert contribution to shading of light grid cell
+                                    iStarXYJ = Avx.Max(iStarXYJ, Constant.MinimumLightIntensity128); // limit minimum value
+
+                                    Vector128<float> lightIntensity = Avx.LoadVector128(bufferAddress);
+                                    lightIntensity = Avx.Multiply(iStarXYJ, lightIntensity);  // compound LIF intensity, Eq. 4
+                                    Avx.Store(bufferAddress, lightIntensity);
+
+                                    stampIndexX128 = Avx.Add(stampIndexX128, four);
+                                    // useful for checking correctness of calculations
+                                    // DebugV.Assert(Avx.CompareGreaterThan(lightIntensity, Vector128<float>.Zero));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            lock (landscape.LightGrid)
+            {
+                lightBuffer.ApplyToLightGrid128(landscape.LightGrid, bufferLightOriginX, bufferLightOriginY);
+            }
+            lightBuffers.Enqueue(lightBuffer);
+        }
+
+        public unsafe void ApplyLightIntensityPattern256(Landscape landscape, ConcurrentQueue<LightBuffer> lightBuffers)
+        {
+            if (lightBuffers.TryDequeue(out LightBuffer? lightBuffer) == false)
+            {
+                lightBuffer = new(isTorus: false);
+            }
+            lightBuffer.Fill(Constant.Grid.FullLightIntensity);
+
+            Point resourceUnitLightGridOrigin = landscape.LightGrid.GetCellXYIndex(this.resourceUnit.ProjectExtent.X, this.resourceUnit.ProjectExtent.Y);
+            int bufferLightOriginX = resourceUnitLightGridOrigin.X - Constant.Grid.MaxLightStampSizeInLightCells / 2;
+            int bufferLightOriginY = resourceUnitLightGridOrigin.Y - Constant.Grid.MaxLightStampSizeInLightCells / 2;
+            Vector256<float> dominantHeightInM = Vector256<float>.Zero; // height of z*u,v on the current position
+            Vector256<float> one = Avx2Extensions.BroadcastScalarToVector256(1.0F);
+            Vector256<int> eight = Avx2Extensions.BroadcastScalarToVector256(Simd256.Width32);
+            Vector256<int> zeroOneTwoThreeFourFiveSixSeven = Vector256.Create(0, 1, 2, 3, 4, 5, 6, 7);
+            Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
+            fixed (float* lightBufferCells = &lightBuffer.Data[0], vegetationHeightCells = &vegetationHeightGrid.Data[0])
+            {
+                for (int speciesIndex = 0; speciesIndex < this.resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+                {
+                    TreeListSpatial treesOfSpecies = this.resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                    for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
+                    {
+                        Point treeLightCellIndexXY = treesOfSpecies.LightCellIndexXY[treeIndex];
+                        LightStamp treeLightStamp = treesOfSpecies.LightStamp[treeIndex]!;
+                        Vector256<float> treeHeightInM = Avx2Extensions.BroadcastScalarToVector256(treesOfSpecies.HeightInM[treeIndex]);
+                        Vector256<float> treeOpacity = Avx2Extensions.BroadcastScalarToVector256(treesOfSpecies.Opacity[treeIndex]);
+
+                        fixed (float* stampCells = &treeLightStamp.Data[0])
+                        {
+                            int stampDataSize = treeLightStamp.DataSize;
+                            // stamp data size must be either an integer multiple of 256 bits or an integer multiple plus 128 bits
+                            int stampLightOriginX = treeLightCellIndexXY.X - treeLightStamp.CenterCellIndex;
+                            int stampLightOriginY = treeLightCellIndexXY.Y - treeLightStamp.CenterCellIndex;
+                            int stampBufferOriginX = stampLightOriginX - bufferLightOriginX;
+                            int stampBufferOriginY = stampLightOriginY - bufferLightOriginY;
+                            int stampHeightOriginX = stampLightOriginX / Constant.Grid.LightCellsPerHeightCellWidth;
+                            int stampHeightOriginY = stampLightOriginY / Constant.Grid.LightCellsPerHeightCellWidth;
+                            int stampSize = treeLightStamp.GetSizeInLightCells();
+                            // stamp data sizes are 4, 8, 12, 16, 24, 32, 48, and 64, actual stamp sizes in light cells may range from
+                            // next smallest data size to full width of stamp
+                            // Default to SIMD across full width of stamp, either 256 bit only or 256 iterations plus a final 128 bit step.
+                            // If the stamp size is small enough, remove unneeded 256 bit iterations.
+                            //
+                            // stampDataSize      4  4  4  4  8  8  8  8 12 12 12 12 16 16 16 16  24 24 24 24 24 24 24 24  32 32 32 32 32 32 32 32  48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48  64 ... 64
+                            // stampSize          1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16  17 18 19 20 21 22 23 24  25 26 27 28 29 30 31 32  33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48  59 ... 64
+                            // SIMD 256 size      0  0  0  0  8  8  8  8  8  8  8  8 16 16 16 16  16 16 16 16 24 24 24 24  24 24 24 24 32 32 32 32  32 32 32 32 40 40 40 40 40 40 40 40 48 48 48 48  48 ... 64
+                            // SIMD 128 bit step  y  y  y  y  n  n  n  n  y  y  y  y  n  n  n  n   y  y  y  y  n  n  n  n   y  y  y  y  n  n  n  n   y  y  y  y  n  n  n  n  y  y  y  y  n  n  n  n   y ...  n
+                            //
+                            // See also stamps.R.
+                            int stampSizeSimd256 = Simd256.Width32 * ((stampSize + 3) / Simd256.Width32);
+                            Debug.Assert((stampDataSize % Simd128.Width32 == 0) && (stampSize <= stampDataSize) && (stampSize - stampSizeSimd256 < Simd128.Width32));
+                            for (int stampIndexY = 0; stampIndexY < stampSize; ++stampIndexY)
+                            {
+                                // 256 bit part of stamp
+                                // Stamps of size 8, 16, 24, 32, 48, and 64 require only 256 bit stamping.
+                                int bufferRowStartIndex = lightBuffer.IndexXYToIndex(stampBufferOriginX, stampBufferOriginY + stampIndexY);
+                                int heightIndex = vegetationHeightGrid.IndexXYToIndex(stampHeightOriginX, stampHeightOriginY + stampIndexY / Constant.Grid.LightCellsPerHeightCellWidth);
+                                int heightLoadModulus = 0;
+                                int stampRowStartIndex = stampDataSize * stampIndexY;
+                                float* stampRowEndAddress256 = stampCells + stampRowStartIndex + stampSizeSimd256;
+                                Vector256<int> stampIndexX256 = zeroOneTwoThreeFourFiveSixSeven;
+                                Vector256<int> stampIndexY256 = Avx2Extensions.BroadcastScalarToVector256(stampIndexY);
+                                for (float* bufferAddress = lightBufferCells + bufferRowStartIndex, stampAddress = stampCells + stampRowStartIndex; stampAddress < stampRowEndAddress256; bufferAddress += Simd256.Width32, stampAddress += Simd256.Width32)
+                                {
+                                    // light grid index:   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 ... (cycle repeats)
+                                    // height grid index:  0  0  0  0  0  1  1  1  1  1  2  2  2  2  2  3  3  3  3  3  4  4  4  4  4  5  5  5  5  5  6  6  6  6  6  7  7  7  7  7
+                                    // height load step:   0                       1                       2                       3                       4
+                                    // Vector256 index:    0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7
+                                    switch (heightLoadModulus)
+                                    {
+                                        case 0:
+                                            dominantHeightInM = Avx.BroadcastScalarToVector256(vegetationHeightCells + heightIndex);
+                                            Vector256<float> dominantHeightInM1 = Avx.BroadcastScalarToVector256(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM = Avx.Blend(dominantHeightInM, dominantHeightInM1, Simd256.Blend32_567);
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 1:
+                                            Vector256<float> dominantHeightInM2 = Avx.BroadcastScalarToVector256(vegetationHeightCells + ++heightIndex);
+                                            Vector256<float> dominantHeightInM3 = Avx.BroadcastScalarToVector256(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM = Avx.Blend(dominantHeightInM, dominantHeightInM2, Simd256.Blend32_23456);
+                                            dominantHeightInM = Avx.Blend(dominantHeightInM, dominantHeightInM3, Simd256.Blend32_7);
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 2:
+                                            Vector256<float> dominantHeightInM4 = Avx.BroadcastScalarToVector256(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM = Avx.Shuffle(dominantHeightInM, dominantHeightInM, Simd128.Shuffle32_3to012); // expand height cell 3 from element 7 to all of upper lane (and element 3 to all of lower lane)
+                                            dominantHeightInM = Avx.Permute2x128(dominantHeightInM, dominantHeightInM4, Simd256.Permute128_1upperTo1lower); // move height cell 3 to lower lane and set upper lane to height cell 4
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 3:
+                                            Vector256<float> dominantHeightInM5 = Avx.BroadcastScalarToVector256(vegetationHeightCells + ++heightIndex);
+                                            Vector256<float> dominantHeightInM6 = Avx.BroadcastScalarToVector256(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM = Avx.Permute2x128(dominantHeightInM, dominantHeightInM, Simd256.Permute128_1upperTo1lower); // copy height cell 4 into lower lane
+                                            dominantHeightInM = Avx.Blend(dominantHeightInM, dominantHeightInM5, Simd256.Blend32_12345);
+                                            dominantHeightInM = Avx.Blend(dominantHeightInM, dominantHeightInM6, Simd256.Blend32_67);
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 4:
+                                            Vector256<float> dominantHeightInM7 = Avx.BroadcastScalarToVector256(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM = Avx.Permute2x128(dominantHeightInM, dominantHeightInM, Simd256.Permute128_1upperTo1lower); // copy height cell 6 into lower lane
+                                            dominantHeightInM = Avx.Shuffle(dominantHeightInM, dominantHeightInM, Simd128.Shuffle32_2to01); // fill lower lane with height cell 6
+                                            dominantHeightInM = Avx.Blend(dominantHeightInM, dominantHeightInM7, Simd256.Blend32_34567);
+                                            heightLoadModulus = 0;
+                                            break;
+                                        default:
+                                            throw new NotSupportedException(nameof(heightLoadModulus));
+                                    };
+
+                                    // http://iland-model.org/competition+for+light
+                                    Vector256<float> iXYJ = Avx.LoadVector256(stampAddress); // tree's light stamp value
+                                    Vector256<float> zStarXYJ = Avx.Subtract(treeHeightInM, treeLightStamp.GetDistanceToCenterInM(stampIndexX256, stampIndexY256)); // distance to center = height (45 degree line)
+                                    zStarXYJ = Avx.Max(zStarXYJ, Vector256<float>.Zero);
+                                    byte zStarBlend = (byte)Avx.MoveMask(Avx.CompareLessThan(zStarXYJ, dominantHeightInM));
+                                    Vector256<float> zStarMin = Avx.Blend(one, Avx.Divide(zStarXYJ, dominantHeightInM), zStarBlend); // tree influence height
+                                    Vector256<float> iStarXYJ = Avx.Subtract(one, Avx.Multiply(treeOpacity, Avx.Multiply(iXYJ, zStarMin))); // this tree's Beer-Lambert contribution to shading of light grid cell
+                                    iStarXYJ = Avx.Max(iStarXYJ, Constant.MinimumLightIntensity256); // limit minimum value
+
+                                    Vector256<float> lightIntensity = Avx.LoadVector256(bufferAddress);
+                                    lightIntensity = Avx.Multiply(iStarXYJ, lightIntensity);  // compound LIF intensity, Eq. 4
+                                    Avx.Store(bufferAddress, lightIntensity);
+
+                                    stampIndexX256 = Avx2.Add(stampIndexX256, eight); // not needed for 256 bit on last 256 bit iteration but is needed if a 128 bit step follows
+                                    // useful for checking correctness of calculations
+                                    // DebugV.Assert(Avx.CompareGreaterThan(lightIntensity, Vector256<float>.Zero));
+                                }
+
+                                // 128 bit part of stamp row
+                                // Stamps of size 4 require special casing, which is not currently implemented, to use 256 bit stamping.
+                                // Stamps of size 12 also currently require special casing. As with 128 bit only stamping
+                                // (ApplyLightIntensityPattern128()), this 128 bit step may take zeros from the stamp in [stampSize..stampDataSize].
+                                if (stampSize > stampSizeSimd256)
+                                {
+                                    Vector128<float> dominantHeightInM128;
+                                    switch (heightLoadModulus)
+                                    {
+                                        case 0:
+                                            dominantHeightInM128 = Avx.BroadcastScalarToVector128(vegetationHeightCells + ++heightIndex);
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 1:
+                                            heightIndex += 2;
+                                            Vector128<float> dominantHeightInM2 = Avx.BroadcastScalarToVector128(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM128 = dominantHeightInM.GetUpper();
+                                            dominantHeightInM128 = Avx.Shuffle(dominantHeightInM128, dominantHeightInM128, Simd128.Shuffle32_3to012); // move height cell 1 into elements 0 and 1
+                                            dominantHeightInM128 = Avx.Blend(dominantHeightInM128, dominantHeightInM2, Simd128.Blend32_23);
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 2:
+                                            dominantHeightInM128 = dominantHeightInM.GetUpper();
+                                            dominantHeightInM128 = Avx.Shuffle(dominantHeightInM128, dominantHeightInM128, Simd128.Shuffle32_3to012); // broadcast height cell 3 to all elements
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 3:
+                                            Vector128<float> dominantHeightInM5 = Avx.BroadcastScalarToVector128(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM128 = dominantHeightInM.GetUpper();
+                                            dominantHeightInM128 = Avx.Blend(dominantHeightInM128, dominantHeightInM5, Simd128.Blend32_123);
+                                            ++heightLoadModulus;
+                                            break;
+                                        case 4:
+                                            Vector128<float> dominantHeightInM7 = Avx.BroadcastScalarToVector128(vegetationHeightCells + ++heightIndex);
+                                            dominantHeightInM128 = dominantHeightInM.GetUpper();
+                                            dominantHeightInM128 = Avx.Shuffle(dominantHeightInM128, dominantHeightInM128, Simd128.Shuffle32_2to01);
+                                            dominantHeightInM128 = Avx.Blend(dominantHeightInM128, dominantHeightInM7, Simd128.Blend32_3);
+                                            heightLoadModulus = 0;
+                                            break;
+                                        default:
+                                            throw new NotSupportedException(nameof(heightLoadModulus));
+                                    };
+
+                                    // http://iland-model.org/competition+for+light
+                                    Vector128<float> iXYJ = Avx.LoadVector128(stampRowEndAddress256); // tree's light stamp value
+                                    Vector128<int> stampIndexX128 = stampIndexX256.GetLower();
+                                    Vector128<int> stampIndexY128 = stampIndexY256.GetLower();
+                                    Vector128<float> zStarXYJ = Avx.Subtract(treeHeightInM.GetLower(), treeLightStamp.GetDistanceToCenterInM(stampIndexX128, stampIndexY128)); // distance to center = height (45 degree line)
+                                    zStarXYJ = Avx.Max(zStarXYJ, Vector128<float>.Zero);
+                                    byte zStarBlend = (byte)Avx.MoveMask(Avx.CompareLessThan(zStarXYJ, dominantHeightInM128));
+                                    Vector128<float> one128 = one.GetLower();
+                                    Vector128<float> zStarMin = Avx.Blend(one128, Avx.Divide(zStarXYJ, dominantHeightInM128), zStarBlend); // tree influence height
+                                    Vector128<float> iStarXYJ = Avx.Subtract(one128, Avx.Multiply(treeOpacity.GetLower(), Avx.Multiply(iXYJ, zStarMin))); // this tree's Beer-Lambert contribution to shading of light grid cell
+                                    iStarXYJ = Avx.Max(iStarXYJ, Constant.MinimumLightIntensity128); // limit minimum value
+
+                                    float* bufferAddress128 = lightBufferCells + bufferRowStartIndex + stampSizeSimd256;
+                                    Vector128<float> lightIntensity = Avx.LoadVector128(bufferAddress128);
+                                    lightIntensity = Avx.Multiply(iStarXYJ, lightIntensity);  // compound LIF intensity, Eq. 4
+                                    Avx.Store(bufferAddress128, lightIntensity);
+
+                                    // last step in this row so no index increment needed
+                                    // useful for checking correctness of calculations
+                                    // DebugV.Assert(Avx.CompareGreaterThan(lightIntensity, Vector128<float>.Zero));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            lock (landscape.LightGrid)
+            {
+                lightBuffer.ApplyToLightGrid256(landscape.LightGrid, bufferLightOriginX, bufferLightOriginY);
             }
             lightBuffers.Enqueue(lightBuffer);
         }
@@ -646,7 +966,9 @@ namespace iLand.Tree
                             {
                                 cellLightIntensity = Constant.MinimumLightIntensity;
                             }
+                            
                             float lightValue = lightGrid[lightIndexX, lightIndexY];
+                            Debug.Assert((lightValue >= 0.0F) && (lightValue <= 1.0F));
                             float cellLightResourceIndex = lightValue / cellLightIntensity; // remove impact of focal tree
 
                             // Debug.WriteLine(x + y + local_dom + z + z_zstar + own_value + value + *(grid_value-1) + (*reader)(x,y) + mStamp.offsetValue(x,y,d_offset);
@@ -662,7 +984,7 @@ namespace iLand.Tree
                         lightResourceIndex = treesOfSpecies.Species.SpeciesSet.GetLriCorrection(lightResourceIndex, relativeHeight);
                     }
 
-                    Debug.Assert((Single.IsNaN(lightResourceIndex) == false) && (lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F)); // sanity upper bound
+                    Debug.Assert((Single.IsNaN(lightResourceIndex) == false) && (lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F), "Light resource index for tree " + treesOfSpecies.TreeID[treeIndex] + " is " + lightResourceIndex + "."); // sanity upper bound
                     if (lightResourceIndex > 1.0F)
                     {
                         lightResourceIndex = 1.0F;
@@ -736,6 +1058,7 @@ namespace iLand.Tree
                             // C++ code is actually Tree.LightGrid[Tree.LightGrid.IndexOf(xTorus, yTorus) + 1], which appears to be an off by
                             // one error corrected by Qt build implementing precdence in *ptr++ incorrectly.
                             float lightValue = lightGrid[readerTorusX, readerTorusY];
+                            Debug.Assert((lightValue >= 0.0F) && (lightValue <= 1.0F));
                             float cellLightResourceIndex = lightValue / cellLightIntensity; // remove impact of focal tree
 
                             lightResourceIndex += cellLightResourceIndex * readerStampData[readerIndex];

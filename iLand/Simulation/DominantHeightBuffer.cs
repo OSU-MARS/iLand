@@ -18,8 +18,8 @@ namespace iLand.Simulation
             for (int bufferIndexY = 0; bufferIndexY < this.CellsY; ++bufferIndexY)
             {
                 int heightIndex = vegetationHeightGrid.IndexXYToIndex(bufferHeightOriginX, bufferHeightOriginY + bufferIndexY);
-                int bufferRowEndIndex = this.CellsY * (bufferIndexY + 1);
-                for (int bufferRowIndex = this.CellsY * bufferIndexY; bufferRowIndex < bufferRowEndIndex; ++bufferRowIndex, ++heightIndex)
+                int bufferRowEndIndex = this.CellsX * (bufferIndexY + 1);
+                for (int bufferRowIndex = this.CellsX * bufferIndexY; bufferRowIndex < bufferRowEndIndex; ++bufferRowIndex, ++heightIndex)
                 {
                     float vegetationHeight = vegetationHeightGrid[heightIndex];
                     float dominantHeight = this[bufferRowIndex];

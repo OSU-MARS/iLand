@@ -3,6 +3,7 @@ $unitTestPath = ([System.IO.Path]::Combine($env:USERPROFILE, "PhD\\iLand\\UnitTe
 $buildDirectory = ([System.IO.Path]::Combine($unitTestPath, "bin\\x64\\Debug\\net6.0"))
 #$buildDirectory = ([System.IO.Path]::Combine($unitTestPath, "bin\\x64\\Release\\net6.0"))
 Import-Module -Name ([System.IO.Path]::Combine($buildDirectory, "iLand.dll"));
+$env:PATH = $env:PATH + (';' + $buildDirectory + '\runtimes\win-x64\native') # for GDAL .dll loading if GeoTIFF logging is enabled
 
 ## model instantiation, simulation, and transfer of in memory trajectories to disk
 # powerShellTests.R covers reading the trajectories

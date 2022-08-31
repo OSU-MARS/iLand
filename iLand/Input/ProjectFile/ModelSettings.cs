@@ -40,7 +40,9 @@ namespace iLand.Input.ProjectFile
 
 		public string? ScheduledEventsFileName { get; private set; }
 
-		public float SoilPermanentWiltPotentialInKPA { get; private set; } // matric potential for residual soil water, kPa
+		public int SimdWidth { get; private set; }
+
+        public float SoilPermanentWiltPotentialInKPA { get; private set; } // matric potential for residual soil water, kPa
 		public float SoilSaturationPotentialInKPa { get; private set; } // matric potential, kPa
 
 		// if true, the 'correct' version of the calculation of belowground allocation is used
@@ -58,6 +60,7 @@ namespace iLand.Input.ProjectFile
             this.RandomSeed = null;
 			this.RegenerationEnabled = false;
 			this.ScheduledEventsFileName = null;
+			this.SimdWidth = 256;
 			this.SoilPermanentWiltPotentialInKPA = -4000.0F;
 			this.SoilSaturationPotentialInKPa = Single.NaN; // C++ uses hard coded default of -15.0F kPa plus a switch
 			this.UseParFractionBelowGroundAllocation = true;
@@ -114,6 +117,13 @@ namespace iLand.Input.ProjectFile
                 case "regenerationEnabled":
 					this.RegenerationEnabled = reader.ReadElementContentAsBoolean();
 					break;
+				case "simdWidth":
+					this.SimdWidth = reader.ReadElementContentAsInt();
+					if ((this.SimdWidth != 32) && (this.SimdWidth != 128) && (this.SimdWidth != 256))
+					{
+						throw new XmlException("SIMD width must be either 32, 128, or 256 bits.");
+					}
+                    break;
 				case "soilPermanentWiltPotential":
 					this.SoilPermanentWiltPotentialInKPA = reader.ReadElementContentAsFloat();
 					break;

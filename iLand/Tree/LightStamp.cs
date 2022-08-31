@@ -1,6 +1,9 @@
-﻿using System;
+﻿using iLand.Extensions;
+using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace iLand.Tree
 {
@@ -85,6 +88,26 @@ namespace iLand.Tree
             int distanceY = indexY - this.CenterCellIndex;
             return Constant.Grid.LightCellSizeInM * MathF.Sqrt(distanceX * distanceX + distanceY * distanceY);
             // return LightStamp.DistanceFromCenterGrid[Math.Abs(indexX - this.CenterCellIndex), Math.Abs(indexY - this.CenterCellIndex)];
+        }
+
+        public Vector128<float> GetDistanceToCenterInM(Vector128<int> indexX, Vector128<int> indexY)
+        {
+            // since distances are small integer truncation with multiply low isn't a concern
+            Vector128<int> centerCellIndex = Avx2Extensions.BroadcastScalarToVector128(this.CenterCellIndex);
+            Vector128<int> distanceX = Avx2.Subtract(indexX, centerCellIndex);
+            Vector128<int> distanceY = Avx2.Subtract(indexY, centerCellIndex);
+            Vector128<int> squaredDistance = Avx2.Add(Avx2.MultiplyLow(distanceX, distanceX), Avx2.MultiplyLow(distanceY, distanceY));
+            return Avx.Multiply(Constant.Grid128F.LightCellSizeInM, Avx.Sqrt(Avx.ConvertToVector128Single(squaredDistance)));
+        }
+
+        public Vector256<float> GetDistanceToCenterInM(Vector256<int> indexX, Vector256<int> indexY)
+        {
+            // since distances are small integer truncation with multiply low isn't a concern
+            Vector256<int> centerCellIndex = Avx2Extensions.BroadcastScalarToVector256(this.CenterCellIndex);
+            Vector256<int> distanceX = Avx2.Subtract(indexX, centerCellIndex);
+            Vector256<int> distanceY = Avx2.Subtract(indexY, centerCellIndex);
+            Vector256<int> squaredDistance = Avx2.Add(Avx2.MultiplyLow(distanceX, distanceX), Avx2.MultiplyLow(distanceY, distanceY));
+            return Avx.Multiply(Constant.Grid256F.LightCellSizeInM, Avx.Sqrt(Avx.ConvertToVector256Single(squaredDistance)));
         }
 
         public int GetSizeInLightCells() // width or height of the stamp in light cells

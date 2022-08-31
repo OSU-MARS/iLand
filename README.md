@@ -12,7 +12,8 @@ due to [Entity Framework issue 19396](https://github.com/dotnet/efcore/issues/19
 ### Dependencies
 This port of iLand is a .NET 6.0 assembly whose PowerShell cmdlets require [Powershell 7.2](https://github.com/PowerShell/PowerShell) or newer. 
 Feather files and SQLite databases are both input and output formats, resulting in use of Microsoft.Data.Sqlite (which, as of .NET 6.0, has
-fewer dependencies than System.Data.Sqlite) and Apache Arrow. GDAL is also used for logging light and height grids to GeoTIFF.
+fewer dependencies than System.Data.Sqlite) and Apache Arrow. GDAL is also used for logging light and height grids to GeoTIFF. If a compatible
+GDAL installation isn't included in `$env:PATH` GeoTIFF logging will fail when iLand PowerShell cmdlets are invoked.
 
 Elements of weather and CO₂ time series must be provided in chronological order. While not required, weather files are read somewhat more 
 quickly if they list time series of equal length sequentially (series ID 1: month 1, month 2..., series ID 2: month 1, month 2, ...) rather 
@@ -25,7 +26,9 @@ advantage for it to be worth performing sorting iLand, a one time sort in R (`ar
 may be worthwhile.
 
 As of Arrow 9.0.0, Apache C# bindings do not support compressed feather files and replacement dictionaries are broken. While iLand works around
-these limitations as best it can supporting use of `write_feather(compression = "uncompressed")` and `factor()` may be helpful in R.
+these limitations as best it can supporting use of `write_feather(compression = "uncompressed")` and `factor()` may be helpful in R. Also,
+`read_feather()` defaults to `mmap = TRUE` and therefore holds feather files open for the remainder of an R session. Since this prevents
+rewriting the files from PowerShell after rerunning iLand it's likely convenient to use `read_feather(mmap = FALSE)`.
 
 ### Relationship to iLand 1.0 (2016)
 Code in this repo derives from the [iLand 1.0](http://iland-model.org/) spatial growth and yield model. The official iLand 1.0 release has been
@@ -73,14 +76,6 @@ is native to the Pacific Northwest and a European plantation species, so is supp
 and parameterizations.
 
 ### Known issues inherited from iLand 1.0 C++
-* Light stamping is not thread safe. Stamping is done in parallel at the resource unit level and, when a tree's stamp reaches into an adjacent
-  resource unit it is possible two threads may stamp the same grid cell at the same time, resulting in a race condition where one, or possibly 
-  more, trees' contributions being loast. If this happens, either the domininant height field is underestimated (albeit only when the tallest
-  tree is lost), which results in light level underestimation due to lost shading, or the cell's light level is overestimated by the extent of
-  the shading lost in dropping a tree's light multiplication. Currently, both risks are mitigated by 
-  [`Parallel.For()`](https://docs.microsoft.com/en-us/dotnet/api/system.threading.tasks.parallel.for)'s 
-  [default range partitioning](https://github.com/dotnet/runtime/blob/main/src/libraries/System.Threading.Tasks.Parallel/src/System/Threading/Tasks/Parallel.cs)
-  and stamping code structure which attempts to keep read-write cycles as close to atomic.
 * Leaf phenology is hard coded for northern hemisphere temperate and boreal sites, preventing support for deciduous species in the southern
   hemisphere and likely inhibiting modeling on tropical sites. Chilling day calculations for establishment of evergreen species are also likely 
   to be incorrect in these locations.
@@ -93,6 +88,12 @@ and parameterizations.
 * ~50% crash probability per run reduced to negligible risk, dramatically improving useability.
 * Miscounting of tree presence in height grid cells for resource unit occupancy (very likely a Qt 6 compiler order of operations defect, possibly
   specific to toroidal resource units).
+* Dominant height field establishment and light stamping were not thread safe. Both operations run in parallel at the resource unit level and, 
+  when a tree's height field or light stamp reaches into an adjacent resource unit, it is possible two threads may stamp the same heihgt or
+  light grid cell at the same time, resulting in a race condition where one, or possibly more, trees' heights or shading contributions are lost. 
+  The 1.0 C++ implementation did not guard against either of these overlap cases and also did not guarantee establishment of the dominant 
+  height field prior to beginning light stamping. The C# implementation avoids all three race conditions by completing the height field before
+  beginning light stamping and taking writer locks on both the height and light grids when needed.
 * Moving average of daily soil water potential for sapling establishment restarted every January 1st even though the calendar year boundary is 
   usually within the growing season on tropical and southern hemisphere sites.
 * ResourceUnitSoil carbon and nitrogen inputs were off by a factor of 10,000 because resource units' in landscape areas in m² were misinterpreted as

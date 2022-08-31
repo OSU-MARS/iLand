@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using Weather = iLand.World.Weather;
 using Model = iLand.Simulation.Model;
+using System.Drawing;
 
 namespace iLand.Test
 {
@@ -202,7 +203,7 @@ namespace iLand.Test
 
                     endOfYearTrees.ObserveResourceUnit(resourceUnit1);
                     ModelTest.VerifyKalkalpenResourceUnitTrees(kalkalpen.Landscape.ResourceUnits, simulationYear, startOfYearTrees, endOfYearTrees);
-                    ModelTest.VerifyLightAndHeightGrids(kalkalpen.Landscape, maxHeight: 45.0F + 0.1F * simulationYear);
+                    ModelTest.VerifyLightAndHeightGrids(kalkalpen.Landscape, maxExpectedHeight: 45.0F + 0.1F * simulationYear);
 
                     (startOfYearTrees, endOfYearTrees) = (endOfYearTrees, startOfYearTrees);
                 }
@@ -727,43 +728,75 @@ namespace iLand.Test
             }
         }
 
-        private static void VerifyLightAndHeightGrids(Landscape landscape, float maxHeight)
+        private static void VerifyLightAndHeightGrids(Landscape landscape, float maxExpectedHeight)
         {
             // light grid
             Grid<float> lightGrid = landscape.LightGrid;
             float maxLight = Single.MinValue;
+            int maxLightIndex = -1;
             float meanLight = 0.0F;
             float minLight = Single.MaxValue;
-            for (int lightIndex = 0; lightIndex < lightGrid.CellCount; ++lightIndex)
+            int minLightIndex = -1;
+            for (int lightIndex = 0; lightIndex < lightGrid.Data.Length; ++lightIndex)
             {
-                float light = lightGrid[lightIndex];
-                maxLight = MathF.Max(light, maxLight);
-                meanLight += light;
-                minLight = MathF.Min(light, minLight);
+                float lightIntensity = lightGrid[lightIndex];
+                Assert.IsTrue(Single.IsNaN(lightIntensity) == false);
+
+                if (lightIntensity > maxLight)
+                {
+                    maxLight = lightIntensity;
+                    maxLightIndex = lightIndex;
+                }
+                meanLight += lightIntensity;
+                if (lightIntensity < minLight)
+                {
+                    minLight = lightIntensity;
+                    minLightIndex = lightIndex;
+                }
             }
             meanLight /= lightGrid.CellCount;
 
-            Assert.IsTrue((minLight >= 0.0F) && (minLight < 1.0F));
-            Assert.IsTrue((meanLight > minLight) && (meanLight < maxLight));
-            Assert.IsTrue(maxLight == 1.0F);
+            Point minLightIndexXY = lightGrid.GetCellXYIndex(minLightIndex);
+            Point maxLightIndexXY = lightGrid.GetCellXYIndex(maxLightIndex);
+
+            Assert.IsTrue(lightGrid.CellCount == lightGrid.CellsX * lightGrid.CellsY, "Light grid dimensions " + lightGrid.CellsX + " x " + lightGrid.CellsY + " do not match cell count of " + lightGrid.CellCount + ".");
+            Assert.IsTrue((minLight >= 0.0F) && (minLight < 1.0F), "Minimum value of light grid is " + minLight + " at grid index " + minLightIndex + " (x = " + minLightIndexXY.X + ", y = " + minLightIndexXY.Y + ").");
+            Assert.IsTrue((meanLight > minLight) && (meanLight < maxLight), "Mean value of light grid is " + meanLight + ", which does not fall between the minimum and maximum values of " + minLight + " and " + maxLight + ".");
+            Assert.IsTrue(maxLight == 1.0F, "Maximum value of light grid is " + maxLight + " at light grid index " + maxLightIndex + " (x = " + maxLightIndexXY.X + ", y = " + maxLightIndexXY.Y + ").");
 
             // height grid
             Grid<float> heightGrid = landscape.VegetationHeightGrid;
-            float maxGridHeight = Single.MinValue;
-            float meanGridHeight = 0.0F;
-            float minGridHeight = Single.MaxValue;
-            for (int heightIndex = 0; heightIndex < heightGrid.CellCount; ++heightIndex)
+            float maxHeight = Single.MinValue;
+            int maxHeightIndex = -1;
+            float meanHeight = 0.0F;
+            float minHeight = Single.MaxValue;
+            int minHeightIndex = -1;
+            for (int heightIndex = 0; heightIndex < heightGrid.Data.Length; ++heightIndex)
             {
                 float vegetationHeightInM = heightGrid[heightIndex];
-                maxGridHeight = MathF.Max(vegetationHeightInM, maxGridHeight);
-                meanGridHeight += vegetationHeightInM;
-                minGridHeight = MathF.Min(vegetationHeightInM, minGridHeight);
-            }
-            meanGridHeight /= heightGrid.CellCount;
+                Assert.IsTrue(Single.IsNaN(vegetationHeightInM) == false);
 
-            Assert.IsTrue(minGridHeight >= 0.0F);
-            Assert.IsTrue((meanGridHeight > minGridHeight) && (meanGridHeight < maxGridHeight));
-            Assert.IsTrue(maxGridHeight < maxHeight);
+                if (vegetationHeightInM > maxHeight)
+                {
+                    maxHeight = vegetationHeightInM;
+                    maxHeightIndex = heightIndex;
+                }
+                meanHeight += vegetationHeightInM;
+                if (vegetationHeightInM < minHeight)
+                {
+                    minHeight = vegetationHeightInM;
+                    minHeightIndex = heightIndex;
+                }
+            }
+            meanHeight /= heightGrid.CellCount;
+
+            Point minHeightIndexXY = heightGrid.GetCellXYIndex(minHeightIndex);
+            Point maxHeightIndexXY = heightGrid.GetCellXYIndex(maxHeightIndex);
+
+            Assert.IsTrue(heightGrid.CellCount == heightGrid.CellsX * heightGrid.CellsY, "Height grid dimensions " + heightGrid.CellsX + " x " + heightGrid.CellsY + " do not match cell count of " + heightGrid.CellCount + ".");
+            Assert.IsTrue(minHeight >= Constant.RegenerationLayerHeight, "Minimum value of height grid is " + minHeight + " at grid index " + minHeightIndex + " (x = " + minHeightIndexXY.X + ", y = " + minHeightIndexXY.Y + ").");
+            Assert.IsTrue((meanHeight > minHeight) && (meanHeight < maxHeight), "Mean value of height grid is " + meanHeight + ", which does not fall between the minimum and maximum values of " + minHeight + " and " + maxHeight + ".");
+            Assert.IsTrue(maxHeight < maxExpectedHeight, "Maximum value of height grid is " + maxHeight + " at height grid index " + maxHeightIndex + " (x = " + maxHeightIndexXY.X + ", y = " + maxHeightIndexXY.Y + ").");
         }
 
         private static void VerifyMalcolmKnappModel(Model model)

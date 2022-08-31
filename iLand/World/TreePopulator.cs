@@ -300,8 +300,10 @@ namespace iLand.World
                 for (int treeIndexInFile = startTreeIndexInFile; treeIndexInFile < endTreeIndexInFile; ++treeIndexInFile)
                 {
                     // if needed, trees of sapling size could be converted to saplings rather than added as treees
-                    //if (dbh<5.)
+                    //if (individualTreeReader.HeightInM[treeIndexInFile] < Constant.RegenerationLayerHeight)
+                    //{
                     //    continue;
+                    //}
 
                     // translate tree into project coordinates
                     int treeID = individualTreeReader.TreeID[treeIndexInFile];

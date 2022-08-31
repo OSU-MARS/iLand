@@ -207,11 +207,32 @@ namespace iLand.Simulation
                     ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
                     treesOnResourceUnit.CalculateDominantHeightField(landscape, dominantHeightBuffers);
                 });
-                Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
+                switch (this.Project.Model.Settings.SimdWidth)
                 {
-                    ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
-                    treesOnResourceUnit.ApplyLightIntensityPattern(landscape, lightBuffers);
-                });
+                    case 32:
+                        Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
+                        {
+                            ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
+                            treesOnResourceUnit.ApplyLightIntensityPattern(landscape, lightBuffers);
+                        });
+                        break;
+                    case 128:
+                        Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
+                        {
+                            ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
+                            treesOnResourceUnit.ApplyLightIntensityPattern128(landscape, lightBuffers);
+                        });
+                        break;
+                    case 256:
+                        Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
+                        {
+                            ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
+                            treesOnResourceUnit.ApplyLightIntensityPattern256(landscape, lightBuffers);
+                        });
+                        break;
+                    default:
+                        throw new NotSupportedException("Unhandled SIMD width of " + this.Project.Model.Settings.SimdWidth + " bits.");
+                }
 
                 // read pattern: LIP value calculation
                 Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
