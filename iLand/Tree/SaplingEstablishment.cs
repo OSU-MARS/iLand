@@ -164,7 +164,7 @@ namespace iLand.Tree
             else if (weatherTimeSeries.Timestep == Timestep.Monthly)
             {
                 bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
-                (int leafOffMonthIndex, int leafOnEndDayOfMonth) = SaplingEstablishment.GetLeafOffMonthlyWeatherIndices(weather, leafPhenology);
+                (int leafOffMonthIndex, int leafOnEndDayOfMonth) = SaplingEstablishment.GetLeafOffMonthlyWeatherIndices(weather, leafPhenology, isLeapYear);
                 for (int monthIndex = 0, weatherMonthIndex = weatherTimeSeries.CurrentYearStartIndex; weatherMonthIndex < weatherTimeSeries.NextYearStartIndex; ++monthIndex, ++weatherMonthIndex)
                 {
                     // if winterkill temperature is reached seedling establishment probability becomes zero
@@ -322,10 +322,10 @@ namespace iLand.Tree
             return weather.TimeSeries.CurrentYearStartIndex + (leafPhenology.IsEvergreen ? weather.Sun.LastDayLongerThan10_5Hours : leafPhenology.LeafOnEndDayOfYearIndex);
         }
 
-        private static (int leafOffMonthIndex, int leafOnEndDayOfMonth) GetLeafOffMonthlyWeatherIndices(Weather weather, LeafPhenology leafPhenology)
+        private static (int leafOffMonthIndex, int leafOnEndDayOfMonth) GetLeafOffMonthlyWeatherIndices(Weather weather, LeafPhenology leafPhenology, bool isLeapYear)
         {
             int leafOnEndDayOfYearIndex = leafPhenology.IsEvergreen ? weather.Sun.LastDayLongerThan10_5Hours : leafPhenology.LeafOnEndDayOfYearIndex;
-            return DateTimeExtensions.DayOfYearToDayOfMonth(leafOnEndDayOfYearIndex);
+            return DateTimeExtensions.DayOfYearToDayOfMonth(leafOnEndDayOfYearIndex, isLeapYear);
         }
 
         private float GetMinimumLeafOnSoilWaterModifier(ResourceUnitTreeSpecies ruSpecies, int leafOnStart, int leafOnEnd, int daysInYear)
@@ -344,7 +344,7 @@ namespace iLand.Tree
             }
 
             float miniumumLeafOnMovingAveragePsiInKPa = Single.MaxValue; // kPa
-            WaterCycle waterCycle = ruSpecies.ResourceUnit.WaterCycle;
+            ResourceUnitWaterCycle waterCycle = ruSpecies.ResourceUnit.WaterCycle;
             for (int dayOfYear = 0, movingAverageIndex = 0; dayOfYear < daysInYear; ++dayOfYear)
             {
                 // running average: remove oldest item, add new item in a ringbuffer

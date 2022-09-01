@@ -12,8 +12,8 @@ due to [Entity Framework issue 19396](https://github.com/dotnet/efcore/issues/19
 ### Dependencies
 This port of iLand is a .NET 6.0 assembly whose PowerShell cmdlets require [Powershell 7.2](https://github.com/PowerShell/PowerShell) or newer. 
 Feather files and SQLite databases are both input and output formats, resulting in use of Microsoft.Data.Sqlite (which, as of .NET 6.0, has
-fewer dependencies than System.Data.Sqlite) and Apache Arrow. GDAL is also used for logging light and height grids to GeoTIFF. If a compatible
-GDAL installation isn't included in `$env:PATH` GeoTIFF logging will fail when iLand PowerShell cmdlets are invoked.
+fewer dependencies than System.Data.Sqlite) and Apache Arrow. GDAL is also used for logging light and height grids to GeoTIFF. If compatible
+GDAL binaries aren't included in `$env:PATH` GeoTIFF logging will fail when iLand PowerShell cmdlets are invoked.
 
 Elements of weather and CO₂ time series must be provided in chronological order. While not required, weather files are read somewhat more 
 quickly if they list time series of equal length sequentially (series ID 1: month 1, month 2..., series ID 2: month 1, month 2, ...) rather 

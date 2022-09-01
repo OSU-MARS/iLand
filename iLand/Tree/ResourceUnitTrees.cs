@@ -984,7 +984,7 @@ namespace iLand.Tree
                         lightResourceIndex = treesOfSpecies.Species.SpeciesSet.GetLriCorrection(lightResourceIndex, relativeHeight);
                     }
 
-                    Debug.Assert((Single.IsNaN(lightResourceIndex) == false) && (lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F), "Light resource index for tree " + treesOfSpecies.TreeID[treeIndex] + " is " + lightResourceIndex + "."); // sanity upper bound
+                    Debug.Assert((lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F), "Light resource index for tree " + treesOfSpecies.TreeID[treeIndex] + " is " + lightResourceIndex + "."); // sanity upper bound
                     if (lightResourceIndex > 1.0F)
                     {
                         lightResourceIndex = 1.0F;
@@ -1072,7 +1072,7 @@ namespace iLand.Tree
                         lightResourceIndex = treesOfSpecies.Species.SpeciesSet.GetLriCorrection(lightResourceIndex, relativeHeight);
                     }
 
-                    Debug.Assert((Single.IsNaN(lightResourceIndex) == false) && (lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F)); // sanity upper bound
+                    Debug.Assert((lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F)); // sanity upper bound
                     if (lightResourceIndex > 1.0F)
                     {
                         lightResourceIndex = 1.0F; // TODO: why clamp?

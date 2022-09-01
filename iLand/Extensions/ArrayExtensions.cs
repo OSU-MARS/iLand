@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 namespace iLand.Extensions
 {
@@ -39,6 +40,30 @@ namespace iLand.Extensions
         public static Span<T> Slice<T>(this T[] array, int start, int length)
         {
             return array.AsSpan().Slice(start, length);
+        }
+
+        public static float Sum(this float[] array)
+        {
+            float sum = 0.0F;
+            for (int index = 0; index < array.Length; ++index)
+            {
+                sum += array[index];
+            }
+            return sum;
+        }
+
+        public static void ToMonthlyAverages(this float[] dailyAverages, Span<float> monthlyAverages)
+        {
+            if ((dailyAverages.Length < Constant.Time.DaysInYear) || (dailyAverages.Length > Constant.Time.DaysInLeapYear))
+            {
+                throw new ArgumentOutOfRangeException(nameof(dailyAverages));
+            }
+            if (monthlyAverages.Length != Constant.Time.MonthsInYear)
+            {
+                throw new ArgumentOutOfRangeException(nameof(monthlyAverages));
+            }
+
+            monthlyAverages[0] = dailyAverages[0..31].Average();
         }
     }
 }

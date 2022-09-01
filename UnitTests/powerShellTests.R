@@ -207,15 +207,44 @@ ggplot(individualTreeSubset) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
   theme(legend.justification = c(0, 1), legend.position = c(0.02, 0.99))
 
-# 3-PG modifiers
+## 3-PG
+# modifiers
 ggplot(elliottThreePG %>% filter(year > 2021)) + # 3-PG outputs are all zero in initialization year
   geom_path(aes(x = decimalYear, y = co2Modifier, color = "CO2", group = uniqueID), alpha = 0.5) +
-  geom_path(aes(x = decimalYear, y = soilWaterModifier, color = "soil water", group = uniqueID), alpha = 0.5) +
-  geom_path(aes(x = decimalYear, y = temperatureModifier, color = "temperature", group = uniqueID), alpha = 0.5) +
-  geom_path(aes(x = decimalYear, y = vpdModifier, color = "VPD", group = uniqueID), alpha = 0.5) +
-  coord_cartesian(ylim = c(0, 1.1)) +
   guides(color = guide_legend(ncol = 4)) +
-  labs(x = "calendar year", y = "3-PG growth modifier", color = NULL) +
-  scale_color_discrete(breaks = c("CO2", "soil water", "temperature", "VPD"), labels = c(bquote("CO"[2]), "soil water", "temperature", "VPD")) +
+  labs(x = NULL, y = "3-PG CO₂ modifier", color = NULL) +
+  scale_color_manual(values = c("grey35")) +
   scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
-  theme(legend.justification = c(1, 0), legend.position = c(0.99, 0.02))
+  theme(legend.position = "null") +
+ggplot(elliottThreePG %>% filter(year > 2021)) + # 3-PG outputs are all zero in initialization year
+  geom_path(aes(x = decimalYear, y = soilWaterModifier, color = "soil water", group = uniqueID), alpha = 0.5) +
+  guides(color = guide_legend(ncol = 4)) +
+  labs(x = NULL, y = "3-PG soil water modifier", color = NULL) +
+  scale_color_manual(values = "blue2") +
+  scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
+  theme(legend.position = "null") +
+ggplot(elliottThreePG %>% filter(year > 2021)) + # 3-PG outputs are all zero in initialization year
+  geom_path(aes(x = decimalYear, y = temperatureModifier, color = "temperature", group = uniqueID), alpha = 0.5) +
+  guides(color = guide_legend(ncol = 4)) +
+  labs(x = "calendar year", y = "3-PG temperature modifier", color = NULL) +
+  scale_color_manual(values = "darkorange2") +
+  scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
+  theme(legend.position = "null") +
+  ggplot(elliottThreePG %>% filter(year > 2021)) + # 3-PG outputs are all zero in initialization year
+geom_path(aes(x = decimalYear, y = vpdModifier, color = "VPD", group = uniqueID), alpha = 0.5) +
+  guides(color = guide_legend(ncol = 4)) +
+  labs(x = "calendar year", y = "3-PG VPD modifier", color = NULL) +
+  scale_color_manual(values = c("darkviolet")) +
+  scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
+  theme(legend.position = "null") +
+plot_layout(nrow = 2, ncol = 2)
+  
+# water cycle
+ggplot(elliottThreePG %>% filter(year > 2021)) + # 3-PG outputs are all zero in initialization year
+  geom_path(aes(x = decimalYear, y = infiltration, color = "infiltration, mm", group = uniqueID), alpha = 0.15) +
+  geom_path(aes(x = decimalYear, y = evapotranspiration, color = "evapotranspiration, mm", group = uniqueID), alpha = 0.15) +
+  geom_path(aes(x = decimalYear, y = soilWaterPotential, color = "matric potential, kPa", group = uniqueID), alpha = 0.15) +
+  labs(x = "calendar year", y = "water flow, mm, or matric potential, kPa", color = NULL) +
+  scale_color_manual(breaks = c("infiltration, mm", "evapotranspiration, mm", "matric potential, kPa"), values = c("blue2", "green3", "grey25")) +
+  scale_x_continuous(breaks = seq(2022, 2032, by = 2)) +
+  theme(legend.justification = c(0, 1), legend.position = c(0.02, 0.99))

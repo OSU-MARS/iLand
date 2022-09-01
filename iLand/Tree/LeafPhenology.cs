@@ -164,7 +164,7 @@ namespace iLand.Tree
             }
             else if (weatherTimeSeries.Timestep == Timestep.Monthly)
             {
-                (int summerSolsticeMonthIndex, int _) = DateTimeExtensions.DayOfYearToDayOfMonth(weather.Sun.LongestDayIndex);
+                int summerSolsticeMonthIndex = DateTimeExtensions.DayOfYearToMonthIndex(weather.Sun.LongestDayIndex, isLeapYear);
                 for (int monthOfYearIndex = 0, weatherMonthIndex = weatherTimeSeries.CurrentYearStartIndex; weatherMonthIndex != weatherTimeSeries.NextYearStartIndex; ++monthOfYearIndex, ++weatherMonthIndex)
                 {
                     if ((longestDayOfYearIndex >= 0) && (weatherMonthIndex < summerSolsticeMonthIndex))
@@ -213,8 +213,8 @@ namespace iLand.Tree
             this.LeafOnEndDayOfYearIndex = leafOnEndDayIndex;
 
             // set leaf on fractions
-            (int leafOnMonthIndex, int leafOnDayOfMonthIndex) = DateTimeExtensions.DayOfYearToDayOfMonth(leafOnStartDayIndex);
-            (int leafOffMonthIndex, int leafOffDayOfMonthIndex) = DateTimeExtensions.DayOfYearToDayOfMonth(leafOnEndDayIndex);
+            (int leafOnMonthIndex, int leafOnDayOfMonthIndex) = DateTimeExtensions.DayOfYearToDayOfMonth(leafOnStartDayIndex, isLeapYear);
+            (int leafOffMonthIndex, int leafOffDayOfMonthIndex) = DateTimeExtensions.DayOfYearToDayOfMonth(leafOnEndDayIndex, isLeapYear);
             for (int monthIndex = 0; monthIndex < 12; ++monthIndex)
             {
                 if ((monthIndex < leafOnMonthIndex) || (monthIndex > leafOffMonthIndex))

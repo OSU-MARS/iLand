@@ -142,7 +142,7 @@ namespace iLand.Tree
             }
 
             // no seed production if maturity age is not reached (species parameter) or if tree height is below 4m.
-            if ((tree.AgeInYears[treeIndex] > this.minimumAgeInYearsForSeedProduction) && (tree.HeightInM[treeIndex] > 4.0F))
+            if ((tree.AgeInYears[treeIndex] > this.minimumAgeInYearsForSeedProduction) && (tree.HeightInM[treeIndex] > Constant.RegenerationLayerHeight))
             {
                 this.SeedDispersal.SetMatureTree(tree.LightCellIndexXY[treeIndex], tree.LeafAreaInM2[treeIndex]);
             }
@@ -496,7 +496,7 @@ namespace iLand.Tree
             species.SaplingGrowth.SetupReinekeLookup();
             if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
             {
-                species.SaplingGrowth.HeightGrowthPotential.Linearize(0.0F, Constant.Sapling.MaximumHeight);
+                species.SaplingGrowth.HeightGrowthPotential.Linearize(0.0F, Constant.RegenerationLayerHeight);
             }
             return species;
         }

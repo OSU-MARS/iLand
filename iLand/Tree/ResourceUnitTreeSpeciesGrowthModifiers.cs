@@ -71,7 +71,7 @@ namespace iLand.Tree
 
             // calculate monthly modifiers for the current simulation year (January-December calendar year)
             LeafPhenology leafPhenology = this.resourceUnit.Weather.GetPhenology(this.Species.LeafPhenologyID);
-            WaterCycle ruWaterCycle = this.resourceUnit.WaterCycle;
+            ResourceUnitWaterCycle ruWaterCycle = this.resourceUnit.WaterCycle;
             CO2TimeSeriesMonthly co2timeSeries = landscape.CO2ByMonth;
             WeatherTimeSeries weatherTimeSeries = this.resourceUnit.Weather.TimeSeries;
             if (weatherTimeSeries.Timestep == Timestep.Daily)
@@ -102,7 +102,7 @@ namespace iLand.Tree
             this.TotalRadiationForYear = this.resourceUnit.Weather.TotalAnnualRadiation; // TODO: is this copy necessary?
         }
 
-        private void CalculateMonthlyGrowthModifiersFromDailyWeather(WeatherTimeSeriesDaily dailyWeatherSeries, LeafPhenology leafPhenology, CO2TimeSeriesMonthly co2timeSeries, WaterCycle ruWaterCycle)
+        private void CalculateMonthlyGrowthModifiersFromDailyWeather(WeatherTimeSeriesDaily dailyWeatherSeries, LeafPhenology leafPhenology, CO2TimeSeriesMonthly co2timeSeries, ResourceUnitWaterCycle ruWaterCycle)
         {
             int leafOnDayIndex = leafPhenology.LeafOnStartDayOfYearIndex;
             int leafOffDayIndex = leafPhenology.LeafOnEndDayOfYearIndex;
@@ -154,7 +154,7 @@ namespace iLand.Tree
             }
         }
 
-        private void CalculateMonthlyGrowthModifiersFromMonthlyWeather(WeatherTimeSeries monthlyTimeSeries, LeafPhenology leafPhenology, CO2TimeSeriesMonthly co2timeSeries, WaterCycle ruWaterCycle)
+        private void CalculateMonthlyGrowthModifiersFromMonthlyWeather(WeatherTimeSeries monthlyTimeSeries, LeafPhenology leafPhenology, CO2TimeSeriesMonthly co2timeSeries, ResourceUnitWaterCycle ruWaterCycle)
         {
             for (int weatherMonthIndex = monthlyTimeSeries.CurrentYearStartIndex; weatherMonthIndex < monthlyTimeSeries.NextYearStartIndex; ++weatherMonthIndex)
             {

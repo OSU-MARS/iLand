@@ -36,7 +36,7 @@ namespace iLand.Input.Tree
                 };
                 ++lineNumber;
 
-                if (sizeRange.HeightDiameterRatio == 0.0 || sizeRange.DbhFrom / 100.0 * sizeRange.HeightDiameterRatio < Constant.Sapling.MaximumHeight)
+                if (sizeRange.HeightDiameterRatio == 0.0 || sizeRange.DbhFrom / 100.0 * sizeRange.HeightDiameterRatio < Constant.RegenerationLayerHeight)
                 {
                     throw new NotSupportedException("File '" + treeFilePath + "' tries to init trees below 4 m height at line " + lineNumber + ". Height-diameter ratio = " + sizeRange.HeightDiameterRatio + ", DBH = " + sizeRange.DbhFrom + ".");
                 }

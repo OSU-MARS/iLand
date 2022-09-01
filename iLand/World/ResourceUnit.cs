@@ -35,7 +35,7 @@ namespace iLand.World
         public SaplingCell[]? SaplingCells { get; private set; }
         public Point MinimumLightIndexXY { get; set; } // coordinates on the LIF grid of the upper left corner of the RU
         public ResourceUnitTrees Trees { get; private init; }
-        public WaterCycle WaterCycle { get; private init; }
+        public ResourceUnitWaterCycle WaterCycle { get; private init; }
         public Weather Weather { get; set; }
 
         public ResourceUnit(Project projectFile, Weather weather, TreeSpeciesSet speciesSet, int ruGridIndex)
@@ -404,7 +404,7 @@ namespace iLand.World
             sapling.Age++; // increase age of sapling by 1
 
             // recruitment?
-            if (sapling.HeightInM > 4.0F)
+            if (sapling.HeightInM > Constant.RegenerationLayerHeight)
             {
                 ++ruSpecies.SaplingStats.RecruitedCohorts;
 

@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using Weather = iLand.World.Weather;
 using Model = iLand.Simulation.Model;
 using System.Drawing;
+using static iLand.Constant;
 
 namespace iLand.Test
 {
@@ -457,17 +458,32 @@ namespace iLand.Test
                 //ru.Variables.CumNep;
                 //ru.Variables.Nep;
                 Assert.IsTrue((resourceUnit.WaterCycle.CanopyConductance > 0.001F) && (resourceUnit.WaterCycle.CanopyConductance < 0.1F), "Water cycle: canopy conductance"); // initially zero
-                Assert.IsTrue((resourceUnit.WaterCycle.CurrentSoilWater >= 0.0F) && (resourceUnit.WaterCycle.CurrentSoilWater <= resourceUnit.WaterCycle.FieldCapacity), "Water cycle: current water content of " + resourceUnit.WaterCycle.CurrentSoilWater + " mm is negative or greater than the field capacity of " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
-                Assert.IsTrue((resourceUnit.WaterCycle.FieldCapacity > 300.0F) && (resourceUnit.WaterCycle.FieldCapacity < 1000.0F), "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
+                Assert.IsTrue((resourceUnit.WaterCycle.FieldCapacityInMM > 300.0F) && (resourceUnit.WaterCycle.FieldCapacityInMM < 1000.0F), "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacityInMM + " mm.");
                 Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.Time.MonthsInYear, "Water cycle: water potential length");
-                foreach (float psi in resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear)
+                // Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
+                // Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= 10.0F), "Water cycle: snow days");
+
+                float[] waterPotentialByTimestep = resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear;
+                for (int weatherTimestepIndex = 0; weatherTimestepIndex < waterPotentialByTimestep.Length; ++weatherTimestepIndex)
                 {
-                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential of " + psi + " kpa.");
+                    float psi = waterPotentialByTimestep[weatherTimestepIndex];
+                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential of " + psi + " kPa at timestep " + weatherTimestepIndex + ".");
                 }
-                Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
-                Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= 10.0F), "Water cycle: snow days");
-                Assert.IsTrue((resourceUnit.WaterCycle.TotalAnnualEvapotranspirationInMM > 1.0F) && (resourceUnit.WaterCycle.TotalAnnualEvapotranspirationInMM < 250.0F), "Soil: evapotranspiration"); // zero at initialization
-                Assert.IsTrue((resourceUnit.WaterCycle.TotalAnnualRunoffInMM > 100.0F) && (resourceUnit.WaterCycle.TotalAnnualRunoffInMM < 3000.0F), "Soil: runoff"); // zero at initialization
+
+                float[] evapotranspirationInMMByMonth = resourceUnit.WaterCycle.EvapotranspirationInMMByMonth;
+                float[] infiltrationInMMByMonth = resourceUnit.WaterCycle.InfiltrationInMMByMonth;
+                float[] runoffInMMByMonth = resourceUnit.WaterCycle.RunoffInMMByMonth;
+                for (int monthIndex = 0; monthIndex < Constant.Time.MonthsInYear; ++monthIndex)
+                {
+                    float evapotranspirationInMM = evapotranspirationInMMByMonth[monthIndex];
+                    float infiltrationInMM = infiltrationInMMByMonth[monthIndex];
+                    float runoffInMM = runoffInMMByMonth[monthIndex];
+
+                    int month = monthIndex + 1;
+                    Assert.IsTrue((evapotranspirationInMM > 1.0F) && (evapotranspirationInMM < 25.0F), "Soil: evapotranspiration is " + evapotranspirationInMM + " mm in month " + month + ".");
+                    Assert.IsTrue((infiltrationInMM >= 0.0F) && (infiltrationInMM < 800.0F), "Water cycle: infiltration is " + infiltrationInMM + " mm in month " + month + ".");
+                    Assert.IsTrue((runoffInMM >= 0.0F) && (runoffInMM < 800.0F), "Water cycle: runoff is " + runoffInMM + " mm in month " + month + ".");
+                }
             }
 
             Assert.IsTrue(model.Landscape.ResourceUnits.Count == 190);
@@ -860,17 +876,32 @@ namespace iLand.Test
                 //ru.Variables.CumNep;
                 //ru.Variables.Nep;
                 Assert.IsTrue(resourceUnit.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
-                Assert.IsTrue((resourceUnit.WaterCycle.CurrentSoilWater >= 0.0) && (resourceUnit.WaterCycle.CurrentSoilWater <= resourceUnit.WaterCycle.FieldCapacity), "Water cycle: current water content of " + resourceUnit.WaterCycle.CurrentSoilWater + " mm is negative or greater than the field capacity of " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
-                Assert.IsTrue(MathF.Abs(resourceUnit.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacity + " mm.");
+                Assert.IsTrue(MathF.Abs(resourceUnit.WaterCycle.FieldCapacityInMM - 29.2064552F) < 0.001F, "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacityInMM + " mm.");
                 Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.Time.DaysInLeapYear, "Water cycle: water potential length");
-                foreach (float psi in resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear)
+                // Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
+                // Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= Constant.Time.DaysInLeapYear), "Water cycle: snow days");
+
+                float[] waterPotentialByTimestep = resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear;
+                for (int weatherTimestepIndex = 0; weatherTimestepIndex < waterPotentialByTimestep.Length; ++weatherTimestepIndex)
                 {
-                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential");
+                    float psi = waterPotentialByTimestep[weatherTimestepIndex];
+                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential of " + psi + " kPa at timestep " + weatherTimestepIndex + ".");
                 }
-                Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
-                Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= Constant.Time.DaysInLeapYear), "Water cycle: snow days");
-                Assert.IsTrue(resourceUnit.WaterCycle.TotalAnnualEvapotranspirationInMM == 0.0F, "Soil: evapotranspiration"); // zero at initialization
-                Assert.IsTrue(resourceUnit.WaterCycle.TotalAnnualRunoffInMM == 0.0F, "Soil: runoff"); // zero at initialization
+
+                float[] evapotranspirationInMMByMonth = resourceUnit.WaterCycle.EvapotranspirationInMMByMonth;
+                float[] infiltrationInMMByMonth = resourceUnit.WaterCycle.InfiltrationInMMByMonth;
+                float[] runoffInMMByMonth = resourceUnit.WaterCycle.RunoffInMMByMonth;
+                for (int monthIndex = 0; monthIndex < Constant.Time.MonthsInYear; ++monthIndex)
+                {
+                    float evapotranspirationInMM = evapotranspirationInMMByMonth[monthIndex];
+                    float infiltrationInMM = infiltrationInMMByMonth[monthIndex];
+                    float runoffInMM = runoffInMMByMonth[monthIndex];
+
+                    int month = monthIndex + 1;
+                    Assert.IsTrue(evapotranspirationInMM == 0.0F, "Soil: initial evapotranspiration is " + evapotranspirationInMM + " mm in month " + month + ".");
+                    Assert.IsTrue(infiltrationInMM == 0.0F, "Water cycle: initial infiltration is " + infiltrationInMM + " mm in month " + month + ".");
+                    Assert.IsTrue(runoffInMM == 0.0F, "Water cycle: initial runoff is " + runoffInMM  + " mm in month " + month + "."); // zero at initialization
+                }
             }
 
             Assert.IsTrue(model.Landscape.ResourceUnits.Count == 1);
@@ -983,31 +1014,31 @@ namespace iLand.Test
             float treeNppInKgPerHa = trajectory.TreeNppByYear[simulationYear];
             float treesPerHectare = trajectory.TreesPerHectareByYear[simulationYear];
 
-            Assert.IsTrue((Single.IsNaN(averageDbhInCm) == false) && (averageDbhInCm >= 0.0F) && (averageDbhInCm < 200.0F));
-            Assert.IsTrue((Single.IsNaN(averageHeightInM) == false) && (averageHeightInM >= 0.0F) && (averageHeightInM < 100.0F));
-            Assert.IsTrue((Single.IsNaN(basalAreaInM2PerHa) == false) && (basalAreaInM2PerHa >= 0.0F) && (basalAreaInM2PerHa < 200.0F));
-            Assert.IsTrue((Single.IsNaN(leafAreaIndex) == false) && (leafAreaIndex >= 0.0F) && (leafAreaIndex < 20.0F));
-            Assert.IsTrue((Single.IsNaN(liveStemVolumeInM3PerHa) == false) && (liveStemVolumeInM3PerHa >= 0.0F) && (liveStemVolumeInM3PerHa < 3000.0F));
-            Assert.IsTrue((Single.IsNaN(treeAbovegroundNppInKgPerHa) == false) && (treeAbovegroundNppInKgPerHa >= 0.0F) && (treeAbovegroundNppInKgPerHa < 50000.0F));
-            Assert.IsTrue((Single.IsNaN(treeNppInKgPerHa) == false) && (treeNppInKgPerHa >= 0.0F) && (treeNppInKgPerHa < 75000.0F));
+            Assert.IsTrue((averageDbhInCm >= 0.0F) && (averageDbhInCm < 200.0F));
+            Assert.IsTrue((averageHeightInM >= 0.0F) && (averageHeightInM < 100.0F));
+            Assert.IsTrue((basalAreaInM2PerHa >= 0.0F) && (basalAreaInM2PerHa < 200.0F));
+            Assert.IsTrue((leafAreaIndex >= 0.0F) && (leafAreaIndex < 20.0F));
+            Assert.IsTrue((liveStemVolumeInM3PerHa >= 0.0F) && (liveStemVolumeInM3PerHa < 3000.0F));
+            Assert.IsTrue((treeAbovegroundNppInKgPerHa >= 0.0F) && (treeAbovegroundNppInKgPerHa < 50000.0F));
+            Assert.IsTrue((treeNppInKgPerHa >= 0.0F) && (treeNppInKgPerHa < 75000.0F));
 
-            Assert.IsTrue((Single.IsNaN(meanSaplingAgeInYears) == false) && (meanSaplingAgeInYears >= 0.0F) && (meanSaplingAgeInYears < 20.0F));
-            Assert.IsTrue((Single.IsNaN(saplingCohortsPerHectare) == false) && (saplingCohortsPerHectare >= 0.0F) && (saplingCohortsPerHectare < 200.0F));
-            Assert.IsTrue((Single.IsNaN(saplingsPerHectare) == false) && (saplingsPerHectare >= 0.0F) && (saplingsPerHectare < 200.0F));
-            Assert.IsTrue((Single.IsNaN(treesPerHectare) == false) && (treesPerHectare >= 0.0F) && (treesPerHectare < 2000.0F));
+            Assert.IsTrue((meanSaplingAgeInYears >= 0.0F) && (meanSaplingAgeInYears < 20.0F));
+            Assert.IsTrue((saplingCohortsPerHectare >= 0.0F) && (saplingCohortsPerHectare < 200.0F));
+            Assert.IsTrue((saplingsPerHectare >= 0.0F) && (saplingsPerHectare < 200.0F));
+            Assert.IsTrue((treesPerHectare >= 0.0F) && (treesPerHectare < 2000.0F));
 
-            Assert.IsTrue((Single.IsNaN(branchCarbonInKgPerHa) == false) && (branchCarbonInKgPerHa >= 0.0F) && (branchCarbonInKgPerHa < 2000000.0F));
-            Assert.IsTrue((Single.IsNaN(branchNitrogenInKgPerHa) == false) && (branchNitrogenInKgPerHa >= 0.0F) && (branchNitrogenInKgPerHa < 200000.0F));
-            Assert.IsTrue((Single.IsNaN(coarseRootCarbonInKgPerHa) == false) && (coarseRootCarbonInKgPerHa >= 0.0F) && (coarseRootCarbonInKgPerHa < 2000000.0F));
-            Assert.IsTrue((Single.IsNaN(coarseRootNitrogenInKgPerHa) == false) && (coarseRootNitrogenInKgPerHa >= 0.0F) && (coarseRootNitrogenInKgPerHa < 200000.0F));
-            Assert.IsTrue((Single.IsNaN(fineRootCarbonInKgPerHa) == false) && (fineRootCarbonInKgPerHa >= 0.0F) && (fineRootCarbonInKgPerHa < 2000000.0F));
-            Assert.IsTrue((Single.IsNaN(fineRootNitrogenInKgPerHa) == false) && (fineRootNitrogenInKgPerHa >= 0.0F) && (fineRootNitrogenInKgPerHa < 200000.0F));
-            Assert.IsTrue((Single.IsNaN(foliageCarbonInKgPerHa) == false) && (foliageCarbonInKgPerHa >= 0.0F) && (foliageCarbonInKgPerHa < 2000000.0F));
-            Assert.IsTrue((Single.IsNaN(foliageNitrogenInKgPerHa) == false) && (foliageNitrogenInKgPerHa >= 0.0F) && (foliageNitrogenInKgPerHa < 200000.0F));
-            Assert.IsTrue((Single.IsNaN(regenerationCarbonInKgPerHa) == false) && (regenerationCarbonInKgPerHa >= 0.0F) && (regenerationCarbonInKgPerHa < 2000000.0F));
-            Assert.IsTrue((Single.IsNaN(regenerationNitrogenInKgPerHa) == false) && (regenerationNitrogenInKgPerHa >= 0.0F) && (regenerationNitrogenInKgPerHa < 200000.0F));
-            Assert.IsTrue((Single.IsNaN(stemCarbonInKgPerHa) == false) && (stemCarbonInKgPerHa >= 0.0F) && (stemCarbonInKgPerHa < 2000000.0F));
-            Assert.IsTrue((Single.IsNaN(stemNitrogenInKgPerHa) == false) && (stemNitrogenInKgPerHa >= 0.0F) && (stemNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((branchCarbonInKgPerHa >= 0.0F) && (branchCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((branchNitrogenInKgPerHa >= 0.0F) && (branchNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((coarseRootCarbonInKgPerHa >= 0.0F) && (coarseRootCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((coarseRootNitrogenInKgPerHa >= 0.0F) && (coarseRootNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((fineRootCarbonInKgPerHa >= 0.0F) && (fineRootCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((fineRootNitrogenInKgPerHa >= 0.0F) && (fineRootNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((foliageCarbonInKgPerHa >= 0.0F) && (foliageCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((foliageNitrogenInKgPerHa >= 0.0F) && (foliageNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((regenerationCarbonInKgPerHa >= 0.0F) && (regenerationCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((regenerationNitrogenInKgPerHa >= 0.0F) && (regenerationNitrogenInKgPerHa < 200000.0F));
+            Assert.IsTrue((stemCarbonInKgPerHa >= 0.0F) && (stemCarbonInKgPerHa < 2000000.0F));
+            Assert.IsTrue((stemNitrogenInKgPerHa >= 0.0F) && (stemNitrogenInKgPerHa < 200000.0F));
 
             Assert.IsTrue(trajectory.LengthInYears == simulationYear + 1);
 

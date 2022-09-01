@@ -19,8 +19,11 @@ namespace iLand.Output.Memory
         private readonly byte[] utilizablePar;
         private readonly byte[] monthlyGpp;
         private readonly byte[] co2Modifier;
+        private readonly byte[] evapotranspiration;
         // if needed, the resource unit's annual nitrogen modifier can be included
+        private readonly byte[] soilWaterInfiltration;
         private readonly byte[] soilWaterModifier;
+        private readonly byte[] soilWaterPotential;
         private readonly byte[] temperatureModifier;
         private readonly byte[] vpdModifier;
 
@@ -38,7 +41,10 @@ namespace iLand.Output.Memory
             this.utilizablePar = new byte[batchLength * sizeof(float)];
             this.monthlyGpp = new byte[batchLength * sizeof(float)];
             this.co2Modifier = new byte[batchLength * sizeof(float)];
+            this.evapotranspiration = new byte[batchLength * sizeof(float)];
+            this.soilWaterInfiltration = new byte[batchLength * sizeof(float)];
             this.soilWaterModifier = new byte[batchLength * sizeof(float)];
+            this.soilWaterPotential = new byte[batchLength * sizeof(float)];
             this.temperatureModifier = new byte[batchLength * sizeof(float)];
             this.vpdModifier = new byte[batchLength * sizeof(float)];
 
@@ -50,6 +56,9 @@ namespace iLand.Output.Memory
                 new("year", Int16Type.Default, false),
                 new("month", UInt8Type.Default, false),
                 new("solarRadiation", FloatType.Default, false),
+                new("infiltration", FloatType.Default, false),
+                new("evapotranspiration", FloatType.Default, false),
+                new("soilWaterPotential", FloatType.Default, false),
                 new("utilizablePar", FloatType.Default, false),
                 new("monthlyGpp", FloatType.Default, false),
                 new("co2Modifier", FloatType.Default, false),
@@ -65,6 +74,9 @@ namespace iLand.Output.Memory
                 { "year", "Calendar year." },
                 { "month", "Month of year." },
                 { "solarRadiation", "Monthly total radiation sum in MJ/m²." },
+                { "infiltration", "Monthly total infiltration, mm water column." },
+                { "evapotranspiration", "Monthly total evapotranspiration, mm water column." },
+                { "soilWaterPotential", "Monthly matric potential, kPa." },
                 { "utilizablePar", "Monthly photosynthetically active radiation multiplied by minimum of soil water, temperature, and VPD modifiers." },
                 { "monthlyGpp", "Monthly gross primary production, kg biomass/m²." },
                 { "co2Modifier", "Monthly carbon dioxide growth modifier." },
@@ -84,6 +96,9 @@ namespace iLand.Output.Memory
                 ArrowArrayExtensions.WrapInInt16(this.calendarYear),
                 ArrowArrayExtensions.WrapInUInt8(this.month),
                 ArrowArrayExtensions.WrapInFloat(this.solarRadiation),
+                ArrowArrayExtensions.WrapInFloat(this.soilWaterInfiltration),
+                ArrowArrayExtensions.WrapInFloat(this.evapotranspiration),
+                ArrowArrayExtensions.WrapInFloat(this.soilWaterPotential),
                 ArrowArrayExtensions.WrapInFloat(this.utilizablePar),
                 ArrowArrayExtensions.WrapInFloat(this.monthlyGpp),
                 ArrowArrayExtensions.WrapInFloat(this.co2Modifier),
@@ -112,6 +127,9 @@ namespace iLand.Output.Memory
             }
 
             this.CopyFirstN(threePGtimeSeries.SolarRadiationTotal, this.solarRadiation, monthsInTimeSeries);
+            this.CopyFirstN(threePGtimeSeries.SoilWaterInfiltration, this.soilWaterInfiltration, monthsInTimeSeries);
+            this.CopyFirstN(threePGtimeSeries.Evapotranspiration, this.evapotranspiration, monthsInTimeSeries);
+            this.CopyFirstN(threePGtimeSeries.SoilWaterPotential, this.soilWaterPotential, monthsInTimeSeries);
             this.CopyFirstN(threePGtimeSeries.UtilizablePar, this.utilizablePar, monthsInTimeSeries);
             this.CopyFirstN(threePGtimeSeries.MonthlyGpp, this.monthlyGpp, monthsInTimeSeries);
             this.CopyFirstN(threePGtimeSeries.CO2Modifier, this.co2Modifier, monthsInTimeSeries);

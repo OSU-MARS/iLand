@@ -323,6 +323,8 @@ namespace iLand.World
 
         private void SetupSaplingsAndGrass(int standID, List<StandSaplings> saplingsInStands, int standStartIndex, int standEndIndex, RandomGenerator randomGenerator)
         {
+            Debug.Assert(Constant.RegenerationLayerHeight == 4.0F, "If regeneration layer is not 4 m then code changes in handling StandSaplings.AgeAt4m are needed.");
+
             GridRaster10m? standGrid = this.StandRaster; // default
             if (standGrid == null)
             {
@@ -408,7 +410,7 @@ namespace iLand.World
                         if (age <= 1)
                         {
                             // assume a linear relationship between height and age
-                            age = Math.Max((int)MathF.Round(height / Constant.Sapling.MaximumHeight * saplingsInStand.AgeAt4m), 1);
+                            age = Math.Max((int)MathF.Round(height / Constant.RegenerationLayerHeight * saplingsInStand.AgeAt4m), 1);
                         }
                     }
 

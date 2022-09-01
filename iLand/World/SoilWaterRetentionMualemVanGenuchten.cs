@@ -6,7 +6,7 @@ namespace iLand.World
 {
     internal class SoilWaterRetentionMualemVanGenuchten : SoilWaterRetention
     {
-        private readonly float alpha;
+        private readonly float alphaInKPa;
         private readonly float n;
         private readonly float soilPlantAccessibleDepthInMM;
         private readonly float thetaR;
@@ -14,7 +14,7 @@ namespace iLand.World
 
         public SoilWaterRetentionMualemVanGenuchten(ResourceUnitEnvironment environment)
         {
-            this.alpha = environment.SoilVanGenuchtenAlphaInKPa;
+            this.alphaInKPa = environment.SoilVanGenuchtenAlphaInKPa;
             this.n = environment.SoilVanGenuchtenN;
             this.plantAccessibleWater = environment.SoilThetaS - environment.SoilThetaR;
             this.soilPlantAccessibleDepthInMM = 10.0F * environment.SoilPlantAccessibleDepthInCm;
@@ -30,22 +30,33 @@ namespace iLand.World
 
         public override float GetSoilWaterPotentialFromWater(float soilWaterInMM)
         {
+            // θ = θr + PAW / (1 + (α |Ψ|)^n)^(1 - 1/n)) -> (1 + (α |Ψ|)^n)^(1 - 1/n) = PAW / (θ - θr) = plantRelativeSaturationInverse, PAW = plantAccessibleWater
+            //                                           -> α |Ψ| = ((PAW / (θ - θr))^(1/(1 - 1/n)) - 1)^1/n
             float soilWaterContent = soilWaterInMM / this.soilPlantAccessibleDepthInMM;
-            float plantRelativeSaturation = this.plantAccessibleWater / (soilWaterContent - this.thetaR);
-            float alphaAbsPsi = MathF.Pow(MathF.Pow(plantRelativeSaturation, 1.0F / (1.0F - 1.0F / this.n)), 1.0F / this.n) - 1.0F;
-            float psiInKPa = -alphaAbsPsi / this.alpha;
+            float plantRelativeSaturationInverse = this.plantAccessibleWater / (soilWaterContent - this.thetaR);
+            if (plantRelativeSaturationInverse < 1.0F)
+            {
+                // check for numerical error as alphaAbsPsi's outer Math.Pow() NaNs if plantRelativeSaturationInverse < 1
+                Debug.Assert((plantRelativeSaturationInverse > 0.999999F) && (this.SaturationPotentialInKPa == 0.0F));
+                return 0.0F;
+            }
+
+            float alphaAbsPsi = MathF.Pow(MathF.Pow(plantRelativeSaturationInverse, 1.0F / (1.0F - 1.0F / this.n)) - 1.0F, 1.0F / this.n);
+            float psiInKPa = -alphaAbsPsi / this.alphaInKPa;
             if (psiInKPa > this.SaturationPotentialInKPa)
             {
                 // clamp matric potential if numerical error places it slightly above saturation potential
                 Debug.Assert(psiInKPa - this.SaturationPotentialInKPa < 1E-6F);
                 psiInKPa = this.SaturationPotentialInKPa;
             }
+
+            Debug.Assert((psiInKPa >= -4000.0F) && (psiInKPa <= 0.0F)); // will detect NaN
             return psiInKPa;
         }
 
         public override float GetSoilWaterFromPotential(float psiInKilopascals)
         {
-            float soilWaterContent = this.thetaR + this.plantAccessibleWater / MathF.Pow(1.0F + MathF.Pow(-this.alpha * psiInKilopascals, this.n), 1.0F - 1.0F / this.n);
+            float soilWaterContent = this.thetaR + this.plantAccessibleWater / MathF.Pow(1.0F + MathF.Pow(-this.alphaInKPa * psiInKilopascals, this.n), 1.0F - 1.0F / this.n);
             float soilWater = this.soilPlantAccessibleDepthInMM * soilWaterContent;
             Debug.Assert((psiInKilopascals <= 0.0F) && (soilWaterContent >= this.thetaR) && (soilWaterContent <= this.thetaR + this.plantAccessibleWater));
             return soilWater;

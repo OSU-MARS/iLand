@@ -44,11 +44,11 @@ namespace iLand.Tree
                 // if it's not specified, estimate the tree's from its height
                 ageInYears = this.Species.EstimateAgeFromHeight(heightInM);
             }
-            if (Single.IsNaN(dbhInCm) || (dbhInCm <= 0.0F) || (dbhInCm > 500.0F))
+            if ((dbhInCm <= 0.0F) || (dbhInCm > 500.0F))
             {
                 throw new ArgumentOutOfRangeException(nameof(dbhInCm), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid diameter of " + dbhInCm + " cm to resource unit " + this.ResourceUnit.ID + ".");
             }
-            if (Single.IsNaN(heightInM) || (heightInM <= 0.0F) || (heightInM > 150.0F))
+            if ((heightInM <= 0.0F) || (heightInM > 150.0F))
             {
                 throw new ArgumentOutOfRangeException(nameof(heightInM), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid height of " + heightInM + " m to resource unit " + this.ResourceUnit.ID + ".");
             }
@@ -120,14 +120,14 @@ namespace iLand.Tree
                 this.TreeID[treeListDestination] = treesToAdd.TreeID[sourceIndex];
 
                 float dbhInCm = treesToAdd.DbhInCm[sourceIndex];
-                if (Single.IsNaN(dbhInCm) || (dbhInCm <= 0.0F) || (dbhInCm > 500.0F))
+                if ((dbhInCm <= 0.0F) || (dbhInCm > 500.0F))
                 {
                     throw new ArgumentOutOfRangeException(nameof(treesToAdd), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid diameter of " + dbhInCm + " cm to resource unit " + this.ResourceUnit.ID + ".");
                 }
                 this.DbhInCm[treeListDestination] = dbhInCm;
 
                 float heightInM = treesToAdd.HeightInM[sourceIndex];
-                if (Single.IsNaN(heightInM) || (heightInM <= 0.0F) || (heightInM > 150.0F))
+                if ((heightInM <= 0.0F) || (heightInM > 150.0F))
                 {
                     throw new ArgumentOutOfRangeException(nameof(treesToAdd), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid height of " + heightInM + " m to resource unit " + this.ResourceUnit.ID + ".");
                 }
@@ -371,7 +371,8 @@ namespace iLand.Tree
         /// return the basal area in m²
         public float GetBasalArea(int treeIndex)
         {
-            float basalArea = MathF.PI * 0.0001F / 4.0F * this.DbhInCm[treeIndex] * this.DbhInCm[treeIndex];
+            float dbhInCm = this.DbhInCm[treeIndex];
+            float basalArea = 0.25F * MathF.PI * 0.0001F * dbhInCm * dbhInCm;
             return basalArea;
         }
 

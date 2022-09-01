@@ -18,7 +18,7 @@ namespace iLand
         public const int NoDataInt32 = Int32.MinValue;
         public const float NoDataFloat = Single.NaN;
 
-        public const float RegenerationLayerHeight = 4.0F; // m
+        public const float RegenerationLayerHeight = 4.0F; // m, also controls Constant.Sapling.MaximumHeight
         public const float SquareMetersPerHectare = 10000.0F;
 
         public static class Data
@@ -102,8 +102,7 @@ namespace iLand
         {
             public const int HeightClasses = 41;
             public const float HeightClassSize = 0.1F; // m
-            public const float MaximumHeight = 4.0F; // m
-            public const float MinimumHeight = 0.05F; // m
+            public const float MinimumHeight = 0.05F; // m, maximum height is Constant.RegenerationLayerHeight
         }
 
         public static class Time

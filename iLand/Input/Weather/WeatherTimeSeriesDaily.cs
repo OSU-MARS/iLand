@@ -34,7 +34,7 @@ namespace iLand.Input.Weather
             for (int dayIndex = startDayIndex; dayIndex < endDayIndex; ++dayIndex)
             {
                 float meanDaytimeTemperatureMA1 = this.TemperatureDaytimeMeanMA1[dayIndex];
-                if (Single.IsNaN(meanDaytimeTemperatureMA1) || (meanDaytimeTemperatureMA1 < Constant.Limit.TemperatureMin) || (meanDaytimeTemperatureMA1 > Constant.Limit.TemperatureMax))
+                if ((meanDaytimeTemperatureMA1 < Constant.Limit.TemperatureMin) || (meanDaytimeTemperatureMA1 > Constant.Limit.TemperatureMax))
                 {
                     // can't reliably check against the day's min and max since strong weather systems might put the moving average outside
                     // of a day's range

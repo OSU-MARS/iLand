@@ -12,9 +12,9 @@ namespace iLand.Test
         {
             Grid<float> grid = new();
             grid.Setup(Constant.Grid.ResourceUnitSizeInM / cellSize, Constant.Grid.ResourceUnitSizeInM / cellSize, cellSize);
-            for (int xIndex = 0; xIndex < grid.CellsX; xIndex++)
+            for (int xIndex = 0; xIndex < grid.CellsX; ++xIndex)
             {
-                for (int yIndex = 0; yIndex < grid.CellsY; yIndex++)
+                for (int yIndex = 0; yIndex < grid.CellsY; ++yIndex)
                 {
                     grid[xIndex, yIndex] += xIndex + yIndex; // include initialization to 0.0F in test coverage
                 }
@@ -40,7 +40,7 @@ namespace iLand.Test
             {
                 if (averaged[index] > 0.09)
                 {
-                    count++;
+                    ++count;
                 }
             }
             Assert.IsTrue(count == 55);
