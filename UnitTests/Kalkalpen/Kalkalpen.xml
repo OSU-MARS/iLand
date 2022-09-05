@@ -265,16 +265,19 @@
       <!--<initialTrajectoryLengthInYears>80</initialTrajectoryLengthInYears>-->
       <!-- flags for logging of resource unit level tree statistics
            
-             - None: don't log anything (default, equivalent to omitting <resourceUnitTrajectories>
-             - AllTreeSpeciesStatistics: log annual time series of summary statistics for all trees in resource unit
-             - IndividualTrees: log annual time series for each individual tree present on the resource unit, either through the end of 
+             - allTreeSpeciesStatistics: log annual time series of summary statistics for all trees in resource unit
+             - individualTrees: log annual time series for each individual tree present on the resource unit, either through the end of 
                simulation or until the tree dies
-             - IndividualTreeSpeciesStatistics: log annual time series of summary statistics for each tree species present in resource unit
-             - ThreePG: log monthly time series of 3-PG growth modifiers
+             - individualTreeSpeciesStatistics: log annual time series of summary statistics for each tree species present in resource unit
+             - threePG: log monthly time series of 3-PG growth modifiers
            
-           Flags can be combined as a comma separated list, e.g. <resourceUnitTrajectories>AllTreeSpeciesStatistics, IndividualTrees,
-           IndividualTreeSpeciesStatistics, ThreePG</resourceUnitTrajectories> -->
-      <resourceUnitTrajectories>None</resourceUnitTrajectories>
+           -->
+      <resourceUnits>
+        <allTreeSpeciesStatistics enabled="false" />
+        <individualTrees enabled="false" />
+        <individualTreeSpeciesStatistics enabled="false" />
+        <threePG enabled="false" />
+      </resourceUnits>
       <!-- turn annual logging of stand stand level tree statistics on or off -->
       <standTrajectories enabled="false" />
     </memory>

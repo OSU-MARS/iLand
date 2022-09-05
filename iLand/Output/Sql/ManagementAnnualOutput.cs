@@ -31,7 +31,7 @@ namespace iLand.Output.Sql
             {
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeSpeciesStatistics ruManagementEffects = ruSpecies.StatisticsManagement;
+                    LiveTreeStatistics ruManagementEffects = ruSpecies.StatisticsManagement;
                     if (ruManagementEffects.TreesPerHa == 0)
                     {
                         continue;

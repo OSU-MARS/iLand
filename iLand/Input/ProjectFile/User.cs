@@ -1,12 +1,11 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class User : XmlSerializable
     {
-        public string? Code { get; private set; }
-        public float WindspeedFactor { get; private set; }
+        public string? Code { get; private set; } // currently unused
+        public float WindspeedFactor { get; private set; } // currently unused
 
         protected override void ReadStartElement(XmlReader reader)
         {

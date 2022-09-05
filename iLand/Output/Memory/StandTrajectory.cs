@@ -12,7 +12,7 @@ namespace iLand.Output.Memory
             this.StandID = standID;
         }
 
-        public void AddYear(StandTreeStatistics standTreeStatistics)
+        public void AddYear(StandLiveTreeAndSaplingStatistics standTreeStatistics)
         {
             if (this.StandID != standTreeStatistics.StandID)
             {

@@ -22,9 +22,9 @@ namespace iLand.Tree
         public SaplingEstablishment SaplingEstablishment { get; private init; } // establishment submodel
         public SaplingStatistics SaplingStats { get; private init; } // statistics for the sapling sub module
         public TreeSpecies Species { get; private init; } // return pointer to species
-        public ResourceUnitTreeSpeciesStatistics StatisticsLive { get; private init; } // statistics of this species on the resource unit
-        public ResourceUnitTreeSpeciesStatistics StatisticsManagement { get; private init; } // statistics of removed trees
-        public ResourceUnitTreeSpeciesStatistics StatisticsSnag { get; private init; } // statistics of trees that have died, maintained here for now since resource unit snags are tracked by size class and not by species
+        public LiveTreeAndSaplingStatistics StatisticsLive { get; private init; } // statistics of this species on the resource unit
+        public LiveTreeStatistics StatisticsManagement { get; private init; } // statistics of removed trees
+        public LiveTreeStatistics StatisticsSnag { get; private init; } // statistics of trees that have died, maintained here for now since resource unit snags are tracked by size class and not by species
         public ResourceUnitTreeSpeciesGrowth TreeGrowth { get; private init; } // the 3-PG production model of this species on this resource unit
 
         public ResourceUnitTreeSpecies(TreeSpecies treeSpecies, ResourceUnit resourceUnit)
@@ -38,9 +38,9 @@ namespace iLand.Tree
 
             this.SaplingEstablishment = new();
             this.SaplingStats = new();
-            this.StatisticsLive = new(resourceUnit, this);
-            this.StatisticsManagement = new(resourceUnit, this);
-            this.StatisticsSnag = new(resourceUnit, this);
+            this.StatisticsLive = new();
+            this.StatisticsManagement = new();
+            this.StatisticsSnag = new();
             this.TreeGrowth = new(resourceUnit, this); // requires this.Species be set
         }
 

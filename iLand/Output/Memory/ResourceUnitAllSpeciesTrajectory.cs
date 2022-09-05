@@ -9,10 +9,5 @@ namespace iLand.Output.Memory
             : base(initialCapacityInYears)
         {
         }
-
-        public void AddYear(ResourceUnitTreeStatistics resourceUnitAllSpeciesStatistics)
-        {
-            base.AddYear(resourceUnitAllSpeciesStatistics);
-        }
     }
 }

@@ -6,7 +6,6 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using Model = iLand.Simulation.Model;
-using ResourceUnitSnags = iLand.Tree.ResourceUnitSnags;
 
 namespace iLand.World
 {
@@ -28,7 +27,7 @@ namespace iLand.World
         public RectangleF ProjectExtent { get; set; }
         public int ResourceUnitGridIndex { get; private init; }
 
-        public ResourceUnitCarbonFluxes CarbonCycle { get; private init; }
+        public ResourceUnitCarbonFluxes? CarbonCycle { get; private set; }
         public ResourceUnitSnags? Snags { get; private set; }
         public ResourceUnitSoil? Soil { get; private set; }
         // TODO: should be Grid<SaplingCell> rather than an array
@@ -45,7 +44,7 @@ namespace iLand.World
 
             this.AreaInLandscapeInM2 = 0.0F;
             this.AreaWithTreesInM2 = 0.0F;
-            this.CarbonCycle = new();
+            this.CarbonCycle = null;
             this.HeightCellsOnLandscape = 0;
             this.ID = 0;
             this.ResourceUnitGridIndex = ruGridIndex;
@@ -135,7 +134,7 @@ namespace iLand.World
             }
         }
 
-        public void ClearSaplings(SaplingCell saplingCell, bool removeBiomass)
+        private void ClearSaplings(SaplingCell saplingCell, bool removeBiomass)
         {
             for (int index = 0; index < saplingCell.Saplings.Length; ++index)
             {
@@ -643,28 +642,28 @@ namespace iLand.World
             this.Trees.OnEndYear();
 
             // update carbon flows
-            if (this.Soil != null)
+            if (this.CarbonCycle != null)
             {
-                Debug.Assert(this.Snags != null);
+                Debug.Assert((this.Snags != null) && (this.Soil != null));
 
-                this.CarbonCycle.Npp = this.Trees.TreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa * Constant.DryBiomassCarbonFraction;
-                this.CarbonCycle.Npp += this.Trees.TreeAndSaplingStatisticsForAllSpecies.SaplingNppPerHa * Constant.DryBiomassCarbonFraction;
+                this.CarbonCycle.NppInKgCPerHa = this.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa * Constant.DryBiomassCarbonFraction;
+                this.CarbonCycle.NppInKgCPerHa += this.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.SaplingNppPerHa * Constant.DryBiomassCarbonFraction;
 
-                float area_factor = this.AreaInLandscapeInM2 / Constant.Grid.ResourceUnitAreaInM2; //conversion factor
-                float to_atm = this.Snags.FluxToAtmosphere.C / area_factor; // from snags, kgC/ha
-                to_atm += 0.1F * this.Soil.FluxToAtmosphere.C * Constant.Grid.ResourceUnitAreaInM2; // soil: t/ha * 0.0001 ha/m2 * 1000 kg/ton = 0.1 kg/m2
-                this.CarbonCycle.CarbonToAtmosphere = to_atm;
+                float areaFactor = this.AreaInLandscapeInM2 / Constant.Grid.ResourceUnitAreaInM2; // conversion factor
+                float carbonToAtmosphereInKgPerHa = this.Snags.FluxToAtmosphere.C / areaFactor; // from snags, kgC/ha
+                carbonToAtmosphereInKgPerHa += 0.1F * this.Soil.FluxToAtmosphere.C * Constant.Grid.ResourceUnitAreaInM2; // soil: ton/ha * 0.0001 ha/m² * 1000 kg/ton = 0.1 kg/m²
+                this.CarbonCycle.CarbonToAtmosphereInKgPerHa = carbonToAtmosphereInKgPerHa;
 
-                float to_dist = this.Snags.FluxToDisturbance.C / area_factor;
-                to_dist += 0.1F * this.Soil.FluxToDisturbance.C * Constant.Grid.ResourceUnitAreaInM2;
-                float to_harvest = this.Snags.FluxToExtern.C / area_factor;
+                float disturbanceReleaseInKgPerHa = this.Snags.FluxToDisturbance.C / areaFactor;
+                disturbanceReleaseInKgPerHa += 0.1F * this.Soil.FluxToDisturbance.C * Constant.Grid.ResourceUnitAreaInM2;
+                float to_harvest = this.Snags.FluxToExtern.C / areaFactor;
 
-                this.CarbonCycle.Nep = this.CarbonCycle.Npp - to_atm - to_dist - to_harvest; // kgC/ha
+                this.CarbonCycle.NepInKgCPerHa = this.CarbonCycle.NppInKgCPerHa - carbonToAtmosphereInKgPerHa - disturbanceReleaseInKgPerHa - to_harvest; // kgC/ha
 
                 // incremental values....
-                this.CarbonCycle.TotalNpp += this.CarbonCycle.Npp;
-                this.CarbonCycle.TotalCarbonToAtmosphere += this.CarbonCycle.CarbonToAtmosphere;
-                this.CarbonCycle.TotalNep += this.CarbonCycle.Nep;
+                this.CarbonCycle.CumulativeCarbonToAtmosphereInKgPerHa += this.CarbonCycle.CarbonToAtmosphereInKgPerHa;
+                this.CarbonCycle.CumulativeNepInKgCPerHa += this.CarbonCycle.NepInKgCPerHa;
+                this.CarbonCycle.CumulativeNppInKgCPerHa += this.CarbonCycle.NppInKgCPerHa;
             }
         }
 
@@ -701,6 +700,7 @@ namespace iLand.World
 
             if (projectFile.Model.Settings.CarbonCycleEnabled)
             {
+                this.CarbonCycle = new();
                 this.Soil = new(this, environment);
                 this.Snags = new(projectFile, this, environment);
             }

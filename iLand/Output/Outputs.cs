@@ -18,13 +18,14 @@ namespace iLand.Output
     // Global container that handles data output.
     public class Outputs : IDisposable
     {
-        private readonly SortedList<int, StandTreeStatistics> currentYearStandStatistics;
         private int mostRecentSimulationYearCommittedToDatabase;
         private bool isDisposed;
         private readonly int sqlCommitIntervalInYears;
         private readonly SqliteConnection? sqlDatabaseConnection;
         private readonly List<AnnualOutput> sqlOutputs;
         private SqliteTransaction? sqlOutputTransaction;
+        private readonly ResourceUnitToStandStatisticsConverter[] standStatisticsByPartition;
+        private readonly SortedList<int, StandLiveTreeAndSaplingStatistics> standStatisticsForCurrentYear;
 
         public LandscapeRemovedAnnualOutput? LandscapeRemovedSql { get; private init; }
         public ResourceUnitTrajectory[] ResourceUnitTrajectories { get; private init; } // in same order as Landscape.ResourceUnits, array for simplicity of multithreaded population
@@ -33,13 +34,14 @@ namespace iLand.Output
 
         public Outputs(Project projectFile, Landscape landscape, SimulationState simulationState)
         {
-            this.currentYearStandStatistics = new();
             this.mostRecentSimulationYearCommittedToDatabase = -1;
             this.isDisposed = false;
             this.sqlCommitIntervalInYears = 10; // 
             this.sqlDatabaseConnection = null; // initialized in Setup()
             this.sqlOutputs = new();
             this.sqlOutputTransaction = null; // managed in LogYear()
+            this.standStatisticsByPartition = Array.Empty<ResourceUnitToStandStatisticsConverter>();
+            this.standStatisticsForCurrentYear = new();
 
             this.LandscapeRemovedSql = null;
             this.ResourceUnitTrajectories = Array.Empty<ResourceUnitTrajectory>();
@@ -47,8 +49,8 @@ namespace iLand.Output
             this.TreeRemovedSql = null;
 
             // memory outputs
-            ResourceUnitMemoryOutputs resourceUnitMemoryOutputs = projectFile.Output.Memory.ResourceUnitTrajectories;
-            bool logAnyTypeOfResourceUnitTrajectory = resourceUnitMemoryOutputs != ResourceUnitMemoryOutputs.None;
+            ResourceUnitOutputs resourceUnitMemoryOutputs = projectFile.Output.Memory.ResourceUnits;
+            bool logAnyTypeOfResourceUnitTrajectory = resourceUnitMemoryOutputs.IsAnyOutputEnabled();
             bool logStandTrajectories = projectFile.Output.Memory.StandTrajectories.Enabled;
             if (logAnyTypeOfResourceUnitTrajectory || logStandTrajectories)
             {
@@ -57,6 +59,15 @@ namespace iLand.Output
                 if (logAnyTypeOfResourceUnitTrajectory)
                 {
                     this.ResourceUnitTrajectories = new ResourceUnitTrajectory[resourceUnitCount];
+                }
+                if (logStandTrajectories)
+                {
+                    int maxThreads = simulationState.ParallelComputeOptions.MaxDegreeOfParallelism;
+                    this.standStatisticsByPartition = new ResourceUnitToStandStatisticsConverter[maxThreads];
+                    for (int partitionIndex = 0; partitionIndex < maxThreads; ++partitionIndex)
+                    {
+                        this.standStatisticsByPartition[partitionIndex] = new();
+                    }
                 }
 
                 int initialCapacityInYears = projectFile.Output.Memory.InitialTrajectoryLengthInYears;
@@ -70,23 +81,37 @@ namespace iLand.Output
                         ResourceUnit resourceUnit = resourceUnits[resourceUnitIndex];
                         if (logAnyTypeOfResourceUnitTrajectory)
                         {
+                            // create a trajectory for each reasource unit
                             this.ResourceUnitTrajectories[resourceUnitIndex] = new ResourceUnitTrajectory(resourceUnit, resourceUnitMemoryOutputs, initialCapacityInYears);
                         }
                         if (logStandTrajectories)
                         {
-                            SortedList<int, ResourceUnitTreeStatistics> standsInResourceUnit = resourceUnit.Trees.TreeStatisticsByStandID;
-                            for (int standIndex = 0; standIndex < standsInResourceUnit.Count; ++standIndex)
+                            // create a trajectory for each stand
+                            // As only one trajectory need be created per stand ID, stand ID differencing is used to limit the number of
+                            // ContainsKey() calls and locks taken.
+                            IList<TreeListSpatial> treesBySpecies = resourceUnit.Trees.TreesBySpeciesID.Values;
+                            int previousStandID = Constant.DefaultStandID;
+                            for (int treeSpeciesIndex = 0; treeSpeciesIndex < treesBySpecies.Count; ++treeSpeciesIndex)
                             {
-                                int standID = standsInResourceUnit.Keys[standIndex];
-                                if (this.currentYearStandStatistics.ContainsKey(standID) == false)
+                                TreeListSpatial treesOfSpecies = treesBySpecies[treeSpeciesIndex];
+                                for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                                 {
-                                    lock (this.currentYearStandStatistics)
+                                    int standID = treesOfSpecies.StandID[treeIndex];
+                                    if (standID != previousStandID)
                                     {
-                                        if (this.currentYearStandStatistics.ContainsKey(standID) == false)
+                                        if (this.standStatisticsForCurrentYear.ContainsKey(standID) == false)
                                         {
-                                            this.currentYearStandStatistics.Add(standID, new StandTreeStatistics(standID));
-                                            this.StandTrajectoriesByID.Add(standID, new StandTrajectory(standID, initialCapacityInYears));
+                                            lock (this.standStatisticsForCurrentYear)
+                                            {
+                                                if (this.standStatisticsForCurrentYear.ContainsKey(standID) == false)
+                                                {
+                                                    this.standStatisticsForCurrentYear.Add(standID, new StandLiveTreeAndSaplingStatistics(standID));
+                                                    this.StandTrajectoriesByID.Add(standID, new StandTrajectory(standID, initialCapacityInYears));
+                                                }
+                                            }
                                         }
+
+                                        previousStandID = standID;
                                     }
                                 }
                             }
@@ -159,12 +184,6 @@ namespace iLand.Output
             // open output SQL database if there are SQL outputs
             if (this.sqlOutputs.Count > 0)
             {
-                // create run-metadata
-                //int maxID = (int)(long)SqlHelper.QueryValue("select max(id) from runs", g.DatabaseInput);
-                //maxID++;
-                //SqlHelper.ExecuteSql(String.Format("insert into runs (id, timestamp) values ({0}, '{1}')", maxID, timestamp), g.DatabaseInput);
-                // replace path information
-                // setup final path
                 string? outputDatabaseFile = sqlOutputSettings.DatabaseFile;
                 if (String.IsNullOrWhiteSpace(outputDatabaseFile))
                 {
@@ -216,6 +235,7 @@ namespace iLand.Output
         public void LogYear(Model model)
         {
             // log files
+            // If needed grid export can be made multithreaded but, for now, it's assumed not to be performance critical.
             if (model.Project.Output.Logging.HeightGrid.Enabled)
             {
                 string? coordinateSystem = model.Project.Model.Settings.CoordinateSystem;
@@ -243,37 +263,34 @@ namespace iLand.Output
                 Parallel.For(0, partitions, parallelComputeOptions, (int partitionIndex) =>
                 {
                     (int startTrajectoryIndex, int endTrajectoryIndex) = ParallelOptionsExtensions.GetUniformPartitionRange(partitionIndex, resourceUnitsPerPartition, resourceUnitTrajectoryCount);
+                    ResourceUnitToStandStatisticsConverter? standStatisticsConverter = logStandTrajectories ? this.standStatisticsByPartition[partitionIndex] : null;
+
                     for (int resourceUnitIndex = startTrajectoryIndex; resourceUnitIndex < endTrajectoryIndex; ++resourceUnitIndex)
                     {
+                        ResourceUnitTrajectory trajectory = this.ResourceUnitTrajectories[resourceUnitIndex];
                         if (logResourceUnitTrajectories)
                         {
-                            ResourceUnitTrajectory trajectory = this.ResourceUnitTrajectories[resourceUnitIndex];
                             trajectory.AddYear();
                         }
                         if (logStandTrajectories)
                         {
-                            SortedList<int, ResourceUnitTreeStatistics> resourceUnitStandStatisticsByID = model.Landscape.ResourceUnits[resourceUnitIndex].Trees.TreeStatisticsByStandID;
-                            for (int resourceUnitStandIndex = 0; resourceUnitStandIndex < resourceUnitStandStatisticsByID.Count; ++resourceUnitStandIndex)
-                            {
-                                int standID = resourceUnitStandStatisticsByID.Keys[resourceUnitStandIndex];
-                                ResourceUnitTreeStatistics resourceUnitStandStatistics = resourceUnitStandStatisticsByID.Values[resourceUnitStandIndex];
-
-                                StandTreeStatistics standStatistics = this.currentYearStandStatistics[standID];
-                                standStatistics.Add(resourceUnitStandStatistics);
-                            }
+                            Debug.Assert(standStatisticsConverter != null);
+                            ResourceUnit resourceUnit = trajectory.ResourceUnit;
+                            standStatisticsConverter.CalculateStandStatisticsFromResourceUnit(resourceUnit);
+                            standStatisticsConverter.AddResourceUnitToStandStatisticsThreadSafe(resourceUnit.AreaInLandscapeInM2, this.standStatisticsForCurrentYear);
                         }
                     }
                 });
 
-                int standUnitTrajectoryCount = this.currentYearStandStatistics.Count;
+                int standUnitTrajectoryCount = this.standStatisticsForCurrentYear.Count;
                 (partitions, int standsPerPartition) = parallelComputeOptions.GetUniformPartitioning(standUnitTrajectoryCount, Constant.Data.MinimumStandsPerLoggingThread);
                 Parallel.For(0, partitions, parallelComputeOptions, (int partitionIndex) =>
                 {
                     (int startStandIndex, int endStandIndex) = ParallelOptionsExtensions.GetUniformPartitionRange(partitionIndex, standsPerPartition, standUnitTrajectoryCount);
                     for (int standIndex = startStandIndex; standIndex < endStandIndex; ++standIndex)
                     {
-                        int standID = this.currentYearStandStatistics.Keys[standIndex];
-                        StandTreeStatistics standStatistics = this.currentYearStandStatistics.Values[standIndex];
+                        int standID = this.standStatisticsForCurrentYear.Keys[standIndex];
+                        StandLiveTreeAndSaplingStatistics standStatistics = this.standStatisticsForCurrentYear.Values[standIndex];
                         standStatistics.OnAdditionsComplete();
 
                         Debug.Assert(standID == this.StandTrajectoriesByID.Keys[standIndex]);
@@ -286,6 +303,9 @@ namespace iLand.Output
             }
 
             // SQL outputs
+            // Outputs share a single transaction because, while SQLite supports multiple concurrent readers, writes are limited to a
+            // single transaction and BeginTransaction() and Execute*() calls block until other pending changes commit (see
+            // https://docs.microsoft.com/en-us/dotnet/standard/data/sqlite/transactions).
             if (this.sqlOutputs.Count > 0)
             {
                 int currentCalendarYear = model.SimulationState.CurrentCalendarYear;
@@ -300,6 +320,8 @@ namespace iLand.Output
                 }
                 foreach (AnnualOutput output in this.sqlOutputs)
                 {
+                    // single threaded for now
+                    // If this is made parallel each output will need to lock the transaction on each call to insertRow.ExecuteNonQuery().
                     output.LogYear(model, this.sqlOutputTransaction);
                 }
                 if (currentCalendarYear - this.mostRecentSimulationYearCommittedToDatabase > this.sqlCommitIntervalInYears)

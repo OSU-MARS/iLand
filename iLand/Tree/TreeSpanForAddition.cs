@@ -5,7 +5,7 @@ using System.Drawing;
 
 namespace iLand.Tree
 {
-    public ref struct TreeSpanForAddition
+    public readonly ref struct TreeSpanForAddition
     {
         public Span<UInt16> AgeInYears { get; init; }
         public Span<float> DbhInCm { get; init; }

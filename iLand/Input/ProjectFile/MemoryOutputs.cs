@@ -6,13 +6,13 @@ namespace iLand.Input.ProjectFile
     public class MemoryOutputs : XmlSerializable
     {
 		public int InitialTrajectoryLengthInYears { get; private set; }
-		public ResourceUnitMemoryOutputs ResourceUnitTrajectories { get; private set; }
+		public ResourceUnitOutputs ResourceUnits { get; private set; }
 		public Enablable StandTrajectories { get; private set; }
 
 		public MemoryOutputs()
 		{
 			this.InitialTrajectoryLengthInYears = Constant.Data.DefaultAnnualAllocationIncrement;
-			this.ResourceUnitTrajectories = ResourceUnitMemoryOutputs.None;
+			this.ResourceUnits = new();
 			this.StandTrajectories = new("standTrajectories");
 		}
 
@@ -39,8 +39,8 @@ namespace iLand.Input.ProjectFile
 					case "initialTrajectoryLengthInYears":
 						this.InitialTrajectoryLengthInYears = reader.ReadElementContentAsInt();
 						break;
-					case "resourceUnitTrajectories":
-						this.ResourceUnitTrajectories = Enum.Parse<ResourceUnitMemoryOutputs>(reader.ReadElementContentAsString());
+					case "resourceUnits":
+						this.ResourceUnits.ReadXml(reader);
 						break;
 					default:
 						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");

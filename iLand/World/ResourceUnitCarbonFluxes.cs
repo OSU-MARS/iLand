@@ -2,25 +2,25 @@
 {
     public class ResourceUnitCarbonFluxes
     {
-        // values of the current year = NPP, flux to atmosphere, net ecosystem productivity, all in kgC/ha
-        public float CarbonToAtmosphere { get; set; }
-        public float Nep { get; set; }
-        public float Npp { get; set; }
+        // values of the current year = NPP, flux to atmosphere, net ecosystem productivity, all in kg C/ha
+        public float CarbonToAtmosphereInKgPerHa { get; set; }
+        public float NepInKgCPerHa { get; set; }
+        public float NppInKgCPerHa { get; set; }
 
-        public float TotalCarbonToAtmosphere { get; set; } // total flux of carbon to atmosphere, kg C/ha
-        // cumulative ecosystem productivity, kg C/ha, i.e. cumulative = NPP-losses = atm,harvest
-        public float TotalNep { get; set; }
+        public float CumulativeCarbonToAtmosphereInKgPerHa { get; set; } // total flux of carbon to atmosphere, kg C/ha
+        // cumulative ecosystem productivity, kg C, i.e. cumulative = NPP - losses to atmosphere and harvest
+        public float CumulativeNepInKgCPerHa { get; set; }
         // NPP, kg C/ha
-        public float TotalNpp { get; set; }
+        public float CumulativeNppInKgCPerHa { get; set; }
 
         public ResourceUnitCarbonFluxes()
         {
-            this.CarbonToAtmosphere = 0.0F;
-            this.Npp = 0.0F;
-            this.TotalCarbonToAtmosphere = 0.0F;
-            this.TotalNpp = 0.0F;
-            this.TotalNep = 0.0F;
-            this.Nep = 0.0F;
+            this.CarbonToAtmosphereInKgPerHa = 0.0F;
+            this.CumulativeCarbonToAtmosphereInKgPerHa = 0.0F;
+            this.CumulativeNppInKgCPerHa = 0.0F;
+            this.CumulativeNepInKgCPerHa = 0.0F;
+            this.NepInKgCPerHa = 0.0F;
+            this.NppInKgCPerHa = 0.0F;
         }
     }
 }

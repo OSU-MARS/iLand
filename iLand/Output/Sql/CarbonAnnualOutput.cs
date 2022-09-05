@@ -80,7 +80,7 @@ namespace iLand.Output.Sql
                 logResourceUnitDetails = false;
             }
 
-            Span<float> accumulatedValues = stackalloc float[23]; // 8 data values
+            Span<float> accumulatedValues = stackalloc float[23];
             foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
                 if (resourceUnit.Snags == null)
@@ -89,7 +89,7 @@ namespace iLand.Output.Sql
                 }
                 Debug.Assert(resourceUnit.Soil != null, "Resource unit has null soil when its snags are non-null.");
 
-                ResourceUnitTreeStatistics ruTreeStatistics = resourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies;
+                LiveTreeAndSaplingStatistics liveTreeAndSaplingStatistics = resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies;
                 float areaFactor = resourceUnit.AreaInLandscapeInM2 / Constant.Grid.ResourceUnitAreaInM2; // conversion factor from real area to per ha values
                 if (logResourceUnitDetails)
                 {
@@ -97,20 +97,20 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[1].Value = resourceUnit.ID;
                     insertRow.Parameters[2].Value = areaFactor;
                     // biomass from trees (scaled to 1ha already)
-                    insertRow.Parameters[3].Value = ruTreeStatistics.StemCarbonInKgPerHa;
-                    insertRow.Parameters[4].Value = ruTreeStatistics.StemNitrogenInKgPerHa;
-                    insertRow.Parameters[5].Value = ruTreeStatistics.BranchCarbonInKgPerHa;
-                    insertRow.Parameters[6].Value = ruTreeStatistics.BranchNitrogenInKgPerHa;
-                    insertRow.Parameters[7].Value = ruTreeStatistics.FoliageCarbonInKgPerHa;
-                    insertRow.Parameters[8].Value = ruTreeStatistics.FoliageNitrogenInKgPerHa;
-                    insertRow.Parameters[9].Value = ruTreeStatistics.CoarseRootCarbonInKgPerHa;
-                    insertRow.Parameters[10].Value = ruTreeStatistics.CoarseRootNitrogenInKgPerHa;
-                    insertRow.Parameters[11].Value = ruTreeStatistics.FineRootCarbonInKgPerHa;
-                    insertRow.Parameters[12].Value = ruTreeStatistics.FineRootNitrogenInKgPerHa;
+                    insertRow.Parameters[3].Value = liveTreeAndSaplingStatistics.StemCarbonInKgPerHa;
+                    insertRow.Parameters[4].Value = liveTreeAndSaplingStatistics.StemNitrogenInKgPerHa;
+                    insertRow.Parameters[5].Value = liveTreeAndSaplingStatistics.BranchCarbonInKgPerHa;
+                    insertRow.Parameters[6].Value = liveTreeAndSaplingStatistics.BranchNitrogenInKgPerHa;
+                    insertRow.Parameters[7].Value = liveTreeAndSaplingStatistics.FoliageCarbonInKgPerHa;
+                    insertRow.Parameters[8].Value = liveTreeAndSaplingStatistics.FoliageNitrogenInKgPerHa;
+                    insertRow.Parameters[9].Value = liveTreeAndSaplingStatistics.CoarseRootCarbonInKgPerHa;
+                    insertRow.Parameters[10].Value = liveTreeAndSaplingStatistics.CoarseRootNitrogenInKgPerHa;
+                    insertRow.Parameters[11].Value = liveTreeAndSaplingStatistics.FineRootCarbonInKgPerHa;
+                    insertRow.Parameters[12].Value = liveTreeAndSaplingStatistics.FineRootNitrogenInKgPerHa;
 
                     // biomass from regeneration
-                    insertRow.Parameters[13].Value = ruTreeStatistics.RegenerationCarbonInKgPerHa;
-                    insertRow.Parameters[14].Value = ruTreeStatistics.RegenerationNitrogenInKgPerHa;
+                    insertRow.Parameters[13].Value = liveTreeAndSaplingStatistics.RegenerationCarbonInKgPerHa;
+                    insertRow.Parameters[14].Value = liveTreeAndSaplingStatistics.RegenerationNitrogenInKgPerHa;
 
                     // biomass from standing dead woods
                     if (resourceUnit.Snags.TotalStanding == null) // expected in year 0
@@ -148,19 +148,19 @@ namespace iLand.Output.Sql
                 // landscape level statistics
                 accumulatedValues[0] += areaFactor;
                 // carbon pools aboveground are in kg/resource unit, e.g., the sum of stem-carbon of all trees, so no scaling required
-                accumulatedValues[1] += ruTreeStatistics.StemCarbonInKgPerHa * areaFactor;
-                accumulatedValues[2] += ruTreeStatistics.StemNitrogenInKgPerHa * areaFactor;
-                accumulatedValues[3] += ruTreeStatistics.BranchCarbonInKgPerHa * areaFactor;
-                accumulatedValues[4] += ruTreeStatistics.BranchNitrogenInKgPerHa * areaFactor;
-                accumulatedValues[5] += ruTreeStatistics.FoliageCarbonInKgPerHa * areaFactor;
-                accumulatedValues[6] += ruTreeStatistics.FoliageNitrogenInKgPerHa * areaFactor;
-                accumulatedValues[7] += ruTreeStatistics.CoarseRootCarbonInKgPerHa * areaFactor;
-                accumulatedValues[8] += ruTreeStatistics.CoarseRootNitrogenInKgPerHa * areaFactor;
-                accumulatedValues[9] += ruTreeStatistics.FineRootCarbonInKgPerHa * areaFactor;
-                accumulatedValues[10] += ruTreeStatistics.FineRootNitrogenInKgPerHa * areaFactor;
+                accumulatedValues[1] += liveTreeAndSaplingStatistics.StemCarbonInKgPerHa * areaFactor;
+                accumulatedValues[2] += liveTreeAndSaplingStatistics.StemNitrogenInKgPerHa * areaFactor;
+                accumulatedValues[3] += liveTreeAndSaplingStatistics.BranchCarbonInKgPerHa * areaFactor;
+                accumulatedValues[4] += liveTreeAndSaplingStatistics.BranchNitrogenInKgPerHa * areaFactor;
+                accumulatedValues[5] += liveTreeAndSaplingStatistics.FoliageCarbonInKgPerHa * areaFactor;
+                accumulatedValues[6] += liveTreeAndSaplingStatistics.FoliageNitrogenInKgPerHa * areaFactor;
+                accumulatedValues[7] += liveTreeAndSaplingStatistics.CoarseRootCarbonInKgPerHa * areaFactor;
+                accumulatedValues[8] += liveTreeAndSaplingStatistics.CoarseRootNitrogenInKgPerHa * areaFactor;
+                accumulatedValues[9] += liveTreeAndSaplingStatistics.FineRootCarbonInKgPerHa * areaFactor;
+                accumulatedValues[10] += liveTreeAndSaplingStatistics.FineRootNitrogenInKgPerHa * areaFactor;
                 // regen
-                accumulatedValues[11] += ruTreeStatistics.RegenerationCarbonInKgPerHa;
-                accumulatedValues[12] += ruTreeStatistics.RegenerationNitrogenInKgPerHa;
+                accumulatedValues[11] += liveTreeAndSaplingStatistics.RegenerationCarbonInKgPerHa;
+                accumulatedValues[12] += liveTreeAndSaplingStatistics.RegenerationNitrogenInKgPerHa;
                 // standing dead wood
                 if (resourceUnit.Snags.TotalStanding != null)
                 {

@@ -237,8 +237,6 @@ namespace iLand.Test
 
                 observedTrajectory.AddYear(resourceUnit);
                 Assert.IsTrue(plot14.Landscape.ResourceUnits.Count == 1);
-                Assert.IsTrue(plot14.Landscape.ResourceUnits[0].Trees.TreeStatisticsByStandID.Count == 1);
-                Assert.IsTrue(plot14.Landscape.ResourceUnits[0].Trees.TreeStatisticsByStandID.ContainsKey(14));
             }
 
             ModelTest.VerifyMalcolmKnappModel(plot14);
@@ -638,8 +636,6 @@ namespace iLand.Test
                     Assert.IsTrue(resourceUnit.Trees.PhotosyntheticallyActiveArea == 0.0F);
                     Assert.IsTrue(resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea == 0.0F);
                 }
-                Assert.IsTrue(resourceUnit.Trees.TreeStatisticsByStandID.Count == 1, "Expected tree statistics for one stand but got statistics for " + resourceUnit.Trees.TreeStatisticsByStandID.Count + " stands.");
-                Assert.IsTrue(resourceUnit.Trees.TreeStatisticsByStandID.ContainsKey(Constant.DefaultStandID), "Expected zero tree statistics by stand ID but got " + resourceUnit.Trees.TreeStatisticsByStandID.Count + ".");
                 Assert.IsTrue((resourceUnit.Trees.TotalLeafArea > 0.0F) && (resourceUnit.Trees.TotalLeafArea < 20.0F * Constant.Grid.ResourceUnitAreaInM2));
 
                 //Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero

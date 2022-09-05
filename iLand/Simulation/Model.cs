@@ -7,6 +7,7 @@ using MaxRev.Gdal.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.Intrinsics.X86;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,6 +44,11 @@ namespace iLand.Simulation
                 {
                     Trace.AutoFlush = projectFile.Output.Logging.AutoFlush;
                 }
+            }
+
+            if ((projectFile.Model.Settings.SimdWidth > 32) && (Avx2.IsSupported == false))
+            {
+                throw new ArgumentOutOfRangeException(nameof(projectFile), "simdWidth in project file is " + projectFile.Model.Settings.SimdWidth + " bits but AVX2 instructions are not supported. Either set the SIMD width to 32 bits or run on a processor with the AVX2 instruction set.");
             }
 
             this.stopwatch = new();

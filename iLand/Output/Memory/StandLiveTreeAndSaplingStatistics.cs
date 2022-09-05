@@ -3,33 +3,32 @@ using System.Diagnostics;
 
 namespace iLand.Output.Memory
 {
-    public class StandTreeStatistics : StandOrResourceUnitTreeStatistics
+    public class StandLiveTreeAndSaplingStatistics : LiveTreeAndSaplingStatistics
     {
         private float areaInLandscapeInM2;
 
         public int StandID { get; private init; }
 
-        public StandTreeStatistics(int standID)
+        public StandLiveTreeAndSaplingStatistics(int standID)
         {
             this.areaInLandscapeInM2 = 0.0F;
             this.StandID = standID;
         }
 
-        public void Add(ResourceUnitTreeStatistics completedResourceUnitTreeStatistics)
+        public void Add(float areaInLandscapeInM2, LiveTreeAndSaplingStatistics completedResourceUnitTreeStatistics)
         {
-            // can't check stand ID for consistency as ResourceUnitTreeStatistics doesn't carry it, though this shim method does
+            // can't check stand ID for consistency as LiveTreeAndSaplingStatistics doesn't carry it, though this shim method does
             // provide a hook for checking method calls
 
             // since statistics at the resource unit level are per hectare they must be accumulated in an area weighted fashion
-            float resourceUnitAreaInM2 = completedResourceUnitTreeStatistics.ResourceUnit.AreaInLandscapeInM2;
-            this.areaInLandscapeInM2 += resourceUnitAreaInM2;
+            this.areaInLandscapeInM2 += areaInLandscapeInM2;
 
             // TODO: for area weighting to be completely correct the area stand occupies within the resource unit should be used
             // but this isn't currently available as an iLand input
-            this.AverageDbhInCm += resourceUnitAreaInM2 * completedResourceUnitTreeStatistics.AverageDbhInCm;
-            this.AverageHeightInM += resourceUnitAreaInM2 * completedResourceUnitTreeStatistics.AverageHeightInM;
-            this.SaplingMeanAgeInYears += resourceUnitAreaInM2 * completedResourceUnitTreeStatistics.SaplingMeanAgeInYears;
-            base.AddAreaWeighted(completedResourceUnitTreeStatistics, resourceUnitAreaInM2);
+            this.AverageDbhInCm += areaInLandscapeInM2 * completedResourceUnitTreeStatistics.AverageDbhInCm;
+            this.AverageHeightInM += areaInLandscapeInM2 * completedResourceUnitTreeStatistics.AverageHeightInM;
+            this.SaplingMeanAgeInYears += areaInLandscapeInM2 * completedResourceUnitTreeStatistics.SaplingMeanAgeInYears;
+            base.AddAreaWeighted(areaInLandscapeInM2, completedResourceUnitTreeStatistics);
         }
 
         public void OnAdditionsComplete()

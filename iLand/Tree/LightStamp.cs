@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
@@ -81,6 +82,7 @@ namespace iLand.Tree
             this.ReaderStamp = null;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetDistanceToCenterInM(int indexX, int indexY)
         {
             // caculating distance each time profiles about 10% faster than using a lookup table
@@ -90,6 +92,7 @@ namespace iLand.Tree
             // return LightStamp.DistanceFromCenterGrid[Math.Abs(indexX - this.CenterCellIndex), Math.Abs(indexY - this.CenterCellIndex)];
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Vector128<float> GetDistanceToCenterInM(Vector128<int> indexX, Vector128<int> indexY)
         {
             // since distances are small integer truncation with multiply low isn't a concern
@@ -100,6 +103,7 @@ namespace iLand.Tree
             return Avx.Multiply(Constant.Grid128F.LightCellSizeInM, Avx.Sqrt(Avx.ConvertToVector128Single(squaredDistance)));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Vector256<float> GetDistanceToCenterInM(Vector256<int> indexX, Vector256<int> indexY)
         {
             // since distances are small integer truncation with multiply low isn't a concern

@@ -6,11 +6,8 @@ plugins are not included.
 * These directories were not ported: apidoc, fonstudio, iland, ilandc, inits, plugins/{barkbeetle, fire, wind}
 * The abe and abe/output directories were ported but are currently retained only in the feature/scripting branch.
 
-Currently, e_sqlite3.dll needs to be copied from %OutDir%\net60\runtimes\win-x64\native to %OutDir% as a post build step
-due to [Entity Framework issue 19396](https://github.com/dotnet/efcore/issues/19396). This is a one time step so is not automated.
-
 ### Dependencies
-This port of iLand is a .NET 6.0 assembly whose PowerShell cmdlets require [Powershell 7.2](https://github.com/PowerShell/PowerShell) or newer. 
+This port of iLand is a .NET 6.0 assembly whose PowerShell cmdlets require [Powershell 7.3](https://github.com/PowerShell/PowerShell) or newer. 
 Feather files and SQLite databases are both input and output formats, resulting in use of Microsoft.Data.Sqlite (which, as of .NET 6.0, has
 fewer dependencies than System.Data.Sqlite) and Apache Arrow. GDAL is also used for logging light and height grids to GeoTIFF. If compatible
 GDAL binaries aren't included in `$env:PATH` GeoTIFF logging will fail when iLand PowerShell cmdlets are invoked.
@@ -29,6 +26,11 @@ As of Arrow 9.0.0, Apache C# bindings do not support compressed feather files an
 these limitations as best it can supporting use of `write_feather(compression = "uncompressed")` and `factor()` may be helpful in R. Also,
 `read_feather()` defaults to `mmap = TRUE` and therefore holds feather files open for the remainder of an R session. Since this prevents
 rewriting the files from PowerShell after rerunning iLand it's likely convenient to use `read_feather(mmap = FALSE)`.
+
+Like many .NET class libraries and PowerShell modules, this iLand port is operating system and processor agnostic. Development 
+and use occurs on Windows but binaries compiled on Windows have been verified to be xcopyable to Linux and ran without issues. Unless disabled 
+in the project file, SIMD instructions are used on processors supporting AVX2 (Intel 4<sup>th</sup> generation and newer, from 2013, and AMD
+Excavator, from 2015). Performance optimizations currently target AMD Zen 3.
 
 ### Relationship to iLand 1.0 (2016)
 Code in this repo derives from the [iLand 1.0](http://iland-model.org/) spatial growth and yield model. The official iLand 1.0 release has been
@@ -109,3 +111,10 @@ and parameterizations.
 
 Decoupling from Qt additionally exempts iLand development from Qt licensing terms (minimum US$ 302/month, as of July 2022, or Qt code contributions
 in kind), reducing the cost of open source software.
+
+### Developer Notes
+Primary development is done with [Visual Studio 2022 Community](https://visualstudio.microsoft.com/) but any other .NET 6.0 toolchain is expected
+to work, including [Visual Studio Code](https://dotnet.microsoft.com/en-us/platform/tools) on Linux.
+
+After the first time a repo is built, e_sqlite3.dll needs to be copied from %OutDir%\net60\runtimes\win-x64\native to %OutDir% as a post build 
+step due to [Entity Framework issue 19396](https://github.com/dotnet/efcore/issues/19396). This is a one time task so is not automated.

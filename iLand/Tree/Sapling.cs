@@ -16,8 +16,6 @@ namespace iLand.Tree
             this.Clear();
         }
 
-        public bool IsOccupied() { return HeightInM > 0.0F; }
-
         public void Clear()
         {
             this.Age = 0;
@@ -25,6 +23,11 @@ namespace iLand.Tree
             this.IsSprout = false;
             this.SpeciesIndex = -1;
             this.StressYears = 0;
+        }
+
+        public bool IsOccupied()
+        {
+            return this.HeightInM > 0.0F;
         }
 
         public void SetSapling(float heightInM, int ageInYears, int speciesIndex)

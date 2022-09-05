@@ -45,7 +45,7 @@ namespace iLand.Test
             }
             this.ObservedGppByYear.Add(gpp);
             this.ObservedNppByYear.Add(npp);
-            this.ObservedTreesPerHectareByYear.Add(resourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.TreesPerHa);
+            this.ObservedTreesPerHectareByYear.Add(resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreesPerHa);
 
             float stemVolume = 0.0F;
             foreach (TreeListSpatial treesOfSpecies in resourceUnit.Trees.TreesBySpeciesID.Values)

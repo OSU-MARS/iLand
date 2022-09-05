@@ -77,15 +77,15 @@ namespace iLand.Output.Sql
             Span<float> accumulatedValues = stackalloc float[10]; // 10 data values
             foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
-                if ((resourceUnit.Snags == null) || (resourceUnit.Snags == null))
+                if ((resourceUnit.CarbonCycle == null) || (resourceUnit.Snags == null) || (resourceUnit.Snags == null))
                 {
                     // Debug.WriteLine("Resource unit lacks soil or snag data, no output generated.");
                     continue;
                 }
 
                 float areaFactor = resourceUnit.AreaInLandscapeInM2 / Constant.Grid.ResourceUnitAreaInM2; //conversion factor
-                float npp = resourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa * Constant.DryBiomassCarbonFraction; // kg C/ha
-                npp += resourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies.SaplingNppPerHa * Constant.DryBiomassCarbonFraction; // kgC/ha
+                float npp = resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa * Constant.DryBiomassCarbonFraction; // kg C/ha
+                npp += resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.SaplingNppPerHa * Constant.DryBiomassCarbonFraction; // kgC/ha
 
                 // Snag pools are not scaled per ha (but refer to the stockable RU), soil pools and biomass statistics (NPP, ...) 
                 // are scaled.
@@ -110,9 +110,9 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[6].Value = -toDisturbance; // disturbance
                     insertRow.Parameters[7].Value = -toHarvest; // management loss
                     insertRow.Parameters[8].Value = nep; // nep
-                    insertRow.Parameters[9].Value = resourceUnit.CarbonCycle.TotalNpp;
-                    insertRow.Parameters[10].Value = resourceUnit.CarbonCycle.TotalCarbonToAtmosphere;
-                    insertRow.Parameters[11].Value = resourceUnit.CarbonCycle.TotalNep;
+                    insertRow.Parameters[9].Value = resourceUnit.CarbonCycle.CumulativeNppInKgCPerHa;
+                    insertRow.Parameters[10].Value = resourceUnit.CarbonCycle.CumulativeCarbonToAtmosphereInKgPerHa;
+                    insertRow.Parameters[11].Value = resourceUnit.CarbonCycle.CumulativeNepInKgCPerHa;
                     insertRow.ExecuteNonQuery();
                 }
 
@@ -124,9 +124,9 @@ namespace iLand.Output.Sql
                 accumulatedValues[4] += -toDisturbance * areaFactor; // disturbance
                 accumulatedValues[5] += -toHarvest * areaFactor; // management loss
                 accumulatedValues[6] += nep * areaFactor; // net ecosystem productivity
-                accumulatedValues[7] += resourceUnit.CarbonCycle.TotalNpp * areaFactor; // cum. NPP
-                accumulatedValues[8] += resourceUnit.CarbonCycle.TotalCarbonToAtmosphere * areaFactor; // cum. Rh
-                accumulatedValues[9] += resourceUnit.CarbonCycle.TotalNep * areaFactor; // cum. NEP
+                accumulatedValues[7] += resourceUnit.CarbonCycle.CumulativeNppInKgCPerHa * areaFactor; // cum. NPP
+                accumulatedValues[8] += resourceUnit.CarbonCycle.CumulativeCarbonToAtmosphereInKgPerHa * areaFactor; // cum. Rh
+                accumulatedValues[9] += resourceUnit.CarbonCycle.CumulativeNepInKgCPerHa * areaFactor; // cum. NEP
             }
 
             // write landscape sums

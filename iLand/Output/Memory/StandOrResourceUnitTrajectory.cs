@@ -73,7 +73,7 @@ namespace iLand.Output.Memory
             get { return this.AverageDbhByYear.Length; }
         }
 
-        protected void AddYear(StandOrResourceUnitTreeStatistics endOfYearLiveTreeStatistics)
+        public void AddYear(LiveTreeAndSaplingStatistics endOfYearLiveTreeStatistics)
         {
             if (this.LengthInYears == this.CapacityInYears)
             {

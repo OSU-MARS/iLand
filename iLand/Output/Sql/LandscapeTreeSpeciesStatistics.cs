@@ -22,7 +22,7 @@ namespace iLand.Output.Sql
         public float TreeNpp { get; private set; }
         public float TreeNppAboveground { get; private set; }
 
-        public void AddResourceUnit(ResourceUnit resourceUnit, ResourceUnitTreeSpeciesStatistics ruLiveTreeStatisticsForSpecies, float totalStemVolumeInM3PerHa)
+        public void AddResourceUnit(ResourceUnit resourceUnit, LiveTreeAndSaplingStatistics ruLiveTreeStatisticsForSpecies, float totalStemVolumeInM3PerHa)
         {
             float ruAreaInLandscape = resourceUnit.AreaInLandscapeInM2;
             if (ruAreaInLandscape <= 0.0F)

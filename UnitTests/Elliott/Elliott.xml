@@ -17,7 +17,12 @@
       <lightGrid enabled="false" />
     </logging>
     <memory>
-      <resourceUnitTrajectories>AllTreeSpeciesStatistics, IndividualTrees, IndividualTreeSpeciesStatistics, ThreePG</resourceUnitTrajectories>
+      <resourceUnits>
+        <allTreeSpeciesStatistics enabled="true" />
+        <individualTrees enabled="true" />
+        <individualTreeSpeciesStatistics enabled="true" />
+        <threePG enabled="true" />
+      </resourceUnits>
       <standTrajectories enabled="true" />
     </memory>
   </output>

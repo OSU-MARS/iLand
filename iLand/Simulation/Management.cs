@@ -36,7 +36,11 @@ namespace iLand.Simulation
         }
 
         // return number of trees currently in list
-        public int Count() { return this.treesInMostRecentlyLoadedStand.Count; }
+        public int Count() 
+        {
+            return this.treesInMostRecentlyLoadedStand.Count; 
+        }
+
         /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
         // public float Mean(string expression, string filter = null) { return AggregateFunction(expression, filter, "mean"); }
         /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
@@ -100,8 +104,8 @@ namespace iLand.Simulation
                 TreeListSpatial trees = liveTreesOfSpecies.Trees;
                 foreach (int treeIndex in liveTreesOfSpecies.LiveTreeIndices)
                 {
-                    // TODO: why 10%?
-                    trees.RemoveDisturbance(model, treeIndex, 0.1F, 0.1F, 0.1F, 0.1F, 1.0F);
+                    // TODO: Why 10%? Should foiliage to soil also be 10%?
+                    trees.RemoveDisturbance(model, treeIndex, stemToSnagFraction: 0.1F, stemToSoilFraction: 0.1F, branchToSoilFraction: 0.1F, branchToSnagFraction: 0.1F, foliageToSoilFraction: 1.0F);
                     ++treeCount;
                 }
             }
@@ -554,21 +558,21 @@ namespace iLand.Simulation
 
         /** loadFromMap selects trees located on pixels with value 'key' within the grid 'map_grid'.
             */
-        public void LoadFromMap(GridRaster10m mapGrid, int standID)
-        {
-            if (mapGrid == null)
-            {
-                throw new ArgumentNullException(nameof(mapGrid));
-            }
-            if (mapGrid.IsSetup())
-            {
-                this.treesInMostRecentlyLoadedStand = mapGrid.GetLivingTreesInStand(standID);
-            }
-            else
-            {
-                throw new ArgumentException("Grid is not valid. No trees loaded");
-            }
-        }
+        //public void LoadFromMap(GridRaster10m mapGrid, int standID)
+        //{
+        //    if (mapGrid == null)
+        //    {
+        //        throw new ArgumentNullException(nameof(mapGrid));
+        //    }
+        //    if (mapGrid.IsSetup())
+        //    {
+        //        this.treesInMostRecentlyLoadedStand = mapGrid.GetLivingTreesInStand(standID);
+        //    }
+        //    else
+        //    {
+        //        throw new ArgumentException("Grid is not valid. No trees loaded");
+        //    }
+        //}
 
         //private int TreePairValue(MutableTuple<Trees, List<int>> treesOfSpecies1, MutableTuple<Trees, List<int>> treesOfSpecies2)
         //{

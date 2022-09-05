@@ -295,9 +295,6 @@ namespace iLand.Tree
                     float abovegroundNpp = treeGrowthData.NppAboveground;
                     float totalNpp = treeGrowthData.NppTotal;
                     ruSpecies.StatisticsLive.Add(this, treeIndex, totalNpp, abovegroundNpp);
-
-                    int standID = this.StandID[treeIndex];
-                    this.ResourceUnit.Trees.TreeStatisticsByStandID[standID].Add(this, treeIndex, totalNpp, abovegroundNpp);
                 }
 
                 // regeneration

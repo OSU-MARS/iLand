@@ -17,7 +17,7 @@ namespace iLand.Output.Memory
         public ResourceUnitThreePGTimeSeries[]? ThreePGTimeSeries { get; private init; }
         public ResourceUnitTreeSpeciesTrajectory[]? TreeSpeciesTrajectories { get; private init; }
 
-        public ResourceUnitTrajectory(ResourceUnit resourceUnit, ResourceUnitMemoryOutputs resourceUnitOutputs, int initialCapacityInYears)
+        public ResourceUnitTrajectory(ResourceUnit resourceUnit, ResourceUnitOutputs resourceUnitOutputs, int initialCapacityInYears)
         {
             this.AllTreeSpeciesTrajectory = null;
             this.IndividualTreeTrajectories = null;
@@ -25,14 +25,14 @@ namespace iLand.Output.Memory
             this.ThreePGTimeSeries = null;
             this.TreeSpeciesTrajectories = null;
 
-            if (resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.AllTreeSpeciesStatistics))
+            if (resourceUnitOutputs.AllTreeSpeciesStatistics.Enabled)
             {
                 this.AllTreeSpeciesTrajectory = new(initialCapacityInYears);
             }
 
-            bool logIndividualTrees = resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.IndividualTrees);
-            bool logSpeciesStatistics = resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.IndividualTreeSpeciesStatistics);
-            bool logThreePG = resourceUnitOutputs.HasFlag(ResourceUnitMemoryOutputs.ThreePG);
+            bool logIndividualTrees = resourceUnitOutputs.IndividualTrees.Enabled;
+            bool logSpeciesStatistics = resourceUnitOutputs.IndividualTreeSpeciesStatistics.Enabled;
+            bool logThreePG = resourceUnitOutputs.ThreePG.Enabled;
             if (logIndividualTrees || logSpeciesStatistics || logThreePG)
             {
                 IList<TreeListSpatial> treesOnResourceUnitBySpecies = resourceUnit.Trees.TreesBySpeciesID.Values;
@@ -119,7 +119,7 @@ namespace iLand.Output.Memory
         {
             if (this.HasAllTreeSpeciesStatistics)
             {
-                ResourceUnitTreeStatistics endOfYearResourceUnitTreeStatistics = this.ResourceUnit.Trees.TreeAndSaplingStatisticsForAllSpecies;
+                LiveTreeAndSaplingStatistics endOfYearResourceUnitTreeStatistics = this.ResourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies;
                 this.AllTreeSpeciesTrajectory.AddYear(endOfYearResourceUnitTreeStatistics);
             }
 

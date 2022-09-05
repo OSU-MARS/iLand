@@ -55,7 +55,7 @@ namespace iLand.Output.Sql
 
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
-                    ResourceUnitTreeSpeciesStatistics ruLiveTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
+                    LiveTreeAndSaplingStatistics ruLiveTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
                     if (ruLiveTreeStatisticsForSpecies.SaplingsPerHa == 0)
                     {
                         continue;

@@ -18,7 +18,7 @@ namespace iLand.Extensions
             // GDAL documentation indicates the upper left corner but this is incorrect
             raster.SetGeoTransform(new double[] { gisOrigin.X + grid.ProjectExtent.X, grid.CellSizeInM, 0.0, gisOrigin.Y + grid.ProjectExtent.Y, 0.0, grid.CellSizeInM });
             raster.SetProjection(projection);
-            raster.WriteRaster(xOff: 0, yOff: 0, grid.CellsX, grid.CellsY, grid.Data, grid.CellsX, grid.CellsY, bandCount: 1, null, pixelSpace: 0, lineSpace: 0, bandSpace: 0);
+            raster.WriteRaster(xOff: 0, yOff: 0, grid.CellsX, grid.CellsY, grid.Data, grid.CellsX, grid.CellsY, bandCount: 1, bandMap: null, pixelSpace: 0, lineSpace: 0, bandSpace: 0);
         }
     }
 }
