@@ -6,7 +6,7 @@
         public float Value { get; set; }
         public int Index { get; set; }
 
-        public override string ToString()
+        public readonly override string? ToString()
         {
             return this.Type switch
             {

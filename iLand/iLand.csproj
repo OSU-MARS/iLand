@@ -48,12 +48,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Apache.Arrow" Version="10.0.0" />
-    <PackageReference Include="MaxRev.Gdal.Core" Version="3.3.3.120" />
-    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal" Version="3.3.3.110" />
+    <PackageReference Include="Apache.Arrow" Version="12.0.1" />
+    <PackageReference Include="MaxRev.Gdal.Core" Version="3.7.0.217" />
+    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal" Version="3.7.0.100" />
     <PackageReference Include="MersenneTwister" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.0" />
-    <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.2.7" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.9" />
+    <PackageReference Include="System.Management.Automation" Version="7.2.13" />
   </ItemGroup>
   
 </Project>

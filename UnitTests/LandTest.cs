@@ -1,5 +1,6 @@
 ﻿using iLand.Input.ProjectFile;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Diagnostics;
 using System.IO;
 using Model = iLand.Simulation.Model;
 
@@ -24,7 +25,8 @@ namespace iLand.Test
 
         protected static string GetUnitTestDirectoryPath(TestContext testContext)
         {
-            return Path.Combine(testContext.TestDir, "..", "..", "UnitTests");
+            Debug.Assert(string.IsNullOrWhiteSpace(testContext.TestRunDirectory) == false);
+            return Path.Combine(testContext.TestRunDirectory, "..", "..", "UnitTests");
         }
 
         protected static Model LoadProject(string projectFilePath)

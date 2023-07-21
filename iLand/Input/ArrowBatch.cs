@@ -11,7 +11,7 @@ namespace iLand.Input
 
         protected static TArray? MaybeGetArray<TArray>(string name, Schema schema, IArrowArray[] fields) where TArray : class, IArrowArray
         {
-            if (schema.Fields.ContainsKey(name))
+            if (schema.FieldsLookup.Contains(name))
             {
                 return (TArray)fields[schema.GetFieldIndex(name)];
             }

@@ -34,8 +34,8 @@ namespace iLand.Input.Tree
                 {
                     wfoIDfield = fields.WorldFloraID.Values;
                 }
-                ReadOnlySpan<float> gisXield = fields.GisX.Values;
-                ReadOnlySpan<float> gisYield = fields.GisY.Values;
+                ReadOnlySpan<float> gisXfield = fields.GisX.Values;
+                ReadOnlySpan<float> gisYfield = fields.GisY.Values;
 
                 if (this.Capacity - this.Count < batch.Length)
                 {
@@ -71,8 +71,8 @@ namespace iLand.Input.Tree
                 }
                 dbhField.CopyTo(this.DbhInCm.AsSpan()[this.Count..]);
                 heightField.CopyTo(this.HeightInM.AsSpan()[this.Count..]);
-                gisXield.CopyTo(this.GisX.AsSpan()[this.Count..]);
-                gisYield.CopyTo(this.GisY.AsSpan()[this.Count..]);
+                gisXfield.CopyTo(this.GisX.AsSpan()[this.Count..]);
+                gisYfield.CopyTo(this.GisY.AsSpan()[this.Count..]);
 
                 if (fields.AgeInYears != null)
                 {

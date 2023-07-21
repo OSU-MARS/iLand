@@ -22,3 +22,6 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Style", "IDE0031:Use null propagation", Justification = "clarity", Scope = "member", Target = "~M:iLand.Tree.TreeListSpatial.Remove(iLand.Simulation.Model,System.Int32,System.Single,System.Single,System.Single)")]
 [assembly: SuppressMessage("Style", "IDE0031:Use null propagation", Justification = "clarity", Scope = "member", Target = "~M:iLand.Tree.TreeListSpatial.MarkTreeAsDead(iLand.Simulation.Model,System.Int32)")]
 [assembly: SuppressMessage("Style", "IDE0031:Use null propagation", Justification = "clarity", Scope = "member", Target = "~M:iLand.Tree.TreeListSpatial.PartitionBiomass(iLand.Tree.TreeGrowthData,iLand.Simulation.Model,System.Int32)")]
+[assembly: SuppressMessage("Style", "IDE0270:Use coalesce expression", Justification = "readability", Scope = "type", Target = "~T:iLand.Tree.TreeSpeciesStamps")]
+[assembly: SuppressMessage("Style", "IDE0270:Use coalesce expression", Justification = "readability", Scope = "type", Target = "~T:iLand.World.Landscape")]
+[assembly: SuppressMessage("Style", "IDE0270:Use coalesce expression", Justification = "readability", Scope = "type", Target = "~T:iLand.World.TreePopulator")]
