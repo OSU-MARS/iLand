@@ -7,7 +7,7 @@ plugins are not included.
 * The abe and abe/output directories were ported but are currently retained only in the feature/scripting branch.
 
 ### Dependencies
-This port of iLand is a .NET 6.0 assembly whose PowerShell cmdlets require [Powershell 7.3](https://github.com/PowerShell/PowerShell) or newer. 
+This port of iLand is a .NET 7.0 assembly whose PowerShell cmdlets require [Powershell 7.3](https://github.com/PowerShell/PowerShell) or newer. 
 Feather files and SQLite databases are both input and output formats, resulting in use of Microsoft.Data.Sqlite (which, as of .NET 6.0, has
 fewer dependencies than System.Data.Sqlite) and Apache Arrow. GDAL is also used for logging light and height grids to GeoTIFF. If compatible
 GDAL binaries aren't included in `$env:PATH` GeoTIFF logging will fail when iLand PowerShell cmdlets are invoked.
@@ -113,7 +113,7 @@ Decoupling from Qt additionally exempts iLand development from Qt licensing term
 in kind), reducing the cost of open source software.
 
 ### Developer Notes
-Primary development is done with [Visual Studio 2022 Community](https://visualstudio.microsoft.com/) but any other .NET 6.0 toolchain is expected
+Primary development is done with [Visual Studio 2022 Community](https://visualstudio.microsoft.com/) but any other .NET 7.0 toolchain is expected
 to work, including [Visual Studio Code](https://dotnet.microsoft.com/en-us/platform/tools) on Linux.
 
 After the first time a repo is built, e_sqlite3.dll needs to be copied from %OutDir%\net60\runtimes\win-x64\native to %OutDir% as a post build 

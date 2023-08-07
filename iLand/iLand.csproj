@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <RootNamespace>iLand</RootNamespace>
     <Version>1.0.0</Version>
     <Company>Oregon State University</Company>
@@ -53,7 +53,7 @@
     <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal" Version="3.7.0.100" />
     <PackageReference Include="MersenneTwister" Version="1.0.6" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.9" />
-    <PackageReference Include="System.Management.Automation" Version="7.2.13" />
+    <PackageReference Include="System.Management.Automation" Version="7.3.6" />
   </ItemGroup>
   
 </Project>

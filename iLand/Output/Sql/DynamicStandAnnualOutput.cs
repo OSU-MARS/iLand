@@ -13,9 +13,9 @@ using Model = iLand.Simulation.Model;
 
 namespace iLand.Output.Sql
 {
-    public class DynamicStandAnnualOutput : AnnualOutput
+    public partial class DynamicStandAnnualOutput : AnnualOutput
     {
-        private static readonly ReadOnlyCollection<string> Aggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95", "sd" }.AsReadOnly();
+        private static readonly ReadOnlyCollection<string> WellKnownAggregations;
 
         private readonly List<DynamicOutputField> fieldList;
         private readonly Expression resourceUnitFilter;
@@ -28,6 +28,11 @@ namespace iLand.Output.Sql
             public int VariableIndex { get; set; }
             public string Expression { get; set; }
         };
+
+        static DynamicStandAnnualOutput()
+        {
+            DynamicStandAnnualOutput.WellKnownAggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95", "sd" }.AsReadOnly();
+        }
 
         public DynamicStandAnnualOutput()
         {
@@ -59,6 +64,12 @@ namespace iLand.Output.Sql
             // other colums are added during setup...
         }
 
+        [GeneratedRegex("([^\\.]+).(\\w+)[,\\s]*")] // two parts: before dot and after dot, and , + whitespace at the end
+        private static partial Regex GetColumnVariableAndAggregationRegex();
+
+        [GeneratedRegex("[\\[\\]\\,\\(\\)<>=!\\s]")]
+        private static partial Regex GetSqlColumnNameRegex();
+
         public override void Setup(Project projectFile, SimulationState simulationState)
         {
             string? columnString = projectFile.Output.Sql.DynamicStand.Columns;
@@ -76,12 +87,11 @@ namespace iLand.Output.Sql
 
             // setup fields
             TreeVariableAccessor treeWrapper = new(simulationState);
-            Regex regex = new("([^\\.]+).(\\w+)[,\\s]*"); // two parts: before dot and after dot, and , + whitespace at the end
-            MatchCollection columns = regex.Matches(columnString);
-            foreach (Match column in columns)
+            MatchCollection columnDefinitions = DynamicStandAnnualOutput.GetColumnVariableAndAggregationRegex().Matches(columnString);
+            foreach (Match columnVariableAndAggregation in columnDefinitions)
             {
-                string columnVariable = column.Groups[1].Value; // field / expresssion
-                string columnVariableAggregation = column.Groups[2].Value;
+                string columnVariable = columnVariableAndAggregation.Groups[1].Value; // field / expresssion
+                string columnVariableAggregation = columnVariableAndAggregation.Groups[2].Value;
                 DynamicOutputField fieldForColumn = new();
                 // parse field
                 if (columnVariable.Length > 0 && !columnVariable.Contains('('))
@@ -96,16 +106,16 @@ namespace iLand.Output.Sql
                     fieldForColumn.Expression = columnVariable;
                 }
 
-                fieldForColumn.AggregationIndex = DynamicStandAnnualOutput.Aggregations.IndexOf(columnVariableAggregation);
+                fieldForColumn.AggregationIndex = DynamicStandAnnualOutput.WellKnownAggregations.IndexOf(columnVariableAggregation);
                 if (fieldForColumn.AggregationIndex == -1)
                 {
                     throw new NotSupportedException(String.Format("Invalid aggregate expression for dynamic output: {0}{2}allowed:{1}",
-                                                                  columnVariableAggregation, String.Join(" ", Aggregations), System.Environment.NewLine));
+                                                                  columnVariableAggregation, String.Join(" ", DynamicStandAnnualOutput.WellKnownAggregations), System.Environment.NewLine));
                 }
                 this.fieldList.Add(fieldForColumn);
 
                 string sqlColumnName = String.Format("{0}_{1}", columnVariable, columnVariableAggregation);
-                sqlColumnName = Regex.Replace(sqlColumnName, "[\\[\\]\\,\\(\\)<>=!\\s]", "_");
+                sqlColumnName = DynamicStandAnnualOutput.GetSqlColumnNameRegex().Replace(sqlColumnName, "_");
                 sqlColumnName = sqlColumnName.Replace("__", "_");
                 this.Columns.Add(new(sqlColumnName, columnVariable, SqliteType.Real));
             }

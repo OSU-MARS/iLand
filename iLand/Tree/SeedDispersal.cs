@@ -19,7 +19,7 @@ namespace iLand.Tree
 
         See http://iland-model.org/dispersal
         */
-    public class SeedDispersal
+    public partial class SeedDispersal
     {
         private bool probabalisticDispersal; // if 'true', seed dispersal uses probabilities to distribute (old version)
         private bool hasPendingSerotiny; // true if active (unprocessed) pixels are on the extra-serotiny map
@@ -547,6 +547,10 @@ namespace iLand.Tree
             }
         }
 
+        [GeneratedRegex("([^\\.\\w]+)")]
+        private static partial Regex GetTokensRegex();
+
+
         //public void SeedProductionSerotiny(Point positionIndex)
         //{
         //    if (this.seedMapSerotiny.IsSetup() == false)
@@ -671,7 +675,7 @@ namespace iLand.Tree
                     this.externalSeedDirection += direction.Contains('e', StringComparison.Ordinal) ? 0x2 : 0x0;
                     this.externalSeedDirection += direction.Contains('s', StringComparison.Ordinal) ? 0x4 : 0x0;
                     this.externalSeedDirection += direction.Contains('w', StringComparison.Ordinal) ? 0x8 : 0x0;
-                    List<string> seedBufferTokens = Regex.Matches(seedDispersal.ExternalSeedBuffer, "([^\\.\\w]+)").Select(match => match.Value).ToList();
+                    List<string> seedBufferTokens = SeedDispersal.GetTokensRegex().Matches(seedDispersal.ExternalSeedBuffer).Select(match => match.Value).ToList();
                     string speciesAbbreviation = this.Species.WorldFloraID.ToSpeciesAbbreviation();
                     int index = seedBufferTokens.IndexOf(speciesAbbreviation);
                     if (index >= 0)
@@ -681,7 +685,7 @@ namespace iLand.Tree
                     }
 
                     // background seed rain (i.e. for the full landscape), use regexp
-                    List<string> backgroundInputList = Regex.Matches(seedDispersal.ExternalSeedBackgroundInput, "([^\\.\\w]+)").Select(match => match.Value).ToList();
+                    List<string> backgroundInputList = SeedDispersal.GetTokensRegex().Matches(seedDispersal.ExternalSeedBackgroundInput).Select(match => match.Value).ToList();
                     index = backgroundInputList.IndexOf(speciesAbbreviation);
                     if (index >= 0)
                     {
