@@ -22,10 +22,11 @@ by resource unit in input files. This matches the file's spatial ordering to iLa
 advantage for it to be worth performing sorting iLand, a one time sort in R (`arrange(resourceUnitY, resourceUnitX, treeSpecies, treeY, treeX)`)
 may be worthwhile.
 
-As of Arrow 9.0.0, Apache C# bindings do not support compressed feather files and replacement dictionaries are broken. While iLand works around
-these limitations as best it can supporting use of `write_feather(compression = "uncompressed")` and `factor()` may be helpful in R. Also,
-`read_feather()` defaults to `mmap = TRUE` and therefore holds feather files open for the remainder of an R session. Since this prevents
-rewriting the files from PowerShell after rerunning iLand it's likely convenient to use `read_feather(mmap = FALSE)`.
+Apache C# bindings did not support compressed feather files until Arrow 12 (May 2023) and replacement dictionaries were broken when last tested. 
+iLand works around resource dictionary limitations as best it can but supporting use of `factor()` may be helpful in R. While iLand reads 
+compressed feather but it has not yet been updated to write compressed feather. Also, in R `read_feather()` defaults to `mmap = TRUE` and 
+therefore holds feather files open for the remainder of an R session. Since this prevents rewriting the files from PowerShell after rerunning 
+iLand it's likely convenient to use `read_feather(mmap = FALSE)`.
 
 Like many .NET class libraries and PowerShell modules, this iLand port is operating system and processor agnostic. Development 
 and use occurs on Windows but binaries compiled on Windows have been verified to be xcopyable to Linux and ran without issues. Unless disabled 

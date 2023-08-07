@@ -1,4 +1,5 @@
 ﻿using Apache.Arrow;
+using Apache.Arrow.Compression;
 using Apache.Arrow.Ipc;
 using iLand.Tree;
 using System;
@@ -16,7 +17,7 @@ namespace iLand.Input.Tree
         public LightStampReaderArrow(string stampFilePath)
         {
             FileStream stream = new(stampFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, Constant.File.DefaultBufferSize, FileOptions.SequentialScan);
-            this.arrowReader = new(stream);
+            this.arrowReader = new(stream, new CompressionCodecFactory());
         }
 
         public void Dispose()

@@ -58,7 +58,7 @@ namespace iLand.Input.Tree
                 }
                 this.SpeciesID[treeIndex] = mostRecentSpeciesID; // ID string reuse can be made more sophisticated if needed
 
-                int treeID = treeIndex;
+                UInt32 treeID;
                 if (individualTreeHeader.TreeID >= 0)
                 {
                     // override default of ID = count of trees currently on resource unit
@@ -75,7 +75,11 @@ namespace iLand.Input.Tree
                     {
                         treeIDAsString = treeIDAsString[1..^2];
                     }
-                    treeID = Int32.Parse(treeIDAsString, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                    treeID = UInt32.Parse(treeIDAsString, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                }
+                else
+                {
+                    treeID = (UInt32)treeIndex;
                 }
                 this.TreeID[treeIndex] = treeID;
 
@@ -90,10 +94,10 @@ namespace iLand.Input.Tree
                 }
                 this.AgeInYears[treeIndex] = age;
 
-                int standID = Constant.DefaultStandID;
+                UInt32 standID = Constant.DefaultStandID;
                 if (individualTreeHeader.StandID >= 0)
                 {
-                    standID = Int32.Parse(row[individualTreeHeader.StandID], NumberStyles.Integer);
+                    standID = UInt32.Parse(row[individualTreeHeader.StandID], NumberStyles.Integer);
                 }
                 this.StandID[treeIndex] = standID;
 

@@ -98,7 +98,7 @@ namespace iLand.Tree
             // best effort default: doesn't guarantee unique tree ID when tree lists are combined with regeneration or if tags are
             // partially specified in individual tree input but does at least provide unique IDs during initial resource unit
             // population
-            this.TreeID[this.Count] = this.Count;
+            this.TreeID[this.Count] = (UInt32)this.Count;
 
             ++this.Count;
         }

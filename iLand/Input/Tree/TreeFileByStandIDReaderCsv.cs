@@ -6,7 +6,7 @@ namespace iLand.Input.Tree
 {
     internal class TreeFileByStandIDReaderCsv : TreeReader
     {
-        public List<(int StandID, string TreeFileName)> TreeFileNameByStandID { get; private init; }
+        public List<(UInt32 StandID, string TreeFileName)> TreeFileNameByStandID { get; private init; }
 
         public TreeFileByStandIDReaderCsv(string treeFilePath, TreeFileByStandIDCsvHeader treeFileIndexHeader, CsvFile treeFile)
             : base(treeFilePath)
@@ -17,7 +17,7 @@ namespace iLand.Input.Tree
             treeFile.Parse((row) =>
             {
                 ++lineNumber;
-                int standID = Int32.Parse(row[treeFileIndexHeader.StandID], NumberStyles.Integer);
+                UInt32 standID = UInt32.Parse(row[treeFileIndexHeader.StandID], NumberStyles.Integer);
                 ReadOnlySpan<char> treeFileName = row[treeFileIndexHeader.TreeFileName];
                 if (MemoryExtensions.IsWhiteSpace(treeFileName) == false)
                 {

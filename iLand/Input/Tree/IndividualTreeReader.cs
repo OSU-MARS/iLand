@@ -14,8 +14,8 @@ namespace iLand.Input.Tree
         public float[] GisY { get; private set; }
         public float[] HeightInM { get; private set; }
         public WorldFloraID[] SpeciesID { get; private set; }
-        public int[] StandID { get; private set; }
-        public int[] TreeID { get; private set; }
+        public UInt32[] StandID { get; private set; }
+        public UInt32[] TreeID { get; private set; }
 
         public IndividualTreeReader(string individualTreeFilePath)
             : base(individualTreeFilePath)
@@ -26,8 +26,8 @@ namespace iLand.Input.Tree
             this.GisY = Array.Empty<float>();
             this.HeightInM = Array.Empty<float>();
             this.SpeciesID = Array.Empty<WorldFloraID>();
-            this.StandID = Array.Empty<int>();
-            this.TreeID = Array.Empty<int>();
+            this.StandID = Array.Empty<UInt32>();
+            this.TreeID = Array.Empty<UInt32>();
         }
 
         public int Capacity

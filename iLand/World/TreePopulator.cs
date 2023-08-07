@@ -39,7 +39,7 @@ namespace iLand.World
             this.treeSizeDistribution = null;
         }
 
-        private void ApplyTreeFileToResourceUnit(Project projectFile, Landscape landscape, ResourceUnit resourceUnit, RandomGenerator randomGenerator, TreeReader treeReader, int standID)
+        private void ApplyTreeFileToResourceUnit(Project projectFile, Landscape landscape, ResourceUnit resourceUnit, RandomGenerator randomGenerator, TreeReader treeReader, UInt32 standID)
         {
             if (treeReader is IndividualTreeReader individualTreeReader)
             {
@@ -306,7 +306,7 @@ namespace iLand.World
                     //}
 
                     // translate tree into project coordinates
-                    int treeID = individualTreeReader.TreeID[treeIndexInFile];
+                    UInt32 treeID = individualTreeReader.TreeID[treeIndexInFile];
                     float treeGisX = individualTreeReader.GisX[treeIndexInFile];
                     float treeGisY = individualTreeReader.GisY[treeIndexInFile];
                     float treeProjectX = treeGisX - projectOriginGisCoordinatesX;
@@ -413,7 +413,7 @@ namespace iLand.World
             int[] treeCountByHeightCell = new int[Constant.Grid.HeightCellsPerRUWidth * Constant.Grid.HeightCellsPerRUWidth];
             (int TreePlacementBits, int TreePlacementIndex) treePlacementState = (0, -1);
             TreeListForAddition treesToAdd = new(0);
-            int uniqueTreeIDonResourceUnit = -1;
+            UInt32 uniqueTreeIDonResourceUnit = 0;
             for (int distributionIndex = 0; distributionIndex < treeSizeDistribution.Count; ++distributionIndex)
             {
                 TreeSizeRange sizeRange = treeSizeDistribution[distributionIndex];
@@ -441,7 +441,7 @@ namespace iLand.World
 
                     treesToAdd.SpeciesID[treeIndex] = treeSpeciesID;
                     treesToAdd.StandID[treeIndex] = Constant.DefaultStandID;
-                    treesToAdd.TreeID[treeIndex] = ++uniqueTreeIDonResourceUnit;
+                    treesToAdd.TreeID[treeIndex] = uniqueTreeIDonResourceUnit++;
                 }
                 treesToAdd.Count = sizeRange.TreesPerResourceUnit;
 
@@ -483,7 +483,7 @@ namespace iLand.World
         // Basically a list of 10m pixels for a given stand is retrieved
         // and the filled with the same procedure as the resource unit based init
         // see http://iland-model.org/initialize+trees
-        private void PopulateStandTreesFromSizeDistribution(Project projectFile, Landscape landscape, List<TreeSizeRange> treeSizeDistribution, RandomGenerator randomGenerator, int standID)
+        private void PopulateStandTreesFromSizeDistribution(Project projectFile, Landscape landscape, List<TreeSizeRange> treeSizeDistribution, RandomGenerator randomGenerator, UInt32 standID)
         {
             GridRaster10m? standRaster = landscape.StandRaster;
             if (standRaster == null)
@@ -746,7 +746,7 @@ namespace iLand.World
 
                     Parallel.For(0, treeFileByStandIDReader.TreeFileNameByStandID.Count, parallelComputeOptions, (int standIndex) =>
                     {
-                        (int standID, string standTreeFileName) = treeFileByStandIDReader.TreeFileNameByStandID[standIndex];
+                        (UInt32 standID, string standTreeFileName) = treeFileByStandIDReader.TreeFileNameByStandID[standIndex];
                         // for now, assume tree files are seldom repeated and there's little to no benefit in caching loaded files
                         // C++ code doesn't mask tree generation using the stand raster, so resource units which lie in multiple stands will get
                         // multiple tree fills, if specified, which don't follow the stand boundaries and result in overstocking.

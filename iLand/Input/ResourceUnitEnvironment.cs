@@ -1,5 +1,4 @@
-﻿using iLand.Tool;
-using System;
+﻿using System;
 using System.Globalization;
 
 namespace iLand.Input
@@ -11,7 +10,7 @@ namespace iLand.Input
         // resource unit's centroid in GIS projected coordinate system
         public float GisCenterX { get; private init; }
         public float GisCenterY { get; private init; }
-        public int ResourceUnitID { get; private init; }
+        public UInt32 ResourceUnitID { get; private init; }
 
         // parameters which obtain defaults from the project file but can be overridden in the environment file
         public float SnagBranchRootCarbon { get; private init; }
@@ -81,7 +80,7 @@ namespace iLand.Input
             this.WeatherID = header.WeatherID >= 0 ? environmentFileRow[header.WeatherID].ToString() : defaultEnvironment.WeatherID;
             this.GisCenterX = Single.Parse(environmentFileRow[header.CenterX], NumberStyles.Float); // required field
             this.GisCenterY = Single.Parse(environmentFileRow[header.CenterY], NumberStyles.Float); // required field
-            this.ResourceUnitID = Int32.Parse(environmentFileRow[header.ResourceUnitID], NumberStyles.Integer); // required field
+            this.ResourceUnitID = UInt32.Parse(environmentFileRow[header.ResourceUnitID], NumberStyles.Integer); // required field
 
             this.SnagBranchRootCarbon = header.SnagBranchRootCarbon >= 0 ? Single.Parse(environmentFileRow[header.SnagBranchRootCarbon], NumberStyles.Float) : defaultEnvironment.SnagBranchRootCarbon;
             this.SnagBranchRootCNRatio = header.SnagBranchRootCNRatio >= 0 ? Single.Parse(environmentFileRow[header.SnagBranchRootCNRatio], NumberStyles.Float) : defaultEnvironment.SnagBranchRootCNRatio;
@@ -177,7 +176,7 @@ namespace iLand.Input
         public ResourceUnitEnvironment(ProjectFile.World world)
         {
             this.WeatherID = world.Weather.DefaultDatabaseTable ?? String.Empty;
-            this.ResourceUnitID = -1;
+            this.ResourceUnitID = Constant.NoDataUInt32;
 
             // default snag parameters which can be overridden in environment file
             this.SnagBranchRootCarbon = world.Initialization.Snags.BranchRootCarbon;

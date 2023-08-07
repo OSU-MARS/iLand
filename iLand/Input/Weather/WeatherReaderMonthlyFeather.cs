@@ -1,4 +1,5 @@
 ﻿using Apache.Arrow;
+using Apache.Arrow.Compression;
 using Apache.Arrow.Ipc;
 using System;
 using System.IO;
@@ -15,9 +16,8 @@ namespace iLand.Input.Weather
         /// </remarks>
         public WeatherReaderMonthlyFeather(string weatherFilePath, int startYear)
         {
-            // Arrow 9.0.0 supports only uncompressed feather: https://issues.apache.org/jira/browse/ARROW-17062
             using FileStream weatherStream = new(weatherFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, Constant.File.DefaultBufferSize);
-            using ArrowFileReader weatherFile = new(weatherStream); // ArrowFileReader.IsFileValid is false until a batch is read
+            using ArrowFileReader weatherFile = new(weatherStream, new CompressionCodecFactory()); // ArrowFileReader.IsFileValid is false until a batch is read
 
             WeatherTimeSeriesMonthly? monthlyWeather = null;
             int longestTimeSeriesLengthInMonths = -1;

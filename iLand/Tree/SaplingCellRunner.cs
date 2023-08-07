@@ -8,12 +8,12 @@ namespace iLand.Tree
     internal class SaplingCellRunner
     {
         private readonly Landscape landscape;
-        private readonly int standID;
+        private readonly UInt32 standID;
         private readonly GridWindowEnumerator<float> standLightEnumerator;
 
         public ResourceUnit? RU { get; private set; }
 
-        public SaplingCellRunner(Landscape landscape, int standID)
+        public SaplingCellRunner(Landscape landscape, UInt32 standID)
         {
             if (landscape.StandRaster == null)
             {

@@ -11,8 +11,8 @@ namespace iLand.Tree
         public UInt16[] AgeInYears { get; private set; }
         public float[] DbhInCm { get; private set; }
         public float[] HeightInM { get; private set; }
-        public int[] StandID { get; private set; }
-        public int[] TreeID { get; private set; }
+        public UInt32[] StandID { get; private set; }
+        public UInt32[] TreeID { get; private set; }
 
         public TreeList(int capacity)
         {
@@ -51,16 +51,16 @@ namespace iLand.Tree
                 this.AgeInYears = Array.Empty<UInt16>();
                 this.DbhInCm = Array.Empty<float>();
                 this.HeightInM = Array.Empty<float>();
-                this.StandID = Array.Empty<int>();
-                this.TreeID = Array.Empty<int>();
+                this.StandID = Array.Empty<UInt32>();
+                this.TreeID = Array.Empty<UInt32>();
             }
             else
             {
                 this.AgeInYears = new UInt16[capacity];
                 this.DbhInCm = new float[capacity];
                 this.HeightInM = new float[capacity];
-                this.StandID = new int[capacity];
-                this.TreeID = new int[capacity];
+                this.StandID = new UInt32[capacity];
+                this.TreeID = new UInt32[capacity];
             }
         }
 

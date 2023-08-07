@@ -489,7 +489,7 @@ namespace iLand.Simulation
         /// @param DWDfrac 0: no change, 1: remove all of downled woody debris
         /// @param litterFrac 0: no change, 1: remove all of soil litter
         /// @param soilFrac 0: no change, 1: remove all of soil organic matter
-        public static void RemoveCarbon(GridRaster10m standGrid, int key, float standingWoodyFraction, float downWoodFraction, float litterFraction, float soilFraction)
+        public static void RemoveCarbon(GridRaster10m standGrid, UInt32 resourceUnitID, float standingWoodyFraction, float downWoodFraction, float litterFraction, float soilFraction)
         {
             if ((standingWoodyFraction < 0.0F) || (standingWoodyFraction > 1.0F) || 
                 (downWoodFraction < 0.0F) || (downWoodFraction > 1.0F) || 
@@ -498,7 +498,7 @@ namespace iLand.Simulation
             {
                 throw new ArgumentException("removeSoilCarbon called with one or more invalid parameters.");
             }
-            IList<(ResourceUnit, float)> ruAreas = standGrid.GetResourceUnitAreaFractions(key);
+            IList<(ResourceUnit, float)> ruAreas = standGrid.GetResourceUnitAreaFractions(resourceUnitID);
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
@@ -532,13 +532,13 @@ namespace iLand.Simulation
           @param key ID of the polygon.
           @param slash_fraction 0: no change, 1: 100%
            */
-        public static void SlashSnags(GridRaster10m standGrid, int key, float slashFraction)
+        public static void SlashSnags(GridRaster10m standGrid, UInt32 resourceUnitID, float slashFraction)
         {
             if (slashFraction < 0.0F || slashFraction > 1.0F)
             {
                 throw new ArgumentOutOfRangeException(nameof(slashFraction));
             }
-            List<(ResourceUnit, float)> ruAreas = standGrid.GetResourceUnitAreaFractions(key).ToList();
+            List<(ResourceUnit, float)> ruAreas = standGrid.GetResourceUnitAreaFractions(resourceUnitID).ToList();
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {

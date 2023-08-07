@@ -1,13 +1,14 @@
 ﻿using iLand.Tree;
 using iLand.World;
+using System;
 using System.Collections.Generic;
 
 namespace iLand.Test
 {
     internal class ObservedResourceUnitTrees
     {
-        public Dictionary<int, float> DiameterInCmByTreeID { get; private init; }
-        public Dictionary<int, float> HeightInMByTreeID { get; private init; }
+        public Dictionary<UInt32, float> DiameterInCmByTreeID { get; private init; }
+        public Dictionary<UInt32, float> HeightInMByTreeID { get; private init; }
 
         public ObservedResourceUnitTrees()
         {

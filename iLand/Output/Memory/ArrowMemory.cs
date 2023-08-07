@@ -37,6 +37,11 @@ namespace iLand.Output.Memory
             source[..count].CopyTo(MemoryMarshal.Cast<byte, UInt16>(field.Span).Slice(this.Count, count));
         }
 
+        protected void CopyFirstN(ReadOnlySpan<UInt32> source, Memory<byte> field, int count)
+        {
+            source[..count].CopyTo(MemoryMarshal.Cast<byte, UInt32>(field.Span).Slice(this.Count, count));
+        }
+
         protected void Fill(Memory<byte> field, IntegerType fieldType, Int32 value, int count)
         {
             switch (fieldType.BitWidth)
@@ -87,6 +92,11 @@ namespace iLand.Output.Memory
         protected void Fill(Memory<byte> field, Int32 value, int count)
         {
             MemoryMarshal.Cast<byte, Int32>(field.Span).Slice(this.Count, count).Fill(value);
+        }
+
+        protected void Fill(Memory<byte> field, UInt32 value, int count)
+        {
+            MemoryMarshal.Cast<byte, UInt32>(field.Span).Slice(this.Count, count).Fill(value);
         }
     }
 }

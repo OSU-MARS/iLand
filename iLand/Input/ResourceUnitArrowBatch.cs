@@ -9,7 +9,7 @@ namespace iLand.Input
         public StringArray? WeatherID { get; private init; }
         public FloatArray CenterX { get; private init; }
         public FloatArray CenterY { get; private init; }
-        public Int32Array ResourceUnitID { get; private init; }
+        public UInt32Array ResourceUnitID { get; private init; }
 
         public FloatArray? SnagBranchRootCarbon { get; private init; }
         public FloatArray? SnagBranchRootCNRatio { get; private init; }
@@ -56,7 +56,7 @@ namespace iLand.Input
             this.AnnualNitrogenDeposition = ArrowBatch.MaybeGetArray<FloatArray>("soilAnnualNitrogenDeposition", schema, fields);
             this.CenterX = ArrowBatch.GetArray<FloatArray>("centerX", schema, fields);
             this.CenterY = ArrowBatch.GetArray<FloatArray>("centerY", schema, fields);
-            this.ResourceUnitID = ArrowBatch.GetArray<Int32Array>("id", schema, fields);
+            this.ResourceUnitID = ArrowBatch.GetArray<UInt32Array>("id", schema, fields);
             this.SnagBranchRootCarbon = ArrowBatch.MaybeGetArray<FloatArray>("snagBranchRootC", schema, fields);
             this.SnagBranchRootCNRatio = ArrowBatch.MaybeGetArray<FloatArray>("snagBranchRootCN", schema, fields);
             this.SnagHalfLife = ArrowBatch.MaybeGetArray<FloatArray>("snagHalfLife", schema, fields);

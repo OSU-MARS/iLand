@@ -23,7 +23,7 @@ namespace iLand.World
         public float AreaInLandscapeInM2 { get; set; } // total stockable area in m² at height grid (10 m) resolution
         public float AreaWithTreesInM2 { get; private set; } // the stocked area in m² at height grid (10 m) resolution
         public int HeightCellsOnLandscape { get; set; } // count of on landscape height grid cells within the RU
-        public int ID { get; set; }
+        public UInt32 ID { get; set; }
         public RectangleF ProjectExtent { get; set; }
         public int ResourceUnitGridIndex { get; private init; }
 
@@ -424,7 +424,7 @@ namespace iLand.World
                 // add a new tree
                 TreeListForAddition saplingsToRecruit = new(saplingsToEstablishAsTrees);
                 float heightOrDiameterVariation = model.Project.Model.SeedDispersal.RecruitmentDimensionVariation;
-                int ingrowthBaseTreeID = 100000 * this.ID + this.saplingsRecruited;
+                UInt32 ingrowthBaseTreeID = 100000U * this.ID + (UInt32)this.saplingsRecruited;
                 Point lightCellIndexXY = model.Landscape.LightGrid.GetCellXYIndex(lightCellIndex);
                 Debug.Assert(this.ProjectExtent.Contains(model.Landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
                 for (int saplingIndex = 0; saplingIndex < saplingsToEstablishAsTrees; ++saplingIndex)
@@ -439,7 +439,7 @@ namespace iLand.World
                     saplingsToRecruit.LightCellIndexXY[saplingIndex] = lightCellIndexXY;
                     saplingsToRecruit.SpeciesID[saplingIndex] = species.WorldFloraID;
                     saplingsToRecruit.StandID[saplingIndex] = Constant.DefaultStandID; // TODO
-                    saplingsToRecruit.TreeID[saplingIndex] = ingrowthBaseTreeID + saplingIndex;
+                    saplingsToRecruit.TreeID[saplingIndex] = ingrowthBaseTreeID + (UInt32)saplingIndex;
                 }
                 saplingsToRecruit.Count = saplingsToEstablishAsTrees;
                 this.saplingsRecruited += saplingsToEstablishAsTrees;

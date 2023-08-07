@@ -110,7 +110,7 @@ namespace iLand.Output.Memory
             this.RecordBatch = new(schema, arrowArrays, batchLength);
         }
 
-        public void Add(ResourceUnitThreePGTimeSeries threePGtimeSeries, int resourceUnitID, UInt32 treeSpeciesCode, int calendarYearBeforeFirstSimulationTimestep)
+        public void Add(ResourceUnitThreePGTimeSeries threePGtimeSeries, UInt32 resourceUnitID, UInt32 treeSpeciesCode, int calendarYearBeforeFirstSimulationTimestep)
         {
             int monthsInTimeSeries = threePGtimeSeries.LengthInMonths;
 

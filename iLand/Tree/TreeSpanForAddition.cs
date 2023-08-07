@@ -12,8 +12,8 @@ namespace iLand.Tree
         public Span<float> HeightInM { get; init; }
         public Span<Point> LightCellIndexXY { get; init; }
         public Span<WorldFloraID> SpeciesID { get; init; }
-        public Span<int> StandID { get; init; }
-        public Span<int> TreeID { get; init; }
+        public Span<UInt32> StandID { get; init; }
+        public Span<UInt32> TreeID { get; init; }
 
         public TreeSpanForAddition(IndividualTreeReader individualTreeReader, Point[] treePositions, int readerStartIndex, int treesToAdd)
         {

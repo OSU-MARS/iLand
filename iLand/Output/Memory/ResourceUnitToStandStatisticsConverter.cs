@@ -1,6 +1,7 @@
 ﻿using iLand.Extensions;
 using iLand.Tree;
 using iLand.World;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -9,7 +10,7 @@ namespace iLand.Output.Memory
     internal class ResourceUnitToStandStatisticsConverter
     {
         private int count;
-        private int[] resourceUnitStandIDs;
+        private UInt32[] resourceUnitStandIDs;
         private LiveTreeAndSaplingStatistics?[] resourceUnitStatisticsByStand;
 
         public ResourceUnitToStandStatisticsConverter()
@@ -17,7 +18,7 @@ namespace iLand.Output.Memory
             this.count = 0;
 
             const int defaultStandCapacity = 5;
-            this.resourceUnitStandIDs = new int[defaultStandCapacity];
+            this.resourceUnitStandIDs = new UInt32[defaultStandCapacity];
             this.resourceUnitStatisticsByStand = new LiveTreeAndSaplingStatistics?[defaultStandCapacity];
         }
 
@@ -26,11 +27,11 @@ namespace iLand.Output.Memory
             get { return this.resourceUnitStandIDs.Length; }
         }
 
-        public void AddResourceUnitToStandStatisticsThreadSafe(float resourceUnitAreaInM2, SortedList<int, StandLiveTreeAndSaplingStatistics> statisticsByStandID)
+        public void AddResourceUnitToStandStatisticsThreadSafe(float resourceUnitAreaInM2, SortedList<UInt32, StandLiveTreeAndSaplingStatistics> statisticsByStandID)
         {
             for (int resourceUnitStandIndex = 0; resourceUnitStandIndex < this.count; ++resourceUnitStandIndex)
             {
-                int standID = this.resourceUnitStandIDs[resourceUnitStandIndex];
+                UInt32 standID = this.resourceUnitStandIDs[resourceUnitStandIndex];
                 LiveTreeAndSaplingStatistics? resourceUnitStandStatistics = this.resourceUnitStatisticsByStand[resourceUnitStandIndex];
                 Debug.Assert(resourceUnitStandStatistics != null);
 
@@ -55,14 +56,14 @@ namespace iLand.Output.Memory
 
             // find stand statistics for this resource unit's trees
             IList<TreeListSpatial> treesBySpecies = resourceUnit.Trees.TreesBySpeciesID.Values;
-            int currentStandID = Constant.NoDataInt32;
+            UInt32 currentStandID = Constant.NoDataUInt32;
             LiveTreeAndSaplingStatistics? currentResourceUnitStandStatistics = null;
             for (int treeSpeciesIndex = 0; treeSpeciesIndex < treesBySpecies.Count; ++treeSpeciesIndex)
             {
                 TreeListSpatial treesOfSpecies = treesBySpecies[treeSpeciesIndex];
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
-                    int standID = treesOfSpecies.StandID[treeIndex];
+                    UInt32 standID = treesOfSpecies.StandID[treeIndex];
                     if (currentStandID != standID)
                     {
                         for (int standIndex = 0; standIndex < this.count; ++standIndex)

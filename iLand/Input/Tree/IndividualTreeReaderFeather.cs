@@ -1,4 +1,5 @@
 ﻿using Apache.Arrow;
+using Apache.Arrow.Compression;
 using Apache.Arrow.Ipc;
 using iLand.Extensions;
 using iLand.Tree;
@@ -16,7 +17,7 @@ namespace iLand.Input.Tree
             : base(individualTreeFilePath)
         {
             using FileStream individualTreeStream = new(individualTreeFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, Constant.File.DefaultBufferSize);
-            using ArrowFileReader individualTreeFile = new(individualTreeStream); // ArrowFileReader.IsFileValid is false until a batch is read
+            using ArrowFileReader individualTreeFile = new(individualTreeStream, new CompressionCodecFactory()); // ArrowFileReader.IsFileValid is false until a batch is read
 
             // no clear advantage to reading batches asynchronously at 9.2 Mtrees (Apache 9.0.0, .NET 6.0, AMD Zen 3 @ 4.8 GHz, PCIe 3.0 x4 SSD)
             for (RecordBatch? batch = individualTreeFile.ReadNextRecordBatch(); batch != null; batch = individualTreeFile.ReadNextRecordBatch())
@@ -98,7 +99,7 @@ namespace iLand.Input.Tree
                 {
                     for (int destinationIndex = this.Count, sourceIndex = 0; sourceIndex < batch.Length; ++destinationIndex, ++sourceIndex)
                     {
-                        this.TreeID[destinationIndex] = destinationIndex; // default "unique" tree ID is its sequential number in the tree file
+                        this.TreeID[destinationIndex] = (UInt32)destinationIndex; // default "unique" tree ID is its sequential number in the tree file
                     }
                 }
 

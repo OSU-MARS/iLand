@@ -149,7 +149,7 @@ namespace iLand.Test
 
                 string resourceUnitFeatherPath = elliott.Project.GetFilePath(ProjectDirectory.Gis, "resource units unbuffered 4 km weather.feather");
                 ResourceUnitReaderFeather resourceUnitFeatherReader = new(resourceUnitFeatherPath, defaultEnvironment);
-                Assert.IsTrue(resourceUnitFeatherReader.Count == availableResourceUnits);
+                Assert.IsTrue(resourceUnitFeatherReader.Count == availableResourceUnits, "Expected " + availableResourceUnits + " resource units but read " + resourceUnitFeatherReader.Count + ".");
 
                 // check monthly CO₂ .csv read
                 string co2csvFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "co2 ssp370.csv");
@@ -402,7 +402,7 @@ namespace iLand.Test
             // stands
             for (int standIndex = 0; standIndex < model.Output.StandTrajectoriesByID.Count; ++standIndex)
             {
-                int standID = model.Output.StandTrajectoriesByID.Keys[standIndex];
+                UInt32 standID = model.Output.StandTrajectoriesByID.Keys[standIndex];
                 StandTrajectory standTrajectory = model.Output.StandTrajectoriesByID.Values[standIndex];
                 Assert.IsTrue(standTrajectory.StandID == standID);
 
@@ -659,7 +659,7 @@ namespace iLand.Test
             // growth on observed resource unit
             float averageDiameterGrowth = 0.0F;
             float averageHeightGrowth = 0.0F;
-            foreach ((int treeID, float height) in endOfYearTrees.HeightInMByTreeID)
+            foreach ((UInt32 treeID, float height) in endOfYearTrees.HeightInMByTreeID)
             {
                 float initialDiameter = startOfYearTrees.DiameterInCmByTreeID[treeID];
                 float initialHeight = startOfYearTrees.HeightInMByTreeID[treeID];

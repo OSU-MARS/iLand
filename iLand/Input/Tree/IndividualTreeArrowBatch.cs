@@ -11,8 +11,8 @@ namespace iLand.Input.Tree
         public FloatArray HeightInM { get; private init; }
         public UInt16Array? FiaCode { get; private init; }
         public UInt32Array? WorldFloraID { get; private init; }
-        public Int32Array? StandID { get; private init; }
-        public Int32Array? TreeID { get; private init; }
+        public UInt32Array? StandID { get; private init; }
+        public UInt32Array? TreeID { get; private init; }
         public FloatArray GisX { get; private init; }
         public FloatArray GisY { get; private init; }
 
@@ -26,8 +26,8 @@ namespace iLand.Input.Tree
             this.FiaCode = ArrowBatch.MaybeGetArray<UInt16Array>("fiaCode", schema, fields);
             this.HeightInM = ArrowBatch.GetArray<FloatArray>("height", schema, fields);
             this.WorldFloraID = ArrowBatch.MaybeGetArray<UInt32Array>("wfoID", schema, fields);
-            this.StandID = ArrowBatch.MaybeGetArray<Int32Array>("standID", schema, fields);
-            this.TreeID = ArrowBatch.MaybeGetArray<Int32Array>("treeID", schema, fields);
+            this.StandID = ArrowBatch.MaybeGetArray<UInt32Array>("standID", schema, fields);
+            this.TreeID = ArrowBatch.MaybeGetArray<UInt32Array>("treeID", schema, fields);
             this.GisX = ArrowBatch.GetArray<FloatArray>("x", schema, fields);
             this.GisY = ArrowBatch.GetArray<FloatArray>("y", schema, fields);
 

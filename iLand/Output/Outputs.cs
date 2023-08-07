@@ -25,11 +25,11 @@ namespace iLand.Output
         private readonly List<AnnualOutput> sqlOutputs;
         private SqliteTransaction? sqlOutputTransaction;
         private readonly ResourceUnitToStandStatisticsConverter[] standStatisticsByPartition;
-        private readonly SortedList<int, StandLiveTreeAndSaplingStatistics> standStatisticsForCurrentYear;
+        private readonly SortedList<UInt32, StandLiveTreeAndSaplingStatistics> standStatisticsForCurrentYear;
 
         public LandscapeRemovedAnnualOutput? LandscapeRemovedSql { get; private init; }
         public ResourceUnitTrajectory[] ResourceUnitTrajectories { get; private init; } // in same order as Landscape.ResourceUnits, array for simplicity of multithreaded population
-        public SortedList<int, StandTrajectory> StandTrajectoriesByID { get; private init; }
+        public SortedList<UInt32, StandTrajectory> StandTrajectoriesByID { get; private init; }
         public TreeRemovedAnnualOutput? TreeRemovedSql { get; private init; }
 
         public Outputs(Project projectFile, Landscape landscape, SimulationState simulationState)
@@ -90,13 +90,13 @@ namespace iLand.Output
                             // As only one trajectory need be created per stand ID, stand ID differencing is used to limit the number of
                             // ContainsKey() calls and locks taken.
                             IList<TreeListSpatial> treesBySpecies = resourceUnit.Trees.TreesBySpeciesID.Values;
-                            int previousStandID = Constant.DefaultStandID;
+                            UInt32 previousStandID = Constant.DefaultStandID;
                             for (int treeSpeciesIndex = 0; treeSpeciesIndex < treesBySpecies.Count; ++treeSpeciesIndex)
                             {
                                 TreeListSpatial treesOfSpecies = treesBySpecies[treeSpeciesIndex];
                                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                                 {
-                                    int standID = treesOfSpecies.StandID[treeIndex];
+                                    UInt32 standID = treesOfSpecies.StandID[treeIndex];
                                     if (standID != previousStandID)
                                     {
                                         if (this.standStatisticsForCurrentYear.ContainsKey(standID) == false)
@@ -289,7 +289,7 @@ namespace iLand.Output
                     (int startStandIndex, int endStandIndex) = ParallelOptionsExtensions.GetUniformPartitionRange(partitionIndex, standsPerPartition, standUnitTrajectoryCount);
                     for (int standIndex = startStandIndex; standIndex < endStandIndex; ++standIndex)
                     {
-                        int standID = this.standStatisticsForCurrentYear.Keys[standIndex];
+                        UInt32 standID = this.standStatisticsForCurrentYear.Keys[standIndex];
                         StandLiveTreeAndSaplingStatistics standStatistics = this.standStatisticsForCurrentYear.Values[standIndex];
                         standStatistics.OnAdditionsComplete();
 

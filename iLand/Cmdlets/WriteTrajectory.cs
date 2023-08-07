@@ -268,7 +268,7 @@ namespace iLand.Cmdlets
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[resourceUnitIndex];
                 if (resourceUnitTrajectory.HasThreePGTimeSeries)
                 {
-                    int resourceUnitID = resourceUnitTrajectory.ResourceUnit.ID;
+                    UInt32 resourceUnitID = resourceUnitTrajectory.ResourceUnit.ID;
                     for (int treeSpeciesIndex = 0; treeSpeciesIndex < resourceUnitTrajectory.ThreePGTimeSeries.Length; ++treeSpeciesIndex)
                     {
                         ResourceUnitThreePGTimeSeries threePGtimeSeries = resourceUnitTrajectory.ThreePGTimeSeries[treeSpeciesIndex];

@@ -4,9 +4,9 @@ namespace iLand.Output.Memory
 {
     public class StandTrajectory : StandOrResourceUnitTrajectory
     {
-        public int StandID { get; private init; }
+        public UInt32 StandID { get; private init; }
 
-        public StandTrajectory(int standID, int initialCapacityInYears)
+        public StandTrajectory(UInt32 standID, int initialCapacityInYears)
             : base(initialCapacityInYears)
         {
             this.StandID = standID;

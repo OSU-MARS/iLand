@@ -183,7 +183,7 @@ namespace iLand.Output.Memory
         /// <param name="polygonID">Resource unit or stand ID.</param>
         /// <param name="treeSpeciesCode">Index of tree species in tree species string table.</param>
         /// <param name="calendarYearSource">Sequential array of calendar years, starting with simulation year zero.</param>
-        public void Add(StandOrResourceUnitTrajectory trajectory, int polygonID, UInt32 treeSpeciesCode, Span<Int16> calendarYearSource)
+        public void Add(StandOrResourceUnitTrajectory trajectory, UInt32 polygonID, UInt32 treeSpeciesCode, Span<Int16> calendarYearSource)
         {
             int trajectoryLengthInYears = trajectory.LengthInYears;
 

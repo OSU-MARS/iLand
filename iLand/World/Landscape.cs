@@ -321,7 +321,7 @@ namespace iLand.World
             return null;
         }
 
-        private void SetupSaplingsAndGrass(int standID, List<StandSaplings> saplingsInStands, int standStartIndex, int standEndIndex, RandomGenerator randomGenerator)
+        private void SetupSaplingsAndGrass(UInt32 standID, List<StandSaplings> saplingsInStands, int standStartIndex, int standEndIndex, RandomGenerator randomGenerator)
         {
             Debug.Assert(Constant.RegenerationLayerHeight == 4.0F, "If regeneration layer is not 4 m then code changes in handling StandSaplings.AgeAt4m are needed.");
 
@@ -480,7 +480,7 @@ namespace iLand.World
 
             if (this.StandRaster.IsSetup())
             {
-                int previousStandID = Constant.NoDataInt32;
+                UInt32 previousStandID = Constant.NoDataUInt32;
                 int standStartIndex = -1;
                 for (int standIndex = 0; standIndex < saplingsInStands.Count; ++standIndex)
                 {

@@ -2,7 +2,7 @@
 using Apache.Arrow;
 using System.IO;
 using System;
-using System.Diagnostics;
+using Apache.Arrow.Compression;
 
 namespace iLand.Input.Weather
 {
@@ -11,7 +11,7 @@ namespace iLand.Input.Weather
         public CO2ReaderMonthlyFeather(string co2filePath, Int16 startYear)
         {
             using FileStream co2stream = new(co2filePath, FileMode.Open, FileAccess.Read, FileShare.Read, Constant.File.DefaultBufferSize);
-            using ArrowFileReader co2file = new(co2stream); // ArrowFileReader.IsFileValid is false until a batch is read
+            using ArrowFileReader co2file = new(co2stream, new CompressionCodecFactory()); // ArrowFileReader.IsFileValid is false until a batch is read
 
             for (RecordBatch? batch = co2file.ReadNextRecordBatch(); batch != null; batch = co2file.ReadNextRecordBatch())
             {

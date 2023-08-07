@@ -1,4 +1,5 @@
 ﻿using iLand.Tree;
+using System;
 using System.Diagnostics;
 
 namespace iLand.Output.Memory
@@ -7,9 +8,9 @@ namespace iLand.Output.Memory
     {
         private float areaInLandscapeInM2;
 
-        public int StandID { get; private init; }
+        public UInt32 StandID { get; private init; }
 
-        public StandLiveTreeAndSaplingStatistics(int standID)
+        public StandLiveTreeAndSaplingStatistics(UInt32 standID)
         {
             this.areaInLandscapeInM2 = 0.0F;
             this.StandID = standID;

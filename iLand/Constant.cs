@@ -8,7 +8,7 @@ namespace iLand
     {
         public const int AllTreeSpeciesCode = 0;
 
-        public const int DefaultStandID = 0; // lowest valid stand ID, any negative IDs in stand raster are treated as no data or no stand
+        public const UInt32 DefaultStandID = 0; // lowest valid stand ID, any negative IDs in stand raster are treated as no data or no stand
         public const float DryBiomassCarbonFraction = 0.5F; // fraction of dry biomass which is carbon
         public const int EvergreenLeafPhenologyID = 0;
 
@@ -17,6 +17,7 @@ namespace iLand
         public static readonly Vector256<float> MinimumLightIntensity256 = Avx2Extensions.BroadcastScalarToVector256(Constant.MinimumLightIntensity);
         public const int NoDataInt32 = Int32.MinValue;
         public const float NoDataFloat = Single.NaN;
+        public const UInt32 NoDataUInt32 = UInt32.MaxValue;
 
         public const float RegenerationLayerHeight = 4.0F; // m, also controls Constant.Sapling.MaximumHeight
         public const float SquareMetersPerHectare = 10000.0F;
