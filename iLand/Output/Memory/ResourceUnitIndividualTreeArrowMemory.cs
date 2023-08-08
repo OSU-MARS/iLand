@@ -2,6 +2,7 @@
 using Apache.Arrow.Types;
 using iLand.Extensions;
 using iLand.Tree;
+using iLand.World;
 using System;
 using System.Collections.Generic;
 
@@ -11,48 +12,31 @@ namespace iLand.Output.Memory
     {
         private readonly IntegerType treeSpeciesFieldType;
 
+        private readonly Schema schema;
+
         // if needed, a resource unit ID field can be included
-        private readonly byte[] calendarYear;
-        private readonly byte[] standID;
-        private readonly byte[] treeSpeciesIndices;
-        private readonly byte[] treeID;
-        private readonly byte[] dbhInCm;
-        private readonly byte[] heightInM;
-        private readonly byte[] leafAreaInM2;
-        private readonly byte[] lightResourceIndex;
-        private readonly byte[] lightResponse;
-        private readonly byte[] stressIndex;
-        private readonly byte[] nppReserveInKg;
-        private readonly byte[] opacity;
-        private readonly byte[] ageInYears;
-        private readonly byte[] coarseRootMassInKg;
-        private readonly byte[] fineRootMassInKg;
-        private readonly byte[] foliageMassInKg;
-        private readonly byte[] stemMassInKg;
+        private byte[]? calendarYear;
+        private byte[]? standID;
+        private byte[]? treeSpeciesIndices;
+        private byte[]? treeID;
+        private byte[]? dbhInCm;
+        private byte[]? heightInM;
+        private byte[]? leafAreaInM2;
+        private byte[]? lightResourceIndex;
+        private byte[]? lightResponse;
+        private byte[]? stressIndex;
+        private byte[]? nppReserveInKg;
+        private byte[]? opacity;
+        private byte[]? ageInYears;
+        private byte[]? coarseRootMassInKg;
+        private byte[]? fineRootMassInKg;
+        private byte[]? foliageMassInKg;
+        private byte[]? stemMassInKg;
 
-        public RecordBatch RecordBatch { get; private init; }
-
-        public ResourceUnitIndividualTreeArrowMemory(IntegerType treeSpeciesFieldType, int batchLength)
+        public ResourceUnitIndividualTreeArrowMemory(IntegerType treeSpeciesFieldType, int capacityInRecords)
+            : base(capacityInRecords, ArrowMemory.DefaultMaximumRecordsPerBatch)
         {
             this.treeSpeciesFieldType = treeSpeciesFieldType;
-
-            this.calendarYear = new byte[batchLength * sizeof(Int16)];
-            this.standID = new byte[batchLength * sizeof(Int32)];
-            this.treeSpeciesIndices = new byte[batchLength * treeSpeciesFieldType.BitWidth / 8];
-            this.treeID = new byte[batchLength * sizeof(Int32)];
-            this.dbhInCm = new byte[batchLength * sizeof(float)];
-            this.heightInM = new byte[batchLength * sizeof(float)];
-            this.leafAreaInM2 = new byte[batchLength * sizeof(float)];
-            this.lightResourceIndex = new byte[batchLength * sizeof(float)];
-            this.lightResponse = new byte[batchLength * sizeof(float)];
-            this.stressIndex = new byte[batchLength * sizeof(float)];
-            this.nppReserveInKg = new byte[batchLength * sizeof(float)];
-            this.opacity = new byte[batchLength * sizeof(float)];
-            this.ageInYears = new byte[batchLength * sizeof(UInt16)];
-            this.coarseRootMassInKg = new byte[batchLength * sizeof(float)];
-            this.fineRootMassInKg = new byte[batchLength * sizeof(float)];
-            this.foliageMassInKg = new byte[batchLength * sizeof(float)];
-            this.stemMassInKg = new byte[batchLength * sizeof(float)];
 
             // create schema
             List<Field> fields = new()
@@ -96,7 +80,99 @@ namespace iLand.Output.Memory
                 { "foliageMass", "Mass of tree's foliage, kg." },
                 { "stemMass", "Mass of tree's stem, kg." }
             };
-            Schema schema = new(fields, metadata);
+            this.schema = new(fields, metadata);
+
+            this.calendarYear = null;
+            this.standID = null;
+            this.treeSpeciesIndices = null;
+            this.treeID = null;
+            this.dbhInCm = null;
+            this.heightInM = null;
+            this.leafAreaInM2 = null;
+            this.lightResourceIndex = null;
+            this.lightResponse = null;
+            this.stressIndex = null;
+            this.nppReserveInKg = null;
+            this.opacity = null;
+            this.ageInYears = null;
+            this.coarseRootMassInKg = null;
+            this.fineRootMassInKg = null;
+            this.foliageMassInKg = null;
+            this.stemMassInKg = null;
+        }
+
+        public void Add(ResourceUnitIndividualTreeTrajectories trajectories, UInt32 treeSpeciesCode, int calendarYearBeforeFirstSimulationTimestep)
+        {
+            Int16 calendarYear = (Int16)calendarYearBeforeFirstSimulationTimestep;
+            for (int simulationYear = 0; simulationYear < trajectories.TreesByYear.Length; ++calendarYear, ++simulationYear)
+            {
+                TreeListBiometric? treesOfSpecies = trajectories.TreesByYear[simulationYear];
+                if (treesOfSpecies == null)
+                {
+                    break;
+                }
+
+                (int startIndexInRecordBatch, int treesToCopyToRecordBatch) = this.GetBatchIndicesForAdd(treesOfSpecies.Count);
+                if (startIndexInRecordBatch == 0)
+                {
+                    this.AppendNewBatch();
+                }
+                this.Add(treesOfSpecies, treeSpeciesCode,0,  calendarYear, startIndexInRecordBatch, treesToCopyToRecordBatch);
+
+                int treesRemainingToCopy = treesOfSpecies.Count - treesToCopyToRecordBatch;
+                if (treesRemainingToCopy > 0)
+                {
+                    this.AppendNewBatch();
+                    this.Add(treesOfSpecies, treeSpeciesCode, treesToCopyToRecordBatch, calendarYear, 0, treesRemainingToCopy);
+                }
+            }
+        }
+
+        private void Add(TreeListBiometric treesOfSpecies, UInt32 treeSpeciesCode, int startIndexInTreeList, Int16 calendarYear, int startIndexInRecordBatch, int treesToCopy)
+        {
+            ArrowMemory.Fill(this.calendarYear, calendarYear, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.StandID, startIndexInTreeList, this.standID, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.Fill(this.treeSpeciesIndices, this.treeSpeciesFieldType, treeSpeciesCode, startIndexInRecordBatch, treesToCopy);
+
+            ArrowMemory.CopyN(treesOfSpecies.TreeID, startIndexInTreeList, this.treeID, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.DbhInCm, startIndexInTreeList, this.dbhInCm, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.HeightInM, startIndexInTreeList, this.heightInM, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.LeafAreaInM2, startIndexInTreeList, this.leafAreaInM2, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.LightResourceIndex, startIndexInTreeList, this.lightResourceIndex, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.LightResponse, startIndexInTreeList, this.lightResponse, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.StressIndex, startIndexInTreeList, this.stressIndex, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.NppReserveInKg, startIndexInTreeList, this.nppReserveInKg, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.Opacity, startIndexInTreeList, this.opacity, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.AgeInYears, startIndexInTreeList, this.ageInYears, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.CoarseRootMassInKg, startIndexInTreeList, this.coarseRootMassInKg, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.FineRootMassInKg, startIndexInTreeList, this.fineRootMassInKg, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.FoliageMassInKg, startIndexInTreeList, this.foliageMassInKg, startIndexInRecordBatch, treesToCopy);
+            ArrowMemory.CopyN(treesOfSpecies.StemMassInKg, startIndexInTreeList, this.stemMassInKg, startIndexInRecordBatch, treesToCopy);
+
+            this.Count += treesToCopy;
+        }
+
+        private void AppendNewBatch()
+        {
+            int batchLength = this.GetNextBatchLength();
+
+            this.calendarYear = new byte[batchLength * sizeof(Int16)];
+            this.standID = new byte[batchLength * sizeof(Int32)];
+            this.treeSpeciesIndices = new byte[batchLength * treeSpeciesFieldType.BitWidth / 8];
+            this.treeID = new byte[batchLength * sizeof(Int32)];
+            this.dbhInCm = new byte[batchLength * sizeof(float)];
+            this.heightInM = new byte[batchLength * sizeof(float)];
+            this.leafAreaInM2 = new byte[batchLength * sizeof(float)];
+            this.lightResourceIndex = new byte[batchLength * sizeof(float)];
+            this.lightResponse = new byte[batchLength * sizeof(float)];
+            this.stressIndex = new byte[batchLength * sizeof(float)];
+            this.nppReserveInKg = new byte[batchLength * sizeof(float)];
+            this.opacity = new byte[batchLength * sizeof(float)];
+            this.ageInYears = new byte[batchLength * sizeof(UInt16)];
+            this.coarseRootMassInKg = new byte[batchLength * sizeof(float)];
+            this.fineRootMassInKg = new byte[batchLength * sizeof(float)];
+            this.foliageMassInKg = new byte[batchLength * sizeof(float)];
+            this.stemMassInKg = new byte[batchLength * sizeof(float)];
 
             // repackage arrays into Arrow record batch
             IArrowArray[] arrowArrays = new IArrowArray[]
@@ -122,42 +198,7 @@ namespace iLand.Output.Memory
                 ArrowArrayExtensions.WrapInFloat(this.stemMassInKg)
             };
 
-            this.RecordBatch = new(schema, arrowArrays, batchLength);
-        }
-
-        public void Add(ResourceUnitIndividualTreeTrajectories trajectories, UInt32 treeSpeciesCode, int calendarYearBeforeFirstSimulationTimestep)
-        {
-            Int16 calendarYear = (Int16)calendarYearBeforeFirstSimulationTimestep;
-            for (int simulationYear = 0; simulationYear < trajectories.TreesByYear.Length; ++calendarYear, ++simulationYear)
-            {
-                TreeListBiometric? treesOfSpecies = trajectories.TreesByYear[simulationYear];
-                if (treesOfSpecies == null)
-                {
-                    break;
-                }
-                int trees = treesOfSpecies.Count;
-
-                this.Fill(this.calendarYear, calendarYear, trees);
-                this.CopyFirstN(treesOfSpecies.StandID, this.standID, trees);
-                this.Fill(this.treeSpeciesIndices, this.treeSpeciesFieldType, treeSpeciesCode, trees);
-
-                this.CopyFirstN(treesOfSpecies.TreeID, this.treeID, trees);
-                this.CopyFirstN(treesOfSpecies.DbhInCm, this.dbhInCm, trees);
-                this.CopyFirstN(treesOfSpecies.HeightInM, this.heightInM, trees);
-                this.CopyFirstN(treesOfSpecies.LeafAreaInM2, this.leafAreaInM2, trees);
-                this.CopyFirstN(treesOfSpecies.LightResourceIndex, this.lightResourceIndex, trees);
-                this.CopyFirstN(treesOfSpecies.LightResponse, this.lightResponse, trees);
-                this.CopyFirstN(treesOfSpecies.StressIndex, this.stressIndex, trees);
-                this.CopyFirstN(treesOfSpecies.NppReserveInKg, this.nppReserveInKg, trees);
-                this.CopyFirstN(treesOfSpecies.Opacity, this.opacity, trees);
-                this.CopyFirstN(treesOfSpecies.AgeInYears, this.ageInYears, trees);
-                this.CopyFirstN(treesOfSpecies.CoarseRootMassInKg, this.coarseRootMassInKg, trees);
-                this.CopyFirstN(treesOfSpecies.FineRootMassInKg, this.fineRootMassInKg, trees);
-                this.CopyFirstN(treesOfSpecies.FoliageMassInKg, this.foliageMassInKg, trees);
-                this.CopyFirstN(treesOfSpecies.StemMassInKg, this.stemMassInKg, trees);
-
-                this.Count += trees;
-            }
+            this.RecordBatches.Add(new(this.schema, arrowArrays, batchLength));
         }
     }
 }

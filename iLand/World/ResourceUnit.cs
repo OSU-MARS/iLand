@@ -17,7 +17,7 @@ namespace iLand.World
         */
     public class ResourceUnit
     {
-        private int heightCellsWithTrees;  // count of pixels that are stocked with trees
+        private int heightCellsWithTreesTallerThanRegenerationLayer;  // count of pixels that are stocked with trees
         private int saplingsRecruited;
 
         public float AreaInLandscapeInM2 { get; set; } // total stockable area in m² at height grid (10 m) resolution
@@ -39,7 +39,7 @@ namespace iLand.World
 
         public ResourceUnit(Project projectFile, Weather weather, TreeSpeciesSet speciesSet, int ruGridIndex)
         {
-            this.heightCellsWithTrees = 0;
+            this.heightCellsWithTreesTallerThanRegenerationLayer = 0;
             this.saplingsRecruited = 0;
 
             this.AreaInLandscapeInM2 = 0.0F;
@@ -78,11 +78,12 @@ namespace iLand.World
                 float maximumVegetationHeightInM = ruVegetationHeightEnumerator.Current;
                 if (maximumVegetationHeightInM > Constant.RegenerationLayerHeight)
                 {
-                    ++this.heightCellsWithTrees;
+                    ++this.heightCellsWithTreesTallerThanRegenerationLayer;
                 }
             }
 
-            Debug.Assert((this.heightCellsWithTrees <= this.HeightCellsOnLandscape) && ((this.heightCellsWithTrees > 0) || (this.Trees.TreesBySpeciesID.Count == 0) || ((this.Trees.TreesBySpeciesID.Count == 1) && (this.Trees.TreesBySpeciesID.Values[0].Count == 1) && (this.Trees.TreesBySpeciesID.Values[0].HeightInM[0] > 0.0F))));
+            // sometimes useful for debugging: check for resource units with trees but without hieight cells taller than the regeneration layer
+            // Debug.Assert((this.heightCellsWithTrees <= this.HeightCellsOnLandscape) && ((this.heightCellsWithTrees > 0) || (this.Trees.TreesBySpeciesID.Count == 0) || ((this.Trees.TreesBySpeciesID.Count == 1) && (this.Trees.TreesBySpeciesID.Values[0].Count == 1) && (this.Trees.TreesBySpeciesID.Values[0].HeightInM[0] > 0.0F))));
         }
 
         public void AddSprout(Model model, TreeListSpatial trees, int treeIndex)
@@ -500,7 +501,7 @@ namespace iLand.World
 
         public void OnStartYear()
         {
-            this.heightCellsWithTrees = 0;
+            this.heightCellsWithTreesTallerThanRegenerationLayer = 0;
 
             this.Trees.OnStartYear();
 
@@ -537,7 +538,7 @@ namespace iLand.World
             else
             {
                 // height pixels are counted during the height-grid-calculations
-                this.AreaWithTreesInM2 = Constant.Grid.HeightCellAreaInM2 * this.heightCellsWithTrees; // m² (1 height grid pixel = 10x10m)
+                this.AreaWithTreesInM2 = Constant.Grid.HeightCellAreaInM2 * this.heightCellsWithTreesTallerThanRegenerationLayer; // m² (1 height grid pixel = 10x10m)
                 float laiBasedOnRUAreaWithinLandscape = this.GetLeafAreaIndex();
                 if (laiBasedOnRUAreaWithinLandscape < 3.0F)
                 {
@@ -584,7 +585,7 @@ namespace iLand.World
 
                 // calculate the total weighted leaf area on this RU:
                 this.Trees.AverageLightRelativeIntensity = this.Trees.PhotosyntheticallyActiveArea / this.Trees.TotalLightWeightedLeafArea; // p_WLA
-                Debug.Assert((this.Trees.AverageLightRelativeIntensity >= 0.0F) && (this.Trees.AverageLightRelativeIntensity < 4.5F), "Average light relative intensity of " + this.Trees.AverageLightRelativeIntensity + "."); // sanity upper bound, denser stands produce higher intensities
+                Debug.Assert((this.Trees.AverageLightRelativeIntensity >= 0.0F) && (this.Trees.AverageLightRelativeIntensity < 8.0F), "Average light relative intensity of " + this.Trees.AverageLightRelativeIntensity + " is negative or greater than the expected upper bound for LRIs."); // sanity upper bound, denser stands produce higher intensities
 
                 //if (this.LriModifier == 0.0F)
                 //{

@@ -24,9 +24,9 @@ may be worthwhile.
 
 Apache C# bindings did not support compressed feather files until Arrow 12 (May 2023) and replacement dictionaries were broken when last tested. 
 iLand works around resource dictionary limitations as best it can but supporting use of `factor()` may be helpful in R. While iLand reads 
-compressed feather but it has not yet been updated to write compressed feather. Also, in R `read_feather()` defaults to `mmap = TRUE` and 
-therefore holds feather files open for the remainder of an R session. Since this prevents rewriting the files from PowerShell after rerunning 
-iLand it's likely convenient to use `read_feather(mmap = FALSE)`.
+compressed feather [Arrow 12's C# bindings](https://github.com/apache/arrow/blob/main/csharp/README.md) do not support writing of compressed 
+feather. Also, in R `read_feather()` defaults to `mmap = TRUE` and therefore holds feather files open for the remainder of an R session. Since 
+this prevents rewriting the files from PowerShell after rerunning iLand it's likely convenient to use `read_feather(mmap = FALSE)`.
 
 Like many .NET class libraries and PowerShell modules, this iLand port is operating system and processor agnostic. Development 
 and use occurs on Windows but binaries compiled on Windows have been verified to be xcopyable to Linux and ran without issues. Unless disabled 

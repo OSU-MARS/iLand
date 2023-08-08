@@ -4,7 +4,6 @@ using iLand.Tree;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Xml;
 using LeafPhenology = iLand.Tree.LeafPhenology;
 using Model = iLand.Simulation.Model;
@@ -86,7 +85,7 @@ namespace iLand.World
         {
             if (phenologyID >= this.TreeSpeciesPhenology.Count)
             {
-                throw new ArgumentOutOfRangeException(nameof(phenologyID), "Phenology group " + phenologyID + "not present. Is /project/model/species/phenology missing elements?");
+                throw new ArgumentOutOfRangeException(nameof(phenologyID), "Phenology group " + phenologyID + " not present. Is /project/model/species/phenology missing elements?");
             }
 
             Tree.LeafPhenology phenology = this.TreeSpeciesPhenology[phenologyID];

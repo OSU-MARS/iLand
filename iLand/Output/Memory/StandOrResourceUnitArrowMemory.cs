@@ -10,70 +10,40 @@ namespace iLand.Output.Memory
     {
         private readonly IntegerType treeSpeciesFieldType;
 
-        private readonly byte[] id;
-        private readonly byte[] calendarYear;
-        private readonly byte[] treeSpeciesIndices;
-        private readonly byte[] averageDbh;
-        private readonly byte[] averageHeight;
-        private readonly byte[] basalArea;
-        private readonly byte[] lai;
-        private readonly byte[] liveStemVolume;
-        private readonly byte[] treeNpp;
-        private readonly byte[] treeAbovegroundNpp;
-        private readonly byte[] treesPerHectare;
-        private readonly byte[] saplingCohorts;
-        private readonly byte[] saplingMeanAge;
-        private readonly byte[] saplingNpp;
-        private readonly byte[] saplingsPerHectare;
-        private readonly byte[] branchCarbon;
-        private readonly byte[] branchNitrogen;
-        private readonly byte[] coarseRootCarbon;
-        private readonly byte[] coarseRootNitrogen;
-        private readonly byte[] fineRootCarbon;
-        private readonly byte[] fineRootNitrogen;
-        private readonly byte[] foliageCarbon;
-        private readonly byte[] foliageNitrogen;
-        private readonly byte[] regenerationCarbon;
-        private readonly byte[] regenerationNitrogen;
-        private readonly byte[] stemCarbon;
-        private readonly byte[] stemNitrogen;
+        private readonly Schema schema;
 
-        public RecordBatch RecordBatch { get; private init; }
+        private byte[]? id;
+        private byte[]? calendarYear;
+        private byte[]? treeSpeciesIndices;
+        private byte[]? averageDbh;
+        private byte[]? averageHeight;
+        private byte[]? basalArea;
+        private byte[]? lai;
+        private byte[]? liveStemVolume;
+        private byte[]? treeNpp;
+        private byte[]? treeAbovegroundNpp;
+        private byte[]? treesPerHectare;
+        private byte[]? saplingCohorts;
+        private byte[]? saplingMeanAge;
+        private byte[]? saplingNpp;
+        private byte[]? saplingsPerHectare;
+        private byte[]? branchCarbon;
+        private byte[]? branchNitrogen;
+        private byte[]? coarseRootCarbon;
+        private byte[]? coarseRootNitrogen;
+        private byte[]? fineRootCarbon;
+        private byte[]? fineRootNitrogen;
+        private byte[]? foliageCarbon;
+        private byte[]? foliageNitrogen;
+        private byte[]? regenerationCarbon;
+        private byte[]? regenerationNitrogen;
+        private byte[]? stemCarbon;
+        private byte[]? stemNitrogen;
 
-        // public StandOrResourceUnitTrajectoryArrowMemory(string idFieldName, IList<string> treeSpecies, int batchLength)
-        public StandOrResourceUnitArrowMemory(string idFieldName, string idFieldDescription, IntegerType treeSpeciesFieldType, int batchLength)
+        public StandOrResourceUnitArrowMemory(string idFieldName, string idFieldDescription, IntegerType treeSpeciesFieldType, int capacityInRecords)
+            : base(capacityInRecords, ArrowMemory.DefaultMaximumRecordsPerBatch)
         {
             this.treeSpeciesFieldType = treeSpeciesFieldType;
-
-            // 27 fields @ 4 bytes/field -> 9700 trajectory years/MB -> 103 MB for one century of 10,000 resource units' all species trajectories
-            // If needed, restricted batch lengths can be supported. But, for now, it's assumed a few hundred MB isn't a concern.
-            this.id = new byte[batchLength * sizeof(Int32)];
-            this.calendarYear = new byte[batchLength * sizeof(Int16)];
-            this.treeSpeciesIndices = new byte[batchLength * treeSpeciesFieldType.BitWidth / 8];
-            this.averageDbh = new byte[batchLength * sizeof(float)];
-            this.averageHeight = new byte[batchLength * sizeof(float)];
-            this.basalArea = new byte[batchLength * sizeof(float)];
-            this.lai = new byte[batchLength * sizeof(float)];
-            this.liveStemVolume = new byte[batchLength * sizeof(float)];
-            this.treeNpp = new byte[batchLength * sizeof(float)];
-            this.treeAbovegroundNpp = new byte[batchLength * sizeof(float)];
-            this.treesPerHectare = new byte[batchLength * sizeof(float)];
-            this.saplingCohorts = new byte[batchLength * sizeof(float)];
-            this.saplingMeanAge = new byte[batchLength * sizeof(float)];
-            this.saplingNpp = new byte[batchLength * sizeof(float)];
-            this.saplingsPerHectare = new byte[batchLength * sizeof(float)];
-            this.branchCarbon = new byte[batchLength * sizeof(float)];
-            this.branchNitrogen = new byte[batchLength * sizeof(float)];
-            this.coarseRootCarbon = new byte[batchLength * sizeof(float)];
-            this.coarseRootNitrogen = new byte[batchLength * sizeof(float)];
-            this.fineRootCarbon = new byte[batchLength * sizeof(float)];
-            this.fineRootNitrogen = new byte[batchLength * sizeof(float)];
-            this.foliageCarbon = new byte[batchLength * sizeof(float)];
-            this.foliageNitrogen = new byte[batchLength * sizeof(float)];
-            this.regenerationCarbon = new byte[batchLength * sizeof(float)];
-            this.regenerationNitrogen = new byte[batchLength * sizeof(float)];
-            this.stemCarbon = new byte[batchLength * sizeof(float)];
-            this.stemNitrogen = new byte[batchLength * sizeof(float)];
 
             // create schema
             List<Field> fields = new()
@@ -137,7 +107,128 @@ namespace iLand.Output.Memory
                 { "stemCarbon", "Carbon contained in live tree stems (snags are reported separately), kg/ha-yr." },
                 { "stemNitrogen", "Nitrogen contained in live tree stems, kg/ha-yr." }
             };
-            Schema schema = new(fields, metadata);
+            this.schema = new(fields, metadata);
+
+            this.id = null;
+            this.calendarYear = null;
+            this.treeSpeciesIndices = null;
+            this.averageDbh = null;
+            this.averageHeight = null;
+            this.basalArea = null;
+            this.lai = null;
+            this.liveStemVolume = null;
+            this.treeNpp = null;
+            this.treeAbovegroundNpp = null;
+            this.treesPerHectare = null;
+            this.saplingCohorts = null;
+            this.saplingMeanAge = null;
+            this.saplingNpp = null;
+            this.saplingsPerHectare = null;
+            this.branchCarbon = null;
+            this.branchNitrogen = null;
+            this.coarseRootCarbon = null;
+            this.coarseRootNitrogen = null;
+            this.fineRootCarbon = null;
+            this.fineRootNitrogen = null;
+            this.foliageCarbon = null;
+            this.foliageNitrogen = null;
+            this.regenerationCarbon = null;
+            this.regenerationNitrogen = null;
+            this.stemCarbon = null;
+            this.stemNitrogen = null;
+        }
+
+        /// <summary>
+        /// Append trajectory to record batch.
+        /// </summary>
+        /// <param name="trajectory">Resource unit all species, resource unit tree species, or stand trajectory to copy into record batch memory.</param>
+        /// <param name="polygonID">Resource unit or stand ID.</param>
+        /// <param name="treeSpeciesCode">Index of tree species in tree species string table.</param>
+        /// <param name="calendarYearSource">Sequential array of calendar years, starting with simulation year zero.</param>
+        public void Add(StandOrResourceUnitTrajectory trajectory, UInt32 polygonID, UInt32 treeSpeciesCode, Span<Int16> calendarYearSource)
+        {
+            (int startIndexInRecordBatch, int yearsToCopyToRecordBatch) = this.GetBatchIndicesForAdd(trajectory.LengthInYears);
+            if (startIndexInRecordBatch == 0)
+            {
+                this.AppendNewBatch();
+            }
+            this.Add(trajectory, polygonID, treeSpeciesCode, 0, calendarYearSource, startIndexInRecordBatch, yearsToCopyToRecordBatch);
+
+            int yearsRemainingToCopy = trajectory.LengthInYears - yearsToCopyToRecordBatch;
+            if (yearsRemainingToCopy > 0)
+            {
+                this.AppendNewBatch();
+                this.Add(trajectory, polygonID, treeSpeciesCode, yearsToCopyToRecordBatch, calendarYearSource, 0, yearsRemainingToCopy);
+            }
+        }
+
+        private void Add(StandOrResourceUnitTrajectory trajectory, UInt32 polygonID, UInt32 treeSpeciesCode, int startYearIndex, Span<Int16> calendarYearSource, int startIndexInRecordBatch, int yearsToCopy)
+        {
+            ArrowMemory.Fill(this.id, polygonID, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(calendarYearSource, startYearIndex, this.calendarYear, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.Fill(this.treeSpeciesIndices, this.treeSpeciesFieldType, treeSpeciesCode, startIndexInRecordBatch, yearsToCopy);
+
+            ArrowMemory.CopyN(trajectory.AverageDbhByYear, startYearIndex, this.averageDbh, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.AverageHeightByYear, startYearIndex, this.averageHeight, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.BasalAreaByYear, startYearIndex, this.basalArea, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.LeafAreaIndexByYear, startYearIndex, this.lai, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.LiveStemVolumeByYear, startYearIndex, this.liveStemVolume, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.TreeNppByYear, startYearIndex, this.treeNpp, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.TreeNppAbovegroundByYear, startYearIndex, this.treeAbovegroundNpp, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.TreesPerHectareByYear, startYearIndex, this.treesPerHectare, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.SaplingCohortsPerHectareByYear, startYearIndex, this.saplingCohorts, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.SaplingMeanAgeByYear, startYearIndex, this.saplingMeanAge, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.SaplingNppByYear, startYearIndex, this.saplingNpp, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.SaplingsPerHectareByYear, startYearIndex, this.saplingsPerHectare, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.BranchCarbonByYear, startYearIndex, this.branchCarbon, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.BranchNitrogenByYear, startYearIndex, this.branchNitrogen, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.CoarseRootCarbonByYear, startYearIndex, this.coarseRootCarbon, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.CoarseRootNitrogenByYear, startYearIndex, this.coarseRootNitrogen, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.FineRootCarbonByYear, startYearIndex, this.fineRootCarbon, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.FineRootNitrogenByYear, startYearIndex, this.fineRootNitrogen, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.FoliageCarbonByYear, startYearIndex, this.foliageCarbon, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.FoliageNitrogenByYear, startYearIndex, this.foliageNitrogen, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.RegenerationCarbonByYear, startYearIndex, this.regenerationCarbon, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.RegenerationNitrogenByYear, startYearIndex, this.regenerationNitrogen, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.StemCarbonByYear, startYearIndex, this.stemCarbon, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.StemNitrogenByYear, startYearIndex, this.stemNitrogen, startIndexInRecordBatch, yearsToCopy);
+
+            this.Count += yearsToCopy;
+        }
+
+        private void AppendNewBatch()
+        {
+            int capacityInRecords = this.GetNextBatchLength();
+
+            // 27 fields @ 4 bytes/field -> 9700 trajectory years/MB -> 103 MB for one century of 10,000 resource units' all species trajectories
+            // If needed, restricted batch lengths can be supported. But, for now, it's assumed a few hundred MB isn't a concern.
+            this.id = new byte[capacityInRecords * sizeof(Int32)];
+            this.calendarYear = new byte[capacityInRecords * sizeof(Int16)];
+            this.treeSpeciesIndices = new byte[capacityInRecords * treeSpeciesFieldType.BitWidth / 8];
+            this.averageDbh = new byte[capacityInRecords * sizeof(float)];
+            this.averageHeight = new byte[capacityInRecords * sizeof(float)];
+            this.basalArea = new byte[capacityInRecords * sizeof(float)];
+            this.lai = new byte[capacityInRecords * sizeof(float)];
+            this.liveStemVolume = new byte[capacityInRecords * sizeof(float)];
+            this.treeNpp = new byte[capacityInRecords * sizeof(float)];
+            this.treeAbovegroundNpp = new byte[capacityInRecords * sizeof(float)];
+            this.treesPerHectare = new byte[capacityInRecords * sizeof(float)];
+            this.saplingCohorts = new byte[capacityInRecords * sizeof(float)];
+            this.saplingMeanAge = new byte[capacityInRecords * sizeof(float)];
+            this.saplingNpp = new byte[capacityInRecords * sizeof(float)];
+            this.saplingsPerHectare = new byte[capacityInRecords * sizeof(float)];
+            this.branchCarbon = new byte[capacityInRecords * sizeof(float)];
+            this.branchNitrogen = new byte[capacityInRecords * sizeof(float)];
+            this.coarseRootCarbon = new byte[capacityInRecords * sizeof(float)];
+            this.coarseRootNitrogen = new byte[capacityInRecords * sizeof(float)];
+            this.fineRootCarbon = new byte[capacityInRecords * sizeof(float)];
+            this.fineRootNitrogen = new byte[capacityInRecords * sizeof(float)];
+            this.foliageCarbon = new byte[capacityInRecords * sizeof(float)];
+            this.foliageNitrogen = new byte[capacityInRecords * sizeof(float)];
+            this.regenerationCarbon = new byte[capacityInRecords * sizeof(float)];
+            this.regenerationNitrogen = new byte[capacityInRecords * sizeof(float)];
+            this.stemCarbon = new byte[capacityInRecords * sizeof(float)];
+            this.stemNitrogen = new byte[capacityInRecords * sizeof(float)];
 
             // repackage arrays into Arrow record batch
             IArrowArray[] arrowArrays = new IArrowArray[]
@@ -173,50 +264,7 @@ namespace iLand.Output.Memory
                 ArrowArrayExtensions.WrapInFloat(this.stemNitrogen)
             };
 
-            this.RecordBatch = new(schema, arrowArrays, batchLength);
-        }
-
-        /// <summary>
-        /// Append trajectory to record batch.
-        /// </summary>
-        /// <param name="trajectory">Resource unit all species, resource unit tree species, or stand trajectory to copy into record batch memory.</param>
-        /// <param name="polygonID">Resource unit or stand ID.</param>
-        /// <param name="treeSpeciesCode">Index of tree species in tree species string table.</param>
-        /// <param name="calendarYearSource">Sequential array of calendar years, starting with simulation year zero.</param>
-        public void Add(StandOrResourceUnitTrajectory trajectory, UInt32 polygonID, UInt32 treeSpeciesCode, Span<Int16> calendarYearSource)
-        {
-            int trajectoryLengthInYears = trajectory.LengthInYears;
-
-            this.Fill(this.id, polygonID, trajectoryLengthInYears);
-            this.CopyFirstN(calendarYearSource, this.calendarYear, trajectoryLengthInYears);
-            this.Fill(this.treeSpeciesIndices, this.treeSpeciesFieldType, treeSpeciesCode, trajectoryLengthInYears);
-
-            this.CopyFirstN(trajectory.AverageDbhByYear, this.averageDbh, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.AverageHeightByYear, this.averageHeight, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.BasalAreaByYear, this.basalArea, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.LeafAreaIndexByYear, this.lai, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.LiveStemVolumeByYear, this.liveStemVolume, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.TreeNppByYear, this.treeNpp, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.TreeNppAbovegroundByYear, this.treeAbovegroundNpp, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.TreesPerHectareByYear, this.treesPerHectare, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.SaplingCohortsPerHectareByYear, this.saplingCohorts, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.SaplingMeanAgeByYear, this.saplingMeanAge, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.SaplingNppByYear, this.saplingNpp, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.SaplingsPerHectareByYear, this.saplingsPerHectare, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.BranchCarbonByYear, this.branchCarbon, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.BranchNitrogenByYear, this.branchNitrogen, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.CoarseRootCarbonByYear, this.coarseRootCarbon, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.CoarseRootNitrogenByYear, this.coarseRootNitrogen, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.FineRootCarbonByYear, this.fineRootCarbon, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.FineRootNitrogenByYear, this.fineRootNitrogen, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.FoliageCarbonByYear, this.foliageCarbon, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.FoliageNitrogenByYear, this.foliageNitrogen, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.RegenerationCarbonByYear, this.regenerationCarbon, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.RegenerationNitrogenByYear, this.regenerationNitrogen, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.StemCarbonByYear, this.stemCarbon, trajectoryLengthInYears);
-            this.CopyFirstN(trajectory.StemNitrogenByYear, this.stemNitrogen, trajectoryLengthInYears);
-
-            this.Count += trajectoryLengthInYears;
+            this.RecordBatches.Add(new(this.schema, arrowArrays, capacityInRecords));
         }
     }
 }

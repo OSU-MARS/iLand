@@ -201,10 +201,10 @@ namespace iLand.Tree
             return this.woodyA * MathF.Pow(dbhInCm, this.woodyB); 
         }
 
-        public (float hdRatioLowerBound, float hdRatioUpperBound) GetHeightDiameterRatioLimits(float dbh)
+        public (float hdRatioLowerBound, float hdRatioUpperBound) GetHeightDiameterRatioLimits(float dbhInCm)
         {
-            float hdRatioLowerBound = heightDiameterRatioLowerBound.Evaluate(dbh);
-            float hdRatioUpperBound = heightDiameterRatioUpperBound.Evaluate(dbh);
+            float hdRatioLowerBound = heightDiameterRatioLowerBound.Evaluate(dbhInCm);
+            float hdRatioUpperBound = heightDiameterRatioUpperBound.Evaluate(dbhInCm);
             return (hdRatioLowerBound, hdRatioUpperBound);
         }
 

@@ -380,7 +380,7 @@ namespace iLand.Cmdlets
                     writeIndividualTrees = Task.Run(() =>
                     {
                         ResourceUnitIndividualTreeArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForIndividualTrees(trajectories, calendarYearBeforeFirstSimulationTimestep);
-                        return WriteTrajectory.WriteTrajectories(this.IndividualTreeFile!, arrowMemory.RecordBatch);
+                        return WriteTrajectory.WriteTrajectories(this.IndividualTreeFile!, arrowMemory.RecordBatches);
                     });
                 }
                 if (logResourceUnitStatistics)
@@ -388,7 +388,7 @@ namespace iLand.Cmdlets
                     writeResourceUnits = Task.Run(() =>
                     {
                         StandOrResourceUnitArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForResourceUnitStatistics(trajectories, calendarYearBeforeFirstSimulationTimestep);
-                        return WriteTrajectory.WriteTrajectories(this.ResourceUnitFile!, arrowMemory.RecordBatch);
+                        return WriteTrajectory.WriteTrajectories(this.ResourceUnitFile!, arrowMemory.RecordBatches);
                     });
                 }
                 if (logThreePG)
@@ -396,7 +396,7 @@ namespace iLand.Cmdlets
                     writeThreePG = Task.Run(() =>
                     {
                         ResourceUnitThreePGArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForThreePGTimeSeries(trajectories, calendarYearBeforeFirstSimulationTimestep);
-                        return WriteTrajectory.WriteTrajectories(this.ThreePGFile!, arrowMemory.RecordBatch);
+                        return WriteTrajectory.WriteTrajectories(this.ThreePGFile!, arrowMemory.RecordBatches);
                     });
                 }
             }
@@ -412,7 +412,7 @@ namespace iLand.Cmdlets
                 writeStands = Task.Run(() =>
                 {
                     StandOrResourceUnitArrowMemory arrowMemory = WriteTrajectory.CreateArrowMemoryForStandStatistics(trajectories, calendarYearBeforeFirstSimulationTimestep);
-                    return WriteTrajectory.WriteTrajectories(this.StandFile, arrowMemory.RecordBatch);
+                    return WriteTrajectory.WriteTrajectories(this.StandFile, arrowMemory.RecordBatches);
                 });
             }
 
@@ -444,13 +444,21 @@ namespace iLand.Cmdlets
             this.WriteVerbose("Trajectories written in " + totalSeconds.ToString("0.0") + " s (" + (bytesWritten / (1000 * 1000 * totalSeconds)).ToString("0") + " MB/s from " + tasks + " concurrent tasks).");
         }
 
-        private static long WriteTrajectories(string trajectoryFilePath, RecordBatch recordBatch)
+        private static long WriteTrajectories(string trajectoryFilePath, IList<RecordBatch> recordBatches)
         {
+            if (recordBatches.Count < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(recordBatches));
+            }
+
             // for now, all weather time series should start in January of the first simulation year
             using FileStream stream = new(trajectoryFilePath, FileMode.Create, FileAccess.Write, FileShare.None, Constant.File.DefaultBufferSize, FileOptions.SequentialScan);
-            using ArrowFileWriter writer = new(stream, recordBatch.Schema);
+            using ArrowFileWriter writer = new(stream, recordBatches[0].Schema);
             writer.WriteStart();
-            writer.WriteRecordBatch(recordBatch);
+            for (int batchIndex = 0; batchIndex < recordBatches.Count; ++batchIndex)
+            {
+                writer.WriteRecordBatch(recordBatches[batchIndex]);
+            }
             writer.WriteEnd();
             return stream.Length;
         }

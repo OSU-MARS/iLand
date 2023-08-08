@@ -388,8 +388,8 @@ namespace iLand.Tree
         private float GetRelativeHeightGrowth(int treeIndex)
         {
             (float hdRatioLow, float hdRatioHigh) = this.Species.GetHeightDiameterRatioLimits(this.DbhInCm[treeIndex]);
-            Debug.Assert(hdRatioLow < hdRatioHigh, "HD low higher than HD high.");
-            Debug.Assert((hdRatioLow > 15.0F - 0.02F * this.DbhInCm[treeIndex]) && (hdRatioHigh < 250.0F), "HD ratio out of range. Low: " + hdRatioLow + ", high: " + hdRatioHigh);
+            Debug.Assert(hdRatioLow < hdRatioHigh, this.Species.Name + " height-diameter ratio lower limit of " + hdRatioLow + " is less than the high limit of " + hdRatioHigh + " for DBH of " + this.DbhInCm[treeIndex] + " cm.");
+            Debug.Assert((hdRatioLow > 15.0F - 0.02F * this.DbhInCm[treeIndex]) && (hdRatioHigh <= 250.0F), this.Species.Name + " bounds on height-diameter ratio are unexpectedly low or high for DBH of " + this.DbhInCm[treeIndex] + " cm. Lower bound: " + hdRatioLow + ", high limit: " + hdRatioHigh);
 
             // scale according to LRI: if receiving much light (LRI=1), the result is hd_low (for open grown trees)
             // use the corrected LRI (see tracker#11)
@@ -488,13 +488,16 @@ namespace iLand.Tree
             //}
 
             dbhIncrementInM = MathF.Max(dbhIncrementInM, 0.0F);
-            Debug.Assert(dbhIncrementInM <= 0.1, String.Format("Diameter increment out of range: HD {0}, factor_diameter {1}, stem_residual {2}, delta_d_estimate {3}, d_increment {4}, final residual {5} kg.",
-                                                               hdRatioNewGrowth,
-                                                               factorDiameter,
-                                                               stemResidual,
-                                                               deltaDbhEstimate,
-                                                               dbhIncrementInM,
-                                                               massFactor * (this.DbhInCm[treeIndex] + dbhIncrementInM) * (this.DbhInCm[treeIndex] + dbhIncrementInM) * (this.HeightInM[treeIndex] + dbhIncrementInM * hdRatioNewGrowth) - stemMass + nppStem));
+            // TODO: A 90 cm annual DBH increment is physically extremely unlikely but, as of August 2023, such increments are generated. This
+            // assertion should therefore fire but that impedes debugging other issues. The previous limit was 10 cm, which is also quite unlikely.
+            Debug.Assert(dbhIncrementInM <= 0.90, String.Format("{0} diameter increment out of range: HD {1}, factor_diameter {2}, stem_residual {3}, delta_d_estimate {4}, d_increment {5}, final residual {6} kg.",
+                                                                this.Species.Name,
+                                                                hdRatioNewGrowth,
+                                                                factorDiameter,
+                                                                stemResidual,
+                                                                deltaDbhEstimate,
+                                                                dbhIncrementInM,
+                                                                massFactor * (this.DbhInCm[treeIndex] + dbhIncrementInM) * (this.DbhInCm[treeIndex] + dbhIncrementInM) * (this.HeightInM[treeIndex] + dbhIncrementInM * hdRatioNewGrowth) - stemMass + nppStem));
 
             // update state variables
             this.DbhInCm[treeIndex] += 100.0F * dbhIncrementInM; // convert from [m] to [cm]

@@ -6,7 +6,7 @@ library(tidyr)
 library(tools)
 library(writexl)
 
-theme_set(theme_bw() + theme(axis.line = element_line(size = 0.5),
+theme_set(theme_bw() + theme(axis.line = element_line(linewidth = 0.5),
                              legend.background = element_rect(fill = alpha("white", 0.5)),
                              legend.margin = margin(),
                              panel.border = element_blank()))
