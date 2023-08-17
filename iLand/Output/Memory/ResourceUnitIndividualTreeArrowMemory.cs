@@ -2,7 +2,6 @@
 using Apache.Arrow.Types;
 using iLand.Extensions;
 using iLand.Tree;
-using iLand.World;
 using System;
 using System.Collections.Generic;
 
@@ -179,7 +178,7 @@ namespace iLand.Output.Memory
             {
                 ArrowArrayExtensions.WrapInInt16(this.calendarYear),
                 ArrowArrayExtensions.WrapInInt32(this.standID),
-                // not supported in Apache 9.0.0
+                // not supported in Arrow 12.0
                 // ArrowArrayExtensions.BindStringTable256(this.treeSpeciesIndices, treeSpecies),
                 ArrowArrayExtensions.Wrap(treeSpeciesFieldType, this.treeSpeciesIndices),
                 ArrowArrayExtensions.WrapInInt32(this.treeID),

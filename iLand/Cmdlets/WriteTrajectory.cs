@@ -291,9 +291,9 @@ namespace iLand.Cmdlets
         private static List<UInt32> GetTreeSpeciesCodes(List<WorldFloraID> treeSpeciesPresent, out IntegerType treeSpeciesFieldType)
         {
             // map tree species to integers for string table encoding
-            // Because Apache 9.0.0 does not support replacement dictionary interoperability between C# and R
-            // (https://issues.apache.org/jira/browse/ARROW-17391), mapping to USFS FIA codes is attempted first and, if this fails, then
-            // mapping to World Flora Online idenifiers. This species coding workaround makes the species column written in the output
+            // Because Arrow 12.0 does not support replacement dictionary interoperability between C# and R
+            // (https://github.com/apache/arrow/issues/32662), mapping to USFS FIA codes is attempted first and, if this fails, then
+            // mapping to World Flora Online identifiers. This species coding workaround makes the species column written in the output
             // somewhat human friendly as it contains well defined species identifiers rather than an arbitrary mapping. 
             //
             // For now, all species statistics are logged with FiaCode or WorldFloraID = Default. 

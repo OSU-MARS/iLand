@@ -10,28 +10,28 @@ namespace iLand.Output.Memory
     {
         protected const int DefaultMaximumRecordsPerBatch = 10 * 1000 * 1000;
 
-        public int BatchSize { get; private init; }
+        public int BatchLength { get; private init; }
         public int Capacity { get; private init; }
         public int Count { get; protected set; }
 
         public IList<RecordBatch> RecordBatches { get; private init; }
 
-        protected ArrowMemory(int capacityInRecords, int batchSize)
+        protected ArrowMemory(int capacityInRecords, int batchLength)
         {
             if (capacityInRecords < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(capacityInRecords), "Capacity of " + capacityInRecords + " is zero or negative.");
             }
-            if ((batchSize < 10 * 1000) || (batchSize > 100 * 1000 * 1000))
+            if ((batchLength < 10 * 1000) || (batchLength > 100 * 1000 * 1000))
             {
-                throw new ArgumentOutOfRangeException(nameof(batchSize), "Record batch size of " + batchSize + " is unexpectedly large or small.");
+                throw new ArgumentOutOfRangeException(nameof(batchLength), "Record batch size of " + batchLength + " is unexpectedly large or small.");
             }
 
-            this.BatchSize = batchSize;
+            this.BatchLength = batchLength;
             this.Capacity = capacityInRecords;
             this.Count = 0;
 
-            int batches = capacityInRecords / batchSize + (capacityInRecords % batchSize != 0 ? 1 : 0);
+            int batches = capacityInRecords / batchLength + (capacityInRecords % batchLength != 0 ? 1 : 0);
             this.RecordBatches = new List<RecordBatch>(batches);
         }
 
@@ -146,8 +146,8 @@ namespace iLand.Output.Memory
 
         protected (int startIndexInCurrentBatch, int recordsToCopyToCurrentBatch) GetBatchIndicesForAdd(int recordsToAdd)
         {
-            int startIndexInCurrentBatch = this.Count % this.BatchSize;
-            int capacityRemainingInRecordBatch = this.BatchSize - startIndexInCurrentBatch;
+            int startIndexInCurrentBatch = this.Count % this.BatchLength;
+            int capacityRemainingInRecordBatch = this.BatchLength - startIndexInCurrentBatch;
             int recordsToCopyToCurrentBatch = Int32.Min(recordsToAdd, capacityRemainingInRecordBatch);
             return (startIndexInCurrentBatch, recordsToCopyToCurrentBatch);
         }
@@ -155,7 +155,7 @@ namespace iLand.Output.Memory
         protected int GetNextBatchLength()
         {
             int remainingCapacity = this.Capacity - this.Count;
-            return Int32.Min(remainingCapacity, this.BatchSize);
+            return Int32.Min(remainingCapacity, this.BatchLength);
         }
     }
 }

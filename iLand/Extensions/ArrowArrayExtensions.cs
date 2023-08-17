@@ -7,8 +7,8 @@ namespace iLand.Extensions
 {
     public class ArrowArrayExtensions
     {
-        // Apache 9.0.0 does not support replacement dictionaries from C#, preventing string table implementation
-        // As of 9.0.0, it appears the current state of support is the necessary C# classes exist but the dictionary batch required to
+        // Arrow 12.0 does not support replacement dictionaries from C#, preventing string table implementation
+        // As of 9.0, it appears the current state of support is the necessary C# classes exist but the dictionary batch required to
         // accompany the record batch is silently not written in feather files (https://arrow.apache.org/docs/status.html#ipc-format,
         // https://arrow.apache.org/docs/format/Columnar.html). The result is that, while writes from C# appear successful, reads in R
         // fail with Key error: Dictionary with id 1 not found.

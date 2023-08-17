@@ -235,7 +235,7 @@ namespace iLand.Output.Memory
             {
                 ArrowArrayExtensions.WrapInInt32(this.id),
                 ArrowArrayExtensions.WrapInInt16(this.calendarYear),
-                // not supported in Apache 9.0.0
+                // not supported in Arrow 12.0.0
                 // ArrowArrayExtensions.BindStringTable256(this.treeSpeciesIndices, treeSpecies),
                 ArrowArrayExtensions.Wrap(treeSpeciesFieldType, this.treeSpeciesIndices),
                 ArrowArrayExtensions.WrapInFloat(this.averageDbh),
