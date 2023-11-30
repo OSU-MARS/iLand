@@ -12,11 +12,11 @@ namespace iLand.Extensions
             // https://gdal.org/tutorials/geotransforms_tut.html
             // Unclear if any useful return code checking can be done on SetTransform(), SetProjection(), and WriteRaster().
             Driver geoTiff = Gdal.GetDriverByName("GTiff");
-            string[] options = new string[] { "COMPRESS=DEFLATE", "PREDICTOR=2", "ZLEVEL=9" };
+            string[] options = [ "COMPRESS=DEFLATE", "PREDICTOR=2", "ZLEVEL=9" ];
             using Dataset raster = geoTiff.Create(geoTiffFilePath, grid.CellsX, grid.CellsY, 1, DataType.GDT_Float32, options);
             // GDAL transform parameters: lower left corner x, cell size east-west, row rotation, lower left corner y, column rotation, cell size north-south
             // GDAL documentation indicates the upper left corner but this is incorrect
-            raster.SetGeoTransform(new double[] { gisOrigin.X + grid.ProjectExtent.X, grid.CellSizeInM, 0.0, gisOrigin.Y + grid.ProjectExtent.Y, 0.0, grid.CellSizeInM });
+            raster.SetGeoTransform([ gisOrigin.X + grid.ProjectExtent.X, grid.CellSizeInM, 0.0, gisOrigin.Y + grid.ProjectExtent.Y, 0.0, grid.CellSizeInM ]);
             raster.SetProjection(projection);
             raster.WriteRaster(xOff: 0, yOff: 0, grid.CellsX, grid.CellsY, grid.Data, grid.CellsX, grid.CellsY, bandCount: 1, bandMap: null, pixelSpace: 0, lineSpace: 0, bandSpace: 0);
         }

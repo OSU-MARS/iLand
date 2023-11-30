@@ -52,16 +52,16 @@ namespace iLand.Tree
         {
             if (capacity == 0)
             {
-                this.CoarseRootMassInKg = Array.Empty<float>();
-                this.FineRootMassInKg = Array.Empty<float>();
-                this.FoliageMassInKg = Array.Empty<float>();
-                this.LeafAreaInM2 = Array.Empty<float>();
-                this.LightResourceIndex = Array.Empty<float>();
-                this.LightResponse = Array.Empty<float>();
-                this.NppReserveInKg = Array.Empty<float>();
-                this.Opacity = Array.Empty<float>();
-                this.StemMassInKg = Array.Empty<float>();
-                this.StressIndex = Array.Empty<float>();
+                this.CoarseRootMassInKg = [];
+                this.FineRootMassInKg = [];
+                this.FoliageMassInKg = [];
+                this.LeafAreaInM2 = [];
+                this.LightResourceIndex = [];
+                this.LightResponse = [];
+                this.NppReserveInKg = [];
+                this.Opacity = [];
+                this.StemMassInKg = [];
+                this.StressIndex = [];
             }
             else
             {

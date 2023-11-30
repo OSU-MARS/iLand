@@ -96,7 +96,7 @@ namespace iLand.Tree
         public Vector128<float> GetDistanceToCenterInM(Vector128<int> indexX, Vector128<int> indexY)
         {
             // since distances are small integer truncation with multiply low isn't a concern
-            Vector128<int> centerCellIndex = Avx2Extensions.BroadcastScalarToVector128(this.CenterCellIndex);
+            Vector128<int> centerCellIndex = AvxExtensions.BroadcastScalarToVector128(this.CenterCellIndex);
             Vector128<int> distanceX = Avx2.Subtract(indexX, centerCellIndex);
             Vector128<int> distanceY = Avx2.Subtract(indexY, centerCellIndex);
             Vector128<int> squaredDistance = Avx2.Add(Avx2.MultiplyLow(distanceX, distanceX), Avx2.MultiplyLow(distanceY, distanceY));
@@ -107,7 +107,7 @@ namespace iLand.Tree
         public Vector256<float> GetDistanceToCenterInM(Vector256<int> indexX, Vector256<int> indexY)
         {
             // since distances are small integer truncation with multiply low isn't a concern
-            Vector256<int> centerCellIndex = Avx2Extensions.BroadcastScalarToVector256(this.CenterCellIndex);
+            Vector256<int> centerCellIndex = AvxExtensions.BroadcastScalarToVector256(this.CenterCellIndex);
             Vector256<int> distanceX = Avx2.Subtract(indexX, centerCellIndex);
             Vector256<int> distanceY = Avx2.Subtract(indexY, centerCellIndex);
             Vector256<int> squaredDistance = Avx2.Add(Avx2.MultiplyLow(distanceX, distanceX), Avx2.MultiplyLow(distanceY, distanceY));

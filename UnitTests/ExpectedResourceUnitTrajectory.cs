@@ -11,9 +11,9 @@ namespace iLand.Test
 
         public ExpectedResourceUnitTrajectory()
         {
-            this.GppByYear = Array.Empty<float>();
-            this.NppByYear = Array.Empty<float>();
-            this.StemVolumeByYear = Array.Empty<float>();
+            this.GppByYear = [];
+            this.NppByYear = [];
+            this.StemVolumeByYear = [];
         }
 
         public int LengthInYears

@@ -72,11 +72,11 @@ namespace iLand.World
             // this.LightGrid is set below
             // this.HeightGrid is set below
             this.ResourceUnitGrid = new();
-            this.ResourceUnits = new();
-            this.SpeciesSetsByTableName = new();
+            this.ResourceUnits = [];
+            this.SpeciesSetsByTableName = [];
             this.StandRaster = new();
             // this.TotalStockableHectares is set in this.CalculateStockableArea()
-            this.WeatherByID = new();
+            this.WeatherByID = [];
             this.WeatherFirstCalendarYear = Constant.NoDataInt32;
 
             // populate grids: resource units, height, and light (resource units have also a sapling grid)
@@ -471,7 +471,7 @@ namespace iLand.World
             StandSaplingsCsvHeader saplingHeader = new(saplingFile);
 
             // TODO: should this be sorted by stand ID?
-            List<StandSaplings> saplingsInStands = new();
+            List<StandSaplings> saplingsInStands = [];
             saplingFile.Parse((SplitString row) =>
             {
                 StandSaplings saplings = new(saplingHeader, row);

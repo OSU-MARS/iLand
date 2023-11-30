@@ -15,7 +15,7 @@ namespace iLand.Input.Weather
 
         public WeatherReaderMonthly()
         {
-            this.MonthlyWeatherByID = new();
+            this.MonthlyWeatherByID = [];
         }
 
         /// <summary>

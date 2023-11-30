@@ -2,8 +2,8 @@
 {
     public static class DateTimeExtensions
     {
-        private static readonly int[] DaysInNonLeapYearMonth = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-        private static readonly int[] MidmonthDayIndicesNonLeapYear = { 16, 45, 74, 105, 136, 166, 196, 228, 258, 288, 319, 350 }; // see iLand.R
+        private static readonly int[] DaysInNonLeapYearMonth = [ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
+        private static readonly int[] MidmonthDayIndicesNonLeapYear = [ 16, 45, 74, 105, 136, 166, 196, 228, 258, 288, 319, 350 ]; // see iLand.R
 
         public static (int monthIndex, int dayOfMonthIndex) DayOfYearToDayOfMonth(int dayOfYearIndex, bool isLeapYear)
         {

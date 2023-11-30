@@ -11,7 +11,7 @@ namespace iLand.Input.Tree
         public TreeFileByStandIDReaderCsv(string treeFilePath, TreeFileByStandIDCsvHeader treeFileIndexHeader, CsvFile treeFile)
             : base(treeFilePath)
         {
-            this.TreeFileNameByStandID = new();
+            this.TreeFileNameByStandID = [];
 
             int lineNumber = 0;
             treeFile.Parse((row) =>

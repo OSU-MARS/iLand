@@ -80,7 +80,7 @@ namespace iLand.Cmdlets
         {
             // find batch length and tree species codes
             int batchLength = 0;
-            List<WorldFloraID> treeSpeciesPresent = new();
+            List<WorldFloraID> treeSpeciesPresent = [];
             for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
@@ -133,7 +133,7 @@ namespace iLand.Cmdlets
             // find batch length and tree species present
             int batchLength = 0;
             int maxTrajectoryLengthInYears = Int32.MinValue;
-            List<WorldFloraID> treeSpeciesPresent = new();
+            List<WorldFloraID> treeSpeciesPresent = [];
             for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
@@ -237,7 +237,7 @@ namespace iLand.Cmdlets
         {
             // find batch length and tree species codes
             int batchLength = 0;
-            List<WorldFloraID> treeSpeciesPresent = new();
+            List<WorldFloraID> treeSpeciesPresent = [];
             for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
@@ -281,7 +281,7 @@ namespace iLand.Cmdlets
             return arrowMemory;
         }
 
-        private static UInt32 GetTreeSpeciesCode(ResourceUnitTreeSpecies treeSpecies, IList<WorldFloraID> treeSpeciesPresent, IList<UInt32> treeSpeciesCodesAsUInt32)
+        private static UInt32 GetTreeSpeciesCode(ResourceUnitTreeSpecies treeSpecies, List<WorldFloraID> treeSpeciesPresent, IList<UInt32> treeSpeciesCodesAsUInt32)
         {
             WorldFloraID treeSpeciesID = treeSpecies.Species.WorldFloraID;
             int treeSpeciesCodeIndex = treeSpeciesPresent.IndexOf(treeSpeciesID);

@@ -40,21 +40,21 @@ namespace iLand.Test
             // changes to random number generation appear likely to require expected values be updated.
             ExpectedResourceUnitTrajectory expectedTrajectory82597 = new()
             {
-                GppByYear = new float[]
-                {
+                GppByYear =
+                [
                     0.0F, 15.450F, 15.564F, 15.453F, 15.706F, 15.383F,
                     15.701F, 15.846F, 15.707F, 15.792F, 15.869F
-                },
-                NppByYear = new float[]
-                {
+                ],
+                NppByYear =
+                [
                     0.0F, 50746.117F, 51789.003F, 51903.867F, 53107.093F, 52297.18F,
                     53638F, 54336.765F, 53995.175F, 54398.253F, 54749.98F
-                },
-                StemVolumeByYear = new float[]
-                {
+                ],
+                StemVolumeByYear =
+                [
                     1166.786F, 1221.545F, 1276.808F, 1331.800F, 1388.283F, 1442.904F,
                     1499.338F, 1556.354F, 1612.148F, 1668.454F, 1725.025F
-                }
+                ]
             };
                     
             for (int reliabilityIteration = 0; reliabilityIteration < 1; ++reliabilityIteration)
@@ -250,24 +250,24 @@ namespace iLand.Test
             {
                 // with input data in NAD83 / BC Albers (EPSG:3005) and Douglas-fir light stamps updated to iLand 1.0 height:diameter
                 // ratio spacing
-                GppByYear = new float[]
-                {
+                GppByYear = 
+                [
                     0.0F,10.332F, 11.101F, 13.942F, 11.197F, 13.367F, 10.300F, 12.123F, 12.582F, 12.812F,
                     10.991F, 11.269F, 9.763F, 10.914F, 9.690F, 12.477F, 11.038F, 11.317F, 10.039F, 8.122F,
                     9.139F, 11.834F, 8.867F, 11.034F, 10.034F, 13.091F, 10.851F, 12.163F, 12.639F
-                },
-                NppByYear = new float[]
-                {
+                ],
+                NppByYear = 
+                [
                     0.0F, 15121.153F, 16567.48F, 21124.502F, 17659.486F, 21233.345F, 16907.064F, 19966.412F, 20802.783F, 22333.103F,
                     19217.291F, 20211.252F, 17536.902F, 19613.64F, 17416.525F, 22425.482F, 19859.281F, 20366.093F, 18062.011F, 14609.35F,
                     16428.11F, 21257.44F, 15932.751F, 19820.877F, 18021.93F, 23516.998F, 19478.73F, 21812.896F, 22652.115F
-                },
-                StemVolumeByYear = new float[]
-                {
+                ],
+                StemVolumeByYear =
+                [
                     107.503F, 120.144F, 134.572F, 155.985F, 171.044F, 191.837F, 205.168F, 223.533F, 243.057F, 263.543F,
                     278.798F, 295.564F, 307.320F, 321.637F, 331.338F, 347.055F, 362.951F, 377.981F, 385.101F, 389.623F,
                     394.295F, 410.941F, 417.181F, 433.390F, 443.233F, 465.463F, 475.591F, 484.418F, 500.627F
-                }
+                ]
             };
 
             observedTrajectory.Verify(plot14.Output.ResourceUnitTrajectories[0].AllTreeSpeciesTrajectory, 222.0F, expectedTrajectory);

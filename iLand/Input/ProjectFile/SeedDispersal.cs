@@ -26,7 +26,7 @@ namespace iLand.Input.ProjectFile
 			this.ExternalSeedBuffer = null;
 			this.ExternalSeedEnabled = false;
 			this.ExternalSeedDirection = null;
-			this.ExternalSeedSpecies = new();
+			this.ExternalSeedSpecies = [];
 			this.LongDistanceDispersal = new();
 			this.RecruitmentDimensionVariation = 0.1F; // +/- 10%
         }

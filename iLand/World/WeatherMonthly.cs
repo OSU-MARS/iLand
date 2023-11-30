@@ -5,13 +5,9 @@ using Model = iLand.Simulation.Model;
 
 namespace iLand.World
 {
-    internal class WeatherMonthly : Weather<WeatherTimeSeriesMonthly>
+    internal class WeatherMonthly(Project projectFile, WeatherTimeSeriesMonthly timeSeries) 
+        : Weather<WeatherTimeSeriesMonthly>(projectFile, timeSeries) // one year minimum capacity
     {
-        public WeatherMonthly(Project projectFile, WeatherTimeSeriesMonthly timeSeries)
-            : base(projectFile, timeSeries) // one year minimum capacity
-        {
-        }
-
         public override void OnStartYear(Model model)
         {
             if (this.DoRandomSampling)

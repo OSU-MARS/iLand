@@ -37,7 +37,7 @@ namespace iLand.Output.Sql
         public DynamicStandAnnualOutput()
         {
             this.yearFilter = new();
-            this.fieldList = new();
+            this.fieldList = [];
             this.resourceUnitFilter = new();
             this.treeFilter = new();
 
@@ -150,12 +150,12 @@ namespace iLand.Output.Sql
             {
                 throw new NotImplementedException("Generation of a unique list of species from multiple species sets is not currently supported.");
             }
-            List<float> fieldData = new(); // statistics data
+            List<float> fieldData = []; // statistics data
             TreeVariableAccessor treeWrapper = new(model.SimulationState);
             Expression customExpression = new();
 
             TreeSpeciesSet treeSpeciesSet = model.Landscape.SpeciesSetsByTableName.First().Value;
-            List<TreeListSpatial> liveTreesOfSpecies = new();
+            List<TreeListSpatial> liveTreesOfSpecies = [];
             for (int speciesSet = 0; speciesSet < treeSpeciesSet.ActiveSpecies.Count; ++speciesSet)
             {
                 liveTreesOfSpecies.Clear();
@@ -264,7 +264,7 @@ namespace iLand.Output.Sql
                 return; // nothing to do if no fields to log
             }
 
-            List<float> fieldData = new(); //statistics data
+            List<float> fieldData = []; //statistics data
             SummaryStatistics fieldStatistics = new(); // statistcs helper class
             TreeVariableAccessor treeWrapper = new(model.SimulationState);
             ResourceUnitVariableAccessor ruWrapper = new(model.SimulationState);

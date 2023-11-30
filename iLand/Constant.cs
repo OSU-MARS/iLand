@@ -13,8 +13,8 @@ namespace iLand
         public const int EvergreenLeafPhenologyID = 0;
 
         public const float MinimumLightIntensity = 0.02F;
-        public static readonly Vector128<float> MinimumLightIntensity128 = Avx2Extensions.BroadcastScalarToVector128(Constant.MinimumLightIntensity);
-        public static readonly Vector256<float> MinimumLightIntensity256 = Avx2Extensions.BroadcastScalarToVector256(Constant.MinimumLightIntensity);
+        public static readonly Vector128<float> MinimumLightIntensity128 = AvxExtensions.BroadcastScalarToVector128(Constant.MinimumLightIntensity);
+        public static readonly Vector256<float> MinimumLightIntensity256 = AvxExtensions.BroadcastScalarToVector256(Constant.MinimumLightIntensity);
         public const int NoDataInt32 = Int32.MinValue;
         public const float NoDataFloat = Single.NaN;
         public const UInt32 NoDataUInt32 = UInt32.MaxValue;
@@ -68,12 +68,12 @@ namespace iLand
 
         public static class Grid128F
         {
-            public static readonly Vector128<float> LightCellSizeInM = Avx2Extensions.BroadcastScalarToVector128((float)Constant.Grid.LightCellSizeInM);
+            public static readonly Vector128<float> LightCellSizeInM = AvxExtensions.BroadcastScalarToVector128((float)Constant.Grid.LightCellSizeInM);
         }
 
         public static class Grid256F
         {
-            public static readonly Vector256<float> LightCellSizeInM = Avx2Extensions.BroadcastScalarToVector256((float)Constant.Grid.LightCellSizeInM);
+            public static readonly Vector256<float> LightCellSizeInM = AvxExtensions.BroadcastScalarToVector256((float)Constant.Grid.LightCellSizeInM);
         }
 
         public static class LightStamp

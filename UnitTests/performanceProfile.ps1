@@ -1,6 +1,6 @@
 ﻿# $env:COREHOST_TRACE=1
-#$buildDirectory = ([System.IO.Path]::Combine($PSScriptRoot, "bin\\x64\\Debug\\net7.0"))
-$buildDirectory = ([System.IO.Path]::Combine($PSScriptRoot, "bin\\x64\\Release\\net7.0"))
+#$buildDirectory = ([System.IO.Path]::Combine($PSScriptRoot, "bin\\x64\\Debug\\net8.0"))
+$buildDirectory = ([System.IO.Path]::Combine($PSScriptRoot, "bin\\x64\\Release\\net8.0"))
 Import-Module -Name ([System.IO.Path]::Combine($buildDirectory, "iLand.dll"));
 
 # profile unit test version of Elliott State Research Forest project

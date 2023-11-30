@@ -20,14 +20,14 @@ namespace iLand.Input.Tree
         public IndividualTreeReader(string individualTreeFilePath)
             : base(individualTreeFilePath)
         {
-            this.AgeInYears = Array.Empty<UInt16>();
-            this.DbhInCm = Array.Empty<float>();
-            this.GisX = Array.Empty<float>();
-            this.GisY = Array.Empty<float>();
-            this.HeightInM = Array.Empty<float>();
-            this.SpeciesID = Array.Empty<WorldFloraID>();
-            this.StandID = Array.Empty<UInt32>();
-            this.TreeID = Array.Empty<UInt32>();
+            this.AgeInYears = [];
+            this.DbhInCm = [];
+            this.GisX = [];
+            this.GisY = [];
+            this.HeightInM = [];
+            this.SpeciesID = [];
+            this.StandID = [];
+            this.TreeID = [];
         }
 
         public int Capacity

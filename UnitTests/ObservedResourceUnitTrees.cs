@@ -12,8 +12,8 @@ namespace iLand.Test
 
         public ObservedResourceUnitTrees()
         {
-            this.DiameterInCmByTreeID = new();
-            this.HeightInMByTreeID = new();
+            this.DiameterInCmByTreeID = [];
+            this.HeightInMByTreeID = [];
         }
 
         public void ObserveResourceUnit(ResourceUnit resourceUnit)

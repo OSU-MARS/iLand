@@ -51,7 +51,8 @@ namespace iLand.Tool
             "sin", "cos", "tan", "exp", "ln", "sqrt", "min", "max", "if", "incsum", "polygon", "mod", "sigmoid", "rnd", "rndg", "in", "round"
         }.AsReadOnly();
 
-        private static readonly int[] MathFunctionArgumentCount = new int[] { 1, 1, 1, 1, 1, 1, -1, -1, 3, 1, -1, 2, 4, 2, 2, -1, 1 };
+        private static readonly int[] MathFunctionArgumentCount = [ 1, 1, 1, 1, 1, 1, -1, -1, 3, 1, -1, 2, 4, 2, 2, -1, 1 ];
+        private static readonly char[] TokenDelimiters = [ ' ', '\t', '\n', '\r' ];
 
         // inc-sum
         private float incrementalSum;
@@ -94,10 +95,10 @@ namespace iLand.Tool
         {
             this.execListSize = 5; // initial size
             //this.mExternalVariableValues = null;
-            this.linearized = new();
+            this.linearized = [];
             this.token = String.Empty;
             this.tokens = new ExpressionToken[this.execListSize];
-            this.variableNames = new();
+            this.variableNames = [];
             this.variableValues = new float[10];
 
             this.ExpressionString = null;
@@ -728,7 +729,7 @@ namespace iLand.Tool
                 }
                 else
                 {
-                    if (this.token.ToLowerInvariant() == "and" || this.token.ToLowerInvariant() == "or")
+                    if (String.Equals(this.token, "and", StringComparison.OrdinalIgnoreCase) || String.Equals(this.token, "or", StringComparison.OrdinalIgnoreCase))
                     {
                         this.state = ExpressionTokenType.Logical;
                         return ExpressionTokenType.Logical;
@@ -1031,11 +1032,11 @@ namespace iLand.Tool
             }
         }
 
-        /// set the current expression.
-        /// do some preprocessing (e.g. handle the different use of ",", ".", ";")
+        // set the current expression.
+        // do some preprocessing (e.g. handle the different use of ",", ".", ";")
         public void SetExpression(string? expressionString)
         {
-            this.ExpressionString = expressionString == null ? String.Empty : String.Join(' ', expressionString.Trim().Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries));
+            this.ExpressionString = expressionString == null ? String.Empty : String.Join(' ', expressionString.Trim().Split(Expression.TokenDelimiters, StringSplitOptions.RemoveEmptyEntries));
             this.parsePosition = 0;  // set starting point...
 
             for (int index = 0; index < this.variableValues.Length; ++index)

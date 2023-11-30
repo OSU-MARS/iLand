@@ -20,7 +20,7 @@ namespace iLand.Output.Sql
 
         public LandscapeRemovedAnnualOutput()
         {
-            this.removalsByTypeAndSpeciesIndex = new();
+            this.removalsByTypeAndSpeciesIndex = [];
 
             this.includeDeadTrees = false;
             this.includeHarvestTrees = true;

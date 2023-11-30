@@ -74,7 +74,7 @@ namespace iLand.Output.Sql
         {
             this.insertRowSqlText = null;
 
-            this.Columns = new();
+            this.Columns = [];
         }
 
         public void LogYear(Model model, SqliteTransaction transaction)

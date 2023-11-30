@@ -21,8 +21,8 @@ namespace iLand.Tree
         {
             if (capacity == 0)
             {
-                this.LightCellIndexXY = Array.Empty<Point>();
-                this.SpeciesID = Array.Empty<WorldFloraID>();
+                this.LightCellIndexXY = [];
+                this.SpeciesID = [];
             }
             else
             {

@@ -97,10 +97,7 @@ namespace iLand.Tree
 
         private TreeSpecies(TreeSpeciesSet speciesSet, WorldFloraID speciesID, string name, string stampFilePath)
         {
-            if (speciesSet == null)
-            {
-                throw new ArgumentNullException(nameof(speciesSet));
-            }
+            ArgumentNullException.ThrowIfNull(speciesSet);
 
             this.aging = new();
             this.lightIntensityProfiles = new(stampFilePath);

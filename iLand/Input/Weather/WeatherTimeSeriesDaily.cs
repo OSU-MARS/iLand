@@ -14,8 +14,8 @@ namespace iLand.Input.Weather
         public WeatherTimeSeriesDaily(Timestep timestep)
             : base(timestep)
         {
-            this.DayOfMonth = Array.Empty<byte>();
-            this.TemperatureDaytimeMeanMA1 = Array.Empty<float>();
+            this.DayOfMonth = [];
+            this.TemperatureDaytimeMeanMA1 = [];
         }
 
         public override void Resize(int newSize)

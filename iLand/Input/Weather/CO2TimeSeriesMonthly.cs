@@ -11,7 +11,7 @@ namespace iLand.Input.Weather
         public CO2TimeSeriesMonthly()
             : base(Timestep.Monthly)
         {
-            this.CO2ConcentrationInPpm = Array.Empty<float>();
+            this.CO2ConcentrationInPpm = [];
 
             // position time series year indices one year before the first year in the series so that they become valid on
             // the first call to OnStartYear()

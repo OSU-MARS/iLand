@@ -49,7 +49,7 @@ namespace iLand.Input.Weather
                 }
 
                 // gather and copy year, month, precipitation, snow, solar radiation, and maximum and minimum temperatures
-                Span<byte> monthOfYear = stackalloc byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+                Span<byte> monthOfYear = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ];
                 Span<float> precipitationTotalByMonthInMM = stackalloc float[12];
                 Span<float> relativeHumidityMeanByMonth = stackalloc float[12];
                 Span<float> snowTotalByMonthInMM = stackalloc float[12];

@@ -19,7 +19,7 @@ namespace iLand.Tool
         public float Max { get; private set; } // maximum value
 
         public SummaryStatistics()
-            : this(new List<float>())
+            : this([])
         {
         }
 

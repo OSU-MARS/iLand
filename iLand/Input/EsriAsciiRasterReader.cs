@@ -7,6 +7,8 @@ namespace iLand.Input
 {
     public class EsriAsciiRasterReader
     {
+        private static readonly char[] ValueDelimiters = [' ', '\t', '\n', '\r'];
+
         private readonly float[] data;
         private PointF lowerLeftCorner;
         private PointF upperRightCorner;
@@ -44,7 +46,7 @@ namespace iLand.Input
                 {
                     continue;
                 }
-                line = string.Join(' ', line.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries));
+                line = String.Join(' ', line.Split(EsriAsciiRasterReader.ValueDelimiters, StringSplitOptions.RemoveEmptyEntries));
 
                 string key = line[..line.IndexOf(' ')].ToLowerInvariant();
                 if (key.Length > 0 && (char.IsNumber(key[0]) || key[0] == '-'))

@@ -214,9 +214,9 @@ namespace iLand.Tree
         {
             if (capacity == 0)
             {
-                this.DbhDeltaInCm = Array.Empty<float>();
-                this.LightCellIndexXY = Array.Empty<Point>();
-                this.LightStamp = Array.Empty<LightStamp>();
+                this.DbhDeltaInCm = [];
+                this.LightCellIndexXY = [];
+                this.LightStamp = [];
             }
             else
             {

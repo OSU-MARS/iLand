@@ -63,13 +63,13 @@ namespace iLand.Tree
         public SeedDispersal(TreeSpecies species)
         {
             this.externalSeedBaseMap = new();
-            this.externalSeedData = new();
+            this.externalSeedData = [];
             this.externalSeedMap = new();
             this.kernelMastYear = new(); // species specific "seed kernel" (small) for seed years
             this.kernelNonMastYear = new(); // species specific "seed kernel" (small) for non-seed-years
             this.kernelSerotiny = new(); // seed kernel for extra seed rain
-            this.longDispersalDistance = new(); // long distance dispersal distances (e.g. the "rings")
-            this.longDistanceDispersalSeedsByRing = new();  // long distance dispersal # of cells that should be affected in each "ring"
+            this.longDispersalDistance = []; // long distance dispersal distances (e.g. the "rings")
+            this.longDistanceDispersalSeedsByRing = [];  // long distance dispersal # of cells that should be affected in each "ring"
             this.seedMapSerotiny = new(); // seed map that keeps track of serotiny events
             this.sourceMap = new(); // (large) seedmap used to denote the sources
 
@@ -874,7 +874,7 @@ namespace iLand.Tree
 
                 // Debug.WriteLine("processing species list at x = " + x + ", y = " + y + ", " + species.IDs);
                 // we assume pairs of name and fraction
-                List<string> speciesIDs = species.SpeciesIDs.Split(" ").ToList();
+                List<string> speciesIDs = new(species.SpeciesIDs.Split(" "));
                 for (int speciesIndex = 0; speciesIndex < speciesIDs.Count; ++speciesIndex)
                 {
                     WorldFloraID speciesTsn = WorldFloraIDExtensions.Parse(speciesIDs[speciesIndex]);

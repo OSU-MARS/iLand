@@ -24,8 +24,8 @@ namespace iLand.World
 
         public GridRaster10m()
         {
-            this.boundingBoxByRasterizedPolygonID = new();
-            this.resourceUnitsByRasterizedPolygonID = new();
+            this.boundingBoxByRasterizedPolygonID = [];
+            this.resourceUnitsByRasterizedPolygonID = [];
 
             this.Grid = new();
         }
@@ -120,7 +120,7 @@ namespace iLand.World
         /// return a list of all living trees on the area denoted by 'id'
         public List<(TreeListSpatial, List<int>)> GetLivingTreesInStand(UInt32 standID)
         {
-            List<(TreeListSpatial Trees, List<int> LiveTreeIndices)> livingTrees = new();
+            List<(TreeListSpatial Trees, List<int> LiveTreeIndices)> livingTrees = [];
             IReadOnlyCollection<(ResourceUnit, float _)> resourceUnitsInStand = this.resourceUnitsByRasterizedPolygonID[standID];
             foreach ((ResourceUnit ResourceUnit, float _) unitInStand in resourceUnitsInStand)
             {
@@ -128,7 +128,7 @@ namespace iLand.World
                 for (int speciesIndex = 0; speciesIndex < treesBySpeciesID.Count; ++speciesIndex)
                 {
                     TreeListSpatial treesOfSpecies = treesBySpeciesID.Values[speciesIndex];
-                    (TreeListSpatial Trees, List<int> LiveTreeIndices) livingTreesInStand = new(treesOfSpecies, new List<int>());
+                    (TreeListSpatial Trees, List<int> LiveTreeIndices) livingTreesInStand = new(treesOfSpecies, []);
                     for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                     {
                         if ((this.GetPolygonIDFromLightGridIndex(treesOfSpecies.LightCellIndexXY[treeIndex]) == standID) && (treesOfSpecies.IsDead(treeIndex) == false))
@@ -151,7 +151,7 @@ namespace iLand.World
             RectangleF boundingBox = this.boundingBoxByRasterizedPolygonID[rasterizedPolygonID].BoundingBox;
             GridWindowEnumerator<UInt32> gridEnumerator10m = new(this.Grid, boundingBox);
 
-            List<int> gridIndices = new();
+            List<int> gridIndices = [];
             while (gridEnumerator10m.MoveNext())
             {
                 UInt32 cellStandID = gridEnumerator10m.Current;

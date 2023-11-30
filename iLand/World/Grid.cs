@@ -32,7 +32,7 @@ namespace iLand.World
             this.CellSizeInM = 0.0F;
             this.CellsX = 0;
             this.CellsY = 0;
-            this.Data = Array.Empty<T>();
+            this.Data = [];
             this.ProjectExtent = default;
         }
 
@@ -290,18 +290,9 @@ namespace iLand.World
 
         public void Setup(int cellsX, int cellsY, float cellSizeInM)
         {
-            if (cellsX < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(cellsX));
-            }
-            if (cellsY < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(cellsY));
-            }
-            if (cellSizeInM < 0.0F)
-            {
-                throw new ArgumentOutOfRangeException(nameof(cellSizeInM));
-            }
+            ArgumentOutOfRangeException.ThrowIfLessThan(cellsX, 1);
+            ArgumentOutOfRangeException.ThrowIfLessThan(cellsY, 1);
+            ArgumentOutOfRangeException.ThrowIfLessThan(cellSizeInM, 0.0F);
 
             // reuse the data array that's already been allocated if it's large enough
             // If needed, shrinkage of an existing data array can be supported.

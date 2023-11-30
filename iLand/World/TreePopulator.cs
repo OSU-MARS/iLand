@@ -23,8 +23,8 @@ namespace iLand.World
     {
         // evenlist: tentative order of pixel-indices (within a 5x5 grid) used as tree positions.
         // e.g. 12 = centerpixel, 0: upper left corner, ...
-        private static readonly int[] EvenHeightCellPositions = new int[] { 12, 6, 18, 16, 8, 22, 2, 10, 14, 0, 24, 20, 4, 1, 13, 15, 19, 21, 3, 7, 11, 17, 23, 5, 9 };
-        private static readonly int[] UnevenHeightCellPositions = new int[] { 11, 13, 7, 17, 1, 19, 5, 21, 9, 23, 3, 15, 6, 18, 2, 10, 4, 24, 12, 0, 8, 14, 20, 22 };
+        private static readonly int[] EvenHeightCellPositions = [ 12, 6, 18, 16, 8, 22, 2, 10, 14, 0, 24, 20, 4, 1, 13, 15, 19, 21, 3, 7, 11, 17, 23, 5, 9 ];
+        private static readonly int[] UnevenHeightCellPositions = [ 11, 13, 7, 17, 1, 19, 5, 21, 9, 23, 3, 15, 6, 18, 2, 10, 4, 24, 12, 0, 8, 14, 20, 22 ];
 
         // set a constraining height grid (10m resolution)
         private Expression? heightGridResponse; // response function to calculate fitting of pixels with pre-determined height

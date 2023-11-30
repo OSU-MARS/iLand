@@ -50,10 +50,10 @@ namespace iLand.Tree
             this.lightResponseShadeTolerant = new();
             this.relativeHeightModifer = new();
             //this.mSeedDispersal = new();
-            this.treeSpeciesByID = new();
+            this.treeSpeciesByID = [];
 
-            this.ActiveSpecies = new();
-            this.RandomSpeciesOrder = new(); // lazy initialization
+            this.ActiveSpecies = [];
+            this.RandomSpeciesOrder = []; // lazy initialization
             this.ReaderStamps = new(readerStampFilePath);
             this.SqlTableName = sqlTableName;
 

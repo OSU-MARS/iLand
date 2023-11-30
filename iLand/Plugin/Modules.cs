@@ -14,10 +14,10 @@ namespace iLand.Plugin
 
         public Modules()
         {
-            this.disturbanceModules = new();
-            this.mortalityModules = new();
-            this.resourceUnitSetupModules = new();
-            this.waterModules = new();
+            this.disturbanceModules = [];
+            this.mortalityModules = [];
+            this.resourceUnitSetupModules = [];
+            this.waterModules = [];
 
             foreach (IDisturbanceInterface modules in PluginLoader.StaticInstances)
             {

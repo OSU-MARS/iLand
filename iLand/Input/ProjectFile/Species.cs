@@ -21,7 +21,7 @@ namespace iLand.Input.ProjectFile
             this.CO2Response = new();
             this.LightResponse = new();
             this.NitrogenResponseClasses = new();
-            this.Phenology = new();
+            this.Phenology = [];
         }
 
 		protected override void ReadStartElement(XmlReader reader)

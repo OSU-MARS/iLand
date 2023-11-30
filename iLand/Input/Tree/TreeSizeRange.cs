@@ -15,7 +15,7 @@ namespace iLand.Input.Tree
 
         public TreeSizeRange(WorldFloraID treeSpeciesID)
         {
-            SpeciesID = treeSpeciesID;
+            this.SpeciesID = treeSpeciesID;
         }
     }
 }

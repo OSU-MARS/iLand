@@ -30,7 +30,7 @@ namespace iLand.World
             this.lastIndex = grid.IndexXYToIndex(upperRightCellBeyondWindow.X - 1, upperRightCellBeyondWindow.Y - 1);
             if ((this.firstIndex < 0) || (this.lastIndex >= grid.CellCount))
             {
-                throw new ArgumentOutOfRangeException(nameof(cellExtentToRun), "Rectangle extends beyond grid.");
+                throw new ArgumentOutOfRangeException(nameof(projectExtentToEnumerate), "Rectangle extends beyond grid.");
             }
             this.columnsNotInWindow = grid.CellsX - this.columnsInWindow;
 

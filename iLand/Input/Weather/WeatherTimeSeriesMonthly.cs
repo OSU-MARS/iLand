@@ -16,7 +16,7 @@ namespace iLand.Input.Weather
             this.CurrentYearStartIndex = -Constant.Time.MonthsInYear;
             this.NextYearStartIndex = 0;
 
-            this.SnowTotalInMM = Array.Empty<float>();
+            this.SnowTotalInMM = [];
         }
 
         public override void Resize(int newSize)

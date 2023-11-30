@@ -114,8 +114,8 @@ namespace iLand.World
             int lightCellsInCrown = (int)MathF.Round(crownArea / (Constant.Grid.LightCellSizeInM * Constant.Grid.LightCellSizeInM) - 1.0F);
             if (lightCellsInCrown > 0)
             {
-                ReadOnlySpan<int> offsetsX = stackalloc int[] { 1, 1, 0, -1, -1, -1, 0, 1 };
-                ReadOnlySpan<int> offsetsY = stackalloc int[] { 0, 1, 1, 1, 0, -1, -1, -1 };
+                ReadOnlySpan<int> offsetsX = [ 1, 1, 0, -1, -1, -1, 0, 1 ];
+                ReadOnlySpan<int> offsetsY = [ 0, 1, 1, 1, 0, -1, -1, -1 ];
                 int neighbor = model.RandomGenerator.Value!.GetRandomInteger(0, 8);
                 for (; lightCellsInCrown > 0; --lightCellsInCrown)
                 {

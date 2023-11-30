@@ -23,7 +23,7 @@ namespace iLand.Input.ProjectFile
             this.Snags = new();
             this.SaplingsByStandFile = null;
             this.StandRasterFile = null;
-            this.TreeFiles = new();
+            this.TreeFiles = [];
             this.TreeSizeDistribution = "1-x^2";
         }
 

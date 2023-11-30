@@ -55,7 +55,7 @@ namespace iLand.Extensions
 
         private static ArrayData WrapInArrayData(IArrowType dataType, Memory<byte> memory, int length)
         {
-            return new ArrayData(dataType, length, 0, 0, new ArrowBuffer[] { ArrowBuffer.Empty, new ArrowBuffer(memory) }, Array.Empty<ArrayData>());
+            return new ArrayData(dataType, length, 0, 0, [ ArrowBuffer.Empty, new ArrowBuffer(memory) ], []);
         }
 
         public static FloatArray WrapInFloat(Memory<byte> memory)

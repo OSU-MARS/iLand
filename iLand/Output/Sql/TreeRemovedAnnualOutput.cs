@@ -18,7 +18,7 @@ namespace iLand.Output.Sql
         public TreeRemovedAnnualOutput()
         {
             this.treeFilter = new();
-            this.removedTreesByResourceUnit = new();
+            this.removedTreesByResourceUnit = [];
 
             this.Name = "Tree Removed Output";
             this.TableName = "treeRemoved";
@@ -65,7 +65,7 @@ namespace iLand.Output.Sql
 
             if (this.removedTreesByResourceUnit.TryGetValue(trees.ResourceUnit, out (TreeListSpatial Trees, List<MortalityCause> Removals) removedTreesOfSpecies) == false)
             {
-                removedTreesOfSpecies = new(new TreeListSpatial(trees.ResourceUnit, trees.Species, trees.Capacity), new List<MortalityCause>());
+                removedTreesOfSpecies = new(new TreeListSpatial(trees.ResourceUnit, trees.Species, trees.Capacity), []);
                 this.removedTreesByResourceUnit.Add(trees.ResourceUnit, removedTreesOfSpecies);
             }
 

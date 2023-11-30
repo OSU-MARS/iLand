@@ -2,15 +2,11 @@
 
 namespace iLand.Simulation
 {
-    public class DominantHeightBuffer : Grid<float>
+    public class DominantHeightBuffer(bool isTorus) 
+        : Grid<float>(isTorus ? Constant.Grid.HeightCellsPerRUWidth : Constant.Grid.DominantHeightFieldBufferWidthInHeightCells,
+                      isTorus ? Constant.Grid.HeightCellsPerRUWidth : Constant.Grid.DominantHeightFieldBufferWidthInHeightCells,
+                      Constant.Grid.HeightCellSizeInM)
     {
-        public DominantHeightBuffer(bool isTorus)
-            : base(isTorus ? Constant.Grid.HeightCellsPerRUWidth : Constant.Grid.DominantHeightFieldBufferWidthInHeightCells,
-                   isTorus ? Constant.Grid.HeightCellsPerRUWidth : Constant.Grid.DominantHeightFieldBufferWidthInHeightCells,
-                   Constant.Grid.HeightCellSizeInM)
-        {
-        }
-
         public void ApplyToHeightGrid(Grid<float> vegetationHeightGrid, int bufferLightOriginX, int bufferLightOriginY)
         {
             int bufferHeightOriginX = bufferLightOriginX / Constant.Grid.LightCellsPerHeightCellWidth;

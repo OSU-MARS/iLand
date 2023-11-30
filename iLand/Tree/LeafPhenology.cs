@@ -30,10 +30,7 @@ namespace iLand.Tree
 
         protected LeafPhenology(int id)
         {
-            if (id < Constant.EvergreenLeafPhenologyID)
-            {
-                throw new ArgumentOutOfRangeException(nameof(id));
-            }
+            ArgumentOutOfRangeException.ThrowIfLessThan(id, Constant.EvergreenLeafPhenologyID);
 
             this.ID = id;
             this.LeafOnFractionByMonth = new float[Constant.Time.MonthsInYear]; // left as 0 since populated in RunYear()

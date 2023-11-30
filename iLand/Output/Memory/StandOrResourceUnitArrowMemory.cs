@@ -46,8 +46,8 @@ namespace iLand.Output.Memory
             this.treeSpeciesFieldType = treeSpeciesFieldType;
 
             // create schema
-            List<Field> fields = new()
-            {
+            List<Field> fields =
+            [
                 new(idFieldName, Int32Type.Default, false),
                 new("year", Int16Type.Default, false),
                 new("species", treeSpeciesFieldType, false),
@@ -75,7 +75,7 @@ namespace iLand.Output.Memory
                 new("regenerationNitrogen", FloatType.Default, false),
                 new("stemCarbon", FloatType.Default, false),
                 new("stemNitrogen", FloatType.Default, false)
-            };
+            ];
 
             Dictionary<string, string> metadata = new()
             {
@@ -231,8 +231,8 @@ namespace iLand.Output.Memory
             this.stemNitrogen = new byte[capacityInRecords * sizeof(float)];
 
             // repackage arrays into Arrow record batch
-            IArrowArray[] arrowArrays = new IArrowArray[]
-            {
+            IArrowArray[] arrowArrays =
+            [
                 ArrowArrayExtensions.WrapInInt32(this.id),
                 ArrowArrayExtensions.WrapInInt16(this.calendarYear),
                 // not supported in Arrow 12.0.0
@@ -262,7 +262,7 @@ namespace iLand.Output.Memory
                 ArrowArrayExtensions.WrapInFloat(this.regenerationNitrogen),
                 ArrowArrayExtensions.WrapInFloat(this.stemCarbon),
                 ArrowArrayExtensions.WrapInFloat(this.stemNitrogen)
-            };
+            ];
 
             this.RecordBatches.Add(new(this.schema, arrowArrays, capacityInRecords));
         }

@@ -22,7 +22,7 @@ namespace iLand.Extensions
         {
             if (newSize == 0)
             {
-                return Array.Empty<T>();
+                return [];
             }
 
             T[] resizedArray = new T[newSize];

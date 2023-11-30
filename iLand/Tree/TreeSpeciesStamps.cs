@@ -29,7 +29,7 @@ namespace iLand.Tree
             this.dbhClasses = 62; // class count, see StampContainer.GetKey(): classes are smaller at smaller DBH
             this.heightDiameterClasses = 17; // class count: highest ratio: 185-195? 195-205?
             this.lightStampsByDbhAndHeightDiameterRatio = new LightStamp[this.dbhClasses, this.heightDiameterClasses];
-            this.lightStampsWithTreeSizes = new();
+            this.lightStampsWithTreeSizes = [];
 
             this.Description = String.Empty;
 

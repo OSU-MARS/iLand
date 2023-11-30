@@ -48,11 +48,11 @@ namespace iLand.Tree
         {
             if (capacity == 0)
             {
-                this.AgeInYears = Array.Empty<UInt16>();
-                this.DbhInCm = Array.Empty<float>();
-                this.HeightInM = Array.Empty<float>();
-                this.StandID = Array.Empty<UInt32>();
-                this.TreeID = Array.Empty<UInt32>();
+                this.AgeInYears = [];
+                this.DbhInCm = [];
+                this.HeightInM = [];
+                this.StandID = [];
+                this.TreeID = [];
             }
             else
             {

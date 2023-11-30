@@ -40,7 +40,7 @@ namespace iLand.Simulation
             }
         }
 
-        public unsafe void ApplyToLightGrid128(Grid<float> lightGrid, int bufferLightOriginX, int bufferLightOriginY)
+        public unsafe void ApplyToLightGridVex128(Grid<float> lightGrid, int bufferLightOriginX, int bufferLightOriginY)
         {
             fixed (float* bufferCells = &this.Data[0], lightGridCells = &lightGrid.Data[0])
             {
@@ -78,7 +78,7 @@ namespace iLand.Simulation
             }
         }
 
-        public unsafe void ApplyToLightGrid256(Grid<float> lightGrid, int bufferLightOriginX, int bufferLightOriginY)
+        public unsafe void ApplyToLightGridAvx(Grid<float> lightGrid, int bufferLightOriginX, int bufferLightOriginY)
         {
             fixed (float* bufferCells = &this.Data[0], lightGridCells = &lightGrid.Data[0])
             {

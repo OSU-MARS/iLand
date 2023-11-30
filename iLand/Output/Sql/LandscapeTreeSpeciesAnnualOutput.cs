@@ -18,7 +18,7 @@ namespace iLand.Output.Sql
         public LandscapeTreeSpeciesAnnualOutput()
         {
             this.filter = new();
-            this.treeStatisticsBySpecies = new();
+            this.treeStatisticsBySpecies = [];
 
             this.Name = "Landscape aggregates per species";
             this.TableName = "landscape";

@@ -4,7 +4,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace iLand.Extensions
 {
-    public static class Avx2Extensions
+    public static class AvxExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Vector128<float> BroadcastScalarToVector128(float value)

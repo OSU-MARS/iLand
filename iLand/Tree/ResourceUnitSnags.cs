@@ -57,7 +57,7 @@ namespace iLand.Tree
             this.dbhLowerBreak = lowerDbhBreak;
             this.dbhHigherBreak = upperDbhBreak;
             this.standingWoodyToSoil = new();
-            this.toStandingWoodyByClass = new CarbonNitrogenPool[3] { new CarbonNitrogenPool(), new CarbonNitrogenPool(), new CarbonNitrogenPool() };
+            this.toStandingWoodyByClass = [ new CarbonNitrogenPool(), new CarbonNitrogenPool(), new CarbonNitrogenPool() ];
             this.totalSnagInput = new();
 
             this.AverageDbhByClass = new float[3];
@@ -69,7 +69,7 @@ namespace iLand.Tree
             this.NumberOfSnagsByClass = new float[3];
             this.BranchesAndCoarseRootsByYear = new CarbonNitrogenPool[5];
             this.ResourceUnit = resourceUnit;
-            this.StandingWoodyDebrisByClass = new CarbonNitrogenPool[] { new CarbonNitrogenPool(), new CarbonNitrogenPool(), new CarbonNitrogenPool() };
+            this.StandingWoodyDebrisByClass = [ new CarbonNitrogenPool(), new CarbonNitrogenPool(), new CarbonNitrogenPool() ];
             this.TimeSinceDeathByClass = new float[3];
 
             this.FluxToAtmosphere = new();

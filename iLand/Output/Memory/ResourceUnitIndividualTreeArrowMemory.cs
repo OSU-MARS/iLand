@@ -38,8 +38,8 @@ namespace iLand.Output.Memory
             this.treeSpeciesFieldType = treeSpeciesFieldType;
 
             // create schema
-            List<Field> fields = new()
-            {
+            List<Field> fields =
+            [
                 new("year", Int16Type.Default, false),
                 new("standID", Int32Type.Default, false),
                 new("species", treeSpeciesFieldType, false),
@@ -57,7 +57,7 @@ namespace iLand.Output.Memory
                 new("fineRootMass", FloatType.Default, false),
                 new("foliageMass", FloatType.Default, false),
                 new("stemMass", FloatType.Default, false)
-            };
+            ];
 
             Dictionary<string, string> metadata = new()
             {
@@ -174,8 +174,8 @@ namespace iLand.Output.Memory
             this.stemMassInKg = new byte[batchLength * sizeof(float)];
 
             // repackage arrays into Arrow record batch
-            IArrowArray[] arrowArrays = new IArrowArray[]
-            {
+            IArrowArray[] arrowArrays =
+            [
                 ArrowArrayExtensions.WrapInInt16(this.calendarYear),
                 ArrowArrayExtensions.WrapInInt32(this.standID),
                 // not supported in Arrow 12.0
@@ -195,7 +195,7 @@ namespace iLand.Output.Memory
                 ArrowArrayExtensions.WrapInFloat(this.fineRootMassInKg),
                 ArrowArrayExtensions.WrapInFloat(this.foliageMassInKg),
                 ArrowArrayExtensions.WrapInFloat(this.stemMassInKg)
-            };
+            ];
 
             this.RecordBatches.Add(new(this.schema, arrowArrays, batchLength));
         }

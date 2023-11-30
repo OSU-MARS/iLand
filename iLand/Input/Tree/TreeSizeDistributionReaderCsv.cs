@@ -13,7 +13,7 @@ namespace iLand.Input.Tree
         public TreeSizeDistributionReaderCsv(string treeFilePath, TreeSizeDistributionCsvHeader treeSizeHeader, CsvFile treeFile)
             : base(treeFilePath)
         {
-            this.TreeSizeDistribution = new();
+            this.TreeSizeDistribution = [];
 
             int lineNumber = 0;
             string? mostRecentSpeciesAbbreviation = null;

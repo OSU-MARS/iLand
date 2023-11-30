@@ -28,8 +28,8 @@ namespace iLand.Input.Weather
             this.CurrentYearStartIndex = -1;
             this.NextYearStartIndex = -1;
 
-            this.Month = Array.Empty<byte>();
-            this.Year = Array.Empty<Int16>(); // can be shortened to one element per year if needed
+            this.Month = [];
+            this.Year = []; // can be shortened to one element per year if needed
         }
 
         public virtual void Resize(int newSize)

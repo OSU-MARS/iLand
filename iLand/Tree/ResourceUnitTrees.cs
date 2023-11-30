@@ -44,7 +44,7 @@ namespace iLand.Tree
             this.TotalLeafArea = 0.0F;
             this.TotalLightWeightedLeafArea = 0.0F;
             this.TreeSpeciesSet = treeSpeciesSet;
-            this.TreesBySpeciesID = new();
+            this.TreesBySpeciesID = [];
 
             for (int index = 0; index < treeSpeciesSet.Count; ++index)
             {
@@ -206,7 +206,7 @@ namespace iLand.Tree
             lightBuffers.Enqueue(lightBuffer);
         }
 
-        public unsafe void ApplyLightIntensityPattern128(Landscape landscape, ConcurrentQueue<LightBuffer> lightBuffers)
+        public unsafe void ApplyLightIntensityPatternVex128(Landscape landscape, ConcurrentQueue<LightBuffer> lightBuffers)
         {
             if (lightBuffers.TryDequeue(out LightBuffer? lightBuffer) == false)
             {
@@ -218,8 +218,8 @@ namespace iLand.Tree
             int bufferLightOriginX = resourceUnitLightGridOrigin.X - Constant.Grid.MaxLightStampSizeInLightCells / 2;
             int bufferLightOriginY = resourceUnitLightGridOrigin.Y - Constant.Grid.MaxLightStampSizeInLightCells / 2;
             Vector128<float> dominantHeightInM = Vector128<float>.Zero; // height of z*u,v on the current position
-            Vector128<float> one = Avx2Extensions.BroadcastScalarToVector128(1.0F);
-            Vector128<int> four = Avx2Extensions.BroadcastScalarToVector128(Simd128.Width32);
+            Vector128<float> one = AvxExtensions.BroadcastScalarToVector128(1.0F);
+            Vector128<int> four = AvxExtensions.BroadcastScalarToVector128(Simd128.Width32);
             Vector128<int> zeroOneTwoThree = Vector128.Create(0, 1, 2, 3);
             Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
             fixed (float* lightBufferCells = &lightBuffer.Data[0], vegetationHeightCells = &vegetationHeightGrid.Data[0])
@@ -231,8 +231,8 @@ namespace iLand.Tree
                     {
                         Point treeLightCellIndexXY = treesOfSpecies.LightCellIndexXY[treeIndex];
                         LightStamp treeLightStamp = treesOfSpecies.LightStamp[treeIndex]!;
-                        Vector128<float> treeHeightInM = Avx2Extensions.BroadcastScalarToVector128(treesOfSpecies.HeightInM[treeIndex]);
-                        Vector128<float> treeOpacity = Avx2Extensions.BroadcastScalarToVector128(treesOfSpecies.Opacity[treeIndex]);
+                        Vector128<float> treeHeightInM = AvxExtensions.BroadcastScalarToVector128(treesOfSpecies.HeightInM[treeIndex]);
+                        Vector128<float> treeOpacity = AvxExtensions.BroadcastScalarToVector128(treesOfSpecies.Opacity[treeIndex]);
 
                         fixed (float* stampCells = &treeLightStamp.Data[0])
                         {
@@ -252,7 +252,7 @@ namespace iLand.Tree
                                 int stampRowStartIndex = stampDataSize * stampIndexY;
                                 float *stampRowEndAddress = stampCells + stampRowStartIndex + stampSize;
                                 Vector128<int> stampIndexX128 = zeroOneTwoThree;
-                                Vector128<int> stampIndexY128 = Avx2Extensions.BroadcastScalarToVector128(stampIndexY);
+                                Vector128<int> stampIndexY128 = AvxExtensions.BroadcastScalarToVector128(stampIndexY);
                                 for (float* bufferAddress = lightBufferCells + bufferRowStartIndex, stampAddress = stampCells + stampRowStartIndex; stampAddress < stampRowEndAddress; bufferAddress += Simd128.Width32, stampAddress += Simd128.Width32)
                                 {
                                     // light grid index:   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 ... (cycle repeats)
@@ -292,8 +292,8 @@ namespace iLand.Tree
                                     Vector128<float> iXYJ = Avx.LoadVector128(stampAddress); // tree's light stamp value
                                     Vector128<float> zStarXYJ = Avx.Subtract(treeHeightInM, treeLightStamp.GetDistanceToCenterInM(stampIndexX128, stampIndexY128)); // distance to center = height (45 degree line)
                                     zStarXYJ = Avx.Max(zStarXYJ, Vector128<float>.Zero);
-                                    byte zStarBlend = (byte)Avx.MoveMask(Avx.CompareLessThan(zStarXYJ, dominantHeightInM));
-                                    Vector128<float> zStarMin = Avx.Blend(one, Avx.Divide(zStarXYJ, dominantHeightInM), zStarBlend); // tree influence height
+                                    Vector128<float> zStarBlend = Avx.CompareLessThan(zStarXYJ, dominantHeightInM);
+                                    Vector128<float> zStarMin = Avx.BlendVariable(one, Avx.Divide(zStarXYJ, dominantHeightInM), zStarBlend); // tree influence height
                                     Vector128<float> iStarXYJ = Avx.Subtract(one, Avx.Multiply(treeOpacity, Avx.Multiply(iXYJ, zStarMin))); // this tree's Beer-Lambert contribution to shading of light grid cell
                                     iStarXYJ = Avx.Max(iStarXYJ, Constant.MinimumLightIntensity128); // limit minimum value
 
@@ -313,12 +313,12 @@ namespace iLand.Tree
 
             lock (landscape.LightGrid)
             {
-                lightBuffer.ApplyToLightGrid128(landscape.LightGrid, bufferLightOriginX, bufferLightOriginY);
+                lightBuffer.ApplyToLightGridVex128(landscape.LightGrid, bufferLightOriginX, bufferLightOriginY);
             }
             lightBuffers.Enqueue(lightBuffer);
         }
 
-        public unsafe void ApplyLightIntensityPattern256(Landscape landscape, ConcurrentQueue<LightBuffer> lightBuffers)
+        public unsafe void ApplyLightIntensityPatternAvx(Landscape landscape, ConcurrentQueue<LightBuffer> lightBuffers)
         {
             if (lightBuffers.TryDequeue(out LightBuffer? lightBuffer) == false)
             {
@@ -330,8 +330,8 @@ namespace iLand.Tree
             int bufferLightOriginX = resourceUnitLightGridOrigin.X - Constant.Grid.MaxLightStampSizeInLightCells / 2;
             int bufferLightOriginY = resourceUnitLightGridOrigin.Y - Constant.Grid.MaxLightStampSizeInLightCells / 2;
             Vector256<float> dominantHeightInM = Vector256<float>.Zero; // height of z*u,v on the current position
-            Vector256<float> one = Avx2Extensions.BroadcastScalarToVector256(1.0F);
-            Vector256<int> eight = Avx2Extensions.BroadcastScalarToVector256(Simd256.Width32);
+            Vector256<float> one = AvxExtensions.BroadcastScalarToVector256(1.0F);
+            Vector256<int> eight = AvxExtensions.BroadcastScalarToVector256(Simd256.Width32);
             Vector256<int> zeroOneTwoThreeFourFiveSixSeven = Vector256.Create(0, 1, 2, 3, 4, 5, 6, 7);
             Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
             fixed (float* lightBufferCells = &lightBuffer.Data[0], vegetationHeightCells = &vegetationHeightGrid.Data[0])
@@ -343,8 +343,8 @@ namespace iLand.Tree
                     {
                         Point treeLightCellIndexXY = treesOfSpecies.LightCellIndexXY[treeIndex];
                         LightStamp treeLightStamp = treesOfSpecies.LightStamp[treeIndex]!;
-                        Vector256<float> treeHeightInM = Avx2Extensions.BroadcastScalarToVector256(treesOfSpecies.HeightInM[treeIndex]);
-                        Vector256<float> treeOpacity = Avx2Extensions.BroadcastScalarToVector256(treesOfSpecies.Opacity[treeIndex]);
+                        Vector256<float> treeHeightInM = AvxExtensions.BroadcastScalarToVector256(treesOfSpecies.HeightInM[treeIndex]);
+                        Vector256<float> treeOpacity = AvxExtensions.BroadcastScalarToVector256(treesOfSpecies.Opacity[treeIndex]);
 
                         fixed (float* stampCells = &treeLightStamp.Data[0])
                         {
@@ -380,7 +380,7 @@ namespace iLand.Tree
                                 int stampRowStartIndex = stampDataSize * stampIndexY;
                                 float* stampRowEndAddress256 = stampCells + stampRowStartIndex + stampSizeSimd256;
                                 Vector256<int> stampIndexX256 = zeroOneTwoThreeFourFiveSixSeven;
-                                Vector256<int> stampIndexY256 = Avx2Extensions.BroadcastScalarToVector256(stampIndexY);
+                                Vector256<int> stampIndexY256 = AvxExtensions.BroadcastScalarToVector256(stampIndexY);
                                 for (float* bufferAddress = lightBufferCells + bufferRowStartIndex, stampAddress = stampCells + stampRowStartIndex; stampAddress < stampRowEndAddress256; bufferAddress += Simd256.Width32, stampAddress += Simd256.Width32)
                                 {
                                     // light grid index:   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 ... (cycle repeats)
@@ -431,8 +431,8 @@ namespace iLand.Tree
                                     Vector256<float> iXYJ = Avx.LoadVector256(stampAddress); // tree's light stamp value
                                     Vector256<float> zStarXYJ = Avx.Subtract(treeHeightInM, treeLightStamp.GetDistanceToCenterInM(stampIndexX256, stampIndexY256)); // distance to center = height (45 degree line)
                                     zStarXYJ = Avx.Max(zStarXYJ, Vector256<float>.Zero);
-                                    byte zStarBlend = (byte)Avx.MoveMask(Avx.CompareLessThan(zStarXYJ, dominantHeightInM));
-                                    Vector256<float> zStarMin = Avx.Blend(one, Avx.Divide(zStarXYJ, dominantHeightInM), zStarBlend); // tree influence height
+                                    Vector256<float> zStarBlend = Avx.CompareLessThan(zStarXYJ, dominantHeightInM);
+                                    Vector256<float> zStarMin = Avx.BlendVariable(one, Avx.Divide(zStarXYJ, dominantHeightInM), zStarBlend); // tree influence height
                                     Vector256<float> iStarXYJ = Avx.Subtract(one, Avx.Multiply(treeOpacity, Avx.Multiply(iXYJ, zStarMin))); // this tree's Beer-Lambert contribution to shading of light grid cell
                                     iStarXYJ = Avx.Max(iStarXYJ, Constant.MinimumLightIntensity256); // limit minimum value
 
@@ -494,9 +494,9 @@ namespace iLand.Tree
                                     Vector128<int> stampIndexY128 = stampIndexY256.GetLower();
                                     Vector128<float> zStarXYJ = Avx.Subtract(treeHeightInM.GetLower(), treeLightStamp.GetDistanceToCenterInM(stampIndexX128, stampIndexY128)); // distance to center = height (45 degree line)
                                     zStarXYJ = Avx.Max(zStarXYJ, Vector128<float>.Zero);
-                                    byte zStarBlend = (byte)Avx.MoveMask(Avx.CompareLessThan(zStarXYJ, dominantHeightInM128));
+                                    Vector128<float> zStarBlend = Avx.CompareLessThan(zStarXYJ, dominantHeightInM128);
                                     Vector128<float> one128 = one.GetLower();
-                                    Vector128<float> zStarMin = Avx.Blend(one128, Avx.Divide(zStarXYJ, dominantHeightInM128), zStarBlend); // tree influence height
+                                    Vector128<float> zStarMin = Avx.BlendVariable(one128, Avx.Divide(zStarXYJ, dominantHeightInM128), zStarBlend); // tree influence height
                                     Vector128<float> iStarXYJ = Avx.Subtract(one128, Avx.Multiply(treeOpacity.GetLower(), Avx.Multiply(iXYJ, zStarMin))); // this tree's Beer-Lambert contribution to shading of light grid cell
                                     iStarXYJ = Avx.Max(iStarXYJ, Constant.MinimumLightIntensity128); // limit minimum value
 
@@ -517,7 +517,7 @@ namespace iLand.Tree
 
             lock (landscape.LightGrid)
             {
-                lightBuffer.ApplyToLightGrid256(landscape.LightGrid, bufferLightOriginX, bufferLightOriginY);
+                lightBuffer.ApplyToLightGridAvx(landscape.LightGrid, bufferLightOriginX, bufferLightOriginY);
             }
             lightBuffers.Enqueue(lightBuffer);
         }

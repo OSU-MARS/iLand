@@ -39,8 +39,8 @@ namespace iLand.Output.Memory
             this.treeSpeciesFieldType = treeSpeciesFieldType;
 
             // create schema
-            List<Field> fields = new()
-            {
+            List<Field> fields =
+            [
                 new("resourceUnit", Int32Type.Default, false),
                 new("species", treeSpeciesFieldType, false),
                 new("year", Int16Type.Default, false),
@@ -55,7 +55,7 @@ namespace iLand.Output.Memory
                 new("soilWaterModifier", FloatType.Default, false),
                 new("temperatureModifier", FloatType.Default, false),
                 new("vpdModifier", FloatType.Default, false)
-            };
+            ];
 
             Dictionary<string, string> metadata = new()
             {
@@ -119,7 +119,7 @@ namespace iLand.Output.Memory
             ArrowMemory.Fill(this.resourceUnitID, resourceUnitID, startIndexInRecordBatch, monthsToCopy);
             ArrowMemory.Fill(this.treeSpeciesIndices, this.treeSpeciesFieldType, treeSpeciesCode, startIndexInRecordBatch, monthsToCopy);
 
-            Span<byte> monthsOfYear = stackalloc byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+            Span<byte> monthsOfYear = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 ];
             int yearsInTimeSeries = monthsToCopy / 12;
             for (int simulationYear = 0, yearStartIndex = startIndexInRecordBatch; simulationYear < yearsInTimeSeries; ++calendarYear, ++simulationYear, yearStartIndex += Constant.Time.MonthsInYear)
             {
@@ -161,8 +161,8 @@ namespace iLand.Output.Memory
             this.vpdModifier = new byte[batchLength * sizeof(float)];
 
             // repackage arrays into Arrow record batch
-            IArrowArray[] arrowArrays = new IArrowArray[]
-            {
+            IArrowArray[] arrowArrays =
+            [
                 ArrowArrayExtensions.WrapInInt32(this.resourceUnitID),
                 // not supported in Apache 9.0.0
                 // ArrowArrayExtensions.BindStringTable256(this.treeSpeciesIndices, treeSpecies),
@@ -179,7 +179,7 @@ namespace iLand.Output.Memory
                 ArrowArrayExtensions.WrapInFloat(this.soilWaterModifier),
                 ArrowArrayExtensions.WrapInFloat(this.temperatureModifier),
                 ArrowArrayExtensions.WrapInFloat(this.vpdModifier)
-            };
+            ];
 
             this.RecordBatches.Add(new(this.schema, arrowArrays, batchLength));
         }

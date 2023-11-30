@@ -24,12 +24,12 @@ namespace iLand.Input.Weather
         protected WeatherTimeSeries(Timestep timestep)
             : base(timestep)
         {
-            this.PrecipitationTotalInMM = Array.Empty<float>();
-            this.SolarRadiationTotal = Array.Empty<float>();
-            this.TemperatureDaytimeMean = Array.Empty<float>();
-            this.TemperatureMax = Array.Empty<float>();
-            this.TemperatureMin = Array.Empty<float>();
-            this.VpdMeanInKPa = Array.Empty<float>();
+            this.PrecipitationTotalInMM = [];
+            this.SolarRadiationTotal = [];
+            this.TemperatureDaytimeMean = [];
+            this.TemperatureMax = [];
+            this.TemperatureMin = [];
+            this.VpdMeanInKPa = [];
         }
 
         public int GetTimestepsPerYear()

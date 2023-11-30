@@ -33,10 +33,10 @@ namespace iLand.World
         {
             this.CurrentDataYear = -1; // start with -1 as the first call to NextYear() will go to year 0
             this.DoRandomSampling = projectFile.World.Weather.RandomSamplingEnabled;
-            this.TreeSpeciesPhenology = new();
+            this.TreeSpeciesPhenology = [];
             this.RandomListIndex = -1;
-            this.RandomYearList = new();
-            this.SampledYears = new();
+            this.RandomYearList = [];
+            this.SampledYears = [];
             this.YearsToLoad = projectFile.World.Weather.DailyWeatherChunkSizeInYears;
 
             this.DaytimeMeanTemperatureByMonth = new float[Constant.Time.MonthsInYear];

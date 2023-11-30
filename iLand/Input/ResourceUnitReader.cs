@@ -21,7 +21,7 @@ namespace iLand.Input
             this.MinimumCenterCoordinateX = Single.MaxValue;
             this.MinimumCenterCoordinateY = Single.MaxValue;
 
-            this.Environments = Array.Empty<ResourceUnitEnvironment>();
+            this.Environments = [];
         }
 
         public int Capacity

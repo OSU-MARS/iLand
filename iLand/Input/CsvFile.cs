@@ -39,24 +39,24 @@ namespace iLand.Input
             }
 
             // detect separator
-            int tabIndex = header.IndexOf('\t');
-            int semicolonIndex = header.IndexOf(';');
-            int commaIndex = header.IndexOf(',');
-            int spaceIndex = header.IndexOf(' ');
+            bool tabIndex = header.Contains('\t');
+            bool semicolonIndex = header.Contains(';');
+            bool commaIndex = header.Contains(',');
+            bool spaceIndex = header.Contains(' ');
             char separator;
-            if (tabIndex != -1)
+            if (tabIndex)
             {
                 separator = '\t';
             }
-            else if (semicolonIndex != -1)
+            else if (semicolonIndex)
             {
                 separator = ';';
             }
-            else if (commaIndex != -1)
+            else if (commaIndex)
             {
                 separator = ',';
             }
-            else if (spaceIndex != -1)
+            else if (spaceIndex)
             {
                 separator = ' ';
             }
@@ -66,8 +66,7 @@ namespace iLand.Input
             }
 
             // parse header
-            this.Columns = new();
-            this.Columns.AddRange(header.Split(separator, StringSplitOptions.None)); // C++ iLand removes \ characters here for an undocumented reason
+            this.Columns = new(header.Split(separator, StringSplitOptions.None)); // C++ iLand removes \ characters here for an undocumented reason
             this.splitString = new(separator, this.Columns.Count, stream.Length);
         }
 

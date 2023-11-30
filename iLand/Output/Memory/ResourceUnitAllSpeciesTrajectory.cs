@@ -1,13 +1,7 @@
-﻿using iLand.Tree;
-
-namespace iLand.Output.Memory
+﻿namespace iLand.Output.Memory
 {
     // for now, a shim class for object model consistency
-    public class ResourceUnitAllSpeciesTrajectory : StandOrResourceUnitTrajectory
+    public class ResourceUnitAllSpeciesTrajectory(int initialCapacityInYears) : StandOrResourceUnitTrajectory(initialCapacityInYears)
     {
-        public ResourceUnitAllSpeciesTrajectory(int initialCapacityInYears)
-            : base(initialCapacityInYears)
-        {
-        }
     }
 }

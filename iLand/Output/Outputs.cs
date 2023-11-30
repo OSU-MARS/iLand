@@ -38,14 +38,14 @@ namespace iLand.Output
             this.isDisposed = false;
             this.sqlCommitIntervalInYears = 10; // 
             this.sqlDatabaseConnection = null; // initialized in Setup()
-            this.sqlOutputs = new();
+            this.sqlOutputs = [];
             this.sqlOutputTransaction = null; // managed in LogYear()
-            this.standStatisticsByPartition = Array.Empty<ResourceUnitToStandStatisticsConverter>();
-            this.standStatisticsForCurrentYear = new();
+            this.standStatisticsByPartition = [];
+            this.standStatisticsForCurrentYear = [];
 
             this.LandscapeRemovedSql = null;
-            this.ResourceUnitTrajectories = Array.Empty<ResourceUnitTrajectory>();
-            this.StandTrajectoriesByID = new();
+            this.ResourceUnitTrajectories = [];
+            this.StandTrajectoriesByID = [];
             this.TreeRemovedSql = null;
 
             // memory outputs

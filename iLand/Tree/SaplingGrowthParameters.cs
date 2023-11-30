@@ -25,7 +25,7 @@ namespace iLand.Tree
             this.MaxStressYears = 3;
             this.ReinekeR = 1450.0F;
             this.ReferenceRatio = 1.0F;
-            this.RepresentedClasses = new();
+            this.RepresentedClasses = [];
             this.SproutGrowth = 0.0F;
             this.StressThreshold = 0.1F;
         }

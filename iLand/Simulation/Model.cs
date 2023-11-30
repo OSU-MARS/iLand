@@ -226,14 +226,14 @@ namespace iLand.Simulation
                         Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
                         {
                             ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
-                            treesOnResourceUnit.ApplyLightIntensityPattern128(landscape, lightBuffers);
+                            treesOnResourceUnit.ApplyLightIntensityPatternVex128(landscape, lightBuffers);
                         });
                         break;
                     case 256:
                         Parallel.For(0, landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
                         {
                             ResourceUnitTrees treesOnResourceUnit = landscape.ResourceUnits[resourceUnitIndex].Trees;
-                            treesOnResourceUnit.ApplyLightIntensityPattern256(landscape, lightBuffers);
+                            treesOnResourceUnit.ApplyLightIntensityPatternAvx(landscape, lightBuffers);
                         });
                         break;
                     default:

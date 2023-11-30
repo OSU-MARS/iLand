@@ -132,7 +132,7 @@ namespace iLand.Tool
             }
         }
 
-        private static Exception ParseError(string expression)
+        private static ArgumentOutOfRangeException ParseError(string expression)
         {
             return new ArgumentOutOfRangeException(nameof(expression), "Expression '" + expression + "' doesn't match the format expected for a height:diameter ratio bound.");
         }

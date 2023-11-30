@@ -32,7 +32,7 @@ namespace iLand.Simulation
             this.removalFractionFoliage = 0.0F;
             this.removalFractionBranch = 0.0F;
             this.removalFractionStem = 1.0F;
-            this.treesInMostRecentlyLoadedStand = new();
+            this.treesInMostRecentlyLoadedStand = [];
         }
 
         // return number of trees currently in list
@@ -55,7 +55,7 @@ namespace iLand.Simulation
         public static int KillRandomTreesAboveRetentionThreshold(Model model, int treesToRetain)
         {
             AllTreesEnumerator allTreeEnumerator = new(model.Landscape);
-            List<(TreeListSpatial Trees, int TreeIndex)> livingTrees = new();
+            List<(TreeListSpatial Trees, int TreeIndex)> livingTrees = [];
             while (allTreeEnumerator.MoveNextLiving())
             {
                 livingTrees.Add(new(allTreeEnumerator.CurrentTrees, allTreeEnumerator.CurrentTreeIndex));
@@ -334,7 +334,7 @@ namespace iLand.Simulation
 
         public int FilterByTreeID(List<int> treeIDlist)
         {
-            List<(TreeListSpatial Trees, List<int>)> filteredTrees = new();
+            List<(TreeListSpatial Trees, List<int>)> filteredTrees = [];
             int treesSelected = 0;
             foreach ((TreeListSpatial Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
             {
@@ -349,7 +349,7 @@ namespace iLand.Simulation
                         {
                             if (treeIndicesInSpecies == null)
                             {
-                                treeIndicesInSpecies = new();
+                                treeIndicesInSpecies = [];
                                 filteredTrees.Add(new(trees, treeIndicesInSpecies));
                             }
 

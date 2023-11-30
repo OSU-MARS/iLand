@@ -8,7 +8,7 @@ namespace iLand.Extensions
         {
             if (dictionary.TryGetValue(key, out List<TValue>? valueList) == false)
             {
-                valueList = new();
+                valueList = [];
                 dictionary.Add(key, valueList);
             }
             valueList.Add(value);
