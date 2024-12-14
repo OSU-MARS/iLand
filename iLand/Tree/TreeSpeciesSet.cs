@@ -15,7 +15,7 @@ namespace iLand.Tree
     /** A SpeciesSet acts as a container for individual Species objects. In iLand, theoretically,
         multiple species sets can be used in parallel.
         */
-    public class TreeSpeciesSet
+    public class TreeSpeciesSet // C++: SpeciesSet
     {
         private const int RandomSets = 20;
 
@@ -31,8 +31,6 @@ namespace iLand.Tree
         private readonly Expression lightResponseShadeIntolerant; // light response function for the the most shade tolerant species
         private readonly Expression lightResponseShadeTolerant; // light response function for the most shade intolerant species
         private readonly Expression relativeHeightModifer; // function to modfiy LRI during read
-        /// container holding the seed maps
-        //private readonly List<SeedDispersal> mSeedDispersal;
 
         public List<TreeSpecies> ActiveSpecies { get; private init; } // list of species that are "active" (flag active in database)
         public List<int> RandomSpeciesOrder { get; private init; }
@@ -71,6 +69,11 @@ namespace iLand.Tree
                 }
                 TreeSpecies species = Tree.TreeSpecies.Load(projectFile, speciesReader, this);
                 Debug.Assert(species.Active);
+                if (this.treeSpeciesByID.ContainsKey(species.WorldFloraID))
+                {
+                    throw new SqliteException("Error loading species: " + species.Name + " with World Flora ID " + species.WorldFloraID + " appears multiple times!", (int)SqliteErrorCode.Error);
+                }
+
                 this.ActiveSpecies.Add(species);
                 this.treeSpeciesByID.Add(species.WorldFloraID, species);
             }
@@ -137,6 +140,16 @@ namespace iLand.Tree
             get { return this.treeSpeciesByID.Count; }
         }
 
+        ///< clear the seed maps that collect leaf area for saplings
+        public void ClearSaplingSeedMap() // C++: SpeciesSet::clearSaplingSeedMap()
+        {
+            for (int speciesIndex = 0; speciesIndex < this.ActiveSpecies.Count; ++speciesIndex)
+            {
+                TreeSpecies species = this.ActiveSpecies[speciesIndex];
+                species.SeedDispersal?.ClearSaplingMap();
+            }
+        }
+
         public void CreateRandomSpeciesOrder(RandomGenerator randomGenerator)
         {
             this.RandomSpeciesOrder.Clear();
@@ -162,7 +175,7 @@ namespace iLand.Tree
         /// <summary>
         /// Find the CO₂ growth modifier for the ambient CO₂, water modifier, and nitrogen modifer given.
         /// </summary>
-        /// <param name="atmosphericCO2">atmospheric CO₂ concentration at this simulation timestep (ppm)</param>
+        /// <param name="atmosphericCO2inPpm">atmospheric CO₂ concentration at this simulation timestep (ppm)</param>
         /// <param name="nitrogenModifier">nitrogen response of the species (yearly)</param>
         /// <param name="soilWaterModifier">soil water response (mean value for a month)</param>
         /// <returns></returns>
@@ -173,20 +186,20 @@ namespace iLand.Tree
         /// 
         /// Friedlingstein P, Fung I, Holland E et a. 1995. On the contribution of CO₂ fertilization to the missing biospheric sink. Global
         ///   Biogeochemical Cycles 9(4):541-556. https://doi.org/10.1029/95GB02381
-        /// See also: http://iland-model.org/CO2+response
+        /// See also: https://iland-model.org/CO2+response
         /// </remarks>
-        public float GetCarbonDioxideModifier(float atmosphericCO2, float nitrogenModifier, float soilWaterModifier)
+        public float GetCarbonDioxideModifier(float atmosphericCO2inPpm, float nitrogenModifier, float soilWaterModifier) // C++: co2Response()
         {
             Debug.Assert((nitrogenModifier >= 0.0F) && (nitrogenModifier <= 1.000001F) && 
                          (soilWaterModifier >= 0.0F) && (soilWaterModifier <= 1.000001F));
-            if ((atmosphericCO2 < this.co2compensationPoint) || (nitrogenModifier == 0.0F))
+            if ((atmosphericCO2inPpm < this.co2compensationPoint) || (nitrogenModifier == 0.0F))
             {
                 // atmospheric concentration below compensation point -> modifier would be negative
                 // nitrogen = 0 -> r becomes 1 -> divide by zero in k2
                 return 0.0F;
             }
 
-            float beta = this.co2beta0 * (2.0F - soilWaterModifier) * nitrogenModifier;
+            float beta = this.co2beta0 * (2.0F - soilWaterModifier) * nitrogenModifier; // C++: co2Beta()
             float r = 1.0F + Constant.Math.Ln2 * beta; // NPP increase for a doubling of atmospheric CO2 (Eq. 17)
 
             // fertilization function (Farquhar 1980) based on Michaelis-Menten expressions
@@ -196,14 +209,14 @@ namespace iLand.Tree
             float k2 = (2.0F * this.co2baseConcentration - this.co2compensationPoint - r * deltaCO2) / ((r - 1.0F) * deltaCO2 * (2.0F * this.co2baseConcentration - this.co2compensationPoint)); // Eq. 16
             float k1 = (1.0F + k2 * deltaCO2) / deltaCO2;
 
-            float co2modifier = this.co2p0 * k1 * (atmosphericCO2 - this.co2compensationPoint) / (1 + k2 * (atmosphericCO2 - this.co2compensationPoint)); // Eq. 16
+            float co2modifier = this.co2p0 * k1 * (atmosphericCO2inPpm - this.co2compensationPoint) / (1 + k2 * (atmosphericCO2inPpm - this.co2compensationPoint)); // Eq. 16
             return co2modifier;
         }
 
         /** calculates the lightResponse based on a value for LRI and the species lightResponseClass.
             LightResponse is classified from 1 (very shade inolerant) and 5 (very shade tolerant) and interpolated for values between 1 and 5.
             Returns a value between 0..1
-            @sa http://iland-model.org/allocation#reserve_and_allocation_to_stem_growth */
+            @sa https://iland-model.org/allocation#reserve_and_allocation_to_stem_growth */
         public float GetLightResponse(float lightResourceIndex, float lightResponseClass)
         {
             float intolerant = this.lightResponseShadeIntolerant.Evaluate(lightResourceIndex);

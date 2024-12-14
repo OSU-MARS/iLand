@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -51,6 +51,9 @@ void CSVFile::addToScriptEngine(QJSEngine &engine)
 
     // the script name for the object is "CSVFile".
     //engine.globalObject().setProperty("CSVFile", cc_class);
+    QJSValue jsMetaObject = engine.newQMetaObject(&CSVFile::staticMetaObject);
+    engine.globalObject().setProperty("CSVFile", jsMetaObject);
+
 }
 
 CSVFile::CSVFile(QObject *)
@@ -71,25 +74,18 @@ void CSVFile::clear()
 
 }
 
-bool CSVFile::loadFromString(const QString &content)
+bool CSVFile::processRows()
 {
-    clear();
-    // split into rows: use either with windows or unix style delimiter
-    if (content.left(1000).contains("\r\n"))
-        mRows = content.split("\r\n", QString::SkipEmptyParts);
-    else
-        mRows = content.split("\n", QString::SkipEmptyParts);
-
     if (mRows.count()==0)
         return false;
 
     mIsEmpty = false;
     // trimming of whitespaces is a problem
     // when having e.g. tabs as delimiters...
-//    if (!mFixedWidth) {
-//        for (int i=0;i<mRows.count();i++)
-//            mRows[i] = mRows[i].trimmed();
-//    }
+    //    if (!mFixedWidth) {
+    //        for (int i=0;i<mRows.count();i++)
+    //            mRows[i] = mRows[i].trimmed();
+    //    }
     // drop comments (i.e. lines at the beginning that start with '#', also ignore '<' (are in tags of picus-ini-files)
     while (!mRows.isEmpty() && (mRows.front().startsWith('#') || mRows.front().startsWith('<')))
         mRows.pop_front();
@@ -112,20 +108,20 @@ bool CSVFile::loadFromString(const QString &content)
         if (c_tab > c_semi && c_tab>c_comma) mSeparator="\t";
         if (c_semi > c_tab && c_semi>c_comma) mSeparator=";";
         if (c_comma > c_tab && c_comma>c_semi) mSeparator=",";
-//        if (mSeparator==" ") {
-//            for (int i=0;i<mRows.count();i++)
-//                mRows[i] = mRows[i].simplified();
-//            first = mRows.first();
-//        }
+        //        if (mSeparator==" ") {
+        //            for (int i=0;i<mRows.count();i++)
+        //                mRows[i] = mRows[i].simplified();
+        //            first = mRows.first();
+        //        }
     } // !mFlat
 
     // captions
     if (mHasCaptions) {
-        mCaptions = first.split(mSeparator, QString::KeepEmptyParts).replaceInStrings("\"", ""); // drop "-characters
+        mCaptions = first.split(mSeparator, Qt::KeepEmptyParts).replaceInStrings("\"", ""); // drop "-characters
         mRows.pop_front(); // drop the first line
     } else {
         // create pseudo captions
-        mCaptions = first.split(mSeparator, QString::KeepEmptyParts);
+        mCaptions = first.split(mSeparator, Qt::KeepEmptyParts);
         for (int i=0;i<mCaptions.count();i++)
             mCaptions[i] = QString("c%1").arg(i);
     }
@@ -136,15 +132,36 @@ bool CSVFile::loadFromString(const QString &content)
     return true;
 
 }
+
+bool CSVFile::loadFromString(const QString &content)
+{
+    clear();
+    // split into rows: use either with windows or unix style delimiter
+    if (content.left(1000).contains("\r\n"))
+        mRows = content.split("\r\n", Qt::SkipEmptyParts);
+    else
+        mRows = content.split("\n", Qt::SkipEmptyParts);
+
+    return processRows();
+}
+
+bool CSVFile::loadFromStringList(QStringList content)
+{
+    clear();
+    mRows = content;
+
+    return processRows();
+}
+
 bool CSVFile::loadFile(const QString &fileName)
 {
-    QString content = Helper::loadTextFile(fileName);
+    QStringList content = Helper::loadTextFileLines(fileName);
     if (content.isEmpty()) {
         qDebug() << "CSVFile::loadFile" << fileName << "does not exist or is empty.";
         mIsEmpty = true;
         return false;
     }
-    return loadFromString(content);
+    return loadFromStringList(content);
 }
 QVariantList CSVFile::values(const int row) const
 {
@@ -227,7 +244,7 @@ QVariant CSVFile::value(const int row, const int col) const
                     if (s.at(lastsep)=='\"' && s.at(i-1)=='\"')
                         result = s.mid(lastsep+1,i-lastsep-2); // ignore "
                     else
-                        result = s.mid(lastsep,i-lastsep);
+                        result = s.mid(lastsep,i-lastsep).trimmed(); // remove whitespace
 
                     return result;
                 }
@@ -262,6 +279,17 @@ QVariant CSVFile::row(const int row)
 
     QVariant result = mRows[row];
     return result;
+}
+
+QJSValue CSVFile::jsValue(const int row, const int col) const
+{
+    QVariant val = value(row, col);
+    bool ok;
+    int ival = val.toInt(&ok);
+    if(ok) return QJSValue(ival);
+    double dval = val.toDouble(&ok);
+    if (ok) return QJSValue(dval);
+    return QJSValue(val.toString());
 }
 
 bool CSVFile::openFile(const QString &fileName)
@@ -331,8 +359,8 @@ void CSVFile::saveFile(const QString &fileName)
     }
     QTextStream str(&file);
     if (mHasCaptions)
-        str << mCaptions.join(mSeparator) << endl;
+        str << mCaptions.join(mSeparator) << Qt::endl;
     foreach(const QString s, mRows)
-        str << s << endl;
+        str << s << Qt::endl;
 }
 

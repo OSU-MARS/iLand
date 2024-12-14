@@ -1,13 +1,13 @@
-﻿using iLand.Extensions;
+﻿// C++/core/{ establishment.h, establishment.cpp }
+using iLand.Extensions;
 using iLand.Input;
-using iLand.Input.ProjectFile;
 using iLand.Input.Weather;
 using iLand.Tool;
 using iLand.World;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Weather = iLand.World.Weather;
+using Model = iLand.Simulation.Model;
 
 namespace iLand.Tree
 {
@@ -20,7 +20,7 @@ namespace iLand.Tree
     /// - availability of seeds: derived from the seed-maps per species <see cref="SeedDispersal"/>
     /// - quality of the abiotic environment (TACA model): calculations are performed here, based on weather and establishment modifiers
     /// - quality of the biotic environment, mainly light from LIF-values
-    /// http://iland-model.org/establishment
+    /// https://iland-model.org/establishment
     ///    
     /// TACA (tree and climate assessment) model:
     /// Nitshke CR, Innes JL. 2008. A tree and climate assessment tool for modelling ecosystem response to climate change.Ecological Modelling
@@ -31,25 +31,28 @@ namespace iLand.Tree
         // number of days that meet TACA chilling requirements (-5 to +5 °C) carried over from previous calendar year in northern hemisphere sites
         // Most likely zero in southern hemisphere sites.
         private float chillingDaysCarriedOverFromPreviousCalendarYear;
+        // TODO: remove unused
+        // private readonly List<float> soilWaterPotentialCircularBuffer;
 
-        private readonly List<float> soilWaterPotentialCircularBuffer;
+        ///< the growing degree days (species specific)
+        public float GrowingDegreeDays { get; private set; } // growing degree days, C++ growingDegreeDays(), mGDD
 
         public SaplingEstablishment()
         {
             this.chillingDaysCarriedOverFromPreviousCalendarYear = Constant.NoDataInt32;
-            this.soilWaterPotentialCircularBuffer = new(14); // for two week moving average, kPa
+            // this.soilWaterPotentialCircularBuffer = new(14); // for two week moving average, kPa
         }
 
         /** Estimate the abiotic environment effects on a species' seedling establishment on the given resource unit.
          The model is closely based on the TACA approach of Nitschke and Innes (2008), Ecol. Model 210, 263-277
-         more details: http://iland-model.org/establishment#abiotic_environment
+         more details: https://iland-model.org/establishment#abiotic_environment
          a model mockup in R: script_establishment.r
          */
-        public float CalculateFrostAndWaterModifier(Project projectFile, Landscape landscape, Weather weather, ResourceUnitTreeSpecies ruSpecies)
+        public float CalculateFrostAndWaterModifier(Model model, Weather weather, ResourceUnitTreeSpecies ruSpecies) // C++: Establishment::calculateAbioticEnvironment()
         {
             // make sure that required calculations (e.g. watercycle are already performed)
             // TODO: why is CalculateBiomassGrowthForYear() called from three places?
-            ruSpecies.CalculateBiomassGrowthForYear(projectFile, landscape, fromSaplingEstablishmentOrGrowth: true); // calculate the 3-PG module and run the water cycle (this is done only if that did not happen up to now)
+            ruSpecies.CalculateBiomassGrowthForYear(model, fromSaplingEstablishmentOrGrowth: true); // calculate the 3-PG module and run the water cycle (this is done only if that did not happen up to now)
 
             // get start of fall chilling days: leaf off for deciduous species, 10.5 hour day length for evergreen species
             // TODO: why is a 10.5 hour day defined as the end of the growing seasion for all evergreens?
@@ -92,11 +95,19 @@ namespace iLand.Tree
             float chillingDays = this.chillingDaysCarriedOverFromPreviousCalendarYear;
             this.chillingDaysCarriedOverFromPreviousCalendarYear = 0;
 
+            // should we use microclimate temperatures?
+            bool use_micro_clim = model.Project.Model.Microclimate.Enabled && model.Project.Model.Microclimate.EstablishmentEffect;
+            Microclimate? microclimate = ruSpecies.ResourceUnit.Microclimate;
+            if (use_micro_clim && (microclimate == null))
+            {
+                throw new InvalidOperationException("Project enables microclimate establishment effects but resource unit " + ruSpecies.ResourceUnit.ID + "'s microclimate is not instantiated.");
+            }
+
             bool budsHaveBurst = false;
             SaplingEstablishmentParameters establishment = ruSpecies.Species.SaplingEstablishment;
             float frostDaysAfterBudburst = 0.0F; // frost days after budburst
             float frostFreeDaysInYear = 0.0F;
-            float growingDegreeDays = 0.0F;
+            this.GrowingDegreeDays = 0.0F;
             float growingDegreeDaysBudburst = 0.0F;
             bool tacaChillingDaysReached = false; // total chilling requirement
             bool tacaColdFatalityTemperatureNotReached = true; // minimum temperature threshold
@@ -105,8 +116,22 @@ namespace iLand.Tree
                 int leafOffTimeSeriesIndex = SaplingEstablishment.GetLeafOffDailyWeatherIndex(weather, leafPhenology);
                 for (int weatherDayIndex = weatherTimeSeries.CurrentYearStartIndex; weatherDayIndex < weatherTimeSeries.NextYearStartIndex; ++weatherDayIndex)
                 {
-                    // if winterkill temperature is reached seedling establishment probability becomes zero
                     float minTemperature = weatherTimeSeries.TemperatureMin[weatherDayIndex];
+                    float daytimeMeanTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherDayIndex];
+                    if (use_micro_clim)
+                    {
+                        // use microclimate calculations to modify the temperature for establishment
+                        Debug.Assert(microclimate != null);
+                        int monthIndex = weatherTimeSeries.Month[weatherDayIndex] - 1;
+                        float mc_min_buf = microclimate.GetMinimumMicroclimateBuffering(monthIndex);
+                        float mc_max_buf = microclimate.GetMaximumMicroclimateBuffering(monthIndex);
+                        float mc_mean_buf = (mc_min_buf + mc_max_buf) / 2.0F;
+
+                        minTemperature += mc_min_buf;
+                        daytimeMeanTemperature += mc_mean_buf;
+                    }
+
+                    // if winterkill temperature is reached seedling establishment probability becomes zero
                     if (minTemperature < establishment.ColdFatalityTemperature)
                     {
                         tacaColdFatalityTemperatureNotReached = false;
@@ -120,7 +145,6 @@ namespace iLand.Tree
                     }
 
                     // chilling days
-                    float daytimeMeanTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherDayIndex];
                     if (SaplingEstablishment.IsChillingDay(daytimeMeanTemperature))
                     {
                         ++chillingDays;
@@ -142,7 +166,7 @@ namespace iLand.Tree
                         if (tacaChillingDaysReached && (daytimeMeanTemperature > establishment.GrowingDegreeDaysBaseTemperature))
                         {
                             float growingDegrees = daytimeMeanTemperature - establishment.GrowingDegreeDaysBaseTemperature;
-                            growingDegreeDays += growingDegrees;
+                            this.GrowingDegreeDays += growingDegrees;
                             growingDegreeDaysBudburst += growingDegrees;
                         }
                         // if day-frost occurs, the growing degree day counter for budburst is reset
@@ -163,6 +187,7 @@ namespace iLand.Tree
             }
             else if (weatherTimeSeries.Timestep == Timestep.Monthly)
             {
+                // monthly TODO: microclimate + this.mGDD
                 bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();
                 (int leafOffMonthIndex, int leafOnEndDayOfMonth) = SaplingEstablishment.GetLeafOffMonthlyWeatherIndices(weather, leafPhenology, isLeapYear);
                 for (int monthIndex = 0, weatherMonthIndex = weatherTimeSeries.CurrentYearStartIndex; weatherMonthIndex < weatherTimeSeries.NextYearStartIndex; ++monthIndex, ++weatherMonthIndex)
@@ -212,7 +237,7 @@ namespace iLand.Tree
                             {
                                 growingDegreeDaysInMonth *= fractionOfMonthAfterChillingDaysReached;
                             }
-                            growingDegreeDays += growingDegreeDaysInMonth;
+                            this.GrowingDegreeDays += growingDegreeDaysInMonth;
                             growingDegreeDaysBudburst += growingDegreeDaysInMonth;
                         }
                         // if a frost day occurs before budburst, the growing degree day counter for budburst is reset
@@ -257,8 +282,7 @@ namespace iLand.Tree
                 // frost free days in vegetation period
                 bool tacaFrostFreeDaysReached = frostFreeDaysInYear > establishment.MinimumFrostFreeDays;
                 // growing degree day requirement
-                bool tacaGrowingDegreeDaysInRange = (growingDegreeDays > establishment.MinimumGrowingDegreeDays) && (growingDegreeDays < establishment.MaximumGrowingDegreeDays);
-
+                bool tacaGrowingDegreeDaysInRange = (this.GrowingDegreeDays > establishment.MinimumGrowingDegreeDays) && (this.GrowingDegreeDays < establishment.MaximumGrowingDegreeDays);
                 if (tacaFrostFreeDaysReached && tacaGrowingDegreeDaysInRange)
                 {
                     // negative effect of frost events after bud birst
@@ -268,10 +292,12 @@ namespace iLand.Tree
                         frostModifier = MathF.Pow(establishment.FrostTolerance, MathF.Sqrt(frostDaysAfterBudburst));
                     }
                     // reduction in establishment due to water limitation and drought induced mortality
-                    int daysInYear = DateTimeExtensions.GetDaysInYear(weatherTimeSeries.IsCurrentlyLeapYear());
-                    float waterModifier = this.GetMinimumLeafOnSoilWaterModifier(ruSpecies, leafPhenology.LeafOnStartDayOfYearIndex, leafPhenology.GetLeafOnDurationInDays(), daysInYear);
+                    float waterModifier = SaplingEstablishment.GetMinimumLeafOnSoilWaterModifier(ruSpecies);
+                    // negative effect of a thick soil organic layer on regeneration [1: no effect]
+                    float frozenGroundModifier = SaplingEstablishment.GetSoilOrganicLayerDepthModifier(ruSpecies);
+
                     // combine water and frost effects multiplicatively
-                    frostAndWaterModifier = frostModifier * waterModifier;
+                    frostAndWaterModifier = frostModifier * waterModifier * frozenGroundModifier;
                 }
             }
 
@@ -328,63 +354,41 @@ namespace iLand.Tree
             return DateTimeExtensions.DayOfYearToDayOfMonth(leafOnEndDayOfYearIndex, isLeapYear);
         }
 
-        private float GetMinimumLeafOnSoilWaterModifier(ResourceUnitTreeSpecies ruSpecies, int leafOnStart, int leafOnEnd, int daysInYear)
+        /// calculate effect of water limitation on establishment, returns scalar [0..1]
+        private static float GetMinimumLeafOnSoilWaterModifier(ResourceUnitTreeSpecies ruSpecies) // C++: Establishment::calculateWaterLimitation()
         {
             // return 1.0 if water limitation is disabled
-            if (Single.IsNaN(ruSpecies.Species.SaplingEstablishment.DroughtMortalityPsiInMPa))
+            float psi_min = ruSpecies.Species.SaplingEstablishment.DroughtMortalityPsiInMPa;
+            if (Single.IsNaN(psi_min))
             {
                 return 1.0F;
             }
 
-            // two week (14 days) running average of matric potential on the resource unit
-            float currentPsiSum = 0.0F; // kPa
-            for (int sumInitializationIndex = 0; sumInitializationIndex < this.soilWaterPotentialCircularBuffer.Count; ++sumInitializationIndex)
+            // get the psi min of the current year
+            float psi_mpa = ruSpecies.ResourceUnit.WaterCycle.GetEstablishmentPsiMin(ruSpecies.Species.LeafPhenologyID);
+
+            // calculate the response of the species to this value of psi (see also Species::soilwaterResponse())
+            float result = Maths.Limit((psi_mpa - psi_min) / (-0.015F - psi_min), 0.0F, 1.0F);
+            return result;
+        }
+
+        /// limitation if the depth of the soil organic layer is high (e.g. boreal forests)
+        private static float GetSoilOrganicLayerDepthModifier(ResourceUnitTreeSpecies ruSpecies)
+        {
+            float est_SOLlimit = ruSpecies.Species.SaplingEstablishment.SOL_thickness;
+            if (est_SOLlimit == 0.0F)
             {
-                currentPsiSum += this.soilWaterPotentialCircularBuffer[sumInitializationIndex];
+                return 1.0F; // no limitation for the current species
+            }
+            Permafrost? ruPermafrost = ruSpecies.ResourceUnit.WaterCycle.Permafrost;
+            if (ruPermafrost == null)
+            {
+                return 1.0F; // no limitation if permafrost module is disabled
             }
 
-            float miniumumLeafOnMovingAveragePsiInKPa = Single.MaxValue; // kPa
-            ResourceUnitWaterCycle waterCycle = ruSpecies.ResourceUnit.WaterCycle;
-            for (int dayOfYear = 0, movingAverageIndex = 0; dayOfYear < daysInYear; ++dayOfYear)
-            {
-                // running average: remove oldest item, add new item in a ringbuffer
-                float soilWaterPotentialForDay = waterCycle.SoilWaterPotentialByWeatherTimestepInYear[dayOfYear];
-                if (this.soilWaterPotentialCircularBuffer.Count <= movingAverageIndex)
-                {
-                    this.soilWaterPotentialCircularBuffer.Add(soilWaterPotentialForDay);
-                }
-                else
-                {
-                    currentPsiSum -= this.soilWaterPotentialCircularBuffer[movingAverageIndex];
-                    this.soilWaterPotentialCircularBuffer[movingAverageIndex] = soilWaterPotentialForDay;
-                }
-                currentPsiSum += this.soilWaterPotentialCircularBuffer[movingAverageIndex];
-
-                if (dayOfYear >= leafOnStart && dayOfYear <= leafOnEnd)
-                {
-                    float currentPsiAverage = currentPsiSum / this.soilWaterPotentialCircularBuffer.Count;
-                    miniumumLeafOnMovingAveragePsiInKPa = MathF.Min(miniumumLeafOnMovingAveragePsiInKPa, currentPsiAverage);
-                }
-
-                // move to next value in the circular buffer
-                ++movingAverageIndex;
-                if (movingAverageIndex >= this.soilWaterPotentialCircularBuffer.Count)
-                {
-                    movingAverageIndex = 0;
-                }
-            }
-
-            if (miniumumLeafOnMovingAveragePsiInKPa > 1000.0F)
-            {
-                return 1.0F; // invalid leaf on period?
-            }
-
-            // calculate the response of the species to this value of psi (see also Species.GetSoilWaterModifier())
-            float minimumEstablishmentPsiMPa = ruSpecies.Species.SaplingEstablishment.DroughtMortalityPsiInMPa;
-            float minimumLeafOnMovingAveragePsiInMPa = 0.001F * miniumumLeafOnMovingAveragePsiInKPa; // convert to MPa
-            float waterModifier = Maths.Limit((minimumLeafOnMovingAveragePsiInMPa - minimumEstablishmentPsiMPa) / (-0.015F - minimumEstablishmentPsiMPa), 0.0F, 1.0F);
-
-            return waterModifier;
+            float depthInCm = 100.0F * (ruPermafrost.GetMossLayerThicknessInM() + ruPermafrost.SoilOrganicLayerDepthInM); // to cm
+            float effect = MathF.Exp(-est_SOLlimit * depthInCm);
+            return effect;
         }
 
         private static bool IsChillingDay(float daytimeMeanTemperature)

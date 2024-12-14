@@ -3,7 +3,8 @@
     public static class DateTimeExtensions
     {
         private static readonly int[] DaysInNonLeapYearMonth = [ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
-        private static readonly int[] MidmonthDayIndicesNonLeapYear = [ 16, 45, 74, 105, 136, 166, 196, 228, 258, 288, 319, 350 ]; // see iLand.R
+        private static readonly int[] FirstDayOfMonthIndicesNonLeapYear = [ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 ];
+        private static readonly int[] MidmonthDayIndicesNonLeapYear = [ 16, 45, 74, 105, 136, 166, 196, 228, 258, 288, 319, 350 ]; // see time series.R
 
         public static (int monthIndex, int dayOfMonthIndex) DayOfYearToDayOfMonth(int dayOfYearIndex, bool isLeapYear)
         {
@@ -393,6 +394,26 @@
                 ++midmonthDayIndex;
             }
             return midmonthDayIndex;
+        }
+
+        public static (int firstDayOfMonthIndex, int firstDayOfNextMonthIndex) ToDayIndices(int monthIndex, bool isLeapYear)
+        {
+            int firstDayOfMonthIndex = DateTimeExtensions.FirstDayOfMonthIndicesNonLeapYear[monthIndex];
+            int firstDayOfNextMonthIndex = DateTimeExtensions.FirstDayOfMonthIndicesNonLeapYear[monthIndex + 1];
+            if (isLeapYear)
+            {
+                if (monthIndex > 1) // February, March, ...
+                {
+                    if (monthIndex > 2) // March, April, ...
+                    {
+                        ++firstDayOfMonthIndex;
+                    }
+
+                    ++firstDayOfNextMonthIndex;
+                }
+            }
+
+            return (firstDayOfMonthIndex, firstDayOfNextMonthIndex);
         }
     }
 }

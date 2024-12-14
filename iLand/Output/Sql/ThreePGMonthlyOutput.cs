@@ -1,4 +1,5 @@
-﻿using iLand.Simulation;
+﻿// C++/output/{ productionout.h, productionout.cpp }
+using iLand.Simulation;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
@@ -16,15 +17,17 @@ namespace iLand.Output.Sql
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnitID());
             this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
-            this.Columns.Add(new("month", "month of year", SqliteType.Integer));
-            this.Columns.Add(new("tempModifier", "monthly average of daily modifier value temperature", SqliteType.Real));
-            this.Columns.Add(new("waterModifier", "monthly average of daily modifier value soil water", SqliteType.Real));
-            this.Columns.Add(new("vpdModifier", "monthly vapour pressure deficit modifier.", SqliteType.Real));
-            this.Columns.Add(new("co2Modifier", "monthly response value for ambient co2.", SqliteType.Real));
-            this.Columns.Add(new("nitrogenModifier", "yearly modifier value nitrogen", SqliteType.Real));
-            this.Columns.Add(new("radiation_m2", "global radiation PAR in MJ per m2 and month", SqliteType.Real));
-            this.Columns.Add(new("utilizableRadiation_m2", "utilizable PAR in MJ per m2 and month (sum of daily rad*min(respVpd,respWater,respTemp))", SqliteType.Real));
-            this.Columns.Add(new("GPP_kg_m2", "GPP (without Aging) in kg Biomass/m2", SqliteType.Real));
+            this.Columns.Add(new("month", "Month of year.", SqliteType.Integer));
+            this.Columns.Add(new("CO2_beta", "Monthly value for effective beta (CO₂ fertilization). β = β₀ * fN * (2-fSW)", SqliteType.Real));
+            this.Columns.Add(new("phenology", "Proportion of the month (0..1) that is within the vegetation period (and thus it is assumed that leaves are out).", SqliteType.Real));
+            this.Columns.Add(new("tempModifier", "Monthly average of daily modifier value temperature", SqliteType.Real));
+            this.Columns.Add(new("waterModifier", "Monthly average of daily modifier value soil water", SqliteType.Real));
+            this.Columns.Add(new("vpdModifier", "Monthly vapour pressure deficit modifier.", SqliteType.Real));
+            this.Columns.Add(new("co2Modifier", "Monthly response value for ambient co2.", SqliteType.Real));
+            this.Columns.Add(new("nitrogenModifier", "Yearly modifier value nitrogen", SqliteType.Real));
+            this.Columns.Add(new("radiation_m2", "Global photosynthetically active radiation (PAR), MJ/m².", SqliteType.Real));
+            this.Columns.Add(new("utilizableRadiation_m2", "Utilizable PAR, MJ/m² (sum of daily rad*min(respVpd,respWater,respTemp)).", SqliteType.Real));
+            this.Columns.Add(new("GPP_kg_m2", "GPP (without aging) in kg biomass/m².", SqliteType.Real));
         }
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
@@ -35,20 +38,26 @@ namespace iLand.Output.Sql
                 {
                     ResourceUnitTreeSpeciesGrowth growth = ruSpecies.TreeGrowth;
                     ResourceUnitTreeSpeciesGrowthModifiers growthModifiers = growth.Modifiers;
+                    LeafPhenology phenology = resourceUnit.Weather.GetPhenology(ruSpecies.Species.LeafPhenologyID);
+
                     for (int monthIndex = 0; monthIndex < Constant.Time.MonthsInYear; ++monthIndex)
                     {
+                        float atmosphericCO2 = model.Landscape.CO2ByMonth.CO2ConcentrationInPpm[monthIndex];
+                        float soilWaterModifier = growthModifiers.SoilWaterModifierByMonth[monthIndex];
                         insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
                         insertRow.Parameters[1].Value = ruSpecies.ResourceUnit.ID;
                         insertRow.Parameters[2].Value = ruSpecies.Species.WorldFloraID;
                         insertRow.Parameters[3].Value = monthIndex + 1; // month
-                        insertRow.Parameters[4].Value = growthModifiers.TemperatureModifierByMonth[monthIndex];
-                        insertRow.Parameters[5].Value = growthModifiers.SoilWaterModifierByMonth[monthIndex];
-                        insertRow.Parameters[6].Value = growthModifiers.VpdModifierByMonth[monthIndex];
-                        insertRow.Parameters[7].Value = growthModifiers.CO2ModifierByMonth[monthIndex];
-                        insertRow.Parameters[8].Value = growthModifiers.NitrogenModifierForYear;
-                        insertRow.Parameters[9].Value = growthModifiers.SolarRadiationTotalByMonth[monthIndex];
-                        insertRow.Parameters[10].Value = growth.UtilizableParByMonth[monthIndex];
-                        insertRow.Parameters[11].Value = growth.MonthlyGpp[monthIndex];
+                        insertRow.Parameters[4].Value = ruSpecies.Species.SpeciesSet.GetCarbonDioxideModifier(atmosphericCO2, growthModifiers.NitrogenModifierForYear, soilWaterModifier);
+                        insertRow.Parameters[5].Value = phenology.LeafOnFractionByMonth[monthIndex];
+                        insertRow.Parameters[6].Value = growthModifiers.TemperatureModifierByMonth[monthIndex];
+                        insertRow.Parameters[7].Value = soilWaterModifier;
+                        insertRow.Parameters[8].Value = growthModifiers.VpdModifierByMonth[monthIndex];
+                        insertRow.Parameters[9].Value = growthModifiers.CO2ModifierByMonth[monthIndex];
+                        insertRow.Parameters[10].Value = growthModifiers.NitrogenModifierForYear;
+                        insertRow.Parameters[11].Value = growthModifiers.SolarRadiationTotalByMonth[monthIndex];
+                        insertRow.Parameters[12].Value = growth.UtilizableParByMonth[monthIndex];
+                        insertRow.Parameters[13].Value = growth.MonthlyGpp[monthIndex];
                         insertRow.ExecuteNonQuery();
                     }
                 }

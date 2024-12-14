@@ -1,4 +1,4 @@
-﻿using iLand.Input.ProjectFile;
+﻿// C++/output/{ dynamicstandout.h, dynamicstandout.cpp }
 using iLand.Simulation;
 using iLand.Tool;
 using iLand.Tree;
@@ -9,15 +9,17 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Project = iLand.Input.ProjectFile.Project;
 using Model = iLand.Simulation.Model;
 
 namespace iLand.Output.Sql
 {
-    public partial class DynamicStandAnnualOutput : AnnualOutput
+    public partial class DynamicStandAnnualOutput : AnnualOutput // partial with Regex precompilation
     {
         private static readonly ReadOnlyCollection<string> WellKnownAggregations;
 
         private readonly List<DynamicOutputField> fieldList;
+        private readonly Expression resourceUnitCondition;
         private readonly Expression resourceUnitFilter;
         private readonly Expression treeFilter;
         private readonly Expression yearFilter;
@@ -31,13 +33,14 @@ namespace iLand.Output.Sql
 
         static DynamicStandAnnualOutput()
         {
-            DynamicStandAnnualOutput.WellKnownAggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95", "sd" }.AsReadOnly();
+            DynamicStandAnnualOutput.WellKnownAggregations = new List<string>() { "mean", "sum", "min", "max", "p25", "p50", "p75", "p5", "p10", "p90", "p95", "sd", "p80", "p85" }.AsReadOnly();
         }
 
         public DynamicStandAnnualOutput()
         {
             this.yearFilter = new();
             this.fieldList = [];
+            this.resourceUnitCondition = new();
             this.resourceUnitFilter = new();
             this.treeFilter = new();
 
@@ -50,14 +53,17 @@ namespace iLand.Output.Sql
                                "The ''by_species'' and ''by_ru'' option allow to define the aggregation level. When ''by_species'' is set to ''true'', " +
                                "a row for each species will be created, otherwise all trees of all species are aggregated to one row. " +
                                "Similarly, ''by_ru''=''true'' means outputs for each resource unit, while a value of ''false'' aggregates over the full project area." + Environment.NewLine +
+                               "Even if ''by_ru'' is false, the calculation of RU level outputs can be triggered by the ''conditionRU'' switch (variable='year'). Note " +
+                               "that in this case landscape level outputs are generated always, RU-level outputs only for certain years." + Environment.NewLine +
                                "!!!Specifying filters" + Environment.NewLine +
                                "You can use the 'rufilter' and 'treefilter' XML settings to reduce the limit the output to a subset of resource units / trees. " +
                                "Both filters are valid expressions (for resource unit level and tree level, respectively). For example, a ''treefilter'' of 'speciesindex=0' reduces the output to just one species.\n" +
                                "The ''condition'' filter is (when present) evaluated and the output is only executed when ''condition'' is true (variable='year') This can be used to constrain the output to specific years (e.g. 'in(year,100,200,300)' produces output only for the given year." + Environment.NewLine +
                                "!!!Specifying data columns" + Environment.NewLine +
-                               "Each field is defined as: ''field.aggregatio''n (separated by a dot). A ''field'' is a valid [Expression]. ''Aggregation'' is one of the following:  " +
+                               "Each field is defined as: ''field.aggregation'' (separated by a dot). A ''field'' is a valid [Expression]. ''Aggregation'' is one of the following:  " +
                                "mean, sum, min, max, p25, p50, p75, p5, 10, p90, p95 (pXX=XXth percentile), sd (std.dev.)." + Environment.NewLine +
-                               "Complex expression are allowed, e.g: if(dbh>50,1,0).sum (-> counts trees with dbh>50)";
+                               "Complex expressions are allowed, e.g: if(dbh>50,1,0).sum (-> counts trees with dbh>50)" +
+                               "Column names in the output table may be slightly different as dots and other special characters not allowed in column names are replaced.";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnitID());
             this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
@@ -67,7 +73,7 @@ namespace iLand.Output.Sql
         [GeneratedRegex("([^\\.]+).(\\w+)[,\\s]*")] // two parts: before dot and after dot, and , + whitespace at the end
         private static partial Regex GetColumnVariableAndAggregationRegex();
 
-        [GeneratedRegex("[\\[\\]\\,\\(\\)<>=!\\s]")]
+        [GeneratedRegex("[\\[\\]\\,\\(\\)<>=!\\-\\+\\s]")]
         private static partial Regex GetSqlColumnNameRegex();
 
         public override void Setup(Project projectFile, SimulationState simulationState)
@@ -78,6 +84,7 @@ namespace iLand.Output.Sql
                 return;
             }
 
+            this.resourceUnitCondition.SetExpression(projectFile.Output.Sql.DynamicStand.ResourceUnitCondition);
             this.resourceUnitFilter.SetExpression(projectFile.Output.Sql.DynamicStand.ResourceUnitFilter);
             this.treeFilter.SetExpression(projectFile.Output.Sql.DynamicStand.TreeFilter);
             this.yearFilter.SetExpression(projectFile.Output.Sql.DynamicStand.Condition);
@@ -143,6 +150,11 @@ namespace iLand.Output.Sql
                 // when looping over resource units, do it differently (old way)
                 this.ExtractByResourceUnit(model, logBySpecies, insertRow);
                 return;
+            }
+            if ((this.resourceUnitCondition.IsEmpty == false) && (this.resourceUnitCondition.Evaluate(model.SimulationState.CurrentCalendarYear) != 0.0F))
+            {
+                // in this case the RU level outputs are *in addition* to the landscape means
+                this.ExtractByResourceUnit(model, logBySpecies, insertRow);
             }
 
             // grouping
@@ -239,6 +251,8 @@ namespace iLand.Output.Sql
                         9 => fieldStatistics.GetPercentile(90),
                         10 => fieldStatistics.GetPercentile(95),
                         11 => fieldStatistics.GetStandardDeviation(),
+                        12 => fieldStatistics.GetPercentile(80),
+                        13 => fieldStatistics.GetPercentile(85),
                         _ => 0.0F,
                     };
                     // add current value to output
@@ -374,6 +388,8 @@ namespace iLand.Output.Sql
                             9 => fieldStatistics.GetPercentile(90),
                             10 => fieldStatistics.GetPercentile(95),
                             11 => fieldStatistics.GetStandardDeviation(),
+                            12 => fieldStatistics.GetPercentile(80),
+                            13 => fieldStatistics.GetPercentile(85),
                             _ => 0.0F,
                         };
                         // add current value to output

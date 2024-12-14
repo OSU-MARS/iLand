@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -97,7 +97,7 @@ void dbg_helper_ext(const char *where, const char *what,const char* file,int lin
     qDebug() << "Warning in " << where << ":"<< what << ". (file: " << file << "line:" << line << "more:" << s;
 }
 
-int _loglevel=0;
+static int _loglevel=0;
  // true, if detailed debug information is logged
 bool logLevelDebug()
 {
@@ -127,27 +127,25 @@ void setLogLevel(int loglevel)
     }
 }
 
-GlobalSettings *GlobalSettings::mInstance = 0;
+GlobalSettings *GlobalSettings::mInstance = nullptr;
 
 GlobalSettings::GlobalSettings()
 {
     mDebugOutputs = 0;
-    mModel = 0;
-    mModelController = 0;
+    mModel = nullptr;
+    mModelController = nullptr;
     mSystemStatistics = new SystemStatistics;
     // create output manager
     mOutputManager = new OutputManager();
-    mScriptEngine = 0;
+    mScriptEngine = nullptr;
 
 }
 
 
 GlobalSettings::~GlobalSettings()
 {
-    // meta data... really clear ressources...
-    qDeleteAll(mSettingMetaData.values());
     delete mSystemStatistics;
-    mInstance = NULL;
+    mInstance = nullptr;
     delete mOutputManager;
     // clear all databases
     clearDatabaseConnections();
@@ -157,12 +155,18 @@ GlobalSettings::~GlobalSettings()
 
 QString GlobalSettings::executeJavascript(const QString &command)
 {
-    return ScriptGlobal::executeScript(command);
+    QString result = ScriptGlobal::executeScript(command);
+    if (!ScriptGlobal::lastErrorMessage().isEmpty())
+        Helper::msg("Javascript-Error: \n" + ScriptGlobal::lastErrorMessage());
+    return result;
 }
 
 QString GlobalSettings::executeJSFunction(const QString function_name)
 {
-    return ScriptGlobal::executeJSFunction(function_name);
+    QString result = ScriptGlobal::executeJSFunction(function_name);
+    if (!ScriptGlobal::lastErrorMessage().isEmpty())
+        Helper::msg("Javascript-Error: \n" + ScriptGlobal::lastErrorMessage());
+    return result;
 }
 
 void GlobalSettings::resetScriptEngine()
@@ -171,6 +175,8 @@ void GlobalSettings::resetScriptEngine()
         delete mScriptEngine;
 
     mScriptEngine = new QJSEngine();
+    // add "console" extension (enabling the Console API)
+    mScriptEngine->installExtensions(QJSEngine::ConsoleExtension);
     // globals object: instatiate here, but ownership goes to script engine
     ScriptGlobal *global = new ScriptGlobal();
     QJSValue glb = mScriptEngine->newQObject(global);
@@ -183,7 +189,7 @@ void GlobalSettings::setDebugOutput(const GlobalSettings::DebugOutputs dbg, cons
     if (enable)
         mDebugOutputs |= int(dbg);
     else
-        mDebugOutputs &= int(dbg) ^ 0xffffffff;
+        mDebugOutputs &= static_cast<unsigned int>(dbg) ^ 0xffffffff;
 }
 
 // storing the names of debug outputs
@@ -217,7 +223,7 @@ void GlobalSettings::clearDebugLists()
     mDebugLists.clear();
 }
 
-QMutex debugListMutex;
+static QMutex debugListMutex;
 DebugList &GlobalSettings::debugList(const int ID, const DebugOutputs dbg)
 {
     QMutexLocker m(&debugListMutex); // serialize creation of debug outputs
@@ -256,7 +262,7 @@ const QList<const DebugList*> GlobalSettings::debugLists(const int ID, const Deb
     }
     // sort result list
     //std::sort(result_list.begin(), result_list.end(), debuglist_sorter); // changed because of compiler warnings
-    qSort(result_list.begin(), result_list.end(), debuglist_sorter);
+    std::sort(result_list.begin(), result_list.end(), debuglist_sorter);
     return result_list;
 }
 
@@ -273,26 +279,32 @@ QStringList GlobalSettings::debugListCaptions(const DebugOutputs dbg)
     case dTreeGrowth: return QStringList() << "id" << "type" << "year" <<  treeCaps
                                            << "netNPPStem" << "massStemOld" << "hd_growth" << "factor_diameter" << "delta_d_estimate" << "d_increment";
 
-    case dTreePartition: return QStringList() << "id" << "type" << "year" << treeCaps
+    case dTreePartition: return QStringList() << "id" << "type" << "year" << treeCaps << "mFineroot" << "mBranch"
                                               << "npp_kg" << "apct_foliage" << "apct_wood" << "apct_root"
-                                              << "delta_foliage" << "delta_woody" << "delta_root" << "mNPPReserve" << "netStemInc" << "stress_index";
+                                              << "delta_foliage" << "delta_woody" << "delta_root" << "biomass_loss"
+                                              << "mNPPReserve" << "netStemInc" << "stress_index";
 
-    case dStandGPP: return QStringList() << "id" << "type" << "year" << "species" << "RU_index" << "rid" << "lai_factor" << "gpp_kg_m2" << "gpp_kg" << "avg_aging" << "f_env_yr";
+    case dStandGPP: return QStringList() << "id" << "type" << "year" << "species" << "RU_index" << "rid" << "lai" << "gpp_kg_m2" << "gpp_kg" << "avg_aging" << "f_env_yr";
 
     case dWaterCycle: return QStringList() << "id" << "type" << "year" << "date" << "ruindex" << "rid" << "temp" << "vpd" << "prec" << "rad" << "combined_response"
                                            << "after_intercept" << "after_snow" << "et_canopy" << "evapo_intercepted"
-                                           << "content" << "psi_kpa" << "excess_mm" << "snow_height";
+                                           << "content" << "psi_kpa" << "excess_mm" << "snow_height" << "lai_effective"
+                                              // permafrost details
+                                           << "pftop" << "pfbottom" << "pffreezeback" << "delta_mm" << "delta_soil" << "thermalConductivity"
+                                           << "soilfrozen" << "waterfrozen" << "current_capacity"
+                                           << "moss_fLight" << "moss_fDecid";
 
     case dDailyResponses: return QStringList() << "id" << "type" << "year" << "species" << "date" << "RU_index" << "rid"
                                                << "waterResponse" << "tempResponse" << "VpdResponse" << "Radiation of day" << "util.Radiation";
 
     case dEstablishment: return QStringList() << "id" << "type" << "year" << "species" << "RU_index" << "rid"
-                                              << "avgProbDensity" << "TACAminTemp" << "TACAchill" << "TACAfrostFree" << "TACAgdd" << "TACAFrostAfterBud" << "waterLimitation" << "TACAAbioticEnv"
+                                              << "avgProbDensity" << "TACAminTemp" << "TACAchill" << "TACAfrostFree" << "TACAgdd" << "TACAFrostAfterBud" << "waterLimitation" << "GDD" << "TACAAbioticEnv"
                                               << "fEnvYr" <<"N_Established" ;
 
     case dSaplingGrowth: return QStringList() << "id" << "type" << "year" << "species" << "RU_index" << "rid"
                                               << "Living_cohorts" << "averageHeight" << "averageAge" << "avgDeltaHPot" << "avgDeltaHRealized"
-                                              << "Added" << "Died" << "Recruited" << "refRatio";
+                                              << "added" << "addedVegetative" << "died" << "recruited" << "refRatio"
+                                              << "carbonLiving" << "carbonGain";
 
     case dCarbonCycle: return QStringList() << "id" << "type" << "year" << "RU_index" << "rid"
                                             << "SnagState_c" << "TotalC_in" << "TotalC_toAtm" << "SWDtoDWD_c" << "SWDtoDWD_n" << "toLabile_c" << "toLabile_n" << "toRefr_c" << "toRefr_n"
@@ -310,7 +322,10 @@ QStringList GlobalSettings::debugListCaptions(const DebugOutputs dbg)
     return QStringList() << "invalid debug output!";
 }
 
-QStringList GlobalSettings::debugDataTable(GlobalSettings::DebugOutputs type, const QString separator, const QString fileName)
+QStringList GlobalSettings::debugDataTable(GlobalSettings::DebugOutputs type,
+                                           const QString separator,
+                                           const QString fileName,
+                                           const bool do_append)
 {
 
     GlobalSettings *g = GlobalSettings::instance();
@@ -323,11 +338,17 @@ QStringList GlobalSettings::debugDataTable(GlobalSettings::DebugOutputs type, co
     QFile out_file(fileName);
     QTextStream ts;
     if (!fileName.isEmpty()) {
-        if (out_file.open(QFile::WriteOnly)) {
-            ts.setDevice(&out_file);
-            ts << g->debugListCaptions(type).join(separator) << endl;
+        if (do_append) {
+            if (out_file.open(QFile::Append)) {
+                ts.setDevice(&out_file);
+            }
         } else {
-            qDebug() << "Cannot open debug output file" << fileName;
+            if (out_file.open(QFile::WriteOnly)) {
+                ts.setDevice(&out_file);
+                ts << g->debugListCaptions(type).join(separator) << Qt::endl;
+            } else {
+                qDebug() << "Cannot open debug output file" << fileName;
+            }
         }
 
     }
@@ -340,8 +361,9 @@ QStringList GlobalSettings::debugDataTable(GlobalSettings::DebugOutputs type, co
                 line+=separator;
             line += value.toString();
         }
+        // save data to the file, or to the
         if (out_file.isOpen())
-            ts << line << endl;
+            ts << line << Qt::endl;
         else
             result << line;
     }
@@ -372,29 +394,6 @@ QList<QPair<QString, QVariant> > GlobalSettings::debugValues(const int ID)
     return result;
 }
 
-/** retrieve a const pointer to a stored SettingMetaData object.
- if @p name is not found, NULL is returned.
- */
-const SettingMetaData *GlobalSettings::settingMetaData(const QString &name)
-{
-    if (mSettingMetaData.contains(name)) {
-        return mSettingMetaData[name];
-    }
-    return NULL;
-}
-
-QVariant GlobalSettings::settingDefaultValue(const QString &name)
-{
-    const SettingMetaData *smd = settingMetaData(name);
-    if (smd)
-        return smd->defaultValue();
-    return QVariant(0);
-}
-
-void GlobalSettings::loadSettingsMetaDataFromFile(const QString &fileName)
-{
-    QString metadata = Helper::loadTextFile(fileName);
-}
 
 QString childText(QDomElement &elem, const QString &name, const QString &def="") {
     QDomElement e = elem.firstChildElement(name);
@@ -404,41 +403,6 @@ QString childText(QDomElement &elem, const QString &name, const QString &def="")
         return e.text();
 }
 
-/** Load setting meta data from a piece of XML.
-    @p topNode is a XML node, that contains the "setting" nodes as childs:
-    @code
-    <topnode>
-    <setting>...</setting>
-    <setting>...</setting>
-    ...
-    </topnode>
-    @endcode
-  */
-void GlobalSettings::loadSettingsMetaDataFromXml(const QDomElement &topNode)
-{
-    mSettingMetaData.clear();
-    if (topNode.isNull())
-        WARNINGRETURN( "GlobalSettings::loadSettingsMetaDataFromXml():: no globalsettings section!");
-
-    QString settingName;
-    QDomElement elt = topNode.firstChildElement("setting");
-    for (; !elt.isNull(); elt = elt.nextSiblingElement("setting")) {
-        settingName = elt.attribute("name", "invalid");
-        if (mSettingMetaData.contains(settingName))
-            WARNINGRETURN( "GlobalSettings::loadSettingsMetaDataFromXml():: setting" << settingName << "already exists in the settings list!") ;
-
-        SettingMetaData *md = new SettingMetaData(SettingMetaData::typeFromName(elt.attribute("type", "invalid")), // type
-                      settingName, // name
-                      childText(elt,"description"), // description
-                      childText(elt, "url"), // url
-                      QVariant(childText(elt,"default")));
-        mSettingMetaData[settingName] = md;
-
-        qDebug() << md->dump();
-        //mSettingMetaData[settingName].dump();
-    }
-    qDebug() << "setup settingmetadata complete." << mSettingMetaData.count() << "items loaded.";
-}
 
 void GlobalSettings::clearDatabaseConnections()
 {
@@ -458,14 +422,22 @@ bool GlobalSettings::setupDatabaseConnection(const QString& dbname, const QStrin
         if (!QFile::exists(fileName))
             throw IException("Error setting up database connection: file " + fileName + " does not exist!");
     db.setDatabaseName(fileName);
+    if (fileMustExist)
+        db.setConnectOptions("QSQLITE_OPEN_READONLY"); // connect as read only
+
     if (!db.open()) {
         throw IException(QString("Error in setting up the database connection <%2> connection to file %1.\n").arg(fileName, dbname));
     }
     if (!fileMustExist) {
         // for output databases:
         // some special commands (pragmas: see also: http://www.sqlite.org/pragma.html)
-        db.exec("pragma temp_store(2)"); // temp storage in memory
-        db.exec("pragma synchronous(1)"); // medium synchronization between memory and disk (faster than "full", more than "none")
+        // db.exec("pragma temp_store(2)"); // temp storage in memory
+        // db.exec("pragma synchronous(1)"); // medium synchronization between memory and disk (faster than "full", more than "none")
+        // db.exec("pragma journal_mode(OFF)"); // disable transactions
+
+        // https://stackoverflow.com/questions/1711631/improve-insert-per-second-performance-of-sqlite
+        db.exec("PRAGMA synchronous = OFF");
+        db.exec("PRAGMA journal_mode = MEMORY");
     }
     return true;
 }
@@ -490,10 +462,10 @@ void GlobalSettings::setupDirectories(QDomElement pathNode, const QString &proje
     // make other paths relativ to "home" if given as relative paths
     mFilePath.insert("lip", path(xml.value("lip", "lip"), "home"));
     mFilePath.insert("database", path(xml.value("database", "database"), "home"));
-    mFilePath.insert("temp", path(xml.value("temp", ""), "home"));
-    mFilePath.insert("log", path(xml.value("log", ""), "home"));
-    mFilePath.insert("script", path(xml.value("script", ""), "home"));
-    mFilePath.insert("init", path(xml.value("init", ""), "home"));
+    mFilePath.insert("temp", path(xml.value("temp", "", false), "home"));
+    mFilePath.insert("log", path(xml.value("log", "", false), "home"));
+    mFilePath.insert("script", path(xml.value("script", "", false), "home"));
+    mFilePath.insert("init", path(xml.value("init", "", false), "home"));
     mFilePath.insert("output", path(xml.value("output", "output"), "home"));
 }
 
@@ -538,7 +510,7 @@ void GlobalSettings::loadProjectFile(const QString &fileName)
     if (!QFile::exists(fileName))
         throw IException(QString("The project file %1 does not exist!").arg(fileName));
     mXml.loadFromFile(fileName);
-    setupDirectories(mXml.node("system.path"),QFileInfo(fileName).path());
+    setupDirectories(mXml.node("system.path"),QFileInfo(fileName).absolutePath());
 
 }
 

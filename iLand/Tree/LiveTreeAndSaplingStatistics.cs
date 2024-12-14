@@ -7,7 +7,9 @@
         public float RegenerationCarbonInKgPerHa { get; protected set; } // accumulated as kg and converted to kg/ha
         public float RegenerationNitrogenInKgPerHa { get; protected set; } // accumulated as kg and converted to kg/ha
 
+        public float SaplingBasalArea { get; private set; } // basal area (m²) of saplings
         public float SaplingCohortsPerHa { get; protected set; } // number of cohorts of saplings or cohorts/ha
+        public float SaplingLeafAreaIndex { get; protected set; } // leaf area index (m²/m²)
         public float SaplingMeanAgeInYears { get; protected set; } // average age of sapling (not currently weighted by represented sapling numbers)
         public float SaplingNppPerHa { get; protected set; } // carbon gain of saplings (kg biomass increment) or (kg biomass increment)/ha
         public float SaplingsPerHa { get; protected set; } // number of individuals in regeneration layer (represented by CohortCount cohorts), saplings or saplings/ha
@@ -19,7 +21,9 @@
             this.RegenerationCarbonInKgPerHa += saplingStatistics.CarbonNitrogenLiving.C;
             this.RegenerationNitrogenInKgPerHa += saplingStatistics.CarbonNitrogenLiving.N;
 
+            this.SaplingBasalArea += saplingStatistics.BasalArea;
             this.SaplingCohortsPerHa += saplingStatistics.LivingCohorts;
+            this.SaplingLeafAreaIndex += saplingStatistics.LeafAreaIndex;
             this.SaplingNppPerHa += saplingStatistics.CarbonNitrogenGain.C / Constant.DryBiomassCarbonFraction;
             this.SaplingsPerHa += saplingStatistics.LivingSaplings; // saplings with height >1.3m
         }
@@ -42,7 +46,9 @@
             this.TreeNppPerHaAboveground += areaInHectares * completedTreeStatistics.TreeNppPerHaAboveground;
 
             // regeneration
+            this.SaplingBasalArea += areaInHectares * completedTreeStatistics.SaplingBasalArea;
             this.SaplingCohortsPerHa += areaInHectares * completedTreeStatistics.SaplingCohortsPerHa;
+            this.SaplingLeafAreaIndex += areaInHectares * completedTreeStatistics.SaplingLeafAreaIndex;
             this.SaplingsPerHa += areaInHectares * completedTreeStatistics.SaplingsPerHa;
             this.SaplingNppPerHa += areaInHectares * completedTreeStatistics.SaplingNppPerHa;
 
@@ -57,8 +63,15 @@
             this.FoliageNitrogenInKgPerHa += areaInHectares * completedTreeStatistics.FoliageNitrogenInKgPerHa;
             this.RegenerationCarbonInKgPerHa += areaInHectares * completedTreeStatistics.RegenerationCarbonInKgPerHa;
             this.RegenerationNitrogenInKgPerHa += areaInHectares * completedTreeStatistics.RegenerationNitrogenInKgPerHa;
-            this.StemCarbonInKgPerHa += areaInHectares * completedTreeStatistics.StemCarbonInKgPerHa;
-            this.StemNitrogenInKgPerHa += areaInHectares * completedTreeStatistics.StemNitrogenInKgPerHa;
+            this.StemAndReserveCarbonInKgPerHa += areaInHectares * completedTreeStatistics.StemAndReserveCarbonInKgPerHa;
+            this.StemAndReserveNitrogenInKgPerHa += areaInHectares * completedTreeStatistics.StemAndReserveNitrogenInKgPerHa;
+        }
+
+        public void AddNppOfTreeBeforeDeath(TreeGrowthData tgd) // StandStatistics::addNPP()
+        {
+            // add NPP of trees that died due to mortality
+            this.TreeNppPerHa += tgd.NppTotal;
+            this.TreeNppPerHaAboveground += tgd.NppAboveground;
         }
 
         // this member function is only expected to be called when accumulating statistics for resource unit tree species
@@ -84,7 +97,9 @@
             this.TreeNppPerHaAboveground += completedTreeStatistics.TreeNppPerHaAboveground;
 
             // regeneration
+            this.SaplingBasalArea += completedTreeStatistics.SaplingBasalArea;
             this.SaplingCohortsPerHa += completedTreeStatistics.SaplingCohortsPerHa;
+            this.SaplingLeafAreaIndex += completedTreeStatistics.SaplingLeafAreaIndex;
             this.SaplingsPerHa += completedTreeStatistics.SaplingsPerHa;
             this.SaplingNppPerHa += completedTreeStatistics.SaplingNppPerHa;
 
@@ -99,14 +114,14 @@
             this.FoliageNitrogenInKgPerHa += completedTreeStatistics.FoliageNitrogenInKgPerHa;
             this.RegenerationCarbonInKgPerHa += completedTreeStatistics.RegenerationCarbonInKgPerHa;
             this.RegenerationNitrogenInKgPerHa += completedTreeStatistics.RegenerationNitrogenInKgPerHa;
-            this.StemCarbonInKgPerHa += completedTreeStatistics.StemCarbonInKgPerHa;
-            this.StemNitrogenInKgPerHa += completedTreeStatistics.StemNitrogenInKgPerHa;
+            this.StemAndReserveCarbonInKgPerHa += completedTreeStatistics.StemAndReserveCarbonInKgPerHa;
+            this.StemAndReserveNitrogenInKgPerHa += completedTreeStatistics.StemAndReserveNitrogenInKgPerHa;
         }
 
         // total carbon stock: sum of carbon of all living trees + regeneration layer
         public float GetTotalCarbon()
         {
-            return this.StemCarbonInKgPerHa + this.BranchCarbonInKgPerHa + this.FoliageCarbonInKgPerHa + this.FineRootCarbonInKgPerHa + this.CoarseRootCarbonInKgPerHa + this.RegenerationCarbonInKgPerHa;
+            return this.StemAndReserveCarbonInKgPerHa + this.BranchCarbonInKgPerHa + this.FoliageCarbonInKgPerHa + this.FineRootCarbonInKgPerHa + this.CoarseRootCarbonInKgPerHa + this.RegenerationCarbonInKgPerHa;
         }
 
         public override void OnAdditionsComplete(float resourceUnitAreaInLandscapeInM2)

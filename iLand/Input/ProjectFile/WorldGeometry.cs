@@ -1,10 +1,12 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
 	public class WorldGeometry : XmlSerializable
 	{
 		public int BufferWidthInM { get; private set; }
+		public string DigitalElevationModel { get; private set; }
 
 		// special mode that treats each resource unit as a "torus" (light calculation, seed distribution)
 		public bool IsTorus { get; private set; }
@@ -14,7 +16,8 @@ namespace iLand.Input.ProjectFile
 		public WorldGeometry()
 		{
 			this.BufferWidthInM = Constant.Grid.DefaultWorldBufferWidthInM;
-			this.Latitude = 48.0F;
+			this.DigitalElevationModel = String.Empty;
+			this.Latitude = Single.NaN;
 			this.IsTorus = false;
 		}
 
@@ -43,8 +46,8 @@ namespace iLand.Input.ProjectFile
 					this.IsTorus = reader.ReadElementContentAsBoolean();
 					break;
 				case "latitude":
-					// TODO: large simulation areas can cover ~0.4° of longitude, resulting in ±0.2° of error from a central longitude choice
-					this.Latitude = reader.ReadElementContentAsFloat();
+                    // TODO: large simulation areas can cover ~0.4° of latitude, resulting in ±0.2° of error from a central latitude choice
+                    this.Latitude = reader.ReadElementContentAsFloat();
 					if ((this.Latitude <= -90.0F) || (this.Latitude >= 90.0F))
 					{
 						throw new XmlException("Latitude is not between -90 and 90°.");
@@ -54,5 +57,16 @@ namespace iLand.Input.ProjectFile
 					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
-	}
+
+		public void Validate()
+		{
+            // this.BufferWidthInM is defaulted
+            // this.DigitalElevationModel can remain empty;
+            if (Single.IsNaN(this.Latitude))
+			{
+				throw new XmlException("Project area's latitude (/project/world/geometry/latitude) is not specified. The study site's latitude is required for .");
+			}
+            // this.IsTorus is boolean;
+        }
+    }
 }

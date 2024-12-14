@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -47,16 +47,25 @@ public:
     virtual void exec();
     virtual void setup();
 private:
+    const int mMaxDbh = 200;
+    int dbhClass(float dbh); ///< return the dbh class of 'dbh' (starting with 0)
+    void setupDbhClasses(QString cls_string);
     bool mIncludeDeadTrees;
     bool mIncludeHarvestTrees;
     Expression mCondition;
     struct LROdata {
         LROdata() { clear(); }
-        void clear() { volume=0.; basal_area=0.; n=0.; }
+        void clear() { volume=0.; basal_area=0.; carbon=0.; n=0.; cstem=0.; cbranch=0.; cfoliage=0.; }
         double volume;
         double basal_area;
+        double carbon;
         double n;
+        double cstem;
+        double cbranch;
+        double cfoliage;
     };
+    QVector<float> mDBHThreshold;
+    QVector<int> mDBHClass;
 
     QHash<int,LROdata> mLandscapeRemoval;
 };

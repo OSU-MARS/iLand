@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -31,8 +31,8 @@ class CSVFile : public QObject
     Q_PROPERTY(int colCount READ colCount)
     Q_PROPERTY(int rowCount READ rowCount)
 public:
-    CSVFile(QObject *parent=0);
-    CSVFile(const QString &fileName) {     mHasCaptions = true; mFlat = false; mFixedWidth=false; loadFile(fileName);} ///< ctor, load @p fileName.
+    Q_INVOKABLE CSVFile(QObject *parent=0);
+    Q_INVOKABLE CSVFile(const QString &fileName) {     mHasCaptions = true; mFlat = false; mFixedWidth=false; loadFile(fileName);} ///< ctor, load @p fileName.
     // actions
     bool openFile(const QString &fileName); ///< open file in streaming mode.
     QVariant colValue(const int col); ///< get value of column with index @p col. Use in streaming mode.
@@ -45,7 +45,7 @@ public:
     int colCount() const { return mColCount; } ///< number of columns, or -1
     bool isEmpty() const { return mIsEmpty; } /// returns true when no valid file has been loaded (returns false when a file with 0 rows is loaded)
     QStringList captions() const { return mCaptions; } ///< retrieve (a copy) of column headers
-    QStringList column(const int col) const; ///< retrieve a string list of a given row
+    QStringList column(const int col) const; ///< retrieve a string list of a given column
     QVariantList values(const int row) const; ///< get a list of the values in row "row"
     // setters
     void setHasCaptions(const bool hasCaps) { mHasCaptions = hasCaps; }
@@ -55,19 +55,24 @@ public:
 public slots:
     bool loadFile(const QString &fileName); ///< load @p fileName. load the complete file at once.
     bool loadFromString(const QString &content); ///< load content from a given string.
+    bool loadFromStringList(QStringList content); ///< load from a string list
     QString columnName(const int col) { if (col<mColCount) return mCaptions[col]; return QString(); } ///< get caption of ith column.
     int columnIndex(const QString &columnName) const { return mCaptions.indexOf(columnName); } ///< index of column or -1 if not available
     // value function with a column name
     QVariant value(const int row, const QString column_name) const { return value(row, columnIndex(column_name)); }
 
-    QVariant value(const int row, const int col) const; ///< get value of cell denoted by @p row and @p cell. Not available in streaming mode.
-    QVariant row(const int row); ///< retrieve content of the full row @p row as a Variant
+    /// get value of cell denoted by @p row and @p cell. Not available in streaming mode.
+    QVariant value(const int row, const int col) const;
+    QVariant row(const int row); ///< retrieve content of the full row @p row as a QJSValue
+    QJSValue jsValue(const int row, const int col) const;
+    QJSValue jsValue(const int row, const QString column_name) const { return jsValue(row, columnIndex(column_name)); }
 
     void setValue(const int row, const int col, QVariant value); ///< set the value of the column
     void saveFile(const QString &fileName); ///< save the current content to a file
 
 private:
     void clear();
+    bool processRows();
     bool mIsEmpty;
     bool mHasCaptions;
     bool mFixedWidth;

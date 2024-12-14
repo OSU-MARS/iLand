@@ -13,6 +13,7 @@ namespace iLand.Input
 
         public FloatArray? SnagBranchRootCarbon { get; private init; }
         public FloatArray? SnagBranchRootCNRatio { get; private init; }
+        public FloatArray? SnagOtherWoodAbovegroundFraction { get; private init; }
         public FloatArray? SnagStemCarbon { get; private init; }
         public FloatArray? SnagStemCNRatio { get; private init; }
         public FloatArray? SnagStemDecompositionRate { get; private init; }
@@ -39,9 +40,11 @@ namespace iLand.Input
         public FloatArray? SoilOrganicMatterDecompositionRate { get; private init; }
         public FloatArray? SoilOrganicMatterN { get; private init; }
         public FloatArray? SoilQh { get; private init; }
+        public FloatArray? SoilYoungLabileAbovegroundFraction { get; private init; }
         public FloatArray? SoilYoungLabileC { get; private init; }
         public FloatArray? SoilYoungLabileDecompositionRate { get; private init; }
         public FloatArray? SoilYoungLabileN { get; private init; }
+        public FloatArray? SoilYoungRefractoryAbovegroundFraction { get; private init; }
         public FloatArray? SoilYoungRefractoryC { get; private init; }
         public FloatArray? SoilYoungRefractoryDecompositionRate { get; private init; }
         public FloatArray? SoilYoungRefractoryN { get; private init; }
@@ -60,6 +63,7 @@ namespace iLand.Input
             this.SnagBranchRootCarbon = ArrowBatch.MaybeGetArray<FloatArray>("snagBranchRootC", schema, fields);
             this.SnagBranchRootCNRatio = ArrowBatch.MaybeGetArray<FloatArray>("snagBranchRootCN", schema, fields);
             this.SnagHalfLife = ArrowBatch.MaybeGetArray<FloatArray>("snagHalfLife", schema, fields);
+            this.SnagOtherWoodAbovegroundFraction = ArrowBatch.MaybeGetArray<FloatArray>("snagOtherWoodAbovegroundFraction", schema, fields);
             this.SnagsPerResourceUnit = ArrowBatch.MaybeGetArray<FloatArray>("snagCount", schema, fields);
             this.SnagStemCarbon = ArrowBatch.MaybeGetArray<FloatArray>("snagCarbon", schema, fields);
             this.SnagStemCNRatio = ArrowBatch.MaybeGetArray<FloatArray>("snagCNRatio", schema, fields);
@@ -81,11 +85,13 @@ namespace iLand.Input
             this.SoilThetaS = ArrowBatch.MaybeGetArray<FloatArray>("soilThetaS", schema, fields);
             this.SoilVanGenuchtenAlpha = ArrowBatch.MaybeGetArray<FloatArray>("soilVanGenuchtenAlpha", schema, fields);
             this.SoilVanGenuchtenN = ArrowBatch.MaybeGetArray<FloatArray>("soilVanGenuchtenN", schema, fields);
+            this.SoilYoungLabileAbovegroundFraction = ArrowBatch.MaybeGetArray<FloatArray>("soilYoungLabileAbovegroundFraction", schema, fields);
             this.SoilYoungLabileC = ArrowBatch.MaybeGetArray<FloatArray>("soilYoungLabileC", schema, fields);
             this.SoilYoungLabileDecompositionRate = ArrowBatch.MaybeGetArray<FloatArray>("soilYoungLabileDecompositionRate", schema, fields);
             this.SoilYoungLabileN = ArrowBatch.MaybeGetArray<FloatArray>("soilYoungLabileN", schema, fields);
+            this.SoilYoungRefractoryAbovegroundFraction = ArrowBatch.MaybeGetArray<FloatArray>("soilYoungRefractoryAbovegroundFraction", schema, fields);
             this.SoilYoungRefractoryC = ArrowBatch.MaybeGetArray<FloatArray>("soilYoungRefractoryC", schema, fields);
-            this.SoilYoungRefractoryDecompositionRate = ArrowBatch.MaybeGetArray<FloatArray>("isoilYoungRefractoryDecompositionRated", schema, fields);
+            this.SoilYoungRefractoryDecompositionRate = ArrowBatch.MaybeGetArray<FloatArray>("soilYoungRefractoryDecompositionRate", schema, fields);
             this.SoilYoungRefractoryN = ArrowBatch.MaybeGetArray<FloatArray>("soilYoungRefractoryN", schema, fields);
             this.SpeciesTableName = ArrowBatch.MaybeGetArray<StringArray>("speciesTable", schema, fields);
             this.WeatherID = ArrowBatch.GetArray<StringArray>("weatherID", schema, fields);

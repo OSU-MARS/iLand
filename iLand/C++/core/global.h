@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -87,22 +87,22 @@ inline int limit(const int value, const int lower, const int upper)
 {
     return qMax(qMin(value, upper), lower);
 }
-inline void setBit(int &rTarget, const int bit, const bool value)
+inline void setBit(unsigned int &rTarget, const int bit, const bool value)
 {
     if (value)
         rTarget |= (1 << bit);  // set bit
     else
         rTarget &= ( (1 << bit) ^ 0xffffff ); // clear bit
 }
-inline bool isBitSet(const int value, const int bit)
+inline bool isBitSet(const unsigned int value, const int bit)
 {
     return value & (1 << bit);
 }
 
 // define a global isnan() function
-#ifndef isnan
-#define isnan(x) ((x) != (x))
-#endif
+// #ifndef isnan
+// #define isnan(x) ((x) != (x))
+// #endif
 
 #include "globalsettings.h"
 

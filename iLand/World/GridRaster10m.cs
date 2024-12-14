@@ -11,8 +11,11 @@ namespace iLand.World
     /// <summary>
     /// A grid with canopy height, stand classification, or other data at 10 m resolution.
     /// </summary>
-    // The raster is currently loaded from an ESRI ASCII file and nearest-neighbor resampled to 10 m. The grid is clipped to the extent of the
-    // world and Constant.NoDataInt32 is used for no_data_values.
+    /// <remarks>
+    /// TODO: replace this legacy glass with <see cref="Grid{T}"/>.
+    /// The raster is currently loaded from an ESRI ASCII file and nearest-neighbor resampled to 10 m. The grid is clipped to the extent of 
+    /// the world and Constant.NoDataInt32 is used for no_data_values.
+    /// </remarks>
     public class GridRaster10m
     {
         // holds the extent of each rasterized polygon and a count of occupied pixels
@@ -112,7 +115,7 @@ namespace iLand.World
 
         /// returns a list with resource units and area factors per 'id'.
         /// the area is '1' if the resource unit is fully covered by the grid-value.
-        public IList<(ResourceUnit ResourceUnit, float OccupiedAreaInRU)> GetResourceUnitAreaFractions(UInt32 standID)
+        public List<(ResourceUnit ResourceUnit, float OccupiedAreaInRU)> GetResourceUnitAreaFractions(UInt32 standID)
         {
             return this.resourceUnitsByRasterizedPolygonID[standID]; 
         }

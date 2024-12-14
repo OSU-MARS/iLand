@@ -8,6 +8,7 @@ namespace iLand.Input.ProjectFile
         public float BranchRootCarbon { get; private set; }
         public float BranchRootCarbonNitrogenRatio { get; private set; }
         public float BranchRootDecompositionRate { get; private set; }
+        public float OtherWoodAbovegroundFraction { get; private set; }
         public float SnagHalfLife { get; private set; }
         public float SnagsPerResourceUnit { get; private set; }
         public float StemCarbon { get; private set; }
@@ -19,6 +20,7 @@ namespace iLand.Input.ProjectFile
 			this.BranchRootCarbon = 0.0F;
 			this.BranchRootCarbonNitrogenRatio = 50.0F;
             this.BranchRootDecompositionRate = 0.0F;
+            this.OtherWoodAbovegroundFraction = 0.0F;
             this.SnagHalfLife = 0.0F;
             this.SnagsPerResourceUnit = 0;
 			this.StemCarbon = 0.0F;
@@ -43,6 +45,13 @@ namespace iLand.Input.ProjectFile
                     if (this.StemCarbon < 0.0F)
                     {
                         throw new XmlException("Standing woody debris carbon is negative.");
+                    }
+                    break;
+                case "otherWoodAbovegroundFraction":
+                    this.OtherWoodAbovegroundFraction = reader.ReadElementContentAsFloat();
+                    if ((this.OtherWoodAbovegroundFraction < 0.0F) || (this.OtherWoodAbovegroundFraction > 1.0F))
+                    {
+                        throw new XmlException("Other wood aboveground fraction " + this.OtherWoodAbovegroundFraction + " is not in the range [ 00, 1.0 ].");
                     }
                     break;
                 case "stemCN":

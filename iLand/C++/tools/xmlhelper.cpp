@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -67,6 +67,24 @@ XmlHelper::XmlHelper(QDomElement topNode)
     mCurrentTop = topNode;
 }
 
+void XmlHelper::saveToFile(const QString &fileName) {
+
+    QFile file(fileName);
+
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qDebug() << "File couldn't be opened for writing. Abort.";
+        return;
+    } else {
+
+        qDebug() << "Write current data to file.";
+        QTextStream outStream(&file);
+        mDoc.save(outStream, 4);
+
+        file.close();
+    }
+
+}
+
 void XmlHelper::loadFromFile(const QString &fileName)
 {
     mDoc.clear();
@@ -93,6 +111,34 @@ void XmlHelper::loadFromFile(const QString &fileName)
         mParamCache[e.nodeName()] = e.text();
         e = e.nextSiblingElement();
     }
+}
+
+void XmlHelper::resetWarnings()
+{
+    mMissingKeys.clear();
+}
+
+void XmlHelper::printSuppressedWarnings()
+{
+    QHash<QString, int>::const_iterator i = mMissingKeys.constBegin();
+    int n=0;
+    while (i != mMissingKeys.constEnd()) {
+        if (i.value()>3)
+            n++;
+        ++i;
+    }
+    if (n==0)
+        return;
+
+    qDebug() << "Settings not found in project file (more often than 3 times):";
+    qDebug() << "=============================================================";
+    i = mMissingKeys.constBegin();
+    while (i != mMissingKeys.constEnd()) {
+        if (i.value()>3)
+            qDebug() << i.key() << ":" << i.value() << "times";
+        ++i;
+    }
+
 }
 
 /** numeric values of elements in the section <parameter> are stored in a QHash structure for faster access.
@@ -126,11 +172,36 @@ bool XmlHelper::hasNode(const QString &path) const
     return !node(path).isNull();
 }
 
-QString XmlHelper::value(const QString &path, const QString &defaultValue) const
+bool XmlHelper::createNode(const QString &path)
+{
+    if (hasNode(path)) {
+        qDebug() << "Node already exists. Skipping!";
+        return false;
+    } else
+    {
+        QDomNode curNode = top();
+        QDomNode childBranch;
+        foreach (QString xmlPath, path.split(".")) {
+            childBranch = curNode.firstChildElement(xmlPath);
+            if ( childBranch.isNull() ) {
+                curNode = curNode.appendChild(mDoc.createElement(xmlPath));
+            }
+            else {
+                curNode = childBranch;
+            }
+        }
+        curNode.appendChild(mDoc.createTextNode(""));
+
+    }
+
+    return true;
+}
+
+QString XmlHelper::value(const QString &path, const QString &defaultValue, bool do_warn) const
 {
     QDomElement e = node(path);
     if (e.isNull()) {
-        qDebug() << "Warning: xml: node" << path << "is not present.";
+        if (do_warn) missedKey(path);
         return defaultValue;
     } else {
         if (e.text().isEmpty())
@@ -139,11 +210,11 @@ QString XmlHelper::value(const QString &path, const QString &defaultValue) const
             return e.text();
     }
 }
-bool XmlHelper::valueBool(const QString &path, const bool defaultValue) const
+bool XmlHelper::valueBool(const QString &path, const bool defaultValue, bool do_warn) const
 {
     QDomElement e = node(path);
     if (e.isNull()) {
-        qDebug() << "Warning: xml: node" << path << "is not present.";
+        if (do_warn) missedKey(path);
         return defaultValue;
     }
     QString v = e.text();
@@ -152,11 +223,11 @@ bool XmlHelper::valueBool(const QString &path, const bool defaultValue) const
     else
         return false;
 }
-double XmlHelper::valueDouble(const QString &path, const double defaultValue) const
+double XmlHelper::valueDouble(const QString &path, const double defaultValue, bool do_warn) const
 {
     QDomElement e = node(path);
     if (e.isNull()) {
-        qDebug() << "Warning: xml: node" << path << "is not present.";
+        if (do_warn) missedKey(path);
         return defaultValue;
     } else {
         if (e.text().isEmpty())
@@ -166,16 +237,16 @@ double XmlHelper::valueDouble(const QString &path, const double defaultValue) co
     }
 }
 
-int XmlHelper::valueInt(const QString &path, const int defaultValue) const
+int XmlHelper::valueInt(const QString &path, const int defaultValue, bool do_warn) const
 {
-    double dbl_val = valueDouble(path, defaultValue);
+    double dbl_val = valueDouble(path, defaultValue, do_warn);
     return static_cast<int>(dbl_val);
 }
 
 /// retreives node with given @p path and a element where isNull() is true if nothing is found.
 QDomElement XmlHelper::node(const QString &path) const
 {
-    QStringList elem = path.split('.', QString::SkipEmptyParts);
+    QStringList elem = path.split('.', Qt::SkipEmptyParts);
     QDomElement c;
     if (path.count()>0 && path.at(0) == '.')
         c = mCurrentTop;
@@ -223,6 +294,43 @@ bool XmlHelper::setNodeValue(const QString &path, const QString &value)
     return setNodeValue(e,value);
 }
 
+QMutex xml_mutex;
+void XmlHelper::missedKey(const QString &keyname) const
+{
+    // make the hash non const (for updating it), therefore add a lock
+    QMutexLocker lock(&xml_mutex);
+    QHash<QString, int> &keys = const_cast<QHash<QString, int>& >(mMissingKeys);
+
+    QString key = fullName(keyname);
+    keys[key]++;
+
+    int n=keys[key];
+    if (n<3)
+        qDebug() << "Warning: xml: node" << key << "is not present.";
+    if (n==3)
+        qDebug() << "Warning: xml: node" << key << "is not present (3rd occurrence, suppressed in the future).";
+}
+
+QString XmlHelper::fullName(const QString &keyname) const
+{
+    QStringList elem = keyname.split('.', Qt::SkipEmptyParts);
+
+    if (keyname.count()==0 || keyname.at(0) != '.')
+        return keyname;
+
+    // we have a relative path
+    QString result = keyname;
+    result.remove(0,1); // remove leading "."
+
+    QDomNode c= mCurrentTop;
+    // loop over parents until we reach the top-node ("project")
+    while (!c.isNull() && c.nodeName()!="project") {
+        result = c.nodeName() + "." + result;
+        c = c.parentNode();
+    }
+    return result;
+}
+
 // private recursive loop
 void XmlHelper::dump_rec(QDomElement c, QStringList &stack, QStringList &out)
 {
@@ -235,7 +343,8 @@ void XmlHelper::dump_rec(QDomElement c, QStringList &stack, QStringList &out)
     while (!ch.isNull()) {
         if (nChildren) {
             child_index++;
-            stack.push_back(QString("%1[%2]").arg(ch.nodeName()).arg(child_index));
+            // stack.push_back(QString("%1[%2]").arg(ch.nodeName()).arg(child_index)); // including child index
+            stack.push_back(QString("%1").arg(ch.nodeName()));
         } else
           stack.push_back(ch.nodeName());
         dump_rec(ch, stack, out);
@@ -249,7 +358,8 @@ void XmlHelper::dump_rec(QDomElement c, QStringList &stack, QStringList &out)
     out.push_back(self);
 }
 
-QString XmlHelper::dump(const QString &path, int levels)
+
+QStringList XmlHelper::dump(const QString &path, int levels)
 {
     Q_UNUSED(levels);
     QDomElement c = node(path);
@@ -258,5 +368,17 @@ QString XmlHelper::dump(const QString &path, int levels)
     stack.push_back(c.nodeName());
     QStringList result;
     dump_rec(c, stack, result);
-    return result.join("\n");
+    return result;
+}
+
+bool XmlHelper::nodeHasChildren(const QString &path)
+{
+    QDomElement e = node(path);
+    if ( !e.isNull() ) {
+        if ( !e.firstChild().isText() ) {
+           return true;
+        }
+    }
+    return false;
+
 }

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -42,6 +42,12 @@ Modules::Modules()
     init();
 }
 
+Modules::~Modules()
+{
+    qDeleteAll(mInterfaces);
+    mInterfaces.clear();
+}
+
 // load the static plugins
 void Modules::init()
 {
@@ -73,7 +79,7 @@ void Modules::init()
     if (wind && bb) {
         int iw = mInterfaces.indexOf(wind), ib = mInterfaces.indexOf(bb);
         if (ib<iw)
-            mInterfaces.swap(iw, ib);
+            mInterfaces.swapItemsAt(iw, ib);
     }
 
 
@@ -134,6 +140,7 @@ void Modules::run()
             qWarning() << "ERROR: uncaught exception in module '" << di->name() << "':";
             qWarning() << "ERROR:" << e.message();
             qWarning() << " **************************************** ";
+            throw IException(QString("ERROR in module: %1\n%2").arg(di->name(), e.message()));
         }
     }
 

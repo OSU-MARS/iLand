@@ -1,4 +1,5 @@
-﻿using iLand.Extensions;
+﻿// C++/core/{ tree.h, tree.cpp }
+using iLand.Extensions;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
@@ -78,6 +79,24 @@ namespace iLand.Tree
             }
         }
 
+        // TODO: remove
+        public float GetBranchBiomass(int treeIndex)
+        {
+            return this.Species.GetBiomassBranch(this.DbhInCm[treeIndex]);
+        }
+
+        /// volume (m3) of stem volume based on geometry and density calculated on the fly.
+        /// The volume is parameterized as standing tree volume including bark (but not branches). E.g. Pollanschuetz-volume.
+        public float GetStemVolume(int treeIndex) // C++: volume()
+        {
+            /// @see Species::volumeFactor() for details
+            float taperCoefficient = this.Species.VolumeFactor;
+            float dbhInCm = this.DbhInCm[treeIndex];
+            float heightInM = this.HeightInM[treeIndex];
+            float volume = taperCoefficient * 0.0001F * dbhInCm * dbhInCm * heightInM; // dbh in cm: cm/100 * cm/100 = cm*cm * 0.0001 = m2
+            return volume;
+        }
+
         public override void Resize(int newSize)
         {
             base.Resize(newSize);
@@ -93,5 +112,11 @@ namespace iLand.Tree
             this.StemMassInKg = this.StemMassInKg.Resize(newSize);
             this.StressIndex = this.StressIndex.Resize(newSize);
         }
+        
+        /// volume (m3) of stem volume based on geometry and density calculated on the fly.
+        /// The volume is parameterized as standing tree volume including bark (but not branches). E.g. Pollanschuetz-volume.
+        //public float volume()
+        //{
+        //}
     }
 }

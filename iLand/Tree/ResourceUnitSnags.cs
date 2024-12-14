@@ -1,10 +1,13 @@
-﻿using iLand.Extensions;
+﻿// C++/core/snag.h
+using iLand.Extensions;
 using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Input.Weather;
 using iLand.World;
 using System;
 using System.Diagnostics;
+using System.Management.Automation.Runspaces;
+using Model = iLand.Simulation.Model;
 
 namespace iLand.Tree
 {
@@ -27,17 +30,23 @@ namespace iLand.Tree
         public float[] TimeSinceDeathByClass { get; private init; } // time since death: mass-weighted age of the content of the snag pool
         public float[] StemDecompositionRateByClass { get; private init; } // standing woody debris decay rate (weighted average of species values)
         public float[] HalfLifeByClass { get; private init; } // half-life values (yrs) (averaged)
-        public CarbonNitrogenPool[] BranchesAndCoarseRootsByYear { get; private init; } // pool for branch biomass and coarse root biomass
+        public CarbonNitrogenPool[] BranchesAndCoarseRootsByYear { get; private init; } // pool for branch biomass and coarse root biomass (C++ mOtherWood)
         public int BranchCounter { get; set; } // index which of the branch pools should be emptied
+
+        public float DeciduousFoliageLitter { get; private set; } // foliage litter (biomass) form deciduous trees of the year (kg/ha) [Note: is cleared at the end of the year] (C++ freshDeciduousFoliage(), mDeciduousFoliageLitter)
+        public float LabileFluxAbovegroundCarbon { get; private set; } // C input to the labile flux from aboveground sources (kg/ha) (C++ labileFluxAbovegroundCarbon(), mLabileFluxAbovegroundCarbon)
+        public float RefractoryFluxAbovegroundCarbon { get; private set; } // C input to the woody (refractory) pools from aboveground sources (kg/ha) (C++ refractoryFluxAbovegroundCarbon(), mRefrFluxAbovegroundCarbon)
+        public float OtherWoodAbovegroundFraction { get; private set; } // fraction of other wood from aboveground
 
         public CarbonNitrogenTuple FluxToAtmosphere { get; private init; } // total kg/ha heterotrophic respiration / flux to atm
         public CarbonNitrogenTuple FluxToDisturbance { get; private set; } // total kg/ha due to disturbance (e.g. fire)
         public CarbonNitrogenTuple FluxToExtern { get; private init; } // total kg/ha harvests
-        public CarbonNitrogenPool LabileFlux { get; private init; } // litter flux to the soil (kg/ha)
-        public CarbonNitrogenPool RefractoryFlux { get; private set; } // deadwood flux to the soil (kg/ha)
-        public float StandingAndDebrisCarbon { get; private set; } // sum of carbon content in all snag compartments (kg/ha)
+        public CarbonNitrogenPool LabileFlux { get; private init; } // litter flux to the soil (kg/ha) (C++ labileFlux(), mLabileFlux)
+        public CarbonNitrogenPool RefractoryFlux { get; private set; } // deadwood flux to the soil (kg/ha) (C++ refractoryFlux(), mRefractoryFlux)
+        // TODO: resolve conflicting units in C++ getter (kg/RU) and field (kg/ha) comments
+        public float StandingAndDebrisCarbon { get; private set; } // total carbon in snags (kg/RU): not scaled to 1ha!!, sum of carbon content in all snag compartments (kg/ha)  (C++ totalCarbon(), mTotalSnagCarbon)
         public CarbonNitrogenTuple TotalStanding { get; private set; } // sum of C and N in SWD pools (stems) kg/ha
-        public CarbonNitrogenTuple TotalBranchesAndRoots { get; private set; } // sum of C and N in other woody pools (branches + coarse roots) kg/ha
+        public CarbonNitrogenTuple TotalBranchesAndRoots { get; private set; } // sum of C and N in other woody pools (branches + coarse roots) kg/ha (C++ totalOtherWood(), mTotalOther)
         public float WeatherFactor { get; set; } // the 're' climate factor to modify decay rates (also used in ICBM/2N model)
 
         public ResourceUnitSnags(Project projectFile, ResourceUnit resourceUnit, ResourceUnitEnvironment environment)
@@ -80,14 +89,14 @@ namespace iLand.Tree
             this.TotalStanding = new();
 
             // threshold levels for emptying out the dbh-snag-classes
-            // derived from PSME woody allometry, converted to C, with a threshold level set to 10%
+            // derived from PSME woody allometry, converted to C, with a threshold level set to 1%
             // values in kg!
             this.carbonThresholdByClass[0] = 0.5F * lowerDbhBreak;
             this.carbonThresholdByClass[1] = lowerDbhBreak + 0.5F * (upperDbhBreak - lowerDbhBreak);
             this.carbonThresholdByClass[2] = upperDbhBreak + 0.5F * (upperDbhBreak - lowerDbhBreak);
             for (int diameterClass = 0; diameterClass < 3; ++diameterClass)
             {
-                this.carbonThresholdByClass[diameterClass] = 0.10568F * MathF.Pow(this.carbonThresholdByClass[diameterClass], 2.4247F) * 0.5F * 0.1F;
+                this.carbonThresholdByClass[diameterClass] = 0.10568F * MathF.Pow(this.carbonThresholdByClass[diameterClass], 2.4247F) * 0.5F * 0.01F;
             }
 
             this.ResourceUnit = resourceUnit;
@@ -126,6 +135,8 @@ namespace iLand.Tree
                                               environment.SnagBranchRootCarbon / environment.SnagBranchRootCNRatio,
                                               environment.SnagBranchRootDecompositionRate);
             this.StandingAndDebrisCarbon = branches.C + this.StandingWoodyDebrisByClass[1].C;
+            this.OtherWoodAbovegroundFraction = environment.SnagOtherWoodAbovegroundFraction;
+            this.DeciduousFoliageLitter = 0.0F;
 
             branches *= 1.0F / this.BranchesAndCoarseRootsByYear.Length;
             for (int diameterClass = 0; diameterClass < this.BranchesAndCoarseRootsByYear.Length; ++diameterClass)
@@ -211,22 +222,26 @@ namespace iLand.Tree
         //    return list;
         //}
 
+        // C++/core/snag.cpp: newYear()
         public void OnStartYear()
         {
             for (int classIndex = 0; classIndex < this.toStandingWoodyByClass.Length; ++classIndex)
             {
-                toStandingWoodyByClass[classIndex].Zero(); // clear transfer pools to standing-woody-debris
-                currentDecayRateByClass[classIndex] = 0.0F;
+                this.toStandingWoodyByClass[classIndex].Zero(); // clear transfer pools to standing-woody-debris
+                this.currentDecayRateByClass[classIndex] = 0.0F;
             }
 
-            standingWoodyToSoil.Zero();
-            totalSnagInput.Zero();
+            this.standingWoodyToSoil.Zero();
+            this.totalSnagInput.Zero();
 
-            FluxToAtmosphere.Zero();
-            FluxToExtern.Zero();
-            FluxToDisturbance.Zero();
-            LabileFlux.Zero();
-            RefractoryFlux.Zero();
+            this.FluxToAtmosphere.Zero();
+            this.FluxToExtern.Zero();
+            this.FluxToDisturbance.Zero();
+            this.LabileFlux.Zero();
+            this.RefractoryFlux.Zero();
+
+            this.LabileFluxAbovegroundCarbon = 0.0F;
+            this.RefractoryFluxAbovegroundCarbon = 0.0F;
         }
 
         /// <summary>
@@ -236,7 +251,7 @@ namespace iLand.Tree
         /// Decomposition rates are calculated per ResourceUnit because this is the granularity of water cycle tracking. It is assumed this function is called
         /// once per annual time step after the RU's water cycle has been updated for the year.
         /// </remarks>
-        public void CalculateWeatherFactors()
+        public void CalculateWeatherFactors(Model model)
         {
             // calculate the water-factor for each month
             // Adair CE, Parton WJ, del Grosso SL, et al. 2008. Simple three-pool model accurately describes patterns of long-term litter
@@ -257,6 +272,8 @@ namespace iLand.Tree
                 // Debug.WriteLine("month " + month + " PET " + this.RU.WaterCycle.ReferenceEvapotranspiration()[month] + " prec " + this.RU.Weather.PrecipitationByMonth[month]);
             }
 
+            bool use_microclimate = model.Project.Model.Microclimate.Enabled && model.Project.Model.Microclimate.DecompositionEffect;
+
             // the calculation of weather factors requires calculated evapotranspiration. In cases without vegetation (trees or saplings)
             float weatherFactorSumForYear = 0.0F;
             WeatherTimeSeries weatherTimeSeries = this.ResourceUnit.Weather.TimeSeries;
@@ -264,6 +281,18 @@ namespace iLand.Tree
             {
                 // empirical variable Q10 model of Lloyd and Taylor (1994), see also Adair et al. (2008)
                 float ft = MathF.Exp(308.56F * (1.0F / 56.02F - 1.0F / (273.15F + weatherTimeSeries.TemperatureDaytimeMean[weatherTimestepIndex] - 227.13F)));
+
+                float temp_day = weatherTimeSeries.TemperatureDaytimeMean[weatherTimestepIndex];
+                if (use_microclimate)
+                {
+                    Debug.Assert(this.ResourceUnit.Microclimate != null); ;
+                    float mc_mean_buffer = this.ResourceUnit.Microclimate.GetMeanMicroclimateBuffering(weatherTimeSeries.Month[weatherTimestepIndex] - 1);
+                    temp_day += mc_mean_buffer;
+                }
+
+                // empirical variable Q10 model of Lloyd and Taylor (1994), see also Adair et al. (2008)
+                // Note: function becomes unstable with very low temperatures (e.g. Alaska)
+                ft = temp_day > -30.0F ? MathF.Exp(308.56F * (1.0F / 56.02F - 1.0F / ((273.15F + temp_day) - 227.13F))) : 0.0F;
                 float fw = waterFactorByMonth[weatherTimeSeries.Month[weatherTimestepIndex] - 1];
 
                 weatherFactorSumForYear += ft * fw;
@@ -279,21 +308,31 @@ namespace iLand.Tree
             this.WeatherFactor = weatherFactorSumForYear / weatherTimestepsInYear;
         }
 
+        /// set deciduous foliage litter to 0 - this is not ideal, but timing is complicated
+        /// as litter input comes from both trees and saplings, and the only "user" at the moment
+        /// is permafrost, which is executed between both processes
+        public void ZeroDeciduousFoliage()
+        {
+            this.DeciduousFoliageLitter = 0.0F;
+        }
+
         /// do the yearly calculation
-        /// see http://iland-model.org/snag+dynamics
-        public void RunYear()
+        /// see https://iland-model.org/snag+dynamics
+        public void RunYear(Model model)
         {
             this.standingWoodyToSoil.Zero();
 
             // calculate anyway, because also the soil module needs it (and currently one can have Snag and Soil only as a couple)
-            this.CalculateWeatherFactors();
+            this.CalculateWeatherFactors(model);
             float weatherFactor = this.WeatherFactor;
             if (this.HasNoCarbon()) // nothing to do
             {
                 return;
             }
-            // process branches: every year one of the five baskets is emptied and transfered to the refractory soil pool
+
+            // process branches and coarse roots: every year one of the five baskets is emptied and transfered to the refractory soil pool
             this.RefractoryFlux += this.BranchesAndCoarseRootsByYear[BranchCounter];
+            this.RefractoryFluxAbovegroundCarbon += this.BranchesAndCoarseRootsByYear[this.BranchCounter].C * this.OtherWoodAbovegroundFraction; // content * aboveground_fraction
             this.BranchesAndCoarseRootsByYear[this.BranchCounter].Zero();
             this.BranchCounter = (this.BranchCounter + 1) % this.BranchesAndCoarseRootsByYear.Length; // increase index, roll over to 0.
 
@@ -348,11 +387,14 @@ namespace iLand.Tree
                         rate *= 2.0F;
                     }
                     float transfer = 1.0F - MathF.Exp(rate);
+                    Debug.Assert((0.0F <= transfer) && (transfer <= 1.0F));
 
                     // calculate flow to soil pool...
                     this.standingWoodyToSoil += this.StandingWoodyDebrisByClass[diameterClass] * transfer;
                     this.RefractoryFlux += this.StandingWoodyDebrisByClass[diameterClass] * transfer;
-                    this.StandingWoodyDebrisByClass[diameterClass] *= (1.0F - transfer); // reduce pool
+                    this.RefractoryFluxAbovegroundCarbon += this.StandingWoodyDebrisByClass[diameterClass].C * transfer; // all snag biomass is aboveground
+
+                    this.StandingWoodyDebrisByClass[diameterClass] *= 1.0F - transfer; // reduce pool
                     // calculate the stem number of remaining snags
                     this.NumberOfSnagsByClass[diameterClass] = NumberOfSnagsByClass[diameterClass] * (1.0F - transfer);
 
@@ -364,6 +406,7 @@ namespace iLand.Tree
                     {
                         // clear the pool: add the rest to the soil, clear statistics of the pool
                         this.RefractoryFlux += this.StandingWoodyDebrisByClass[diameterClass];
+                        this.RefractoryFluxAbovegroundCarbon += this.StandingWoodyDebrisByClass[diameterClass].C;
                         this.standingWoodyToSoil += this.StandingWoodyDebrisByClass[diameterClass];
                         this.StandingWoodyDebrisByClass[diameterClass].Zero();
                         this.AverageDbhByClass[diameterClass] = 0.0F;
@@ -373,39 +416,53 @@ namespace iLand.Tree
                         this.currentDecayRateByClass[diameterClass] = 0.0F;
                         this.HalfLifeByClass[diameterClass] = 0.0F;
                         this.TimeSinceDeathByClass[diameterClass] = 0.0F;
+                        this.NumberOfSnagsByClass[diameterClass] = 0.0F;
                     }
                 }
             }
+
             // total carbon in the snag-container on the RU *after* processing is the content of the
             // standing woody debris pools + the branches
             this.TotalStanding = this.StandingWoodyDebrisByClass[0] + this.StandingWoodyDebrisByClass[1] + this.StandingWoodyDebrisByClass[2];
             this.TotalBranchesAndRoots = this.BranchesAndCoarseRootsByYear[0] + this.BranchesAndCoarseRootsByYear[1] + this.BranchesAndCoarseRootsByYear[2] + this.BranchesAndCoarseRootsByYear[3] + this.BranchesAndCoarseRootsByYear[4];
             this.StandingAndDebrisCarbon = this.TotalStanding.C + this.TotalBranchesAndRoots.C;
+
+            Debug.Assert(this.StandingAndDebrisCarbon >= 0.0F);
         }
 
         /// foliage and fineroot litter is transferred during tree growth.
         public void AddTurnoverLitter(TreeSpecies species, float litterFoliage, float litterFineroot)
         {
             this.LabileFlux.AddBiomass(litterFoliage, species.CarbonNitrogenRatioFoliage, species.LitterDecompositionRate);
+            this.LabileFluxAbovegroundCarbon += Constant.DryBiomassCarbonFraction * litterFoliage;
             this.LabileFlux.AddBiomass(litterFineroot, species.CarbonNitrogenRatioFineRoot, species.LitterDecompositionRate);
+            if (species.IsEvergreen == false) // bugged in C++
+            {
+                this.DeciduousFoliageLitter += litterFoliage;
+            }
             // Debug.WriteLineIf(Single.IsNaN(this.LabileFlux.C), "Labile carbon NaN.");
         }
 
         public void AddTurnoverWood(float woodyBiomass, TreeSpecies species)
         {
+            // NOTE: currently, woody_biomass is *only* coarse root, therefore no split in aboveground/belowground flux here
             this.RefractoryFlux.AddBiomass(woodyBiomass, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
             // Debug.WriteLineIf(Single.IsNaN(this.RefractoryFlux.C), "addTurnoverWood: NaN");
         }
 
-        /** process the remnants of a single tree.
-            The part of the stem / branch not covered by snag/soil fraction is removed from the system (e.g. harvest, fire)
-            @param tree the tree to process
-            @param stem_to_snag fraction (0..1) of the stem biomass that should be moved to a standing snag
-            @param stem_to_soil fraction (0..1) of the stem biomass that should go directly to the soil
-            @param branch_to_snag fraction (0..1) of the branch biomass that should be moved to a standing snag
-            @param branch_to_soil fraction (0..1) of the branch biomass that should go directly to the soil
-            @param foliage_to_soil fraction (0..1) of the foliage biomass that should go directly to the soil
-            */
+        /// <summary>
+        /// Process the remnants of a single tree.
+        /// </summary>
+        /// <param name="tree">tree the tree to process</param>
+        /// <param name="stemToSnag">fraction(0..1) of the stem biomass that should be moved to a standing snag</param>
+        /// <param name="stemToSoil">fraction(0..1) of the stem biomass that should go directly to the soil</param>
+        /// <param name="branchToSnag">fraction(0..1) of the branch biomass that should be moved to a standing snag</param>
+        /// <param name="branchToSoil">fraction(0..1) of the branch biomass that should go directly to the soil</param>
+        /// <param name="foliageToSoil">fraction(0..1) of the foliage biomass that should go directly to the soil</param>
+        /// <remarks>
+        /// The part of the stem / branch not covered by snag/soil fraction is removed from the system(e.g.harvest, fire).
+        /// C++: Snag::addBiomassPools()
+        /// </remarks>
         public void AddBiomassPools(TreeListSpatial tree, int treeIndex, float stemToSnag, float stemToSoil, float branchToSnag, float branchToSoil, float foliageToSoil)
         {
             TreeSpecies species = tree.Species;
@@ -416,9 +473,18 @@ namespace iLand.Tree
 
             // a part of the foliage goes to the soil
             this.LabileFlux.AddBiomass(tree.FoliageMassInKg[treeIndex] * foliageToSoil, species.CarbonNitrogenRatioFoliage, species.LitterDecompositionRate);
+            this.LabileFluxAbovegroundCarbon += Constant.DryBiomassCarbonFraction * tree.FoliageMassInKg[treeIndex] * foliageToSoil;
+
+            // aboveground fraction of the "other" pool: aboveground_current + ag_new / (total_c)
+            float biomassCoarseRoot = tree.Species.GetBiomassCoarseRoot(treeIndex);
+            if (this.TotalBranchesAndRoots.C + branchToSnag * branchBiomass + biomassCoarseRoot > 0.0F)
+            {
+                this.OtherWoodAbovegroundFraction = (this.TotalBranchesAndRoots.C * this.OtherWoodAbovegroundFraction + branchToSnag * branchBiomass) / (this.TotalBranchesAndRoots.C + branchToSnag * branchBiomass + biomassCoarseRoot);
+            }
 
             // coarse roots and a part of branches are equally distributed over five years:
             float biomass_rest = 0.2F * (tree.CoarseRootMassInKg[treeIndex] + branchToSnag * branchBiomass);
+            Debug.Assert(biomass_rest >= 0.0F);
             for (int year = 0; year < this.BranchesAndCoarseRootsByYear.Length; ++year)
             {
                 // TODO: why five years?
@@ -427,8 +493,14 @@ namespace iLand.Tree
 
             // the other part of the branches goes directly to the soil
             this.RefractoryFlux.AddBiomass(branchBiomass * branchToSoil, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
+            this.RefractoryFluxAbovegroundCarbon += Constant.DryBiomassCarbonFraction * branchBiomass * branchToSoil;
+
             // a part of the stem wood goes directly to the soil
-            this.RefractoryFlux.AddBiomass(tree.StemMassInKg[treeIndex] * stemToSoil, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
+            float biomassStemAndReserve = tree.StemMassInKg[treeIndex] + tree.NppReserveInKg[treeIndex];
+            this.RefractoryFlux.AddBiomass(stemToSoil * biomassStemAndReserve, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
+            this.RefractoryFluxAbovegroundCarbon += Constant.DryBiomassCarbonFraction * stemToSoil * biomassStemAndReserve;
+
+            Debug.Assert(Single.IsNaN(this.RefractoryFlux.C) == false);
 
             // just for book-keeping: keep track of all inputs of branches / roots / swd into the "snag" pools
             this.totalSnagInput.AddBiomass(branchBiomass * branchToSnag + tree.CoarseRootMassInKg[0] + tree.StemMassInKg[0] * stemToSnag, species.CarbonNitrogenRatioWood);
@@ -449,21 +521,25 @@ namespace iLand.Tree
 
                 // average the decay rate (ksw); this is done based on the carbon content
                 // aggregate all trees that die in the current year (and save weighted decay rates to CurrentKSW)
-                p_old = toStandingWoodyByClass[poolIndex].C / (toStandingWoodyByClass[poolIndex].C + tree.StemMassInKg[treeIndex] * Constant.DryBiomassCarbonFraction);
-                p_new = tree.StemMassInKg[treeIndex] * Constant.DryBiomassCarbonFraction / (toStandingWoodyByClass[poolIndex].C + tree.StemMassInKg[treeIndex] * Constant.DryBiomassCarbonFraction);
-                this.currentDecayRateByClass[poolIndex] = currentDecayRateByClass[poolIndex] * p_old + species.SnagDecompositionRate * p_new;
+                if (biomassStemAndReserve > 0.0F)
+                {
+                    p_old = toStandingWoodyByClass[poolIndex].C / (toStandingWoodyByClass[poolIndex].C + Constant.DryBiomassCarbonFraction) * biomassStemAndReserve;
+                    p_new = Constant.DryBiomassCarbonFraction * biomassStemAndReserve / (toStandingWoodyByClass[poolIndex].C + Constant.DryBiomassCarbonFraction * biomassStemAndReserve);
+                    this.currentDecayRateByClass[poolIndex] = currentDecayRateByClass[poolIndex] * p_old + species.SnagDecompositionRate * p_new;
+                }
                 this.NumberOfSnagsByClass[poolIndex]++;
             }
 
             // finally add the biomass of the stem to the standing snag pool
             CarbonNitrogenPool toStandingWoody = toStandingWoodyByClass[poolIndex];
-            toStandingWoody.AddBiomass(tree.StemMassInKg[treeIndex] * stemToSnag, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
+            toStandingWoody.AddBiomass(biomassStemAndReserve * stemToSnag, species.CarbonNitrogenRatioWood, species.CoarseWoodyDebrisDecompositionRate);
+            Debug.Assert(toStandingWoody.C >= 0.0F);
 
             // the biomass that is not routed to snags or directly to the soil
             // is removed from the system (to atmosphere or harvested)
             this.FluxToExtern.AddBiomass(tree.FoliageMassInKg[treeIndex] * (1.0F - foliageToSoil) +
                                          branchBiomass * (1.0F - branchToSnag - branchToSoil) +
-                                         tree.StemMassInKg[treeIndex] * (1.0F - stemToSnag - stemToSoil), species.CarbonNitrogenRatioWood);
+                                         biomassStemAndReserve * (1.0F - stemToSnag - stemToSoil), species.CarbonNitrogenRatioWood);
         }
 
         /// after the death of the tree the five biomass compartments are processed.
@@ -485,7 +561,7 @@ namespace iLand.Tree
             //        mOtherWood[i].addBiomass(biomass_rest, species.cnWood(), tree.species().snagKyr());
 
             //    // just for book-keeping: keep track of all inputs into branches / roots / swd
-            //    mTotalIn.addBiomass(tree.biomassBranch() + tree.biomassCoarseRoot() + tree.biomassStem(), species.cnWood());
+            //    mTotalIn.addBiomass(tree.biomassBranch() + tree.biomassCoarseRoot() + tree.biomassStem() + tree.reserve, species.cnWood());
             //    // stem biomass is transferred to the standing woody debris pool (SWD), increase stem number of pool
             //    int pi = poolIndex(tree.dbh()); // get right transfer pool
 
@@ -501,7 +577,7 @@ namespace iLand.Tree
 
             //    // average the decay rate (ksw); this is done based on the carbon content
             //    // aggregate all trees that die in the current year (and save weighted decay rates to CurrentKSW)
-            //    if (tree.biomassStem()==0)
+            //    if (tree.biomassStem + tree.reserve==0)
             //        throw new NotSupportedException("addMortality: tree without stem biomass!!");
             //    p_old = mToSWD[pi].C / (mToSWD[pi].C + tree.biomassStem()* CNPair.biomassCFraction);
             //    p_new =tree.biomassStem()* CNPair.biomassCFraction / (mToSWD[pi].C + tree.biomassStem()* CNPair.biomassCFraction);
@@ -544,17 +620,31 @@ namespace iLand.Tree
         }
 
         // add flow from regeneration layer (dead trees) to soil
-        public void AddToSoil(TreeSpecies species, CarbonNitrogenTuple woodyDebris, CarbonNitrogenTuple litter)
+        public void AddToSoil(TreeSpecies species, CarbonNitrogenTuple woodyDebris, CarbonNitrogenTuple litter, float woody_aboveground_C, float fine_aboveground_C)
         {
             this.LabileFlux.Add(litter, species.LitterDecompositionRate);
+            this.LabileFluxAbovegroundCarbon += fine_aboveground_C;
             this.RefractoryFlux.Add(woodyDebris, species.CoarseWoodyDebrisDecompositionRate);
+            this.RefractoryFluxAbovegroundCarbon += woody_aboveground_C;
             Debug.Assert(Single.IsNaN(this.LabileFlux.C) == false && Single.IsNaN(this.RefractoryFlux.C) == false, "NaN in C Pool");
+        }
+
+        public void AddBiomassToSoil(CarbonNitrogenPool woodyPool, CarbonNitrogenPool litterPool)
+        {
+            // add the biomass (fluxes in kg/ha)
+            this.LabileFlux.Add(litterPool, litterPool.DecompositionRate);
+            this.RefractoryFlux.Add(woodyPool, woodyPool.DecompositionRate);
+            // assume all biomass input is from above
+            this.LabileFluxAbovegroundCarbon += litterPool.C;
+            this.RefractoryFluxAbovegroundCarbon += woodyPool.C;
         }
 
         /// disturbance function: remove the fraction of 'factor' of biomass from the SWD pools; 0: remove nothing, 1: remove all
         /// biomass removed by this function goes to the atmosphere
         public void RemoveCarbon(float factor)
         {
+            Debug.Assert((0.0F <= factor) && (factor <= 1.0F));
+
             // reduce pools of currently standing dead wood and also of pools that are added
             // during (previous) management operations of the current year
             for (int diameterClass = 0; diameterClass < this.StandingWoodyDebrisByClass.Length; diameterClass++)
@@ -573,17 +663,19 @@ namespace iLand.Tree
 
         /// cut down swd (and branches) and move to soil pools
         /// @param factor 0: cut 0%, 1: cut and slash 100% of the wood
+        // C++/core/snag.cpp: Snag::management()
         public void TransferStandingWoodToSoil(float fraction)
         {
             if (fraction < 0.0F || fraction > 1.0F)
             {
-                throw new ArgumentOutOfRangeException(nameof(fraction), "Invalid factor '" + fraction + "'.");
+                throw new ArgumentOutOfRangeException(nameof(fraction), "Invalid transfer fraction '" + fraction + "'.");
             }
             // swd pools
             for (int diameterClass = 0; diameterClass < this.StandingWoodyDebrisByClass.Length; diameterClass++)
             {
                 this.standingWoodyToSoil += this.StandingWoodyDebrisByClass[diameterClass] * fraction;
                 this.RefractoryFlux += this.StandingWoodyDebrisByClass[diameterClass] * fraction;
+                this.RefractoryFluxAbovegroundCarbon += this.StandingWoodyDebrisByClass[diameterClass].C * fraction;
                 this.StandingWoodyDebrisByClass[diameterClass] *= 1.0F - fraction;
                 //mSWDtoSoil += mToSWD[i] * factor;
                 //mToSWD[i] *= (1.0 - factor);
@@ -594,6 +686,15 @@ namespace iLand.Tree
             {
                 this.RefractoryFlux += this.BranchesAndCoarseRootsByYear[year] * fraction;
                 this.BranchesAndCoarseRootsByYear[year] *= 1.0F - fraction;
+
+                float ag_factor = this.OtherWoodAbovegroundFraction * fraction; // we move only aboveground carbon to the soil
+                this.RefractoryFlux += this.BranchesAndCoarseRootsByYear[year] * ag_factor;
+                this.RefractoryFluxAbovegroundCarbon += this.BranchesAndCoarseRootsByYear[year].C * ag_factor;
+                this.BranchesAndCoarseRootsByYear[year] *= 1.0F - ag_factor;
+                if (ag_factor < 1.0F)
+                {
+                    this.OtherWoodAbovegroundFraction = (this.OtherWoodAbovegroundFraction - ag_factor) / (1.0F - ag_factor); // the fraction of aboveground carbon
+                }
             }
         }
     }

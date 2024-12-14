@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -43,6 +43,7 @@ void ModelSettings::loadModelSettings()
     //useDynamicAvailableNitrogen = xml.valueBool("model.settings.soil.useDynamicAvailableNitrogen", false); // TODO: there is a bug in using a xml helper that whose top-node is set
     useDynamicAvailableNitrogen = GlobalSettings::instance()->settings().valueBool("model.settings.soil.useDynamicAvailableNitrogen", false);
     torusMode = GlobalSettings::instance()->settings().paramValueBool("torus", false);
+    microclimateEnabled = GlobalSettings::instance()->settings().valueBool("model.climate.microclimate.enabled", false);
 }
 
 void ModelSettings::print()

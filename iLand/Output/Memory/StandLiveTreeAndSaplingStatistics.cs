@@ -69,8 +69,8 @@ namespace iLand.Output.Memory
             this.FoliageNitrogenInKgPerHa /= this.areaInLandscapeInM2;
             this.RegenerationCarbonInKgPerHa /= this.areaInLandscapeInM2;
             this.RegenerationNitrogenInKgPerHa /= this.areaInLandscapeInM2;
-            this.StemCarbonInKgPerHa /= this.areaInLandscapeInM2;
-            this.StemNitrogenInKgPerHa /= this.areaInLandscapeInM2;
+            this.StemAndReserveCarbonInKgPerHa /= this.areaInLandscapeInM2;
+            this.StemAndReserveNitrogenInKgPerHa /= this.areaInLandscapeInM2;
         }
 
         public override void Zero()

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -43,18 +43,18 @@ public:
     /// main function of stand initialization
     /// the function loads - depending on the XML project file - inits for a single resource unit, for polygons or a snapshot from a database.
     void processInit();
-    /// this function is called *after* the init and after  initial LIF-calculations.
+    /// this function is called *after* the init and after initial LIF-calculations.
      void processAfterInit();
 
     /// load a single tree file (picus or iland style). return number of trees loaded.
-    int loadPicusFile(const QString &fileName, ResourceUnit *ru=NULL);
+    int loadPicusFile(const QString &fileName, ResourceUnit *ru=NULL, int stand_id=-1);
     /// load a tree distribution based on dbh classes. return number of trees loaded.
     int loadiLandFile(const QString &fileName, ResourceUnit *ru=NULL, int stand_id=0);
 
     /// worker function to load a file containing single trees
-    int loadSingleTreeList(const QString &content, ResourceUnit*ru = NULL, const QString &fileName="");
+    int loadSingleTreeList(QStringList content, ResourceUnit*ru_offset = NULL, int stand_id=-1, const QString &fileName="");
     /// worker function to load a file containing rows with dbhclasses
-    int loadDistributionList(const QString &content, ResourceUnit *ru = NULL, int stand_id=0, const QString &fileName="");
+    int loadDistributionList(const QStringList &content, ResourceUnit *ru = NULL, int stand_id=0, const QString &fileName="");
     // load regeneration in stands
     int loadSaplings(const QString &content, int stand_id, const QString &fileName=QString());
     // load regen in stand but consider also the light conditions on the ground
@@ -75,7 +75,7 @@ private:
     void executeiLandInitStand(int stand_id); ///< shuffle tree positions
     void copyTrees(); ///< helper function to quickly fill up the landscape by copying trees
     void evaluateDebugTrees(); ///< set debug-flag for trees by evaluating the param-value expression "debug_tree"
-    int parseInitFile(const QString &content, const QString &fileName, ResourceUnit *ru=0); ///< creates a list of InitFileItems from the init files' content
+    int parseInitFile(const QStringList &content, const QString &fileName, ResourceUnit *ru=0); ///< creates a list of InitFileItems from the init files' content
     Model *mModel;
     RandomCustomPDF *mRandom;
     QVector<InitFileItem> mInitItems;

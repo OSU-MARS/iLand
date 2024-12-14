@@ -17,12 +17,14 @@ namespace iLand.Output.Memory
         private byte[]? treeSpeciesIndices;
         private byte[]? averageDbh;
         private byte[]? averageHeight;
-        private byte[]? basalArea;
-        private byte[]? lai;
         private byte[]? liveStemVolume;
+        private byte[]? treeBasalArea;
+        private byte[]? treeLai;
         private byte[]? treeNpp;
         private byte[]? treeAbovegroundNpp;
         private byte[]? treesPerHectare;
+        private byte[]? saplingBasalArea;
+        private byte[]? saplingLai;
         private byte[]? saplingCohorts;
         private byte[]? saplingMeanAge;
         private byte[]? saplingNpp;
@@ -53,12 +55,14 @@ namespace iLand.Output.Memory
                 new("species", treeSpeciesFieldType, false),
                 new("averageDbh", FloatType.Default, false),
                 new("averageHeight", FloatType.Default, false),
-                new("basalArea", FloatType.Default, false),
-                new("lai", FloatType.Default, false),
                 new("liveStemVolume", FloatType.Default, false),
+                new("treeBasalArea", FloatType.Default, false),
+                new("treeLai", FloatType.Default, false),
                 new("treeNpp", FloatType.Default, false),
                 new("treeAbovegroundNpp", FloatType.Default, false),
                 new("treesPerHectare", FloatType.Default, false),
+                new("saplingLai", FloatType.Default, false),
+                new("saplingNpp", FloatType.Default, false),
                 new("saplingCohorts", FloatType.Default, false),
                 new("saplingMeanAge", FloatType.Default, false),
                 new("saplingNpp", FloatType.Default, false),
@@ -84,13 +88,15 @@ namespace iLand.Output.Memory
                 { "species", "Integer code for tree species, typically " + Constant.AllTreeSpeciesCode + " to indicate all tree species present, a USFS FIA code (US Forest Service Forest Inventory and Analysis, 16 bit), or WFO ID (World Flora Online identifier, 32 bit)." },
                 { "averageDbh", "Arithmetic mean diameter of trees, cm." },
                 { "averageHeight", "Arithmetic mean height of trees, m." },
-                { "basalArea", "Basal area of trees, m²/ha." },
-                { "lai", "Leaf area index of trees, m²/m²." },
                 { "liveStemVolume", "Live stem volume of trees, , m³/ha" },
+                { "treeBasalArea", "Basal area of trees, m²/ha." },
+                { "treeLai", "Leaf area index of trees, m²/m²." },
                 { "treeNpp", "Net primary production of trees, kg biomass/ha-yr." },
                 { "treeAbovegroundNpp", "Net primary production of trees in aboveground compartments, kg biomass/ha-yr." },
                 { "treesPerHectare", "Number of trees per hectare." },
-                { "saplingCohorts", "" },
+                { "saplingBasalArea", "Basal area of trees, m²/ha." },
+                { "saplingLai", "Leaf area index of trees, m²/m²." },
+                { "saplingCohorts", "Number of cohorts of saplings per hectare." },
                 { "saplingMeanAge", "Mean age of saplings in years." },
                 { "saplingNpp", "Net primary production of saplings, kg biomass/ha-yr." },
                 { "saplingsPerHectare", "Number of saplings per hectare." },
@@ -114,12 +120,14 @@ namespace iLand.Output.Memory
             this.treeSpeciesIndices = null;
             this.averageDbh = null;
             this.averageHeight = null;
-            this.basalArea = null;
-            this.lai = null;
             this.liveStemVolume = null;
+            this.treeBasalArea = null;
+            this.treeLai = null;
             this.treeNpp = null;
             this.treeAbovegroundNpp = null;
             this.treesPerHectare = null;
+            this.saplingBasalArea = null;
+            this.saplingLai = null;
             this.saplingCohorts = null;
             this.saplingMeanAge = null;
             this.saplingNpp = null;
@@ -170,12 +178,14 @@ namespace iLand.Output.Memory
 
             ArrowMemory.CopyN(trajectory.AverageDbhByYear, startYearIndex, this.averageDbh, startIndexInRecordBatch, yearsToCopy);
             ArrowMemory.CopyN(trajectory.AverageHeightByYear, startYearIndex, this.averageHeight, startIndexInRecordBatch, yearsToCopy);
-            ArrowMemory.CopyN(trajectory.BasalAreaByYear, startYearIndex, this.basalArea, startIndexInRecordBatch, yearsToCopy);
-            ArrowMemory.CopyN(trajectory.LeafAreaIndexByYear, startYearIndex, this.lai, startIndexInRecordBatch, yearsToCopy);
             ArrowMemory.CopyN(trajectory.LiveStemVolumeByYear, startYearIndex, this.liveStemVolume, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.TreeBasalAreaByYear, startYearIndex, this.treeBasalArea, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.TreeLeafAreaIndexByYear, startYearIndex, this.treeLai, startIndexInRecordBatch, yearsToCopy);
             ArrowMemory.CopyN(trajectory.TreeNppByYear, startYearIndex, this.treeNpp, startIndexInRecordBatch, yearsToCopy);
             ArrowMemory.CopyN(trajectory.TreeNppAbovegroundByYear, startYearIndex, this.treeAbovegroundNpp, startIndexInRecordBatch, yearsToCopy);
             ArrowMemory.CopyN(trajectory.TreesPerHectareByYear, startYearIndex, this.treesPerHectare, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.SaplingBasalAreaByYear, startYearIndex, this.saplingBasalArea, startIndexInRecordBatch, yearsToCopy);
+            ArrowMemory.CopyN(trajectory.SaplingLeafAreaIndexByYear, startYearIndex, this.saplingLai, startIndexInRecordBatch, yearsToCopy);
             ArrowMemory.CopyN(trajectory.SaplingCohortsPerHectareByYear, startYearIndex, this.saplingCohorts, startIndexInRecordBatch, yearsToCopy);
             ArrowMemory.CopyN(trajectory.SaplingMeanAgeByYear, startYearIndex, this.saplingMeanAge, startIndexInRecordBatch, yearsToCopy);
             ArrowMemory.CopyN(trajectory.SaplingNppByYear, startYearIndex, this.saplingNpp, startIndexInRecordBatch, yearsToCopy);
@@ -207,12 +217,14 @@ namespace iLand.Output.Memory
             this.treeSpeciesIndices = new byte[capacityInRecords * treeSpeciesFieldType.BitWidth / 8];
             this.averageDbh = new byte[capacityInRecords * sizeof(float)];
             this.averageHeight = new byte[capacityInRecords * sizeof(float)];
-            this.basalArea = new byte[capacityInRecords * sizeof(float)];
-            this.lai = new byte[capacityInRecords * sizeof(float)];
             this.liveStemVolume = new byte[capacityInRecords * sizeof(float)];
+            this.treeBasalArea = new byte[capacityInRecords * sizeof(float)];
+            this.treeLai = new byte[capacityInRecords * sizeof(float)];
             this.treeNpp = new byte[capacityInRecords * sizeof(float)];
             this.treeAbovegroundNpp = new byte[capacityInRecords * sizeof(float)];
             this.treesPerHectare = new byte[capacityInRecords * sizeof(float)];
+            this.saplingBasalArea = new byte[capacityInRecords * sizeof(float)];
+            this.saplingLai = new byte[capacityInRecords * sizeof(float)];
             this.saplingCohorts = new byte[capacityInRecords * sizeof(float)];
             this.saplingMeanAge = new byte[capacityInRecords * sizeof(float)];
             this.saplingNpp = new byte[capacityInRecords * sizeof(float)];
@@ -240,12 +252,14 @@ namespace iLand.Output.Memory
                 ArrowArrayExtensions.Wrap(treeSpeciesFieldType, this.treeSpeciesIndices),
                 ArrowArrayExtensions.WrapInFloat(this.averageDbh),
                 ArrowArrayExtensions.WrapInFloat(this.averageHeight),
-                ArrowArrayExtensions.WrapInFloat(this.basalArea),
-                ArrowArrayExtensions.WrapInFloat(this.lai),
                 ArrowArrayExtensions.WrapInFloat(this.liveStemVolume),
+                ArrowArrayExtensions.WrapInFloat(this.treeBasalArea),
+                ArrowArrayExtensions.WrapInFloat(this.treeLai),
                 ArrowArrayExtensions.WrapInFloat(this.treeNpp),
                 ArrowArrayExtensions.WrapInFloat(this.treeAbovegroundNpp),
                 ArrowArrayExtensions.WrapInFloat(this.treesPerHectare),
+                ArrowArrayExtensions.WrapInFloat(this.saplingBasalArea),
+                ArrowArrayExtensions.WrapInFloat(this.saplingLai),
                 ArrowArrayExtensions.WrapInFloat(this.saplingCohorts),
                 ArrowArrayExtensions.WrapInFloat(this.saplingMeanAge),
                 ArrowArrayExtensions.WrapInFloat(this.saplingNpp),

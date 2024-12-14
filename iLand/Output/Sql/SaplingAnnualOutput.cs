@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿// C++/output/{ saplingout.h, saplingout.cpp }
+using iLand.Input.ProjectFile;
 using iLand.Simulation;
 using iLand.Tool;
 using iLand.Tree;
@@ -20,17 +21,18 @@ namespace iLand.Output.Sql
             this.Name = "Sapling Output";
             this.TableName = "sapling";
             this.Description = "Output of the establishment/sapling layer per resource unit and species." + System.Environment.NewLine +
-                               "The output covers trees between a dbh of 1cm and the recruitment threshold (i.e. a height of 4m)." +
-                               "Cohorts with a dbh < 1cm are counted in 'cohort_count_ha' but not used for average calculations." + System.Environment.NewLine + System.Environment.NewLine +
-                               "You can specify a 'condition' to limit execution for specific time/ area with the variables 'ru' (resource unit id) and 'year' (the current year)";
+                               "The output covers saplings with heights from 1.3 m to the top of the recruitment layer (4 m by default)." +
+                               "Cohorts with a DBH < 1cm are counted in 'cohort_count_ha' but not used for average calculations." + System.Environment.NewLine + System.Environment.NewLine +
+                               "You can specify a 'condition' to limit execution to a specific time or area with the variables 'ru' (resource unit id) and 'year' (the current year).";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnitID());
             this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
-            this.Columns.Add(new("count_ha", "number of represented individuals per ha (tree height >1.3m).", SqliteType.Integer));
-            this.Columns.Add(new("count_small_ha", "number of represented individuals per ha (with height <=1.3m).", SqliteType.Integer));
-            this.Columns.Add(new("cohort_count_ha", "number of cohorts per ha.", SqliteType.Integer));
-            this.Columns.Add(new("height_avg_m", "arithmetic average height of the cohorts (m) ", SqliteType.Real));
-            this.Columns.Add(new("age_avg", "arithmetic average age of the sapling cohorts (years)", SqliteType.Real));
+            this.Columns.Add(new("count_ha", "Number of represented individuals per ha (tree height >1.3m).", SqliteType.Integer));
+            this.Columns.Add(new("count_small_ha", "Number of represented individuals per ha (with height <=1.3m).", SqliteType.Integer));
+            this.Columns.Add(new("cohort_count_ha", "Number of cohorts per hectare.", SqliteType.Integer));
+            this.Columns.Add(new("height_avg_m", "Arithmetic average height of the cohorts, m.", SqliteType.Real));
+            this.Columns.Add(new("age_avg", "Arithmetic average age of the sapling cohorts, years.", SqliteType.Real));
+            this.Columns.Add(new("LAI", "Leaf area index of the regeneration layer, m²/m².", SqliteType.Real));
         }
 
         public override void Setup(Project projectFile, SimulationState simulationState)
@@ -73,6 +75,7 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[5].Value = saplingStatisticsForSpecies.LivingCohorts;
                     insertRow.Parameters[6].Value = saplingStatisticsForSpecies.AverageHeight;
                     insertRow.Parameters[7].Value = saplingStatisticsForSpecies.AverageAgeInYears;
+                    insertRow.Parameters[8].Value = saplingStatisticsForSpecies.LeafAreaIndex;
                     insertRow.ExecuteNonQuery();
                 }
             }

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -80,7 +80,8 @@ bool GisGrid::loadFromFile(const QString &fileName)
     max_value = -1000000000;
 
     // loads from a ESRI-Grid [RasterToFile] File.
-    QByteArray file_content = Helper::loadTextFile(fileName).toLatin1();
+    // QByteArray file_content = Helper::loadTextFile(fileName).toLatin1();
+    QByteArray file_content = Helper::loadFile(fileName);
     if (file_content.isEmpty()) {
         qDebug() << "GISGrid: file" << fileName << "not present or empty.";
         return false;
@@ -95,7 +96,7 @@ bool GisGrid::loadFromFile(const QString &fileName)
     double value;
     do {
         if (pos>lines.count())
-            throw std::logic_error("GISGrid: unexpected end of file ");
+            throw IException("GISGrid: unexpected end of file ");
         line=lines[pos].simplified();
         if (line.length()==0 || line.at(0)=='#') {
             pos++; // skip comments
@@ -142,7 +143,7 @@ bool GisGrid::loadFromFile(const QString &fileName)
         if (!p || *p==0) {
             pos++;
             if (pos>=lines.count())
-                throw std::logic_error("GISGrid: Unexpected End of File!");
+                throw IException("GISGrid: Unexpected End of File!");
             p=lines[pos].data();
             // replace chars
             p2=p;
@@ -297,7 +298,7 @@ QRectF GisGrid::rectangle(const int indexx, const int indexy) const
 Vector3D GisGrid::coord(const int Index) const
 {
     if (Index<0 || Index>=mDataSize)
-        throw std::logic_error("gisgrid:coord: invalid index.");
+        throw IException("gisgrid:coord: invalid index.");
     int ix = Index%mNCols;
     int iy = Index / mNCols;
     return coord(ix,iy);

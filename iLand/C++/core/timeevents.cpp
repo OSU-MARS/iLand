@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -29,27 +29,30 @@ TimeEvents::TimeEvents()
 static QString lastLoadedFile;
 bool TimeEvents::loadFromFile(const QString &fileName)
 {
-    QString source = Helper::loadTextFile(GlobalSettings::instance()->path(fileName));
+    QStringList source = Helper::loadTextFileLines(GlobalSettings::instance()->path(fileName));
     if (source.isEmpty())
         throw IException(QString("TimeEvents: input file does not exist or is empty (%1)").arg(fileName));
     lastLoadedFile=fileName;
     return loadFromString(source);
 }
 
-bool TimeEvents::loadFromString(const QString &source)
+bool TimeEvents::loadFromString(const QStringList &source)
 {
     CSVFile infile;
-    infile.loadFromString(source);
+    infile.loadFromStringList(source);
     QStringList captions = infile.captions();
     int yearcol = infile.columnIndex("year");
     if (yearcol==-1)
         throw IException(QString("TimeEvents: input file '%1' has no 'year' column.").arg(lastLoadedFile));
+
     int year;
     QVariantList line;
     QPair<QString, QVariant> entry;
     for (int row=0;row<infile.rowCount();row++) {
         year = infile.value(row, yearcol).toInt();
         line = infile.values(row);
+        if (line.count()!=infile.colCount())
+            throw IException("TimeEvents: invalid file (number of data columns different than head columns)");
         for (int col=0;col<line.count();col++) {
              if (col!=yearcol) {
                  entry.first = captions[col];
@@ -83,9 +86,10 @@ void TimeEvents::run()
 
         } else {
             // no special value: a xml node...
-            if (! const_cast<XmlHelper&>(GlobalSettings::instance()->settings()).setNodeValue(key, entries[i].second.toString()))
+            if (! const_cast<XmlHelper&>(GlobalSettings::instance()->settings()).setNodeValue(key, entries[i].second.toString())) {
                 qDebug() << "TimeEvents: Error: Key " << key << "not found! (tried to set to" << entries[i].second.toString() << ")";
-            else
+                throw IException("TimeEvents: key '" + key + "' not found in the XML file. \n (Note: corresponding value must not be empty in the project file!). ");
+            } else
                 qDebug() << "TimeEvents: set" << key << "to" << entries[i].second.toString();
         }
         values_set++;

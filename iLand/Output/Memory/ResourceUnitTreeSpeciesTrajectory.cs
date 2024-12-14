@@ -19,15 +19,17 @@ namespace iLand.Output.Memory
             int addIndex = this.LengthInYears;
             this.AverageDbhByYear[addIndex] = 0.0F;
             this.AverageHeightByYear[addIndex] = 0.0F;
-            this.BasalAreaByYear[addIndex] = 0.0F;
-            this.LeafAreaIndexByYear[addIndex] = 0.0F;
             this.LiveStemVolumeByYear[addIndex] = 0.0F;
+            this.TreeBasalAreaByYear[addIndex] = 0.0F;
+            this.TreeLeafAreaIndexByYear[addIndex] = 0.0F;
             this.TreeNppAbovegroundByYear[addIndex] = 0.0F;
             this.TreeNppByYear[addIndex] = 0.0F;
             this.TreesPerHectareByYear[addIndex] = 0.0F;
 
             this.RegenerationCarbonByYear[addIndex] = 0.0F;
             this.RegenerationNitrogenByYear[addIndex] = 0.0F;
+            this.SaplingBasalAreaByYear[addIndex] = 0.0F;
+            this.SaplingLeafAreaIndexByYear[addIndex] = 0.0F;
             this.SaplingCohortsPerHectareByYear[addIndex] = 0.0F;
             this.SaplingMeanAgeByYear[addIndex] = Constant.NoDataFloat;
             this.SaplingNppByYear[addIndex] = 0.0F;

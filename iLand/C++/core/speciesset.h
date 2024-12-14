@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -33,17 +33,20 @@ public:
     ~SpeciesSet();
     const QString &name() const { return mName; } ///< table name of the species set
     // access
-    QList<Species*> activeSpecies() { return mActiveSpecies; } ///< list of species that are "active" (flag active in database)
+    const QList<Species*> &activeSpecies() const { return mActiveSpecies; } ///< list of species that are "active" (flag active in database)
     Species *species(const QString &speciesId) const { return mSpecies.value(speciesId); }
     const Species *species(const int &index); ///< get by arbirtray index (slower than using string-id!)
     const StampContainer &readerStamps() { return mReaderStamp; }
-    QVariant var(const QString& varName);
+    bool hasVar(const QString& varName); ///< test if variable exists
+    QVariant var(const QString& varName); ///< return variable as QVariant
     int count() const { return mSpecies.count(); }
     /// return 2 iterators. The range between 'rBegin' and 'rEnd' are indices of the current species set (all species are included, order is random).
     void randomSpeciesOrder(QVector<int>::const_iterator &rBegin, QVector<int>::const_iterator &rEnd);
+    // properties
     // calculations
     double nitrogenResponse(const double availableNitrogen, const double &responseClass) const;
     double co2Response(const double ambientCO2, const double nitrogenResponse, const double soilWaterResponse) const;
+    double co2Beta(const double nitrogenResponse, const double soilWaterResponse) const;
     double lightResponse(const double lightResourceIndex, const double lightResponseClass) const;
     double LRIcorrection(const double lightResourceIndex, const double relativeHeight) const  { return mLRICorrection.calculate(lightResourceIndex, relativeHeight);}
     // maintenance
@@ -53,6 +56,7 @@ public:
     // running
     void newYear(); ///< is called at the beginning of a year
     void regeneration(); ///< run regeneration (after growth)
+    void clearSaplingSeedMap(); ///< clear the seed maps that collect leaf area for saplings
 private:
     QString mName;
     double nitrogenResponse(const double &availableNitrogen, const double &NA, const double &NB) const;
@@ -74,8 +78,6 @@ private:
     Expression mLightResponseIntolerant; ///< light response function for the the most shade tolerant species
     Expression mLightResponseTolerant; ///< light response function for the most shade intolerant species
     Expression mLRICorrection; ///< function to modfiy LRI during read
-    /// container holding the seed maps
-    QList<SeedDispersal*> mSeedDispersal;
 
 };
 

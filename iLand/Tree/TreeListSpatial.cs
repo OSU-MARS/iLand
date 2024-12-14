@@ -1,4 +1,6 @@
-﻿using iLand.Extensions;
+﻿// C++/core/{ tree.h, tree.cpp }
+using iLand.Extensions;
+using iLand.Input.ProjectFile;
 using iLand.Tool;
 using iLand.World;
 using System;
@@ -17,9 +19,8 @@ namespace iLand.Tree
       */
     public class TreeListSpatial : TreeListBiometric
     {
-        private TreeFlags[] flags; // mortality and harvest flags
-
         public float[] DbhDeltaInCm { get; private set; } // diameter growth [cm]
+        public TreeFlags[] Flags { get; private set; } // mortality, harvest, and disturbance indicators
         public Point[] LightCellIndexXY { get; private set; } // index of the trees position on the basic LIF grid
         public LightStamp[] LightStamp { get; private set; }
         public ResourceUnit ResourceUnit { get; private set; } // pointer to the ressource unit the tree belongs to.
@@ -27,7 +28,7 @@ namespace iLand.Tree
         public TreeListSpatial(ResourceUnit resourceUnit, TreeSpecies species, int capacity)
             : base(species, capacity)
         {
-            this.flags = new TreeFlags[capacity];
+            this.Flags = new TreeFlags[capacity];
 
             this.Allocate(capacity);
             this.ResourceUnit = resourceUnit;
@@ -64,7 +65,7 @@ namespace iLand.Tree
                 this.Resize(newCapacity);
             }
 
-            this.flags[this.Count] = TreeFlags.None;
+            this.Flags[this.Count] = TreeFlags.None;
 
             this.AgeInYears[this.Count] = ageInYears;
             this.CoarseRootMassInKg[this.Count] = this.Species.GetBiomassCoarseRoot(dbhInCm);
@@ -149,7 +150,7 @@ namespace iLand.Tree
                 this.AgeInYears[treeListDestination] = ageInYears;
 
                 // set remaining fields
-                this.flags[treeListDestination] = TreeFlags.None;
+                this.Flags[treeListDestination] = TreeFlags.None;
                 this.CoarseRootMassInKg[treeListDestination] = this.Species.GetBiomassCoarseRoot(dbhInCm);
                 this.DbhDeltaInCm[treeListDestination] = 0.1F; // initial value: used in growth() to estimate diameter increment
 
@@ -185,7 +186,7 @@ namespace iLand.Tree
                 this.Resize(2 * this.Capacity); // for now, default to same size doubling as List<T>
             }
 
-            this.flags[this.Count] = other.flags[otherTreeIndex];
+            this.Flags[this.Count] = other.Flags[otherTreeIndex];
 
             this.AgeInYears[this.Count] = other.AgeInYears[otherTreeIndex];
             this.CoarseRootMassInKg[this.Count] = other.CoarseRootMassInKg[otherTreeIndex];
@@ -228,13 +229,13 @@ namespace iLand.Tree
 
         /** Main function of yearly tree growth.
           The main steps are:
-          - Production of GPP/NPP   @sa http://iland-model.org/primary+production http://iland-model.org/individual+tree+light+availability
-          - Partitioning of NPP to biomass compartments of the tree @sa http://iland-model.org/allocation
-          - Growth of the stem http://iland-model.org/stem+growth (???)
+          - Production of GPP/NPP   @sa https://iland-model.org/primary+production https://iland-model.org/individual+tree+light+availability
+          - Partitioning of NPP to biomass compartments of the tree @sa https://iland-model.org/allocation
+          - Growth of the stem https://iland-model.org/stem+growth (???)
           Further activties: * the age of the tree is increased
                              * the mortality sub routine is executed
                              * seeds are produced */
-        public void CalculateAnnualGrowth(Model model, RandomGenerator random)
+        public void CalculateAnnualGrowth(Model model, RandomGenerator random) // C++: Tree::grow()
         {
             // get the GPP for a "unit area" of the tree species
             ResourceUnitTreeSpecies ruSpecies = this.ResourceUnit.Trees.GetResourceUnitSpecies(this.Species);
@@ -275,7 +276,7 @@ namespace iLand.Tree
                 //#endif
                 if (model.Project.Model.Settings.GrowthEnabled && (treeGrowthData.NppTotal > 0.0F))
                 {
-                    this.PartitionBiomass(treeGrowthData, model, treeIndex); // split npp to compartments and grow (diameter, height)
+                    this.PartitionBiomass(treeGrowthData, model, treeIndex); // split npp to compartments and grow (diameter, height), but also calculate stress index of the tree
                 }
 
                 // mortality
@@ -296,6 +297,11 @@ namespace iLand.Tree
                     float totalNpp = treeGrowthData.NppTotal;
                     ruSpecies.StatisticsLive.Add(this, treeIndex, totalNpp, abovegroundNpp);
                 }
+                else
+                {
+                    // we include the NPP of trees that died in the current year (closed carbon balance)
+                    ruSpecies.StatisticsLive.AddNppOfTreeBeforeDeath(treeGrowthData);
+                }
 
                 // regeneration
                 this.Species.DisperseSeeds(model.RandomGenerator.Value!, this, treeIndex);
@@ -305,18 +311,22 @@ namespace iLand.Tree
         public void CalculateLightResponse(int treeIndex)
         {
             // calculate a light response from lri:
-            // http://iland-model.org/individual+tree+light+availability
+            // https://iland-model.org/individual+tree+light+availability
             float lri = Maths.Limit(this.LightResourceIndex[treeIndex] * this.ResourceUnit.Trees.AverageLightRelativeIntensity, 0.0F, 1.0F); // Eq. (3)
             this.LightResponse[treeIndex] = this.Species.GetLightResponse(lri); // Eq. (4)
             this.ResourceUnit.Trees.AddLightResponse(this.LeafAreaInM2[treeIndex], this.LightResponse[treeIndex]);
         }
 
-        private void CheckIntrinsicAndStressMortality(Model model, int treeIndex, TreeGrowthData growthData, RandomGenerator random)
+        private void CheckIntrinsicAndStressMortality(Model model, int treeIndex, TreeGrowthData growthData, RandomGenerator random) // C++: Tree::mortality()
         {
             // death if leaf area is near zero
             if (this.FoliageMassInKg[treeIndex] < 0.00001F)
             {
                 this.MarkTreeAsDead(model, treeIndex);
+                return;
+            }
+            if (this.StemMassInKg[treeIndex] <= 0.0F)
+            {
                 return;
             }
 
@@ -333,7 +343,7 @@ namespace iLand.Tree
 
         public void Copy(int sourceIndex, int destinationIndex)
         {
-            this.flags[destinationIndex] = this.flags[sourceIndex];
+            this.Flags[destinationIndex] = this.Flags[sourceIndex];
 
             this.AgeInYears[destinationIndex] = this.AgeInYears[sourceIndex];
             this.CoarseRootMassInKg[destinationIndex] = this.CoarseRootMassInKg[sourceIndex];
@@ -365,19 +375,6 @@ namespace iLand.Tree
             this.Count -= n;
         }
 
-        /// return the basal area in m²
-        public float GetBasalArea(int treeIndex)
-        {
-            float dbhInCm = this.DbhInCm[treeIndex];
-            float basalArea = 0.25F * MathF.PI * 0.0001F * dbhInCm * dbhInCm;
-            return basalArea;
-        }
-
-        public float GetBranchBiomass(int treeIndex)
-        {
-            return this.Species.GetBiomassBranch(this.DbhInCm[treeIndex]);
-        }
-
         public float GetCrownRadius(int treeIndex)
         {
             Debug.Assert(this.LightStamp != null);
@@ -385,7 +382,7 @@ namespace iLand.Tree
         }
 
         /// return the HD ratio of this year's increment based on the light status.
-        private float GetRelativeHeightGrowth(int treeIndex)
+        private float GetRelativeHeightGrowth(int treeIndex) // C++: Tree::relative_height_growth()
         {
             (float hdRatioLow, float hdRatioHigh) = this.Species.GetHeightDiameterRatioLimits(this.DbhInCm[treeIndex]);
             Debug.Assert(hdRatioLow < hdRatioHigh, this.Species.Name + " height-diameter ratio lower limit of " + hdRatioLow + " is less than the high limit of " + hdRatioHigh + " for DBH of " + this.DbhInCm[treeIndex] + " cm.");
@@ -395,24 +392,19 @@ namespace iLand.Tree
             // use the corrected LRI (see tracker#11)
             float lri = Maths.Limit(this.LightResourceIndex[treeIndex] * this.ResourceUnit.Trees.AverageLightRelativeIntensity, 0.0F, 1.0F);
             float hdRatio = hdRatioHigh - (hdRatioHigh - hdRatioLow) * lri;
+            // avoid negative HD ratio of increment
+            if (hdRatio < 0.0F)
+            {
+                hdRatio = 0.0F; // TODO: should this be asserted?
+            }
             return hdRatio;
         }
 
-        public float GetStemVolume(int treeIndex)
-        {
-            /// @see Species::volumeFactor() for details
-            float taperCoefficient = this.Species.VolumeFactor;
-            float dbhInCm = this.DbhInCm[treeIndex];
-            float heightInM = this.HeightInM[treeIndex];
-            float volume = taperCoefficient * 0.0001F * dbhInCm * dbhInCm * heightInM; // dbh in cm: cm/100 * cm/100 = cm*cm * 0.0001 = m2
-            return volume;
-        }
-
         /** Determination of diamter and height growth based on increment of the stem mass (@p net_stem_npp).
-            Refer to XXX for equations and variables.
+            Refer to https://iland-model.org/stem+growth for equations and variables.
             This function updates the dbh and height of the tree.
             The equations are based on dbh in meters! */
-        private void GrowHeightAndDiameter(Model model, int treeIndex, TreeGrowthData growthData)
+        private void GrowHeightAndDiameter(Model model, int treeIndex, TreeGrowthData growthData) // C++: Tree::grow_diameter()
         {
             // determine dh-ratio of increment
             // height increment is a function of light competition:
@@ -436,7 +428,7 @@ namespace iLand.Tree
             float dbhIncrementInM = factorDiameter * (nppStem - stemResidual); // Eq. (11)
             if (MathF.Abs(stemResidual) > MathF.Min(1.0F, stemMass))
             {
-                // calculate final residual in stem
+                // calculate final residual in stem (using the deduced d_increment)
                 float res_final = massFactor * (dbhInM + dbhIncrementInM) * (dbhInM + dbhIncrementInM) * (this.HeightInM[treeIndex] + dbhIncrementInM * hdRatioNewGrowth) - ((stemMass + nppStem));
                 if (MathF.Abs(res_final) > MathF.Min(1.0F, stemMass))
                 {
@@ -511,85 +503,106 @@ namespace iLand.Tree
             this.Opacity[treeIndex] = 1.0F - MathF.Exp(-treeK * this.LeafAreaInM2[treeIndex] / this.LightStamp[treeIndex]!.CrownAreaInM2);
         }
 
+        public bool IsCropTree(int treeIndex)
+        {
+            return (this.Flags[treeIndex] & TreeFlags.CropTree) == TreeFlags.CropTree;
+        }
+
+        public bool IsCropCompetitor(int treeIndex)
+        {
+            return (this.Flags[treeIndex] & TreeFlags.CropCompetitor) == TreeFlags.CropCompetitor;
+        }
+
+        public bool IsBioticallyDisturbed(int treeIndex)
+        {
+            return (this.Flags[treeIndex] & TreeFlags.BioticDisturbance) == TreeFlags.BioticDisturbance;
+        }
+
         // death reasons
         public bool IsCutDown(int treeIndex)
         {
-            return this.flags[treeIndex].HasFlag(TreeFlags.DeadCutAndDrop);
+            return (this.Flags[treeIndex] & TreeFlags.DeadCutAndDrop) == TreeFlags.DeadCutAndDrop;
         }
 
         public bool IsDead(int treeIndex)
         {
-            return this.flags[treeIndex].HasFlag(TreeFlags.Dead);
+            return (this.Flags[treeIndex] & TreeFlags.Dead) == TreeFlags.Dead;
         }
 
         public bool IsDeadBarkBeetle(int treeIndex)
         {
-            return this.flags[treeIndex].HasFlag(TreeFlags.DeadFromBarkBeetles);
+            return (this.Flags[treeIndex] & TreeFlags.DeadFromBarkBeetles) == TreeFlags.DeadFromBarkBeetles;
         }
 
         public bool IsDeadFire(int treeIndex)
         {
-            return this.flags[treeIndex].HasFlag(TreeFlags.DeadFromFire);
+            return (this.Flags[treeIndex] & TreeFlags.DeadFromFire) == TreeFlags.DeadFromFire;
         }
 
         public bool IsDeadWind(int treeIndex)
         {
-            return this.flags[treeIndex].HasFlag(TreeFlags.DeadFromWind);
+            return (this.Flags[treeIndex] & TreeFlags.DeadFromWind) == TreeFlags.DeadFromWind;
         }
+
+        // public bool IsDebugging() { return (this.flags[treeIndex] & TreeFlags.Debugging) == TreeFlags.Debugging; }
 
         public bool IsHarvested(int treeIndex)
         {
-            return this.flags[treeIndex].HasFlag(TreeFlags.Harvested);
+            return (this.Flags[treeIndex] & TreeFlags.Harvested) == TreeFlags.Harvested;
         }
 
         // management flags (used by ABE management system)
-        public bool IsMarkedForHarvest(int treeIndex)
-        {
-            return this.flags[treeIndex].HasFlag(TreeFlags.MarkedForHarvest);
-        }
 
         public bool IsMarkedForCut(int treeIndex)
         {
-            return this.flags[treeIndex].HasFlag(TreeFlags.MarkedForCut);
+            return (this.Flags[treeIndex] & TreeFlags.MarkedForCut) == TreeFlags.MarkedForCut;
         }
 
-        public bool IsMarkedAsCropTree(int treeIndex)
+        public bool IsMarkedForHarvest(int treeIndex)
         {
-            return this.flags[treeIndex].HasFlag(TreeFlags.CropTree);
-        }
-
-        public bool IsMarkedAsCropCompetitor(int treeIndex)
-        {
-            return this.flags[treeIndex].HasFlag(TreeFlags.CropCompetitor);
+            return (this.Flags[treeIndex] & TreeFlags.MarkedForHarvest) == TreeFlags.MarkedForHarvest;
         }
 
         /** partitioning of this years assimilates (NPP) to biomass compartments.
           Conceptionally, the algorithm is based on 
             Duursma RA, Marshall JD, Robinson AP, Pangle RE. 2007. Description and test of a simple process-based model of forest growth
               for mixed-species stands. Ecological Modelling 203(3–4):297-311. https://doi.org/10.1016/j.ecolmodel.2006.11.032
-          @sa http://iland-model.org/allocation */
-        private void PartitionBiomass(TreeGrowthData growthData, Model model, int treeIndex)
+          @sa https://iland-model.org/allocation */
+        private void PartitionBiomass(TreeGrowthData growthData, Model model, int treeIndex) // C++: Tree::partitioning()
         {
             // available resources
             float nppAvailable = growthData.NppTotal + this.NppReserveInKg[treeIndex];
-            float foliageBiomass = this.Species.GetBiomassFoliage(this.DbhInCm[treeIndex]);
-            float reserveSize = foliageBiomass * (1.0F + this.Species.FinerootFoliageRatio);
+            float foliageBiomassAllocation = this.Species.GetBiomassFoliage(this.DbhInCm[treeIndex]);
+            float reserveSize = foliageBiomassAllocation * (1.0F + this.Species.FinerootFoliageRatio);
             float reserveAllocation = MathF.Min(reserveSize, (1.0F + this.Species.FinerootFoliageRatio) * this.FoliageMassInKg[treeIndex]); // not always try to refill reserve 100%
 
             ResourceUnitTreeSpecies ruSpecies = this.ResourceUnit.Trees.GetResourceUnitSpecies(this.Species);
             float rootFraction = ruSpecies.TreeGrowth.RootFraction;
             growthData.NppAboveground = growthData.NppTotal * (1.0F - rootFraction); // aboveground: total NPP - fraction to roots
-            float woodFoliageRatio = this.Species.GetStemFoliageRatio(); // ratio of allometric exponents (b_woody / b_foliage)
+            // TODO: remove unused
+            // float woodFoliageRatio = this.Species.GetStemFoliageRatio(); // ratio of allometric exponents (b_woody / b_foliage)
 
             // turnover rates
             float foliageTurnover = this.Species.TurnoverLeaf;
             float rootTurnover = this.Species.TurnoverFineRoot;
             // the turnover rate of wood depends on the size of the reserve pool:
-            float woodTurnover = reserveAllocation / (this.StemMassInKg[treeIndex] + reserveAllocation);
+            float stemBiomass = this.StemMassInKg[treeIndex];
+            float branchBiomass = this.GetBranchBiomass(treeIndex);
+            float woodTurnover = reserveAllocation / (stemBiomass + branchBiomass + reserveAllocation);
 
-            // Duursma 2007, Eq. (20) allocation percentages (sum=1) (eta)
-            float woodFraction = (foliageBiomass * woodTurnover / nppAvailable + woodFoliageRatio * (1.0F - rootFraction) - woodFoliageRatio * foliageBiomass * foliageTurnover / nppAvailable) / (foliageBiomass / this.StemMassInKg[treeIndex] + woodFoliageRatio);
+            // Calculate the share of NPP that goes to wood (stem + branches).
+            // This is based on Duursma 2007 (Eq. 20, allocation percentages (sum=1) (eta)), but modified to include both stem and branch pools.
+            // see "branches_in_allocation.Rmd"
+            float bs = this.Species.AllometricExponentStem;
+            float bb = this.Species.AllometricExponentBranch;
+            float bf = this.Species.AllometricExponentFoliage;
+            float Ws = stemBiomass;
+            float Wb = branchBiomass;
+
+            float woodFraction = (foliageBiomassAllocation * bf * woodTurnover * (Ws + Wb) - (Ws * bs + Wb * bb) * (foliageBiomassAllocation * foliageTurnover - nppAvailable * (1.0F - rootFraction))) / (nppAvailable * (foliageBiomassAllocation * bf + Ws * bs + Wb * bb));
             woodFraction = Maths.Limit(woodFraction, 0.0F, 1.0F - rootFraction);
+
+            // transfer to foliage is the rest:
             float foliageFraction = 1.0F - rootFraction - woodFraction;
 
             //#if DEBUG
@@ -604,38 +617,53 @@ namespace iLand.Tree
             //#endif
 
             // Change of biomass compartments
-            float rootSenescence = this.FineRootMassInKg[treeIndex] * rootTurnover;
+            float previousFineRootMass = this.FineRootMassInKg[treeIndex];
+            float rootSenescence = previousFineRootMass * rootTurnover;
             float foliageSenescence = this.FoliageMassInKg[treeIndex] * foliageTurnover;
             if (this.ResourceUnit.Snags != null)
             {
                 this.ResourceUnit.Snags.AddTurnoverLitter(this.Species, foliageSenescence, rootSenescence);
             }
 
+            // TODO: remove unused
+            // track the biomass that leaves the tree
+            // float mass_lost = rootSenescence + foliageSenescence;
+
             // Roots
-            // http://iland-model.org/allocation#belowground_NPP
-            this.FineRootMassInKg[treeIndex] -= rootSenescence; // reduce only fine root pool
+            // https://iland-model.org/allocation#belowground_NPP
+            float newFineRootMass = previousFineRootMass - rootSenescence; // reduce only fine root pool
             float rootAllocation = rootFraction * nppAvailable;
             // 1st, refill the fine root pool
-            float finerootMass = this.FoliageMassInKg[treeIndex] * this.Species.FinerootFoliageRatio - this.FineRootMassInKg[treeIndex];
-            if (finerootMass > 0.0F)
+            // for very small amounts of foliage biomass (e.g. defoliation), use the newly distributed foliage (apct_foliage*npp-sen_foliage)
+            float finerootMismatch = Single.Max(this.Species.FinerootFoliageRatio * this.FoliageMassInKg[treeIndex], foliageFraction * nppAvailable - foliageSenescence) - newFineRootMass;
+            if (finerootMismatch > 0.0F)
             {
-                float finerootAllocaton = MathF.Min(finerootMass, rootAllocation);
-                this.FineRootMassInKg[treeIndex] += finerootAllocaton;
-                rootAllocation -= finerootAllocaton;
+                float finerootChange = MathF.Min(finerootMismatch, rootAllocation);
+                newFineRootMass += finerootChange;
+                rootAllocation -= finerootChange;
             }
+
+            this.FineRootMassInKg[treeIndex] = newFineRootMass;
+            // TODO: remove unused
+            // float net_root_inc = newFineRootMass - rootSenescence;
+
             // 2nd, the rest of NPP allocated to roots go to coarse roots
             float maxCoarseRootBiomass = this.Species.GetBiomassCoarseRoot(this.DbhInCm[treeIndex]);
-            this.CoarseRootMassInKg[treeIndex] += rootAllocation;
-            if (this.CoarseRootMassInKg[treeIndex] > maxCoarseRootBiomass)
+            float old_coarse_root = this.CoarseRootMassInKg[treeIndex];
+            float newCoarseRoot = old_coarse_root + rootAllocation;
+            if (newCoarseRoot > maxCoarseRootBiomass)
             {
-                // if the coarse root pool exceeds the value given by the allometry, then the
-                // surplus is accounted as turnover
+                // if the coarse root pool exceeds the value given by the allometry, then the surplus is accounted as turnover
                 if (this.ResourceUnit.Snags != null)
                 {
-                    this.ResourceUnit.Snags.AddTurnoverWood(this.CoarseRootMassInKg[treeIndex] - maxCoarseRootBiomass, this.Species);
+                    float surplus = newCoarseRoot - maxCoarseRootBiomass;
+                    // mass_lost += surplus;
+                    this.ResourceUnit.Snags.AddTurnoverWood(surplus, this.Species);
                 }
-                this.CoarseRootMassInKg[treeIndex] = maxCoarseRootBiomass;
+                newCoarseRoot = maxCoarseRootBiomass;
             }
+            this.CoarseRootMassInKg[treeIndex] = newCoarseRoot;
+            // net_root_inc += newCoarseRoot - old_coarse_root;
 
             // foliage
             float foliageAllocation = foliageFraction * nppAvailable - foliageSenescence;
@@ -655,13 +683,15 @@ namespace iLand.Tree
             // stress index: different varaints at denominator: to_fol*foliage_mass = leafmass to rebuild,
             // foliage_mass_allo: simply higher chance for stress
             // note: npp = NPP + reserve (see above)
-            growthData.StressIndex = MathF.Max(1.0F - nppAvailable / (foliageTurnover * foliageBiomass + rootTurnover * foliageBiomass * this.Species.FinerootFoliageRatio + reserveSize), 0.0F);
+            growthData.StressIndex = MathF.Max(1.0F - nppAvailable / (foliageTurnover * foliageBiomassAllocation + rootTurnover * foliageBiomassAllocation * this.Species.FinerootFoliageRatio + reserveSize), 0.0F);
 
             // Woody compartments
-            // see also: http://iland-model.org/allocation#reserve_and_allocation_to_stem_growth
+            // see also: https://iland-model.org/allocation#reserve_and_allocation_to_stem_growth
             // (1) transfer to reserve pool
             float woodyAllocation = woodFraction * nppAvailable;
             float toReserve = MathF.Min(reserveSize, woodyAllocation);
+            // the 'reserve' is part of the stem (and is part of the stem biomass in stand outputs),
+            // and is added to the stem biomass there (biomassStem()).
             this.NppReserveInKg[treeIndex] = toReserve;
             float netWoodyAllocation = woodyAllocation - toReserve;
 
@@ -717,9 +747,22 @@ namespace iLand.Tree
             }
         }
 
-        private void OnTreeRemoved(Model model, int treeIndex, MortalityCause reason)
+        private void OnTreeRemoved(Model model, int treeIndex, MortalityCause reason) // C++: Tree::notifyTreeRemoved()
         {
             Debug.Assert(treeIndex < this.Count);
+
+            // this information is used to track the removed volume for stands based on grids (and for salvaging operations)
+            //ForestManagementEngine? abe = model.ABEngine;
+            //if (abe != null)
+            //{
+            //    abe.notifyTreeRemoval(this, reason);
+            //}
+
+            //BiteEngine? bite = model.BiteEngine;
+            //if (bite != null)
+            //{
+            //    bite.notifyTreeRemoval(this, reason);
+            //}
 
             // tell disturbance modules that a tree died
             model.Modules.OnTreeDeath(this, reason);
@@ -741,7 +784,7 @@ namespace iLand.Tree
 
             if (model.Output.LandscapeRemovedSql != null)
             {
-                model.Output.LandscapeRemovedSql.AddTree(this, treeIndex, reason);
+                model.Output.LandscapeRemovedSql.AddRemovedTree(this, treeIndex, reason);
             }
         }
 
@@ -749,17 +792,59 @@ namespace iLand.Tree
         public void Remove(Model model, int treeIndex, float removeFoliage = 0.0F, float removeBranch = 0.0F, float removeStem = 0.0F)
         {
             this.SetOrClearFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
-            this.SetDeathReasonHarvested(treeIndex);
+            this.SetFlags(treeIndex, TreeFlags.Harvested);
             this.ResourceUnit.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.ResourceUnit.Trees.GetResourceUnitSpecies(this.Species);
             ruSpecies.StatisticsManagement.Add(this, treeIndex);
             this.OnTreeRemoved(model, treeIndex, this.IsCutDown(treeIndex) ? MortalityCause.CutDown : MortalityCause.Harvest);
 
-            this.ResourceUnit.AddSprout(model, this, treeIndex);
+            this.ResourceUnit.AddSprout(model, this, treeIndex, treeIsRemoved: false);
             if (this.ResourceUnit.Snags != null)
             {
                 this.ResourceUnit.Snags.AddHarvest(this, treeIndex, removeStem, removeBranch, removeFoliage);
             }
+        }
+
+        // TODO: remove unused?
+        /// removes fractions (0..1) for foliage, branches, stem, and roots from a tree, e.g. due to a fire.
+        /// values of "0" remove nothing, "1" removes the full compartent.
+        public void RemoveBiomassOfTree(Project project, int treeIndex, float removeFoliageFraction, float _ /* removeBranchFraction */, float removeStemFraction) // C++: Tree::removeBiomassOfTree()
+        {
+            float foliageMass = (1.0F - removeFoliageFraction) * this.FoliageMassInKg[treeIndex];
+            this.FoliageMassInKg[treeIndex] = foliageMass;
+            this.StemMassInKg[treeIndex] *= 1.0F - removeStemFraction;
+            // this.BranchMassInKg[treeIndex] *= 1.0F - removeBranchFraction; // C++ tree lists track branch mass
+            if (removeFoliageFraction > 0.0F)
+            {
+                float leafArea = this.Species.SpecificLeafArea * foliageMass;
+
+                // update related leaf area
+                this.LeafAreaInM2[treeIndex] = leafArea;
+                this.Opacity[treeIndex] = 1.0F - MathF.Exp(-project.Model.Ecosystem.TreeLightStampExtinctionCoefficient * leafArea / this.LightStamp[treeIndex].CrownAreaInM2);
+            }
+        }
+
+        // TODO: remove unused?
+        /// remove root biomass of trees (e.g. due to fungi)
+        public void RemoveRootBiomass(int treeIndex, float removeFineRootFraction, float removeCoarseRootFraction) // C++: Tree::removeRootBiomass()
+        {
+            float fineRootMass = this.FineRootMassInKg[treeIndex];
+            float coarseRootMass = this.CoarseRootMassInKg[treeIndex];
+            float remove_fine_roots = removeFineRootFraction * fineRootMass;
+            float remove_coarse_roots = removeCoarseRootFraction * coarseRootMass;
+            this.FineRootMassInKg[treeIndex] = fineRootMass - remove_fine_roots;
+            this.CoarseRootMassInKg[treeIndex] = coarseRootMass - remove_coarse_roots;
+
+            // remove also the same amount as the fine root removal from the reserve pool
+            // TODO: Why? The reserve its own compartment and, when combined, is combined with the main stem.
+            float nppReserve = this.NppReserveInKg[treeIndex] - remove_fine_roots;
+            if (nppReserve < 0.0F)
+            {
+                nppReserve = 0.0F;
+            }
+            this.NppReserveInKg[treeIndex] = nppReserve;
+
+            this.ResourceUnit.Snags?.AddTurnoverWood(remove_fine_roots + remove_coarse_roots, this.Species);
         }
 
         /// remove the tree due to an special event (disturbance)
@@ -767,17 +852,18 @@ namespace iLand.Tree
         // TODO: when would branch to snag fraction be greater than zero?
         public void RemoveDisturbance(Model model, int treeIndex, float stemToSoilFraction, float stemToSnagFraction, float branchToSoilFraction, float branchToSnagFraction, float foliageToSoilFraction)
         {
-            this.SetOrClearFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
+            this.SetFlags(treeIndex, TreeFlags.Dead);
             this.ResourceUnit.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.ResourceUnit.Trees.GetResourceUnitSpecies(this.Species);
             ruSpecies.StatisticsSnag.Add(this, treeIndex);
             this.OnTreeRemoved(model, treeIndex, MortalityCause.Disturbance);
 
-            this.ResourceUnit.AddSprout(model, this, treeIndex);
+            this.ResourceUnit.AddSprout(model, this, treeIndex, treeIsRemoved: false);
             if (this.ResourceUnit.Snags != null)
             {
                 if (this.IsHarvested(treeIndex))
-                { // if the tree is harvested, do the same as in normal tree harvest (but with default values)
+                { 
+                    // if the tree is harvested, do the same as in normal tree harvest (but with default values)
                     this.ResourceUnit.Snags.AddHarvest(this, treeIndex, 1.0F, 0.0F, 0.0F);
                 }
                 else
@@ -792,7 +878,7 @@ namespace iLand.Tree
             // does argument checking
             base.Resize(newSize);
 
-            this.flags = this.flags.Resize(newSize);
+            this.Flags = this.Flags.Resize(newSize);
 
             this.DbhDeltaInCm = this.DbhDeltaInCm.Resize(newSize);
             this.LightCellIndexXY = this.LightCellIndexXY.Resize(newSize);
@@ -800,35 +886,9 @@ namespace iLand.Tree
             this.LightStamp = this.LightStamp.Resize(newSize);
         }
 
-        public void SetDeathReasonBarkBeetle(int treeIndex)
-        {
-            this.SetOrClearFlag(treeIndex, TreeFlags.DeadFromBarkBeetles, true);
-        }
-
-        public void SetDeathReasonCutAndDrop(int treeIndex)
-        {
-            this.SetOrClearFlag(treeIndex, TreeFlags.DeadCutAndDrop, true);
-        }
-
-        public void SetDeathReasonFire(int treeIndex)
-        {
-            this.SetOrClearFlag(treeIndex, TreeFlags.DeadFromFire, true);
-        }
-
-        public void SetDeathReasonHarvested(int treeIndex)
-        {
-            this.SetOrClearFlag(treeIndex, TreeFlags.Harvested, true);
-        }
-
-        public void SetDeathReasonWind(int treeIndex)
-        {
-            this.SetOrClearFlag(treeIndex, TreeFlags.DeadFromWind, true);
-        }
-
-        // private bool IsDebugging() { return this.flags[treeIndex].HasFlag(TreeFlags.Debugging); }
         public void SetDebugging(int treeIndex)
         {
-            this.SetOrClearFlag(treeIndex, TreeFlags.Debugging, true);
+            this.SetFlags(treeIndex, TreeFlags.Debugging);
         }
 
         public void SetOrClearCropCompetitor(int treeIndex, bool isCompetitor)
@@ -851,16 +911,21 @@ namespace iLand.Tree
             this.SetOrClearFlag(treeIndex, TreeFlags.MarkedForHarvest, isForHarvest);
         }
 
+        public void SetFlags(int treeIndex, TreeFlags flag)
+        {
+            this.Flags[treeIndex] |= flag;
+        }
+
         /// set a Flag 'flag' to the value 'value'.
         private void SetOrClearFlag(int treeIndex, TreeFlags flag, bool value)
         {
             if (value)
             {
-                this.flags[treeIndex] |= flag;
+                this.Flags[treeIndex] |= flag;
             }
             else
             {
-                this.flags[treeIndex] &= (TreeFlags)((int)flag ^ 0xffffff);
+                this.Flags[treeIndex] &= (TreeFlags)((int)flag ^ 0xffffff);
             }
         }
 

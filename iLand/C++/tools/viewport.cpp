@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -41,7 +41,8 @@ const QPoint Viewport::toScreen(const QPointF p)
 {
     QPoint pixel;
     pixel.setX( qRound( (p.x()-m_delta_worldtoscreen.x())* m_scale_worldtoscreen ) );
-    pixel.setY( m_screen.height() - 1 -  qRound( (p.y()-m_delta_worldtoscreen.y() ) * m_scale_worldtoscreen ));
+    pixel.setY( m_screen.height()  -  qRound( (p.y()-m_delta_worldtoscreen.y() ) * m_scale_worldtoscreen ));
+    //pixel.setY( m_screen.height() - 1 -  qRound( (p.y()-m_delta_worldtoscreen.y() ) * m_scale_worldtoscreen ));
     return pixel;
 }
 

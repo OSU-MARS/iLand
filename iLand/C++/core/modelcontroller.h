@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -43,13 +43,16 @@ public:
     bool canDestroy(); ///< model may be destroyed
     bool canRun(); ///< model may be run
     bool isRunning(); ///< model is running
+    bool isStartingUp() { return mIsStartingUp; } ///< model is in the creation phase
     bool isFinished(); ///< returns true if there is a valid model state, but the run is finished
     bool isPaused(); ///< returns true if the model is currently paused
+    bool isBusy() { return mIsBusy; } ///< model is running an operation (startup or simulation)
     bool hasError() { return mHasError; } ///< returns true if an error occured during the last operation
     QString lastError() { return mLastError; } ///< error message of the last received error
     // simulation length
     int currentYear() const; ///< return current year of the model
     int totalYears() const { return mYearsToRun; } ///< returns total number of years to simulate
+    QString timeString() const; ///< return a string with elapsed time and estimated remaining time
     // error handling
     void throwError(const QString msg);
     // dynamic outputs (variable fields)
@@ -64,10 +67,20 @@ public:
 
     void saveScreenshot(QString file_name); ///< saves a screenshot of the central view widget to 'file_name'
     void addGrid(const FloatGrid *grid, const QString &name, const GridViewType view_type, double min_value, double max_value);
+
     void paintMap(MapGrid *map, double min_value, double max_value);
+    void paintGrid(Grid<double> *grid, QString name, GridViewType view_type=GridViewTurbo, double min_value=0., double max_value=1.);
+    void addScriptLayer(Grid<double> *grid, MapGrid* map, QString name);
+
+    void removeMapGrid(Grid<double> *grid, MapGrid *map);
 
     void addLayers(const LayeredGridBase *layers, const QString &name);
     void removeLayers(const LayeredGridBase *layers);
+    void addPaintLayers(QObject *handler, const QStringList names, const QVector<GridViewType> view_types=QVector<GridViewType>());
+    void removePaintLayers(QObject *handler);
+    Grid<double> *preparePaintGrid(QObject *handler, QString name, std::pair<QStringList, QStringList> *rNamesColors);
+    QStringList evaluateClick(QObject *handler, const QPointF coord, const QString &grid_name);
+    double valueAtHandledGrid(QObject *handler, const QPointF coord, const int layer_id);
     void setViewport(QPointF center_point, double scale_px_per_m);
 
     void setUIShortcuts(QVariantMap shortcuts);
@@ -77,7 +90,7 @@ signals:
     void bufferLogs(bool do_buffer); ///< signal indicating that logs should be buffered (true, model run mode) or that buffering should stop (false) for "interactive" mode
     void stateChanged(); ///< is emitted when model started/stopped/paused
 public slots:
-    void setFileName(QString initFileName); ///< set project file name
+    bool setFileName(QString initFileName); ///< set project file name
     void create(); ///< create the model
     void destroy(); ///< delete the model
     void run(int years); ///< run the model
@@ -86,13 +99,15 @@ public slots:
     bool continueRun(); ///< continues execution if simulation was paused
     void cancel(); ///< cancel execution of the model
     void repaint(); ///< force a repaint of the main drawing window
+    void saveDebugOutputJs(bool do_clear); ///< save debug outputs, called from Javascript
 private slots:
     void runloop();
 private:
     bool internalRun(); ///< runs the main loop
     void internalStop(); ///< save outputs, stop the model execution
     void fetchDynamicOutput(); ///< execute the dynamic output and fetch data
-    void saveDebugOutputs(); ///< save debug outputs to file
+    void saveDebugOutputs(bool is_final); ///< save debug outputs to file, is_final is true when the model stops
+    void saveDebugOutputsCore(QString p, bool do_append); ///< core function for saving debug outputs
     MainWindow *mViewerWindow;
     Model *mModel;
     bool mPaused;
@@ -100,6 +115,8 @@ private:
     bool mFinished;
     bool mCanceled;
     bool mHasError;
+    bool mIsStartingUp;
+    bool mIsBusy;
     QString mLastError;
     int mYearsToRun;
     QString mInitFile;
@@ -107,6 +124,7 @@ private:
     QStringList mDynFieldList;
     QStringList mDynData;
     QString mLastLoadedJSFile;
+    QTime mStartTime;
 
 };
 

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -25,6 +25,8 @@
 #include "tree.h"
 #include "expressionwrapper.h"
 #include "soil.h"
+#include "species.h"
+#include "seeddispersal.h"
 
 //#include "climateconverter.h"
 //#include "csvfile.h"
@@ -40,14 +42,19 @@
   The actual iLand management is based on Javascript functions. This class provides
   the frame for executing the javascript as well as the functions that are called by scripts and
   that really do the work.
-  See http://iland.boku.ac.at/iLand+scripting, http://iland.boku.ac.at/Object+Management for management Javascript API.
+  See https://iland-model.org/iLand+scripting, https://iland-model.org/Object+Management for management Javascript API.
   */
 
 
 // global output function
 QString Management::executeScript(QString cmd)
 {
-    return ScriptGlobal::executeScript(cmd);
+    QString result = ScriptGlobal::executeScript(cmd);
+    if (!ScriptGlobal::lastErrorMessage().isEmpty()) {
+        Helper::msg(ScriptGlobal::lastErrorMessage());
+    }
+
+    return result;
 }
 
 Management::Management()
@@ -63,6 +70,9 @@ Management::Management()
     mRemoveBranch = 0.;
     mRemoveStem = 1.;
 
+    mTree = new ScriptTree();
+    mTreeValue = mEngine->newQObject(mTree);
+
 }
 
 Management::~Management()
@@ -72,14 +82,16 @@ Management::~Management()
 
 int Management::remain(int number)
 {
-    qDebug() << "remain called (number): " << number;
+    if (logLevelDebug())
+        qDebug() << "remain called (number): " << number;
     Model *m = GlobalSettings::instance()->model();
     AllTreeIterator at(m);
     QList<Tree*> trees;
     while (Tree *t=at.next())
         trees.push_back(t);
     int to_kill = trees.count() - number;
-    qDebug() << trees.count() << " standing, targetsize" << number << ", hence " << to_kill << "trees to remove";
+    if (logLevelDebug())
+        qDebug() << trees.count() << " standing, targetsize" << number << ", hence " << to_kill << "trees to remove";
     for (int i=0;i<to_kill;i++) {
         int index = irandom(0, trees.count());
         trees[index]->remove();
@@ -99,11 +111,31 @@ int Management::killAll()
     return c;
 }
 
-int Management::disturbanceKill()
+int Management::disturbanceKill(double stem_to_soil_fraction, double  stem_to_snag_fraction,
+                                double branch_to_soil_fraction, double branch_to_snag_fraction,
+                                QString agent)
 {
+    bool is_fire = agent==QStringLiteral("fire");
+    bool is_bb = agent==QStringLiteral("barkbeetle");
+    bool is_wind = agent==QStringLiteral("wind");
+    bool is_cutdown = agent==QStringLiteral("cutdown");
+
     int c = mTrees.count();
-    for (int i=0;i<mTrees.count();i++)
-        mTrees[i].first->removeDisturbance(0.1, 0.1, 0.1, 0.1, 1.);
+    for (int i=0;i<mTrees.count();i++) {
+        Tree *t= mTrees[i].first;
+        if (is_bb) t->setDeathReasonBarkBeetle();
+        if (is_wind) t->setDeathReasonWind();
+        if (is_fire) t->setDeathReasonFire();
+        if (is_cutdown) t->setDeathCutdown();
+
+        t->removeDisturbance(stem_to_soil_fraction, stem_to_snag_fraction, branch_to_soil_fraction, branch_to_snag_fraction, 1.);
+        if (is_fire) {
+            if (t->species()->seedDispersal() && t->species()->isTreeSerotinous(t->age()) ) {
+                //SeedDispersal *sd = t->species()->seedDispersal();
+                t->species()->seedDispersal()->seedProductionSerotiny(t);
+            }
+        }
+    }
     mTrees.clear();
     return c;
 }
@@ -135,7 +167,8 @@ int Management::remove_percentiles(int pctfrom, int pctto, int number, bool mana
     int index_to = limit(int(pctto/100. * mTrees.count()), 0, mTrees.count());
     if (index_from>=index_to)
         return 0;
-    qDebug() << "attempting to remove" << number << "trees between indices" << index_from << "and" << index_to;
+    if (logLevelDebug())
+        qDebug() << "attempting to remove" << number << "trees between indices" << index_from << "and" << index_to;
     int i;
     int count = number;
     if (index_to-index_from <= number)  {
@@ -172,7 +205,8 @@ int Management::remove_percentiles(int pctfrom, int pctto, int number, bool mana
             }
         }
     }
-    qDebug() << count << "removed.";
+    if (logLevelDebug())
+        qDebug() << count << "removed.";
     // clean up the tree list...
     for (int i=mTrees.count()-1; i>=0; --i) {
         if (mTrees[i].first->isDead())
@@ -190,9 +224,10 @@ int Management::remove_trees(QString expression, double fraction, bool managemen
     Expression expr(expression,&tw);
     expr.enableIncSum();
     int n = 0;
+    QPair<Tree*, double> empty_tree(nullptr,0.);
     QList<QPair<Tree*, double> >::iterator tp=mTrees.begin();
     try {
-        while (tp!=mTrees.end()) {
+        for (;tp!=mTrees.end();++tp) {
             tw.setTree(tp->first);
             // if expression evaluates to true and if random number below threshold...
             if (expr.calculate(tw) && drandom() <=fraction) {
@@ -203,14 +238,13 @@ int Management::remove_trees(QString expression, double fraction, bool managemen
                     tp->first->remove(); // kill
 
                 // remove from tree list
-                tp = mTrees.erase(tp);
+                *tp = empty_tree;
                 n++;
-            } else {
-                ++tp;
             }
         }
+        mTrees.removeAll(empty_tree);
     } catch(const IException &e) {
-        throwError(e.message());
+        ScriptGlobal::throwError(e.message());
     }
     return n;
 }
@@ -249,21 +283,13 @@ double Management::aggregate_function(QString expression, QString filter, QStrin
         }
 
     } catch(const IException &e) {
-        throwError(e.message());
+         ScriptGlobal::throwError(e.message());
     }
     if (type=="sum")
         return sum;
     if (type=="mean")
         return n>0?sum/double(n):0.;
     return 0.;
-}
-
-// introduced with switch to QJSEngine (context->throwMessage not available any more)
-void Management::throwError(const QString &errormessage)
-{
-    GlobalSettings::instance()->scriptEngine()->evaluate(QString("throw '%1'").arg(errormessage));
-    qDebug() << "Management-script error:" << errormessage;
-    // no idea if this works!!!
 }
 
 
@@ -294,6 +320,8 @@ int Management::manageAll()
 
 void Management::run()
 {
+    ExprExceptionAsScriptError no_expression; // turn expression errors to JS exceptions
+
     mTrees.clear();
     mRemoved=0;
     qDebug() << "Management::run() called";
@@ -310,6 +338,27 @@ void Management::loadScript(const QString &fileName)
 {
     mScriptFile = fileName;
     ScriptGlobal::loadScript(fileName);
+}
+
+QJSValue Management::tree(int index)
+{
+    if (index<0 || index>=count())
+        mTree->clear();
+    else
+        mTree->setTree( mTrees[index].first );
+    return mTreeValue;
+}
+
+QJSValue Management::treeObject(int index)
+{
+    Tree *tree = nullptr;
+    if (index>=0 && index<count())
+        tree = mTrees[index].first;
+
+    ScriptTree *tobj = new ScriptTree();
+    tobj->setTree(tree);
+    QJSValue val = mEngine->newQObject(tobj);
+    return val;
 }
 
 int Management::filterIdList(QVariantList idList)
@@ -329,7 +378,8 @@ int Management::filterIdList(QVariantList idList)
         else
             ++tp;
     }
-    qDebug() << "Management::filter by id-list:" << mTrees.count();
+    if (logLevelDebug())
+        qDebug() << "Management::filter by id-list:" << mTrees.count();
     return mTrees.count();
 }
 
@@ -339,10 +389,12 @@ int Management::filter(QString filter)
     Expression expr(filter,&tw);
     expr.enableIncSum();
     int n_before = mTrees.count();
-    QList<QPair<Tree*, double> >::iterator tp=mTrees.begin();
+    QPair<Tree*, double> empty_tree(nullptr,0.);
     try {
-        while (tp!=mTrees.end()) {
-            tw.setTree(tp->first);
+        for (QList< QPair<Tree*, double> >::iterator it=mTrees.begin(); it!=mTrees.end(); ++it) {
+
+            tw.setTree(it->first); // iterate
+
             double value = expr.calculate(tw);
             // keep if expression returns true (1)
             bool keep = value==1.;
@@ -351,15 +403,16 @@ int Management::filter(QString filter)
                 keep = drandom() < value;
 
             if (!keep)
-                tp = mTrees.erase(tp);
-            else
-                ++tp;
+                *it = empty_tree;
+
         }
+        mTrees.removeAll(empty_tree);
     } catch(const IException &e) {
-        throwError(e.message());
+        ScriptGlobal::throwError(e.message());
     }
 
-    qDebug() << "filtering with" << filter << "N=" << n_before << "/" << mTrees.count()  << "trees (before/after filtering).";
+    if (logLevelDebug())
+        qDebug() << "filtering with" << filter << "N=" << n_before << "/" << mTrees.count()  << "trees (before/after filtering).";
     return mTrees.count();
 }
 
@@ -389,7 +442,8 @@ int Management::load(QString filter)
     } else {
         Expression expr(filter,&tw);
         expr.enableIncSum();
-        qDebug() << "filtering with" << filter;
+        if (logLevelDebug())
+            qDebug() << "filtering with" << filter;
         while (Tree *t=at.nextLiving()) {
             tw.setTree(t);
             if (!t->isDead() && expr.execute())
@@ -401,68 +455,112 @@ int Management::load(QString filter)
 
 /**
 */
-void Management::loadFromTreeList(QList<Tree*>tree_list)
+void Management::loadFromTreeList(QList<Tree*>tree_list, bool do_append)
 {
-    mTrees.clear();
+    if (!do_append)
+        mTrees.clear();
     for (int i=0;i<tree_list.count();++i)
         mTrees.append(QPair<Tree*, double>(tree_list[i], 0.));
 }
 
 // loadFromMap: script access
-void Management::loadFromMap(MapGridWrapper *wrap, int key)
+int Management::loadFromMap(MapGridWrapper *wrap, int key, bool do_append)
 {
     if (!wrap) {
-        throwError("loadFromMap called with invalid map object!");
-        return;
+         ScriptGlobal::throwError("loadFromMap called with invalid map object!");
+        return 0;
     }
-    loadFromMap(wrap->map(), key);
+    loadFromMap(wrap->map(), key, do_append);
+    return count();
 }
 
-void Management::killSaplings(MapGridWrapper *wrap, int key)
+void Management::killSaplings(MapGridWrapper *wrap, int key, QString filter)
 {
-    //MapGridWrapper *wrap = qobject_cast<MapGridWrapper*>(map_grid_object.toQObject());
-    //if (!wrap) {
-    //    context()->throwError("loadFromMap called with invalid map object!");
-    //    return;
-    //}
-    //loadFromMap(wrap->map(), key);
+
     QRectF box = wrap->map()->boundingBox(key);
     GridRunner<float> runner(GlobalSettings::instance()->model()->grid(), box);
     ResourceUnit *ru;
+
+    SaplingWrapper sw;
+    Expression expr(filter.isEmpty() ? "true" : filter, &sw);
+
+    int nsap_removed=0;
     while (runner.next()) {
         if (wrap->map()->standIDFromLIFCoord(runner.currentIndex()) == key) {
             SaplingCell *sc=GlobalSettings::instance()->model()->saplings()->cell(runner.currentIndex(),true, &ru);
+            if (sc) {
+                if (filter.isEmpty()) {
+                    // clear all saplings on the cell
+                    GlobalSettings::instance()->model()->saplings()->clearSaplings(sc,ru,false, true);
+
+                } else {
+                    for (int i=0;i<NSAPCELLS;++i) {
+                        if (sc->saplings[i].is_occupied()) {
+                            sw.setSaplingTree(&sc->saplings[i], sc->ru);
+                            if (expr.executeBool()) {
+                                sc->saplings[i].clear();
+                                nsap_removed++;
+                            }
+                        }
+                    }
+                    sc->checkState();
+                }
+            }
+        }
+    }
+}
+
+void Management::killSaplingsResourceUnit(int ruindex)
+{
+    ResourceUnit *ru = GlobalSettings::instance()->model()->ru(ruindex);
+    if (ru) {
+        GridRunner<float> runner(GlobalSettings::instance()->model()->grid(), ru->boundingBox());
+        while (runner.next()) {
+            SaplingCell *sc=GlobalSettings::instance()->model()->saplings()->cell(runner.currentIndex(),true);
             if (sc)
-                GlobalSettings::instance()->model()->saplings()->clearSaplings(sc,ru,true);
+                GlobalSettings::instance()->model()->saplings()->clearSaplings(sc,ru,false, true);
         }
     }
 }
 
 /// specify removal fractions
 /// @param SWDFrac 0: no change, 1: remove all of standing woody debris
-/// @param DWDfrac 0: no change, 1: remove all of downled woody debris
+/// @param DWDfrac 0: no change, 1: remove all of downed woody debris
 /// @param litterFrac 0: no change, 1: remove all of soil litter
 /// @param soilFrac 0: no change, 1: remove all of soil organic matter
 void Management::removeSoilCarbon(MapGridWrapper *wrap, int key, double SWDfrac, double DWDfrac, double litterFrac, double soilFrac)
 {
     if (!(SWDfrac>=0. && SWDfrac<=1. && DWDfrac>=0. && DWDfrac<=1. && soilFrac>=0. && soilFrac<=1. && litterFrac>=0. && litterFrac<=1.)) {
-        throwError(QString("removeSoilCarbon called with invalid parameters!!\nArgs: ---"));
+         ScriptGlobal::throwError(QString("removeSoilCarbon called with invalid parameters!!\nArgs: ---"));
         return;
     }
-    QList<QPair<ResourceUnit*, double> > ru_areas = wrap->map()->resourceUnitAreas(key);
+    if (!wrap || !wrap->map())
+        return;
+
+    //QList<QPair<ResourceUnit*, double> > ru_areas = wrap->map()->resourceUnitAreas(key);
+
+    auto it_pair = wrap->map()->resourceUnitAreasIterator(key);
+    auto it = it_pair.first; // the iterator
+    auto itend = it_pair.second; // the end
     double total_area = 0.;
-    for (int i=0;i<ru_areas.size();++i) {
-        ResourceUnit *ru = ru_areas[i].first;
-        double area_factor = ru_areas[i].second; // 0..1
+    while (it!=itend && it.key() == key) {
+        ResourceUnit *ru = it->first;
+        double area_factor = it->second; // 0..1
         total_area += area_factor;
         // swd
-        if (SWDfrac>0.)
+        if (SWDfrac>0. && ru->snag())
             ru->snag()->removeCarbon(SWDfrac*area_factor);
         // soil pools
-        ru->soil()->disturbance(DWDfrac*area_factor, litterFrac*area_factor, soilFrac*area_factor);
+        if (ru->soil())
+            ru->soil()->disturbance(DWDfrac*area_factor, litterFrac*area_factor, soilFrac*area_factor);
         // qDebug() << ru->index() << area_factor;
+
+        ++it;
     }
-    qDebug() << "total area" << total_area << "of" << wrap->map()->area(key);
+
+
+    if (logLevelDebug())
+        qDebug() << "total area" << total_area << "of" << wrap->map()->area(key);
 }
 
 /** slash snags (SWD and otherWood-Pools) of polygon \p key on the map \p wrap.
@@ -474,25 +572,31 @@ void Management::removeSoilCarbon(MapGridWrapper *wrap, int key, double SWDfrac,
 void Management::slashSnags(MapGridWrapper *wrap, int key, double slash_fraction)
 {
     if (slash_fraction<0 || slash_fraction>1) {
-        throwError(QString("slashSnags called with invalid parameters!!\nArgs: ...."));
+         ScriptGlobal::throwError(QString("slashSnags called with invalid parameters!!\nArgs: ...."));
         return;
     }
-    QList<QPair<ResourceUnit*, double> > ru_areas = wrap->map()->resourceUnitAreas(key);
+    if (!wrap || !wrap->map())
+        return;
+    auto it_pair = wrap->map()->resourceUnitAreasIterator(key);
+    auto it = it_pair.first; // the iterator
+    auto itend = it_pair.second; // the end
+
     double total_area = 0.;
-    for (int i=0;i<ru_areas.size();++i) {
-        ResourceUnit *ru = ru_areas[i].first;
-        double area_factor = ru_areas[i].second; // 0..1
+    while (it!=itend && it.key() == key) {
+        ResourceUnit *ru = it->first;
+        double area_factor = it->second; // 0..1
         total_area += area_factor;
         ru->snag()->management(slash_fraction * area_factor);
-        // qDebug() << ru->index() << area_factor;
+        ++it;
     }
-    qDebug() << "total area" << total_area << "of" << wrap->map()->area(key);
+    if (logLevelDebug())
+        qDebug() << "total area" << total_area << "of" << wrap->map()->area(key);
 
 }
 
 /** loadFromMap selects trees located on pixels with value 'key' within the grid 'map_grid'.
 */
-void Management::loadFromMap(const MapGrid *map_grid, int key)
+void Management::loadFromMap(const MapGrid *map_grid, int key, bool do_append)
 {
     if (!map_grid) {
         qDebug() << "invalid parameter for Management::loadFromMap: Map expected!";
@@ -500,7 +604,7 @@ void Management::loadFromMap(const MapGrid *map_grid, int key)
     }
     if (map_grid->isValid()) {
         QList<Tree*> tree_list = map_grid->trees(key);
-        loadFromTreeList( tree_list );
+        loadFromTreeList( tree_list, do_append );
     } else {
         qDebug() << "Management::loadFromMap: grid is not valid - no trees loaded";
     }
@@ -522,7 +626,7 @@ void Management::sort(QString statement)
         mTrees[i].second = sorter.execute();
    }
    // now sort the list....
-   qSort(mTrees.begin(), mTrees.end(), treePairValue);
+   std::sort(mTrees.begin(), mTrees.end(), treePairValue);
 }
 
 double Management::percentile(int pct)
@@ -544,7 +648,7 @@ void Management::randomize()
         mTrees[i].second = drandom();
     }
     // now sort the list....
-    qSort(mTrees.begin(), mTrees.end(), treePairValue);
+    std::sort(mTrees.begin(), mTrees.end(), treePairValue);
 
 }
 

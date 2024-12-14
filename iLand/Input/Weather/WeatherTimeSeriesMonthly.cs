@@ -19,6 +19,21 @@ namespace iLand.Input.Weather
             this.SnowTotalInMM = [];
         }
 
+        public override int GetDaysInTimestep(int timestepIndex)
+        {
+            return DateTimeExtensions.GetDaysInMonth(timestepIndex, this.IsCurrentlyLeapYear());
+        }
+
+        public override float GetMonthlyMeanDailyMaximumTemperature(int monthIndex)
+        {
+            return this.TemperatureMax[monthIndex];
+        }
+
+        public override float GetMonthlyMeanDailyMinimumTemperature(int monthIndex)
+        {
+            return this.TemperatureMin[monthIndex]; 
+        }
+
         public override void Resize(int newSize)
         {
             base.Resize(newSize);

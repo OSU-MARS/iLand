@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -19,6 +19,8 @@
 
 #ifndef WATERCYCLE_H
 #define WATERCYCLE_H
+#include <QHash>
+
 class ResourceUnit;
 struct ClimateDay;
 class WaterCycle; // forward
@@ -27,26 +29,31 @@ class WaterOut; // forward
 namespace Water
 {
 
+class Permafrost; // forward
 
 /** SnowPack handles the snow layer.
    @ingroup core
-   Snow is conceptually very simple (see http://iland.boku.ac.at/water+cycle).
+   Snow is conceptually very simple (see https://iland-model.org/water+cycle).
 */
 class SnowPack
 {
     friend class ::WaterCycle;
 public:
     SnowPack(): mSnowPack(0.) {}
-    void setup() { mSnowPack=0.; }
     void setSnow(double snow_mm) { mSnowPack = snow_mm; }
     /// process the snow layer. Returns the mm of preciptitation/melt water that leaves the snow layer.
     double flow(const double &preciptitation_mm, const double &temperature);
     /// additional precipitation (e.g. non evaporated water of canopy interception).
     inline double add(const double &preciptitation_mm, const double &temperature);
-    double snowPack() const { return mSnowPack; } ///< current snowpack height (mm)
+    /// current snowpack (mm water)
+    double snowPack() const { return mSnowPack; }
+    /// depth of snow (m)
+    double snowDepth() const {  return mSnowPack / mSnowDensity; /* mm = kg/m2, density=kg/m3, mm / density = m */ }
 private:
     double mSnowPack; ///< height of snowpack (mm water column)
-    double mSnowTemperature; ///< Threshold temperature for snowing / snow melt
+    // parameters of snow class
+    static double mSnowTemperature; ///< Threshold temperature for snowing / snow melt
+    static double mSnowDensity; ///< density (kg/m3) of the snow
 
 };
 
@@ -85,8 +92,8 @@ private:
     double mAirDensity; // density of air [kg / m3]
     double mET0[12]; ///< reference evapotranspiration per month (sum of the month, mm)
     // parameters for interception
-    double mNeedleFactor; ///< factor for calculating water storage capacity for intercepted water for conifers
-    double mDecidousFactor; ///< the same for broadleaved
+    static double mNeedleFactor; ///< factor for calculating water storage capacity for intercepted water for conifers
+    static double mDecidousFactor; ///< the same for broadleaved
     friend class ::WaterCycle;
     // GCC problems with friend class and namespaces: http://www.ogre3d.org/forums/viewtopic.php?f=10&t=47540
 };
@@ -99,47 +106,84 @@ class WaterCycle
 {
 public:
     WaterCycle();
+    ~WaterCycle();
     void setup(const ResourceUnit *ru);
     void setContent(double content, double snow_mm) { mContent = content; mSnowPack.setSnow(snow_mm); }
     // actions
     void run(); ///< run the current year
+    static void resetPsiMin(); ///< reset/clear the psi-min values for establishment
     // properties
     double fieldCapacity() const { return mFieldCapacity; } ///< field capacity (mm)
+    /// water holding capacity in mm between suction of (default) -15kpa to -4000 kpa (permanent wilting point)
+    double waterHoldingCapacity() const { return mFieldCapacity - mPermanentWiltingPoint; }
     const double &psi_kPa(const int doy) const { return mPsi[doy]; } ///< soil water potential for the day 'doy' (0-index) in kPa
     double soilDepth() const { return mSoilDepth; } ///< soil depth in mm
     double currentContent() const { return mContent; } ///< current water content in mm
     double currentSnowPack() const { return mSnowPack.snowPack(); } ///< current water stored as snow (mm water)
     double canopyConductance() const { return mCanopyConductance; } ///< current canopy conductance (LAI weighted CC of available tree species) (m/s)
+    double effectiveLAI() const { return mEffectiveLAI; } ///< effective LAI (including saplings and ground vegetation)
+    double meanSoilWaterContent() const {return mMeanSoilWaterContent; } ///< mean of annual soil water content (mm)
+    double meanGrowingSeasonSWC() const { return mMeanGrowingSeasonSWC; } ///< mean soil water content (mm) during the growing season (fixed: april - september)
     /// monthly values for PET (mm sum)
     const double *referenceEvapotranspiration() const { return mCanopy.referenceEvapotranspiration(); }
+    /// psi min values for establishment for a phenology type
+    double estPsiMin(int phenologyGroup) const;
+    // elements
+    const Water::Permafrost *permafrost() const { return mPermafrost; }
 
 private:
+    struct RUSpeciesShares {
+        /// stores intermediate data: LAI shares of species (including saplings)
+        /// fraction of ground vegetation
+        RUSpeciesShares(const int n_species):ground_vegetation_share(0.), adult_trees_share(0.) { lai_share.resize(n_species); }
+        QVector<double> lai_share; // for each species a share [0..1]
+        double ground_vegetation_share; // the share of ground vegetation; sum(lai_share)+ground_vegetation_share = 1
+        double adult_trees_share; // share of adult trees (>4m) on total LAI (relevant for aging)
+        double total_lai; // total effective LAI
+    };
+    /// calculate the psi min over the vegetation period for all
+    /// phenology types for the current resource unit (and store in a container)
+    void calculatePsiMin() const;
+
     int mLastYear; ///< last year of execution
     inline double psiFromHeight(const double mm) const; // kPa for water height "mm"
     inline double heightFromPsi(const double psi_kpa) const; // water height (mm) at water potential psi (kilopascal)
-    inline double calculateBaseSoilAtmosphereResponse(const double psi_kpa, const double vpd_kpa); ///< calculate response for ground vegetation
+    inline double calculateBaseSoilAtmosphereResponse(const double psi_kpa, const double vpd_kpa, const double psi_min, const double vpd_exp); ///< calculate response for ground vegetation
     double mPsi_koeff_b; ///< see psiFromHeight()
     double mPsi_sat; ///< see psiFromHeight(), kPa
     double mTheta_sat; ///< see psiFromHeight(), [-], m3/m3
     const ResourceUnit *mRU; ///< resource unit to which this watercycle is connected
     Water::Canopy mCanopy; ///< object representing the forest canopy (interception, evaporation)
     Water::SnowPack mSnowPack; ///< object representing the snow cover (aggregation, melting)
+    Water::Permafrost *mPermafrost; ///< object representing permafrost soil conditions
     double mSoilDepth; ///< depth of the soil (without rocks) in mm
-    double mContent; ///< current water content in mm water column of the soil.
+    double mContent; ///< current water content in mm water column of the soil (mm)
     double mFieldCapacity; ///< bucket height of field-capacity (eq. -15kPa) (mm)
     double mPermanentWiltingPoint; ///< bucket "height" of PWP (is fixed to -4MPa) (mm)
     double mPsi[366]; ///< soil water potential for each day in kPa
-    void getStandValues(); ///< helper function to retrieve LAI per species group
-    inline double calculateSoilAtmosphereResponse(const double psi_kpa, const double vpd_kpa);
+    void getStandValues(RUSpeciesShares &species_shares); ///< helper function to retrieve LAI per species group
+    inline double calculateSoilAtmosphereResponse(RUSpeciesShares &species_share, const double psi_kpa, const double vpd_kpa);
     double mLAINeedle;
     double mLAIBroadleaved;
     double mCanopyConductance; ///< m/s
+    double mEffectiveLAI; ///< effective LAI for transpiration: includes ground vegetation, saplings and adult trees
+    // ground vegetation
+    double mGroundVegetationLAI; ///< LAI of the ground vegetation (parameter)
+    double mGroundVegetationPsiMin; ///< Psi Min (MPa) that is assumed for ground vegetation (parameter)
     // annual sums
     double mTotalET; ///< annual sum of evapotranspiration (mm)
     double mTotalExcess; ///< annual sum of water loss due to lateral outflow/groundwater flow (mm)
     double mSnowRad; ///< sum of radiation input (MJ/m2) for days with snow cover (used in albedo calculations)
-    double mSnowDays; ///< # of days with snowcover >0
+    int mSnowDays; ///< # of days with snowcover >0
+    double mMeanSoilWaterContent; ///< mean of annual soil water content (mm)
+    double mMeanGrowingSeasonSWC; ///< mean soil water content (mm) during the growing season (fixed: april - september)
+
+    /// container for storing min-psi values per resource unit + phenology class
+    /// key: RU + phenoGroup, value: psiMin (2week minimum) MPa
+    static QHash<int, double> mEstPsi;
+
     friend class ::WaterOut;
+    friend class Water::Permafrost;
 };
 
 /// WaterCycleData is a data transfer container for water-related details.

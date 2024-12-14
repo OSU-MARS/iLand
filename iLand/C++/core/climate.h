@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@
 #include <QtSql>
 #include "phenology.h"
 /// current climate variables of a day. @sa Climate.
-/// http://iland.boku.ac.at/ClimateData
+/// https://iland-model.org/ClimateData
 struct ClimateDay
 {
     int year; // year
@@ -66,7 +66,7 @@ class Climate
 {
 public:
     Climate();
-    void setup(); ///< setup routine that opens database connection
+    void setup(bool do_log=true); ///< setup routine that opens database connection
     bool isSetup() const { return mIsSetup; }
     const QString &name() const { return mName; } ///< table name of this climate
     // activity
@@ -89,9 +89,12 @@ public:
     double meanAnnualTemperature() const { return mMeanAnnualTemperature; }
     /// annual precipitation sum (mm)
     double annualPrecipitation() const { double r=0.; for (int i=0;i<12;++i) r+=mPrecipitationMonth[i]; return r;}
-    /// get a array with mean temperatures per month (deg C)
+    /// get a array with mean temperatures (light hours) per month (deg C)
     const double *temperatureMonth() const { return mTemperatureMonth; }
+    /// retrieve the year provided in the climate table
+    int climateDataYear() const { return mBegin->year; }
     // access to other subsystems
+    int phenologyGroupCount() const { return mPhenology.count(); }
     const Phenology &phenology(const int phenologyGroup) const; ///< phenology class of given type
     const Sun &sun() const { return mSun; } ///< solar radiation class
     double daylength_h(const int doy) const { return sun().daylength(doy); } ///< length of the day in hours
@@ -105,6 +108,7 @@ private:
     void load(); ///< load mLoadYears years from database
     void setupPhenology(); ///< setup of phenology groups
     void climateCalculations(const ClimateDay &lastDay); ///< more calculations done after loading of climate data
+    void updateCO2concentration();
     ClimateDay mInvalidDay;
     int mLoadYears; // count of years to load ahead
     int mCurrentYear; // current year (relative)
@@ -124,6 +128,11 @@ private:
     double mPrecipitationMonth[12]; ///< this years preciptitation sum (mm) per month
     double mTemperatureMonth[12]; ///< this years average temperature per month
     double mMeanAnnualTemperature; ///< mean temperature of the current year
+    static QVector<int> sampled_years; ///< list of sampled years to use
+    // co2 concentrations
+    static QString co2Pathway;
+    static int co2Startyear;
+    static QMap<QString, QVector<double> > fixedCO2concentrations;
 };
 
 #endif // CLIMATE_H

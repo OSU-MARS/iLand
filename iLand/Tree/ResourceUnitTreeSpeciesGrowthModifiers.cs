@@ -53,7 +53,7 @@ namespace iLand.Tree
         }
 
         /// Main function that calculates monthly / annual species responses
-        public void CalculateMonthlyGrowthModifiers(Landscape landscape)
+        public void CalculateMonthlyGrowthModifiers(Landscape landscape) // C++: SpeciesResponse::calculate()
         {
             this.ZeroMonthlyAndAnnualModifiers(); // reset values
 
@@ -128,7 +128,7 @@ namespace iLand.Tree
                     // environmental responses for the day
                     // combine responses
                     float minimumResponse = MathF.Min(MathF.Min(vpdResponse, temperatureResponse), soilWaterResponse);
-                    // calculate utilizable radiation, Eq. 4, http://iland-model.org/primary+production
+                    // calculate utilizable radiation, Eq. 4, https://iland-model.org/primary+production
                     float utilizableRadiation = dailyWeatherSeries.SolarRadiationTotal[weatherDayIndex] * minimumResponse;
 
                     Debug.Assert((minimumResponse >= 0.0F) && (minimumResponse < 1.000001F), "Minimum of VPD (" + vpdResponse + "), temperature (" + temperatureResponse + "), and soil water (" + soilWaterResponse + ") responses is not in [0, 1].");
@@ -197,7 +197,7 @@ namespace iLand.Tree
         /// @param psi_kPa psi of the soil in kPa
         /// @param vpd vapor pressure deficit in kPa
         /// @return minimum of soil water and vpd response
-        public float GetMostLimitingSoilWaterOrVpdModifier(float psiInKilopascals, float vpdInKiloPascals)
+        public float GetMostLimitingSoilWaterOrVpdModifier(float psiInKilopascals, float vpdInKiloPascals) // C++: SpeciesResponse::soilAtmosphereResponses()
         {
             float waterModifier = this.Species.GetSoilWaterModifier(psiInKilopascals);
             float vpdModifier = this.Species.GetVpdModifier(vpdInKiloPascals);

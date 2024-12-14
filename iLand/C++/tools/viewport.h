@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ public:
     // coordinate transformations
     const QPointF toWorld(const QPoint pixel);
     const QPoint toScreen(const QPointF p);
-    const QRect toScreen(const QRectF world) { QPoint p1=toScreen(world.bottomLeft()); QPoint p2=toScreen(world.topRight()); QRect r(p1, QSize(p2.x()-p1.x(), p2.y()-p1.y())); return r; }
+    const QRect toScreen(const QRectF world) { QPoint p1=toScreen(world.bottomLeft()); QPoint p2=toScreen(world.topRight()); QRect r(p1, QSize(p2.x()-p1.x()+1, p2.y()-p1.y()+1)); return r; }
     // getters
     const QRectF viewRect() const { return m_viewport; }
     bool isVisible(const QPointF &world_coord) const;

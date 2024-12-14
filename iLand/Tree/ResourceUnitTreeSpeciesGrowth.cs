@@ -33,20 +33,20 @@ namespace iLand.Tree
 
         /** calculate a resource unit's GPP
           ResourceUnit-level production following the 3-PG approach from Landsberg and Waring.
-          @sa http://iland-model.org/primary+production */
-        public void CalculateGppForYear(Project projectFile)
+          @sa https://iland-model.org/primary+production */
+        public void CalculateGppForYear(Project project)
         {
             this.ZeroMonthlyAndAnnualValues();
 
             // Radiation: sum over all days of each month with foliage
             // conversion from gC to kg Biomass: C/Biomass=0.5
             const float gramsCarbonToKilogramsBiomass = 0.001F / Constant.DryBiomassCarbonFraction;
-            float lightUseEpsilon = projectFile.Model.Ecosystem.LightUseEpsilon;
+            float lightUseEpsilon = project.Model.Ecosystem.LightUseEpsilon;
             float resourceUnitGppForYear = 0.0F;
             for (int monthIndex = 0; monthIndex < Constant.Time.MonthsInYear; ++monthIndex)
             {
                 // This is based on the utilizable photosynthetic active radiation.
-                // http://iland-model.org/primary+production
+                // https://iland-model.org/primary+production
                 // calculate the available radiation. This is done in ResourceUnitTreeSpeciesGrowthModifiers.CalculateMonthlyGrowthModifiers()
                 // see Equation (3)
                 // multiplicative approach: responses are averaged one by one and multiplied on a monthly basis
@@ -65,12 +65,12 @@ namespace iLand.Tree
 
                 this.UtilizableParByMonth[monthIndex] = utilizableRadiation;
                 this.MonthlyGpp[monthIndex] = utilizableRadiation * epsilon * gramsCarbonToKilogramsBiomass; // ... results in GPP of the month kg Biomass/m2 (converted from gC/m2)
-                resourceUnitGppForYear += this.MonthlyGpp[monthIndex]; // kg biomass/m2
+                resourceUnitGppForYear += this.MonthlyGpp[monthIndex]; // kg biomass/m²
 
                 Debug.Assert(this.MonthlyGpp[monthIndex] >= 0.0);
             }
 
-            // calculate f_env,yr: see http://iland-model.org/sapling+growth+and+competition
+            // calculate f_env,yr: see https://iland-model.org/sapling+growth+and+competition
             float f_sum = 0.0F;
             for (int month = 0; month < Constant.Time.MonthsInYear; ++month)
             {
@@ -85,7 +85,7 @@ namespace iLand.Tree
             {
                 if (this.SiteEnvironmentSaplingHeightGrowthMultiplier > 1.5F) // error on large deviations TODO: why a threshold of 1.5 instead of ~1.000001?
                 {
-                    throw new NotSupportedException("fEnvYear > 1 for " + this.Modifiers.Species.WorldFloraID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + projectFile.Model.Ecosystem.LightUseEpsilon + this.Modifiers.TotalRadiationForYear + siteEnvironmentHeightDivisor
+                    throw new NotSupportedException("fEnvYear > 1 for " + this.Modifiers.Species.WorldFloraID + this.SiteEnvironmentSaplingHeightGrowthMultiplier + " f_sum, epsilon, yearlyRad, refRatio " + f_sum + project.Model.Ecosystem.LightUseEpsilon + this.Modifiers.TotalRadiationForYear + siteEnvironmentHeightDivisor
                              + " check calibration of the sapReferenceRatio (fref) for this species!");
                 }
                 this.SiteEnvironmentSaplingHeightGrowthMultiplier = 1.0F;
@@ -93,7 +93,7 @@ namespace iLand.Tree
 
             // calculate fraction for belowground biomass
             float utilizedRadiationFraction = 1.0F;
-            if (projectFile.Model.Settings.UseParFractionBelowGroundAllocation)
+            if (project.Model.Settings.UseParFractionBelowGroundAllocation)
             {
                 // the Landsberg & Waring formulation takes into account the fraction of utilizeable to total radiation (but more complicated)
                 // we originally used only nitrogen and added the U_utilized/U_radiation
@@ -103,7 +103,7 @@ namespace iLand.Tree
             this.RootFraction = 1.0F - abovegroundFraction;
 
             // global value set?
-            float gppOverride = projectFile.Model.Settings.OverrideGppPerYear;
+            float gppOverride = project.Model.Settings.OverrideGppPerYear;
             if (Single.IsNaN(gppOverride) == false)
             {
                 resourceUnitGppForYear = gppOverride;

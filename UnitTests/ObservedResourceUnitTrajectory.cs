@@ -22,11 +22,11 @@ namespace iLand.Test
 
         public ObservedResourceUnitTrajectory(int capacity)
         {
-            this.GppTolerance = 0.02F;
-            this.NonmonotonicGrowthTolerance = 0.05F;
-            this.NppTolerance = 0.02F;
-            this.StemVolumeTolerance = 0.02F;
-            this.TreeNppTolerance = 0.33F;
+            this.GppTolerance = 0.01F;
+            this.NonmonotonicGrowthTolerance = 0.01F;
+            this.NppTolerance = 0.01F;
+            this.StemVolumeTolerance = 0.01F;
+            this.TreeNppTolerance = 0.01F;
 
             this.ObservedGppByYear = new(capacity);
             this.ObservedNppByYear = new(capacity);
@@ -109,8 +109,8 @@ namespace iLand.Test
                     // sanity checks on initial state
                     Assert.IsTrue(actualTrajectory.AverageDbhByYear[simulationYear] > 0.0F);
                     Assert.IsTrue(actualTrajectory.AverageHeightByYear[simulationYear] > 0.0F);
-                    Assert.IsTrue(actualTrajectory.BasalAreaByYear[simulationYear] > 0.0F);
-                    Assert.IsTrue(actualTrajectory.LeafAreaIndexByYear[simulationYear] >= 1.0F);
+                    Assert.IsTrue(actualTrajectory.TreeBasalAreaByYear[simulationYear] > 0.0F);
+                    Assert.IsTrue(actualTrajectory.TreeLeafAreaIndexByYear[simulationYear] >= 1.0F);
                     Assert.IsTrue(actualTrajectory.LiveStemVolumeByYear[simulationYear] > 0.0F);
                     Assert.IsTrue(actualTrajectory.TreeNppAbovegroundByYear[simulationYear] == 0.0F);
                     Assert.IsTrue(actualTrajectory.TreeNppByYear[simulationYear] == 0.0F);
@@ -140,8 +140,8 @@ namespace iLand.Test
                     int previousYear = simulationYear - 1;
                     Assert.IsTrue(actualTrajectory.AverageDbhByYear[simulationYear] > growthMultiplier * actualTrajectory.AverageDbhByYear[previousYear]);
                     Assert.IsTrue(actualTrajectory.AverageHeightByYear[simulationYear] > growthMultiplier * actualTrajectory.AverageHeightByYear[previousYear]);
-                    Assert.IsTrue(actualTrajectory.BasalAreaByYear[simulationYear] > growthMultiplier * actualTrajectory.BasalAreaByYear[previousYear]);
-                    Assert.IsTrue(actualTrajectory.LeafAreaIndexByYear[simulationYear] > growthMultiplier * actualTrajectory.LeafAreaIndexByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.TreeBasalAreaByYear[simulationYear] > growthMultiplier * actualTrajectory.TreeBasalAreaByYear[previousYear]);
+                    Assert.IsTrue(actualTrajectory.TreeLeafAreaIndexByYear[simulationYear] > growthMultiplier * actualTrajectory.TreeLeafAreaIndexByYear[previousYear]);
                     Assert.IsTrue(actualTrajectory.LiveStemVolumeByYear[simulationYear] > growthMultiplier * actualTrajectory.LiveStemVolumeByYear[previousYear]);
                     Assert.IsTrue(actualTrajectory.StemCarbonByYear[simulationYear] > growthMultiplier * actualTrajectory.StemCarbonByYear[previousYear]);
                     Assert.IsTrue(actualTrajectory.StemNitrogenByYear[simulationYear] > growthMultiplier * actualTrajectory.StemNitrogenByYear[previousYear]);
@@ -167,7 +167,7 @@ namespace iLand.Test
                     Assert.IsTrue(actualTrajectory.FoliageNitrogenByYear[simulationYear] > growthMultiplier * actualTrajectory.FoliageNitrogenByYear[previousYear]);
 
                     // sanity checks on ranges
-                    Assert.IsTrue((actualTrajectory.LeafAreaIndexByYear[simulationYear] > 0.3F) && (actualTrajectory.LeafAreaIndexByYear[simulationYear] < 20.0F));
+                    Assert.IsTrue((actualTrajectory.TreeLeafAreaIndexByYear[simulationYear] > 0.3F) && (actualTrajectory.TreeLeafAreaIndexByYear[simulationYear] < 20.0F));
                 }
             }
         }

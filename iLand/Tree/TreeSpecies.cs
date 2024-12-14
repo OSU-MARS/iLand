@@ -1,4 +1,5 @@
-﻿using iLand.Extensions;
+﻿// C++/core/{ tree.h, tree.cpp }
+using iLand.Extensions;
 using iLand.Input.ProjectFile;
 using iLand.Input.Tree;
 using iLand.Tool;
@@ -26,7 +27,7 @@ namespace iLand.Tree
         private float branchA, branchB; // allometry (biomass = a * dbh^b) for branches
         private float foliageA, foliageB;  // allometry (biomass = a * dbh^b) for foliage
         private float rootA, rootB; // allometry (biomass = a * dbh^b) for roots (compound, fine and coarse roots as one pool)
-        private float woodyA, woodyB; // allometry (biomass = a * dbh^b) for woody compartments aboveground
+        private float stemA, stemB; // allometry (biomass = a * dbh^b) for woody compartments aboveground
 
         // height-diameter-relationships
         private readonly ExpressionHeightDiameterRatioBounded heightDiameterRatioLowerBound; // minimum HD-relation as f(d) (open grown tree)
@@ -38,26 +39,26 @@ namespace iLand.Tree
         private float maximumAgeInYears; // maximum age of species (years)
         private float maximumHeightInM; // maximum height of species (m) for aging
         // environmental responses
-        private float lightResponseClass; // light response class (1..5) (1=shade intolerant)
-        private float modifierVpdK; // exponent in vpd response calculation (Mäkelä 2008)
         private float modifierTempMin; // temperature response calculation offset
         private float modifierTempMax; // temperature response calculation: saturation point for temp. response
         private float nitrogenResponseClass; // nitrogen response class (1..3). fractional values (e.g. 1.2) are interpolated.
         // regeneration
         private float mastYearProbability; // probability that a year is a seed year (=1/avg. timespan between seed years)
-        private UInt16 minimumAgeInYearsForSeedProduction; // a tree produces seeds if it is older than this parameter
         // regeneration - seed dispersal
         private readonly Expression serotinyFormula; // function that decides (probabilistic) if a tree is serotinous; empty: serotiny not active
         private float treeMigAlphaS1; // seed dispersal parameters (TreeMig)
         private float treeMigAlphaS2; // seed dispersal parameters (TreeMig)
         private float treeMigKappaS; // seed dispersal parameters (TreeMig)
 
+        public bool Active { get; private init; }
+
         public TreeListBiometric EmptyTreeList { get; private init; }
         public int Index { get; private init; } // unique index of species within current species set
         public bool IsConiferous { get; private set; }
         public bool IsEvergreen { get; private set; }
         public bool IsMastYear { get; private set; }
-        public int LeafPhenologyID { get; private set; } // leaf phenology defined in project file or Constant.EvergreenLeafPhenologyID
+        public int LeafPhenologyID { get; private set; } // leaf phenology defined in project file or Constant.EvergreenLeafPhenologyID, C++ phenologyClass(), mPhenologyClass
+        public float LightResponseClass { get; private set; } // light response class (1..5) (1=shade intolerant)
         /// the full name (e.g. Picea abies) of the species
         public string Name { get; private init; }
         public WorldFloraID WorldFloraID { get; private init; }
@@ -72,7 +73,7 @@ namespace iLand.Tree
 
         // mortality
         public float DeathProbabilityFixed { get; private set; } // prob. of intrinsic death per year [0..1]
-        public float FecundityM2 { get; private set; } // "surviving seeds" (cf. Moles et al) per m2, see also http://iland-model.org/fecundity
+        public float FecundityM2 { get; private set; } // "surviving seeds" (cf. Moles et al) per m2, see also https://iland-model.org/fecundity
         public float FecunditySerotiny { get; private set; } // multiplier that increases fecundity for post-fire seed rain of serotinous species
         public float MaxCanopyConductance { get; private set; } // maximum canopy conductance in m/s
         public float NonMastYearFraction { get; private set; }
@@ -84,12 +85,17 @@ namespace iLand.Tree
         public float CoarseWoodyDebrisDecompositionRate { get; private set; } // decomposition rate for refractory matter (woody) used in soil model
 
         // growth
-        public float MinimumSoilWaterPotential { get; private set; } // soil water potential in MPa, http://iland-model.org/soil+water+response
+        public float MinimumSoilWaterPotential { get; private set; } // soil water potential in MPa, https://iland-model.org/soil+water+response
         public float SpecificLeafArea { get; private set; } // m²/kg; conversion factor from kg OTS to leaf area m²
         public float VolumeFactor { get; private set; } // factor for volume calculation: V = factor * D^2*H (incorporates density and the form of the bole)
         public float WoodDensity { get; private set; } // density of stem wood [kg/m3]
 
+        // environmental responses
+        public float ModifierVpdK { get; private set; } // exponent in vpd response calculation (Mäkelä 2008), C++ mRespVpdExponent
+
+        // regeneration
         public float FinerootFoliageRatio { get; private set; } // ratio of fineroot mass (kg) to foliage mass (kg)
+        public UInt16 MinimumAgeInYearsForSeedProduction { get; private set; } // a tree produces seeds if it is older than this parameter, C++ mMaturityYears
         public SaplingEstablishmentParameters SaplingEstablishment { get; private init; }
         public SaplingGrowthParameters SaplingGrowth { get; private init; }
         public SeedDispersal? SeedDispersal { get; set; }
@@ -97,8 +103,6 @@ namespace iLand.Tree
 
         private TreeSpecies(TreeSpeciesSet speciesSet, WorldFloraID speciesID, string name, string stampFilePath)
         {
-            ArgumentNullException.ThrowIfNull(speciesSet);
-
             this.aging = new();
             this.lightIntensityProfiles = new(stampFilePath);
             this.heightDiameterRatioUpperBound = new();
@@ -118,14 +122,17 @@ namespace iLand.Tree
             this.lightIntensityProfiles.AttachReaderStamps(speciesSet.ReaderStamps);
         }
 
-        public bool Active { get; private init; }
+        // TODO: consolidate with underlying fields
+        public float AllometricExponentStem { get { return this.stemB; } }
+        public float AllometricExponentBranch { get { return this.branchB; } }
+        public float AllometricExponentFoliage { get { return this.foliageB; } }
 
         /** Seed production.
            This function produces seeds if the tree is older than a species-specific age ("maturity")
            If seeds are produced, this information is stored in a "SeedMap"
           */
         /// check the maturity of the tree and flag the position as seed source appropriately
-        public void DisperseSeeds(RandomGenerator randomGenerator, TreeListSpatial tree, int treeIndex)
+        public void DisperseSeeds(RandomGenerator randomGenerator, TreeListSpatial tree, int treeIndex) // C++: Species::seedProduction()
         {
             if (this.SeedDispersal == null)
             {
@@ -139,7 +146,7 @@ namespace iLand.Tree
             }
 
             // no seed production if maturity age is not reached (species parameter) or if tree height is below 4m.
-            if ((tree.AgeInYears[treeIndex] > this.minimumAgeInYearsForSeedProduction) && (tree.HeightInM[treeIndex] > Constant.RegenerationLayerHeight))
+            if (tree.AgeInYears[treeIndex] > this.MinimumAgeInYearsForSeedProduction)
             {
                 this.SeedDispersal.SetMatureTree(tree.LightCellIndexXY[treeIndex], tree.LeafAreaInM2[treeIndex]);
             }
@@ -154,7 +161,7 @@ namespace iLand.Tree
         /** Aging formula.
            calculates a relative "age" by combining a height- and an age-related term using a harmonic mean,
            and feeding this into the Landsberg and Waring formula.
-           see http://iland-model.org/primary+production#respiration_and_aging
+           see https://iland-model.org/primary+production#respiration_and_aging
            @param useAge set to true if "real" tree age is available. If false, only the tree height is used.
           */
         public float GetAgingFactor(float height, int age)
@@ -173,6 +180,7 @@ namespace iLand.Tree
             return Maths.Limit(agingFactor, 0.0F, 1.0F);
         }
 
+        // calculations: allometries for the tree compartments (stem, branches, foliage, fineroots, coarse roots)
         public float GetBarkThickness(float dbhInCm) 
         { 
             return this.barkFractionAtDbh * dbhInCm;
@@ -195,7 +203,7 @@ namespace iLand.Tree
 
         public float GetBiomassStem(float dbhInCm) 
         { 
-            return this.woodyA * MathF.Pow(dbhInCm, this.woodyB); 
+            return this.stemA * MathF.Pow(dbhInCm, this.stemB); 
         }
 
         public (float hdRatioLowerBound, float hdRatioUpperBound) GetHeightDiameterRatioLimits(float dbhInCm)
@@ -207,7 +215,7 @@ namespace iLand.Tree
 
         public float GetLightResponse(float lightResourceIndex)
         {
-            return this.SpeciesSet.GetLightResponse(lightResourceIndex, this.lightResponseClass);
+            return this.SpeciesSet.GetLightResponse(lightResourceIndex, this.LightResponseClass);
         }
 
         // calculate probabilty of death based on the current stress index
@@ -226,7 +234,7 @@ namespace iLand.Tree
             return this.SpeciesSet.GetNitrogenModifier(availableNitrogen, this.nitrogenResponseClass);
         }
 
-        // iLand specific model chosen from Hanson 2004: http://iland-model.org/soil+water+response
+        // iLand specific model chosen from Hanson 2004: https://iland-model.org/soil+water+response
         public float GetSoilWaterModifier(float psiInKilopascals)
         {
             float psiInMPa = 0.001F * psiInKilopascals; // convert to MPa
@@ -241,15 +249,17 @@ namespace iLand.Tree
 
         public float GetStemFoliageRatio()
         {
-            return this.woodyB / this.foliageB; // Duursma et al. 2007 eq 20
+            return this.stemB / this.foliageB; // Duursma et al. 2007 eq 20
         }
 
         /** calculate fraction of stem wood increment base on dbh.
             allometric equation: a*d^b -> first derivation: a*b*d^(b-1)
             the ratio for stem is 1 minus the ratio of twigs to total woody increment at current "dbh". */
-        public float GetStemFraction(float dbh)
+        public float GetStemFraction(float dbh) // C++: Species::allometricFractionStem()
         {
-            float stemFraction = 1.0F - branchA * branchB * MathF.Pow(dbh, branchB - 1.0F) / (woodyA * woodyB * MathF.Pow(dbh, woodyB - 1.0F));
+            float inc_branch_per_d = this.branchA * this.branchB* MathF.Pow(dbh, this.branchB - 1.0F);
+            float inc_woody_per_d = this.stemA * this.stemB * MathF.Pow(dbh, this.stemB - 1.0F);
+            float stemFraction = inc_woody_per_d / (inc_branch_per_d + inc_woody_per_d);
             return stemFraction;
         }
 
@@ -276,7 +286,7 @@ namespace iLand.Tree
 
         public float GetVpdModifier(float vpdInKiloPascals)
         {
-            return MathF.Exp(this.modifierVpdK * vpdInKiloPascals);
+            return MathF.Exp(this.ModifierVpdK * vpdInKiloPascals);
         }
 
         /// returns true of a tree with given age/height is serotinous (i.e. seed release after fire)
@@ -310,8 +320,8 @@ namespace iLand.Tree
                 foliageA = reader.BmFoliageA(),
                 foliageB = reader.BmFoliageB(),
 
-                woodyA = reader.BmWoodyA(),
-                woodyB = reader.BmWoodyB(),
+                stemA = reader.BmWoodyA(),
+                stemB = reader.BmWoodyB(),
 
                 rootA = reader.BmRootA(),
                 rootB = reader.BmRootB(),
@@ -373,8 +383,8 @@ namespace iLand.Tree
                 (species.foliageB <= 0.0F) || (species.foliageB > 10.0F) ||
                 (species.rootA <= 0.0F) || (species.rootA > 10.0F) ||
                 (species.rootB <= 0.0F) || (species.rootB > 10.0F) ||
-                (species.woodyA <= 0.0F) || (species.woodyA > 10.0F) ||
-                (species.woodyB <= 0.0F) || (species.woodyB > 10.0F) ||
+                (species.stemA <= 0.0F) || (species.stemA > 10.0F) ||
+                (species.stemB <= 0.0F) || (species.stemB > 10.0F) ||
                 (species.branchA <= 0.0F) || (species.branchA > 10.0F) ||
                 (species.branchB <= 0.0F) || (species.branchB > 10.0F) ||
                 (species.SpecificLeafArea <= 0.0F) || (species.SpecificLeafArea > 300.0F) || // nominal upper bound from mosses
@@ -412,10 +422,10 @@ namespace iLand.Tree
             species.stressMortalityCoefficient = stressMortalityCoefficient;
 
             // environmental responses
-            species.modifierVpdK = reader.RespVpdExponent();
+            species.ModifierVpdK = reader.RespVpdExponent();
             species.modifierTempMin = reader.RespTempMin();
             species.modifierTempMax = reader.RespTempMax();
-            if (species.modifierVpdK >= 0.0F)
+            if (species.ModifierVpdK >= 0.0F)
             {
                 throw new SqliteException("Error loading '" + species.WorldFloraID + "': VPD exponent greater than or equal to zero.", (int)SqliteErrorCode.Error);
             }
@@ -438,8 +448,8 @@ namespace iLand.Tree
             species.MinimumSoilWaterPotential = reader.PsiMin();
 
             // light
-            species.lightResponseClass = reader.LightResponseClass();
-            if (species.lightResponseClass < 1.0F || species.lightResponseClass > 5.0F)
+            species.LightResponseClass = reader.LightResponseClass();
+            if (species.LightResponseClass < 1.0F || species.LightResponseClass > 5.0F)
             {
                 throw new SqliteException("Error loading '" + species.WorldFloraID + "': light response class must be in range [1.0 5.0].", (int)SqliteErrorCode.Error);
             }
@@ -452,7 +462,7 @@ namespace iLand.Tree
                 throw new SqliteException("Error loading '" + species.WorldFloraID + "': seed year interval must be positive.", (int)SqliteErrorCode.Error);
             }
             species.mastYearProbability = 1.0F / mastYearInterval;
-            species.minimumAgeInYearsForSeedProduction = (UInt16)reader.MaturityYears();
+            species.MinimumAgeInYearsForSeedProduction = (UInt16)reader.MaturityYears();
             species.treeMigAlphaS1 = reader.SeedKernelAs1();
             species.treeMigAlphaS2 = reader.SeedKernelAs2();
             species.treeMigKappaS = reader.SeedKernelKs0();
@@ -472,8 +482,18 @@ namespace iLand.Tree
             species.SaplingEstablishment.MinimumFrostFreeDays = reader.EstablishmentParametersMinFrostFree();
             species.SaplingEstablishment.FrostTolerance = reader.EstablishmentParametersFrostTolerance();
             species.SaplingEstablishment.DroughtMortalityPsiInMPa = reader.EstablishmentParametersPsiMin();
+            if (projectFile.Model.Permafrost.Enabled)
+            {
+                // TODO: uncomment once species parameters are updated
+                // species.SaplingEstablishment.SOL_thickness = reader.EstablishmentParametersSoilOrganicLayerThicknessEffect();
+                if (species.SaplingEstablishment.SOL_thickness < 0.0F)
+                {
+                    throw new SqliteException("Soil organic layer thickness (estSOLthickness) " + species.SaplingEstablishment.SOL_thickness + " for " + species.Name + " is negative.", (int)SqliteErrorCode.Error);
+                }
+            }
 
             // sapling and sapling growth parameters
+            species.SaplingGrowth.AdultSproutProbability = reader.SaplingGrowthAdultSproutProbability();
             species.SaplingGrowth.HeightGrowthPotential.Parse(reader.SaplingGrowthParametersHeightGrowthPotential());
             species.SaplingGrowth.HeightDiameterRatio = reader.SaplingGrowthParametersHdSapling();
             species.SaplingGrowth.StressThreshold = reader.SaplingGrowthParametersStressThreshold();
@@ -482,15 +502,16 @@ namespace iLand.Tree
             species.SaplingGrowth.ReinekeR = reader.SaplingGrowthParametersReinekesR();
             species.SaplingGrowth.BrowsingProbability = reader.SaplingGrowthParametersBrowsingProbability();
             species.SaplingGrowth.SproutGrowth = reader.SaplingGrowthParametersSproutGrowth();
-            // if (species.SaplingGrowthParameters.SproutGrowth > 0.0F)
-            // {
-            //     if (species.SaplingGrowthParameters.SproutGrowth < 1.0F || species.SaplingGrowthParameters.SproutGrowth > 10.0F)
-            //     {
-            //         // TODO: convert to error?
-            //         Debug.WriteLine("Value of 'sapSproutGrowth' dubious for species " + species.Name + "(value: " + species.SaplingGrowthParameters.SproutGrowth + ")");
-            //     }
-            // }
+            if ((species.SaplingGrowth.AdultSproutProbability < 0.0F) || (species.SaplingGrowth.AdultSproutProbability > 1.0F))
+            {
+                throw new SqliteException("sapAdultSproutProbability " + species.SaplingGrowth.AdultSproutProbability + " for species " + species.Name + " is not in the range [0.0, 1.0].", (int)SqliteErrorCode.Error);
+            }
+            if ((species.SaplingGrowth.SproutGrowth < 1.0F) || (species.SaplingGrowth.SproutGrowth > 10.0F))
+            {
+                throw new SqliteException("sapSproutGrowth " + species.SaplingGrowth.SproutGrowth + " for species " + species.Name + " is not in the range [1.0, 10.0].", (int)SqliteErrorCode.Error);
+            }
             species.SaplingGrowth.SetupReinekeLookup();
+
             if (projectFile.Model.Settings.ExpressionLinearizationEnabled)
             {
                 species.SaplingGrowth.HeightGrowthPotential.Linearize(0.0F, Constant.RegenerationLayerHeight);
@@ -501,7 +522,7 @@ namespace iLand.Tree
         /** newYear is called by the SpeciesSet at the beginning of a year before any growth occurs.
           This is used for various initializations, e.g. to clear seed dispersal maps
           */
-        public void OnStartYear(Model model)
+        public void OnStartYear(Model model) // C++: Species::newYear()
         {
             if (this.SeedDispersal != null)
             {
@@ -512,7 +533,7 @@ namespace iLand.Tree
                 {
                     Trace.TraceInformation("Seed year for " + this.WorldFloraID + ".");
                 }
-                // clear seed map
+                // clear seed maps
                 this.SeedDispersal.Clear(model);
             }
         }

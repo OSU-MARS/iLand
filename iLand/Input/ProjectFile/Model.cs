@@ -6,6 +6,8 @@ namespace iLand.Input.ProjectFile
     {
         public Ecosystem Ecosystem { get; private init; }
         public Management Management { get; private init; }
+        public Microclimate Microclimate { get; private init; }
+        public Permafrost Permafrost { get; private init; }
         public SeedDispersal SeedDispersal { get; private init; }
         public ModelSettings Settings { get; private init; }
 
@@ -13,6 +15,8 @@ namespace iLand.Input.ProjectFile
         {
             this.Ecosystem = new();
             this.Management = new();
+            this.Microclimate = new();
+            this.Permafrost = new();
             this.SeedDispersal = new();
             this.Settings = new();
         }
@@ -35,6 +39,12 @@ namespace iLand.Input.ProjectFile
                 case "management":
                     this.Management.ReadXml(reader);
                     break;
+                case "microclimate":
+                    this.Microclimate.ReadXml(reader);
+                    break;
+                case "permafrost":
+                    this.Permafrost.ReadXml(reader);
+                    break;
                 case "seedDispersal":
                     this.SeedDispersal.ReadXml(reader);
                     break;
@@ -44,6 +54,11 @@ namespace iLand.Input.ProjectFile
                 default:
                     throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
+        }
+
+        public void Validate()
+        {
+            this.Permafrost.Validate();
         }
     }
 }

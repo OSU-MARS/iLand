@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -48,7 +48,6 @@ SpeciesSet::~SpeciesSet()
 void SpeciesSet::clear()
 {
     qDeleteAll(mSpecies.values());
-    qDeleteAll(mSeedDispersal);
     mSpecies.clear();
     mActiveSpecies.clear();
 }
@@ -58,7 +57,17 @@ const Species *SpeciesSet::species(const int &index)
     foreach(Species *s, mSpecies)
         if (s->index() == index)
             return s;
-    return NULL;
+    return nullptr;
+}
+
+bool SpeciesSet::hasVar(const QString &varName)
+{
+    Q_ASSERT(mSetupQuery!=nullptr);
+    if (!mSetupQuery)
+        throw IException("SpeciesSet: query is not active!");
+
+    int idx = mSetupQuery->record().indexOf(varName);
+    return idx >= 0;
 }
 
 /** loads active species from a database table and creates/setups the species.
@@ -94,6 +103,9 @@ int SpeciesSet::setup()
         // call setup routine (which calls SpeciesSet::var() to retrieve values
         s->setup();
 
+        if (mSpecies.contains(s->id())) {
+            throw IException(QString("Error loading species: the species id '%1' is not unique and appears multiple times!").arg(s->id()));
+        }
         mSpecies.insert(s->id(), s); // store
         if (s->active())
             mActiveSpecies.append(s);
@@ -117,7 +129,7 @@ int SpeciesSet::setup()
     mNitrogen_2b = resp.valueDouble("class_2_b");
     mNitrogen_3a = resp.valueDouble("class_3_a");
     mNitrogen_3b = resp.valueDouble("class_3_b");
-    if (mNitrogen_1a*mNitrogen_1b*mNitrogen_2a*mNitrogen_2b*mNitrogen_3a*mNitrogen_3b == 0)
+    if (mNitrogen_1a*mNitrogen_1b*mNitrogen_2a*mNitrogen_2b*mNitrogen_3a*mNitrogen_3b == 0.)
         throw IException("at least one parameter of model.species.nitrogenResponseClasses is not valid (value=0)!");
 
     // setup CO2 response
@@ -126,7 +138,7 @@ int SpeciesSet::setup()
     mCO2comp = co2.valueDouble("compensationPoint");
     mCO2beta0 = co2.valueDouble("beta0");
     mCO2p0 = co2.valueDouble("p0");
-    if (mCO2base*mCO2comp*(mCO2base-mCO2comp)*mCO2beta0*mCO2p0==0)
+    if (mCO2base*mCO2comp*(mCO2base-mCO2comp)*mCO2beta0*mCO2p0==0.)
         throw IException("at least one parameter of model.species.CO2Response is not valid!");
 
     // setup Light responses
@@ -159,7 +171,7 @@ void SpeciesSet::setupRegeneration()
     qDebug() << "Setup of seed dispersal maps finished.";
 }
 
-void nc_seed_distribution(Species *species)
+static void nc_seed_distribution(Species *species)
 {
     species->seedDispersal()->execute();
 }
@@ -175,6 +187,14 @@ void SpeciesSet::regeneration()
 
     if (logLevelDebug())
         qDebug() << "seed dispersal finished.";
+}
+
+void SpeciesSet::clearSaplingSeedMap()
+{
+    foreach(Species *s, mActiveSpecies) {
+        if (s->seedDispersal())
+            s->seedDispersal()->clearSaplingMap();
+    }
 }
 
 /** newYear is called by Model::runYear at the beginning of a year before any growth occurs.
@@ -193,12 +213,16 @@ void SpeciesSet::newYear()
   */
 QVariant SpeciesSet::var(const QString& varName)
 {
-    Q_ASSERT(mSetupQuery!=0);
+    Q_ASSERT(mSetupQuery!=nullptr);
+    if (!mSetupQuery)
+        throw IException("SpeciesSet: query is not active!");
 
     int idx = mSetupQuery->record().indexOf(varName);
     if (idx>=0)
         return mSetupQuery->value(idx);
-    throw IException(QString("SpeciesSet: variable not set: %1").arg(varName));
+    throw IException(QString("SpeciesSet: The species parameter table does not contain the column: '%1'\n%2")
+                     .arg(varName)
+                     .arg("Please check https://iland-model.org/release+notes for details."));
     //throw IException(QString("load species parameter: field %1 not found!").arg(varName));
     // lookup in defaults
     //qDebug() << "variable" << varName << "not found - using default.";
@@ -267,18 +291,17 @@ double SpeciesSet::nitrogenResponse(const double availableNitrogen, const double
 
 /** calculation for the CO2 response for the ambientCO2 for the water- and nitrogen responses given.
     The calculation follows Friedlingsstein 1995 (see also links to equations in code)
-    see also: http://iland.boku.ac.at/CO2+response
+    see also: https://iland-model.org/CO2+response
     @param ambientCO2 current CO2 concentration (ppm)
     @param nitrogenResponse (yearly) nitrogen response of the species
-    @param soilWaterReponse soil water response (mean value for a month)
+    @param soilWaterResponse soil water response (mean value for a month)
 */
 double SpeciesSet::co2Response(const double ambientCO2, const double nitrogenResponse, const double soilWaterResponse) const
 {
     if (nitrogenResponse==0.)
         return 0.;
 
-    double co2_water = 2. - soilWaterResponse;
-    double beta = mCO2beta0 * co2_water * nitrogenResponse;
+    double beta = co2Beta(nitrogenResponse, soilWaterResponse);
 
     double r =1. +  M_LN2 * beta; // NPP increase for a doubling of atmospheric CO2 (Eq. 17)
 
@@ -292,10 +315,17 @@ double SpeciesSet::co2Response(const double ambientCO2, const double nitrogenRes
 
 }
 
+double SpeciesSet::co2Beta(const double nitrogenResponse, const double soilWaterResponse) const
+{
+    double co2_water = 2. - soilWaterResponse;
+    double beta = mCO2beta0 * co2_water * nitrogenResponse;
+    return beta;
+}
+
 /** calculates the lightResponse based on a value for LRI and the species lightResponseClass.
     LightResponse is classified from 1 (very shade inolerant) and 5 (very shade tolerant) and interpolated for values between 1 and 5.
     Returns a value between 0..1
-    @sa http://iland.boku.ac.at/allocation#reserve_and_allocation_to_stem_growth */
+    @sa https://iland-model.org/allocation#reserve_and_allocation_to_stem_growth */
 double SpeciesSet::lightResponse(const double lightResourceIndex, const double lightResponseClass) const
 {
     double low = mLightResponseIntolerant.calculate(lightResourceIndex);

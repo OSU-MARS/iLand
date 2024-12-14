@@ -48,13 +48,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Apache.Arrow" Version="14.0.1" />
-    <PackageReference Include="Apache.Arrow.Compression" Version="14.0.1" />
-    <PackageReference Include="MaxRev.Gdal.Core" Version="3.7.0.217" />
-    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal" Version="3.7.0.100" />
+    <PackageReference Include="Apache.Arrow" Version="18.1.0" />
+    <PackageReference Include="Apache.Arrow.Compression" Version="18.1.0" />
+    <PackageReference Include="MaxRev.Gdal.Core" Version="3.10.0.306" />
+    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal" Version="3.10.0.306" />
     <PackageReference Include="MersenneTwister" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
-    <PackageReference Include="System.Management.Automation" Version="7.4.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+    <PackageReference Include="System.Management.Automation" Version="7.4.6" />
   </ItemGroup>
   
 </Project>

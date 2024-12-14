@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,6 @@
 
   */
 #include <QtCore>
-#include "global.h"
 
 #include "resourceunit.h"
 #include "resourceunitspecies.h"
@@ -41,6 +40,11 @@
 #include "snag.h"
 #include "soil.h"
 #include "helper.h"
+#include "svdstate.h"
+#include "statdata.h"
+#include "microclimate.h"
+
+double ResourceUnitVariables::nitrogenAvailableDelta = 0;
 
 ResourceUnit::~ResourceUnit()
 {
@@ -65,8 +69,8 @@ ResourceUnit::~ResourceUnit()
 ResourceUnit::ResourceUnit(const int index)
 {
     qDeleteAll(mRUSpecies);
-    mSpeciesSet = 0;
-    mClimate = 0;
+    mSpeciesSet = nullptr;
+    mClimate = nullptr;
     mPixelCount=0;
     mStockedArea = 0;
     mStockedPixelCount = 0;
@@ -78,24 +82,25 @@ ResourceUnit::ResourceUnit(const int index)
     mLRI_modification = 0.;
     mIndex = index;
     mSaplingHeightMap = 0;
+    mMicroclimate = nullptr;
     mEffectiveArea_perWLA = 0.;
     mWater = new WaterCycle();
-    mSnag = 0;
-    mSoil = 0;
-    mSaplings = 0;
+    mSnag = nullptr;
+    mSoil = nullptr;
+    mSaplings = nullptr;
     mID = 0;
+    mCreateDebugOutput = true;
+    mSVDState.clear();
 }
 
 void ResourceUnit::setup()
 {
-    mWater->setup(this);
-
     if (mSnag)
         delete mSnag;
-    mSnag=0;
+    mSnag=nullptr;
     if (mSoil)
         delete mSoil;
-    mSoil=0;
+    mSoil=nullptr;
     if (Model::settings().carbonCycleEnabled) {
         mSoil = new Soil(this);
         mSnag = new Snag;
@@ -109,13 +114,23 @@ void ResourceUnit::setup()
                                CNPool(xml.valueDouble("model.site.youngRefractoryC", -1),
                                       xml.valueDouble("model.site.youngRefractoryN", -1),
                                       xml.valueDouble("model.site.youngRefractoryDecompRate", -1)),
-                               CNPair(xml.valueDouble("model.site.somC", -1), xml.valueDouble("model.site.somN", -1)));
+                               CNPair(xml.valueDouble("model.site.somC", -1), xml.valueDouble("model.site.somN", -1)),
+                               xml.valueDouble("model.site.youngLabileAbovegroundFraction"),
+                               xml.valueDouble("model.site.youngRefractoryAbovegroundFraction"));
     }
+
+    mWater->setup(this);
 
     if (mSaplings)
         delete mSaplings;
     if (Model::settings().regenerationEnabled) {
         mSaplings = new SaplingCell[cPxPerHectare];
+        for (int i=0;i<cPxPerHectare;++i)
+            mSaplings[i].ru = this;
+    }
+
+    if (Model::settings().microclimateEnabled) {
+        mMicroclimate = new Microclimate(this);
     }
 
     // setup variables
@@ -141,11 +156,38 @@ void ResourceUnit::setBoundingBox(const QRectF &bb)
 SaplingCell *ResourceUnit::saplingCell(const QPoint &lifCoords) const
 {
     // LIF-Coordinates are global, we here need (RU-)local coordinates
-    int ix = lifCoords.x() % cPxPerRU;
-    int iy = lifCoords.y() % cPxPerRU;
+    QPoint po = lifCoords - mCornerOffset;
+    int ix = po.x() % cPxPerRU;
+    int iy = po.y() % cPxPerRU;
     int i = iy*cPxPerRU+ix;
     Q_ASSERT(i>=0 && i<cPxPerHectare);
     return &mSaplings[i];
+}
+
+double ResourceUnit::saplingCoveredArea(bool below130cm) const
+{
+    Q_ASSERT(mSaplings != 0);
+    int n_covered = 0;
+    if (below130cm) {
+        for (int i=0;i<cPxPerHectare;++i) {
+            // either grass *OR* hmax<1.3m
+            if (mSaplings[i].state == SaplingCell::CellGrass) {
+                ++n_covered;
+            } else {
+                float hmx = mSaplings[i].max_height();
+                if (hmx>0.f && hmx<=1.3f)
+                    ++n_covered;
+            }
+        }
+    } else {
+        // only px that have saplings > 1.3m
+        for (int i=0;i<cPxPerHectare;++i) {
+            if (mSaplings[i].max_height()>1.3f)
+                ++n_covered;
+        }
+    }
+
+    return static_cast<double>(n_covered * cPxSize*cPxSize);
 }
 
 /// set species and setup the species-per-RU-data
@@ -179,6 +221,45 @@ ResourceUnitSpecies &ResourceUnit::resourceUnitSpecies(const Species *species)
 const ResourceUnitSpecies *ResourceUnit::constResourceUnitSpecies(const Species *species) const
 {
     return mRUSpecies[species->index()];
+}
+
+double ResourceUnit::topHeight(bool &rIrregular) const
+{
+    GridRunner<HeightGridValue> runner(GlobalSettings::instance()->model()->heightGrid(), boundingBox());
+    int valid=0, total=0;
+    QVector<double> px_heights;
+    px_heights.reserve(cHeightPerRU*cHeightPerRU);
+    while (runner.next()) {
+        if ( runner.current()->isValid() ) {
+            valid++;
+            px_heights.push_back(runner.current()->stemHeight());
+        }
+        total++;
+    }
+    StatData hstat(px_heights);
+    double h_top = hstat.percentile(90);
+    double h_median = hstat.median();
+    // irregular: 50% of the area < 50% topheight: median=50% of the area
+    if (h_median < h_top*0.5)
+        rIrregular = true;
+    else
+        rIrregular = false;
+    return h_top;
+}
+
+void ResourceUnit::notifyDisturbance(ERUDisturbanceType source, double info) const
+{
+    if (!mSVDState.disturbanceEvents) // do nothing if SVD states are not used
+        return;
+
+    // events are stored with newest events first. Oldest event is removed
+    // when maximum number of events reached
+    mSVDState.disturbanceEvents->prepend(RUSVDState::SVDDisturbanceEvent(
+                                            Globals->currentYear(),
+                                            source,
+                                            info));
+    if (mSVDState.disturbanceEvents->size() > 2 )
+        mSVDState.disturbanceEvents->pop_back();
 }
 
 Tree &ResourceUnit::newTree()
@@ -246,6 +327,13 @@ void ResourceUnit::newYear()
     mAggregatedLR = 0.;
     mEffectiveArea = 0.;
     mPixelCount = mStockedPixelCount = 0;
+
+    if (GlobalSettings::instance()->model()->ruList().first()==this && GlobalSettings::instance()->settings().hasNode("model.site.deltaAvailableNitrogen")) {
+        mUnitVariables.nitrogenAvailableDelta = GlobalSettings::instance()->settings().valueDouble("model.site.deltaAvailableNitrogen",0.);
+        if (mUnitVariables.nitrogenAvailableDelta != 0.)
+            qDebug() << "applying a global delta to available Nitrogen:" << mUnitVariables.nitrogenAvailableDelta << "kg N/ha/yr";
+    }
+
     snagNewYear();
     if (mSoil)
         mSoil->newYear();
@@ -258,6 +346,8 @@ void ResourceUnit::newYear()
         (*i)->statisticsMgmt().clear();
     }
 
+
+
 }
 
 /** production() is the "stand-level" part of the biomass production (3PG).
@@ -265,14 +355,15 @@ void ResourceUnit::newYear()
     - the water cycle is calculated
     - statistics for each species are cleared
     - The 3PG production for each species and ressource unit is called (calculates species-responses and NPP production)
-    see also: http://iland.boku.ac.at/individual+tree+light+availability */
+    see also: https://iland-model.org/individual+tree+light+availability */
 void ResourceUnit::production()
 {
 
     if (mAggregatedWLA==0. || mPixelCount==0) {
         // clear statistics of resourceunitspecies
-        for ( QList<ResourceUnitSpecies*>::const_iterator i=mRUSpecies.constBegin(); i!=mRUSpecies.constEnd(); ++i)
+        for ( QList<ResourceUnitSpecies*>::const_iterator i=mRUSpecies.constBegin(); i!=mRUSpecies.constEnd(); ++i) {
             (*i)->statistics().clear();
+        }
         mEffectiveArea = 0.;
         mStockedArea = 0.;
         return;
@@ -324,42 +415,20 @@ void ResourceUnit::production()
     // calculate LAI fractions
     QList<ResourceUnitSpecies*>::const_iterator i;
     QList<ResourceUnitSpecies*>::const_iterator iend = mRUSpecies.constEnd();
-    double ru_lai = leafAreaIndex();
-    if (ru_lai < 1.)
-        ru_lai = 1.;
-    // note: LAIFactors are only 1 if sum of LAI is > 1. (see WaterCycle)
-    for (i=mRUSpecies.constBegin(); i!=iend; ++i) {
-        double lai_factor = (*i)->statistics().leafAreaIndex() / ru_lai;
-
-        //DBGMODE(
-        if (lai_factor > 1.) {
-                        const ResourceUnitSpecies* rus=*i;
-                        qDebug() << "LAI factor > 1: species ru-index:" << rus->species()->name() << rus->ru()->index();
-                    }
-        //);
-        (*i)->setLAIfactor( lai_factor );
-    }
 
     // soil water model - this determines soil water contents needed for response calculations
-    {
     mWater->run();
-    }
 
     // invoke species specific calculation (3PG)
     for (i=mRUSpecies.constBegin(); i!=iend; ++i) {
-        //DBGMODE(
-        if ((*i)->LAIfactor() > 1.) {
-                    const ResourceUnitSpecies* rus=*i;
-                    qDebug() << "LAI factor > 1: species ru-index value:" << rus->species()->name() << rus->ru()->index() << rus->LAIfactor();
-                    }
-        //);
+
         (*i)->calculate(); // CALCULATE 3PG
 
         // debug output related to production
-        if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dStandGPP) && (*i)->LAIfactor()>0.) {
+        if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dStandGPP) && shouldCreateDebugOutput() && (*i)->leafAreaIndex()>0.) {
             DebugList &out = GlobalSettings::instance()->debugList(index(), GlobalSettings::dStandGPP);
             out << (*i)->species()->id() << index() << id();
-            out << (*i)->LAIfactor() << (*i)->prod3PG().GPPperArea() << productiveArea()*(*i)->LAIfactor()*(*i)->prod3PG().GPPperArea() << averageAging() << (*i)->prod3PG().fEnvYear() ;
+            out << (*i)->leafAreaIndex() << (*i)->prod3PG().GPPperArea() << productiveArea()*(*i)->leafAreaIndex()/(leafAreaIndex()==0.?1.:leafAreaIndex()) *(*i)->prod3PG().GPPperArea() << averageAging() << (*i)->prod3PG().fEnvYear() ;
 
         }
     }
@@ -428,6 +497,35 @@ void ResourceUnit::yearEnd()
 
     }
 
+    // SVD States: update state
+    updateSVDState();
+
+
+}
+
+void ResourceUnit::updateSVDState()
+{
+    if (GlobalSettings::instance()->model()->svdStates()){
+        if (!mSVDState.localComposition) {
+            // create vectors on the heap only when really needed
+            int nspecies = GlobalSettings::instance()->model()->speciesSet()->activeSpecies().size();
+            mSVDState.localComposition = new QVector<float>(nspecies, 0.f);
+            mSVDState.midDistanceComposition = new QVector<float>(nspecies, 0.f);
+            // create history vector
+            mSVDState.disturbanceEvents = new QVector<RUSVDState::SVDDisturbanceEvent>();
+        }
+        int stateId=GlobalSettings::instance()->model()->svdStates()->evaluateState(this);
+        if (mSVDState.stateId==stateId)
+            mSVDState.time++;
+        else {
+            mSVDState.previousTime = mSVDState.time;
+            mSVDState.previousStateId = mSVDState.stateId;
+            mSVDState.stateId=stateId;
+            mSVDState.time=1;
+        }
+
+    }
+
 }
 
 void ResourceUnit::addTreeAgingForAllTrees()
@@ -473,6 +571,7 @@ void ResourceUnit::createStandStatistics()
     if (mAverageAging<0. || mAverageAging>1.)
         qDebug() << "Average aging invalid: (RU, LAI):" << index() << mStatistics.leafAreaIndex();
 
+    updateSVDState(); // initial state (if SVD enabled)
 }
 
 /** recreate statistics. This is necessary after events that changed the structure
@@ -502,6 +601,12 @@ void ResourceUnit::recreateStandStatistics(bool recalculate_stats)
     }
 }
 
+void ResourceUnit::analyzeMicroclimate()
+{
+    if (mMicroclimate)
+        mMicroclimate->calculateVegetation();
+}
+
 
 
 
@@ -514,15 +619,19 @@ void ResourceUnit::calculateCarbonCycle()
     // because all carbon/nitrogen-flows from trees to the soil are routed through the snag-layer,
     // all soil inputs (litter + deadwood) are collected in the Snag-object.
     snag()->calculateYear();
+
     soil()->setClimateFactor( snag()->climateFactor() ); // the climate factor is only calculated once
-    soil()->setSoilInput( snag()->labileFlux(), snag()->refractoryFlux());
+
+    soil()->setSoilInput( snag()->labileFlux(), snag()->refractoryFlux(),
+                          snag()->labileFluxAbovegroundCarbon(), snag()->refractoryFluxAbovegroundCarbon());
+
     soil()->calculateYear(); // update the ICBM/2N model
     // use available nitrogen?
     if (Model::settings().useDynamicAvailableNitrogen)
         mUnitVariables.nitrogenAvailable = soil()->availableNitrogen();
 
     // debug output
-    if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dCarbonCycle) && !snag()->isEmpty()) {
+    if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dCarbonCycle) && shouldCreateDebugOutput() && !snag()->isEmpty()) {
         DebugList &out = GlobalSettings::instance()->debugList(index(), GlobalSettings::dCarbonCycle);
         out << index() << id(); // resource unit index and id
         out << snag()->debugList(); // snag debug outs

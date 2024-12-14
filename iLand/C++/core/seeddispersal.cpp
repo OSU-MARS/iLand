@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 #include "debugtimer.h"
 #include "helper.h"
 #include "species.h"
+#include "tree.h"
 #ifdef ILAND_GUI
 #include <QtGui/QImage>
 #endif
@@ -33,7 +34,7 @@
     The class encapsulates the dispersal of seeds of one species over the whole landscape.
     The dispersal algortihm operate on grids with a 20m resolution.
 
-    See http://iland.boku.ac.at/dispersal
+    See https://iland-model.org/dispersal
 
   */
 
@@ -60,17 +61,16 @@ void SeedDispersal::setup()
         || !GlobalSettings::instance()->model()->heightGrid()
         || !mSpecies)
         return;
-    mProbMode = false;
 
     const float seedmap_size = 20.f;
     // setup of seed map
     mSeedMap.clear();
     mSeedMap.setup(GlobalSettings::instance()->model()->heightGrid()->metricRect(), seedmap_size );
     mSeedMap.initialize(0.);
-    if (!mProbMode) {
-        mSourceMap.setup(mSeedMap);
-        mSourceMap.initialize(0.);
-    }
+
+    mSourceMap.setup(mSeedMap);
+    mSourceMap.initialize(0.);
+
     mExternalSeedMap.clear();
     mIndexFactor = int(seedmap_size) / cPxSize; // ratio seed grid / lip-grid:
     if (logLevelInfo()) qDebug() << "Seed map setup. Species:"<< mSpecies->id() << "kernel-size: " << mSeedMap.sizeX() << "x" << mSeedMap.sizeY() << "pixels.";
@@ -90,20 +90,20 @@ void SeedDispersal::setup()
     XmlHelper xml(GlobalSettings::instance()->settings().node("model.settings.seedDispersal"));
     mKernelThresholdArea = xml.valueDouble(".longDistanceDispersal.thresholdArea", 0.0001);
     mKernelThresholdLDD = xml.valueDouble(".longDistanceDispersal.thresholdLDD", 0.0001);
-    mLDDSeedlings = xml.valueDouble(".longDistanceDispersal.LDDSeedlings", 0.0001);
+    mLDDSeedlings = static_cast<float>(xml.valueDouble(".longDistanceDispersal.LDDSeedlings", 0.0001));
     mLDDRings = xml.valueInt(".longDistanceDispersal.rings", 4);
 
     mLDDSeedlings = qMax(mLDDSeedlings, static_cast<float>(mKernelThresholdArea));
 
     // long distance dispersal
-    double ldd_area = setupLDD();
+    float ldd_area = static_cast<float>(setupLDD());
 
-    createKernel(mKernelSeedYear, mTM_fecundity_cell, 1. - ldd_area);
+    createKernel(mKernelSeedYear,  1.f - ldd_area);
 
     // the kernel for non seed years looks similar, but is simply linearly scaled down
     // using the species parameter NonSeedYearFraction.
     // the central pixel still gets the value of 1 (i.e. 100% probability)
-    createKernel(mKernelNonSeedYear, mTM_fecundity_cell*mNonSeedYearFraction, 1. - ldd_area);
+    createKernel(mKernelNonSeedYear, 1.f - ldd_area);
 
     if (mSpecies->fecunditySerotiny()>0.) {
         // an extra seed map is used for storing information related to post-fire seed rain
@@ -112,7 +112,7 @@ void SeedDispersal::setup()
         mSeedMapSerotiny.initialize(0.);
 
         // set up the special seed kernel for post fire seed rain
-        createKernel(mKernelSerotiny, mTM_fecundity_cell * mSpecies->fecunditySerotiny(),1.);
+        createKernel(mKernelSerotiny, 1.);
         qDebug() << "created extra seed map and serotiny seed kernel for species" << mSpecies->name() << "with fecundity factor" << mSpecies->fecunditySerotiny();
     }
     mHasPendingSerotiny = false;
@@ -147,7 +147,7 @@ void SeedDispersal::setup()
             mExternalSeedDirection += dir.contains("e")?2:0;
             mExternalSeedDirection += dir.contains("s")?4:0;
             mExternalSeedDirection += dir.contains("w")?8:0;
-            QStringList buffer_list = GlobalSettings::instance()->settings().value("model.settings.seedDispersal.externalSeedBuffer").split(QRegExp("([^\\.\\w]+)"));
+            QStringList buffer_list = GlobalSettings::instance()->settings().value("model.settings.seedDispersal.externalSeedBuffer").split(QRegularExpression("([^\\.\\w]+)"));
             int index = buffer_list.indexOf(mSpecies->id());
             if (index>=0) {
                 mExternalSeedBuffer = buffer_list[index+1].toInt();
@@ -155,7 +155,7 @@ void SeedDispersal::setup()
             }
 
             // background seed rain (i.e. for the full landscape), use regexp
-            QStringList background_input_list = GlobalSettings::instance()->settings().value("model.settings.seedDispersal.externalSeedBackgroundInput").split(QRegExp("([^\\.\\w]+)"));
+            QStringList background_input_list = GlobalSettings::instance()->settings().value("model.settings.seedDispersal.externalSeedBackgroundInput").split(QRegularExpression("([^\\.\\w]+)"));
             index = background_input_list.indexOf(mSpecies->id());
             if (index>=0) {
                 mExternalSeedBackgroundInput = background_input_list[index+1].toDouble();
@@ -167,31 +167,6 @@ void SeedDispersal::setup()
         }
     }
 
-    // setup of seed kernel
-//    const int max_radius = 15; // pixels
-//
-//    mSeedKernel.clear();
-//    mSeedKernel.setup(mSeedMap.cellsize(), 2*max_radius + 1 , 2*max_radius + 1);
-//    mKernelOffset = max_radius;
-//    // filling of the kernel.... for simplicity: a linear kernel
-//    QPoint center = QPoint(mKernelOffset, mKernelOffset);
-//    const double max_dist = max_radius * seedmap_size;
-//    for (float *p=mSeedKernel.begin(); p!=mSeedKernel.end();++p) {
-//        double d = mSeedKernel.distance(center, mSeedKernel.indexOf(p));
-//        *p = qMax( 1. - d / max_dist, 0.);
-//    }
-
-
-    // randomize seed map.... set 1/3 to "filled"
-    //for (int i=0;i<mSeedMap.count(); i++)
-    //    mSeedMap.valueAtIndex(mSeedMap.randomPosition()) = 1.;
-
-
-//    QImage img = gridToImage(mSeedMap, true, -1., 1.);
-//    img.save("seedmap.png");
-
-//    img = gridToImage(mSeedMap, true, -1., 1.);
-    //    img.save("seedmap_e.png");
 }
 
 void SeedDispersal::setupExternalSeeds()
@@ -248,7 +223,7 @@ void SeedDispersal::setupExternalSeeds()
     // right to left
     for (int y=0;y<mExternalSeedBaseMap->sizeY();y++) {
         for (int x=mExternalSeedBaseMap->sizeX();x>=0;--x) {
-            if (mExternalSeedBaseMap->valueAtIndex(x, y)!=1.)
+            if (mExternalSeedBaseMap->valueAtIndex(x, y)!=1.f)
                 continue;
             int look_forward = std::max(x - seedbelt_width, 0);
             if (mExternalSeedBaseMap->valueAtIndex(look_forward, y)==-1.f) {
@@ -268,7 +243,7 @@ void SeedDispersal::setupExternalSeeds()
             if (mExternalSeedBaseMap->valueAtIndex(x, y)!=1.)
                 continue;
             int look_forward = std::min(y + seedbelt_width, mExternalSeedBaseMap->sizeY()-1);
-            if (mExternalSeedBaseMap->valueAtIndex(x, look_forward)==-1.) {
+            if (mExternalSeedBaseMap->valueAtIndex(x, look_forward)==-1.f) {
                 // fill pixels
                 for(; y<look_forward;++y) {
                     float &v = mExternalSeedBaseMap->valueAtIndex(x, y);
@@ -283,7 +258,7 @@ void SeedDispersal::setupExternalSeeds()
             if (mExternalSeedBaseMap->valueAtIndex(x, y)!=1.)
                 continue;
             int look_forward = std::max(y - seedbelt_width, 0);
-            if (mExternalSeedBaseMap->valueAtIndex(x, look_forward)==-1.) {
+            if (mExternalSeedBaseMap->valueAtIndex(x, look_forward)==-1.f) {
                 // fill pixels
                 for(; y>look_forward;--y) {
                     float &v = mExternalSeedBaseMap->valueAtIndex(x, y);
@@ -321,10 +296,15 @@ void SeedDispersal::setupExternalSeeds()
             // we assume pairs of name and fraction
             QStringList species_list = text.split(" ");
             for (int i=0;i<species_list.count();++i) {
+                if (!GlobalSettings::instance()->model()->speciesSet()->species(species_list[i]))
+                    throw IException(QString("Setup of external seeds: species '%1' is not a valid species!").arg(species_list[i]));
                 QVector<double> &space = mExtSeedData[species_list[i]];
                 if (space.isEmpty())
                     space.resize(sectors_x*sectors_y); // are initialized to 0s
-                double fraction = species_list[++i].toDouble();
+                bool ok;
+                double fraction = species_list[++i].toDouble(&ok);
+                if (!ok)
+                    throw IException(QString("Setup of external seeds: the given fraction '%1' is not a valid number (for species '%2')!").arg(species_list[i], species_list[i-1]));
                 space[index] = fraction;
             }
         }
@@ -341,16 +321,54 @@ void SeedDispersal::finalizeExternalSeeds()
     mExternalSeedBaseMap = 0;
 }
 
-void SeedDispersal::seedProductionSerotiny(const QPoint &position_index)
+static QMutex _lock_create_seed_map;
+void SeedDispersal::setSaplingTree(const QPoint &lip_index, float leaf_area)
+{
+    if (!mSaplingMapCreated) {
+        // setup the data on first use
+        QMutexLocker lock(&_lock_create_seed_map);
+        if (!mSaplingMapCreated) {
+            // if another thread already created the map, skip
+            mSaplingSourceMap.setup(mSeedMap);
+            mSaplingSourceMap.initialize(0.);
+            qDebug() << "SeedDispersal: created seed map for sapling trees for species" << species()->name();
+            mSaplingMapCreated = true;
+        }
+    }
+
+    mSaplingSourceMap.valueAtIndex(lip_index.x()/mIndexFactor, lip_index.y()/mIndexFactor) += leaf_area;
+}
+
+/// is called from the fire module (or from a JS script)
+void SeedDispersal::seedProductionSerotiny(const Tree* tree)
 {
     if (mSeedMapSerotiny.isEmpty())
         throw IException("Invalid use seedProductionSerotiny(): tried to set a seed source for a non-serotinous species!");
-    mSeedMapSerotiny.valueAtIndex(position_index.x()/mIndexFactor, position_index.y()/mIndexFactor)=1.f;
+
+    // if the tree is not considered as serotinous (i.e. seeds need external trigger such as fire), then do nothing
+    if (tree->species()->isTreeSerotinous(tree->age())==false)
+        return;
+
+    // no seed production if maturity age is not reached (species parameter) or if tree height is below 4m.
+    if (tree->age() > tree->species()->maturityAge() && tree->height() > cSapHeight) {
+        // mSeedMapSerotiny.valueAtIndex(position_index.x()/mIndexFactor, position_index.y()/mIndexFactor)=1.f;
+        // todo:  (see setMatureTree): new way uses a "sourceMap" and writes not directly on seed map??
+        mSeedMapSerotiny.valueAtIndex(tree->positionIndex().x()/mIndexFactor, tree->positionIndex().y()/mIndexFactor) += tree->leafArea();
+    }
+
+
+    //mSeedMapSerotiny.valueAtIndex(position_index.x()/mIndexFactor, position_index.y()/mIndexFactor)=1.f;
     mHasPendingSerotiny = true;
+
+
+
+
+
+
 }
 
 // ************ Kernel **************
-void SeedDispersal::createKernel(Grid<float> &kernel, const double max_seed, const double scale_area)
+void SeedDispersal::createKernel(Grid<float> &kernel, const float scale_area)
 {
 
     double max_dist = treemig_distanceTo(mKernelThresholdArea / species()->fecundity_m2());
@@ -371,7 +389,7 @@ void SeedDispersal::createKernel(Grid<float> &kernel, const double max_seed, con
     for (float *p=kernel.begin(); p!=sk_end;++p) {
         double d = kernel.distance(center, kernel.indexOf(p));
         if (d==0.)
-            *p = treemig_centercell(dist_center_cell); // r is the radius of a circle with the same area as a cell
+            *p = static_cast<float>( treemig_centercell(dist_center_cell) ); // r is the radius of a circle with the same area as a cell
         else
             *p = d<=max_dist?static_cast<float>(( treemig(d+dist_center_cell) + treemig(d-dist_center_cell))/2.f * cell_size*cell_size ):0.f;
     }
@@ -383,19 +401,6 @@ void SeedDispersal::createKernel(Grid<float> &kernel, const double max_seed, con
 
     // the sum of all kernel cells has to equal 1 (- long distance dispersal)
      kernel.multiply(scale_area/sum);
-
-
-    if (mProbMode) {
-        // probabilities are derived in multiplying by seed number, and dividing by occupancy criterion
-        float fecundity_factor = static_cast<float>( max_seed / occupation);
-        kernel.multiply( fecundity_factor );
-        // all cells that get more seeds than the occupancy criterion are considered to have no seed limitation for regeneration
-        for (float *p=kernel.begin(); p!=sk_end;++p) {
-            *p = qMin(*p, 1.f);
-        }
-    }
-    // set the parent cell to 1
-    //kernel.valueAtIndex(kernel_offset, kernel_offset)=1.f;
 
 
     // some final statistics....
@@ -453,6 +458,10 @@ treemig=function(as1,as2,ks,d) # two-part exponential function, cf. Lischke & Lo
 
 /// the used kernel function
 /// see also Appendix B of iland paper II (note the different variable names)
+/// mTM_as1: shape parameter for wind / ballistic dispersal
+/// mTM_as2: shape parameter for zoochorous dispersal
+/// mTM_ks: proportion zoochorous transport
+/// fun fact: integral 0..asX = 1-1/e = ~0.63. 63% of dispersal distances are < asX
 /// the function returns the seed density at a point with distance 'distance'.
 double SeedDispersal::treemig(const double &distance)
 {
@@ -522,11 +531,11 @@ void SeedDispersal::setupExternalSeedsForSpecies(Species *species)
                 }
 
         }
-    if (!mProbMode) {
-       // scale external seed values to have pixels with LAI=3
-        for (float *p=mExternalSeedMap.begin(); p!=mExternalSeedMap.end(); ++p)
-           *p *= 3.f * mExternalSeedMap.cellsize()*mExternalSeedMap.cellsize();
-    }
+
+    // scale external seed values to have pixels with LAI=3
+    for (float *p=mExternalSeedMap.begin(); p!=mExternalSeedMap.end(); ++p)
+        *p *= 3.f * mExternalSeedMap.cellsize()*mExternalSeedMap.cellsize();
+
 }
 
 
@@ -543,21 +552,28 @@ void SeedDispersal::loadFromImage(const QString &fileName)
 
 }
 
-void SeedDispersal::clear()
+void SeedDispersal::newYear()
 {
-    Grid<float> *seed_map = &mSeedMap;
-    if (!mProbMode) {
-        seed_map = &mSourceMap;
-        mSeedMap.initialize(0.f);
-    }
+
+    Grid<float> *seed_map = &mSourceMap;
+    mSeedMap.initialize(0.f);
+
     if (!mExternalSeedMap.isEmpty()) {
         // we have a preprocessed initial value for the external seed map (see setupExternalSeeds() et al)
         seed_map->copy(mExternalSeedMap);
+
+        if (!mSaplingSourceMap.isEmpty()) {
+            // add the data from the sapling map if avaialable
+            for (float *src = mSaplingSourceMap.begin(), *dest = seed_map->begin(); src != mSaplingSourceMap.end(); ++src, ++dest)
+                *dest += *src;
+        }
+
         return;
     }
     // clear the map
-    float background_value = static_cast<float>(mExternalSeedBackgroundInput); // there is potentitally a background probability <>0 for all pixels.
-    seed_map->initialize(background_value);
+    // version >2016: background seeds are applied *after* distribution
+    seed_map->initialize(0.f);
+
     if (mHasExternalSeedInput) {
         // if external seed input is enabled, the buffer area of the seed maps is
         // "turned on", i.e. set to 1.
@@ -583,10 +599,29 @@ void SeedDispersal::clear()
                             seed_map->valueAtIndex(ix,iy)=value;
                         }
                     }
+
+            // scale external seed values to have pixels with LAI=3
+            for (float *p=seed_map->begin(); p!=seed_map->end(); ++p)
+                *p *= 3.f * seed_map->cellsize()*seed_map->cellsize();
+
+
         } else {
             qDebug() << "external seed input: Error: invalid buffer size???";
         }
     }
+
+    if (!mSaplingSourceMap.isEmpty()) {
+        // add the data from the sapling map if avaialable
+        for (float *src = mSaplingSourceMap.begin(), *dest = seed_map->begin(); src != mSaplingSourceMap.end(); ++src, ++dest)
+            *dest += *src;
+    }
+
+}
+
+void SeedDispersal::clearSaplingMap()
+{
+    if (!mSaplingSourceMap.isEmpty())
+        mSaplingSourceMap.initialize(0.f);
 }
 
 static int _debug_ldd=0;
@@ -604,56 +639,51 @@ void SeedDispersal::execute()
     if (mDumpSeedMaps)
         qDebug() << "saving of seedmaps only supported in the iLand GUI.";
 #endif
-    if (mProbMode) {
 
-        DebugTimer t("seed dispersal", true);
+    // *********************************************
+    // current version (>=2016)
+    // *********************************************
 
-        // (1) detect edges
-        if (edgeDetection()) {
-
+    // special case serotiny
+    if (mHasPendingSerotiny) {
+        qDebug() << "calculating extra seed rain (serotiny)....";
 #ifdef ILAND_GUI
-            if (mDumpSeedMaps) {
-                gridToImage(seedMap(), true, -1., 1.).save(QString("%1/seed_edge_%2_%3.png").arg(path).arg(mSpecies->id()).arg(year));
-            }
-#endif
-
-            // (2) distribute seed probabilites from edges
-            distribute();
+        if (mDumpSeedMaps) {
+            gridToImage(mSeedMapSerotiny, true, 0., 1.).save(QString("%1/seed_serotiny_before_%2_%3.png").arg(path).arg(mSpecies->id()).arg(year));
         }
-
-        // special case serotiny
-        if (mHasPendingSerotiny) {
-            qDebug() << "calculating extra seed rain (serotiny)....";
-#ifdef ILAND_GUI
-            if (mDumpSeedMaps) {
-                gridToImage(mSeedMapSerotiny, true, 0., 1.).save(QString("%1/seed_serotiny_before_%2_%3.png").arg(path).arg(mSpecies->id()).arg(year));
-            }
 #endif
-            if (edgeDetection(&mSeedMapSerotiny))
-                distribute(&mSeedMapSerotiny);
-            // copy back data
-            float *sero=mSeedMapSerotiny.begin();
-            for (float* p=mSeedMap.begin();p!=mSeedMap.end();++p, ++sero)
-                *p = std::max(*p, *sero);
+        distributeSeeds(&mSeedMapSerotiny);
 
-            float total = mSeedMapSerotiny.sum();
+        // copy back data
+        float *sero=mSeedMapSerotiny.begin();
+        for (float* p=mSeedMap.begin();p!=mSeedMap.end();++p, ++sero)
+            *p = std::max(*p, *sero);
+
+        float total = mSeedMapSerotiny.sum();
 #ifdef ILAND_GUI
-            if (mDumpSeedMaps) {
-                gridToImage(mSeedMapSerotiny, true, 0., 1.).save(QString("%1/seed_serotiny_after_%2_%3.png").arg(path).arg(mSpecies->id()).arg(year));
-            }
-#endif
-            mSeedMapSerotiny.initialize(0.f); // clear
-            mHasPendingSerotiny = false;
-            qDebug() << "serotiny event: extra seed input" << total << "(total sum of seed probability over all pixels of the serotiny seed map) of species" << mSpecies->name();
+        if (mDumpSeedMaps) {
+            gridToImage(mSeedMapSerotiny, true, 0., 1.).save(QString("%1/seed_serotiny_after_%2_%3.png").arg(path).arg(mSpecies->id()).arg(year));
         }
-
-    } else {
-        // distribute actual values
-        DebugTimer t("seed dispersal", true);
-        // fill seed map from source map
-        distributeSeeds();
-
+#endif
+        mSeedMapSerotiny.initialize(0.f); // clear
+        mHasPendingSerotiny = false;
+        qDebug() << "serotiny event: extra seed input" << total << "(total sum of seed probability over all pixels of the serotiny seed map) of species" << mSpecies->name();
     }
+
+
+    // distribute actual values
+    DebugTimer t("seed dispersal", true);
+    // fill seed map from source map
+    distributeSeeds();
+
+    float background_value = static_cast<float>(mExternalSeedBackgroundInput); // there is potentitally a background probability <>0 for all pixels.
+    if (background_value>0.f) {
+        // add a constant number of seeds on the map
+        mSeedMap.add(background_value);
+        mSeedMap.limit(0.f, 1.f);
+    }
+
+
 #ifdef ILAND_GUI
     if (mDumpSeedMaps) {
         //qDebug() << "finished seed dispersal for species. time: " << mSpecies->id() << t.elapsed();
@@ -665,173 +695,48 @@ void SeedDispersal::execute()
         qDebug() << "saved seed map for " << species()->id() << "to" << GlobalSettings::instance()->path(mDumpNextYearFileName);
         mDumpNextYearFileName = QString();
     }
-    qDebug() << "LDD-count:" << _debug_ldd;
+    if (logLevelDebug())
+        qDebug() << "LDD-count:" << _debug_ldd;
 
 #endif
 }
 
-/** scans the seed image and detects "edges".
-    edges are then subsequently marked (set to -1). This is pass 1 of the seed distribution process.
-*/
-bool SeedDispersal::edgeDetection(Grid<float> *seed_map)
-{
-    float *p_above, *p, *p_below;
-    Grid<float> &seedmap = seed_map ? *seed_map : mSeedMap; // switch to extra seed map if provided
-    int dy = seedmap.sizeY();
-    int dx = seedmap.sizeX();
-    int x,y;
-    bool found = false;
-
-    // fill mini-gaps
-    int n_gaps_filled=0;
-    for (y=1;y<dy-1;++y){
-        p = seedmap.ptr(1,y);
-        p_above = p - dx; // one line above
-        p_below = p + dx; // one line below
-        for (x=1;x<dx-1;++x,++p,++p_below, ++p_above) {
-            if (*p < 0.999f) {
-
-                if ((*(p_above-1)==1.f) + (*p_above==1.f) + (*(p_above+1)==1.f) +
-                    (*(p-1)==1.f) + (*(p+1)==1.f) +
-                    (*(p_below-1)==1.f) + (*p_below==1.f) + (*(p_below+1)==1.f) > 3) {
-                    *p=0.999f; // if more than 3 neighbors are active pixels, the value is high
-                    ++n_gaps_filled;
-                }
-            }
-
-        }
-    }
-
-
-    // now detect the edges
-    int n_edges=0 ;
-    for (y=1;y<dy-1;++y){
-        p = seedmap.ptr(1,y);
-        p_above = p - dx; // one line above
-        p_below = p + dx; // one line below
-        for (x=1;x<dx-1;++x,++p,++p_below, ++p_above) {
-            if (*p == 1.f) {
-                found = true;
-                if ( (*(p_above-1)<0.999f && *(p_above-1)>=0.f)
-                     || (*p_above<0.999f && *p_above>=0.f)
-                     || (*(p_above+1)<0.999f && *(p_above+1)>=0.f)
-                     || (*(p-1)<0.999f && *(p-1)>=0.f)
-                     || (*(p+1)<0.999f && (*p+1)>=0.f)
-                     || (*(p_below-1)<0.999f && *(p_below-1)>=0.f)
-                     || (*p_below<0.999f && *p_below>=0.f)
-                     || (*(p_below+1)<0.999f && *(p_below+1)>=0.f ) ) {
-                    *p=-1.f; // if any surrounding pixel is >=0 & <0.999: -> mark as edge
-                    ++n_edges;
-                }
-            }
-
-        }
-    }
-    if (mDumpSeedMaps)
-        qDebug() << "species:" << mSpecies->id() << "# of gaps filled: " << n_gaps_filled << "# of edge-pixels:" << n_edges;
-    return found;
-}
-
-/** do the seed probability distribution.
-    This is phase 2. Apply the seed kernel for each "edge" point identified in phase 1.
-*/
-void SeedDispersal::distribute(Grid<float> *seed_map)
-{
-    int x,y;
-    Grid<float> &seedmap = seed_map ? *seed_map : mSeedMap; // switch to extra seed map if provided
-    float *end = seedmap.end();
-    float *p = seedmap.begin();
-    // choose the kernel depending whether there is a seed year for the current species or not
-    Grid<float> *kernel = species()->isSeedYear()? &mKernelSeedYear : &mKernelNonSeedYear;
-    // extra case: serotiny
-    if (seed_map)
-        kernel = &mKernelSerotiny;
-
-    int offset = kernel->sizeX() / 2; // offset is the index of the center pixel
-    for(;p!=end;++p) {
-        if (*p==-1.f) {
-            // edge pixel found. Now apply the kernel....
-            QPoint pt=seedmap.indexOf(p);
-            for (y=-offset;y<=offset;++y) {
-                for (x=-offset;x<=offset;++x) {
-                    float &kernel_value = kernel->valueAtIndex(x+offset, y+offset);
-                    if (kernel_value>0.f && seedmap.isIndexValid(pt.x()+x, pt.y()+y)) {
-                        float &val = seedmap.valueAtIndex(pt.x()+x, pt.y()+y);
-                        if (val!=-1.f)
-                            val = qMin(1.f - (1.f - val)*(1.f-kernel_value),1.f );
-                    }
-                }
-            }
-            // long distance dispersal
-            if (!mLDDDensity.isEmpty()) {
-                double m = species()->isSeedYear() ? 1. : mNonSeedYearFraction;
-                for (int r=0;r<mLDDDensity.size(); ++r) {
-                    float ldd_val = mLDDSeedlings; // pixels will have this probability
-                    int n = round( mLDDDensity[r]*m ); // number of pixels to activate
-                    for (int i=0;i<n;++i) {
-                        // distance and direction:
-                        double radius = nrandom(mLDDDistance[r], mLDDDistance[r+1]) / seedmap.cellsize(); // choose a random distance (in pixels)
-                        double phi = drandom()*2.*M_PI; // choose a random direction
-                        QPoint ldd(pt.x() + radius*cos(phi), pt.y() + radius*sin(phi));
-                        if (seedmap.isIndexValid(ldd)) {
-                            float &val = seedmap.valueAtIndex(ldd);
-                            _debug_ldd++;
-                            // use the same adding of probabilities
-                            if (val!=-1.f)
-                                val = qMin(1.f - (1.f - val)*(1.f-ldd_val), 1.f);
-                        }
-                    }
-                }
-            }
-            *p=1.f; // mark as processed
-        } // *p==1
-    } // for()
-}
 
 // because C modulo operation gives negative numbers for negative values, here a fix
 // that always returns positive numbers: http://www.lemoda.net/c/modulo-operator/
 #define MOD(a,b) ((((a)%(b))+(b))%(b))
 
+/// main seed distribution function
+/// distributes seeds using distribution kernels and long distance dispersal from source cells
+/// see https://iland-model.org/seed+kernel+and+seed+distribution
 void SeedDispersal::distributeSeeds(Grid<float> *seed_map)
 {
     Grid<float> &sourcemap = seed_map ? *seed_map : mSourceMap; // switch to extra seed map if provided
-    Grid<float> &kernel = mKernelSeedYear;
+    bool serotiny = seed_map==&mSeedMapSerotiny;
+    Grid<float> &kernel = (serotiny ? mKernelSerotiny :  mKernelSeedYear); // if extra seed map is due to serotiny, than switch to serotinous kernel
 
-    // *** estimate seed production (based on leaf area) ***
-    // calculate number of seeds; the source map holds now m2 leaf area on 20x20m pixels
-    // after this step, each source cell has a value between 0 (no source) and 1 (fully covered cell)
-    float fec = species()->fecundity_m2();
-    if (!species()->isSeedYear())
-        fec *= mNonSeedYearFraction;
+    float fec=0.f;
+    if (serotiny) {
+        // special case serotiny
+        fec = static_cast<float>( species()->fecunditySerotiny() );
+    } else {
+        // *** estimate seed production (based on leaf area) ***
+        // calculate number of seeds; the source map holds now m2 leaf area on 20x20m pixels
+        // after this step, each source cell has a value between 0 (no source) and 1 (fully covered cell)
+        fec = static_cast<float>( species()->fecundity_m2() );
+        if (!species()->isSeedYear())
+            fec *= static_cast<float>( mNonSeedYearFraction );
+
+    }
+
     for (float *p=sourcemap.begin(); p!=sourcemap.end(); ++p){
-        if (*p) {
-            // if LAI  >3, then full potential is assumed, below LAI=3 a linear ramp is used
-            *p = std::min(*p / (sourcemap.cellsize()*sourcemap.cellsize()) /3.f, 3.f);
+        if (*p > 0.f) {
+            // if LAI  >3, then full potential is assumed, below LAI=3 a linear ramp is used;
+            // the value of *p is the sum(LA) of seed producing trees on the cell
+            *p = std::min(*p / (sourcemap.cellsize()*sourcemap.cellsize()) /3.f, 1.f);
         }
     }
 
-    // sink mode
-
-    //    // now look for each pixel in the targetmap and sum up seeds*kernel
-    //    int idx=0;
-    //    int offset = kernel.sizeX() / 2; // offset is the index of the center pixel
-    //    //const Grid<ResourceUnit*> &ru_map = GlobalSettings::instance()->model()->RUgrid();
-    //    DebugTimer tsink("seed_sink"); {
-    //    for (float *t=mSeedMap.begin(); t!=mSeedMap.end(); ++t, ++idx) {
-    //        // skip out-of-project areas
-    //        //if (!ru_map.constValueAtIndex(mSeedMap.index5(idx)))
-    //        //    continue;
-    //        // apply the kernel
-    //        QPoint sm=mSeedMap.indexOf(t)-QPoint(offset, offset);
-    //        for (int iy=0;iy<kernel.sizeY();++iy) {
-    //            for (int ix=0;ix<kernel.sizeX();++ix) {
-    //                if (sourcemap.isIndexValid(sm.x()+ix, sm.y()+iy))
-    //                    *t+=sourcemap(sm.x()+ix, sm.y()+iy) * kernel(ix, iy);
-    //            }
-    //        }
-    //    }
-    //    } // debugtimer
-    //    mSeedMap.initialize(0.f); // just for debugging...
 
     int offset = kernel.sizeX() / 2; // offset is the index of the center pixel
     // source mode
@@ -850,7 +755,7 @@ void SeedDispersal::distributeSeeds(Grid<float> *seed_map)
                     }
                 }
                 // long distance dispersal
-                if (!mLDDDensity.isEmpty()) {
+                if (!serotiny && !mLDDDensity.isEmpty()) {
                     QPoint pt=sourcemap.indexOf(src);
 
                     for (int r=0;r<mLDDDensity.size(); ++r) {
@@ -859,12 +764,13 @@ void SeedDispersal::distributeSeeds(Grid<float> *seed_map)
                         if (mLDDDensity[r]<1)
                             n = drandom()<mLDDDensity[r] ? 1 : 0;
                         else
-                            n = round( mLDDDensity[r] ); // number of pixels to activate
+                            n = static_cast<int>( round( mLDDDensity[r] ) ); // number of pixels to activate
                         for (int i=0;i<n;++i) {
                             // distance and direction:
                             double radius = nrandom(mLDDDistance[r], mLDDDistance[r+1]) / mSeedMap.cellsize(); // choose a random distance (in pixels)
                             double phi = drandom()*2.*M_PI; // choose a random direction
-                            QPoint ldd(pt.x() + radius*cos(phi), pt.y() + radius*sin(phi));
+                            QPoint ldd(pt.x() + static_cast<int>(radius*cos(phi)),
+                                       pt.y() + static_cast<int>(radius*sin(phi)));
                             if (mSeedMap.isIndexValid(ldd)) {
                                 float &val = mSeedMap.valueAtIndex(ldd);
                                 _debug_ldd++;
@@ -900,7 +806,7 @@ void SeedDispersal::distributeSeeds(Grid<float> *seed_map)
                     }
                 }
                 // long distance dispersal
-                if (!mLDDDensity.isEmpty()) {
+                if (!serotiny && !mLDDDensity.isEmpty()) {
 
                     for (int r=0;r<mLDDDensity.size(); ++r) {
                         float ldd_val = mLDDSeedlings / fec; // pixels will have this probability [note: fecundity will be multiplied below]
@@ -908,12 +814,13 @@ void SeedDispersal::distributeSeeds(Grid<float> *seed_map)
                         if (mLDDDensity[r]<1)
                             n = drandom()<mLDDDensity[r] ? 1 : 0;
                         else
-                            n = round( mLDDDensity[r] ); // number of pixels to activate
+                            n = static_cast<int>( round( mLDDDensity[r] )); // number of pixels to activate
                         for (int i=0;i<n;++i) {
                             // distance and direction:
                             double radius = nrandom(mLDDDistance[r], mLDDDistance[r+1]) / mSeedMap.cellsize(); // choose a random distance (in pixels)
                             double phi = drandom()*2.*M_PI; // choose a random direction
-                            QPoint ldd( radius*cos(phi),  + radius*sin(phi)); // destination (offset)
+                            QPoint ldd( static_cast<int>( radius*cos(phi) ),
+                                        static_cast<int>( radius*sin(phi))); // destination (offset)
                             torus_pos = offset_ru + QPoint(MOD((offset_in_ru.x()+ldd.x()),seedpx_per_ru), MOD((offset_in_ru.y()+ldd.y()),seedpx_per_ru) );
 
                             if (mSeedMap.isIndexValid(torus_pos)) {
@@ -934,7 +841,7 @@ void SeedDispersal::distributeSeeds(Grid<float> *seed_map)
     // now the seed sources (0..1) are spatially distributed by the kernel (and LDD) without altering the magnitude;
     // now we include the fecundity (=seedling potential per m2 crown area), and convert to the establishment probability p_seed.
     // The number of (potential) seedlings per m2 on each cell is: cell * fecundity[m2]
-    // We assume that the availability of 10 potential seedlings/m2 is enough for unconstrained establishment;
+    // We assume that the availability of 100 potential seedlings/m2 is enough for unconstrained establishment;
     const float n_unlimited = 100.f;
     for (float *p=mSeedMap.begin(); p!=mSeedMap.end(); ++p){
         if (*p>0.f) {

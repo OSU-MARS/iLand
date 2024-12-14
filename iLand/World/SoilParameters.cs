@@ -3,7 +3,7 @@
     // site-specific soil parameters specified in the environment file
     // Note that leaching is not actually influencing soil dynamics but reduces availability of N to plants by assuming that some N
     // (proportional to its mineralization in the mineral soil horizon) is leached
-    // http://iland-model.org/soil+parametrization+and+initialization
+    // https://iland-model.org/soil+parametrization+and+initialization
     // and R-script on parameter estimation and initialization
     public class SoilParameters
     {

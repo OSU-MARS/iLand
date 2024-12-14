@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 #include <QList>
 #include <QtCore/QVariantList>
 #include "scriptglobal.h"
+#include "scripttree.h"
 
 class Tree;
 class QJSEngine;
@@ -56,6 +57,11 @@ public:
     int count() const {return mTrees.count();} ///< return number of trees currently in list
 
 public slots:
+    /// access to single trees (returns a reference)
+    QJSValue tree(int index);
+    /// return a copy of a tree
+    QJSValue treeObject(int index);
+
     /// calculate the mean value for all trees in the internal list for 'expression' (filtered by the filter criterion)
     double mean(QString expression, QString filter=QString()) { return aggregate_function( expression, filter, "mean"); }
     /// calculate the sum for all trees in the internal list for the 'expression' (filtered by the filter criterion)
@@ -69,7 +75,14 @@ public slots:
      *  return the number of removed trees. */
     int killPct(int pctfrom, int pctto, int number);
     int killAll(); ///< kill all trees in the list
-    int disturbanceKill(); ///< kill all trees (disturbance related)
+    /// kill all trees (disturbance related)
+    /// @param stem_to_soil_fraction (0..1) of stem biomass that is routed to the soil
+    /// @param stem_to_snag_fraction (0..1) of the stem biomass continues as standing dead
+    /// @param branch_to_soil_fraction (0..1) of branch biomass that is routed to the soil
+    /// @param branch_to_snag_fraction (0..1) of the branch biomass continues as standing dead
+    /// @param foliage_to_soil_fraciton (0..1) fraction of biomass that goes directly to the soil. The rest (1.-fraction) is removed.
+    /// @param agent (string): disturbance agent ('fire' 'wind', 'bb', ...)
+    int disturbanceKill(double stem_to_soil_fraction, double stem_to_snag_fraction, double branch_to_soil_fraction, double branch_to_snag_fraction, QString agent);
     /** kill 'fraction' of all trees with 'filter'=true */
     int kill(QString filter, double fraction);
     // management
@@ -86,13 +99,18 @@ public slots:
     void cutAndDrop();
 
     double percentile(int pct); ///< get value for the pct th percentile (1..100)
+    /// clear the list (without affecting trees)
+    void clear() { mTrees.clear(); }
     int loadAll() { return load(QString()); } ///< load all trees, return number of trees
     int load(QString filter); ///< load all trees passing the filter in a list, return number of trees
     int loadResourceUnit(int ruindex); ///< load all trees of a resource index
-    void loadFromTreeList(QList<Tree*>tree_list); ///< load a previously present tree list
-    void loadFromMap(const MapGrid *map_grid, int key); ///< load all trees that are on the area denoted by 'key' of the given grid
-    void loadFromMap(MapGridWrapper *wrap, int key); ///< load all trees that are on the area denoted by 'key' of the given grid (script access)
-    void killSaplings(MapGridWrapper *wrap, int key); ///< kill all saplings that are on the area denoted by 'key' of the given grid (script access)
+    void loadFromTreeList(QList<Tree*>tree_list, bool do_append=false); ///< load a previously present tree list
+    void loadFromMap(const MapGrid *map_grid, int key, bool do_append=false); ///< load all trees that are on the area denoted by 'key' of the given grid
+    int loadFromMap(MapGridWrapper *wrap, int key, bool do_append=false); ///< load all trees that are on the area denoted by 'key' of the given grid (script access)
+    /// kill all saplings that are on the area denoted by 'key' of the given grid (script access)
+    void killSaplings(MapGridWrapper *wrap, int key, QString filter=QString());
+    /// kill all saplings that are on a given resource unit (given by 'ruindex')
+    void killSaplingsResourceUnit(int ruindex);
     /** hacky access function to resource units covered by a polygon.
      the parameters are "remove-fractions": i.e. value=0: no change, value=1: set to zero. */
     void removeSoilCarbon(MapGridWrapper *wrap, int key, double SWDfrac, double DWDfrac, double litterFrac, double soilFrac);
@@ -109,7 +127,6 @@ private:
     int remove_percentiles(int pctfrom, int pctto, int number, bool management);
     int remove_trees(QString expression, double fraction, bool management);
     double aggregate_function(QString expression, QString filter, QString type);
-    void throwError(const QString &errormessage);
 
     // removal fractions
     double mRemoveFoliage, mRemoveBranch, mRemoveStem;
@@ -117,6 +134,8 @@ private:
     QList<QPair<Tree*, double> > mTrees;
     QJSEngine *mEngine;
     int mRemoved;
+    QJSValue mTreeValue;
+    ScriptTree *mTree;
 };
 
 #endif // MANAGEMENT_H

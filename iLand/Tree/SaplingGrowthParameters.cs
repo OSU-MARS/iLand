@@ -1,12 +1,15 @@
-﻿using iLand.Tool;
+﻿// C++/core/{ species.h, species.cpp }
+using iLand.Tool;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace iLand.Tree
 {
-    // http://iland-model.org/sapling+growth+and+competition
-    public class SaplingGrowthParameters
+    // https://iland-model.org/sapling+growth+and+competition
+    public class SaplingGrowthParameters // C++: SaplingGrowthParameters
     {
+        public float AdultSproutProbability { get; set; } ///< annual chance of creating a sprouting sapling cell from an adult tree of resprouting species
         public float BrowsingProbability { get; set; }
         public float HeightDiameterRatio { get; set; } // fixed height-diameter ratio used for saplings
         public Expression HeightGrowthPotential { get; private init; } // formula that expresses height growth potential
@@ -19,21 +22,23 @@ namespace iLand.Tree
 
         public SaplingGrowthParameters()
         {
+            this.AdultSproutProbability = 0.0F;
             this.BrowsingProbability = 0.0F;
             this.HeightDiameterRatio = 80.0F;
             this.HeightGrowthPotential = new();
             this.MaxStressYears = 3;
             this.ReinekeR = 1450.0F;
             this.ReferenceRatio = 1.0F;
-            this.RepresentedClasses = [];
+            this.RepresentedClasses = new((int)(Constant.RegenerationLayerHeight / Constant.Sapling.HeightClassSizeInM) + 1);
             this.SproutGrowth = 0.0F;
             this.StressThreshold = 0.1F;
         }
 
         /// represented stem number by height of one cohort (using Reinekes Law): this uses a lookup table to improve performance
-        public float RepresentedStemNumberFromHeight(float height)
+        public float RepresentedStemNumberFromHeight(float heightInM)
         {
-            return this.RepresentedClasses[Maths.Limit((int)MathF.Round(10.0F * height), 0, this.RepresentedClasses.Count)];
+            Debug.Assert(heightInM <= Constant.RegenerationLayerHeight);
+            return this.RepresentedClasses[Maths.Limit((int)MathF.Round(heightInM / Constant.Sapling.HeightClassSizeInM) + 1, 0, this.RepresentedClasses.Count - 1)];
         }
 
         /// represented stem number by one cohort (using Reinekes Law):
@@ -42,15 +47,20 @@ namespace iLand.Tree
             return this.ReinekeR * MathF.Pow(dbh / 25.0F, -1.605F) / Constant.Grid.LightCellsPerHectare;
         }
 
-        /// browsing probability
         public void SetupReinekeLookup()
         {
-            // BUGBUG: constants?
             this.RepresentedClasses.Clear();
-            for (int heightClass = 0; heightClass < Constant.Sapling.HeightClasses; ++heightClass)
+            Debug.Assert(Constant.Sapling.MinimumHeightInM > 0.0F);
+            this.RepresentedClasses.Add(0.0F); // saplings cannot have zero height, so there are zero saplings per hectare in the first height class
+            for (int heightClass = 1; heightClass < this.RepresentedClasses.Capacity; heightClass++)
             {
-                float height = Constant.Sapling.HeightClassSize * heightClass + Constant.Sapling.MinimumHeight; // 0.05, 0.15, 0.25, ... 4.05
-                float dbh = 100.0F * height / this.HeightDiameterRatio;
+                float heightInM = Constant.Sapling.HeightClassSizeInM * heightClass;
+                float dbh = 100.0F * heightInM / this.HeightDiameterRatio;
+                // cap Reineke stem counts as they become unplausible at very small dbh
+                if (dbh < Constant.Sapling.MinimumDbhInCm)
+                {
+                    dbh = Constant.Sapling.MinimumDbhInCm;
+                }
                 this.RepresentedClasses.Add(this.RepresentedStemNumberFromDiameter(dbh));
             }
         }

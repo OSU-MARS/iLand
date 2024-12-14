@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@
   The class Model is the top level container of iLand. The Model holds a collection of ResourceUnits, links to SpeciesSet and Climate.
   ResourceUnit are grid cells with (currently) a size of 1 ha (100x100m). Many stand level processes (NPP produciton, WaterCycle) operate on this
   level.
-  The Model also contain the landscape-wide 2m LIF-grid (http://iland.boku.ac.at/competition+for+light).
+  The Model also contain the landscape-wide 2m LIF-grid (https://iland-model.org/competition+for+light).
 
   */
 #include "global.h"
@@ -38,6 +38,8 @@
 #include "helper.h"
 #include "resourceunit.h"
 #include "climate.h"
+#include "microclimate.h"
+#include "watercycle.h"
 #include "speciesset.h"
 #include "standloader.h"
 #include "tree.h"
@@ -50,10 +52,12 @@
 #include "modules.h"
 #include "dem.h"
 #include "grasscover.h"
+#include "svdstate.h"
 
 #include "outputmanager.h"
 
 #include "forestmanagementengine.h"
+#include "biteengine.h"
 
 #include <QtCore>
 #include <QtXml>
@@ -80,7 +84,7 @@ Tree *AllTreeIterator::next()
         }
             // finished if all RU processed
         if (mRUIterator == mModel->ruList().constEnd())
-            return NULL;
+            return nullptr;
         mTreeEnd = &((*mRUIterator)->trees().back()) + 1; // let end point to "1 after end" (STL-style)
         mCurrent = &((*mRUIterator)->trees().front());
     }
@@ -93,8 +97,8 @@ Tree *AllTreeIterator::next()
             ++mRUIterator;
         }
         if (mRUIterator == mModel->ruList().constEnd()) {
-            mCurrent = NULL;
-            return NULL; // finished!!
+            mCurrent = nullptr;
+            return nullptr; // finished!!
         }else {
             mTreeEnd = &((*mRUIterator)->trees().back()) + 1;
             mCurrent = &((*mRUIterator)->trees().front());
@@ -107,11 +111,23 @@ Tree *AllTreeIterator::nextLiving()
 {
     while (Tree *t = next())
         if (!t->isDead()) return t;
-    return NULL;
+    return nullptr;
 }
 Tree *AllTreeIterator::current() const
 {
-    return mCurrent?mCurrent-1:NULL;
+    return mCurrent?mCurrent-1:nullptr;
+}
+
+/// multithreaded execution of the microclimate routine
+static void nc_microclimate(ResourceUnit *unit)
+{
+    try {
+        unit->analyzeMicroclimate();
+
+    } catch (const IException &e) {
+        // thread-safe error message
+        GlobalSettings::instance()->model()->threadExec().throwError(e.message());
+    }
 }
 
 
@@ -129,7 +145,7 @@ Model::Model()
 Model::~Model()
 {
     clear();
-    GlobalSettings::instance()->setModel(NULL);
+    GlobalSettings::instance()->setModel(nullptr);
 }
 
 /** Initial setup of the Model.
@@ -138,28 +154,34 @@ void Model::initialize()
 {
    mSetup = false;
    GlobalSettings::instance()->setCurrentYear(0);
-   mGrid = 0;
-   mHeightGrid = 0;
-   mManagement = 0;
-   mABEManagement = 0;
-   mEnvironment = 0;
-   mTimeEvents = 0;
-   mStandGrid = 0;
-   mModules = 0;
-   mDEM = 0;
-   mGrassCover = 0;
-   mSaplings=0;
+   mGrid = nullptr;
+   mHeightGrid = nullptr;
+   mManagement = nullptr;
+   mABEManagement = nullptr;
+   mBiteEngine = nullptr;
+   mEnvironment = nullptr;
+   mTimeEvents = nullptr;
+   mStandGrid = nullptr;
+   mModules = nullptr;
+   mDEM = nullptr;
+   mGrassCover = nullptr;
+   mSaplings=nullptr;
+   mSVDStates=nullptr;
 }
 
 /** sets up the simulation space.
 */
 void Model::setupSpace()
 {
+    setCurrentTask("setup landscape");
     XmlHelper xml(GlobalSettings::instance()->settings().node("model.world"));
     double cellSize = xml.value("cellSize", "2").toDouble();
     double width = xml.value("width", "100").toDouble();
     double height = xml.value("height", "100").toDouble();
     double buffer = xml.value("buffer", "60").toDouble();
+    if (fmod(width, 100.)!=0. || fmod(height, 100.)!=0. || fmod(buffer, 20.)!=0. || buffer<=0.) {
+        throw IException("setup of the world: 'width' and 'height' need to be multiple of 100, 'buffer' a multiple of 20 (>0).");
+    }
     mModelRect = QRectF(0., 0., width, height);
 
     qDebug() << QString("setup of the world: %1x%2m with cell-size=%3m and %4m buffer").arg(width).arg(height).arg(cellSize).arg(buffer);
@@ -169,11 +191,14 @@ void Model::setupSpace()
 
     if (mGrid)
         delete mGrid;
-    mGrid = new FloatGrid(total_grid, cellSize);
+    mGrid = new FloatGrid(total_grid, static_cast<float>(cellSize));
+    if (mGrid->isEmpty()) {
+        throw IException("setup of the world: definition of project area (width/height/buffer) invalid or too large.");
+    }
     mGrid->initialize(1.f);
     if (mHeightGrid)
         delete mHeightGrid;
-    mHeightGrid = new HeightGrid(total_grid, cellSize*cPxPerHeight);
+    mHeightGrid = new HeightGrid(total_grid, static_cast<float>(cellSize)*cPxPerHeight);
     mHeightGrid->wipe(); // set all to zero
     Tree::setGrid(mGrid, mHeightGrid);
 
@@ -190,7 +215,7 @@ void Model::setupSpace()
         setupGISTransformation(0., 0., 0., 0.);
     }
 
-    // load environment (multiple climates, speciesSets, ...
+    // load environment (multiple climates, speciesSets, ... )
     if (mEnvironment)
         delete mEnvironment;
     mEnvironment = new Environment();
@@ -237,17 +262,20 @@ void Model::setupSpace()
         if (xml.valueBool("standGrid.enabled")) {
             QString fileName = GlobalSettings::instance()->path(xml.value("standGrid.fileName"));
             mStandGrid = new MapGrid(fileName,false); // create stand grid index later
-
-            if (mStandGrid->isValid()) {
-                for (int i=0;i<mStandGrid->grid().count();i++) {
-                    const int &grid_value = mStandGrid->grid().constValueAtIndex(i);
-                    mHeightGrid->valueAtIndex(i).setValid( grid_value > -1 );
-                    if (grid_value>-1)
-                        mRUmap.valueAt(mStandGrid->grid().cellCenterPoint(i)) = (ResourceUnit*)1;
-                    if (grid_value < -1)
-                        mHeightGrid->valueAtIndex(i).setForestOutside(true);
-                }
+            if (!mStandGrid->isValid()) {
+                throw IException("Error loading stand grid '" + fileName + "'.");
             }
+
+
+            for (int i=0;i<mStandGrid->grid().count();i++) {
+                const int &grid_value = mStandGrid->grid().constValueAtIndex(i);
+                mHeightGrid->valueAtIndex(i).setValid( grid_value > -1 );
+                if (grid_value>-1)
+                    mRUmap.valueAt(mStandGrid->grid().cellCenterPoint(i)) = (ResourceUnit*)1;
+                if (grid_value < -1)
+                    mHeightGrid->valueAtIndex(i).setForestOutside(true);
+            }
+
             mask_is_setup = true;
         } else {
             if (!settings().torusMode) {
@@ -270,15 +298,22 @@ void Model::setupSpace()
         int ru_index = 0;
         for (p=mRUmap.begin(); p!=mRUmap.end(); ++p) {
             QRectF r = mRUmap.cellRect(mRUmap.indexOf(p));
-            if (!mStandGrid || !mStandGrid->isValid() || *p>NULL) {
+            if (!mStandGrid || !mStandGrid->isValid() || *p!=nullptr) {
                 mEnvironment->setPosition( r.center() ); // if environment is 'disabled' default values from the project file are used.
                 // create resource units for valid positions only
                 new_ru = new ResourceUnit(ru_index++); // create resource unit
+                new_ru->setBoundingBox(r);
+                new_ru->setID( mEnvironment->currentID() ); // set id of resource unit in grid mode
                 new_ru->setClimate( mEnvironment->climate() );
+                if (!mEnvironment->climate()) {
+                    QString err_msg = QString("Setup of landscape: Trying to set up a resource unit " \
+                                              " with center point (%1/%2), but no climate is defined in the environment for that location. \n " \
+                                              "Check spatial extent of your stand grid / environment grid, and the log file.").
+                                      arg(r.center().x()).arg(r.center().y());
+                    throw IException(err_msg);
+                }
                 new_ru->setSpeciesSet( mEnvironment->speciesSet() );
                 new_ru->setup();
-                new_ru->setID( mEnvironment->currentID() ); // set id of resource unit in grid mode
-                new_ru->setBoundingBox(r);
                 mRU.append(new_ru);
                 *p = new_ru; // save in the RUmap grid
             }
@@ -297,14 +332,15 @@ void Model::setupSpace()
 
             }
             qDebug() << "Setup of climates: #loaded:" << mClimates.count() << "tables:" << climate_file_list;
-
-
+            qDebug() << "setup of" << mEnvironment->climateList().size() << "climates performed.";
         }
 
-        qDebug() << "setup of" << mEnvironment->climateList().size() << "climates performed.";
 
-        if (mStandGrid && mStandGrid->isValid())
+        if (mStandGrid && mStandGrid->isValid()) {
             mStandGrid->createIndex();
+            GlobalSettings::instance()->controller()->addScriptLayer(nullptr, mStandGrid, "iLand standGrid");
+            qDebug() << "Loaded stand grid from " << mStandGrid->name() << ", #stands: " << mStandGrid->count();
+        }
         // now store the pointers in the grid.
         // Important: This has to be done after the mRU-QList is complete - otherwise pointers would
         // point to invalid memory when QList's memory is reorganized (expanding)
@@ -321,12 +357,13 @@ void Model::setupSpace()
         if (!mask_is_setup && xml.valueBool("areaMask.enabled", false) && xml.hasNode("areaMask.imageFile")) {
             // to be extended!!! e.g. to load ESRI-style text files....
             // setup a grid with the same size as the height grid...
-            FloatGrid tempgrid((int)mHeightGrid->cellsize(), mHeightGrid->sizeX(), mHeightGrid->sizeY());
+            FloatGrid tempgrid(static_cast<int>(mHeightGrid->cellsize()), mHeightGrid->sizeX(), mHeightGrid->sizeY());
             QString fileName = GlobalSettings::instance()->path(xml.value("areaMask.imageFile"));
+            qDebug() << "loading project area mask from" << fileName << "...";
             loadGridFromImage(fileName, tempgrid); // fetch from image
             for (int i=0;i<tempgrid.count(); i++)
-                mHeightGrid->valueAtIndex(i).setValid( tempgrid.valueAtIndex(i)>0.99 );
-            qDebug() << "loaded project area mask from" << fileName;
+                mHeightGrid->valueAtIndex(i).setValid( tempgrid.valueAtIndex(i)>0.99f );
+
         }
 
         // list of "valid" resource units
@@ -340,16 +377,16 @@ void Model::setupSpace()
         if (!dem_file.isEmpty()) {
             mDEM = new DEM(GlobalSettings::instance()->path(dem_file));
             // add them to the visuals...
-            GlobalSettings::instance()->controller()->addGrid(mDEM, "DEM height", GridViewRainbow, 0, 1000);
-            GlobalSettings::instance()->controller()->addGrid(mDEM->slopeGrid(), "DEM slope", GridViewRainbow, 0, 3);
-            GlobalSettings::instance()->controller()->addGrid(mDEM->aspectGrid(), "DEM aspect", GridViewRainbow, 0, 360);
-            GlobalSettings::instance()->controller()->addGrid(mDEM->viewGrid(), "DEM view", GridViewGray, 0, 1);
+            GlobalSettings::instance()->controller()->addGrid(mDEM, "DEM - height", GridViewRainbow, 0, 1000);
+            GlobalSettings::instance()->controller()->addGrid(mDEM->slopeGrid(), "DEM - slope", GridViewRainbow, 0, 3);
+            GlobalSettings::instance()->controller()->addGrid(mDEM->aspectGrid(), "DEM - aspect", GridViewRainbow, 0, 360);
+            GlobalSettings::instance()->controller()->addGrid(mDEM->viewGrid(), "DEM - view", GridViewGray, 0, 1);
 
         }
 
         // setup of saplings
         if (mSaplings) {
-            delete mSaplings; mSaplings=0;
+            delete mSaplings; mSaplings=nullptr;
         }
         if (settings().regenerationEnabled) {
             mSaplings = new Saplings();
@@ -365,7 +402,7 @@ void Model::setupSpace()
         // setup of external modules
         mModules->setup();
         if (mModules->hasSetupResourceUnits()) {
-            for (ResourceUnit **p=mRUmap.begin(); p!=mRUmap.end(); ++p) {
+            for (p=mRUmap.begin(); p!=mRUmap.end(); ++p) {
                 if (*p) {
                     QRectF r = mRUmap.cellRect(mRUmap.indexOf(p));
                     mEnvironment->setPosition( r.center() ); // if environment is 'disabled' default values from the project file are used.
@@ -378,8 +415,18 @@ void Model::setupSpace()
         ScriptGlobal::setupGlobalScripting();
 
         // setup the helper that does the multithreading
+        bool do_multithreading =GlobalSettings::instance()->settings().valueBool("system.settings.multithreading");
+        int n_threads = GlobalSettings::instance()->settings().valueInt("system.settings.threadCount",-1);
+        if (do_multithreading) {
+            if (n_threads>0) {
+                QThreadPool::globalInstance()->setMaxThreadCount(n_threads);
+                qDebug() << "Multithreading: set max thread count to" << n_threads;
+            } else {
+                QThreadPool::globalInstance()->setMaxThreadCount(QThread::idealThreadCount()); // reset
+            }
+        }
         threadRunner.setup(valid_rus);
-        threadRunner.setMultithreading(GlobalSettings::instance()->settings().valueBool("system.settings.multithreading"));
+        threadRunner.setMultithreading(do_multithreading);
         threadRunner.print();
 
 
@@ -391,6 +438,7 @@ void Model::setupSpace()
 
 
 /** clear() frees all ressources allocated with the run of a simulation.
+
   */
 void Model::clear()
 {
@@ -419,8 +467,10 @@ void Model::clear()
         delete mEnvironment;
     if (mTimeEvents)
         delete mTimeEvents;
-    if (mStandGrid)
+    if (mStandGrid) {
+        GlobalSettings::instance()->controller()->removeMapGrid(nullptr, mStandGrid);
         delete mStandGrid;
+    }
     if (mModules)
         delete mModules;
     if (mDEM)
@@ -429,21 +479,27 @@ void Model::clear()
         delete mGrassCover;
     if (mABEManagement)
         delete mABEManagement;
+    if (mSVDStates)
+        delete mSVDStates;
+    if (mBiteEngine)
+        delete  mBiteEngine;
 
-    mGrid = 0;
-    mHeightGrid = 0;
-    mManagement = 0;
-    mEnvironment = 0;
-    mTimeEvents = 0;
-    mStandGrid  = 0;
-    mModules = 0;
-    mDEM = 0;
-    mGrassCover = 0;
-    mABEManagement = 0;
+    mGrid = nullptr;
+    mHeightGrid = nullptr;
+    mManagement = nullptr;
+    mEnvironment = nullptr;
+    mTimeEvents = nullptr;
+    mStandGrid  = nullptr;
+    mModules = nullptr;
+    mDEM = nullptr;
+    mGrassCover = nullptr;
+    mABEManagement = nullptr;
+    mBiteEngine = nullptr;
+    mSVDStates = nullptr;
 
     GlobalSettings::instance()->outputManager()->close();
 
-    qDebug() << "Model ressources freed.";
+    qDebug() << "Model resources freed.";
 }
 
 /** Setup of the Simulation.
@@ -452,9 +508,21 @@ void Model::clear()
 void Model::loadProject()
 {
     DebugTimer dt("load project");
+    setCurrentTask("Loading project area....");
     GlobalSettings *g = GlobalSettings::instance();
     g->printDirectories();
     const XmlHelper &xml = g->settings();
+
+    // load javascript code into the engine
+    QString script_file = xml.value("system.javascript.fileName");
+    if (!script_file.isEmpty()) {
+        script_file = g->path(script_file, "script");
+        ScriptGlobal::loadScript(script_file);
+        g->controller()->setLoadedJavascriptFile(script_file);
+        // call the global event very early in the process of creating the model
+        GlobalSettings::instance()->executeJSFunction("onBeforeCreate");
+    }
+
 
     g->clearDatabaseConnections();
     // database connections: reset
@@ -468,6 +536,9 @@ void Model::loadProject()
 
     mSettings.loadModelSettings();
     mSettings.print();
+
+    DebugTimer::setResponsiveMode(xml.valueBool("system.settings.responsive"));
+
     // random seed: if stored value is <> 0, use this as the random seed (and produce hence always an equal sequence of random numbers)
     uint seed = xml.value("system.settings.randomSeed","0").toUInt();
     RandomGenerator::setup(RandomGenerator::ergMersenneTwister, seed); // use the MersenneTwister as default
@@ -504,13 +575,6 @@ void Model::loadProject()
         throw IException("Setup of Model: no resource units present!");
 
     // (3) additional issues
-    // (3.1) load javascript code into the engine
-    QString script_file = xml.value("system.javascript.fileName");
-    if (!script_file.isEmpty()) {
-        script_file = g->path(script_file, "script");
-        ScriptGlobal::loadScript(script_file);
-        g->controller()->setLoadedJavascriptFile(script_file);
-    }
 
     // (3.2) setup of regeneration
     if (settings().regenerationEnabled) {
@@ -525,7 +589,6 @@ void Model::loadProject()
         // use the agent based forest management engine
         mABEManagement = new ABE::ForestManagementEngine();
         // setup of ABE after loading of trees.
-
     }
     // use the standard management
     QString mgmtFile = xml.value("model.management.file");
@@ -536,6 +599,21 @@ void Model::loadProject()
         qDebug() << "setup management using script" << path;
     }
 
+    // SVD States
+    if (mSVDStates) {
+        delete mSVDStates; mSVDStates=nullptr;
+    }
+    if (xml.valueBool("model.settings.svdStates.enabled", false))
+        mSVDStates=new SVDStates();
+
+    // biotic disturbance module BITE
+    if (mBiteEngine) {
+        delete mBiteEngine; mBiteEngine=nullptr;
+    }
+    if (xml.valueBool("modules.bite.enabled", false)) {
+        mBiteEngine = BITE::BiteEngine::instance();
+        mBiteEngine->setup();
+    }
 
 
 }
@@ -564,66 +642,76 @@ ResourceUnit *Model::ru(QPointF coord)
     if (mRUmap.isEmpty())
         return ru(); // default RU if there is only one
     else
-        return 0; // in this case, no valid coords were provided
+        return nullptr; // in this case, no valid coords were provided
+}
+
+ResourceUnit *Model::ruById(int id) const
+{
+    for (int i=0;i<mRU.size();++i)
+        if (mRU[i]->id()==id)
+            return mRU[i];
+    return nullptr;
 }
 
 void Model::initOutputDatabase()
 {
     GlobalSettings *g = GlobalSettings::instance();
     QString dbPath = g->path(g->settings().value("system.database.out"), "output");
-    // create run-metadata
-    int maxid = SqlHelper::queryValue("select max(id) from runs", g->dbin()).toInt();
-
-    maxid++;
-    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
-    SqlHelper::executeSql(QString("insert into runs (id, timestamp) values (%1, '%2')").arg(maxid).arg(timestamp), g->dbin());
     // replace path information
-    dbPath.replace("$id$", QString::number(maxid));
+    QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
     dbPath.replace("$date$", timestamp);
     // setup final path
    g->setupDatabaseConnection("out", dbPath, false);
 
+   // create table for run meta data
+   QSqlQuery creator(g->dbout());
+   QString drop=QString("drop table if exists runinfo");
+   creator.exec(drop); // drop table (if exists)
+   creator.exec("create table runinfo (timestamp, version)");
+   SqlHelper::executeSql(QString("insert into runinfo (timestamp, version) values ('%1', '%2')").arg(timestamp).arg(verboseVersion()), g->dbout());
+
 }
 
-/// multithreaded running function for the resource unit level establishment
-void nc_establishment(ResourceUnit *unit)
+/// multithreaded run function for resource unit level establishment
+static void nc_establishment(ResourceUnit *unit)
 {
     Saplings *s = GlobalSettings::instance()->model()->saplings();
     try {
         s->establishment(unit);
 
     } catch (const IException& e) {
-        GlobalSettings::instance()->controller()->throwError(e.message());
+        GlobalSettings::instance()->model()->threadExec().throwError(e.message());
     }
 
 }
 
-/// multithreaded running function for the resource unit level establishment
-void nc_sapling_growth(ResourceUnit *unit)
+/// multithreaded run function for resource unit level establishment
+static void nc_sapling_growth(ResourceUnit *unit)
 {
     Saplings *s = GlobalSettings::instance()->model()->saplings();
     try {
         s->saplingGrowth(unit);
 
     } catch (const IException& e) {
-        GlobalSettings::instance()->controller()->throwError(e.message());
+        GlobalSettings::instance()->model()->threadExec().throwError(e.message());
     }
 }
 
 
 
 /// multithreaded execution of the carbon cycle routine
-void nc_carbonCycle(ResourceUnit *unit)
+static void nc_carbonCycle(ResourceUnit *unit)
 {
     try {
         // (1) do calculations on snag dynamics for the resource unit
         unit->calculateCarbonCycle();
         // (2) do the soil carbon and nitrogen dynamics calculations (ICBM/2N)
     } catch (const IException& e) {
-        GlobalSettings::instance()->controller()->throwError(e.message());
+        GlobalSettings::instance()->model()->threadExec().throwError(e.message());
     }
 
 }
+
 
 /// beforeRun performs several steps before the models starts running.
 /// inter alia: * setup of the stands
@@ -639,6 +727,7 @@ void Model::beforeRun()
     GlobalSettings::instance()->clearDebugLists();
 
     // initialize stands
+    setCurrentTask("loading initialization");
     StandLoader loader(this);
     {
     DebugTimer loadtrees("load trees");
@@ -651,6 +740,7 @@ void Model::beforeRun()
     }
 
     // load climate
+    setCurrentTask("loading climate");
     {
         if (logLevelDebug()) qDebug() << "attempting to load climate..." ;
         DebugTimer loadclim("load climate");
@@ -664,7 +754,15 @@ void Model::beforeRun()
 
     }
 
+    // microclimate
+    if (Model::settings().microclimateEnabled) {
+        MicroclimateVisualizer::setupVisualization();
+        DebugTimer t("Microclimate setup");
+        executePerResourceUnit(nc_microclimate, false /* true to force single threaded execution */);
 
+    }
+
+    setCurrentTask("loading initialization (finalize)");
     { DebugTimer loadinit("load standstatistics");
     if (logLevelDebug()) qDebug() << "attempting to calculate initial stand statistics (incl. apply and read pattern)..." ;
     Tree::setGrid(mGrid, mHeightGrid);
@@ -683,7 +781,7 @@ void Model::beforeRun()
         mABEManagement->runOnInit(false);
     }
 
-
+    setCurrentTask("outputs during startup");
     // outputs to create with inital state (without any growth) are called here:
     GlobalSettings::instance()->setCurrentYear(0); // set clock to "0" (for outputs with initial state)
 
@@ -693,12 +791,18 @@ void Model::beforeRun()
     GlobalSettings::instance()->outputManager()->execute("saplingdetail"); // year=0
     GlobalSettings::instance()->outputManager()->execute("tree"); // year=0
     GlobalSettings::instance()->outputManager()->execute("dynamicstand"); // year=0
+    GlobalSettings::instance()->outputManager()->execute("svdstate"); // year=0
+    GlobalSettings::instance()->outputManager()->execute("devstage"); // year=0
+    GlobalSettings::instance()->outputManager()->execute("ecoviz"); // tree output for visualization, year 0
+    GlobalSettings::instance()->outputManager()->execute("customagg"); // custom aggregation, much like dynamic stand, year 0
+    GlobalSettings::instance()->outputManager()->save(); // commit database changes
+
 
     GlobalSettings::instance()->setCurrentYear(1); // set to first year
 
 }
 
-/** Main model runner.
+/** Main model run routine.
   The sequence of actions is as follows:
   (1) Load the climate of the new year
   (2) Reset statistics for resource unit as well as for dead/managed trees
@@ -713,8 +817,9 @@ void Model::beforeRun()
   */
 void Model::runYear()
 {
-    DebugTimer t("Model::runYear()");
+    DebugTimer t_all("Model::runYear()");
     GlobalSettings::instance()->systemStatistics()->reset();
+    threadRunner.clearErrors();
     RandomGenerator::checkGenerator(); // see if we need to generate new numbers...
     // initalization at start of year for external modules
     mModules->yearBegin();
@@ -728,6 +833,13 @@ void Model::runYear()
         foreach(Climate *c, mClimates)
             c->nextYear();
     }
+    // run microclimate
+    if (Model::settings().microclimateEnabled) {
+        DebugTimer t("Microclimate");
+        executePerResourceUnit(nc_microclimate, false /* true to force single threaded execution */);
+    }
+
+    WaterCycle::resetPsiMin();
 
     // reset statistics
     foreach(ResourceUnit *ru, mRU)
@@ -735,8 +847,10 @@ void Model::runYear()
 
     foreach(SpeciesSet *set, mSpeciesSets)
         set->newYear();
+
     // management classic
     if (mManagement) {
+        setCurrentTask("Management");
         DebugTimer t("management");
         mManagement->run();
         GlobalSettings::instance()->systemStatistics()->tManagement+=t.elapsed();
@@ -744,6 +858,7 @@ void Model::runYear()
     // ... or ABE (the agent based variant)
     if (mABEManagement) {
         DebugTimer t("ABE:run");
+        setCurrentTask("ABE");
         mABEManagement->run();
         GlobalSettings::instance()->systemStatistics()->tManagement+=t.elapsed();
     }
@@ -753,37 +868,63 @@ void Model::runYear()
     cleanTreeLists(true); // recalculate statistics (LAIs per species needed later in production)
 
     // process a cycle of individual growth
+    setCurrentTask("apply LIP");
     applyPattern(); // create Light Influence Patterns
+    setCurrentTask("read LIP");
     readPattern(); // readout light state of individual trees
+
+    setCurrentTask("tree growth");
     grow(); // let the trees grow (growth on stand-level, tree-level, mortality)
+
     mGrassCover->execute(); // evaluate the grass / herb cover (and its effect on regeneration)
 
     // regeneration
     if (settings().regenerationEnabled) {
         // seed dispersal
+        setCurrentTask("Seed dispersal");
         DebugTimer tseed("Seed dispersal, establishment, sapling growth");
         foreach(SpeciesSet *set, mSpeciesSets)
             set->regeneration(); // parallel execution for each species set
 
         GlobalSettings::instance()->systemStatistics()->tSeedDistribution+=tseed.elapsed();
+
         // establishment
         Saplings::updateBrowsingPressure();
 
 
         { DebugTimer t("establishment");
+        setCurrentTask("Establishment");
         executePerResourceUnit( nc_establishment, false /* true: force single threaded operation */);
         GlobalSettings::instance()->systemStatistics()->tEstablishment+=t.elapsed();
         }
         { DebugTimer t("sapling growth");
+        setCurrentTask("sapling growth");
+
+        foreach(SpeciesSet *set, mSpeciesSets) {
+            // the sapling seed maps are cleared before sapling growth (where sapling seed maps are filled)
+            // the content of the seed maps is used in the *next* year
+            set->clearSaplingSeedMap();
+        }
+
         executePerResourceUnit( nc_sapling_growth, false /* true: force single threaded operation */);
         GlobalSettings::instance()->systemStatistics()->tSapling+=t.elapsed();
         }
 
+        mGrassCover->executeAfterRegeneration(); // evaluate ground vegetation
+
         // Establishment::debugInfo(); // debug test
+        threadRunner.checkErrors();
 
     }
 
     // external modules/disturbances
+    setCurrentTask("BITE");
+    if (mBiteEngine) {
+        mBiteEngine->setYear(GlobalSettings::instance()->currentYear());
+        mBiteEngine->run();
+    }
+
+    setCurrentTask("Disturbance modules");
     mModules->run();
     // cleanup of tree lists if external modules removed trees.
     cleanTreeLists(false); // do not recalculate statistics - this is done in ru->yearEnd()
@@ -792,6 +933,7 @@ void Model::runYear()
     // calculate soil / snag dynamics
     if (settings().carbonCycleEnabled) {
         DebugTimer ccycle("carbon cylce");
+        setCurrentTask("carbon cycle");
         executePerResourceUnit( nc_carbonCycle, false /* true: force single threaded operation */);
         GlobalSettings::instance()->systemStatistics()->tCarbonCycle+=ccycle.elapsed();
 
@@ -803,10 +945,20 @@ void Model::runYear()
     foreach(ResourceUnit *ru, mRU)
         ru->yearEnd();
 
+    if (mABEManagement) {
+        DebugTimer t("ABE:yearEnd");
+        setCurrentTask("ABE yearEnd");
+        mABEManagement->yearEnd();
+        GlobalSettings::instance()->systemStatistics()->tManagement+=t.elapsed();
+    }
+
+    threadRunner.checkErrors();
+
     // create outputs
+    setCurrentTask("Write outputs");
     OutputManager *om = GlobalSettings::instance()->outputManager();
     om->execute("tree"); // single tree output
-    om->execute("treeremoval"); // single removed tree output
+    om->execute("treeremoved"); // single removed tree output
     om->execute("stand"); //resource unit level x species
     om->execute("landscape"); //landscape x species
     om->execute("landscape_removed"); //removed trees on landscape x species
@@ -818,10 +970,18 @@ void Model::runYear()
     om->execute("management"); // resource unit level x species
     om->execute("carbon"); // resource unit level, carbon pools above and belowground
     om->execute("carbonflow"); // resource unit level, GPP, NPP and total carbon flows (atmosphere, harvest, ...)
+    om->execute("soilinput"); // resource unit level carbon input to the soil
     om->execute("water"); // resource unit/landscape level water output (ET, rad, snow cover, ...)
+    om->execute("svdgpp"); // pot. gpp per m2 and for a number of species (SVD related)
+    om->execute("svdstate"); // forest state information (SVD related)
+    om->execute("svdindicator"); // forest indicators on RU level (SVD related)
+    om->execute("svduniquestate"); // list of forest vegetation states (SVD related)
+    om->execute("devstage"); // spatial analysis of developement stages
+    om->execute("ecoviz"); // tree output for visualization
+    om->execute("customagg"); // custom aggregation, much like dynamic stand
 
     GlobalSettings::instance()->systemStatistics()->tWriteOutput+=toutput.elapsed();
-    GlobalSettings::instance()->systemStatistics()->tTotalYear+=t.elapsed();
+    GlobalSettings::instance()->systemStatistics()->tTotalYear+=t_all.elapsed();
     GlobalSettings::instance()->systemStatistics()->writeOutput();
 
     // global javascript event
@@ -841,7 +1001,7 @@ void Model::afterStop()
 }
 
 /// multithreaded running function for LIP printing
-void nc_applyPattern(ResourceUnit *unit)
+static void nc_applyPattern(ResourceUnit *unit)
 {
 
     QVector<Tree>::iterator tit;
@@ -852,8 +1012,9 @@ void nc_applyPattern(ResourceUnit *unit)
         // light concurrence influence
         if (!GlobalSettings::instance()->model()->settings().torusMode) {
             // height dominance grid
-            for (tit=unit->trees().begin(); tit!=tend; ++tit)
+            for (tit=unit->trees().begin(); tit!=tend; ++tit) {
                 (*tit).heightGrid(); // just do it ;)
+            }
 
             for (tit=unit->trees().begin(); tit!=tend; ++tit)
                 (*tit).applyLIP(); // just do it ;)
@@ -868,12 +1029,12 @@ void nc_applyPattern(ResourceUnit *unit)
         }
 
     } catch (const IException &e) {
-        GlobalSettings::instance()->controller()->throwError(e.message());
+        GlobalSettings::instance()->model()->threadExec().throwError(e.message());
     }
 }
 
 /// multithreaded running function for LIP value extraction
-void nc_readPattern(ResourceUnit *unit)
+static void nc_readPattern(ResourceUnit *unit)
 {
     QVector<Tree>::iterator tit;
     QVector<Tree>::iterator  tend = unit->trees().end();
@@ -886,12 +1047,12 @@ void nc_readPattern(ResourceUnit *unit)
                 (*tit).readLIF_torus(); // do it the wraparound way
         }
     } catch (const IException &e) {
-        GlobalSettings::instance()->controller()->throwError(e.message());
+        GlobalSettings::instance()->model()->threadExec().throwError(e.message());
     }
 }
 
-/// multithreaded running function for the growth of individual trees
-void nc_grow(ResourceUnit *unit)
+/// multithreaded running function for growth of individual trees
+static void nc_grow(ResourceUnit *unit)
 {
     QVector<Tree>::iterator tit;
     QVector<Tree>::iterator  tend = unit->trees().end();
@@ -909,19 +1070,19 @@ void nc_grow(ResourceUnit *unit)
             (*tit).grow(); // actual growth of individual trees
         }
     } catch (const IException &e) {
-        GlobalSettings::instance()->controller()->throwError(e.message());
+        GlobalSettings::instance()->model()->threadExec().throwError(e.message());
     }
 
     GlobalSettings::instance()->systemStatistics()->treeCount+=unit->trees().count();
 }
 
-/// multithreaded running function for the resource level production
-void nc_production(ResourceUnit *unit)
+/// multithreaded running function for resource level production
+static void nc_production(ResourceUnit *unit)
 {
     try {
         unit->production();
     } catch (const IException &e) {
-        GlobalSettings::instance()->controller()->throwError(e.message());
+        GlobalSettings::instance()->model()->threadExec().throwError(e.message());
     }
 }
 
@@ -934,7 +1095,7 @@ void Model::test()
     int count = 0;
     float *end = averaged.end();
     for (float *p=averaged.begin(); p!=end; ++p)
-        if (*p > 0.9)
+        if (*p > 0.9f)
             count++;
     qDebug() << count << "LIF>0.9 of " << averaged.count();
 }
@@ -945,8 +1106,8 @@ void Model::debugCheckAllTrees()
     bool has_errors = false; double dummy=0.;
     while (Tree *t = at.next()) {
         // plausibility
-        if (t->dbh()<0 || t->dbh()>10000. || t->biomassFoliage()<0. || t->height()>1000. || t->height() < 0.
-                || t->biomassFoliage() <0.)
+        if (t->dbh()<0 || t->dbh()>10000.f || t->biomassFoliage()<0.f || t->height()>1000.f || t->height() < 0.f
+                || t->biomassFoliage() <0.f)
             has_errors = true;
         // check for objects....
         dummy = t->stamp()->offset() + t->ru()->ruSpecies()[1]->statistics().count();
@@ -962,10 +1123,11 @@ void Model::applyPattern()
     // intialize grids...
     initializeGrid();
 
-    // initialize height grid with a value of 4m. This is the height of the regeneration layer
+    // initialize height grid with a default value of 4m. This is the height of the regeneration layer
     for (HeightGridValue *h=mHeightGrid->begin();h!=mHeightGrid->end();++h) {
         h->resetCount(); // set count = 0, but do not touch the flags
-        h->height = 4.f;
+        h->height = cSapHeight;
+        h->clearStemHeight();
     }
 
     threadRunner.run(nc_applyPattern);
@@ -1061,7 +1223,7 @@ void Model::calculateStockableArea()
                 ru->setID(-1);
             }
             if (valid>0 && ru->id()==-1) {
-                qDebug() << "Warning: a resource unit has id=-1 but stockable area (id was set to 0)!!! ru: " << ru->boundingBox() << "with index" << ru->index();
+                qDebug() << "Warning: a resource unit is marked as invalid (id=-1), but has stockable area (id was set to 0)!!! ru: " << ru->boundingBox() << "with index" << ru->index();
                 ru->setID(0);
                 // test-code
                 //GridRunner<HeightGridValue> runner(*mHeightGrid, ru->boundingBox());
@@ -1104,7 +1266,7 @@ void Model::initializeGrid()
     int ix_min, ix_max, iy_min, iy_max, ix_center, iy_center;
     const int px_offset = cPxPerHeight / 2; // for 5 px per height grid cell, the offset is 2
     const int max_radiate_distance = 7;
-    const float step_width = 1.f / (float)max_radiate_distance;
+    const float step_width = 1.f / static_cast<float>(max_radiate_distance);
     int c_rad = 0;
     for (HeightGridValue *hgv=mHeightGrid->begin(); hgv!=mHeightGrid->end(); ++hgv) {
         if (hgv->isRadiating()) {
@@ -1155,5 +1317,4 @@ void Model::cleanTreeLists(bool recalculate_stats)
         }
     }
 }
-
 

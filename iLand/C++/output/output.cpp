@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -91,7 +91,7 @@ void Output::setup()
 
 Output::~Output()
 {
-    mInserter.clear();
+    //mInserter.clear();
 }
 
 Output::Output()
@@ -136,7 +136,7 @@ void Output::openDatabase()
     //creator.exec("delete from " + tableName()); // clear table??? necessary?
 
     if (creator.lastError().isValid()){
-        throw IException(QString("Error creating output: %1").arg( creator.lastError().text()) );
+        throw IException(QString("Error creating output: %1 \n Statement: %2").arg( creator.lastError().text()).arg(sql) );
     }
     insert[insert.length()-1]=')';
     values[values.length()-1]=')';
@@ -145,12 +145,34 @@ void Output::openDatabase()
     mInserter = QSqlQuery(db);
     mInserter.prepare(insert);
     if (mInserter.lastError().isValid()){
-        throw IException(QString("Error creating output: %1").arg( mInserter.lastError().text()) );
+        throw IException(QString("Error creating output: %1 \n Statement: %2").arg( mInserter.lastError().text()).arg(insert) );
     }
     for (int i=0;i<columns().count();i++)
         mInserter.bindValue(i,mRow[i]);
 
     mOpen = true;
+}
+
+void Output::openFile()
+{
+    QString path = GlobalSettings::instance()->path(mTableName + ".csv", "output");
+    mOutputFile.setFileName(path);
+    if (!mOutputFile.open(QIODevice::WriteOnly | QIODevice::Text))
+          throw IException(QString("The file '%1' for output '%2' cannot be opened!").arg(path, name()) );
+
+    // create header
+    mFileStream.setDevice(&mOutputFile);
+    QString line; bool first=true;
+    foreach(const OutputColumn &col, columns()) {
+        if (first) {
+            line = col.name();
+            first = false;
+        }  else {
+            line += ";" + col.name();
+        }
+    }
+    mFileStream << line << Qt::endl;
+
 }
 
 void Output::newRow()
@@ -168,10 +190,47 @@ void Output::writeRow()
     switch(mMode) {
         case OutDatabase:
             saveDatabase(); break;
+    case OutFile:
+            saveFile(); break;
         default: throw IException("Invalid output mode");
     }
 
 }
+
+static QMutex __protectWriteRow;
+void Output::singleThreadedWriteRow()
+{
+    QMutexLocker l(&__protectWriteRow);
+    writeRow();
+}
+
+/// delete columns that were added after the column 'find_name'
+bool Output::clearColumnsAfter(QString find_name)
+{
+    if (mColumns.isEmpty() || mColumns.last().name() == find_name)
+        return false; // nothing to do
+
+    QList<OutputColumn>::iterator i=mColumns.begin();
+    while (i!=mColumns.end()) {
+        if (i->name()==find_name)
+            break;
+        ++i;
+    }
+    mColumns.erase(++i, mColumns.end());
+    mCount = mColumns.size();
+    return true;
+}
+
+void Output::truncateTable()
+{
+    QSqlDatabase db = GlobalSettings::instance()->dbout();
+    QSqlQuery query(db);
+    QString stmt=QString("delete from %1").arg(tableName());
+    query.exec(stmt); //
+    qDebug() << "truncated table" << tableName() << "(=delete all records from output database)";
+
+}
+
 void Output::open()
 {
     if (isOpen())
@@ -183,6 +242,8 @@ void Output::open()
     newRow();
     // setup output
     switch(mMode) {
+        case OutFile:
+            openFile(); break;
         case OutDatabase:
             openDatabase(); break;
         default: throw IException("Invalid output mode");
@@ -202,6 +263,9 @@ void Output::close()
                 mInserter.finish();
             mInserter = QSqlQuery(); // clear inserter
          break;
+    case OutFile:
+        mOutputFile.close();
+        break;
         default:
          qWarning() << "Output::close with invalid mode";
     }
@@ -221,6 +285,17 @@ void Output::saveDatabase()
                          .arg(mInserter.lastError().driverText()) );
     }
 
+    newRow();
+}
+
+void Output::saveFile()
+{
+    for (int i=0;i<mCount;++i) {
+        mFileStream << mRow[i].toString();
+        if (i!=mCount-1)
+            mFileStream << ";";
+    }
+    mFileStream << Qt::endl;
     newRow();
 }
 

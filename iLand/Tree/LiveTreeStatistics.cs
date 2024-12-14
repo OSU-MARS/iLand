@@ -29,8 +29,8 @@ namespace iLand.Tree
         public float FineRootNitrogenInKgPerHa { get; protected set; } // accumulated as kg and converted to kg/ha
         public float FoliageCarbonInKgPerHa { get; protected set; } // accumulated as kg and converted to kg/ha
         public float FoliageNitrogenInKgPerHa { get; protected set; } // accumulated as kg and converted to kg/ha
-        public float StemCarbonInKgPerHa { get; protected set; } // accumulated as kg and converted to kg/ha
-        public float StemNitrogenInKgPerHa { get; protected set; } // accumulated as kg and converted to kg/ha
+        public float StemAndReserveCarbonInKgPerHa { get; protected set; } // accumulated as kg and converted to kg/ha
+        public float StemAndReserveNitrogenInKgPerHa { get; protected set; } // accumulated as kg and converted to kg/ha
 
         public LiveTreeStatistics()
         {
@@ -61,9 +61,9 @@ namespace iLand.Tree
             float foliageMass = trees.FoliageMassInKg[treeIndex];
             this.FoliageCarbonInKgPerHa += Constant.DryBiomassCarbonFraction * foliageMass;
             this.FoliageNitrogenInKgPerHa += Constant.DryBiomassCarbonFraction / trees.Species.CarbonNitrogenRatioFineRoot * foliageMass;
-            float stemMass = trees.StemMassInKg[treeIndex];
-            this.StemCarbonInKgPerHa += Constant.DryBiomassCarbonFraction * stemMass;
-            this.StemNitrogenInKgPerHa += Constant.DryBiomassCarbonFraction / trees.Species.CarbonNitrogenRatioWood * stemMass;
+            float stemAndReserveMass = trees.StemMassInKg[treeIndex] + trees.NppReserveInKg[treeIndex];
+            this.StemAndReserveCarbonInKgPerHa += Constant.DryBiomassCarbonFraction * stemAndReserveMass;
+            this.StemAndReserveNitrogenInKgPerHa += Constant.DryBiomassCarbonFraction / trees.Species.CarbonNitrogenRatioWood * stemAndReserveMass;
         }
 
         public void Add(TreeListSpatial trees, int treeIndex, float npp, float abovegroundNpp)
@@ -91,7 +91,7 @@ namespace iLand.Tree
             // if resource unit is 1 ha then values are already per hectare, if not expansion factor multiplication is needed
             // For resource unit tree statistics, expansion factors are applied only at the species level and then species' per hectare
             // properties are added together to find resource unit-level statistics.
-            if (resourceUnitAreaInLandscapeInM2 != Constant.SquareMetersPerHectare)
+            if (resourceUnitAreaInLandscapeInM2 != Constant.Grid.ResourceUnitAreaInM2)
             {
                 // expansion factor does not apply to
                 // this.AverageDbhInCm
@@ -109,8 +109,8 @@ namespace iLand.Tree
                 this.FineRootNitrogenInKgPerHa *= ruExpansionFactor;
                 this.FoliageCarbonInKgPerHa *= ruExpansionFactor;
                 this.FoliageNitrogenInKgPerHa *= ruExpansionFactor;
-                this.StemCarbonInKgPerHa *= ruExpansionFactor;
-                this.StemNitrogenInKgPerHa *= ruExpansionFactor;
+                this.StemAndReserveCarbonInKgPerHa *= ruExpansionFactor;
+                this.StemAndReserveNitrogenInKgPerHa *= ruExpansionFactor;
 
                 this.StemVolumeInM3PerHa *= ruExpansionFactor;
                 this.TreesPerHa *= ruExpansionFactor;
@@ -149,8 +149,8 @@ namespace iLand.Tree
             this.FoliageCarbonInKgPerHa = 0.0F;
             this.FoliageNitrogenInKgPerHa = 0.0F;
             this.LeafAreaIndex = 0.0F;
-            this.StemCarbonInKgPerHa = 0.0F;
-            this.StemNitrogenInKgPerHa = 0.0F;
+            this.StemAndReserveCarbonInKgPerHa = 0.0F;
+            this.StemAndReserveNitrogenInKgPerHa = 0.0F;
             this.StemVolumeInM3PerHa = 0.0F;
             this.TreesPerHa = 0.0F;
         }

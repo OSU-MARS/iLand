@@ -9,9 +9,9 @@ using System.Runtime.Intrinsics.X86;
 namespace iLand.Tree
 {
     /** Stamp is the basic class for the LIP field of a individual tree.
-        In iLand jargon, a Stamp is a LIP (light influence pattern). These patterns are pre-calculated using the "LightRoom" (http://iland-model.org/Lightroom)
+        In iLand jargon, a Stamp is a LIP (light influence pattern). These patterns are pre-calculated using the "LightRoom" (https://iland-model.org/Lightroom)
         and stand for a field of influence (w.r.t. light) of a individual tree of a given size and species.
-        see http://iland-model.org/competition+for+light
+        see https://iland-model.org/competition+for+light
     */
     public class LightStamp
     {

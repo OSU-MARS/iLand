@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -23,14 +23,14 @@
 /** DEM is a digital elevation model class.
   @ingroup tools
    It uses a float grid internally.
-   slope is calculated in "%", i.e. a value of 1 is 45° (90° -> inf)
+   slope is calculated in "%", i.e. a value of 1 is 45deg (90deg -> inf)
 
-   The aspect angles are defined as follows (like ArcGIS):
-          0°
+   The aspect angles are defined as follows (like ArcGIS, values in degrees):
+          0
           N
-   270° W x E 90°
+   270 W x E 90
           S
-         180°
+         180
 
    Values for height of -1 indicate "out of scope", "invalid" values
 
@@ -43,7 +43,9 @@ public:
     bool loadFromFile(const QString &fileName);
     // create and fill grids for aspect/slope
     void createSlopeGrid() const;
+    /// grid with aspect, i.e. slope direction in degrees (0: North, 90: east, 180: south, 270: west)
     const FloatGrid *aspectGrid() const { createSlopeGrid(); return &aspect_grid; }
+    /// grid with slope, given as slope angle as percentage (i.e: 1:=45 degrees)
     const FloatGrid *slopeGrid() const { createSlopeGrid(); return &slope_grid; }
     const FloatGrid *viewGrid() const { createSlopeGrid(); return &view_grid; }
     // special functions for DEM
@@ -58,6 +60,10 @@ public:
     float orientation(const QPointF &point, float &rslope_angle, float &rslope_aspect) const;
     float orientation(const float x, const float y, float &rslope_angle, float &rslope_aspect)
                         { return orientation(QPointF(x,y), rslope_angle, rslope_aspect); }
+    /// topographic position index
+    /// TPI measures the difference between elevation at the central point
+    ///  and the average elevation (z) around it within a predetermined radius (radius in m)
+    float topographicPositionIndex(const QPointF &point, float radius) const;
 
 
 private:

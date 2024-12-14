@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,6 @@
 **    You should have received a copy of the GNU General Public License
 **    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ********************************************************************************************/
-
 #include "dynamicstandout.h"
 
 #include "debugtimer.h"
@@ -36,19 +35,22 @@ DynamicStandOut::DynamicStandOut()
                    "The ''by_species'' and ''by_ru'' option allow to define the aggregation level. When ''by_species'' is set to ''true'', " \
                    "a row for each species will be created, otherwise all trees of all species are aggregated to one row. " \
                    "Similarly, ''by_ru''=''true'' means outputs for each resource unit, while a value of ''false'' aggregates over the full project area.\n" \
+                   "Even if ''by_ru'' is false, the calculation of RU level outputs can be triggered by the ''conditionRU'' switch (variable='year'). Note  " \
+                   " that in this case landscape level outputs are generated always, RU-level outputs only for certain years.\n" \
                    "!!!Specifying filters\n" \
                    "You can use the 'rufilter' and 'treefilter' XML settings to reduce the limit the output to a subset of resource units / trees. " \
                    "Both filters are valid expressions (for resource unit level and tree level, respectively). For example, a ''treefilter'' of 'speciesindex=0' reduces the output to just one species.\n" \
                    "The ''condition'' filter is (when present) evaluated and the output is only executed when ''condition'' is true (variable='year') This can be used to constrain the output to specific years (e.g. 'in(year,100,200,300)' produces output only for the given year.\n" \
                    "!!!Specifying data columns\n"
-                   "Each field is defined as: ''field.aggregatio''n (separated by a dot). A ''field'' is a valid [Expression]. ''Aggregation'' is one of the following:  " \
-                   "mean, sum, min, max, p25, p50, p75, p5, 10, p90, p95 (pXX=XXth percentile), sd (std.dev.).\n" \
-                   "Complex expression are allowed, e.g: if(dbh>50,1,0).sum (-> counts trees with dbh>50)");
+                   "Each field is defined as: ''field.aggregation'' (separated by a dot). A ''field'' is a valid [Expression]. ''Aggregation'' is one of the following:  " \
+                   "mean, sum, min, max, p25, p50, p75, p5, 10, p80, p85, p90, p95 (pXX=XXth percentile), sd (std.dev.).\n" \
+                   "Complex expression are allowed, e.g: if(dbh>50,1,0).sum (-> counts trees with dbh>50)\n" \
+                   "Note that the column names in the output table may be slightly different, as dots (and other special characsters) are not allowed in column names und substituted.");
     columns() << OutputColumn::year() << OutputColumn::ru()  << OutputColumn::id() << OutputColumn::species();
     // other colums are added during setup...
 }
 
-const QStringList aggList = QStringList() << "mean" << "sum" << "min" << "max" << "p25" << "p50" << "p75" << "p5"<< "p10" << "p90" << "p95" << "sd";
+const QStringList aggList = QStringList() << "mean" << "sum" << "min" << "max" << "p25" << "p50" << "p75" << "p5"<< "p10" << "p90" << "p95" << "sd" << "p80" << "p85";
 
 void DynamicStandOut::setup()
 {
@@ -56,26 +58,30 @@ void DynamicStandOut::setup()
     QString tree_filter = settings().value(".treefilter","");
     QString fieldList = settings().value(".columns", "");
     QString condition = settings().value(".condition", "");
+    QString conditionRU = settings().value(".conditionRU", "");
+
     if (fieldList.isEmpty())
         return;
     mRUFilter.setExpression(filter);
     mTreeFilter.setExpression(tree_filter);
     mCondition.setExpression(condition);
+    mConditionRU.setExpression(conditionRU);
     // clear columns
     columns().erase(columns().begin()+4, columns().end());
     mFieldList.clear();
 
     // setup fields
-   if (!fieldList.isEmpty()) {
-       QRegExp rx("([^\\.]+).(\\w+)[,\\s]*"); // two parts: before dot and after dot, and , + whitespace at the end
-        int pos=0;
+    if (!fieldList.isEmpty()) {
+        QRegularExpression re("([^\\.]+).(\\w+)[,\\s]*"); // two parts: before dot and after dot, and , + whitespace at the end
+
         QString field, aggregation;
         TreeWrapper tw;
-        while ((pos = rx.indexIn(fieldList, pos)) != -1) {
-            pos += rx.matchedLength();
+        QRegularExpressionMatchIterator i = re.globalMatch(fieldList);
+        while (i.hasNext()) {
+            QRegularExpressionMatch match = i.next();
+            field = match.captured(1);
+            aggregation = match.captured(2);
 
-            field = rx.cap(1); // field / expresssion
-            aggregation = rx.cap(2);
             mFieldList.append(SDynamicField());
             // parse field
             if (field.count()>0 && !field.contains('(')) {
@@ -89,15 +95,15 @@ void DynamicStandOut::setup()
 
             mFieldList.back().agg_index = aggList.indexOf(aggregation);
             if (mFieldList.back().agg_index==-1)
-                 throw IException(QString("Invalid aggregate expression for dynamic output: %1\nallowed:%2")
-                                          .arg(aggregation).arg(aggList.join(" ")));
+                throw IException(QString("Invalid aggregate expression for dynamic output: %1\nallowed:%2")
+                                 .arg(aggregation).arg(aggList.join(" ")));
 
-             QString stripped_field=QString("%1_%2").arg(field, aggregation);
-             stripped_field.replace(QRegExp("[\\[\\]\\,\\(\\)<>=!\\s]"), "_");
-             stripped_field.replace("__", "_");
-             columns() << OutputColumn(stripped_field, field, OutDouble);
+            QString stripped_field=QString("%1_%2").arg(field, aggregation);
+            stripped_field.replace(QRegularExpression("[\\[\\]\\,\\(\\)<>=!\\-\\+/\\*\\s]"), "_");
+            stripped_field.replace("__", "_");
+            columns() << OutputColumn(stripped_field, field, OutDouble);
         }
-   }
+    }
 }
 
 void DynamicStandOut::exec()
@@ -112,11 +118,20 @@ void DynamicStandOut::exec()
 
     bool per_species = GlobalSettings::instance()->settings().valueBool("output.dynamicstand.by_species", true);
     bool per_ru = GlobalSettings::instance()->settings().valueBool("output.dynamicstand.by_ru", true);
+    bool per_ru_cond=false;
+
+    if (!mConditionRU.isEmpty() && mConditionRU.calculate(GlobalSettings::instance()->currentYear()))
+        per_ru_cond = true;
+
 
     if (per_ru) {
         // when looping over resource units, do it differently (old way)
         extractByResourceUnit(per_species);
         return;
+    }
+    if (per_ru_cond) {
+        // in this case the RU level outputs are *in addition* to the landscape means
+        extractByResourceUnit(per_species);
     }
 
     Model *m = GlobalSettings::instance()->model();
@@ -181,6 +196,8 @@ void DynamicStandOut::exec()
             case 9: value = stat.percentile(90); break;
             case 10: value = stat.percentile(95); break;
             case 11: value = stat.standardDev(); break;
+            case 12: value = stat.percentile(80); break;
+            case 13: value = stat.percentile(85); break;
 
             default: value = 0.; break;
             }
@@ -289,6 +306,9 @@ void DynamicStandOut::extractByResourceUnit(const bool by_species)
                 case 9: value = stat.percentile(90); break;
                 case 10: value = stat.percentile(95); break;
                 case 11: value = stat.standardDev(); break;
+                case 12: value = stat.percentile(80); break;
+                case 13: value = stat.percentile(85); break;
+
 
                 default: value = 0.; break;
                 }

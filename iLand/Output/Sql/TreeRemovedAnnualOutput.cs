@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿// C++/output/{ treeout.h, treeout.cpp }
+using iLand.Input.ProjectFile;
 using iLand.Simulation;
 using iLand.Tool;
 using iLand.Tree;
@@ -34,8 +35,9 @@ namespace iLand.Output.Sql
             this.Columns.Add(new("dbh", "Tree's DBH (cm) of the tree", SqliteType.Real));
             this.Columns.Add(new("height", "Tree's height (m) of the tree", SqliteType.Real));
             this.Columns.Add(new("basalArea", "Tree's basal area, m².", SqliteType.Real));
-            this.Columns.Add(new("volumeM3", "Tree's stem volume, m³.", SqliteType.Real));
-            this.Columns.Add(new("leafAreaM2", "Tree's leaf area of the tree, m².", SqliteType.Real));
+            this.Columns.Add(new("volume_m3", "Tree's stem volume, m³.", SqliteType.Real));
+            this.Columns.Add(new("age", "tree age (yrs)", SqliteType.Integer));
+            this.Columns.Add(new("leafArea_m2", "Tree's leaf area of the tree, m².", SqliteType.Real));
             this.Columns.Add(new("foliageMass", "Foliage biomass, kg", SqliteType.Real));
             this.Columns.Add(new("woodyMass", "Woody biomass, kg.", SqliteType.Real));
             this.Columns.Add(new("fineRootMass", "Fine root biomass, kg", SqliteType.Real));
@@ -44,6 +46,7 @@ namespace iLand.Output.Sql
             this.Columns.Add(new("lightResponse", "Light response value (including species specific response to the light level)", SqliteType.Real));
             this.Columns.Add(new("stressIndex", "Tree's stress level, 0..1 (see [Mortality]).", SqliteType.Real));
             this.Columns.Add(new("reserve_kg", "NPP currently available in the tree's reserve pool, kg biomass.", SqliteType.Real));
+            this.Columns.Add(new("treeFlags", "Tree's individual bit flags (see iLand.Tree.TreeFlags).", SqliteType.Integer));
         }
 
         public bool TryAddTree(Model model, TreeListSpatial trees, int treeIndex, MortalityCause reason)
@@ -96,15 +99,17 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[8].Value = treesOfSpecies.HeightInM[treeIndex];
                     insertRow.Parameters[9].Value = treesOfSpecies.GetBasalArea(treeIndex);
                     insertRow.Parameters[10].Value = treesOfSpecies.GetStemVolume(treeIndex);
-                    insertRow.Parameters[11].Value = treesOfSpecies.LeafAreaInM2[treeIndex];
-                    insertRow.Parameters[12].Value = treesOfSpecies.FoliageMassInKg[treeIndex];
-                    insertRow.Parameters[13].Value = treesOfSpecies.StemMassInKg[treeIndex];
-                    insertRow.Parameters[14].Value = treesOfSpecies.FineRootMassInKg[treeIndex];
-                    insertRow.Parameters[15].Value = treesOfSpecies.CoarseRootMassInKg[treeIndex];
-                    insertRow.Parameters[16].Value = treesOfSpecies.LightResourceIndex[treeIndex];
-                    insertRow.Parameters[17].Value = treesOfSpecies.LightResponse[treeIndex];
-                    insertRow.Parameters[18].Value = treesOfSpecies.StressIndex[treeIndex];
-                    insertRow.Parameters[19].Value = treesOfSpecies.NppReserveInKg[treeIndex];
+                    insertRow.Parameters[11].Value = treesOfSpecies.AgeInYears[treeIndex];
+                    insertRow.Parameters[12].Value = treesOfSpecies.LeafAreaInM2[treeIndex];
+                    insertRow.Parameters[13].Value = treesOfSpecies.FoliageMassInKg[treeIndex];
+                    insertRow.Parameters[14].Value = treesOfSpecies.StemMassInKg[treeIndex];
+                    insertRow.Parameters[15].Value = treesOfSpecies.FineRootMassInKg[treeIndex];
+                    insertRow.Parameters[16].Value = treesOfSpecies.CoarseRootMassInKg[treeIndex];
+                    insertRow.Parameters[17].Value = treesOfSpecies.LightResourceIndex[treeIndex];
+                    insertRow.Parameters[18].Value = treesOfSpecies.LightResponse[treeIndex];
+                    insertRow.Parameters[19].Value = treesOfSpecies.StressIndex[treeIndex];
+                    insertRow.Parameters[20].Value = treesOfSpecies.NppReserveInKg[treeIndex];
+                    insertRow.Parameters[21].Value = treesOfSpecies.Flags[treeIndex];
                     insertRow.ExecuteNonQuery();
                 }
             }

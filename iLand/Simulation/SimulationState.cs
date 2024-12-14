@@ -9,6 +9,7 @@ namespace iLand.Simulation
         public int CurrentCalendarYear { get; set; }
         public ConcurrentQueue<DominantHeightBuffer> DominantHeightBuffers { get; private init; }
         public ConcurrentQueue<LightBuffer> LightBuffers { get; private init; }
+        public int InitialCalendarYear { get; private init; }
         public ParallelOptions ParallelComputeOptions { get; private init; }
         public bool TraceAutoFlushValueToRestore { get; init; }
         public TraceListener? TraceListener { get; init; }
@@ -19,7 +20,15 @@ namespace iLand.Simulation
             this.CurrentCalendarYear = initialCalendarYear;
             this.DominantHeightBuffers = new();
             this.LightBuffers = new();
+            this.InitialCalendarYear = initialCalendarYear;
             this.ParallelComputeOptions = parallelOptions;
+            this.TraceAutoFlushValueToRestore = false;
+            this.TraceListener = null;
+        }
+
+        public bool IsFirstSimulationYear()
+        {
+            return this.CurrentCalendarYear == this.InitialCalendarYear;
         }
     }
 }

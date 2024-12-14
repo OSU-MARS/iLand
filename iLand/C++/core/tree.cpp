@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -29,15 +29,17 @@
 
 #include "forestmanagementengine.h"
 #include "modules.h"
+#include "biteengine.h"
 
 #include "treeout.h"
 #include "landscapeout.h"
 
 // static varaibles
-FloatGrid *Tree::mGrid = 0;
-HeightGrid *Tree::mHeightGrid = 0;
-TreeRemovedOut *Tree::mRemovalOutput = 0;
-LandscapeRemovedOut *Tree::mLSRemovalOutput = 0;
+FloatGrid *Tree::mGrid = nullptr;
+HeightGrid *Tree::mHeightGrid = nullptr;
+TreeRemovedOut *Tree::mRemovalOutput = nullptr;
+LandscapeRemovedOut *Tree::mLSRemovalOutput = nullptr;
+Saplings *Tree::saps = nullptr;
 int Tree::m_statPrint=0;
 int Tree::m_statAboveZ=0;
 int Tree::m_statCreated=0;
@@ -73,29 +75,33 @@ double dist_and_direction(const QPointF &PStart, const QPointF &PEnd, double &rA
 
 
 // lifecycle
+static QMutex _protectTreeId;
 Tree::Tree()
 {
     mDbh = mHeight = 0;
-    mRU = 0; mSpecies = 0;
+    mRU = nullptr; mSpecies = nullptr;
     mFlags = mAge = 0;
-    mOpacity=mFoliageMass=mWoodyMass=mCoarseRootMass=mFineRootMass=mLeafArea=0.;
+    mOpacity=mFoliageMass=mStemMass=mCoarseRootMass=mFineRootMass=mBranchMass=mLeafArea=0.;
     mDbhDelta=mNPPReserve=mLRI=mStressIndex=0.;
     mLightResponse = 0.;
-    mStamp=0;
-    mId = m_nextId++;
+    mStamp = nullptr;
+
     m_statCreated++;
+    saps = GlobalSettings::instance()->model()->saplings(); // save link to saplings to static variable
+
+    QMutexLocker lock(&_protectTreeId); // make sure tree Ids are unique
+    mId = m_nextId++;
+
 }
 
 float Tree::crownRadius() const
 {
-    Q_ASSERT(mStamp!=0);
+    Q_ASSERT(mStamp!=nullptr);
+    if (!mStamp) return 0.f;
     return mStamp->crownRadius();
 }
 
-float Tree::biomassBranch() const
-{
-    return static_cast<float>( mSpecies->biomassBranch(mDbh) );
-}
+
 
 void Tree::setGrid(FloatGrid* gridToStamp, Grid<HeightGridValue> *dominanceGrid)
 {
@@ -121,7 +127,7 @@ QString Tree::dump()
 void Tree::dumpList(DebugList &rTargetList)
 {
     rTargetList << mId << species()->id() << mDbh << mHeight  << position().x() << position().y()   << mRU->index() << mLRI
-                << mWoodyMass << mCoarseRootMass << mFoliageMass << mLeafArea;
+                << mStemMass << mCoarseRootMass << mFoliageMass << mLeafArea;
 }
 
 void Tree::setup()
@@ -139,7 +145,8 @@ void Tree::setup()
     mFoliageMass = static_cast<float>( species()->biomassFoliage(mDbh) );
     mCoarseRootMass = static_cast<float>( species()->biomassRoot(mDbh) ); // coarse root (allometry)
     mFineRootMass = static_cast<float>( mFoliageMass * species()->finerootFoliageRatio() ); //  fine root (size defined  by finerootFoliageRatio)
-    mWoodyMass = static_cast<float>( species()->biomassWoody(mDbh) );
+    mStemMass = static_cast<float>( species()->biomassStem(mDbh) );
+    mBranchMass = static_cast<float>( species()->biomassBranch(mDbh) );
 
     // LeafArea[m2] = LeafMass[kg] * specificLeafArea[m2/kg]
     mLeafArea = static_cast<float>( mFoliageMass * species()->specificLeafArea() );
@@ -280,9 +287,17 @@ void Tree::heightGrid()
     QPoint p = QPoint(mPositionIndex.x()/cPxPerHeight, mPositionIndex.y()/cPxPerHeight); // pos of tree on height grid
 
     // count trees that are on height-grid cells (used for stockable area)
-    mHeightGrid->valueAtIndex(p).increaseCount();
-    if (mHeight > mHeightGrid->valueAtIndex(p).height)
-        mHeightGrid->valueAtIndex(p).height=mHeight;
+    HeightGridValue &hgv = mHeightGrid->valueAtIndex(p);
+    hgv.increaseCount();
+    if (mHeight > hgv.height) {
+        hgv.height=mHeight;
+    }
+    if (mHeight > hgv.stemHeight())
+        hgv.setStemHeight(mHeight);
+
+    // if the crown of a tree continues to a neighboring 10m height grid cell, then
+    // the neighboring cell is updated too; therefore the value of the height grid can be *higher* than the
+    // highest tree on the 10m cell!
 
     int r = mStamp->reader()->offset(); // distance between edge and the center pixel. e.g.: if r = 2 -> stamp=5x5
     int index_eastwest = mPositionIndex.x() % cPxPerHeight; // 4: very west, 0 east edge
@@ -365,6 +380,9 @@ void Tree::heightGrid_torus()
                                                    torusIndex(p.y(),10,bufferOffset,ru_offset.y()));
     v.increaseCount();
     v.height = qMax(v.height, mHeight);
+    if (mHeight > v.stemHeight())
+        v.setStemHeight(mHeight);
+
 
 
     int r = mStamp->reader()->offset(); // distance between edge and the center pixel. e.g.: if r = 2 -> stamp=5x5
@@ -441,7 +459,7 @@ void Tree::heightGrid_torus()
     The LIF field is scanned within the crown area of the focal tree, and the influence of
     the focal tree is "subtracted" from the LIF values.
     Finally, the "LRI correction" is applied.
-    see http://iland.boku.ac.at/competition+for+light for details.
+    see https://iland-model.org/competition+for+light for details.
   */
 void Tree::readLIF()
 {
@@ -554,13 +572,8 @@ void Tree::readLIF_torus()
             own_value = qMax(own_value, 0.02);
             value =  *grid_value++ / own_value; // remove impact of focal tree
 
-            // debug for one tree in HJA
-            //if (id()==178020)
-            //    qDebug() << x << y << xt << yt << *grid_value << local_dom << own_value << value << (*reader)(x,y);
-            //if (_isnan(value))
-            //    qDebug() << "isnan" << id();
             if (value * (*reader)(x,y)>1.)
-                qDebug() << "LIFTorus: value>1.";
+                qDebug() << "LIFTorus: value>1: " << value * (*reader)(x,y) << " Tree: " << species()->id() << ", dbh: " << dbh();
             sum += value * (*reader)(x,y);
 
             //} // isIndexValid
@@ -608,7 +621,7 @@ void Tree::mortalityParams(double dbh_inc_threshold, int stress_years, double st
 void Tree::calcLightResponse()
 {
     // calculate a light response from lri:
-    // http://iland.boku.ac.at/individual+tree+light+availability
+    // https://iland-model.org/individual+tree+light+availability
     double lri = limit(mLRI * mRU->LRImodifier(), 0., 1.); // Eq. (3)
     mLightResponse = static_cast<float>( mSpecies->lightResponse(lri) ); // Eq. (4)
     mRU->addLR(mLeafArea, mLightResponse);
@@ -621,9 +634,9 @@ void Tree::calcLightResponse()
 
 /** grow() is the main function of the yearly tree growth.
   The main steps are:
-  - Production of GPP/NPP   @sa http://iland.boku.ac.at/primary+production http://iland.boku.ac.at/individual+tree+light+availability
-  - Partitioning of NPP to biomass compartments of the tree @sa http://iland.boku.ac.at/allocation
-  - Growth of the stem http://iland.boku.ac.at/stem+growth (???)
+  - Production of GPP/NPP   @sa https://iland-model.org/primary+production https://iland-model.org/individual+tree+light+availability
+  - Partitioning of NPP to biomass compartments of the tree @sa https://iland-model.org/allocation
+  - Growth of the stem https://iland-model.org/stem+growth (???)
   Further activties: * the age of the tree is increased
                      * the mortality sub routine is executed
                      * seeds are produced */
@@ -631,6 +644,13 @@ void Tree::grow()
 {
     TreeGrowthData d;
     mAge++; // increase age
+
+//    if (mId==m_statAboveZ)
+//        qDebug() << "debug id hit!";
+
+    if (mFoliageMass>1000.)
+        qDebug() << "high foliage mass (>1000kg):" << mSpecies->id() << ", dbh:" << mDbh;
+
     // step 1: get "interception area" of the tree individual [m2]
     // the sum of all area of all trees of a unit equal the total stocked area * interception_factor(Beer-Lambert)
     double effective_area = mRU->interceptedArea(mLeafArea, mLightResponse);
@@ -655,8 +675,7 @@ void Tree::grow()
         }
     //); // DBGMODE()
     if (Globals->model()->settings().growthEnabled) {
-        if (d.NPP>0.)
-            partitioning(d); // split npp to compartments and grow (diameter, height)
+            partitioning(d); // split npp to compartments and grow (diameter, height), but also calculate stress index of the tree.
     }
 
     // mortality
@@ -668,20 +687,25 @@ void Tree::grow()
     if (Model::settings().mortalityEnabled)
         mortality(d);
 
-    mStressIndex = d.stress_index;
+    mStressIndex = static_cast<float>(d.stress_index);
 #endif
 
-    if (!isDead())
+    if (!isDead()) {
         mRU->resourceUnitSpecies(species()).statistics().add(this, &d);
-
-    // regeneration
-    mSpecies->seedProduction(this);
+        // regeneration
+        mSpecies->seedProduction(this);
+        if (saps)
+            saps->addSprout(this, false); // check for random sprouts
+    } else {
+        // we include the NPP of trees that died in the current year (closed carbon balance)
+        mRU->resourceUnitSpecies(species()).statistics().addNPP(&d);
+    }
 
 }
 
 /** partitioning of this years assimilates (NPP) to biomass compartments.
   Conceptionally, the algorithm is based on Duursma, 2007.
-  @sa http://iland.boku.ac.at/allocation */
+  @sa https://iland-model.org/allocation */
 inline void Tree::partitioning(TreeGrowthData &d)
 {
     double npp = d.NPP;
@@ -699,17 +723,33 @@ inline void Tree::partitioning(TreeGrowthData &d)
     // the turnover rate of wood depends on the size of the reserve pool:
 
 
-    double to_wood = refill_reserve / (mWoodyMass + refill_reserve);
+    double to_wood = refill_reserve / (mStemMass+mBranchMass + refill_reserve);
 
     apct_root = rus.prod3PG().rootFraction();
     d.NPP_above = d.NPP * (1. - apct_root); // aboveground: total NPP - fraction to roots
-    double b_wf = species()->allometricRatio_wf(); // ratio of allometric exponents (b_woody / b_foliage)
 
-    // Duursma 2007, Eq. (20)
-    apct_wood = (foliage_mass_allo*to_wood/npp + b_wf*(1.-apct_root) - b_wf*foliage_mass_allo*to_fol/npp) / ( foliage_mass_allo/mWoodyMass + b_wf );
+    // Calculate the share of NPP that goes to wood (stem + branches).
+    // This is based on Duursma 2007 (Eq. 20), but modified to include both stem and branch pools.
+    // see "branches_in_allocation.Rmd"
 
+    // eta_w <- (Wf*bf*gamma_w*(Ws+Wb) - (Ws*bs+Wb*bb)*(Wf*gamma_f - NPP*(1-eta_r)) ) / (NPP*(Wf*bf+Ws*bs+Wb*bb))
+    double bs = species()->allometricExponentStem();
+    double bb = species()->allometricExponentBranch();
+    double bf = species()->allometricExponentFoliage();
+    double Ws = mStemMass;
+    double Wb = mBranchMass;
+
+    apct_wood = (foliage_mass_allo*bf*to_wood*(Ws+Wb) - (Ws*bs + Wb*bb)*(foliage_mass_allo*to_fol - npp*(1.-apct_root))) / (npp*(foliage_mass_allo*bf+Ws*bs+Wb*bb));
     apct_wood = limit(apct_wood, 0., 1.-apct_root);
 
+    /* Original code (<201803):
+    // Duursma 2007, Eq. (20)
+    double b_wf = species()->allometricRatio_wf(); // ratio of allometric exponents (b_woody / b_foliage)
+    apct_wood = (foliage_mass_allo*to_wood/npp + b_wf*(1.-apct_root) - b_wf*foliage_mass_allo*to_fol/npp) / ( foliage_mass_allo/mStemMass + b_wf );
+    apct_wood = limit(apct_wood, 0., 1.-apct_root);
+     */
+
+    // transfer to foliage is the rest:
     apct_foliage = 1. - apct_root - apct_wood;
 
 
@@ -723,35 +763,44 @@ inline void Tree::partitioning(TreeGrowthData &d)
     // Change of biomass compartments
     double sen_root = mFineRootMass * to_root;
     double sen_foliage = mFoliageMass * to_fol;
+    // track the biomass that leaves the tree
+    double mass_lost = sen_root + sen_foliage;
     if (ru()->snag())
         ru()->snag()->addTurnoverLitter(this->species(), sen_foliage, sen_root);
 
     // Roots
-    // http://iland.boku.ac.at/allocation#belowground_NPP
-    mFineRootMass -= sen_root; // reduce only fine root pool
+    // https://iland-model.org/allocation#belowground_NPP
+    mFineRootMass -= static_cast<float>(sen_root); // reduce only fine root pool
     double delta_root = apct_root * npp;
     // 1st, refill the fine root pool
-    double fineroot_miss = mFoliageMass * mSpecies->finerootFoliageRatio() - mFineRootMass;
+    // for very small amounts of foliage biomass (e.g. defoliation), use the newly distributed foliage (apct_foliage*npp-sen_foliage)
+    double fineroot_miss = qMax(mFoliageMass * mSpecies->finerootFoliageRatio(), apct_foliage * npp - sen_foliage) - mFineRootMass;
     if (fineroot_miss>0.){
         double delta_fineroot = qMin(fineroot_miss, delta_root);
-        mFineRootMass += delta_fineroot;
+        mFineRootMass += static_cast<float>(delta_fineroot);
         delta_root -= delta_fineroot;
     }
+    double net_root_inc = mFineRootMass - sen_root;
     // 2nd, the rest of NPP allocated to roots go to coarse roots
-    double max_coarse_root = species()->biomassRoot(mDbh);
-    mCoarseRootMass += delta_root;
+    double max_coarse_root = species()->biomassRoot(mDbh) * 1.2; // allometry plus 20% is to upper bound
+    double old_coarse_root = mCoarseRootMass;
+    mCoarseRootMass += static_cast<float>(delta_root);
+
     if (mCoarseRootMass > max_coarse_root) {
         // if the coarse root pool exceeds the value given by the allometry, then the
         // surplus is accounted as turnover
+        double surplus = mCoarseRootMass-max_coarse_root;
+        mass_lost += surplus;
         if (ru()->snag())
-            ru()->snag()->addTurnoverWood(species(), mCoarseRootMass-max_coarse_root);
+            ru()->snag()->addTurnoverWood(species(), surplus);
 
         mCoarseRootMass = static_cast<float>( max_coarse_root );
     }
+    net_root_inc += mCoarseRootMass - old_coarse_root;
 
     // Foliage
     double delta_foliage = apct_foliage * npp - sen_foliage;
-    mFoliageMass += delta_foliage;
+    mFoliageMass += static_cast<float>(delta_foliage);
     if (isnan(mFoliageMass))
         qDebug() << "foliage mass invalid!";
     if (mFoliageMass<0.) mFoliageMass=0.; // limit to zero
@@ -764,10 +813,13 @@ inline void Tree::partitioning(TreeGrowthData &d)
     d.stress_index =qMax(1. - (npp) / ( to_fol*foliage_mass_allo + to_root*foliage_mass_allo*species()->finerootFoliageRatio() + reserve_size), 0.);
 
     // Woody compartments
-    // see also: http://iland.boku.ac.at/allocation#reserve_and_allocation_to_stem_growth
+    // see also: https://iland-model.org/allocation#reserve_and_allocation_to_stem_growth
     // (1) transfer to reserve pool
     double gross_woody = apct_wood * npp;
-    double to_reserve = qMin(reserve_size, gross_woody);
+    double to_reserve = qMax(qMin(reserve_size, gross_woody), 0.);
+    // the 'reserve' is part of the stem (and is part of the stem biomass in stand outputs),
+    // and is added to the stem biomass there (biomassStem()).
+
     mNPPReserve = static_cast<float>( to_reserve );
     double net_woody = gross_woody - to_reserve;
     double net_stem = 0.;
@@ -776,25 +828,45 @@ inline void Tree::partitioning(TreeGrowthData &d)
 
     if (net_woody > 0.) {
         // (2) calculate part of increment that is dedicated to the stem (which is a function of diameter)
+
         net_stem = net_woody * species()->allometricFractionStem(mDbh);
+        double net_branches = net_woody - net_stem;
         d.NPP_stem = net_stem;
-        mWoodyMass += net_woody;
+        mStemMass += static_cast<float>(net_stem);
+        mBranchMass += static_cast<float>(net_branches);
+
         //  (3) growth of diameter and height baseed on net stem increment
         grow_diameter(d);
+
+        // finalize branch pool
+        float max_branch = static_cast<float>( species()->biomassBranch(mDbh) ) * 1.2f; // limit is 20% above the allometry (*new* dbh)
+        if (mBranchMass > max_branch) {
+            float surplus = mBranchMass - max_branch;
+            mass_lost+=surplus;
+            if (ru()->snag())
+                ru()->snag()->addTurnoverWood(species(), surplus);
+            mBranchMass = max_branch;
+        }
     }
+
+    if (mStemMass < 0) {
+        qDebug() << "do somethin!";
+    }
+    mStemMass = qMax(mStemMass, 0.f); // make sure that we don't have negative values.
+
 
     //DBGMODE(
      if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dTreePartition)
-         && isDebugging() ) {
+         /*&& isDebugging()*/ ) {
             DebugList &out = GlobalSettings::instance()->debugList(mId, GlobalSettings::dTreePartition);
             dumpList(out); // add tree headers
-            out << npp << apct_foliage << apct_wood << apct_root
-                    << delta_foliage << net_woody << delta_root << mNPPReserve << net_stem << d.stress_index;
+            out << mFineRootMass << biomassBranch() << d.NPP << apct_foliage << apct_wood << apct_root
+                    << delta_foliage << net_woody << net_root_inc << mass_lost << mNPPReserve << net_stem << d.stress_index;
      }
 
     //); // DBGMODE()
     DBGMODE(
-      if (mWoodyMass<0. || mWoodyMass>50000 || mFoliageMass<0. || mFoliageMass>2000. || mCoarseRootMass<0. || mCoarseRootMass>30000
+      if (mStemMass<0. || mStemMass>50000 || mFoliageMass<0. || mFoliageMass>2000. || mCoarseRootMass<0. || mCoarseRootMass>30000
          || mNPPReserve>4000.) {
          qDebug() << "Tree:partitioning: invalid or unlikely pools.";
          qDebug() << GlobalSettings::instance()->debugListCaptions(GlobalSettings::DebugOutputs(0));
@@ -811,7 +883,7 @@ inline void Tree::partitioning(TreeGrowthData &d)
 
 
 /** Determination of diamter and height growth based on increment of the stem mass (@p net_stem_npp).
-    Refer to XXX for equations and variables.
+    Refer to https://iland-model.org/stem+growth for equations and variables.
     This function updates the dbh and height of the tree.
     The equations are based on dbh in meters! */
 inline void Tree::grow_diameter(TreeGrowthData &d)
@@ -840,7 +912,7 @@ inline void Tree::grow_diameter(TreeGrowthData &d)
     double res_final  = 0.;
     if (fabs(stem_residual) > std::min(1.,stem_mass)) {
 
-        // calculate final residual in stem
+        // calculate final residual in stem (using the deduced d_increment)
         res_final = mass_factor * (d_m + d_increment)*(d_m + d_increment)*(mHeight + d_increment*hd_growth)-((stem_mass + net_stem_npp));
         if (fabs(res_final)>std::min(1.,stem_mass)) {
             // for large errors in stem biomass due to errors in diameter increment (> 1kg or >stem mass), we solve the increment iteratively.
@@ -869,7 +941,7 @@ inline void Tree::grow_diameter(TreeGrowthData &d)
     }
 
     if (d_increment<0.f)
-        qDebug() << "Tree::grow_diameter: d_inc < 0.";
+        qDebug() << "Tree::grow_diameter: d_inc < 0.: " << d_increment << " Tree: " << species()->id() << ", dbh: " << dbh();
     DBG_IF_X(d_increment<0. || d_increment>0.1, "Tree::grow_dimater", "increment out of range.", dump()
              + QString("\nhdz %1 factor_diameter %2 stem_residual %3 delta_d_estimate %4 d_increment %5 final residual(kg) %6")
                .arg(hd_growth).arg(factor_diameter).arg(stem_residual).arg(delta_d_estimate).arg(d_increment)
@@ -880,7 +952,7 @@ inline void Tree::grow_diameter(TreeGrowthData &d)
         DBG_IF_X( (res_final==0.?fabs(mass_factor * (d_m + d_increment)*(d_m + d_increment)*(mHeight + d_increment*hd_growth)-((stem_mass + net_stem_npp))):res_final) > 1, "Tree::grow_diameter", "final residual stem estimate > 1kg", dump());
         DBG_IF_X(d_increment > 10. || d_increment*hd_growth >10., "Tree::grow_diameter", "growth out of bound:",QString("d-increment %1 h-increment %2 ").arg(d_increment).arg(d_increment*hd_growth/100.) + dump());
 
-        if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dTreeGrowth) && isDebugging() ) {
+        if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dTreeGrowth) /*&& isDebugging()*/ ) {
             DebugList &out = GlobalSettings::instance()->debugList(mId, GlobalSettings::dTreeGrowth);
             dumpList(out); // add tree headers
             out << net_stem_npp << stem_mass << hd_growth << factor_diameter << delta_d_estimate*100 << d_increment*100;
@@ -911,13 +983,14 @@ inline double Tree::relative_height_growth()
     mSpecies->hdRange(mDbh, hd_low, hd_high);
 
     DBG_IF_X(hd_low>hd_high, "Tree::relative_height_growth", "hd low higher dann hd_high for ", dump());
-    DBG_IF_X(hd_low < 10 || hd_high>250, "Tree::relative_height_growth", "hd out of range ", dump() + QString(" hd-low: %1 hd-high: %2").arg(hd_low).arg(hd_high));
+    DBG_IF_X(hd_low < 5 || hd_high>250, "Tree::relative_height_growth", "hd out of range ", dump() + QString(" hd-low: %1 hd-high: %2").arg(hd_low).arg(hd_high));
 
     // scale according to LRI: if receiving much light (LRI=1), the result is hd_low (for open grown trees)
     // use the corrected LRI (see tracker#11)
     double lri = limit(mLRI * mRU->LRImodifier(),0.,1.);
-    double hd_ratio = hd_high - (hd_high-hd_low)*lri;
-    return hd_ratio;
+    double hd_ratio = hd_high - (hd_high-hd_low)*lri; // hd_high - lri*hd_high + lri*hd_low=(1-lri)*hd_high + lri*hdlow
+    // avoid negative HD ratio of increment
+    return std::max(hd_ratio, 0.);
 }
 
 /** This function is called if a tree dies.
@@ -940,14 +1013,14 @@ void Tree::remove(double removeFoliage, double removeBranch, double removeStem )
     setIsHarvested();
     mRU->treeDied();
     ResourceUnitSpecies &rus = mRU->resourceUnitSpecies(species());
-    rus.statisticsMgmt().add(this, 0);
+    rus.statisticsMgmt().add(this, nullptr);
     if (isCutdown())
         notifyTreeRemoved(TreeCutDown);
     else
         notifyTreeRemoved(TreeHarvest);
 
-    if (GlobalSettings::instance()->model()->saplings())
-        GlobalSettings::instance()->model()->saplings()->addSprout(this);
+    if (saps)
+        saps->addSprout(this, true);
 
     if (ru()->snag())
         ru()->snag()->addHarvest(this, removeStem, removeBranch, removeFoliage);
@@ -955,16 +1028,20 @@ void Tree::remove(double removeFoliage, double removeBranch, double removeStem )
 
 /// remove the tree due to an special event (disturbance)
 /// this is +- the same as die().
-void Tree::removeDisturbance(const double stem_to_soil_fraction, const double stem_to_snag_fraction, const double branch_to_soil_fraction, const double branch_to_snag_fraction, const double foliage_to_soil_fraction)
+void Tree::removeDisturbance(const double stem_to_soil_fraction,
+                             const double stem_to_snag_fraction,
+                             const double branch_to_soil_fraction,
+                             const double branch_to_snag_fraction,
+                             const double foliage_to_soil_fraction)
 {
     setFlag(Tree::TreeDead, true); // set flag that tree is dead
     mRU->treeDied();
     ResourceUnitSpecies &rus = mRU->resourceUnitSpecies(species());
-    rus.statisticsDead().add(this, 0);
+    rus.statisticsDead().add(this, nullptr);
     notifyTreeRemoved(TreeDisturbance);
 
-    if (GlobalSettings::instance()->model()->saplings())
-        GlobalSettings::instance()->model()->saplings()->addSprout(this);
+    if (saps)
+        saps->addSprout(this, true);
 
     if (ru()->snag()) {
         if (isHarvested()) { // if the tree is harvested, do the same as in normal tree harvest (but with default values)
@@ -978,23 +1055,45 @@ void Tree::removeDisturbance(const double stem_to_soil_fraction, const double st
 /// remove a part of the biomass of the tree, e.g. due to fire.
 void Tree::removeBiomassOfTree(const double removeFoliageFraction, const double removeBranchFraction, const double removeStemFraction)
 {
-    mFoliageMass *= 1. - removeFoliageFraction;
-    mWoodyMass *= (1. - removeStemFraction);
-    // we have a problem with the branches: this currently cannot be done properly!
-    (void) removeBranchFraction; // silence warning
+    mFoliageMass *= static_cast<float>(1. - removeFoliageFraction);
+    mStemMass *= static_cast<float>(1. - removeStemFraction);
+    mBranchMass *= static_cast<float>(1. - removeBranchFraction);
+    if (removeFoliageFraction>0.) {
+        // update related leaf area
+        mLeafArea = static_cast<float>( mFoliageMass * species()->specificLeafArea() ); // update leaf area
+        mOpacity = static_cast<float>( 1. - exp(-Model::settings().lightExtinctionCoefficientOpacity * mLeafArea / mStamp->crownArea()) );
+        //if (removeFoliageFraction==1.)
+        //    m_statAboveZ = mId; // temp
+    }
+}
+
+void Tree::removeRootBiomass(const double removeFineRootFraction, const double removeCoarseRootFraction)
+{
+    float remove_fine_roots = mFineRootMass * static_cast<float>(removeFineRootFraction);
+    float remove_coarse_roots = mCoarseRootMass * static_cast<float>(removeCoarseRootFraction);
+    mFineRootMass -= remove_fine_roots;
+    mCoarseRootMass -= remove_coarse_roots;
+    // remove also the same amount as the fine root removal from the reserve pool
+    mNPPReserve = qMax(mNPPReserve - remove_fine_roots, 0.f);
+    if (ru()->snag())
+        ru()->snag()->addTurnoverWood(species(), remove_fine_roots + remove_coarse_roots);
+
+
 }
 
 void Tree::setHeight(const float height)
 {
-    if (height<=0. || height>150.)
+    if (height<=0.f || height>150.f)
         qWarning() << "trying to set tree height to invalid value:" << height << " for tree on RU:" << (mRU?mRU->boundingBox():QRect());
     mHeight=height;
 }
 
 void Tree::mortality(TreeGrowthData &d)
 {
-    // death if leaf area is 0
-    if (mFoliageMass<0.00001)
+    // death if leaf area is 0 or if stem biomass is 0
+    if (mFoliageMass<0.00001f)
+        die();
+    if (mStemMass == 0.f)
         die();
 
     double p_death,  p_stress, p_intrinsic;
@@ -1039,6 +1138,10 @@ void Tree::notifyTreeRemoved(TreeRemovalType reason)
     ABE::ForestManagementEngine *abe = GlobalSettings::instance()->model()->ABEngine();
     if (abe)
         abe->notifyTreeRemoval(this, static_cast<int>(reason));
+
+    BITE::BiteEngine *bite = GlobalSettings::instance()->model()->biteEngine();
+    if (bite)
+        bite->notifyTreeRemoval(this, static_cast<int>(reason));
 
     // tell disturbance modules that a tree died
     GlobalSettings::instance()->model()->modules()->treeDeath(this, static_cast<int>(reason) );

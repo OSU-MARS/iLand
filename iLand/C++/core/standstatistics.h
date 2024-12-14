@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -33,10 +33,13 @@ public:
     void add(const StandStatistics &stat); ///< add aggregates of @p stat to own aggregates
     void addAreaWeighted(const StandStatistics &stat, const double weight); ///< add aggregates of @p stat to this aggregate and scale using the weight (e.g. stockable area)
     void add(const Tree *tree, const TreeGrowthData *tgd); ///< call for each tree within the domain
+    void addNPP(const TreeGrowthData *tgd); ///< add only the NPP
+
     void add(const SaplingStat *sapling); ///< call for regeneration layer of a species in resource unit
     void clear(); ///< call before trees are aggregated
     void clearOnlyTrees(); ///< clear the statistics only for tree biomass (keep NPP, regen, ...)
     void calculate(); ///< call after all trees are processed (postprocessing)
+    void calculateAreaWeighted(); ///< call after a series of addAreaWeighted
     // getters
     double count() const { return mCount; }
     double dbh_avg() const { return mAverageDbh; } ///< average dbh (cm)
@@ -44,13 +47,15 @@ public:
     double volume() const { return mSumVolume; } ///< sum of tree volume (m3/ha)
     double gwl() const { return mGWL;} ///< total increment (m3/ha)
     double basalArea() const { return mSumBasalArea; } ///< sum of basal area of all trees (m2/ha)
-    double leafAreaIndex() const { return mLeafAreaIndex; } ///< [m2/m2]/ha stocked area.
+    double leafAreaIndex() const { return mLeafAreaIndex; } ///< [m2/m2]/ha stocked area (trees > 4m)
+    double leafAreaIndexSaplings() const { return mLAISaplings; } ///< m2/m2 LAI of sapling layer
     double npp() const { return mNPP; } ///< sum. of NPP (kg Biomass increment, above+belowground, trees >4m)/ha
     double nppAbove() const { return mNPPabove; } ///< above ground NPP (kg Biomass increment)/ha
     double nppSaplings() const { return mNPPsaplings; } ///< carbon gain of saplings (kg Biomass increment)/ha
-    int cohortCount() const { return mCohortCount; } ///< number of cohorts of saplings / ha
-    int saplingCount() const { return mSaplingCount; } ///< number individuals in regeneration layer (represented by "cohortCount" cohorts) N/ha
+    int cohortCount() const { return static_cast<int>(mCohortCount); } ///< number of cohorts of saplings / ha
+    int saplingCount() const { return static_cast<int>(mSaplingCount); } ///< number individuals in regeneration layer (represented by "cohortCount" cohorts) > 1.3m N/ha
     double saplingAge() const { return mAverageSaplingAge; } ///< average age of sapling (currenty not weighted with represented sapling numbers...)
+    double saplingBasalArea() const { return mBasalAreaSaplings; } ///< total basal area (m2) of saplings (>1.3m)
     // carbon/nitrogen cycle
     double cStem() const { return mCStem; }
     double nStem() const { return mNStem; }
@@ -81,12 +86,14 @@ private:
     double mLeafAreaIndex;
     double mNPP;
     double mNPPabove;
-    double mNPPsaplings; // carbon gain of saplings
+    double mNPPsaplings; // carbon gain of saplings (kg Biomass)
     // regeneration layer
-    int mCohortCount; ///< number of cohrots
-    int mSaplingCount; ///< number of sapling (Reinekes Law)
+    double mCohortCount; ///< number of cohrots
+    double mSaplingCount; ///< number of sapling (Reinekes Law)
     double mSumSaplingAge;
     double mAverageSaplingAge;
+    double mLAISaplings; ///< LAI (m2/m2) of sapling layer
+    double mBasalAreaSaplings; ///< basal area (m2) in sapling layer
     // carbon and nitrogen pools
     double mCStem, mCFoliage, mCBranch, mCCoarseRoot, mCFineRoot;
     double mNStem, mNFoliage, mNBranch, mNCoarseRoot, mNFineRoot;

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -39,6 +39,7 @@ public:
     bool torusMode; ///< special mode that treats each resource unit as a "torus" (light calculation, seed distribution)
     // climate
     double temperatureTau; ///< "tau"-value for delayed temperature calculation acc. to Maekela 2008
+    bool microclimateEnabled; ///< if true, iLand calculates microclimate variables at 10m resolution
     // water
     double airDensity; // density of air [kg / m3]
     double laiThresholdForClosedStands; // for calculation of max-canopy-conductance

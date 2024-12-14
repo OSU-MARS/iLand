@@ -1,12 +1,14 @@
-﻿using iLand.World;
+﻿// C++/core/{ saplings.h, saplings.cpp }: SaplingTree
+using iLand.World;
 using System;
 
 namespace iLand.Tree
 {
     public class Sapling
     {
-        public UInt16 Age { get; set; }  // number of consecutive years the sapling suffers from dire conditions
-        public bool IsSprout { get; set; } // flags, e.g. whether sapling stems from sprouting
+        private SaplingStatus status;
+
+        public UInt16 Age { get; set; } // age of the cohort in years
         public float HeightInM { get; set; } // height of the sapling in meter
         public Int16 SpeciesIndex { get; private set; } // index of the species within the resource-unit-species container
         public byte StressYears { get; set; } // number of consecutive years that a sapling suffers from stress
@@ -18,11 +20,45 @@ namespace iLand.Tree
 
         public void Clear()
         {
+            this.status = SaplingStatus.None;
+
             this.Age = 0;
             this.HeightInM = 0.0F;
             this.IsSprout = false;
             this.SpeciesIndex = -1;
             this.StressYears = 0;
+        }
+
+        public bool IsBrowsed 
+        { 
+            get { return (this.status & SaplingStatus.Browsed) == SaplingStatus.Browsed; }
+            set 
+            {
+                if (value) 
+                {
+                    this.status |= SaplingStatus.Browsed; 
+                } 
+                else 
+                { 
+                    this.status &= ~SaplingStatus.Browsed; 
+                }
+            }
+        }
+
+        public bool IsSprout 
+        { 
+            get { return (this.status & SaplingStatus.Sprout) == SaplingStatus.Sprout; }
+            set
+            {
+                if (value)
+                {
+                    this.status |= SaplingStatus.Sprout;
+                }
+                else
+                {
+                    this.status &= ~SaplingStatus.Sprout;
+                }
+            }
         }
 
         public bool IsOccupied()

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 using System;
+using System.Data;
 
 namespace iLand.Input.Tree
 {
@@ -69,6 +70,8 @@ namespace iLand.Input.Tree
         private readonly int establishmentParametersMinFrostFree;
         private readonly int establishmentParametersFrostTolerance;
         private readonly int establishmentParametersPsiMin;
+        //private readonly int establishmentParametersSoilOrganicLayerThicknessEffect;
+        //private readonly int saplingGrowthAdultSproutProbability;
         private readonly int saplingGrowthParametersHeightGrowthPotential;
         private readonly int saplingGrowthParametersHdSapling;
         private readonly int saplingGrowthParametersStressThreshold;
@@ -144,6 +147,9 @@ namespace iLand.Input.Tree
             this.establishmentParametersMinFrostFree = reader.GetOrdinal("estFrostFreeDays");
             this.establishmentParametersFrostTolerance = reader.GetOrdinal("estFrostTolerance");
             this.establishmentParametersPsiMin = reader.GetOrdinal("estPsiMin");
+            // TODO: enable commented out lookups once species parameters are updated
+            //this.establishmentParametersSoilOrganicLayerThicknessEffect = reader.GetOrdinal("estSOLthickness");
+            //this.saplingGrowthAdultSproutProbability = reader.GetOrdinal("sapAdultSproutProbability");
             this.saplingGrowthParametersHeightGrowthPotential = reader.GetOrdinal("sapHeightGrowthPotential");
             this.saplingGrowthParametersHdSapling = reader.GetOrdinal("sapHDSapling");
             this.saplingGrowthParametersStressThreshold = reader.GetOrdinal("sapStressThreshold");
@@ -234,6 +240,10 @@ namespace iLand.Input.Tree
             return -MathF.Abs(reader.GetFloat(this.establishmentParametersPsiMin)); // force negative value
         }
 
+        //public float EstablishmentParametersSoilOrganicLayerThicknessEffect() { return reader.GetFloat(this.establishmentParametersSoilOrganicLayerThicknessEffect); }
+
+        // TODO: retrieve value once species parameters are updated
+        public float SaplingGrowthAdultSproutProbability() { return 0.0F; /* reader.GetFloat(this.saplingGrowthAdultSproutProbability); */ }
         public string SaplingGrowthParametersHeightGrowthPotential() { return reader.GetString(this.saplingGrowthParametersHeightGrowthPotential); }
         public float SaplingGrowthParametersHdSapling() { return reader.GetFloat(this.saplingGrowthParametersHdSapling); }
         public float SaplingGrowthParametersStressThreshold() { return reader.GetFloat(this.saplingGrowthParametersStressThreshold); }

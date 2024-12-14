@@ -1,5 +1,4 @@
 ﻿using iLand.World;
-using System;
 using System.Xml;
 
 namespace iLand.Input.ProjectFile
@@ -7,16 +6,16 @@ namespace iLand.Input.ProjectFile
     public class Grass : Enablable
     {
 		public GrassAlgorithm Algorithm { get; private set; }
-		public string? ContinuousRegenerationEffect { get; private set; }
-		public int ContinuousYearsToFullCover { get; private set; }
-		public string? ContinuousCover { get; private set; }
-		public string? PixelDuration { get; private set; }
-		public float PixelLifThreshold { get; private set; }
+		public string? ContinuousRegenerationEffect { get; private set; } // specific to GrassAlgorithm.ContinuousLight
+        public int ContinuousYearsToFullCover { get; private set; } // specific to GrassAlgorithm.ContinuousLight
+        public string? ContinuousCover { get; private set; } // specific to GrassAlgorithm.ContinuousLight
+        public string? PixelDuration { get; private set; } // specific to GrassAlgorithm.Pixel
+        public float PixelLifThreshold { get; private set; } // specific to GrassAlgorithm.Pixel
 
-		public Grass()
+        public Grass()
 			: base("grass")
         {
-			this.Algorithm = GrassAlgorithm.CellOnOff;
+			this.Algorithm = GrassAlgorithm.Simplified;
 			this.ContinuousRegenerationEffect = null;
 			this.ContinuousCover = null;
 			this.ContinuousYearsToFullCover = 1;
@@ -39,7 +38,8 @@ namespace iLand.Input.ProjectFile
 						this.Algorithm = grassAlgorithmAsString switch
 						{
 							"continuous" => GrassAlgorithm.ContinuousLight,
-							"pixel" => GrassAlgorithm.CellOnOff,
+                            "pixel" => GrassAlgorithm.Pixel,
+                            "simplified" => GrassAlgorithm.Simplified,
 							_ => throw new XmlException("Unknown grass algorithm type '" + grassAlgorithmAsString + "'.")
 						};
 						break;

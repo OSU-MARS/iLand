@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -48,6 +48,8 @@ void StandStatistics::clear()
     mCohortCount = mSaplingCount = 0;
     mAverageSaplingAge = 0.;
     mSumSaplingAge = 0.;
+    mLAISaplings = 0.;
+    mBasalAreaSaplings=0.;
     mCStem=0., mCFoliage=0., mCBranch=0., mCCoarseRoot=0., mCFineRoot=0.;
     mNStem=0., mNFoliage=0., mNBranch=0., mNCoarseRoot=0., mNFineRoot=0.;
     mCRegeneration=0., mNRegeneration=0.;
@@ -98,6 +100,14 @@ void StandStatistics::add(const Tree *tree, const TreeGrowthData *tgd)
     addBiomass(tree->biomassCoarseRoot(), tree->species()->cnWood(), &mCCoarseRoot, &mNCoarseRoot);
 }
 
+void StandStatistics::addNPP(const TreeGrowthData *tgd)
+{
+    // add NPP of trees that died due to mortality
+    mNPP += tgd->NPP;
+    mNPPabove += tgd->NPP_above;
+
+}
+
 // note: mRUS = 0 for aggregated statistics
 void StandStatistics::calculate()
 {
@@ -140,6 +150,22 @@ void StandStatistics::calculate()
     }
 }
 
+void StandStatistics::calculateAreaWeighted()
+{
+    // let a= area ru / total area: (see addAreaWeighted())
+    // mAverageDbh = sum( count_ha * average_dbh * a )
+    // mCount = sum( count_ha * a )
+
+    // calculate averages
+    if (mCount>0.){
+        mAverageDbh=mSumDbh / mCount;
+        mAverageHeight=mSumHeight / mCount;
+    }
+    if (mSaplingCount>0.) {
+        mAverageSaplingAge=mSumSaplingAge / mSaplingCount;
+    }
+}
+
 void StandStatistics::add(const StandStatistics &stat)
 {
     mCount+=stat.mCount;
@@ -156,6 +182,8 @@ void StandStatistics::add(const StandStatistics &stat)
     mCohortCount += stat.mCohortCount;
     mSaplingCount += stat.mSaplingCount;
     mSumSaplingAge += stat.mSumSaplingAge;
+    mLAISaplings += stat.mLAISaplings;
+    mBasalAreaSaplings += stat.mBasalAreaSaplings;
     // carbon/nitrogen pools
     mCStem += stat.mCStem; mNStem += stat.mNStem;
     mCBranch += stat.mCBranch; mNBranch += stat.mNBranch;
@@ -171,14 +199,17 @@ void StandStatistics::addAreaWeighted(const StandStatistics &stat, const double 
     // aggregates that are not scaled to hectares
     mCount+=stat.mCount * weight;
     mSumBasalArea+=stat.mSumBasalArea * weight;
-    mSumDbh+=stat.mSumDbh * weight;
-    mSumHeight+=stat.mSumHeight * weight;
+    mSumDbh+=stat.mAverageDbh * stat.mCount * weight;
+    mSumHeight+=stat.mAverageHeight * stat.mCount * weight;
+    mSumSaplingAge+=stat.mAverageSaplingAge * stat.mSaplingCount * weight;
     mSumVolume+=stat.mSumVolume * weight;
     // averages that are scaled to per hectare need to be scaled
-    mAverageDbh+=stat.mAverageDbh * weight;
-    mAverageHeight+=stat.mAverageHeight * weight;
-    mAverageSaplingAge+=stat.mAverageSaplingAge * weight;
+    //mAverageDbh+=stat.mAverageDbh * weight;
+    //mAverageHeight+=stat.mAverageHeight * weight;
+    //mAverageSaplingAge+=stat.mAverageSaplingAge * weight;
     mLeafAreaIndex += stat.mLeafAreaIndex * weight;
+    mLAISaplings += stat.mLAISaplings * weight;
+    mBasalAreaSaplings += stat.mBasalAreaSaplings * weight;
 
     mNPP += stat.mNPP * weight;
     mNPPabove += stat.mNPPabove * weight;
@@ -187,7 +218,7 @@ void StandStatistics::addAreaWeighted(const StandStatistics &stat, const double 
     // regeneration
     mCohortCount += stat.mCohortCount * weight;
     mSaplingCount += stat.mSaplingCount * weight;
-    mSumSaplingAge += stat.mSumSaplingAge * weight;
+
     // carbon/nitrogen pools
     mCStem += stat.mCStem * weight; mNStem += stat.mNStem * weight;
     mCBranch += stat.mCBranch * weight; mNBranch += stat.mNBranch * weight;
@@ -211,6 +242,9 @@ void StandStatistics::add(const SaplingStat *sapling)
     mNRegeneration += sapling->carbonLiving().N;
 
     mNPPsaplings += sapling->carbonGain().C / biomassCFraction;
+    mLAISaplings += sapling->leafAreaIndex();
+
+    mBasalAreaSaplings += sapling->basalArea();
 
 }
 

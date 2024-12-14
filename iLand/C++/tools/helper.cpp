@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,7 @@
 ********************************************************************************************/
 
 #include "helper.h"
+#include "debugtimer.h"
 #include <QtCore>
 #ifdef ILAND_GUI
 #if QT_VERSION < 0x050000
@@ -40,16 +41,10 @@ Helper::Helper()
 {
 }
 
-QString Helper::currentRevision()
-{
-    //QString cur_revision="$Revision: 202 $";
-    QString cur_revision = QString(svnRevision());
-    return cur_revision; //.section(" ",1,1);
-
-}
 
 QString Helper::loadTextFile(const QString& fileName)
 {
+    DebugTimer t("Helper::loadTextFile");
     QFile file(fileName);
 
     if (!file.open(QIODevice::ReadOnly)) {
@@ -59,6 +54,22 @@ QString Helper::loadTextFile(const QString& fileName)
     //s.setCodec("UTF-8");
     QString result=s.readAll();
     return result;
+}
+
+QStringList Helper::loadTextFileLines(const QString &fileName)
+{
+    DebugTimer t("Helper::loadTextFileLines");
+    QStringList lines;
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return lines;
+
+    QTextStream in(&file);
+    //lines.reserve(100000); // Or a more realistic estimate of expected lines
+    while (!in.atEnd()) {
+        lines.append(in.readLine());
+    }
+    return lines;
 }
 
 void Helper::saveToTextFile(const QString& fileName, const QString& text)
@@ -78,11 +89,14 @@ QByteArray Helper::loadFile(const QString& fileName)
     if (!file.open(QIODevice::ReadOnly)) {
         return QByteArray();
     }
-    QTextStream s(&file);
-    QByteArray result;
-    s >> result;
+    return file.readAll();
 
-    return result;
+//    QTextStream s(&file);
+
+//    QByteArray result;
+//    s >> result;
+
+//    return result;
 }
 
 void Helper::saveToFile(const QString &fileName, const QByteArray &data)
@@ -131,7 +145,7 @@ bool Helper::question(const QString &message, QWidget *parent)
 #endif
 }
 
-QString Helper::fileDialog(const QString &title, const QString &start_directory, const QString &filter, QWidget *parent)
+QString Helper::fileDialog(const QString &title, const QString &start_directory, const QString &filter, const QString& type, QWidget *parent)
 {
 #ifdef ILAND_GUI
     QString the_filter = filter;
@@ -139,9 +153,20 @@ QString Helper::fileDialog(const QString &title, const QString &start_directory,
         the_filter = "All files (*.*)";
     else
         the_filter += ";;All files (*.*)"; // as 2nd filter
+    QFileDialog dialog(parent);
+    dialog.setFileMode(QFileDialog::Directory);
 
-    QString fileName = QFileDialog::getOpenFileName(parent,
-     title, start_directory, the_filter);
+    QString fileName;
+
+    if ( type == "directory") {
+        fileName = dialog.getExistingDirectory(parent,
+                                            title, start_directory);
+    }
+    else if (type == "file") {
+        fileName = dialog.getOpenFileName(parent,
+                                            title, start_directory, the_filter);
+    }
+
 #else
     Q_UNUSED(title); Q_UNUSED(start_directory); Q_UNUSED(filter); Q_UNUSED(parent);
     QString fileName="undefined";
@@ -167,7 +192,7 @@ void Helper::openHelp(const QString& topic)
 QString Helper::stripHtml(const QString &source)
 {
     QString str = source.simplified();
-    return str.replace(QRegExp("<[^>]+>"),"");
+    return str.replace(QRegularExpression("<[^>]+>"),"");
 }
 
 

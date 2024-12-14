@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -35,7 +35,7 @@ Production3PG::Production3PG()
 
 /**
   This is based on the utilizable photosynthetic active radiation.
-  @sa http://iland.boku.ac.at/primary+production
+  @sa https://iland-model.org/primary+production
   The resulting radiation is MJ/m2       */
 inline double Production3PG::calculateUtilizablePAR(const int month) const
 {
@@ -73,7 +73,7 @@ inline double Production3PG::abovegroundFraction() const
         // we originally used only nitrogen and added the U_utilized/U_radiation
         utilized_frac = mResponse->totalUtilizeableRadiation() / mResponse->yearlyRadiation();
     }
-    double harsh =  1 - 0.8/(1 + 2.5 * mResponse->nitrogenResponse() * utilized_frac);
+    double harsh =  1. - 0.8/(1. + 2.5 * mResponse->nitrogenResponse() * utilized_frac);
     return harsh;
 }
 
@@ -90,10 +90,10 @@ void Production3PG::clear()
 /** calculate the stand-level NPP
   @ingroup core
   Standlevel (i.e ResourceUnit-level) production (NPP) following the 3PG approach from Landsberg and Waring.
-  @sa http://iland.boku.ac.at/primary+production */
+  @sa https://iland-model.org/primary+production */
 double Production3PG::calculate()
 {
-    Q_ASSERT(mResponse!=0);
+    Q_ASSERT(mResponse!=nullptr);
     // Radiation: sum over all days of each month with foliage
     double year_raw_gpp = 0.;
     clear();
@@ -108,7 +108,7 @@ double Production3PG::calculate()
         year_raw_gpp += mGPP[i]; // kg Biomass/m2
     }
 
-    // calculate f_env,yr: see http://iland.boku.ac.at/sapling+growth+and+competition
+    // calculate f_env,yr: see https://iland-model.org/sapling+growth+and+competition
     double f_sum = 0.;
     for (int i=0;i<12;i++)
         f_sum += mGPP[i] / gC_to_kg_biomass; // == uAPar * epsilon_eff
@@ -118,7 +118,7 @@ double Production3PG::calculate()
     // f_env,yr=(uapar*epsilon_eff) / (APAR * epsilon_0 * fref)
     mEnvYear = f_sum / (Model::settings().epsilon * mResponse->yearlyRadiation() * perf_factor);
     if (mEnvYear > 1.) {
-        if (mEnvYear>1.5) // warning for large deviations
+        if (logLevelDebug() &&  mEnvYear>1.5) // warning for large deviations
             qDebug() << "WARNING: fEnvYear > 1 for " << mResponse->species()->id() << mEnvYear << "f_sum, epsilon, yearlyRad, refRatio" <<  f_sum << Model::settings().epsilon <<  mResponse->yearlyRadiation() << perf_factor
                      << "check calibration of the sapReferenceRatio (fref) for this species!";
         mEnvYear = 1.;

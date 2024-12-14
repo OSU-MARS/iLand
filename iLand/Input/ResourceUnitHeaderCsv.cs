@@ -10,6 +10,7 @@
         public int SnagBranchRootCarbon { get; private init; }
         public int SnagBranchRootCNRatio { get; private init; }
         public int SnagBranchRootDecompositionRate { get; private init; }
+        public int SnagOtherWoodAbovegroundFraction { get; private init; }
         public int SnagStemCarbon { get; private init; }
         public int SnagStemCNRatio { get; private init; }
         public int SnagsPerResourceUnit { get; private init; }
@@ -38,9 +39,11 @@
         public int SoilOrganicMatterDecompositionRate { get; private init; }
         public int SoilOrganicMatterN { get; private init; }
         public int SoilQh { get; private init; }
+        public int SoilYoungLabileAbovegroundFraction { get; private init; }
         public int SoilYoungLabileC { get; private init; }
         public int SoilYoungLabileDecompositionRate { get; private init; }
         public int SoilYoungLabileN { get; private init; }
+        public int SoilYoungRefractoryAbovegroundFraction { get; private init; }
         public int SoilYoungRefractoryC { get; private init; }
         public int SoilYoungRefractoryDecompositionRate { get; private init; }
         public int SoilYoungRefractoryN { get; private init; }
@@ -56,6 +59,7 @@
             this.SnagBranchRootCarbon = environmentFile.GetColumnIndex("snagBranchRootC");
             this.SnagBranchRootCNRatio = environmentFile.GetColumnIndex("snagBranchRootCN");
             this.SnagHalfLife = environmentFile.GetColumnIndex("snagHalfLife");
+            this.SnagOtherWoodAbovegroundFraction = environmentFile.GetColumnIndex("snagOtherWoodAbovegroundFraction");
             this.SnagsPerResourceUnit = environmentFile.GetColumnIndex("snagCount");
             this.SnagStemCarbon = environmentFile.GetColumnIndex("snagCarbon");
             this.SnagStemCNRatio = environmentFile.GetColumnIndex("snagCNRatio");
@@ -77,9 +81,11 @@
             this.SoilThetaS = environmentFile.GetColumnIndex("soilThetaS");
             this.SoilVanGenuchtenAlpha = environmentFile.GetColumnIndex("soilVanGenuchtenAlpha");
             this.SoilVanGenuchtenN = environmentFile.GetColumnIndex("soilVanGenuchtenN");
+            this.SoilYoungLabileAbovegroundFraction = environmentFile.GetColumnIndex("soilYoungLabileAbovegroundFraction");
             this.SoilYoungLabileC = environmentFile.GetColumnIndex("soilYoungLabileC");
             this.SoilYoungLabileDecompositionRate = environmentFile.GetColumnIndex("soilYoungLabileDecompositionRate");
             this.SoilYoungLabileN = environmentFile.GetColumnIndex("soilYoungLabileN");
+            this.SoilYoungRefractoryAbovegroundFraction = environmentFile.GetColumnIndex("soilYoungRefractoryAbovegroundFraction");
             this.SoilYoungRefractoryC = environmentFile.GetColumnIndex("soilYoungRefractoryC");
             this.SoilYoungRefractoryDecompositionRate = environmentFile.GetColumnIndex("soilYoungRefractoryDecompositionRate");
             this.SoilYoungRefractoryN = environmentFile.GetColumnIndex("soilYoungRefractoryN");

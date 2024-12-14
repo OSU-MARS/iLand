@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -54,9 +54,10 @@ friend class Output;
 class Output
 {
 public:
-    Output(); ///< ctor. Override in derived class to craete columns, etc.
+    Output(); ///< ctor. Override in derived class to create columns, etc.
     virtual ~Output();
     virtual void setup(); ///< setup() is called during project setup and can be ovveridden for specific setup
+    void setMode(OutputMode mode) { mMode = mode; }
 
     void open(); ///< open output connection (create actual db connection, ...)
     bool isOpen() const { return mOpen; } ///< returns true if output is open, i.e. has a open database connection
@@ -78,16 +79,19 @@ public:
     // save data
     Output & operator<< ( const double& value ) { add(value); return *this; }
     Output & operator<< ( const int value ) { add(value); return *this; }
+    Output & operator<< ( const long long value ) { add(static_cast<int>(value)); return *this; }
     Output & operator<< ( const QString &value ) { add(value); return *this; }
 
 protected:
     void setName(const QString &name, const QString tableName) { mName = name; mTableName=tableName; }
     void setDescription(const QString &description) { mDescription=description; }
+
     QList<OutputColumn> &columns()  { return mColumns; }
     int currentYear() const { return gl->currentYear(); }
     const XmlHelper &settings() const { return gl->settings(); } ///< access XML settings (see class description)
     // add data
-    void writeRow(); ///< saves the current row/line of data to database/file. Must be called f
+    void writeRow(); ///< saves the current row/line of data to database/file. Must be called for each row.
+    void singleThreadedWriteRow(); ///< writeRow() protected by a mutex (if there is a chance that two outputs write at the same time)
 
     inline void add(const double &value);
     void add(const double &value1, const double &value2) { add(value1); add(value2); }
@@ -96,12 +100,18 @@ protected:
     void add(const double &value1, const double &value2, const double &value3, const double &value4, const double value5) { add(value1, value2); add(value3, value4, value5); }
     inline void add(const int intValue);
     inline void add(const QString &stringValue);
+    /// delete all columns after the column 'find_name'. Return true if columns were removed.
+    bool clearColumnsAfter(QString find_name);
+    /// delete all data from the table
+    void truncateTable();
 
 private:
     static const GlobalSettings *gl; ///< pointer to globalsettings object
     void newRow(); ///< starts a new row (resets the internal counter)
     void openDatabase(); ///< database open, create output table and prepare insert statement
+    void openFile(); ///< open output file
     inline void saveDatabase(); ///< database save (exeute the "insert" statement)
+    inline void saveFile(); ///< write to file
     OutputMode mMode;
     bool mOpen;
     bool mEnabled;
@@ -111,6 +121,8 @@ private:
     QList<OutputColumn> mColumns; ///< list of columns of output
     QVector<QVariant> mRow; ///< current row
     QSqlQuery mInserter;
+    QFile mOutputFile;
+    QTextStream mFileStream; ///< for file based output
     int mCount;
     int mIndex;
 

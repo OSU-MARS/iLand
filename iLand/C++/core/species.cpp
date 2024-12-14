@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -42,7 +42,7 @@ Species::~Species()
 {
     if (mSeedDispersal)
         delete mSeedDispersal;
-    mSeedDispersal = 0;
+    mSeedDispersal = nullptr;
 }
 
 /** main setup routine for tree species.
@@ -51,7 +51,9 @@ Species::~Species()
 */
 void Species::setup()
 {
-    Q_ASSERT(mSet != 0);
+    Q_ASSERT(mSet != nullptr);
+    const XmlHelper &xml=GlobalSettings::instance()->settings();
+
     // setup general information
     mId = stringVar("shortName");
     mName = stringVar("name");
@@ -77,8 +79,8 @@ void Species::setup()
     mFoliage_a = doubleVar("bmFoliage_a");
     mFoliage_b = doubleVar("bmFoliage_b");
 
-    mWoody_a = doubleVar("bmWoody_a");
-    mWoody_b = doubleVar("bmWoody_b");
+    mStem_a = doubleVar("bmWoody_a");
+    mStem_b = doubleVar("bmWoody_b");
 
     mRoot_a = doubleVar("bmRoot_a");
     mRoot_b = doubleVar("bmRoot_b");
@@ -122,7 +124,7 @@ void Species::setup()
     mSnagKYL = doubleVar("snagKYL"); // decay rate labile
     mSnagKYR = doubleVar("snagKYR"); // decay rate refractory matter
 
-    if (mFoliage_a*mFoliage_b*mRoot_a*mRoot_b*mWoody_a*mWoody_b*mBranch_a*mBranch_b*mWoodDensity*mFormFactor*mSpecificLeafArea*mFinerootFoliageRatio == 0.) {
+    if (mFoliage_a*mFoliage_b*mRoot_a*mRoot_b*mStem_a*mStem_b*mBranch_a*mBranch_b*mWoodDensity*mFormFactor*mSpecificLeafArea*mFinerootFoliageRatio == 0.) {
         throw IException( QString("Error setting up species %1: one value is NULL in database.").arg(id()));
     }
     // Aging
@@ -196,9 +198,12 @@ void Species::setup()
     mEstablishmentParams.frost_tolerance = doubleVar("estFrostTolerance");
     mEstablishmentParams.psi_min = -fabs(doubleVar("estPsiMin")); // force negative value
 
+    if (xml.valueBool("model.settings.permafrost.enabled"))
+        mEstablishmentParams.SOL_thickness = fabs(doubleVar("estSOLthickness")); // force positive value
+
     // sapling and sapling growth parameters
     mSaplingGrowthParams.heightGrowthPotential.setAndParse(stringVar("sapHeightGrowthPotential"));
-    mSaplingGrowthParams.heightGrowthPotential.linearize(0., 4.);
+    mSaplingGrowthParams.heightGrowthPotential.linearize(0., cSapHeight);
     mSaplingGrowthParams.hdSapling = static_cast<float>( doubleVar("sapHDSapling") );
     mSaplingGrowthParams.stressThreshold = doubleVar("sapStressThreshold");
     mSaplingGrowthParams.maxStressYears = intVar("sapMaxStressYears");
@@ -208,8 +213,24 @@ void Species::setup()
     mSaplingGrowthParams.sproutGrowth = doubleVar("sapSproutGrowth");
     if (mSaplingGrowthParams.sproutGrowth>0.)
         if (mSaplingGrowthParams.sproutGrowth<1. || mSaplingGrowthParams.sproutGrowth>10)
-            qDebug() << "Value of 'sapSproutGrowth' dubious for species" << name() << "(value: " << mSaplingGrowthParams.sproutGrowth << ")";
+            qWarning() << "Value of 'sapSproutGrowth' dubious for species" << name() << "(value: " << mSaplingGrowthParams.sproutGrowth << ", expected range: 1-10)";
     mSaplingGrowthParams.setupReinekeLookup();
+
+    mSaplingGrowthParams.adultSproutProbability = 0.;
+    QString adult_sprout = GlobalSettings::instance()->settings().value("model.species.sprouting.adultSproutProbability");
+    if (!adult_sprout.isEmpty()) {
+        QStringList sprout_prob_list = adult_sprout.split(QRegularExpression("([^\\.\\w]+)"));
+
+        if (sprout_prob_list.length() == 1)
+            mSaplingGrowthParams.adultSproutProbability = adult_sprout.toDouble();
+        if (sprout_prob_list.length() > 1) {
+            int index = sprout_prob_list.indexOf(id());
+            if (index>=0 && index+1 < sprout_prob_list.length()) {
+                mSaplingGrowthParams.adultSproutProbability = sprout_prob_list[index+1].toDouble();
+                qDebug() << "enabled species specific sprouting probability for" << id() << ": p=" << mSaplingGrowthParams.adultSproutProbability;
+            }
+        }
+    }
 }
 
 
@@ -218,14 +239,17 @@ void Species::setup()
     the ratio for stem is 1 minus the ratio of twigs to total woody increment at current "dbh". */
 double Species::allometricFractionStem(const double dbh) const
 {
-    double fraction_stem = 1. - (mBranch_a*mBranch_b*pow(dbh, mBranch_b-1.)) / (mWoody_a*mWoody_b*pow(dbh, mWoody_b-1));
+    double inc_branch_per_d = (mBranch_a*mBranch_b*pow(dbh, mBranch_b-1.));
+    double inc_woody_per_d = (mStem_a*mStem_b*pow(dbh, mStem_b-1));
+    //double fraction_stem = 1. - inc_branch_per_d / inc_woody_per_d; // old
+    double fraction_stem = inc_woody_per_d / (inc_branch_per_d + inc_woody_per_d);
     return fraction_stem;
 }
 
 /** Aging formula.
    calculates a relative "age" by combining a height- and an age-related term using a harmonic mean,
    and feeding this into the Landsberg and Waring formula.
-   see http://iland.boku.ac.at/primary+production#respiration_and_aging
+   see https://iland-model.org/primary+production#respiration_and_aging
    @param useAge set to true if "real" tree age is available. If false, only the tree height is used.
   */
 double Species::aging(const float height, const int age) const
@@ -260,8 +284,8 @@ void Species::seedProduction(const Tree *tree)
     if (isTreeSerotinous(tree->age()))
         return;
 
-    // no seed production if maturity age is not reached (species parameter) or if tree height is below 4m.
-    if (tree->age() > mMaturityYears && tree->height() > 4.f) {
+    // no seed production if maturity age is not yet reached (species parameter)
+    if (tree->age() > mMaturityYears) {
         mSeedDispersal->setMatureTree(tree->positionIndex(), tree->leafArea());
     }
 }
@@ -291,7 +315,7 @@ void Species::newYear()
         if (mIsSeedYear && logLevelDebug())
             qDebug() << "species" << id() << "has a seed year.";
         // clear seed map
-        seedDispersal()->clear();
+        seedDispersal()->newYear();
     }
 }
 
@@ -299,9 +323,14 @@ void Species::newYear()
 void SaplingGrowthParameters::setupReinekeLookup()
 {
     mRepresentedClasses.clear();
-    for (int i=0;i<41;i++) {
-        double h = i/10. + 0.05; // 0.05, 0.15, 0.25, ... 4.05
+    for (int i=0;i<401;i++) {
+        double h = i/100.;
+        if (i==0) h=0.01; // avoid infinity
         double dbh = h / hdSapling  * 100.;
+        // we use a lower limit of 0.25cm dbh, i.e. the reineke formula is truncated
+        // as it is highly unplausible with very small dbh
+        if (dbh < 0.25)
+            dbh = 0.25;
         mRepresentedClasses.push_back(representedStemNumber(dbh));
     }
 }

@@ -76,5 +76,10 @@ namespace iLand.Input.ProjectFile
 				}
 			}
 		}
-	}
+
+		public void Validate()
+		{
+			this.Geometry.Validate();
+		}
+    }
 }

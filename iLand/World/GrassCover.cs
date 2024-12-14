@@ -1,4 +1,4 @@
-﻿using iLand.Extensions;
+﻿// C++/core/{ grasscover.h, grasscover.cpp }
 using iLand.Input.ProjectFile;
 using iLand.Tool;
 using System;
@@ -8,15 +8,15 @@ using System.Drawing;
 
 namespace iLand.World
 {
+    // TODO: remove as class becomes a wrapper for ResourceUnit.simlifiedGrassCover() / Saplings::simplifiedGrassCover() in iLand 2.0
     // TODO: would be cleaner if split into two classes with virtual method overrides by algorithm
     public class GrassCover
     {
         // cover is encoded using not quite Q1.15 fixed point
         private const int FullCoverValue = 32000;
 
-        private GrassAlgorithm algorithm;
+        private GrassAlgorithm algorithm; // C++ mode(), mType
         private readonly RandomCustomPdf cellProbabilityDensityFunction; // probability density function defining the life time of grass-pixels
-        private float cellLifThreshold; // if LIF>threshold, then the grass is considered as occupatied by grass
         private readonly Expression continousCover; // function defining max. grass cover [0..1] as function of the LIF pixel value
         private Int16 continuousCoverAtFullLight; // potential at lif=1
         private int continousGrowthRate; // max. annual growth rate of herbs and grasses (in 1/256th)
@@ -24,6 +24,8 @@ namespace iLand.World
         private readonly float[] continuousRegenerationEffectByCover; // effect lookup table
 
         //private readonly GrassCoverLayers mLayers; // visualization
+
+        public float CellLifThreshold { get; private set; } // if LIF>threshold, then the grass is considered as occupatied by grass, C++ lifThreshold(), mGrassLIFThreshold
 
         // grid of current grass cover, same cell size as light grid
         // cell on-off mode: 0 = pixel enabled for regeneration, n > 1 = pixel disabled for regeneration for next n years
@@ -33,7 +35,7 @@ namespace iLand.World
 
         public GrassCover()
         {
-            this.algorithm = GrassAlgorithm.CellOnOff;
+            this.algorithm = GrassAlgorithm.Simplified;
             this.cellProbabilityDensityFunction = new();
             this.continousCover = new();
             this.continuousRegenerationEffectByCover = new float[GrassCover.FullCoverValue];
@@ -46,6 +48,7 @@ namespace iLand.World
         }
 
         //public float GetCoverFraction(Int16 coverLevel) { return this.algorithm == GrassAlgorithm.LightPixelOnOff ? coverLevel : coverLevel / (float)(GrassCover.Steps - 1); }
+        // access values of the underlying grid (for visualization)
         //public float GetRegenerationEffect(Int16 coverLevel) { return this.continuousRegenerationEffectByCover[coverLevel]; }
 
         // TODO: should be connected to seedling establishment
@@ -60,7 +63,7 @@ namespace iLand.World
         //    return this.IsEnabled ? this.Effect(Grid[lightCellIndex]) : 0.0;
         //}
 
-        public void Setup(Project projectFile, Landscape landscape)
+        public void Setup(Project projectFile, Landscape landscape) // C++: GrassCover::setup()
         {
             if (projectFile.World.Grass.Enabled == false)
             {
@@ -68,18 +71,13 @@ namespace iLand.World
                 return;
             }
 
-            // create the grid
-            this.CoverOrOnOffGrid.Setup(landscape.LightGrid.ProjectExtent, landscape.LightGrid.CellSizeInM);
-            this.CoverOrOnOffGrid.Fill(-1); // default all grass cells to being outside of a resource unit
-            for (int resourceUnitIndex = 0; resourceUnitIndex < landscape.ResourceUnits.Count; ++resourceUnitIndex)
-            { 
-                ResourceUnit resourceUnit = landscape.ResourceUnits[resourceUnitIndex];
-                Point seedmapIndexXY = this.CoverOrOnOffGrid.GetCellXYIndex(resourceUnit.ProjectExtent.X, resourceUnit.ProjectExtent.Y);
-                this.CoverOrOnOffGrid.Fill(seedmapIndexXY.X, seedmapIndexXY.Y, Constant.Grid.LightCellsPerRUWidth, Constant.Grid.LightCellsPerRUWidth, 0);
+            this.algorithm = projectFile.World.Grass.Algorithm;
+            if (this.algorithm != GrassAlgorithm.Simplified)
+            {
+                throw new NotSupportedException("Currently only the simplified grass algorithm is supported.");
             }
 
-            this.algorithm = projectFile.World.Grass.Algorithm;
-            if (this.algorithm == GrassAlgorithm.CellOnOff)
+            if (this.algorithm == GrassAlgorithm.Pixel)
             {
                 // setup of pixel based / discrete approach
                 string? durationFormula = projectFile.World.Grass.PixelDuration;
@@ -89,7 +87,7 @@ namespace iLand.World
                 }
                 this.cellProbabilityDensityFunction.Setup(durationFormula, 0.0F, 100.0F);
                 //mGrassEffect.setExpression(formula);
-                this.cellLifThreshold = projectFile.World.Grass.PixelLifThreshold;
+                this.CellLifThreshold = projectFile.World.Grass.PixelLifThreshold;
 
                 // clear array
                 for (int stepIndex = 0; stepIndex < GrassCover.FullCoverValue; ++stepIndex)
@@ -131,16 +129,30 @@ namespace iLand.World
 
                 this.continuousCoverAtFullLight = (Int16)(Maths.Limit(continousCover.Evaluate(1.0F), 0.0F, 1.0F) * (GrassCover.FullCoverValue - 1)); // the max value of the potential function
             }
+            else if (this.algorithm == GrassAlgorithm.Simplified)
+            {
+                // nothing to do
+            }
             else
             {
                 throw new NotSupportedException("Unhandled algorithm " + this.algorithm + ".");
+            }
+
+            // create the grid
+            this.CoverOrOnOffGrid.Setup(landscape.LightGrid.ProjectExtent, landscape.LightGrid.CellSizeInM);
+            this.CoverOrOnOffGrid.Fill(-1); // default all grass cells to being outside of a resource unit
+            for (int resourceUnitIndex = 0; resourceUnitIndex < landscape.ResourceUnits.Count; ++resourceUnitIndex)
+            {
+                ResourceUnit resourceUnit = landscape.ResourceUnits[resourceUnitIndex];
+                Point seedmapIndexXY = this.CoverOrOnOffGrid.GetCellXYIndex(resourceUnit.ProjectExtent.X, resourceUnit.ProjectExtent.Y);
+                this.CoverOrOnOffGrid.Fill(seedmapIndexXY.X, seedmapIndexXY.Y, Constant.Grid.LightCellsPerRUWidth, Constant.Grid.LightCellsPerRUWidth, 0);
             }
 
             this.IsEnabled = true;
             // Debug.WriteLine("setup of grass cover complete.");
         }
 
-        public void SetInitialValues(RandomGenerator randomGenerator, List<(int CellIndex, float LightValue)> lightCells, int percentGrassCover)
+        public void SetInitialValues(RandomGenerator randomGenerator, List<(int CellIndex, float LightValue)> lightCells, int percentGrassCover) // C++: GrassCover::setInitialValues()
         {
             Debug.Assert((percentGrassCover >= 0) && (percentGrassCover <= 100));
             if (this.IsEnabled == false)
@@ -159,7 +171,7 @@ namespace iLand.World
                     this.CoverOrOnOffGrid[lightCells[lightCell].CellIndex] = grassValue;
                 }
             }
-            else if (algorithm == GrassAlgorithm.CellOnOff)
+            else if (algorithm == GrassAlgorithm.Pixel)
             {
                 for (int lightCell = 0; lightCell < lightCells.Count; ++lightCell)
                 {
@@ -179,12 +191,14 @@ namespace iLand.World
             }
         }
 
-        public void UpdateCoverage(Landscape landscape, RandomGenerator randomGenerator)
+        /// main function (growth/die-off of grass cover)
+        public void UpdateCoverage(Landscape landscape, RandomGenerator randomGenerator) // C++: GrassCover::execute()
         {
-            if (this.IsEnabled == false)
+            if ((this.IsEnabled == false) || (this.algorithm == GrassAlgorithm.Simplified))
             {
                 return;
             }
+
             // main function of the grass submodule
             Grid<float> lightGrid = landscape.LightGrid;
             if (algorithm == GrassAlgorithm.ContinuousLight)
@@ -205,7 +219,7 @@ namespace iLand.World
                 }
                 // Debug.WriteLine("skipped " << cellsSkipped);
             }
-            else if (algorithm == GrassAlgorithm.CellOnOff)
+            else if (algorithm == GrassAlgorithm.Pixel)
             {
                 for (int lightIndex = 0; lightIndex < lightGrid.CellCount; ++lightIndex)
                 {
@@ -216,12 +230,12 @@ namespace iLand.World
                     {
                         --this.CoverOrOnOffGrid[lightIndex]; // count down the years (until gr=1)
                     }
-                    else if ((grassCover == 0) && (lightGrid[lightIndex] > this.cellLifThreshold))
+                    else if ((grassCover == 0) && (lightGrid[lightIndex] > this.CellLifThreshold))
                     {
                         // enable grass cover
                         this.CoverOrOnOffGrid[lightIndex] = (Int16)(MathF.Max(this.cellProbabilityDensityFunction.GetRandomValue(randomGenerator), 0.0F) + 1); // switch on...
                     }
-                    else if ((grassCover == 1) && (lightGrid[lightIndex] < this.cellLifThreshold))
+                    else if ((grassCover == 1) && (lightGrid[lightIndex] < this.CellLifThreshold))
                     {
                         // now LIF is below the threshold - this enables the pixel to get grassy again
                         this.CoverOrOnOffGrid[lightIndex] = 0;

@@ -1,9 +1,8 @@
-﻿using iLand.Input.Tree;
-using iLand.World;
+﻿// C++/core/{ stampcontainer.h, stampcontainer.cpp }
+using iLand.Input.Tree;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 
 namespace iLand.Tree
@@ -141,7 +140,7 @@ namespace iLand.Tree
             this.lightStampsWithTreeSizes.Add(stamp);
         }
 
-        public void AttachReaderStamps(TreeSpeciesStamps readerStamps)
+        public void AttachReaderStamps(TreeSpeciesStamps readerStamps) // C++: StampContainer::attachReaderStamps(), StampContainer::readerStamp()
         {
             foreach (LightStamp speciesStamp in this.lightStampsWithTreeSizes)
             {
@@ -159,6 +158,10 @@ namespace iLand.Tree
                 if (readerStamp == null)
                 {
                     throw new InvalidOperationException("Reader stamp not found for crown radius class " + crownRadiusClass + " (crown radius " + crownRadiusInMeters + " m) and height class " + heightDiameterClass + " (height diameter ratio " + heightDiameterClass + ").");
+                }
+                if (readerStamp.DataSize > speciesStamp.DataSize)
+                {
+                    throw new InvalidOperationException("Species stamp size " + speciesStamp.DataSize + " does not match reader stamp size " + readerStamp.DataSize + ". Are the correct reader and species stamp files in use?");
                 }
 
                 speciesStamp.SetReaderStamp(readerStamp);

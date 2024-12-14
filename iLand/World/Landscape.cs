@@ -17,39 +17,44 @@ namespace iLand.World
     public class Landscape
     {
         public CO2TimeSeriesMonthly CO2ByMonth { get; private init; }
+        public DigitalElevationModel? DigitalElevationModel { get; private init; }
         public GrassCover GrassCover { get; private init; }
         public Grid<float> LightGrid { get; private init; } // this is the global 'LIF'-grid (light patterns) (currently 2x2m)
         public PointF ProjectOriginInGisCoordinates { get; private init; }
 
         public Grid<ResourceUnit?> ResourceUnitGrid { get; private init; }
         public List<ResourceUnit> ResourceUnits { get; private init; }
-        public Dictionary<string, TreeSpeciesSet> SpeciesSetsByTableName { get; private init; }
+        public Dictionary<string, TreeSpeciesSet> SpeciesSetsByTableName { get; private init; } // TODO: why is this a dictionary when it's mainly accessed with First()?
         public GridRaster10m StandRaster { get; private init; } // retrieve the spatial grid that defines the stands (10m resolution)
 
         public Grid<float> VegetationHeightGrid { get; private init; } // stores maximum height of vegetation in m, currently 10 x 10 m cells
         public Dictionary<string, Weather> WeatherByID { get; private init; }
         public int WeatherFirstCalendarYear { get; private init; }
 
-        public Landscape(Project projectFile, ParallelOptions parallelComputeOptions)
+        public Landscape(Project project, ParallelOptions parallelComputeOptions)
         {
-            if (String.IsNullOrWhiteSpace(projectFile.World.Initialization.ResourceUnitFile))
+            if (String.IsNullOrWhiteSpace(project.World.Initialization.ResourceUnitFile))
             {
                 throw new NotSupportedException("Project file does not specify a resource unit file (/project/model/world/initialization/resourceUnitFile).");
             }
-            float worldBufferWidth = projectFile.World.Geometry.BufferWidthInM;
+            float worldBufferWidth = project.World.Geometry.BufferWidthInM;
             if ((worldBufferWidth < Constant.Grid.HeightCellSizeInM) || (worldBufferWidth % Constant.Grid.HeightCellSizeInM != 0))
             {
-                throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + projectFile.World.Geometry.BufferWidthInM + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.Grid.HeightCellSizeInM + " m).");
+                throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + project.World.Geometry.BufferWidthInM + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.Grid.HeightCellSizeInM + " m).");
+            }
+            if (project.Model.Settings.RegenerationEnabled && (worldBufferWidth % Constant.Grid.SeedmapCellSizeInM != 0))
+            {
+                throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + project.World.Geometry.BufferWidthInM + " m is not a positive, integer multiple of the seed grid's cell size (" + Constant.Grid.SeedmapCellSizeInM + " m). Either change the buffer width to an exact multiple or disable regeneration.");
             }
 
             // if available, read monthly weather data in parallel with resource unit setup
-            string weatherFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.WeatherFile);
+            string weatherFilePath = project.GetFilePath(ProjectDirectory.Database, project.World.Weather.WeatherFile);
             string? weatherFileExtension = Path.GetExtension(weatherFilePath);
             Func<WeatherReaderMonthly>? readMonthlyWeatherFromFile = weatherFileExtension switch
             {
                 // for now, assume .csv and .feather weather is monthly and all weather tables in SQLite databases are daily
-                Constant.File.CsvExtension => () => new WeatherReaderMonthlyCsv(weatherFilePath, projectFile.World.Weather.StartYear),
-                Constant.File.FeatherExtension => () => new WeatherReaderMonthlyFeather(weatherFilePath, projectFile.World.Weather.StartYear),
+                Constant.File.CsvExtension => () => new WeatherReaderMonthlyCsv(weatherFilePath, project.World.Weather.StartYear),
+                Constant.File.FeatherExtension => () => new WeatherReaderMonthlyFeather(weatherFilePath, project.World.Weather.StartYear),
                 Constant.File.SqliteExtension => null,
                 _ => throw new NotSupportedException("Unhandled weather file extension '" + weatherFileExtension + "'.")
             };
@@ -57,8 +62,8 @@ namespace iLand.World
             Task<WeatherReaderMonthly>? readMonthlyWeather = readMonthlyWeatherFromFile != null ? Task.Run(readMonthlyWeatherFromFile) : null;
 
             // read monthly CO₂ in parallel with resource unit setup
-            string co2filePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Weather.CO2File);
-            string? co2fileExtension = Path.GetExtension(projectFile.World.Weather.CO2File);
+            string co2filePath = project.GetFilePath(ProjectDirectory.Database, project.World.Weather.CO2File);
+            string? co2fileExtension = Path.GetExtension(project.World.Weather.CO2File);
             CO2ReaderMonthly monthlyCO2reader = co2fileExtension switch
             {
                 Constant.File.CsvExtension => new CO2ReaderMonthlyCsv(co2filePath, Constant.Data.DefaultMonthlyAllocationIncrement),
@@ -67,6 +72,7 @@ namespace iLand.World
             };
 
             this.CO2ByMonth = monthlyCO2reader.TimeSeries;
+            this.DigitalElevationModel = null; // loaded below if specified as the height grid needs to be loaded first
             // this.Extent is set below
             this.GrassCover = new();
             // this.LightGrid is set below
@@ -108,8 +114,8 @@ namespace iLand.World
             // coordinates, these variables are named as such. In some cases iLand also works with resource unit coordinates, in which
             // case the origin is the resource unit coordinate with the minimum values (usually the southwest corner as this is the
             // position with the minimum easting and northing in most projected coordinate systems).
-            ResourceUnitEnvironment defaultEnvironment = new(projectFile.World);
-            string resourceUnitFilePath = projectFile.GetFilePath(ProjectDirectory.Gis, projectFile.World.Initialization.ResourceUnitFile);
+            ResourceUnitEnvironment defaultEnvironment = new(project.World);
+            string resourceUnitFilePath = project.GetFilePath(ProjectDirectory.Gis, project.World.Initialization.ResourceUnitFile);
             string? resourceUnitExtension = Path.GetExtension(resourceUnitFilePath);
             ResourceUnitReader resourceUnitReader = resourceUnitExtension switch
             {
@@ -127,6 +133,13 @@ namespace iLand.World
             this.LightGrid = new(bufferedExtent, Constant.Grid.LightCellSizeInM); // (re)initialized by Model at start of every timestep
             this.VegetationHeightGrid = new(bufferedExtent, Constant.Grid.HeightCellSizeInM);
 
+            if (String.IsNullOrWhiteSpace(project.World.Geometry.DigitalElevationModel) == false)
+            {
+                string demPath = project.GetFilePath(ProjectDirectory.Gis, project.World.Geometry.DigitalElevationModel);
+                this.DigitalElevationModel = new();                
+                this.DigitalElevationModel.LoadFromFile(demPath, this.VegetationHeightGrid);
+            }
+
             // instantiate resource units only where defined in resource unit file
             WeatherReaderMonthly? monthlyWeatherReader = readMonthlyWeather?.GetAwaiter().GetResult();
             for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitReader.Count; ++resourceUnitIndex)
@@ -139,11 +152,11 @@ namespace iLand.World
                     // create only those climate sets that are really used in the current landscape
                     if (monthlyWeatherReader != null)
                     {
-                        weather = new WeatherMonthly(projectFile, monthlyWeatherReader.MonthlyWeatherByID[weatherID]);
+                        weather = new WeatherMonthly(project, monthlyWeatherReader.MonthlyWeatherByID[weatherID]);
                     }
                     else
                     {
-                        weather = new WeatherDaily(weatherFilePath, weatherID, projectFile);
+                        weather = new WeatherDaily(weatherFilePath, weatherID, project);
                     }
                     this.WeatherByID.Add(weatherID, weather);
 
@@ -159,7 +172,7 @@ namespace iLand.World
                 }
                 if (this.SpeciesSetsByTableName.TryGetValue(environment.SpeciesTableName, out TreeSpeciesSet? treeSpeciesSet) == false)
                 {
-                    treeSpeciesSet = new(projectFile, environment.SpeciesTableName);
+                    treeSpeciesSet = new(project, environment.SpeciesTableName);
                     this.SpeciesSetsByTableName.Add(environment.SpeciesTableName, treeSpeciesSet);
                 }
 
@@ -172,13 +185,13 @@ namespace iLand.World
 
                 float ruMinProjectX = ruProjectCentroidX - 0.5F * Constant.Grid.ResourceUnitSizeInM;
                 float ruMinProjectY = ruProjectCentroidY - 0.5F * Constant.Grid.ResourceUnitSizeInM;
-                ResourceUnit newRU = new(projectFile, weather, treeSpeciesSet, ruGridIndex)
+                ResourceUnit newRU = new(project, weather, treeSpeciesSet, ruGridIndex)
                 {
                     ProjectExtent = new RectangleF(ruMinProjectX, ruMinProjectY, Constant.Grid.ResourceUnitSizeInM, Constant.Grid.ResourceUnitSizeInM),
                     ID = environment.ResourceUnitID,
                     MinimumLightIndexXY = this.LightGrid.GetCellXYIndex(ruMinProjectX, ruMinProjectY)
                 };
-                newRU.SetupEnvironment(projectFile, environment);
+                newRU.SetupEnvironment(project, environment);
                 this.ResourceUnits.Add(newRU);
                 this.ResourceUnitGrid[ruGridIndex] = newRU; // save in the RUmap grid
             }
@@ -190,10 +203,10 @@ namespace iLand.World
             // mark height cells as on landscape (in a resource unit or stand) or leave height flags as default (off landscape)
             // On landscape marking is required before marking edge height cells as radiating because, otherwise, there no on-landscape,
             // off-landscape edges exist to detect.
-            string? standRasterFile = projectFile.World.Initialization.StandRasterFile;
+            string? standRasterFile = project.World.Initialization.StandRasterFile;
             if (String.IsNullOrEmpty(standRasterFile) == false)
             {
-                string filePath = projectFile.GetFilePath(ProjectDirectory.Gis, standRasterFile);
+                string filePath = project.GetFilePath(ProjectDirectory.Gis, standRasterFile);
                 this.StandRaster.LoadFromFile(filePath);
                 if ((this.StandRaster.Grid.CellCount != this.VegetationHeightGrid.CellCount) || (this.StandRaster.Grid.ProjectExtent != this.VegetationHeightGrid.ProjectExtent))
                 {
@@ -208,14 +221,14 @@ namespace iLand.World
 
             // setup of grass cover configuration
             // Initialization of grass cover values is done subsequently from GrassCover.SetInitialValues()
-            this.GrassCover.Setup(projectFile, this);
+            this.GrassCover.Setup(project, this);
         }
 
         /** calculate for each resource unit the stockable area.
           "stockability" is determined by the isValid flag of resource units which in turn
           is derived from stand grid values.
           */
-        private void MarkSaplingCellsAndScaleSnags(ParallelOptions parallelComputeOptions)
+        private void MarkSaplingCellsAndScaleSnags(ParallelOptions parallelComputeOptions) // C++: Model::calculateStockableArea()
         {
             Parallel.For(0, this.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
             {
@@ -228,11 +241,12 @@ namespace iLand.World
 
                 if (resourceUnit.SaplingCells != null)
                 {
-                    // for now, all sapling cells in resource unit are available for germination
+                    // for now, all sapling cells in resource unit are available for establishment (germination or sprouting)
+                    // C++/core/saplings.cpp: Saplings::setup()
                     for (int saplingCellIndex = 0; saplingCellIndex < resourceUnit.SaplingCells.Length; ++saplingCellIndex)
                     {
                         SaplingCell saplingCell = resourceUnit.SaplingCells[saplingCellIndex];
-                        saplingCell.State = SaplingCellState.Free;
+                        saplingCell.State = SaplingCellState.Empty;
                     }
                 }
                 if (resourceUnit.Snags != null)
@@ -258,21 +272,28 @@ namespace iLand.World
 
         public static SqliteConnection GetDatabaseConnection(string databaseFilePath, bool openReadOnly)
         {
-            if (openReadOnly)
-            {
-                if (File.Exists(databaseFilePath) == false)
-                {
-                    throw new ArgumentException("Database file '" + databaseFilePath + "'does not exist!", nameof(databaseFilePath));
-                }
-            }
-
             SqliteConnectionStringBuilder connectionString = new()
             {
                 DataSource = databaseFilePath,
                 Mode = openReadOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
             };
             SqliteConnection connection = new(connectionString.ConnectionString);
-            connection.Open();
+            try
+            {
+                connection.Open();
+            }
+            catch (SqliteException sqlException)
+            {
+                if (sqlException.SqliteErrorCode == (int)SqliteErrorCode.NotFound)
+                {
+                    // SqliteException lacks an inner exception constructor
+                    throw new ArgumentOutOfRangeException("'" + databaseFilePath + "' is not a valid database file path. Do both the path to the database and the database file exist?", sqlException);
+                }
+                else
+                {
+                    throw;
+                }
+            }
             if (openReadOnly == false)
             {
                 // performance settings for output databases (http://www.sqlite.org/pragma.html)
@@ -319,6 +340,27 @@ namespace iLand.World
                 return saplingCell;
             }
             return null;
+        }
+
+        /// returns the index of an aligned grid (the same size) with 5 times bigger cells (e.g. convert from a 2 m grid to a 10 m grid)
+        public int LightIndexToHeightIndex(int lightIndex)
+        {
+            // lightIndexX = lightIndex % lightGrid.CellsX
+            // lightIndexY = lightIndex / lightGrid.CellsX
+            // heightIndexX = lightIndexX / (10 / 2)
+            // heightIndexY = lightIndexY / (10 / 2)
+            // heightIndex = heightIndexY * heightGrid.CellsX + heightIndexX
+            //             = lightIndexY / (10 / 2) * heightGrid.CellsX + lightIndexX / (10 / 2)
+            //             = (lightIndex / lightGrid.CellsX) / (10 / 2) * lightGrid.CellsX / (10 / 2) + (lightIndex % lightGrid.CellsX) / (10 / 2)
+            //             = lightIndex / (10 / 2)² + (lightIndex % lightGrid.CellsX) / (10 / 2)
+            //return ((lightIndex / this.CellsX) / Constant.Grid.LightCellsPerHeightCellWidth) * (this.CellsX / Constant.Grid.LightCellsPerHeightCellWidth) + (lightIndex % this.CellsX) / Constant.Grid.LightCellsPerHeightCellWidth;
+            return lightIndex / (Constant.Grid.LightCellsPerHeightCellWidth * Constant.Grid.LightCellsPerHeightCellWidth) + (lightIndex % this.LightGrid.CellsX) / Constant.Grid.LightCellsPerHeightCellWidth;
+        }
+
+        /// returns the index of an aligned grid (the same size) with 10 times bigger cells (e.g. convert from a 2 m grid to a 20 m grid)
+        public int LightIndexToSeedIndex(int lightIndex)
+        {
+            return lightIndex / (Constant.Grid.LightCellsPerSeedmapCellWidth * Constant.Grid.LightCellsPerSeedmapCellWidth) + (lightIndex % this.LightGrid.CellsX) / Constant.Grid.LightCellsPerSeedmapCellWidth;
         }
 
         private void SetupSaplingsAndGrass(UInt32 standID, List<StandSaplings> saplingsInStands, int standStartIndex, int standEndIndex, RandomGenerator randomGenerator)

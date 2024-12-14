@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -34,6 +34,7 @@ private:
     Expression mRUFilter;
     Expression mTreeFilter;
     Expression mCondition;
+    Expression mConditionRU;
     struct SDynamicField {
         int agg_index;
         int var_index;

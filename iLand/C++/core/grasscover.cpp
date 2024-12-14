@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -23,6 +23,7 @@
 #include "xmlhelper.h"
 #include "model.h"
 #include "modelcontroller.h"
+#include "saplings.h"
 
 const int GrassCover::GRASSCOVERSTEPS;
 
@@ -50,14 +51,6 @@ void GrassCover::setup()
         qDebug() << "grass module not enabled";
         return;
     }
-    // create the grid
-    mGrid.setup(GlobalSettings::instance()->model()->grid()->metricRect(), GlobalSettings::instance()->model()->grid()->cellsize());
-    mGrid.wipe();
-    // mask out out-of-project areas
-    HeightGrid *hg = GlobalSettings::instance()->model()->heightGrid();
-    for (int i=0;i<mGrid.count();++i)
-        if (!hg->valueAtIndex(mGrid.index5(i)).isValid())
-            mGrid[i] = -1;
 
     mType = Invalid;
     QString type = xml.value("model.settings.grass.type");
@@ -67,8 +60,31 @@ void GrassCover::setup()
     if (type==QStringLiteral("continuous"))
         mType = Continuous;
 
+    if (type==QStringLiteral("simplified"))
+        mType = Simplified;
+
     if (mType == Invalid)
-        throw IException("GrassCover::setup: invalid 'grass.type'. Allowed: 'continous' and 'pixel'.");
+        throw IException("GrassCover::setup: invalid 'grass.type'. Allowed: 'continous', 'pixel', 'simplified'.");
+
+    if (mType != Simplified)
+        throw IException("GrassCover::setup: invalid 'grass.type'. Currently only 'simplified' is supported.");
+
+    if (mType == Simplified) {
+        mGrassLIFThreshold = static_cast<float>( xml.valueDouble("model.settings.grass.LIFThreshold", 0.2) );
+        mEnabled = true;
+        // this does not work with the simplified mode, as there is no explicit grass cover grid!!
+        // GlobalSettings::instance()->controller()->addLayers(mLayers, QStringLiteral("grass cover"));
+        return;
+    }
+
+    // create the grid
+    mGrid.setup(GlobalSettings::instance()->model()->grid()->metricRect(), GlobalSettings::instance()->model()->grid()->cellsize());
+    mGrid.wipe();
+    // mask out out-of-project areas
+    HeightGrid *hg = GlobalSettings::instance()->model()->heightGrid();
+    for (int i=0;i<mGrid.count();++i)
+        if (!hg->valueAtIndex(mGrid.index5(i)).isValid())
+            mGrid[i] = -1;
 
     if (mType == Pixel) {
         // setup of pixel based / discrete approach
@@ -144,9 +160,24 @@ void GrassCover::setInitialValues(const QVector<float *> &LIFpixels, const int p
     }
 }
 
+
+void nc_grass_simplified(ResourceUnit *unit)
+{
+    try{
+        GlobalSettings::instance()->model()->saplings()->simplifiedGrassCover(unit);
+    } catch (const IException &e) {
+        // thread-safe error message
+        GlobalSettings::instance()->model()->threadExec().throwError(e.message());
+    }
+
+}
+
 void GrassCover::execute()
 {
     if (!enabled())
+        return;
+
+    if (mType == Simplified)
         return;
 
     DebugTimer t("GrassCover");
@@ -193,24 +224,51 @@ void GrassCover::execute()
 
 }
 
+void GrassCover::executeAfterRegeneration()
+{
+    if (!enabled())
+        return;
+
+    if (mType != Simplified)
+        return;
+
+    DebugTimer t("GrassCover");
+    if (mType == Simplified) {
+        // loop over all RUs and call function in the Saplings class (multithreaded)
+        GlobalSettings::instance()->model()->threadExec().run(nc_grass_simplified, false);
+        return;
+    }
+
+}
+
 
 
 double GrassCoverLayers::value(const grass_grid_type &data, const int index) const
 {
     if (!mGrassCover->enabled()) return 0.;
-    switch(index){
-    case 0: return mGrassCover->effect(data); //effect
-    case 1: return mGrassCover->cover(data); // cover
-    default: throw IException(QString("invalid variable index for a GrassCoverLayers: %1").arg(index));
+    if (mGrassCover->mode() == GrassCover::Simplified) {
+        switch(index) {
+        case 0: return 0.; // effect -> no effect in simplified
+        case 1: return 1.; // cover
+        }
+
+    } else {
+        // continuous and pixel
+        switch(index){
+        case 0: return mGrassCover->effect(data); //effect
+        case 1: return mGrassCover->cover(data); // cover
+        default: throw IException(QString("invalid variable index for a GrassCoverLayers: %1").arg(index));
+        }
     }
+    return 0.;
 }
 
 const QVector<LayeredGridBase::LayerElement> &GrassCoverLayers::names()
 {
     if (mNames.isEmpty())
         mNames = QVector<LayeredGridBase::LayerElement>()
-                << LayeredGridBase::LayerElement(QLatin1Literal("effect"), QLatin1Literal("prohibiting effect on regeneration [0..1]"), GridViewGreens)
-                << LayeredGridBase::LayerElement(QLatin1Literal("cover"), QLatin1Literal("current grass cover on pixels [0..1 for continuous, or #(years+2) for pixel mode]"), GridViewGreens);
+                << LayeredGridBase::LayerElement(QStringLiteral("effect"), QStringLiteral("prohibiting effect on regeneration [0..1]"), GridViewGreens)
+                << LayeredGridBase::LayerElement(QStringLiteral("cover"), QStringLiteral("current grass cover on pixels [0..1 for continuous, or #(years+2) for pixel mode]"), GridViewGreens);
     return mNames;
 
 }

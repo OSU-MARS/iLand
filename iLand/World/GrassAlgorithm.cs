@@ -3,6 +3,7 @@
     public enum GrassAlgorithm
     {
         ContinuousLight,
-        CellOnOff
+        Pixel,
+        Simplified
     }
 }

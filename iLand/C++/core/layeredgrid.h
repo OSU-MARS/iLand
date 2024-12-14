@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -40,6 +40,7 @@ public:
         QString description;
         GridViewType view_type;
     };
+    virtual ~LayeredGridBase() {}
 
     // access to properties
     virtual int sizeX() const=0;
@@ -79,7 +80,7 @@ public:
     {
         Q_UNUSED(value)
         Q_UNUSED(index)
-        return QLatin1Literal("-");
+        return QStringLiteral("-");
     }
 
 };
@@ -95,6 +96,7 @@ class LayeredGrid: public LayeredGridBase
 public:
     LayeredGrid(const Grid<T>& grid) { mGrid = &grid; }
     LayeredGrid() { mGrid = 0;  }
+    bool isValid() const { return mGrid != 0; }
     QRectF cellRect(const QPoint &p) const { return mGrid->cellRect(p); }
     QRectF metricRect() const { return mGrid->metricRect(); }
     float cellsize() const { return mGrid->cellsize(); }

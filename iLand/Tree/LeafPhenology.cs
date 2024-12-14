@@ -1,4 +1,5 @@
-﻿using iLand.Extensions;
+﻿// C++/core/{ phenology.h, phenology.cpp }
+using iLand.Extensions;
 using iLand.Input;
 using iLand.Input.Weather;
 using iLand.World;
@@ -21,7 +22,7 @@ namespace iLand.Tree
         // TODO: change ID to string? (or enum?)
         public int ID { get; private init; } // identifier of this phenology group
         // get result of phenology calculation for this year (a pointer to a array of 12 values between 0..1: 0 = no days with foliage)
-        public float[] LeafOnFractionByMonth { get; private init; }
+        public float[] LeafOnFractionByMonth { get; private init; } // C++: monthArray(), mPhenoFraction
 
         // northern hemisphere: leafOnStartDayIndex < leafOnEndDayIndex
         // southern hemisphere: leafOnStartDayIndex > leafOnEndDayIndex
@@ -92,7 +93,7 @@ namespace iLand.Tree
             return new(weather, Constant.EvergreenLeafPhenologyID, Single.NaN, Single.NaN, Single.NaN, Single.NaN, Single.NaN, Single.NaN);
         }
 
-        public override void GetLeafOnAndOffDatesForCurrentYear()
+        public override void GetLeafOnAndOffDatesForCurrentYear() // C++: calculate()
         {
             TWeatherTimeSeries weatherTimeSeries = this.weather.TimeSeries;
             bool isLeapYear = weatherTimeSeries.IsCurrentlyLeapYear();

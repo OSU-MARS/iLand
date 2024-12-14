@@ -1,16 +1,24 @@
-﻿using System;
+﻿// C++/core/watercycle.h
+using iLand.Input.ProjectFile;
+using System;
 
 namespace iLand.World
 {
-    internal class SnowPack
+    public class Snowpack
     {
-        public float MeltTemperatureInC { get; set; } // Threshold temperature for snowing / snow melt
+        private readonly float snowDensityInKgM3;
+
+        public float MeltTemperatureInC { get; private init; } // Threshold temperature for snowing / snow melt
         public float WaterEquivalentInMM { get; set; } // height of snowpack (mm water column)
 
-        public SnowPack()
+        public Snowpack(Project project)
         {
-            this.MeltTemperatureInC = 0.0F;
-            this.WaterEquivalentInMM = 0.0F;
+            this.snowDensityInKgM3 = project.Model.Ecosystem.SnowDensity;
+
+            this.MeltTemperatureInC = project.Model.Ecosystem.SnowmeltTemperature;
+            // convert m snowdepth to mm water
+            // Simple linear model assuming constant, or constant equivalent, snowpack density. See also Hill et al. 2019 (https://doi.org/10.5194/tc-13-1767-2019).
+            this.WaterEquivalentInMM = this.snowDensityInKgM3 * project.Model.Ecosystem.SnowInitialDepth; // snow water equivalent, mm = (snow density, kg/m3) / (water density, kg/m3) * 1000 mm/m * (snow depth, m) = (snow density) / (1000) * 1000 * (snow depth) = (snow density) * (snow depth)
         }
 
         /// additional precipitation (e.g. non evaporated water of canopy interception).
@@ -51,6 +59,12 @@ namespace iLand.World
             // assume all precipitation on days below melting point is received as snow
             this.WaterEquivalentInMM += totalThroughfallInMM;
             return 0.0F; // no output
+        }
+
+        public float GetDepthInM()
+        {
+            // same simple linear model as in constructor
+            return this.WaterEquivalentInMM / this.snowDensityInKgM3;
         }
     }
 }

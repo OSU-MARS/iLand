@@ -1,6 +1,8 @@
-﻿using iLand.Input.ProjectFile;
+﻿// C++/core/watercycle.cpp
+using iLand.Input.ProjectFile;
 using iLand.Input.Weather;
 using System;
+using System.Diagnostics;
 
 namespace iLand.Tree
 {
@@ -8,7 +10,7 @@ namespace iLand.Tree
         Calculates the amount of preciptitation that does not reach the ground and
         is stored in the canopy. The approach is adopted from Picus 1.3.
         Returns the amount of precipitation (mm) that surpasses the canopy layer.
-        @sa http://iland-model.org/water+cycle#precipitation_and_interception */
+        @sa https://iland-model.org/water+cycle#precipitation_and_interception */
     public class Canopy
     {
         // Penman-Monteith parameters
@@ -69,7 +71,7 @@ namespace iLand.Tree
                 float maxNeedleleafFlow = 0.9F * MathF.Sqrt(1.03F - MathF.Exp(-0.055F * dayOrMeanDailyPrecipitationInMM));
                 totalInterceptionInMM += totalTimestepPrecipitationInMM * (1.0F - maxNeedleleafFlow * this.laiNeedleleaf / this.laiTotal);
                 // (2) calculate maximum storage potential based on the current LAI
-                //     by weighing the needle/decidious storage capacity
+                //     by weighing the needle/deciduous storage capacity
                 totalStoragePotential += this.NeedleStorageInMM * this.laiNeedleleaf / this.laiTotal;
             }
 
@@ -108,8 +110,13 @@ namespace iLand.Tree
             }
         }
 
-        // returns the total sum of evaporation+transpiration in mm of the day
-        public float FlowEvapotranspirationTimestep3PG(Project projectFile, WeatherTimeSeries weatherTimeSeries, int weatherTimestepIndex, float dayLengthInHours, float soilAtmosphereModifier)
+        /// <summary>
+        /// returns the total sum of evaporation+transpiration in mm of the day
+        /// </summary>
+        /// <remarks>
+        /// C++: WaterCycle::evapotranspiration3PG()
+        /// </remarks>
+        public float FlowEvapotranspirationTimestep3PG(Project project, WeatherTimeSeries weatherTimeSeries, int weatherTimestepIndex, float dayLengthInHours, float soilAtmosphereModifier)
         {
             float vpdInMillibar = 10.0F * weatherTimeSeries.VpdMeanInKPa[weatherTimestepIndex]; // convert from kPa to mbar
             float meanDaytimeTemperature = weatherTimeSeries.TemperatureDaytimeMean[weatherTimestepIndex]; // average air temperature of the day (°C at 2 m height)
@@ -122,7 +129,7 @@ namespace iLand.Tree
             // Landsberg original: float e20 = 2.2;  // rate of change of saturated VP with T at 20C
             const float vpdToSaturationDeficit = 0.000622F; // convert VPD to saturation deficit = 18/29/1000 = molecular weight of H₂O/molecular weight of air
             const float latentHeatOfVaporization = 2460000.0F; // Latent heat of vaporization. Energy required per unit mass of water vaporized, J/kg
-            float boundaryLayerConductance = projectFile.Model.Ecosystem.BoundaryLayerConductance; // gA, m/s
+            float boundaryLayerConductance = project.Model.Ecosystem.BoundaryLayerConductance; // gA, m/s
 
             // canopy conductance.
             // The species traits are weighted by LAI on the RU.
@@ -172,7 +179,7 @@ namespace iLand.Tree
                 float div_evap = 1.0F + s;
                 float potentialCanopyEvaporation = (s * netRadiation + defTerm) / div_evap / latentHeatOfVaporization * dayLengthInSeconds;
                 // reduce the amount of transpiration on a wet day based on the approach of
-                // Wigmosta et al (1994). See http://iland-model.org/water+cycle#transpiration_and_canopy_conductance
+                // Wigmosta et al (1994). See https://iland-model.org/water+cycle#transpiration_and_canopy_conductance
 
                 float ratio_T_E = canopyTranspiration / potentialCanopyEvaporation;
                 float canopyEvaporation = MathF.Min(potentialCanopyEvaporation, this.TotalInterceptedWaterInMM);
@@ -183,6 +190,8 @@ namespace iLand.Tree
                 this.TotalInterceptedWaterInMM -= canopyEvaporation; // reduce interception
                 this.EvaporationFromCanopy = canopyEvaporation; // evaporation from intercepted water
             }
+
+            Debug.Assert(canopyTranspiration >= 0.0F);
             return canopyTranspiration;
         }
     }

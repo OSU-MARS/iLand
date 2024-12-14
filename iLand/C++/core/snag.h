@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -89,13 +89,23 @@ public:
     bool isEmpty() const { return mLabileFlux.isEmpty() && mRefractoryFlux.isEmpty() && isStateEmpty(); }
     const CNPool &labileFlux() const { return mLabileFlux; } ///< litter flux to the soil (kg/ha)
     const CNPool &refractoryFlux() const {return  mRefractoryFlux; } ///< deadwood flux to the soil (kg/ha)
+    double labileFluxAbovegroundCarbon() const { return mLabileFluxAbovegroundCarbon; } ///< C input to the labile flux from aboveground sources (kg/ha)
+    double refractoryFluxAbovegroundCarbon() const { return mRefrFluxAbovegroundCarbon; } ///< C input of the input to the refractory (woody) flux from aboveground sources (kg/ha)
     double climateFactor() const { return mClimateFactor; } ///< the 're' climate factor to modify decay rates (also used in ICBM/2N model)
-    double totalCarbon() const { return mTotalSnagCarbon; } ///< total carbon in snags (kg/ha)
-    const CNPair &totalSWD() const { return mTotalSWD; } ///< sum of C and N in SWD pools (stems) kg/ha
-    const CNPair &totalOtherWood() const { return mTotalOther; } ///< sum of C and N in other woody pools (branches + coarse roots) kg/ha
-    const CNPair &fluxToAtmosphere() const { return mTotalToAtm; } ///< total kg/ha heterotrophic respiration / flux to atm
-    const CNPair &fluxToExtern() const { return mTotalToExtern; } ///< total kg/ha harvests
-    const CNPair &fluxToDisturbance() const { return mTotalToDisturbance; } ///< total kg/ha due to disturbance (e.g. fire)
+    double totalCarbon() const { return mTotalSnagCarbon; } ///< total carbon in snags (kg/RU): not scaled to 1ha!!
+    const CNPair &totalSWD() const { return mTotalSWD; } ///< sum of C and N in SWD pools (stems) kg/RU
+    const CNPair &totalOtherWood() const { return mTotalOther; } ///< sum of C and N in other woody pools (branches + coarse roots) kg/RU
+    double otherWoodAbovegroundFraction() const { return mOtherWoodAbovegroundFrac; } ///< fraction of branches in 'other' pools (0..1)
+    const CNPair &fluxToAtmosphere() const { return mTotalToAtm; } ///< total kg/RU heterotrophic respiration / flux to atm
+    const CNPair &fluxToExtern() const { return mTotalToExtern; } ///< total kg/RU harvests
+    const CNPair &fluxToDisturbance() const { return mTotalToDisturbance; } ///< total kg/RU due to disturbance (e.g. fire)
+
+    /// deciduous foliage litter (kg/ha) from the previous year
+    double freshDeciduousFoliage() const { return mDeciduousFoliageLitter; }
+    /// set deciduous foliage litter to 0 - this is not ideal, but timing is complicated
+    /// as litter input comes from both trees and saplings, and the only "user" at the moment
+    /// is permafrost, which is executed between both processes
+    void resetDeciduousFoliage() { mDeciduousFoliageLitter = 0.; }
     // actions
     /// add for a tree with diameter
     void addTurnoverLitter(const Species *species, const double litter_foliage, const double litter_fineroot);
@@ -121,7 +131,10 @@ public:
                         const double foliage_to_soil) { addBiomassPools(tree, stem_to_snag, stem_to_soil, branch_to_snag, branch_to_soil, foliage_to_soil);}
 
     /// add (died) biomass from the regeneration layer
-    void addToSoil(const Species *species, const CNPair &woody_pool, const CNPair &litter_pool);
+    void addToSoil(const Species *species, const CNPair &woody_pool, const CNPair &litter_pool, double woody_aboveground_C, double fine_aboveground_C);
+
+    /// add non-tree biomass to soil (litter input). Inputs in kg/ha. decomposition rate in parameter value of CNPool.
+    void addBiomassToSoil(const CNPool &woody_pool, const CNPool &litter_pool);
 
     /// disturbance function: remove the fraction of 'factor' of biomass from the SWD pools; 0: remove nothing, 1: remove all
     void removeCarbon(const double factor);
@@ -152,6 +165,10 @@ private:
     CNPool mOtherWood[5]; ///< pool for branch biomass and coarse root biomass
     CNPair mTotalOther; ///< sum of mOtherWood[x]
     int mBranchCounter; ///< index which of the branch pools should be emptied
+    double mDeciduousFoliageLitter; ///< foliage litter (biomass) form deciduous trees of the year (kg/ha) [Note: is cleared at the end of the year]
+    double mLabileFluxAbovegroundCarbon; ///< C input to the labile flux from aboveground sources (kg/ha)
+    double mRefrFluxAbovegroundCarbon; ///< C input to the woody (refractory) pools from aboveground sources (kg/ha)
+    double mOtherWoodAbovegroundFrac; ///< fraction of other wood from aboveground
     double mTotalSnagCarbon; ///< sum of carbon content in all snag compartments (kg/ha)
     CNPair mTotalIn; ///< total input to the snag state (i.e. mortality/harvest and litter)
     CNPair mSWDtoSoil; ///< total flux from standing dead wood (book-keeping) -> soil (kg/ha)

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -23,6 +23,7 @@
 #include "snag.h"
 struct SoilParams; // forward
 class ResourceUnit; // forward
+class SoilInputOut; // forward
 
 class Soil
 {
@@ -30,10 +31,10 @@ public:
     // lifecycle
     Soil(ResourceUnit *ru=0);
     /// set initial pool contents
-    void setInitialState(const CNPool &young_labile_kg_ha, const CNPool &young_refractory_kg_ha, const CNPair &SOM_kg_ha);
+    void setInitialState(const CNPool &young_labile_kg_ha, const CNPool &young_refractory_kg_ha, const CNPair &SOM_kg_ha, double young_labile_aboveground_frac, double young_refractory_aboveground_frac);
 
     // actions
-    void setSoilInput(const CNPool &labile_input_kg_ha, const CNPool &refractory_input_kg_ha); ///< provide values for input pools
+    void setSoilInput(const CNPool &labile_input_kg_ha, const CNPool &refractory_input_kg_ha, double labile_aboveground_C, double refractory_aboveground_C); ///< provide values for input pools
     void setClimateFactor(const double climate_factor_re) { mRE = climate_factor_re; } ///< set the climate decomposition factor for the current year
     void newYear(); ///< reset of counters
     void calculateYear(); ///< main calculation function: calculates the update of state variables
@@ -53,7 +54,10 @@ public:
     const CNPool &youngLabile() const { return mYL;} ///< young labile matter (t/ha)
     const CNPool &youngRefractory() const { return mYR;} ///< young refractory matter (t/ha)
     const CNPair &oldOrganicMatter() const { return mSOM;} ///< old matter (SOM) (t/ha)
+    double youngLabileAbovegroundFraction() const { return mYLaboveground_frac; } ///< fraction (0..1) of aboveground biomass in litter layer (yL), source is foliage
+    double youngRefractoryAbovegroundFraction() const { return mYRaboveground_frac; } ///< fraction (0..1) of aboveground biomass in woody litter layer (yR), source=branches, stems
     double availableNitrogen() const { return mAvailableNitrogen; } ///< return available Nitrogen (kg/ha*yr)
+    double totalCarbon() const; ///< total soil carbon t/ha (result is per ha, not the real area)
 
     const CNPair &fluxToAtmosphere() const { return mTotalToAtmosphere; } ///< total flux due to heterotrophic respiration kg/ha
     const CNPair &fluxToDisturbance() const { return mTotalToDisturbance; } ///< total flux due to disturbance events (e.g. fire) kg/ha
@@ -79,12 +83,16 @@ private:
     CNPool mYL; ///< C/N Pool for young labile matter (i.e. litter) (t/ha)
     CNPool mYR; ///< C/N Pool for young refractory matter (i.e. downed woody debris) (t/ha)
     CNPair mSOM; ///< C/N Pool for old matter (t/ha) (i.e. soil organic matter, SOM)
+    // aboveground fraction (=fraction of the pool content for which the source is AG biomass (leafs, branches, stems)
+    double mYLaboveground_frac; ///< aboveground fraction (0..1) of the litter pool (=leafs)
+    double mYRaboveground_frac; ///< aboveground fraciton (0..1) of the refr. pool (all except coarse roots)
 
     CNPair mTotalToDisturbance; ///< book-keeping pool for heterotrophic respiration (kg/*ha)
     CNPair mTotalToAtmosphere; ///< book-keeping disturbance envents (fire) (kg/ha)
 
     static double mNitrogenDeposition; ///< annual nitrogen deposition (kg N/ha*yr)
     friend class Snapshot;
+    friend class SoilInputOut;
 };
 
 #endif // SOIL_H

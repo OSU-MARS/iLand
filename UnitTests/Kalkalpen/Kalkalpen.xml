@@ -82,8 +82,6 @@
       <regenerationEnabled>true</regenerationEnabled>
       <!-- the default soil permanent wilt potential is -4000 kPa -->
       <!--<soilPermanentWiltPotential>-4000.0</soilPermanentWiltPotential>-->
-      <!-- default is to query the soil water curve for the soil saturation potential but it can be overridden here -->
-      <!--<soilSaturationPotential>-15.0</soilSaturationPotential>--> <!-- specified in kPa -->
       <usePARFractionBelowGroundAllocation>true</usePARFractionBelowGroundAllocation>
       <!--<overrideGppPerYear>0</overrideGppPerYear>--> <!-- force GPP to a specific value -->
       <randomSeed>0</randomSeed>
@@ -137,6 +135,9 @@
       <qh>14.5</qh>
     </defaultSoil>
     <geometry>
+	  <!-- latitude of project area in degrees (positive values indicate the northern hemisphere, negative the southern hemisphere) 
+	       Assumed to have negligible variation over the project area and to match the latitude trees' light stamps are rendered for. -->
+	  <latitude>48.0</latitude>
       <!-- buffer width must be an integer multiple of light grid cell size (2 m), height grid cell size (10 m), and greater than the radius
            of the largest light stamp available (64 m)
            Buffer width must also be an integer multiple of the seed map cell size (20 m) if regeneration is enabled. The default value of 
@@ -144,18 +145,7 @@
       <bufferWidth>80</bufferWidth>
       <torus>false</torus>
     </geometry>
-    <grass enabled="true">
-      <!-- 'pixel' or 'continuous' -->
-      <type>pixel</type>
-      <grassDuration>polygon(x, 0,0, 6,0, 6,1, 30,1, 30,0)</grassDuration>
-      <lifThreshold>0.2</lifThreshold>
-      <!-- continuous mode -->
-      <grassPotential>polygon(0.9999*x^0.15)</grassPotential>
-      <!-- maximum duration (years) from 0 to full cover -->
-      <maxTimeLag>3</maxTimeLag>
-      <!-- equation giving probability of prohibiting regeneration as a function of grass level [0..1] -->
-      <grassEffect>polygon(0.9999*x^0.15)</grassEffect>
-    </grass>
+    <grass enabled="true" />
     <initialization>
       <resourceUnitFile>Kalkalpen resource unit subset.csv</resourceUnitFile>
       <!-- non-empty saplingFile only supported with resourceUnit = standRaster -->
@@ -345,7 +335,7 @@
   </output>
   <modules>
     <!-- a section for each plugin module, modules are turned on and off with their @enabled attribute
-     http://iland-model.org/disturbance+modules -->
+     https://iland-model.org/disturbance+modules -->
     <fire enabled="false">
       <!-- the "enabled" tag is available for each module -->
       <onlySimulation>true</onlySimulation>

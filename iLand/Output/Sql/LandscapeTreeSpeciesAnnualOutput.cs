@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿// C++/output/{ landscapeout.h, landscapeout.cpp }
+using iLand.Input.ProjectFile;
 using iLand.Simulation;
 using iLand.Tool;
 using iLand.Tree;
@@ -28,18 +29,20 @@ namespace iLand.Output.Sql
                                "year 2000.0 The initial state (without any growth) is indicated by the year 'startyear-1'." +
                                "You can use the 'condition' to control if the output should be created for the current year(see also dynamic stand output)";
             this.Columns.Add(SqlColumn.CreateYear());
+            this.Columns.Add(new("area_stockable_ha", "Total stockable area of the simulated landscape, ha (10 x 10 m cell resolution).", SqliteType.Real));
+            this.Columns.Add(new("area_ru_ha", "Total area of all simulated resource units, ha (1 ha resolution), which is the same as the number of resource units simulated. This area is larger than 'area' if any resource unit is only partially stockable.", SqliteType.Integer));
             this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
-            this.Columns.Add(new("count_ha", "tree count (living, >4m height) per ha", SqliteType.Integer));
-            this.Columns.Add(new("dbh_avg_cm", "average dbh (cm)", SqliteType.Real));
-            this.Columns.Add(new("height_avg_m", "average tree height (m)", SqliteType.Real));
-            this.Columns.Add(new("volume_m3", "volume (geomery, taper factor) in m3", SqliteType.Real));
-            this.Columns.Add(new("total_carbon_kg", "total carbon in living biomass (aboveground compartments and roots) of all living trees (including regeneration layer) (kg/ha)", SqliteType.Real));
-            this.Columns.Add(new("gwl_m3", "'gesamtwuchsleistung' (total growth including removed/dead trees) volume (geomery, taper factor) in m3", SqliteType.Real));
-            this.Columns.Add(new("basal_area_m2", "total basal area at breast height (m2)", SqliteType.Real));
-            this.Columns.Add(new("NPP_kg", "sum of NPP (aboveground + belowground) kg Biomass/ha", SqliteType.Real));
-            this.Columns.Add(new("NPPabove_kg", "sum of NPP (abovegroundground) kg Biomass/ha", SqliteType.Real));
-            this.Columns.Add(new("LAI", "Leafareaindex (m2/m2)", SqliteType.Real));
-            this.Columns.Add(new("cohort_count_ha", "number of cohorts in the regeneration layer (<4m) /ha", SqliteType.Integer));
+            this.Columns.Add(new("count_ha", "Tree count (living, >4m height) per ha", SqliteType.Integer));
+            this.Columns.Add(new("dbh_avg_cm", "Average DBH, cm.", SqliteType.Real));
+            this.Columns.Add(new("height_avg_m", "Average tree height, m.", SqliteType.Real));
+            this.Columns.Add(new("volume_m3", "Volume (geomery, taper factor) in m³.", SqliteType.Real));
+            this.Columns.Add(new("total_carbon_kg", "Total carbon in living biomass (aboveground compartments and roots) of all living trees (including regeneration layer) (kg/ha).", SqliteType.Real));
+            this.Columns.Add(new("gwl_m3", "'Gesamtwuchsleistung' (total growth including removed/dead trees) volume (geomery, taper factor) in m³.", SqliteType.Real));
+            this.Columns.Add(new("basal_area_m2", "Total basal area at breast height (m²).", SqliteType.Real));
+            this.Columns.Add(new("NPP_kg", "Sum of NPP (aboveground + belowground) kg biomass/ha.", SqliteType.Real));
+            this.Columns.Add(new("NPPabove_kg", "Sum of NPP (abovegroundground) kg biomass/ha.", SqliteType.Real));
+            this.Columns.Add(new("LAI", "Leaf area index (m²/m²),", SqliteType.Real));
+            this.Columns.Add(new("cohort_count_ha", "Number of cohorts in the regeneration layer (<4m) per hectare.", SqliteType.Integer));
         }
 
         public override void Setup(Project projectFile, SimulationState simulationState)
@@ -65,8 +68,11 @@ namespace iLand.Output.Sql
                 this.treeStatisticsBySpecies.Values[treeSpeciesIndex].Zero();
             }
 
+
+            float totalLandscapeAreaInM2 = 0.0F;
             foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
+                totalLandscapeAreaInM2 += resourceUnit.AreaInLandscapeInM2;
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     LiveTreeAndSaplingStatistics ruLiveTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
@@ -99,18 +105,20 @@ namespace iLand.Output.Sql
                 }
 
                 insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
-                insertRow.Parameters[1].Value = this.treeStatisticsBySpecies.Keys[treeSpeciesIndex];
-                insertRow.Parameters[2].Value = speciesStats.TreeCount;
-                insertRow.Parameters[3].Value = speciesStats.AverageDbh;
-                insertRow.Parameters[4].Value = speciesStats.AverageHeight;
-                insertRow.Parameters[5].Value = speciesStats.LiveStandingStemVolume;
-                insertRow.Parameters[6].Value = speciesStats.TotalCarbon;
-                insertRow.Parameters[7].Value = speciesStats.LiveStandingAndRemovedStemVolume;
-                insertRow.Parameters[8].Value = speciesStats.BasalArea;
-                insertRow.Parameters[9].Value = speciesStats.TreeNpp;
-                insertRow.Parameters[10].Value = speciesStats.TreeNppAboveground;
-                insertRow.Parameters[11].Value = speciesStats.LeafAreaIndex;
-                insertRow.Parameters[12].Value = speciesStats.CohortCount;
+                insertRow.Parameters[1].Value = totalLandscapeAreaInM2 / Constant.Grid.ResourceUnitAreaInM2; // m² -> ha
+                insertRow.Parameters[2].Value = model.Landscape.ResourceUnits.Count;
+                insertRow.Parameters[3].Value = this.treeStatisticsBySpecies.Keys[treeSpeciesIndex];
+                insertRow.Parameters[4].Value = speciesStats.TreeCount;
+                insertRow.Parameters[5].Value = speciesStats.AverageDbh;
+                insertRow.Parameters[6].Value = speciesStats.AverageHeight;
+                insertRow.Parameters[7].Value = speciesStats.LiveStandingStemVolume;
+                insertRow.Parameters[8].Value = speciesStats.TotalCarbon;
+                insertRow.Parameters[9].Value = speciesStats.LiveStandingAndRemovedStemVolume;
+                insertRow.Parameters[10].Value = speciesStats.BasalArea;
+                insertRow.Parameters[11].Value = speciesStats.TreeNpp;
+                insertRow.Parameters[12].Value = speciesStats.TreeNppAboveground;
+                insertRow.Parameters[13].Value = speciesStats.LeafAreaIndex;
+                insertRow.Parameters[14].Value = speciesStats.CohortCount;
                 insertRow.ExecuteNonQuery();
             }
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿// C++/tools/{ grid.h, grid.cpp }
+using System;
 using System.Diagnostics;
 using System.Drawing;
 
@@ -79,6 +80,7 @@ namespace iLand.World
             set { this.Data[indexY * this.CellsX + indexX] = value; }
         }
 
+        // TOOD: remove to force use of safer index translation APIs on Landscape
         public T this[int indexX, int indexY, int divisor]
         {
             get 
@@ -192,21 +194,20 @@ namespace iLand.World
             return new Point(index % this.CellsX, index / this.CellsX);
         }
 
+        public bool IsIndexValid(Point pos)
+        {
+            return this.IsIndexValid(pos.X, pos.Y); 
+        }
+
+        /// <returns>true if position is within the grid</returns>
+        public bool IsIndexValid(int x, int y)
+        {
+            return (x >= 0) && (x < this.CellsX) && (y >= 0) && (y < this.CellsY);
+        }
+
         public bool IsSetup()
         { 
             return this.Data.Length > 0; 
-        }
-        
-        /// returns the index of an aligned grid (the same size) with 5 times bigger cells (e.g. convert from a 2 m grid to a 10 m grid)
-        public int LightIndexToHeightIndex(int lightIndex) 
-        { 
-            return ((lightIndex / this.CellsX) / Constant.Grid.LightCellsPerHeightCellWidth) * (this.CellsX / Constant.Grid.LightCellsPerHeightCellWidth) + (lightIndex % this.CellsX) / Constant.Grid.LightCellsPerHeightCellWidth;
-        }
-
-        /// returns the index of an aligned grid (the same size) with 10 times bigger cells (e.g. convert from a 2 m grid to a 20 m grid)
-        public int LightIndexToSeedIndex(int lightIndex) 
-        { 
-            return ((lightIndex / this.CellsX) / Constant.Grid.LightCellsPerSeedmapCellWidth) * (this.CellsX / Constant.Grid.LightCellsPerSeedmapCellWidth) + (lightIndex % this.CellsX) / Constant.Grid.LightCellsPerSeedmapCellWidth; 
         }
 
         public int IndexXYToIndex(int indexX, int indexY) 
@@ -299,7 +300,7 @@ namespace iLand.World
             int newCount = cellsX * cellsY;
             if (newCount > this.CellCount)
             {
-                this.Data = new T[newCount];
+                this.Data = new T[newCount]; // for now leave at default value, GC.AllocateUninitializedArray() could be used in some cases
             }
 
             this.CellSizeInM = cellSizeInM;

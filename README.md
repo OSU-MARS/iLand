@@ -34,7 +34,7 @@ in the project file, SIMD instructions are used on processors supporting AVX2 (I
 Excavator, from 2015). Performance optimizations currently target AMD Zen 3.
 
 ### Relationship to iLand 1.0 (2016)
-Code in this repo derives from the [iLand 1.0](http://iland-model.org/) spatial growth and yield model. The official iLand 1.0 release has been
+Code in this repo derives from the [iLand 1.0](https://iland-model.org/) spatial growth and yield model. The official iLand 1.0 release has been
 used primarily for modeling in Europe and contains an example model from Kalkalpen National Park in Austria. The main code changes in this 
 repo are
 
@@ -50,7 +50,7 @@ repo are
 * Removal of fixed light reduction around model edges. This edge correction was inaccurate for open edges, such as bodies of water, as well as
   for typical closed canopy forest. Larger trees would both stamp and and read beyond the correction width.
 * Removal of static state so that multiple iLand models can be instantiated in the same app domain. As a corollary, species names are no
-  longer replaced with their species set indices within expressions as [management filtering](http://iland-model.org/Expression#Constants)
+  longer replaced with their species set indices within expressions as [management filtering](https://iland-model.org/Expression#Constants)
   relied on static lookups from deep within the parse stack.
 * Standardization on single precision rather than retaining the mixed and variable use of single and double precision of the C++ build. This 
   essentially halves the memory footprint of floating point data and reduces calculation and single precision exponentiation, logarithms, square 
@@ -78,14 +78,60 @@ its example project through version 0.8. Since this repo is devoted to continued
 is native to the Pacific Northwest and a European plantation species, so is supported on both continents with differing light intensity profiles 
 and parameterizations.
 
-### Known issues inherited from iLand 1.0 C++
+### Known issues inherited from iLand C++
+* Most project components' coordinate reference systems cannot be checked for consistency because file formats lacking coordinate system 
+  information are used. Internally, while iLand follows projected coordinate systems' convention of y values increasing northwards, project 
+  grids' y indices also increase going northwards. This is opposite the GDAL convention of using negative raster cell heights so that y indices 
+  increase southwards. (In both systems x indices increase eastwards.)
 * Leaf phenology is hard coded for northern hemisphere temperate and boreal sites, preventing support for deciduous species in the southern
   hemisphere and likely inhibiting modeling on tropical sites. Chilling day calculations for establishment of evergreen species are also likely 
-  to be incorrect in these locations.
+  to be incorrect for tropical and southern hemisphere sites.
+* Every resource unit's soils are assumed to be fully saturated with water at simulation start, which is likely incorrect for most resource units
+  in most project areas. Snowpack density remains invariant of depth throughout the entire model run.
+* Latitude is assumed constant over the project area and light stamps are assumed to be rendered for the latitude specified in the project file.
+  Terrain influences on lighting are ignored, even when a digital elevation model is provided for microsite modeling. As a result, all resource 
+  units have the same day length, regardless of their actual latitude and topographic position, and the extent and depth of trees' light 
+  influence fields does not vary as a function of latitude or slope.
 * Sun angles are aren't adjusted for leap years. Angles and solstice dates therefore accumulate up to one day of error over the four year leap 
   year cycle. Biases are also introduced by the use of fixed values for the Earth's axial tilt and neglect of latitudinal variation across the 
   simulation area, though these effects are likely small compared to those of atmospheric refraction, terrain occultation, and slope.
 * The project level switch for expression linearization is not consistently translated into calls to Linearize().
+
+### iLand 2.0 C++ issues fixed
+* Stem biomass is consistently defined as stem biomass, rather than including or not including NPP reserve depending on the API used. Reserve
+  is combined with stem biomass in carbon pools and outputs but is not (mis)reported as stem biomass.
+* Exceptions continue to be thrown rather than silently revising inputs leading to out of range parameters or internal variables.
+* Digital elevation models (DEMs) are consistently resampled to the 10 m height grid using bilinear interpolation. Nearest neighbor resampling of
+  DEMs at 10 m or higher resolution is removed, as are the requirements DEM cells be square and, if larger than 10 m, be an exact multiple of 
+  10 m.
+* Consistent with iLand 1.0, nitrogen growth modifiers aren't calculated if resource unit soils are disabled. iLand 2.0 main implements a bypass 
+  where nitrogen modifiers are calculated from the default soil even if soils are disabled which, while arguably a feature, is inconsistent with 
+  the rest of the nitrogen cycle implementation. iLand 2.0 main also adds the next years' nitrogen deposition when calculating the growth
+  modifier, which is not done here.
+* Mismatched values of sapling height class constants in different functions are consolidated, correcting miscalculation of stem counts generated
+  from sapling heights.
+* Inconsistencies over whether a tree can or cannot produce seed if it is shorter than the regeneration layer height are removed in favor of
+  consistently allowing seed production regardless of height.
+* A tree's probability of sprouting, once of reproductive age, is defined in the species database with the rest of the species' establishment
+  and sapling parameters, rather than as an isolated value in the project XML.
+* If multiple species sets are in use, miscalculations are prevented by not implementing the internal APIs which return the first species set 
+  without checking whether those are the species the calling resource unit is bound to. Matric potential requirements for establishment are
+  also not supported as variable accessible from resource unit expressions because expression syntax currently lacks a way of indicating which
+  species' requirement should be returned.
+* The landscape removal SQL output rejects negative, out of order, and non-integer DBH class thresholds instead of silently making wrong DBH
+  class assignments. DBHes are ceilinged, rather than rounded, so that trees 0-5 mm larger in diameter than a class break are added to the 
+  class they're in rather than the next smaller one.
+* Assorted typo level defects, such as 1) multiplying foliage by fine root turnover when calculating sapling biomass turnover, 2) checking
+  whether a species is coniferous rather than evergreen to determine if it is deciduous, 3) not writing clauses or loops to short circuit
+  once their value is known, 4) calculating microclimate cell position offset with inconsistent signs in y, 5) trees dying if their stem
+  mass reduces to zero but not if numerical errors result in a negative stem mass, 6) writing `NaN` rather than undefined values for 
+  landscape level permafrost moss and soil organic layer depths, and 7) writing landscape level moss biomass. In the interests of code integrity, 
+  multiple functions added to the 2.0 codebase which appear to have never worked are not ported.
+* Static variables continue to be avoided so that multiple `Project` and `Model` instances can exist within the same app domain. Implementation
+  moves accordingly with, for example, microclimate, permafrost, and taiga (or tundra) moss settings deserialized within a `Project` instance 
+  rather than to a global static variable.
+* Replaced hard coded -1.0 m no data value and checks for elevations less than zero with no data value specified (if any) in the digital 
+  elevation model's raster, removing conflicts on sites with elevations below sea level.
 
 ### iLand 1.0 C++ issues fixed
 * ~50% crash probability per run reduced to negligible risk, dramatically improving useability.

@@ -5,7 +5,7 @@
     /// </summary>
     public class CarbonNitrogenPool : CarbonNitrogenTuple
     {
-        public float DecompositionRate { get; set; } // get weighting parameter
+        public float DecompositionRate { get; set; } // get weighting parameter (C++ parameter(), mParameter)
 
         public CarbonNitrogenPool()
             : base()
@@ -28,7 +28,7 @@
         public void Add(CarbonNitrogenTuple cnTuple, float decompositionRate)
         {
             CarbonNitrogenPool pool = new() { C = cnTuple.C, N = cnTuple.N, DecompositionRate = decompositionRate };
-            this.DecompositionRate = this.GetWeightedDecomposiitonRate(pool);
+            this.DecompositionRate = this.GetWeightedDecompositionRate(pool);
             this.C += cnTuple.C;
             this.N += cnTuple.N;
         } // convenience function
@@ -37,7 +37,7 @@
         public static CarbonNitrogenPool operator +(CarbonNitrogenPool pool1, CarbonNitrogenPool pool2)
         {
             CarbonNitrogenPool sum = new() { C = pool1.C, N = pool1.N, DecompositionRate = pool1.DecompositionRate };
-            sum.GetWeightedDecomposiitonRate(pool2);
+            sum.GetWeightedDecompositionRate(pool2);
             sum.C += pool2.C;
             sum.N += pool2.N;
             return sum;
@@ -69,7 +69,7 @@
         }
 
         // 'simulate' weighting (get weighted param value of 's' with the current content)
-        public float GetWeightedDecomposiitonRate(CarbonNitrogenPool other)
+        public float GetWeightedDecompositionRate(CarbonNitrogenPool other)
         {
             if (other.C == 0.0F)
             {

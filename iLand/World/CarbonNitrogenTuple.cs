@@ -49,6 +49,11 @@
             this.N += Constant.DryBiomassCarbonFraction * biomass / cnRatio;
         }
 
+        public bool IsValid()
+        {
+            return (this.C >= 0.0F) && (this.N >= 0.0F);
+        }
+
         public void Zero() 
         {
             this.C = 0.0F; 

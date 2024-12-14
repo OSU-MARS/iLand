@@ -1,19 +1,18 @@
-﻿using iLand.Input;
+﻿// C++/core/watercycle.cpp
+using iLand.Input;
 using System;
 using System.Diagnostics;
 
 namespace iLand.World
 {
-    internal class SoilWaterRetentionCampbell : SoilWaterRetention
+    public class SoilWaterRetentionCampbell : SoilWaterRetention
     {
         private readonly float saturationRatioPowerB; // see GetSoilWater*()
-        private readonly float soilPlantAccessibleDepthInMM;
-        private readonly float saturatedSoilWaterContent; // see GetSoilWater*(), [-], m3/m3
+        private readonly float saturatedSoilWaterContent; // see GetSoilWater*(), [-], m³/m³
 
-        public SoilWaterRetentionCampbell(ResourceUnitEnvironment environment)
+        public SoilWaterRetentionCampbell(ResourceUnitEnvironment environment, float soilSaturationPotentialInKPa)
+            : base(environment)
         {
-            this.soilPlantAccessibleDepthInMM = 10.0F * environment.SoilPlantAccessibleDepthInCm; // convert from cm to mm
-
             // get values...
             float percentSand = environment.SoilSand;
             float percentSilt = environment.SoilSilt;
@@ -39,7 +38,27 @@ namespace iLand.World
             //   Journal 18(1):1-15. https://doi.org/10.2136/vzj2018.08.0151
             // Zhang Y, Schaap G. 2017. Weighted recalibration of the Rosetta pedotransfer model with improved estimates of hydraulic parameter
             //   distributions and summary statistics (Rosetta3). Journal of Hydrology 547:39-53. https://doi.org/10.1016/j.jhydrol.2017.01.004
-            this.SaturationPotentialInKPa = -0.000098F * MathF.Exp(2.30258509299F * (1.54F - 0.0095F * percentSand + 0.0063F * percentSilt)); // Schwalm and Ek eq. 83, Cosby et al. Table 4, Campbell and Norman 1998, ln(10) = 2.30258509299
+
+            //bool fix_mpa_kpa = true;
+            //if (xml.hasNode("model.settings.waterUseLegacyCalculation"))
+            //{
+            //    fix_mpa_kpa = !xml.valueBool("model.settings.waterUseLegacyCalculation");
+            //    qDebug() << "waterUseLegacyCalculation: " << (fix_mpa_kpa ? "no (fixed)" : "yes (buggy)");
+            //}
+            // calculate soil characteristics based on empirical functions (Schwalm & Ek, 2004)
+            // note: the variables are percentages [0..100]
+            // note: conversion of cm -> kPa (1cm = 9.8 Pa), therefore 0.098 instead of 0.000098
+            // the log(10) from Schwalm&Ek cannot be found in Cosby (1984),
+            // and results are more similar to the static WHC estimate without the log(10).
+            if (Single.IsNaN(soilSaturationPotentialInKPa))
+            {
+                this.SaturationPotentialInKPa = -0.098F * MathF.Exp(2.30258509299F * (1.54F - 0.0095F * percentSand + 0.0063F * percentSilt)); // Schwalm and Ek eq. 83, Cosby et al. Table 4, Campbell and Norman 1998, ln(10) = 2.30258509299
+            }
+            else
+            {
+                Debug.Assert(soilSaturationPotentialInKPa <= 0.0F);
+                this.SaturationPotentialInKPa = soilSaturationPotentialInKPa;
+            }
             this.saturationRatioPowerB = -(3.1F + 0.157F * percentClay - 0.003F * percentSand);  // eq. 84
             this.saturatedSoilWaterContent = 0.01F * (50.5F - 0.142F * percentSand - 0.037F * percentClay); // eq. 78
         }
@@ -51,23 +70,28 @@ namespace iLand.World
 
         public override float GetSoilWaterPotentialFromWater(float soilWaterInMM)
         {
-            Debug.Assert((soilWaterInMM >= 0.0F) && (this.soilPlantAccessibleDepthInMM > soilWaterInMM), "Soil depth is negative, soil water content is negative, or soil water content exceeds soil depth.");
+            Debug.Assert((soilWaterInMM >= 0.0F) && (this.SoilPlantAccessibleDepthInMM > soilWaterInMM), "Soil depth is negative, soil water content is negative, or soil water content exceeds soil depth.");
 
             // psi_x = psi_ref * (θ / θref)^b
             if (soilWaterInMM < 0.001F)
             {
-                return -100000000.0F;
+                return -5000.0F; // if no water at all is in the soil (e.g. all frozen) return 5 MPa
             }
-            float psiInKPa = this.SaturationPotentialInKPa * MathF.Pow(soilWaterInMM / this.soilPlantAccessibleDepthInMM / this.saturatedSoilWaterContent, this.saturationRatioPowerB);
+
+            float psiInKPa = this.SaturationPotentialInKPa * MathF.Pow(soilWaterInMM / this.SoilPlantAccessibleDepthInMM / this.saturatedSoilWaterContent, this.saturationRatioPowerB);
+            if (psiInKPa < -5000.0F)
+            {
+                return -5000.0F; // Eq. 82
+            }
             return psiInKPa;
         }
 
         public override float GetSoilWaterFromPotential(float psiInKilopascals)
         {
-            Debug.Assert(psiInKilopascals <= 0.0F, "Soil depth is negative or matric potential is positive. Are the arguments reversed?");
+            Debug.Assert(psiInKilopascals <= 0.0F, "Matric potential " + psiInKilopascals + " kPa is positive.");
 
             // rho_x = rho_ref * (psi_x / psi_ref)^(1/b)
-            float mmH20 = this.soilPlantAccessibleDepthInMM * this.saturatedSoilWaterContent * MathF.Pow(psiInKilopascals / this.SaturationPotentialInKPa, 1.0F / this.saturationRatioPowerB);
+            float mmH20 = this.SoilPlantAccessibleDepthInMM * this.saturatedSoilWaterContent * MathF.Pow(psiInKilopascals / this.SaturationPotentialInKPa, 1.0F / this.saturationRatioPowerB);
             return mmH20;
         }
     }

@@ -1,9 +1,11 @@
-﻿using iLand.Input.ProjectFile;
+﻿// C++/output/{ treeout.h, treeout.cpp }
+using iLand.Input.ProjectFile;
 using iLand.Simulation;
 using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
+using System;
 using System.Drawing;
 using Model = iLand.Simulation.Model;
 
@@ -21,7 +23,8 @@ namespace iLand.Output.Sql
             this.TableName = "tree";
             this.Description = "Output of indivdual trees. Use the 'filter' property to reduce amount of data (filter by resource-unit, year, species, ...)." + System.Environment.NewLine +
                                "The output is triggered after the growth of the current season. " +
-                               "Initial values (without any growth) are output as 'startyear-1'.";
+                               "Initial values (without any growth) are output as 'startyear-1'." + Environment.NewLine +
+                               "The 'treeFlags' is a binary combination of individual flags; see iLand.Tree.TreeFlags.";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnitID());
             this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
@@ -31,16 +34,19 @@ namespace iLand.Output.Sql
             this.Columns.Add(new("dbh", "Tree's DBH (cm) of the tree", SqliteType.Real));
             this.Columns.Add(new("height", "Tree's height (m) of the tree", SqliteType.Real));
             this.Columns.Add(new("basalArea", "Tree's basal area, m².", SqliteType.Real));
-            this.Columns.Add(new("volumeM3", "Tree's stem volume, m³.", SqliteType.Real));
-            this.Columns.Add(new("leafAreaM2", "Tree's leaf area of the tree, m².", SqliteType.Real));
+            this.Columns.Add(new("volume_m3", "Tree's stem volume, m³.", SqliteType.Real));
+            this.Columns.Add(new("age", "tree age (years)", SqliteType.Integer));
+            this.Columns.Add(new("leafArea_m2", "Tree's leaf area of the tree, m².", SqliteType.Real));
             this.Columns.Add(new("foliageMass", "Foliage biomass, kg", SqliteType.Real));
-            this.Columns.Add(new("woodyMass", "Woody biomass, kg.", SqliteType.Real));
+            this.Columns.Add(new("stemMass", "Biomass in woody department (tree stem, without reserve pool), kg.", SqliteType.Real));
+            this.Columns.Add(new("branchMass", "Biomass in branches, kg.", SqliteType.Real));
             this.Columns.Add(new("fineRootMass", "Fine root biomass, kg", SqliteType.Real));
             this.Columns.Add(new("coarseRootMass", "Coarse root biomass, kg.", SqliteType.Real));
             this.Columns.Add(new("lri", "Light resource index of the tree (raw light index from iLand, without applying resource-unit modifications).", SqliteType.Real));
             this.Columns.Add(new("lightResponse", "Light response value (including species specific response to the light level)", SqliteType.Real));
             this.Columns.Add(new("stressIndex", "Tree's stress level, 0..1 (see [Mortality]).", SqliteType.Real));
             this.Columns.Add(new("reserve_kg", "NPP currently available in the tree's reserve pool, kg biomass.", SqliteType.Real));
+            this.Columns.Add(new("treeFlags", "Tree's individual bit flags (see iLand.Tree.TreeFlags).", SqliteType.Integer));
         }
 
         public override void Setup(Project projectFile, SimulationState simulationState)
@@ -72,25 +78,28 @@ namespace iLand.Output.Sql
                 PointF approximateTreeProjectCoordinate = landscape.LightGrid.GetCellProjectCentroid(treesOfSpecies.LightCellIndexXY[treeIndex]);
                 PointF approximateTreeGisCoordinate = landscape.ToGisCoordinate(approximateTreeProjectCoordinate);
 
-                insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear;
-                insertRow.Parameters[1].Value = treesOfSpecies.ResourceUnit.ID;
-                insertRow.Parameters[2].Value = treesOfSpecies.Species.WorldFloraID;
-                insertRow.Parameters[3].Value = treesOfSpecies.TreeID[treeIndex];
-                insertRow.Parameters[4].Value = approximateTreeGisCoordinate.X;
-                insertRow.Parameters[5].Value = approximateTreeGisCoordinate.Y;
-                insertRow.Parameters[6].Value = treesOfSpecies.DbhInCm[treeIndex];
-                insertRow.Parameters[7].Value = treesOfSpecies.HeightInM[treeIndex];
-                insertRow.Parameters[8].Value = treesOfSpecies.GetBasalArea(treeIndex);
-                insertRow.Parameters[9].Value = treesOfSpecies.GetStemVolume(treeIndex);
-                insertRow.Parameters[10].Value = treesOfSpecies.LeafAreaInM2[treeIndex];
-                insertRow.Parameters[11].Value = treesOfSpecies.FoliageMassInKg[treeIndex];
-                insertRow.Parameters[12].Value = treesOfSpecies.StemMassInKg[treeIndex];
-                insertRow.Parameters[13].Value = treesOfSpecies.FineRootMassInKg[treeIndex];
-                insertRow.Parameters[14].Value = treesOfSpecies.CoarseRootMassInKg[treeIndex];
-                insertRow.Parameters[15].Value = treesOfSpecies.LightResourceIndex[treeIndex];
-                insertRow.Parameters[16].Value = treesOfSpecies.LightResponse[treeIndex];
-                insertRow.Parameters[17].Value = treesOfSpecies.StressIndex[treeIndex];
-                insertRow.Parameters[18].Value = treesOfSpecies.NppReserveInKg[treeIndex];
+                insertRow.Parameters[0].Value = model.SimulationState.CurrentCalendarYear; // year
+                insertRow.Parameters[1].Value = treesOfSpecies.ResourceUnit.ID; // resourceUnit
+                insertRow.Parameters[2].Value = treesOfSpecies.Species.WorldFloraID; // species
+                insertRow.Parameters[3].Value = treesOfSpecies.TreeID[treeIndex]; // id
+                insertRow.Parameters[4].Value = approximateTreeGisCoordinate.X; // xLite
+                insertRow.Parameters[5].Value = approximateTreeGisCoordinate.Y; // yLight
+                insertRow.Parameters[6].Value = treesOfSpecies.DbhInCm[treeIndex]; // dbh
+                insertRow.Parameters[7].Value = treesOfSpecies.HeightInM[treeIndex]; // height
+                insertRow.Parameters[8].Value = treesOfSpecies.GetBasalArea(treeIndex); // basalArea
+                insertRow.Parameters[9].Value = treesOfSpecies.GetStemVolume(treeIndex); // volume_m3
+                insertRow.Parameters[10].Value = treesOfSpecies.AgeInYears[treeIndex]; // age
+                insertRow.Parameters[11].Value = treesOfSpecies.LeafAreaInM2[treeIndex]; // leafArea_m2
+                insertRow.Parameters[12].Value = treesOfSpecies.FoliageMassInKg[treeIndex]; // foliageMass
+                insertRow.Parameters[13].Value = treesOfSpecies.StemMassInKg[treeIndex]; // stemMass
+                insertRow.Parameters[14].Value = treesOfSpecies.GetBranchBiomass(treeIndex); // branchMass
+                insertRow.Parameters[15].Value = treesOfSpecies.FineRootMassInKg[treeIndex]; // fineRootMass
+                insertRow.Parameters[16].Value = treesOfSpecies.CoarseRootMassInKg[treeIndex]; // coarseRootMass
+                insertRow.Parameters[17].Value = treesOfSpecies.LightResourceIndex[treeIndex]; // lri
+                insertRow.Parameters[18].Value = treesOfSpecies.LightResponse[treeIndex]; // lightResponse
+                insertRow.Parameters[19].Value = treesOfSpecies.StressIndex[treeIndex]; // stressIndex
+                insertRow.Parameters[20].Value = treesOfSpecies.NppReserveInKg[treeIndex]; // reserve_kg
+                insertRow.Parameters[21].Value = treesOfSpecies.Flags[treeIndex]; // treeFlags
                 insertRow.ExecuteNonQuery();
             }
         }

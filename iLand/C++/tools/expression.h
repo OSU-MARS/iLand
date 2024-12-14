@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -23,21 +23,21 @@
 #include <QtCore/QStringList>
 #include <QtCore/QMutexLocker>
 #include <QtCore/QVector>
-
+#define EXPRNLOCALVARS 10
 class ExpressionWrapper;
 class Expression
 {
 public:
         ~Expression();
         Expression();
-        Expression(const QString &aExpression) { m_expr=0; m_execList=0; setExpression(aExpression); }
-        Expression(const QString &expression, ExpressionWrapper *wrapper) { m_expr=0; m_execList=0; setExpression(expression); mModelObject = wrapper;  }
+        Expression(const QString &aExpression) { m_expr=nullptr; m_execList=nullptr; setExpression(aExpression); }
+        Expression(const QString &expression, ExpressionWrapper *wrapper) { m_expr=nullptr; m_execList=nullptr; setExpression(expression); mModelObject = wrapper;  }
         // intialization
         void setExpression(const QString &aExpression); ///< set expression
         void setAndParse(const QString &expr); ///< set expression and parse instantly
         void setModelObject(ExpressionWrapper *wrapper) { mModelObject = wrapper; }
         const QString &expression() const { return m_expression; }
-        void  parse(ExpressionWrapper *wrapper=0); ///< force a parsing of the expression
+        void  parse(ExpressionWrapper *wrapper=nullptr); ///< force a parsing of the expression
 
         /// call linearize() to 'linarize' an expression, i.e. approximate the function by linear interpolation.
         void linearize(const double low_value, const double high_value, const int steps=1000);
@@ -47,16 +47,19 @@ public:
         /// global switch for linerization. If set to false, subsequent calls to linearize are ignored.
         static void setLinearizationEnabled(const bool enable) {mLinearizationAllowed = enable; }
         // calculations
-        double execute(double *varlist=0, ExpressionWrapper *object=0) const; ///< calculate formula and return result. variable values need to be set using "setVar()"
+        double execute(double *varlist=nullptr, ExpressionWrapper *object=nullptr) const; ///< calculate formula and return result. variable values need to be set using "setVar()"
+        bool executeBool(double *varlist=nullptr, ExpressionWrapper *object=nullptr) const { return execute(varlist, object) != 0.; }
         double executeLocked() { QMutexLocker m(&m_execMutex); return execute();  } ///< thread safe version
         /** calculate formula. the first two variables are assigned the values Val1 and Val2. This function is for convenience.
            the return is the result of the calculation.
            e.g.: x+3*y --> Val1->x, Val2->y
            forceExecution: do not apply linearization */
         double calculate(const double Val1=0., const double Val2=0., const bool forceExecution=false) const;
+        bool calculateBool(const double Val1=0., const double Val2=0., const bool forceExecution=false) const { return calculate(Val1, Val2, forceExecution) != 0.; }
         /// calculate formula with object
         ///
         double calculate(ExpressionWrapper &object, const double variable_value1=0., const double variable_value2=0.) const;
+        double calculateBool(ExpressionWrapper &object, const double variable_value1=0., const double variable_value2=0.) const { return calculate(object,variable_value1, variable_value2)!=0.; }
 
         //variables
         /// set the value of the variable named "Var". Note: using addVar to obtain a pointer may be more efficient for multiple executions.
@@ -65,6 +68,7 @@ public:
         double *addVar(const QString& VarName);
         /// retrieve again the value pointer of a variable.
         double *  getVarAdress(const QString& VarName);
+        const QStringList &variables() {return m_varList; }
 
 
         bool isConstExpression() const { return m_constExpression; } ///< returns true if current expression is a constant.
@@ -102,7 +106,7 @@ private:
         Expression::ExtExecListItem *m_execList;
         int m_execListSize; // size of buffer
         int m_execIndex;
-        double m_varSpace[10];
+        double m_varSpace[EXPRNLOCALVARS];
         QStringList m_varList;
         QStringList m_externVarNames;
         double *m_externVarSpace;
@@ -124,7 +128,7 @@ private:
         void  parse_level4();
         int  getFuncIndex(const QString& functionName);
         int  getVarIndex(const QString& variableName);
-        inline double getModelVar(const int varIdx, ExpressionWrapper *object=0) const ;
+        inline double getModelVar(const int varIdx, ExpressionWrapper *object=nullptr) const ;
 
         // link to external model variable
         ExpressionWrapper *mModelObject;
@@ -151,6 +155,16 @@ private:
         double mLinearStepY;
         int mLinearStepCountY;
         static bool mLinearizationAllowed;
+        static bool mThrowExceptionsInJS;
+        friend class ExprExceptionAsScriptError;
+};
+
+/// use this class to force exceptions from expression to be routed to the global
+/// JS environment (this avoids crashes as no exceptions can happen during JS execution)
+class ExprExceptionAsScriptError {
+    public:
+        ExprExceptionAsScriptError() { Expression::mThrowExceptionsInJS = true; }
+        ~ExprExceptionAsScriptError() { Expression::mThrowExceptionsInJS = false; }
 };
 
 #endif // LOGICEXPRESSION_H

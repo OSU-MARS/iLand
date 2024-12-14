@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.Reflection.PortableExecutable;
 
 namespace iLand.Input
 {
@@ -16,9 +17,10 @@ namespace iLand.Input
         public float SnagBranchRootCarbon { get; private init; }
         public float SnagBranchRootCNRatio { get; private init; }
         public float SnagBranchRootDecompositionRate { get; private init; }
+        public float SnagOtherWoodAbovegroundFraction { get; private init; }
+        public float SnagsPerResourceUnit { get; private init; }
         public float SnagStemCarbon { get; private init; }
         public float SnagStemCNRatio { get; private init; }
-        public float SnagsPerResourceUnit { get; private init; }
         public float SnagStemDecompositionRate { get; private init; }
         public float SnagHalfLife { get; private init; }
 
@@ -64,9 +66,11 @@ namespace iLand.Input
         public float SoilOrganicN { get; private init; }
         public float SoilQb { get; private init; } // soil microbe CN ratio
         public float SoilQh { get; private init; } // soil organic matter CN ratio
+        public float SoilYoungLabileAbovegroundFraction { get; private init; }
         public float SoilYoungLabileC { get; private init; }
         public float SoilYoungLabileDecompositionRate { get; private init; }
         public float SoilYoungLabileN { get; private init; }
+        public float SoilYoungRefractoryAbovegroundFraction { get; private init; }
         public float SoilYoungRefractoryC { get; private init; }
         public float SoilYoungRefractoryDecompositionRate { get; private init; }
         public float SoilYoungRefractoryN { get; private init; }
@@ -84,6 +88,7 @@ namespace iLand.Input
 
             this.SnagBranchRootCarbon = header.SnagBranchRootCarbon >= 0 ? Single.Parse(environmentFileRow[header.SnagBranchRootCarbon], NumberStyles.Float) : defaultEnvironment.SnagBranchRootCarbon;
             this.SnagBranchRootCNRatio = header.SnagBranchRootCNRatio >= 0 ? Single.Parse(environmentFileRow[header.SnagBranchRootCNRatio], NumberStyles.Float) : defaultEnvironment.SnagBranchRootCNRatio;
+            this.SnagOtherWoodAbovegroundFraction = header.SnagOtherWoodAbovegroundFraction >= 0 ? Single.Parse(environmentFileRow[header.SnagOtherWoodAbovegroundFraction], NumberStyles.Float) : defaultEnvironment.SnagOtherWoodAbovegroundFraction;
             this.SnagStemCarbon = header.SnagStemCarbon >= 0 ? Single.Parse(environmentFileRow[header.SnagStemCarbon], NumberStyles.Float) : defaultEnvironment.SnagStemCarbon;
             this.SnagStemCNRatio = header.SnagStemCNRatio >= 0 ? Single.Parse(environmentFileRow[header.SnagStemCNRatio], NumberStyles.Float) : defaultEnvironment.SnagStemCNRatio;
             this.SnagStemDecompositionRate = header.SnagStemDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SnagStemDecompositionRate], NumberStyles.Float) : defaultEnvironment.SnagStemDecompositionRate;
@@ -110,9 +115,11 @@ namespace iLand.Input
             this.SoilOrganicDecompositionRate = header.SoilOrganicMatterDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterDecompositionRate], NumberStyles.Float) : defaultEnvironment.SoilOrganicDecompositionRate;
             this.SoilOrganicN = header.SoilOrganicMatterN >= 0 ? Single.Parse(environmentFileRow[header.SoilOrganicMatterN], NumberStyles.Float) : defaultEnvironment.SoilOrganicN;
             this.SoilQh = header.SoilQh >= 0 ? Single.Parse(environmentFileRow[header.SoilQh], NumberStyles.Float) : defaultEnvironment.SoilQh;
+            this.SoilYoungLabileAbovegroundFraction = header.SoilYoungLabileAbovegroundFraction > 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileAbovegroundFraction], NumberStyles.Float) : defaultEnvironment.SoilYoungLabileAbovegroundFraction;
             this.SoilYoungLabileC = header.SoilYoungLabileC >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileC], NumberStyles.Float) : defaultEnvironment.SoilYoungLabileC;
             this.SoilYoungLabileDecompositionRate = header.SoilYoungLabileDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileDecompositionRate], NumberStyles.Float) : defaultEnvironment.SoilYoungLabileDecompositionRate;
             this.SoilYoungLabileN = header.SoilYoungLabileN >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungLabileN], NumberStyles.Float) : defaultEnvironment.SoilYoungLabileN;
+            this.SoilYoungRefractoryAbovegroundFraction = header.SoilYoungRefractoryAbovegroundFraction > 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryAbovegroundFraction], NumberStyles.Float) : defaultEnvironment.SoilYoungRefractoryAbovegroundFraction;
             this.SoilYoungRefractoryC = header.SoilYoungRefractoryC >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryC], NumberStyles.Float) : defaultEnvironment.SoilYoungRefractoryC;
             this.SoilYoungRefractoryDecompositionRate = header.SoilYoungRefractoryDecompositionRate >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryDecompositionRate], NumberStyles.Float) : defaultEnvironment.SoilYoungRefractoryDecompositionRate;
             this.SoilYoungRefractoryN = header.SoilYoungRefractoryN >= 0 ? Single.Parse(environmentFileRow[header.SoilYoungRefractoryN], NumberStyles.Float) : defaultEnvironment.SoilYoungRefractoryN;
@@ -133,6 +140,7 @@ namespace iLand.Input
 
             this.SnagBranchRootCarbon = arrowBatch.SnagBranchRootCarbon != null ? arrowBatch.SnagBranchRootCarbon.Values[index] : defaultEnvironment.SnagBranchRootCarbon;
             this.SnagBranchRootCNRatio = arrowBatch.SnagBranchRootCNRatio != null ? arrowBatch.SnagBranchRootCNRatio.Values[index] : defaultEnvironment.SnagBranchRootCNRatio;
+            this.SnagOtherWoodAbovegroundFraction = arrowBatch.SnagOtherWoodAbovegroundFraction != null ? arrowBatch.SnagOtherWoodAbovegroundFraction.Values[index] : defaultEnvironment.SnagOtherWoodAbovegroundFraction;
             this.SnagStemCarbon = arrowBatch.SnagStemCarbon != null ? arrowBatch.SnagStemCarbon.Values[index] : defaultEnvironment.SnagStemCarbon;
             this.SnagStemCNRatio = arrowBatch.SnagStemCNRatio != null ? arrowBatch.SnagStemCNRatio.Values[index] : defaultEnvironment.SnagStemCNRatio;
             this.SnagStemDecompositionRate = arrowBatch.SnagStemDecompositionRate != null ? arrowBatch.SnagStemDecompositionRate.Values[index] : defaultEnvironment.SnagStemDecompositionRate;
@@ -159,9 +167,11 @@ namespace iLand.Input
             this.SoilOrganicDecompositionRate = arrowBatch.SoilOrganicMatterDecompositionRate != null ? arrowBatch.SoilOrganicMatterDecompositionRate.Values[index] : defaultEnvironment.SoilOrganicDecompositionRate;
             this.SoilOrganicN = arrowBatch.SoilOrganicMatterN != null ? arrowBatch.SoilOrganicMatterN.Values[index] : defaultEnvironment.SoilOrganicN;
             this.SoilQh = arrowBatch.SoilQh != null ? arrowBatch.SoilQh.Values[index] : defaultEnvironment.SoilQh;
+            this.SoilYoungLabileAbovegroundFraction = arrowBatch.SoilYoungLabileAbovegroundFraction != null ? arrowBatch.SoilYoungLabileAbovegroundFraction.Values[index] : defaultEnvironment.SoilYoungLabileAbovegroundFraction;
             this.SoilYoungLabileC = arrowBatch.SoilYoungLabileC != null ? arrowBatch.SoilYoungLabileC.Values[index] : defaultEnvironment.SoilYoungLabileC;
             this.SoilYoungLabileDecompositionRate = arrowBatch.SoilYoungLabileDecompositionRate != null ? arrowBatch.SoilYoungLabileDecompositionRate.Values[index] : defaultEnvironment.SoilYoungLabileDecompositionRate;
             this.SoilYoungLabileN = arrowBatch.SoilYoungLabileN != null ? arrowBatch.SoilYoungLabileN.Values[index] : defaultEnvironment.SoilYoungLabileN;
+            this.SoilYoungRefractoryAbovegroundFraction = arrowBatch.SoilYoungRefractoryAbovegroundFraction != null ? arrowBatch.SoilYoungRefractoryAbovegroundFraction.Values[index] : defaultEnvironment.SoilYoungRefractoryAbovegroundFraction;
             this.SoilYoungRefractoryC = arrowBatch.SoilYoungRefractoryC != null ? arrowBatch.SoilYoungRefractoryC.Values[index] : defaultEnvironment.SoilYoungRefractoryC;
             this.SoilYoungRefractoryDecompositionRate = arrowBatch.SoilYoungRefractoryDecompositionRate != null ? arrowBatch.SoilYoungRefractoryDecompositionRate.Values[index] : defaultEnvironment.SoilYoungRefractoryDecompositionRate;
             this.SoilYoungRefractoryN = arrowBatch.SoilYoungRefractoryN != null ? arrowBatch.SoilYoungRefractoryN.Values[index] : defaultEnvironment.SoilYoungRefractoryN;
@@ -184,6 +194,7 @@ namespace iLand.Input
             this.SnagBranchRootDecompositionRate = world.Initialization.Snags.BranchRootDecompositionRate;
             this.SnagStemDecompositionRate = world.Initialization.Snags.StemDecompositionRate; // TODO: also in species table
             this.SnagHalfLife = world.Initialization.Snags.SnagHalfLife; // TODO: also in species table
+            this.SnagOtherWoodAbovegroundFraction = world.Initialization.Snags.OtherWoodAbovegroundFraction;
             this.SnagsPerResourceUnit = world.Initialization.Snags.SnagsPerResourceUnit;
             this.SnagStemCarbon = world.Initialization.Snags.StemCarbon;
             this.SnagStemCNRatio = world.Initialization.Snags.StemCarbonNitrogenRatio;

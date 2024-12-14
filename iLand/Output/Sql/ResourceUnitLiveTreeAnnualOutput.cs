@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿// C++/output/{ standout.h, standout.cpp }
+using iLand.Input.ProjectFile;
 using iLand.Simulation;
 using iLand.Tool;
 using iLand.Tree;
@@ -11,10 +12,12 @@ namespace iLand.Output.Sql
     // resource unit level statistics per tree species
     public class ResourceUnitLiveTreeAnnualOutput : AnnualOutput
     {
+        private readonly Expression resourceUnitFilter;
         private readonly Expression yearFilter;
 
         public ResourceUnitLiveTreeAnnualOutput()
         {
+            this.resourceUnitFilter = new();
             this.yearFilter = new();
 
             this.Name = "Stand by species/RU";
@@ -22,9 +25,11 @@ namespace iLand.Output.Sql
             this.Description = "Output of aggregates on the level of RU x species. Values are always aggregated per hectare (of stockable area). " +
                                "Use the 'area' column to scale to the actual values on the resource unit." + System.Environment.NewLine +
                                "The output is created after the growth of the year, " +
-                               "i.e. output with year=2000 means effectively the state of at the end of the " +
-                               "year 2000.0 The initial state (without any growth) is indicated by the year 'startyear-1'. " +
-                               "You can use the 'condition' to control if the output should be created for the current year(see dynamic stand output)";
+                               "i.e. output with year=2000 means effectively the state of the resource unit at the end of the " +
+                               "year 2000. The initial state (without any growth) is indicated by the year 'startyear-1'. " +
+                               "You can use the 'condition' to control if the output should be created for the current year (see dynamic stand output), " + 
+                               "and you can use the 'rufilter' to limit the output to resource units that satisfy the given condition (e.g. 'id=3', or " +
+                               "'leafAreaIndex<2', see ((resource unit variables))).";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnitID());
             this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
@@ -42,10 +47,12 @@ namespace iLand.Output.Sql
             this.Columns.Add(new("NPPabove_kg", "sum of NPP (abovegroundground) kg biomass/ha", SqliteType.Real));
             this.Columns.Add(new("LAI", "leaf area index (m²/m²)", SqliteType.Real));
             this.Columns.Add(new("cohort_count_ha", "number of cohorts in the regeneration layer (<4m) per hectare", SqliteType.Integer));
+            this.Columns.Add(new("cohort_basal_area", "basal area (m²) of saplings (>1.3m and <4m)", SqliteType.Real));
         }
 
         public override void Setup(Project projectFile, SimulationState simulationState)
         {
+            this.resourceUnitFilter.SetExpression(projectFile.Output.Sql.Stand.ResourceUnitFilter);
             this.yearFilter.SetExpression(projectFile.Output.Sql.Stand.Condition);
         }
 
@@ -59,8 +66,18 @@ namespace iLand.Output.Sql
                 }
             }
 
+            ResourceUnitVariableAccessor ruWrapper = new(model.SimulationState);
             foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
+                if (this.resourceUnitFilter.IsEmpty == false)
+                {
+                    ruWrapper.ResourceUnit = resourceUnit;
+                    if (this.resourceUnitFilter.Evaluate(ruWrapper) == 0.0F)
+                    {
+                        continue;
+                    }
+                }
+
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
                 {
                     LiveTreeAndSaplingStatistics ruLiveTreeStatisticsForSpecies = ruSpecies.StatisticsLive;
@@ -73,7 +90,6 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[1].Value = resourceUnit.ID;
                     insertRow.Parameters[2].Value = ruSpecies.Species.WorldFloraID;
                     insertRow.Parameters[3].Value = resourceUnit.AreaInLandscapeInM2 / Constant.Grid.ResourceUnitAreaInM2;
-                    // insertRow.Parameters[3].Value = ru.boundingBox().center().x() << ru.boundingBox().center().y();  // temp
                     insertRow.Parameters[4].Value = ruLiveTreeStatisticsForSpecies.TreesPerHa;
                     insertRow.Parameters[5].Value = ruLiveTreeStatisticsForSpecies.AverageDbhInCm;
                     insertRow.Parameters[6].Value = ruLiveTreeStatisticsForSpecies.AverageHeightInM;
@@ -86,6 +102,7 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[12].Value = ruLiveTreeStatisticsForSpecies.TreeNppPerHaAboveground;
                     insertRow.Parameters[13].Value = ruLiveTreeStatisticsForSpecies.LeafAreaIndex;
                     insertRow.Parameters[14].Value = ruLiveTreeStatisticsForSpecies.SaplingCohortsPerHa;
+                    insertRow.Parameters[15].Value = ruLiveTreeStatisticsForSpecies.SaplingBasalArea;
                     insertRow.ExecuteNonQuery();
                 }
             }

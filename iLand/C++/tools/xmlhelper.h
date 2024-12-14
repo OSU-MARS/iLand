@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,10 @@ public:
    ~XmlHelper();
    XmlHelper(const QString &fileName) {loadFromFile(fileName);}
    XmlHelper(QDomElement topNode);
+   void saveToFile(const QString &fileName);
    void loadFromFile(const QString &fileName);
+   void resetWarnings();
+   void printSuppressedWarnings();
    // relative top nodes
    QDomElement top() const { return mTopNode;}
    void setCurrentNode(const QString &path) { mCurrentTop = node(path); } ///< sets @p path as the current (relative) node.
@@ -37,12 +40,13 @@ public:
    /// returns true if the current (relative!) node is valid (i.e. not null).
    bool isValid() const { return !mCurrentTop.isNull(); }
    bool hasNode(const QString &path) const; ///< returns true if @p path exists.
+   bool createNode(const QString &path);
     // read access
    QDomElement node(const QString &path) const; ///< retrieve node defined by path (see class description)
-   QString value(const QString &path, const QString &defaultValue="") const; ///< retrieve value (as string) from node @p path.
-   bool valueBool(const QString &path, const bool defaultValue=false) const; ///< retrieve value (as bool) from node @p path.
-   double valueDouble(const QString &path, const double defaultValue=0.) const; ///< retrieve value (as double) from node @p path.
-   int valueInt(const QString &path, const int defaultValue=0) const; ///< retrieve value (as int) from node @p path.
+   QString value(const QString &path, const QString &defaultValue="", bool do_warn=true) const; ///< retrieve value (as string) from node @p path.
+   bool valueBool(const QString &path, const bool defaultValue=false, bool do_warn=true) const; ///< retrieve value (as bool) from node @p path.
+   double valueDouble(const QString &path, const double defaultValue=0., bool do_warn=true) const; ///< retrieve value (as double) from node @p path.
+   int valueInt(const QString &path, const int defaultValue=0, bool do_warn=true) const; ///< retrieve value (as int) from node @p path.
    // write access
    bool setNodeValue(QDomElement &node, const QString &value); ///< set value of 'node'. return true on success.
    bool setNodeValue(const QString &path, const QString &value); ///< set value of node indicated by 'path'. return true on success.
@@ -51,13 +55,18 @@ public:
    QString paramValueString(const QString &paramName, const QString &defaultValue="") const; ///< get value of special "parameter" space
    bool paramValueBool(const QString &paramName, const bool &defaultValue=true) const; ///< get value of special "parameter" space
     // helpers
-   QString dump(const QString &path, int levels=-1);
+   QStringList dump(const QString &path, int levels=-1);
+   bool nodeHasChildren(const QString &path);
 private:
    void dump_rec(QDomElement c, QStringList &stack, QStringList &out);
+   void missedKey(const QString &keyname) const;
+   /// retrieve full name (. - notation)
+   QString fullName(const QString &keyname) const;
    QDomDocument mDoc;
    QDomElement mCurrentTop;
    QDomElement mTopNode;
    QHash<const QString, QString> mParamCache;
+   QHash<QString, int> mMissingKeys;
 };
 
 #endif // XMLHELPER_H

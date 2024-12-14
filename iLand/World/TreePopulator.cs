@@ -17,9 +17,9 @@ namespace iLand.World
         StandLoader initializes trees on the landscape. It reads (usually) from text files, creates the
         trees and distributes the trees on the landscape (on the ResourceUnit or on a stand defined by a grid).
 
-        See http://iland-model.org/initialize+trees
+        See https://iland-model.org/initialize+trees
         */
-    internal class TreePopulator
+    internal class TreePopulator // C++: StandLoader
     {
         // evenlist: tentative order of pixel-indices (within a 5x5 grid) used as tree positions.
         // e.g. 12 = centerpixel, 0: upper left corner, ...
@@ -193,90 +193,7 @@ namespace iLand.World
             return lightCellIndexXY;
         }
 
-        /// a (hacky) way of adding saplings of a certain age to a stand defined by 'stand_id'.
-        //public int LoadSaplings(Model model, string content, int standID)
-        //{
-        //    MapGrid standGrid = model.StandGrid;
-        //    List<int> indices = standGrid.GetGridIndices(standID); // list of 10x10m pixels
-        //    if (indices.Count == 0)
-        //    {
-        //        if (projectFile.Output.Logging.LogLevel >= EventLevel.Informational)
-        //        {
-        //            Trace.TraceInformational("stand " + standID + " not in project area. No init performed.");
-        //        }
-        //        return -1;
-        //    }
-        //    float area_factor = standGrid.GetArea(standID) / Constant.RUArea; // multiplier for grid (e.g. 2 if stand has area of 2 hectare)
-
-        //    // parse the content of the init-file
-        //    // species
-        //    CsvFile init = new();
-        //    init.LoadFromString(content);
-        //    int speciesIndex = init.GetColumnIndex("species");
-        //    int countIndex = init.GetColumnIndex("count");
-        //    int heightIndex = init.GetColumnIndex("height");
-        //    int ageIndex = init.GetColumnIndex("age");
-        //    if (speciesIndex == -1 || countIndex == -1)
-        //    {
-        //        throw new NotSupportedException("Error while loading saplings: columns 'species' or 'count' are missing!!");
-        //    }
-
-        //    TreeSpeciesSet set = model.GetFirstSpeciesSet();
-        //    int total = 0;
-        //    for (int row = 0; row < init.RowCount; ++row)
-        //    {
-        //        int pxcount = (int)MathF.Round(Single.Parse(init[countIndex, row], CultureInfo.InvariantCulture) * area_factor + 0.5); // no. of pixels that should be filled (sapling grid is the same resolution as the lif-grid)
-        //        TreeSpecies species = set.GetSpecies(init[speciesIndex, row]);
-        //        if (species == null)
-        //        {
-        //            throw new NotSupportedException(String.Format("Error while loading saplings: invalid species '{0}'.", init[speciesIndex, row)));
-        //        }
-        //        float height = heightIndex == -1 ? Constant.Sapling.MinimumHeight : Single.Parse(init[heightIndex, row], CultureInfo.InvariantCulture);
-        //        int age = ageIndex == -1 ? 1 : Int32.Parse(init[ageIndex, row], CultureInfo.InvariantCulture);
-
-        //        int misses = 0;
-        //        int hits = 0;
-        //        while (hits < pxcount)
-        //        {
-        //            // sapling location
-        //            int rnd_index = randomGenerator.GetRandomInteger(0, indices.Count);
-        //            Point offset = standGrid.Grid.GetCellPosition(indices[rnd_index]);
-        //            offset.X *= Constant.LightCellsPerHeightSize; // index of 10m patch -> to lif pixel coordinates
-        //            offset.Y *= Constant.LightCellsPerHeightSize;
-        //            int in_p = randomGenerator.GetRandomInteger(0, Constant.LightCellsPerHeightSize * Constant.LightCellsPerHeightSize); // index of lif-pixel
-        //            offset.X += in_p / Constant.LightCellsPerHeightSize;
-        //            offset.Y += in_p % Constant.LightCellsPerHeightSize;
-
-        //            SaplingCell sc = model.Saplings.GetCell(model, offset, true, out ResourceUnit _);
-        //            if (sc != null && sc.MaxHeight() > height)
-        //            {
-        //                //if (!ru || ru.saplingHeightForInit(offset) > height) {
-        //                ++misses;
-        //            }
-        //            else
-        //            {
-        //                // ok
-        //                ++hits;
-        //                if (sc != null)
-        //                {
-        //                    sc.AddSaplingIfSlotFree(height, (int)age, species.Index);
-        //                }
-        //                //ru.resourceUnitSpecies(species).changeSapling().addSapling(offset, height, age);
-        //            }
-        //            if (misses > 3 * pxcount)
-        //            {
-        //                if (projectFile.Output.Logging.LogLevel >= EventLevel.Informational)
-        //                {
-        //                    Trace.TraceInformation("tried to add " + pxcount + " saplings at stand " + standID + " but failed in finding enough free positions. Added " + hits + " and stopped.");
-        //                }
-        //                break;
-        //            }
-        //        }
-        //        total += hits;
-
-        //    }
-        //    return total;
-        //}
+        //public int LoadSaplings(Model model, string content, int standID) // C++: StandLoader::loadSaplings() not ported
 
         private static void PopulateResourceUnitsWithIndividualTrees(Project projectFile, Landscape landscape, IndividualTreeReader individualTreeReader, ParallelOptions parallelComputeOptions)
         {
@@ -482,8 +399,8 @@ namespace iLand.World
         // Initialization routine based on a stand map.
         // Basically a list of 10m pixels for a given stand is retrieved
         // and the filled with the same procedure as the resource unit based init
-        // see http://iland-model.org/initialize+trees
-        private void PopulateStandTreesFromSizeDistribution(Project projectFile, Landscape landscape, List<TreeSizeRange> treeSizeDistribution, RandomGenerator randomGenerator, UInt32 standID)
+        // see https://iland-model.org/initialize+trees
+        private void PopulateStandTreesFromSizeDistribution(Project projectFile, Landscape landscape, List<TreeSizeRange> treeSizeDistribution, RandomGenerator randomGenerator, UInt32 standID) // C++: StandLoader::executeiLandInitStand()
         {
             GridRaster10m? standRaster = landscape.StandRaster;
             if (standRaster == null)
@@ -774,7 +691,7 @@ namespace iLand.World
             }
         }
 
-        private class StandHeightInitCell
+        private class StandHeightInitCell // C++: SInitPixel
         {
             public float BasalArea { get; set; } // accumulated basal area
             public int HeightGridIndex { get; init; } // height grid location of the cell

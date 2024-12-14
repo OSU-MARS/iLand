@@ -69,7 +69,6 @@ namespace iLand.Tool
         private int parsePosition;
         private string token;
         private int tokenCount;
-        private readonly List<string> variableNames;
 
         // linearization
         private int linearizedDimensionCount;
@@ -81,7 +80,8 @@ namespace iLand.Tool
         private int linearStepCountY;
 
         public string? ExpressionString { get; set; }
-        public ExpressionVariableAccessor? Wrapper { get; set; }
+        public List<string> VariableNames { get; private init; }
+        public ExpressionVariableAccessor? Wrapper { get; set; } // TODO: fully typed accessors with Expression<T>
 
         public bool IsConstant { get; private set; } // returns true if current expression is a constant.
         public bool IsEmpty { get; private set; } // returns true if expression is empty
@@ -98,8 +98,8 @@ namespace iLand.Tool
             this.linearized = [];
             this.token = String.Empty;
             this.tokens = new ExpressionToken[this.execListSize];
-            this.variableNames = [];
-            this.variableValues = new float[10];
+            this.VariableNames = [];
+            this.variableValues = new float[Constant.ExpressionLocalVariables];
 
             this.ExpressionString = null;
             this.IsEmpty = true;
@@ -118,15 +118,20 @@ namespace iLand.Tool
             this.Wrapper = wrapper;
         }
 
-        public float AddVariable(string varName)
+        public void AddVariable(string variableName)
         {
             // add var
-            int idx = this.variableNames.IndexOf(varName);
+            int idx = this.VariableNames.IndexOf(variableName);
             if (idx == -1)
             {
-                this.variableNames.Add(varName);
+                if (this.VariableNames.Count == this.variableValues.Length)
+                {
+                    throw new NotSupportedException(variableName + " can't be added to expression as its variable value capacity of " + this.variableValues.Length + " has been reached.");
+                }
+                this.VariableNames.Add(variableName);
             }
-            return this.variableValues[this.GetVariableIndex(varName)];
+
+            //return this.variableValues[this.GetVariableIndex(variableName)];
         }
 
         private void CheckBuffer(int index)
@@ -158,7 +163,7 @@ namespace iLand.Tool
             incrementalSum = 0.0F;
         }
 
-        public float Evaluate(float variable1 = 0.0F, float variable2 = 0.0F, bool forceExecution = false)
+        public float Evaluate(float variable1 = 0.0F, float variable2 = 0.0F, bool forceExecution = false) // C++: Expression::calculate()
         {
             if ((this.linearizedDimensionCount > 0) && (forceExecution == false))
             {
@@ -168,7 +173,7 @@ namespace iLand.Tool
                 }
                 return this.GetLinearizedValue(variable1, variable2); // matrix case
             }
-            float[] variableList = new float[10];
+            float[] variableList = new float[Constant.ExpressionLocalVariables];
             variableList[0] = variable1;
             variableList[1] = variable2;
             this.RequireExternalVariableBinding = false;
@@ -177,7 +182,7 @@ namespace iLand.Tool
 
         public float Evaluate(ExpressionVariableAccessor wrapper, float variable1 = 0.0F, float variable2 = 0.0F)
         {
-            float[] variableList = new float[10];
+            float[] variableList = new float[Constant.ExpressionLocalVariables];
             variableList[0] = variable1;
             variableList[1] = variable2;
             this.RequireExternalVariableBinding = false;
@@ -410,20 +415,16 @@ namespace iLand.Tool
         }
 
         // "Userdefined Function" Polygon
-        private static float ExecuteUserDefinedPolygon(float value, List<float> stack, int position, int argumentCount)
+        private float ExecuteUserDefinedPolygon(float value, List<float> stack, int position, int argumentCount)
         {
             // Polygon-Funktion: auf dem Stack liegen (x/y) Paare, aus denen ein "Polygon"
             // aus Linien zusammengesetzt ist. return ist der y-Wert zu x (Value).
             // Achtung: *Stack zeigt auf das letzte Argument! (ist das letzte y).
             // Stack bereinigen tut der Aufrufer.
-            if (argumentCount % 2 != 1)
-            {
-                throw new NotSupportedException("polygon: falsche zahl parameter. polygon(<val>; x0; y0; x1; y1; ....)");
-            }
             int pointCount = (argumentCount - 1) / 2;
-            if (pointCount < 2)
+            if ((argumentCount % 2 != 1) || (pointCount < 2))
             {
-                throw new NotSupportedException("polygon: falsche zahl parameter. polygon(<val>; x0; y0; x1; y1; ....)");
+                throw new NotSupportedException("wrong number of parameters (got " + argumentCount + ") polygon(<val>; x0; y0; x1; y1; ....) in '" + this.ExpressionString + "'.");
             }
             float x, y, xold, yold;
             y = stack[position--];   // 1. Argument: ganz rechts.
@@ -511,10 +512,8 @@ namespace iLand.Tool
                 return this.Evaluate(x, 0.0F, true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
             }
             int lower = (int)((x - this.linearLow) / this.linearStep); // the lower point
-            if (lower + 1 >= this.linearized.Count)
-            {
-                Debug.Assert(lower + 1 < this.linearized.Count);
-            }
+            Debug.Assert(lower + 1 < this.linearized.Count);
+
             // linear interpolation
             float lowerValue = this.linearized[lower];
             float valueStep = this.linearized[lower + 1] - lowerValue;
@@ -531,14 +530,18 @@ namespace iLand.Tool
             }
             int lowerx = (int)((x - linearLow) / linearStep); // the lower point (x-axis)
             int lowery = (int)((y - linearLowY) / linearStepY); // the lower point (y-axis)
-            int idx = linearStepCountY * lowerx + lowery;
-            Debug.Assert(idx + linearStepCountY + 1 < linearized.Count);
-            List<float> data = linearized;
+            int idx = this.linearStepCountY * lowerx + lowery;
+            Debug.Assert(idx + this.linearStepCountY + 1 < this.linearized.Count);
+            
             // linear interpolation
             // mean slope in x - direction
-            float slope_x = ((data[idx + linearStepCountY] - data[idx]) / linearStepY + (data[idx + linearStepCountY + 1] - data[idx + 1]) / linearStepY) / 2.0F;
-            float slope_y = ((data[idx + 1] - data[idx]) / linearStep + (data[idx + linearStepCountY + 1] - data[idx + linearStepCountY]) / linearStep) / 2.0F;
-            float result = data[idx] + (x - (linearLow + lowerx * linearStep)) * slope_x + (y - (linearLowY + lowery * linearStepY)) * slope_y;
+            float valueX0 = this.linearized[idx];
+            float valueX1 = this.linearized[idx + 1];
+            float valueY0 = this.linearized[idx + this.linearStepCountY];
+            float valueY1 = this.linearized[idx + this.linearStepCountY + 1];
+            float slope_x = ((valueY0 - valueX0) / linearStepY + (valueY1 - valueX1) / linearStepY) / 2.0F;
+            float slope_y = ((valueX1 - valueX0) / linearStep + (valueY1 - valueY0) / linearStep) / 2.0F;
+            float result = valueX0 + (x - (linearLow + lowerx * linearStep)) * slope_x + (y - (linearLowY + lowery * linearStepY)) * slope_y;
             return result;
         }
 
@@ -585,7 +588,7 @@ namespace iLand.Tool
             //        return 1000 + idx;
             //    }
             //}
-            index = variableNames.IndexOf(variableName);
+            index = this.VariableNames.IndexOf(variableName);
             if (index > -1)
             {
                 return index;
@@ -1060,7 +1063,7 @@ namespace iLand.Tool
                 this.Parse();
             }
             int variableIndex = this.GetVariableIndex(name);
-            if (variableIndex >= 0 && variableIndex < 10)
+            if (variableIndex >= 0 && variableIndex < this.variableValues.Length)
             {
                 this.variableValues[variableIndex] = value;
             }
@@ -1090,7 +1093,7 @@ namespace iLand.Tool
                     ExpressionTokenType.Operator => (char)token.Index,
                     ExpressionTokenType.Stop => "<stop>",
                     ExpressionTokenType.Unknown => "<unknown>",
-                    ExpressionTokenType.Variable => this.variableNames[token.Index].ToString(),
+                    ExpressionTokenType.Variable => this.VariableNames[token.Index].ToString(),
                     _ => throw new NotSupportedException("Unhandled token type " + token.Type + ".")
                 } + " ");
                 if (token.Type == ExpressionTokenType.Stop)

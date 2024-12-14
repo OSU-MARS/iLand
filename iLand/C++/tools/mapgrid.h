@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -44,22 +44,32 @@ public:
     const QString &name() const { return mName; }
     bool isValid() const { return !mGrid.isEmpty(); }
     const Grid<int> &grid() const { return mGrid; }
+    /// number of stands stored in the index
+    int count() const { return mRectIndex.size(); }
+    /// get a list of all stored polygons in the map
+    QList<int> mapIds() const { return mRectIndex.keys(); }
     // access
     /// returns true, if 'id' is a valid id in the grid, false otherwise.
     bool isValid(const int id) const { return mRectIndex.contains(id); }
-    QRectF boundingBox(const int id) const { return isValid(id)?mRectIndex[id].first: QRectF(); } ///< returns the bounding box of a polygon
-    double area(const int id) const {return isValid(id)?mRectIndex[id].second : 0.;} ///< return the area (m2) covered by the polygon
+    /// returns the bounding box of a polygon (metric coordinates)
+    QRectF boundingBox(const int id) const { return isValid(id)?mRectIndex[id].first: QRectF(); }
+    /// return the area (m2) covered by the polygon
+    double area(const int id) const {return isValid(id)?mRectIndex[id].second : 0.;}
     /// returns the list of resource units with at least one pixel within the area designated by 'id'
     QList<ResourceUnit*> resourceUnits(const int id) const;
     /// returns a list with resource units and area factors per 'id'.
-    /// the area is '1' if the resource unit is fully covered by the grid-value.
+    /// the area is '1' if the resource unit is fully covered by the grid-value. (Less efficient that the function returning directly an iterator)
     QList<QPair<ResourceUnit*, double> > resourceUnitAreas(const int id) const { return mRUIndex.values(id); }
+    /// returns a pair of iterators to the intenal hash with resource units and area factors for stand 'id'.
+    /// the area is '1' if the resource unit is fully covered by the grid-value.
+    QPair<QMultiHash<int, QPair<ResourceUnit*, double> >::const_iterator,
+          QMultiHash<int, QPair<ResourceUnit*, double> >::const_iterator>   resourceUnitAreasIterator(const int id) const {
+        return QPair<QMultiHash<int, QPair<ResourceUnit*, double> >::const_iterator,
+                     QMultiHash<int, QPair<ResourceUnit*, double> >::const_iterator>(mRUIndex.constFind(id), mRUIndex.cend()); }
     /// return a list of all living trees on the area 'id'
     QList<Tree*> trees(const int id) const;
     /// load trees and store in list 'rList'. If 'filter'<>"", then the filter criterion is applied
-    int loadTrees(const int id,  QVector<QPair<Tree *, double> > &rList, const QString filter, int n_estimate=0) const;
-    /// free locks for a given stand
-    static void freeLocksForStand(const int id);
+    int loadTrees(const int id,  QVector<QPair<Tree *, double> > &rList, const QString filter=QString(), int n_estimate=0) const;
     /// return a list of grid-indices of a given stand-id
     QList<int> gridIndices(const int id) const;
     /// extract a list of neighborhood relationships between all the polygons of the grid

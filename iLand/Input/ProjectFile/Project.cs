@@ -27,12 +27,15 @@ namespace iLand.Input.ProjectFile
 			reader.MoveToContent();
 			this.ReadXml(reader);
 
-			// check project settings for consistency
-			// For now, no set of Validate() APIs as there's only one check.
+			// check project for consistency
+			// available per-object Validate() implementations
+			this.Model.Validate();
+			this.World.Validate();
+			// cross-object checks
             if ((this.Output.Logging.HeightGrid.Enabled || this.Output.Logging.LightGrid.Enabled) && 
 				String.IsNullOrWhiteSpace(this.Model.Settings.CoordinateSystem))
             {
-                throw new XmlException("Height or light grid logging is enabled but no projection string is specified. Include a <projection>EPSG:nnnn</projection> element in /model/settings to geolocate light grid GeoTIFFs.");
+                throw new XmlException("Height or light grid logging is enabled but no coordinate system is specified. Include a <projection>EPSG:nnnn</projection> element in /model/settings to geolocate light grid GeoTIFFs.");
             }
         }
 

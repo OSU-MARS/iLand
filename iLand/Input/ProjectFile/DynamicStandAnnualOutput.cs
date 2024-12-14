@@ -8,7 +8,7 @@ namespace iLand.Input.ProjectFile
         public bool ByResourceUnit { get; private set; }
 
         public string? Columns { get; protected set; }
-        public string? ResourceUnitFilter { get; protected set; }
+        public string? ResourceUnitCondition { get; protected set; }
         public string? TreeFilter { get; protected set; }
 
         public DynamicStandAnnualOutput()
@@ -17,7 +17,7 @@ namespace iLand.Input.ProjectFile
             this.ByResourceUnit = true;
             this.BySpecies = true;
             this.Columns = null;
-            this.ResourceUnitFilter = null;
+            this.ResourceUnitCondition = null;
             this.TreeFilter = null;
         }
 
@@ -42,6 +42,9 @@ namespace iLand.Input.ProjectFile
                         break;
                     case "condition":
                         this.Condition = reader.ReadElementContentAsString().Trim();
+                        break;
+                    case "ruCondition":
+                        this.ResourceUnitCondition = reader.ReadElementContentAsString().Trim();
                         break;
                     case "ruFilter":
                         this.ResourceUnitFilter = reader.ReadElementContentAsString().Trim();

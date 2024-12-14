@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,6 @@
 
   */
 
-#include "global.h"
 #include "modelcontroller.h"
 #include <QObject>
 
@@ -40,6 +39,9 @@
 #include "mapgrid.h"
 #include "statdata.h"
 
+
+#include "biteengine.h"
+
 #ifdef ILAND_GUI
 #include "mainwindow.h" // for the debug message buffering
 #endif
@@ -50,6 +52,8 @@ ModelController::ModelController()
     mPaused = false;
     mRunning = false;
     mHasError = false;
+    mIsStartingUp = false;
+    mIsBusy = false;
     mYearsToRun = 0;
     mViewerWindow = 0;
     mDynamicOutputEnabled = false;
@@ -125,11 +129,25 @@ int ModelController::currentYear() const
     return GlobalSettings::instance()->currentYear();
 }
 
-void ModelController::setFileName(QString initFileName)
+QString ModelController::timeString() const
+{
+    int elapsed = mStartTime.msecsTo(QTime::currentTime());
+    QString time_str = DebugTimer::timeStr(elapsed, false);
+    double frac_done = totalYears()>0 ? currentYear() / double(totalYears()) : 0;
+    QString todo_str="-";
+    if (frac_done>0.){
+        int todo = (1. / frac_done - 1.) * elapsed;
+        todo_str = DebugTimer::timeStr(todo, false);
+    }
+    return QString("%1 (%2 remaining)").arg(time_str, todo_str);
+}
+
+bool ModelController::setFileName(QString initFileName)
 {
     mInitFile = initFileName;
     try {
         GlobalSettings::instance()->loadProjectFile(mInitFile);
+        return true;
     } catch(const IException &e) {
         QString error_msg = e.message();
         Helper::msg(error_msg);
@@ -137,6 +155,7 @@ void ModelController::setFileName(QString initFileName)
         mLastError = error_msg;
         qDebug() << error_msg;
     }
+    return false;
 }
 
 void ModelController::create()
@@ -144,10 +163,13 @@ void ModelController::create()
     if (!canCreate())
         return;
     emit bufferLogs(true);
+    const_cast<XmlHelper&>(GlobalSettings::instance()->settings()).resetWarnings();
+    mIsStartingUp = true;
+    mIsBusy = true;
     qDebug() << "**************************************************";
     qDebug() << "project-file:" << mInitFile;
     qDebug() << "started at: " << QDateTime::currentDateTime().toString("yyyy/MM/dd hh:mm:ss");
-    qDebug() << "iLand " << currentVersion() << " (" << svnRevision() << ")";
+    qDebug() << "iLand " << currentVersion() << " (" << verboseVersion() << ")";
     qDebug() << "**************************************************";
 
 
@@ -155,9 +177,12 @@ void ModelController::create()
         mHasError = false;
         DebugTimer::clearAllTimers();
         mModel = new Model();
+
         mModel->loadProject();
         if (!mModel->isSetup()) {
             mHasError = true;
+            mIsStartingUp = false;
+            mIsBusy = false;
             mLastError = "An error occured during the loading of the project. Please check the logs.";
             return;
         }
@@ -172,11 +197,15 @@ void ModelController::create()
         Helper::msg(error_msg);
         mLastError = error_msg;
         mHasError = true;
+        mIsStartingUp = false;
         qDebug() << error_msg;
     }
     emit bufferLogs(false);
 
+    const_cast<XmlHelper&>(GlobalSettings::instance()->settings()).printSuppressedWarnings();
     qDebug() << "Model created.";
+    mIsStartingUp = false;
+    mIsBusy = false;
 }
 
 void ModelController::destroy()
@@ -193,7 +222,7 @@ void ModelController::destroy()
 
 void ModelController::runloop()
 {
-    static QTime sLastTime = QTime::currentTime();
+    static QTime sStartTime = QTime::currentTime();
 #ifdef ILAND_GUI
  //   QApplication::processEvents();
 #else
@@ -204,18 +233,20 @@ void ModelController::runloop()
     bool doStop = false;
     mHasError = false;
     if (GlobalSettings::instance()->currentYear()<=1) {
-        sLastTime = QTime::currentTime(); // reset clock at the beginning of the simulation
+        mStartTime = QTime::currentTime(); // reset clock at the beginning of the simulation
     }
 
     if (!mCanceled && GlobalSettings::instance()->currentYear() < mYearsToRun) {
         emit bufferLogs(true);
 
+        mIsBusy = true;
         mHasError = runYear(); // do the work!
+        mIsBusy = false;
 
         mRunning = true;
         emit year(GlobalSettings::instance()->currentYear());
         if (!mHasError) {
-            int elapsed = sLastTime.msecsTo(QTime::currentTime());
+            int elapsed = sStartTime.msecsTo(QTime::currentTime());
             int time=0;
             if (currentYear()%50==0 && elapsed>10000)
                 time = 100; // a 100ms pause...
@@ -223,7 +254,7 @@ void ModelController::runloop()
                 time = 500; // a 500ms pause...
             }
             if (time>0) {
-                sLastTime = QTime::currentTime(); // reset clock
+                sStartTime = QTime::currentTime(); // reset clock
                 qDebug() << "--- little break ---- (after " << elapsed << "ms).";
                 //QTimer::singleShot(time,this, SLOT(runloop()));
             }
@@ -273,7 +304,7 @@ void ModelController::internalStop()
     if (mRunning) {
         GlobalSettings::instance()->outputManager()->save();
         DebugTimer::printAllTimers();
-        saveDebugOutputs();
+        saveDebugOutputs(true);
         //if (GlobalSettings::instance()->dbout().isOpen())
         //    GlobalSettings::instance()->dbout().close();
 
@@ -316,15 +347,16 @@ bool ModelController::runYear()
     DebugTimer t("ModelController:runYear");
     qDebug() << QDateTime::currentDateTime().toString("hh:mm:ss:") << "ModelController: run year" << currentYear();
 
-    if (GlobalSettings::instance()->settings().paramValueBool("debug_clear"))
-        GlobalSettings::instance()->clearDebugLists();  // clear debug data
     bool err=false;
     try {
         emit bufferLogs(true);
+        mIsBusy = true;
         GlobalSettings::instance()->executeJSFunction("onYearBegin");
         mModel->runYear();
+        mIsBusy = false;
 
         fetchDynamicOutput();
+        saveDebugOutputs(false);
     } catch(const IException &e) {
         QString error_msg = e.message();
         Helper::msg(error_msg);
@@ -399,14 +431,11 @@ void ModelController::setupDynamicOutput(QString fieldList)
 {
     mDynFieldList.clear();
     if (!fieldList.isEmpty()) {
-        QRegExp rx("((?:\\[.+\\]|\\w+)\\.\\w+)");
-        int pos=0;
-        while ((pos = rx.indexIn(fieldList, pos)) != -1) {
-            mDynFieldList.append(rx.cap(1));
-            pos += rx.matchedLength();
+        QRegularExpression re("((?:\\[.+\\]|\\w+)\\.\\w+)");
+        for (const QRegularExpressionMatch &match : re.globalMatch(fieldList)) {
+            mDynFieldList.append(match.captured(1));
         }
 
-        //mDynFieldList = fieldList.split(QRegExp("(?:\\[.+\\]|\\w+)\\.\\w+"), QString::SkipEmptyParts);
         mDynFieldList.prepend("count");
         mDynFieldList.prepend("year"); // fixed fields.
     }
@@ -440,16 +469,18 @@ void ModelController::fetchDynamicOutput()
     foreach (QString field, mDynFieldList) {
         if (field=="count" || field=="year")
             continue;
-        if (field.count()>0 && field.at(0)=='[') {
-            QRegExp rex("\\[(.+)\\]\\.(\\w+)");
-            rex.indexIn(field);
-            var = rex.capturedTexts();
-            var.pop_front(); // drop first element (contains the full string)
-            simple_expression = false;
-        } else {
-            var = field.split(QRegExp("\\W+"), QString::SkipEmptyParts);
-            simple_expression = true;
-        }
+// - removed this to get rid of QRegExp - not sure if it is still used?
+//        if (field.count()>0 && field.at(0)=='[') {
+//            //QRegularExpression rex("\\[(.+)\\]\\.(\\w+)");
+//            QRegExp rex("\\[(.+)\\]\\.(\\w+)");
+//            rex.indexIn(field);
+//            var = rex.capturedTexts();
+//            var.pop_front(); // drop first element (contains the full string)
+//            simple_expression = false;
+//        } else {
+        var = field.split(QRegularExpression("\\W+"), Qt::SkipEmptyParts);
+        simple_expression = true;
+        //}
         if (var.count()!=2)
                 throw IException(QString("Invalid variable name for dynamic output:") + field);
         if (var.first()!=lastVar) {
@@ -499,29 +530,61 @@ void ModelController::fetchDynamicOutput()
     mDynData.append(line.join(";"));
 }
 
-void ModelController::saveDebugOutputs()
+void ModelController::saveDebugOutputs(bool is_final)
 {
     // save to files if switch is true
     if (!GlobalSettings::instance()->settings().valueBool("system.settings.debugOutputAutoSave"))
         return;
 
+    bool clear_data = GlobalSettings::instance()->settings().paramValueBool("debug_clear");
+    bool do_append=false;
+    if (clear_data && currentYear()>2) // >2: is called after incrementing the year counter
+        do_append = true;
     QString p = GlobalSettings::instance()->path("debug_", "temp");
 
-    GlobalSettings::instance()->debugDataTable(GlobalSettings::dTreePartition, ";", p + "tree_partition.csv");
-    GlobalSettings::instance()->debugDataTable(GlobalSettings::dTreeGrowth, ";", p + "tree_growth.csv");
-    GlobalSettings::instance()->debugDataTable(GlobalSettings::dTreeNPP, ";", p + "tree_npp.csv");
-    GlobalSettings::instance()->debugDataTable(GlobalSettings::dStandGPP, ";", p + "stand_gpp.csv");
-    GlobalSettings::instance()->debugDataTable(GlobalSettings::dWaterCycle, ";", p + "water_cycle.csv");
-    GlobalSettings::instance()->debugDataTable(GlobalSettings::dDailyResponses, ";", p + "daily_responses.csv");
-    GlobalSettings::instance()->debugDataTable(GlobalSettings::dEstablishment, ";", p + "establishment.csv");
-    GlobalSettings::instance()->debugDataTable(GlobalSettings::dSaplingGrowth, ";", p + "saplinggrowth.csv");
-    GlobalSettings::instance()->debugDataTable(GlobalSettings::dCarbonCycle, ";", p + "carboncycle.csv");
-    GlobalSettings::instance()->debugDataTable(GlobalSettings::dPerformance, ";", p + "performance.csv");
-    Helper::saveToTextFile(p+"dynamic.csv", dynamicOutput());
-    Helper::saveToTextFile(p+ "version.txt", verboseVersion());
+    if (is_final) {
+        Helper::saveToTextFile(p+"dynamic.csv", dynamicOutput());
+        //Helper::saveToTextFile(p+ "version.txt", verboseVersion());
+    }
 
 
-    qDebug() << "saved debug outputs to" << p;
+    // write outputs
+    saveDebugOutputsCore(p, do_append);
+
+    if (logLevelDebug())
+        qDebug() << "saved debug outputs to" << p;
+
+    if (clear_data)
+        GlobalSettings::instance()->clearDebugLists();  // clear debug data
+
+
+}
+
+void ModelController::saveDebugOutputsCore(QString p, bool do_append)
+{
+    GlobalSettings::instance()->debugDataTable(GlobalSettings::dTreePartition, ";", p + "tree_partition.csv", do_append);
+    GlobalSettings::instance()->debugDataTable(GlobalSettings::dTreeGrowth, ";", p + "tree_growth.csv", do_append);
+    GlobalSettings::instance()->debugDataTable(GlobalSettings::dTreeNPP, ";", p + "tree_npp.csv", do_append);
+    GlobalSettings::instance()->debugDataTable(GlobalSettings::dStandGPP, ";", p + "stand_gpp.csv", do_append);
+    GlobalSettings::instance()->debugDataTable(GlobalSettings::dWaterCycle, ";", p + "water_cycle.csv", do_append);
+    GlobalSettings::instance()->debugDataTable(GlobalSettings::dDailyResponses, ";", p + "daily_responses.csv", do_append);
+    GlobalSettings::instance()->debugDataTable(GlobalSettings::dEstablishment, ";", p + "establishment.csv", do_append);
+    GlobalSettings::instance()->debugDataTable(GlobalSettings::dSaplingGrowth, ";", p + "saplinggrowth.csv", do_append);
+    GlobalSettings::instance()->debugDataTable(GlobalSettings::dCarbonCycle, ";", p + "carboncycle.csv", do_append);
+    GlobalSettings::instance()->debugDataTable(GlobalSettings::dPerformance, ";", p + "performance.csv", do_append);
+
+}
+
+void ModelController::saveDebugOutputJs(bool do_clear)
+{
+    QString p = GlobalSettings::instance()->path("debug_", "temp");
+
+    // save the debug outputs, start new file(s):
+    saveDebugOutputsCore(p, false);
+
+    if (do_clear)
+        GlobalSettings::instance()->clearDebugLists();  // clear debug data
+
 
 }
 
@@ -546,6 +609,45 @@ void ModelController::paintMap(MapGrid *map, double min_value, double max_value)
     }
 #else
     Q_UNUSED(map);Q_UNUSED(min_value);Q_UNUSED(max_value);
+#endif
+}
+
+void ModelController::paintGrid(Grid<double> *grid, QString name, GridViewType view_type, double min_value, double max_value)
+{
+#ifdef ILAND_GUI
+    if (mViewerWindow) {
+        mViewerWindow->paintGrid(grid, name, view_type, min_value, max_value);
+        qDebug() << "painted custom grid min-value (blue):" << min_value << "max-value(red):" << max_value;
+    }
+#else
+    Q_UNUSED(grid);Q_UNUSED(min_value);Q_UNUSED(max_value);
+#endif
+}
+
+void ModelController::addScriptLayer(Grid<double> *grid, MapGrid *map, QString name)
+{
+#ifdef ILAND_GUI
+    if (mViewerWindow) {
+        if (map)
+            mViewerWindow->addPaintLayer(nullptr, map, name);
+        if (grid)
+            mViewerWindow->addPaintLayer(grid, nullptr, name);
+
+    }
+#else
+    Q_UNUSED(grid);Q_UNUSED(map);
+#endif
+
+}
+
+void ModelController::removeMapGrid(Grid<double> *grid, MapGrid *map)
+{
+#ifdef ILAND_GUI
+    if (mViewerWindow) {
+        mViewerWindow->removePaintLayer(grid, map);
+    }
+#else
+    Q_UNUSED(grid);Q_UNUSED(map);
 #endif
 }
 
@@ -583,6 +685,66 @@ void ModelController::removeLayers(const LayeredGridBase *layers)
 #endif
 }
 
+void ModelController::addPaintLayers(QObject *handler, const QStringList names, const QVector<GridViewType> view_types)
+{
+#ifdef ILAND_GUI
+    if (mViewerWindow)
+        mViewerWindow->addPaintLayers(handler, names, view_types);
+
+#else
+    Q_UNUSED(handler) Q_UNUSED(names)
+#endif
+}
+
+void ModelController::removePaintLayers(QObject *handler)
+{
+#ifdef ILAND_GUI
+    if (mViewerWindow)
+        mViewerWindow->removePaintLayers(handler);
+#else
+    Q_UNUSED(handler)
+#endif
+}
+
+Grid<double> *ModelController::preparePaintGrid(QObject *handler, QString name, std::pair<QStringList, QStringList> *rNamesColors)
+{
+    // call the slot "paintGrid" from the handler.
+    // the handler slot should return a pointer to a (double) grid
+    Grid<double> *grid_ptr = nullptr;
+    bool success = false;
+    handler->dumpObjectTree();
+
+
+    //if (handler->metaObject()->indexOfMethod("paintGrid")>-1) {
+        success = QMetaObject::invokeMethod(handler, "paintGrid", Qt::DirectConnection,
+                                                 Q_RETURN_ARG(Grid<double> *, grid_ptr),
+                                                 Q_ARG(QString, name),
+                                                 Q_ARG(QStringList&, rNamesColors->first),
+                                                 Q_ARG(QStringList&, rNamesColors->second)
+                                                 );
+    //}
+
+    if (success) {
+        return grid_ptr;
+    }
+
+    // In case the request is not handled, we fall back to asking BITE.
+    Grid<double> *grid = BITE::BiteEngine::instance()->preparePaintGrid(handler, name);
+    if (grid)
+        return grid;
+    return nullptr;
+}
+
+QStringList ModelController::evaluateClick(QObject *handler, const QPointF coord, const QString &grid_name)
+{
+    return BITE::BiteEngine::instance()->evaluateClick(handler, coord, grid_name);
+}
+
+double ModelController::valueAtHandledGrid(QObject *handler, const QPointF coord, const int layer_id)
+{
+    return BITE::BiteEngine::instance()->variableValueAt(handler, coord, layer_id);
+}
+
 void ModelController::setViewport(QPointF center_point, double scale_px_per_m)
 {
 #ifdef ILAND_GUI
@@ -610,6 +772,8 @@ void ModelController::repaint()
         mViewerWindow->repaint();
 #endif
 }
+
+
 
 
 

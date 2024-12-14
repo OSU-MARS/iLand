@@ -1,9 +1,11 @@
-﻿using iLand.Tool;
+﻿// C++/core/{ management.h, management.cpp }
+using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
+using System.Drawing;
 
 namespace iLand.Simulation
 {
@@ -11,11 +13,11 @@ namespace iLand.Simulation
         The actual iLand management is based on Javascript functions. This class provides
         the frame for executing the javascript as well as the functions that are called by scripts and
         that really do the work.
-        See http://iland-model.org/iLand+scripting, http://iland-model.org/Object+Management for management Javascript API.
+        See https://iland-model.org/iLand+scripting, https://iland-model.org/Object+Management for management Javascript API.
         */
     public class Management
     {
-        private List<(TreeListSpatial Trees, List<int> LiveTreeIndices)> treesInMostRecentlyLoadedStand;
+        private List<(TreeListSpatial Trees, List<int> LiveTreeIndices)> treesInMostRecentlyLoadedStand; // C++: mTrees
 
         // property getter & setter for removal fractions
         /// removal fraction foliage: 0: 0% will be removed, 1: 100% will be removed from the forest by management operations (i.e. calls to manage() instead of kill())
@@ -33,6 +35,11 @@ namespace iLand.Simulation
             this.removalFractionBranch = 0.0F;
             this.removalFractionStem = 1.0F;
             this.treesInMostRecentlyLoadedStand = [];
+        }
+
+        public void Clear()
+        {
+            this.treesInMostRecentlyLoadedStand.Clear();
         }
 
         // return number of trees currently in list
@@ -92,24 +99,35 @@ namespace iLand.Simulation
                     }
                 }
             }
-            treesInMostRecentlyLoadedStand.Clear();
+            this.treesInMostRecentlyLoadedStand.Clear();
             return initialTreeCount;
         }
 
-        public int LethalDisturbanceInCurrentStand(Model model)
+        public int LethalDisturbanceInCurrentStand(Model model, float stemToSoilFraction, float stemToSnagFraction,
+                                                                float branchToSoilFraction, float branchToSnagFraction,
+                                                                TreeFlags deathReason) // C++: disturbanceKill()
         {
+            bool isFire = (deathReason & TreeFlags.DeadFromFire) == TreeFlags.DeadFromFire;
             int treeCount = 0;
             foreach ((TreeListSpatial Trees, List<int> LiveTreeIndices) liveTreesOfSpecies in this.treesInMostRecentlyLoadedStand)
             {
                 TreeListSpatial trees = liveTreesOfSpecies.Trees;
                 foreach (int treeIndex in liveTreesOfSpecies.LiveTreeIndices)
                 {
-                    // TODO: Why 10%? Should foiliage to soil also be 10%?
-                    trees.RemoveDisturbance(model, treeIndex, stemToSnagFraction: 0.1F, stemToSoilFraction: 0.1F, branchToSoilFraction: 0.1F, branchToSnagFraction: 0.1F, foliageToSoilFraction: 1.0F);
+                    trees.RemoveDisturbance(model, treeIndex, stemToSnagFraction, stemToSoilFraction, branchToSoilFraction, branchToSnagFraction, foliageToSoilFraction: 1.0F);
+                    trees.SetFlags(treeIndex, deathReason);
+                    if (isFire && (trees.Species.SeedDispersal != null))
+                    {
+                        if (trees.Species.IsTreeSerotinousRandom(model.RandomGenerator.Value!, trees.AgeInYears[treeIndex]))
+                        {
+                            trees.Species.SeedDispersal.SeedProductionSerotiny(model.RandomGenerator.Value!, trees, treeIndex);
+                        }
+                    }
                     ++treeCount;
                 }
             }
-            this.treesInMostRecentlyLoadedStand.Clear(); // TODO: why?
+
+            this.treesInMostRecentlyLoadedStand.Clear(); // all trees are removed
             return treeCount;
         }
 
@@ -130,7 +148,7 @@ namespace iLand.Simulation
                 TreeListSpatial trees = liveTreesOfSpecies.Trees;
                 foreach (int liveTreeIndex in liveTreesOfSpecies.LiveTreeIndices)
                 {
-                    trees.SetDeathReasonCutAndDrop(liveTreeIndex); // set flag that tree is cut down
+                    trees.SetFlags(liveTreeIndex, TreeFlags.DeadCutAndDrop); // set flag that tree is cut down
                     trees.MarkTreeAsDead(model, liveTreeIndex);
                 }
             }
@@ -460,33 +478,72 @@ namespace iLand.Simulation
         //    return mTrees.Count;
         //}
 
-        //public static void KillSaplings(GridRaster10m standGrid, Model model, int key)
-        //{
-        //    //MapGridWrapper *wrap = qobject_cast<MapGridWrapper*>(map_grid_object.toQObject());
-        //    //if (!wrap) {
-        //    //    context().throwError("loadFromMap called with invalid map object!");
-        //    //    return;
-        //    //}
-        //    //loadFromMap(wrap.map(), key);
-        //    RectangleF boundingBox = standGrid.GetBoundingBox(key);
-        //    GridWindowEnumerator<float> lightGridRunner = new(model.Landscape.LightGrid, boundingBox);
-        //    while (lightGridRunner.MoveNext())
-        //    {
-        //        Point lightCellIndexXY = lightGridRunner.GetCellXYIndex();
-        //        if (standGrid.GetPolygonIDFromLightGridIndex(lightCellIndexXY) == key)
-        //        {
-        //            SaplingCell? saplingCell = model.Landscape.GetSaplingCell(lightCellIndexXY, true, out ResourceUnit ru);
-        //            if (saplingCell != null)
-        //            {
-        //                ru.ClearSaplings(saplingCell, true);
-        //            }
-        //        }
-        //    }
-        //}
+        public static void KillSaplings(SimulationState simulationState, GridRaster10m standGrid, Model model, UInt32 standID, string? filterExpression)
+        {
+            RectangleF boundingBox = standGrid.GetBoundingBox(standID);
+            GridWindowEnumerator<float> lightGridRunner = new(model.Landscape.LightGrid, boundingBox);
+
+            Expression? filter = null;
+            SaplingVariableAccessor? saplingVariableAccessor = null;
+            if (String.IsNullOrWhiteSpace(filterExpression) == false)
+            {
+                saplingVariableAccessor = new SaplingVariableAccessor(simulationState);
+                filter = new(filterExpression, saplingVariableAccessor);
+            }
+
+            while (lightGridRunner.MoveNext())
+            {
+                Point lightCellIndexXY = lightGridRunner.GetCurrentXYIndex();
+                if (standGrid.GetPolygonIDFromLightGridIndex(lightCellIndexXY) == standID)
+                {
+                    SaplingCell? saplingCell = model.Landscape.GetSaplingCell(lightCellIndexXY, true, out ResourceUnit ru);
+                    if (saplingCell != null)
+                    {
+                        if (filter == null)
+                        {
+                            saplingCell.Clear();
+                        }
+                        else
+                        {
+                            int nsap_removed = 0;
+                            for (int saplingIndex = 0; saplingIndex < saplingCell.Saplings.Length; ++saplingIndex)
+                            {
+                                Sapling sapling = saplingCell.Saplings[saplingIndex];
+                                Debug.Assert(saplingVariableAccessor != null);
+                                saplingVariableAccessor.SetSapling(sapling, ru);
+                                if (filter.Execute() == 0.0F)
+                                {
+                                    sapling.Clear();
+                                    ++nsap_removed;
+                                }
+                                if (nsap_removed > 0)
+                                {
+                                    saplingCell.CheckState();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void KillAllSaplingsOnResourceUnit(Model model, int ruIndex)
+        {
+            ResourceUnit ru = model.Landscape.ResourceUnits[ruIndex];
+            if (ru.SaplingCells == null)
+            {
+                throw new InvalidOperationException("Resource unit " + ru.ID + " does not have saplings.");
+            }
+
+            for (int saplingCellIndex = 0; saplingCellIndex < ru.SaplingCells.Length; ++saplingCellIndex)
+            {
+                ru.SaplingCells[saplingCellIndex].Clear();
+            }
+        }
 
         /// specify removal fractions
         /// @param SWDFrac 0: no change, 1: remove all of standing woody debris
-        /// @param DWDfrac 0: no change, 1: remove all of downled woody debris
+        /// @param DWDfrac 0: no change, 1: remove all of downed woody debris
         /// @param litterFrac 0: no change, 1: remove all of soil litter
         /// @param soilFrac 0: no change, 1: remove all of soil organic matter
         public static void RemoveCarbon(GridRaster10m standGrid, UInt32 resourceUnitID, float standingWoodyFraction, float downWoodFraction, float litterFraction, float soilFraction)
@@ -502,25 +559,20 @@ namespace iLand.Simulation
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
-                ResourceUnit resourceUnit = ruAreas[areaIndex].Item1;
+                (ResourceUnit resourceUnit, float areaFactor) = ruAreas[areaIndex];
                 if (resourceUnit.Soil == null)
                 {
                     throw new NotSupportedException("Soil is not enabled on resource unit. Down wood, litter, and soil carbon cannot be removed.");
                 }
 
-                float areaFactor = ruAreas[areaIndex].Item2; // 0..1
                 //totalArea += areaFactor;
-                // swd
+                // standing woody debris, if enabled
                 if (standingWoodyFraction > 0.0F)
                 {
-                    if (resourceUnit.Snags == null)
-                    {
-                        throw new NotSupportedException("Snags are not enabled on resource unit. Standing woody carbon cannot be removed.");
-                    }
-                    resourceUnit.Snags.RemoveCarbon(standingWoodyFraction * areaFactor);
+                    resourceUnit.Snags?.RemoveCarbon(standingWoodyFraction * areaFactor);
                 }
-                // soil pools
-                resourceUnit.Soil.RemoveBiomassFractions(downWoodFraction * areaFactor, litterFraction * areaFactor, soilFraction * areaFactor);
+                // soil pools, if enabled
+                resourceUnit.Soil?.RemoveBiomassFractions(downWoodFraction * areaFactor, litterFraction * areaFactor, soilFraction * areaFactor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
             //Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));
@@ -538,19 +590,18 @@ namespace iLand.Simulation
             {
                 throw new ArgumentOutOfRangeException(nameof(slashFraction));
             }
-            List<(ResourceUnit, float)> ruAreas = standGrid.GetResourceUnitAreaFractions(resourceUnitID).ToList();
+            List<(ResourceUnit, float)> ruAreas = standGrid.GetResourceUnitAreaFractions(resourceUnitID);
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {
-                ResourceUnit resourceUnit = ruAreas[areaIndex].Item1;
+                (ResourceUnit resourceUnit, float areaFactor) = ruAreas[areaIndex];
                 if (resourceUnit.Snags == null)
                 {
                     throw new NotSupportedException("Snags are not enabled on resource unit so snag to slash conversion is not possible.");
                 }
 
-                float area_factor = ruAreas[areaIndex].Item2; // 0..1
                 //totalArea += area_factor;
-                resourceUnit.Snags.TransferStandingWoodToSoil(slashFraction * area_factor);
+                resourceUnit.Snags.TransferStandingWoodToSoil(slashFraction * areaFactor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
             // Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));
@@ -558,21 +609,28 @@ namespace iLand.Simulation
 
         /** loadFromMap selects trees located on pixels with value 'key' within the grid 'map_grid'.
             */
-        //public void LoadFromMap(GridRaster10m mapGrid, int standID)
-        //{
-        //    if (mapGrid == null)
-        //    {
-        //        throw new ArgumentNullException(nameof(mapGrid));
-        //    }
-        //    if (mapGrid.IsSetup())
-        //    {
-        //        this.treesInMostRecentlyLoadedStand = mapGrid.GetLivingTreesInStand(standID);
-        //    }
-        //    else
-        //    {
-        //        throw new ArgumentException("Grid is not valid. No trees loaded");
-        //    }
-        //}
+        public void LoadFromMap(GridRaster10m mapGrid, UInt32 standID, bool append)
+        {
+            if (mapGrid.IsSetup() == false)
+            {
+                throw new ArgumentException("Grid is not valid. No trees loaded", nameof(mapGrid));
+            }
+
+            List<(TreeListSpatial, List<int>)> trees = mapGrid.GetLivingTreesInStand(standID);
+            this.LoadFromTreeList(trees, append);
+        }
+
+        private void LoadFromTreeList(List<(TreeListSpatial, List<int>)> tree_list, bool append)
+        {
+            if (append == false)
+            {
+                this.treesInMostRecentlyLoadedStand = tree_list;
+            }
+            else
+            {
+                this.treesInMostRecentlyLoadedStand.AddRange(tree_list);
+            }
+        }
 
         //private int TreePairValue(MutableTuple<Trees, List<int>> treesOfSpecies1, MutableTuple<Trees, List<int>> treesOfSpecies2)
         //{

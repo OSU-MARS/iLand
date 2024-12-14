@@ -1,4 +1,5 @@
-﻿using iLand.Simulation;
+﻿// C++/output/{ managementout.h, managementout.cpp }
+using iLand.Simulation;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
@@ -11,10 +12,8 @@ namespace iLand.Output.Sql
         {
             this.Name = "Removed trees by species/RU";
             this.TableName = "management";
-            this.Description = "Aggregates for trees that are removed in current year on the level of RU x species. All values are scaled to one hectare." +
-                               "The output is created after the growth of the year, " +
-                               "i.e. the growth of the year in which trees are dying, is included!";
-
+            this.Description = "Aggregates for trees that are removed (harvested or cut down) in current year on the level of RU x species. All values are scaled to one hectare." +
+                               "The output is created after the growth of the year so the growth of the year in which a tree killed is included.";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnitID());
             this.Columns.Add(SqlColumn.CreateTreeSpeciesID());

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -23,16 +23,14 @@
 #include "species.h"
 #include "resourceunit.h"
 #include "resourceunitspecies.h"
-#include "seeddispersal.h"
 #include "model.h"
-#include "grasscover.h"
-#include "helper.h"
-#include "debugtimer.h"
 #include "watercycle.h"
+#include "permafrost.h"
+#include "microclimate.h"
 
 /** @class Establishment
     Establishment deals with the establishment process of saplings.
-    http://iland.boku.ac.at/establishment
+    https://iland-model.org/establishment
     Prerequisites for establishment are:
     the availability of seeds: derived from the seed-maps per Species (@sa SeedDispersal)
     the quality of the abiotic environment (TACA-model): calculations are performend here, based on climate and species responses
@@ -57,7 +55,8 @@ void Establishment::setup(const Climate *climate, const ResourceUnitSpecies *rus
     mPxDensity = 0.;
     mNumberEstablished = 0;
     if (climate==0)
-        throw IException("Establishment::setup: no valid climate for a resource unit.");
+        throw IException(QString("Establishment::setup: no valid climate for a resource unit: RU-Index: %1, RU-ID: %2, coords: (%3/%4) ").arg(rus->ru()->index()).arg(rus->ru()->id()).
+                         arg(rus->ru()->boundingBox().center().x()).arg(rus->ru()->boundingBox().center().y()) );
     if (rus==0 || rus->species()==0 || rus->ru()==0)
         throw IException("Establishment::setup: important variable is null (are the species properly set up?).");
 }
@@ -78,12 +77,23 @@ void Establishment::clear()
 }
 
 
-double Establishment::calculateWaterLimitation(const int veg_period_start, const int veg_period_end)
+double Establishment::calculateWaterLimitation()
 {
     // return 1 if effect is disabled
     if (mRUS->species()->establishmentParameters().psi_min >= 0.)
         return 1.;
 
+    double psi_min = mRUS->species()->establishmentParameters().psi_min;
+    // get the psi min of the current year
+    double psi_mpa = mRUS->ru()->waterCycle()->estPsiMin( mRUS->species()->phenologyClass() );
+
+    // calculate the response of the species to this value of psi (see also Species::soilwaterResponse())
+    double result = limit( (psi_mpa - psi_min) / (-0.015 -  psi_min) , 0., 1.);
+
+    return result;
+
+
+/*
     double psi_min = mRUS->species()->establishmentParameters().psi_min;
     const WaterCycle *water = mRUS->ru()->waterCycle();
     int days = mRUS->ru()->climate()->daysOfYear();
@@ -110,7 +120,7 @@ double Establishment::calculateWaterLimitation(const int veg_period_start, const
         }
 
         // move to next value in the buffer
-        i_buffer = ++i_buffer % nwindow;
+        i_buffer = (i_buffer + 1) % nwindow;
     }
 
     if (min_average > 1000.)
@@ -121,14 +131,32 @@ double Establishment::calculateWaterLimitation(const int veg_period_start, const
     double result = limit( (psi_mpa - psi_min) / (-0.015 -  psi_min) , 0., 1.);
 
     return result;
+*/
+}
 
+double Establishment::calculateSOLDepthLimitation()
+{
+    if (mRUS->species()->establishmentParameters().SOL_thickness == 0.)
+        return 1.; // no effect for the current species
+
+    if (!mRUS->ru()->waterCycle()->permafrost())
+        return 1.; // no limitation if permafrost module is disabled
+
+    double depth = mRUS->ru()->waterCycle()->permafrost()->mossLayerThickness() +
+            mRUS->ru()->waterCycle()->permafrost()->SOLLayerThickness();
+
+    depth = depth * 100.; // to cm
+
+    double est_SOLlimit = mRUS->species()->establishmentParameters().SOL_thickness;
+    double effect = exp( -est_SOLlimit * depth );
+    return effect;
 }
 
 
 
 /** Calculate the abiotic environemnt for seedling for a given species and a given resource unit.
  The model is closely based on the TACA approach of Nitschke and Innes (2008), Ecol. Model 210, 263-277
- more details: http://iland.boku.ac.at/establishment#abiotic_environment
+ more details: https://iland-model.org/establishment#abiotic_environment
  a model mockup in R: script_establishment.r
 
  */
@@ -146,6 +174,10 @@ void Establishment::calculateAbioticEnvironment()
     mTACA_gdd = false;   // gdd-thresholds
     mTACA_frostfree = false; // frost free days in vegetation period
     mTACA_frostAfterBuds = 0; // frost days after bud birst
+    mGDD = 0;
+
+    // should we use microclimate temperatures?
+    bool use_micro_clim = Model::settings().microclimateEnabled && mRUS->ru()->microClimate()->settings().establishment_effect;
 
 
     const ClimateDay *day = mClimate->begin();
@@ -162,16 +194,32 @@ void Establishment::calculateAbioticEnvironment()
         veg_period_end = mClimate->sun().dayShorter10_5hrs();
 
     for (; day!=mClimate->end(); ++day, ++doy) {
+
+        double day_tmin = day->min_temperature;
+        double day_tavg = day->temperature;
+
+        if (use_micro_clim) {
+            // use microclimate calculations to modify the temperature
+            // for establishment
+            double mc_min_buf = mRUS->ru()->microClimate()->minimumMicroclimateBufferingRU(day->month-1);
+            double mc_max_buf = mRUS->ru()->microClimate()->maximumMicroclimateBufferingRU(day->month-1);
+            double mc_mean_buf = (mc_min_buf + mc_max_buf) / 2.;
+
+            day_tmin += mc_min_buf;
+            day_tavg += mc_mean_buf;
+
+        }
+
         // minimum temperature: if temp too low -> set prob. to zero
-        if (day->min_temperature < p.min_temp)
+        if (day_tmin < p.min_temp)
             mTACA_min_temp = false;
 
         // count frost free days
-        if (day->min_temperature > 0.)
+        if (day_tmin > 0.)
             frost_free++;
 
         // chilling requirement, GDD, bud birst
-        if (day->temperature>=-5. && day->temperature<5.)
+        if (day_tavg >=-5. && day_tavg <5. && doy<=veg_period_end)
             chill_days++;
         if (chill_days>p.chill_requirement)
             chill_ok=true;
@@ -179,18 +227,18 @@ void Establishment::calculateAbioticEnvironment()
         // up to a fixed day ending the veg period
         if (doy<=veg_period_end) {
             // accumulate growing degree days
-            if (chill_ok && day->temperature > p.GDD_baseTemperature) {
-                GDD += day->temperature - p.GDD_baseTemperature;
-                GDD_BudBirst += day->temperature - p.GDD_baseTemperature;
+            if (chill_ok && day_tavg > p.GDD_baseTemperature) {
+                GDD += day_tavg - p.GDD_baseTemperature;
+                GDD_BudBirst += day_tavg - p.GDD_baseTemperature;
             }
             // if day-frost occurs, the GDD counter for bud birst is reset
-            if (day->temperature <= 0.)
+            if (day_tavg <= 0.)
                 GDD_BudBirst = 0.;
 
             if (GDD_BudBirst > p.bud_birst)
                 buds_are_birst = true;
 
-            if (doy<veg_period_end && buds_are_birst && day->min_temperature <= 0.)
+            if (doy<veg_period_end && buds_are_birst && day_tmin <= 0.)
                 mTACA_frostAfterBuds++;
         }
     }
@@ -199,6 +247,7 @@ void Establishment::calculateAbioticEnvironment()
         mTACA_chill = true;
 
     // GDD requirements
+    mGDD = static_cast<int>(GDD);
     if (GDD>p.GDD_min && GDD<p.GDD_max)
         mTACA_gdd = true;
 
@@ -213,9 +262,12 @@ void Establishment::calculateAbioticEnvironment()
         if (mTACA_frostAfterBuds>0)
             frost_effect = pow(p.frost_tolerance, sqrt(double(mTACA_frostAfterBuds)));
         // negative effect due to water limitation on establishment [1: no effect]
-        mWaterLimitation = calculateWaterLimitation(pheno.vegetationPeriodStart(), pheno.vegetationPeriodLength());
-        // combine drought and frost effect multiplicatively
-        mPAbiotic = frost_effect * mWaterLimitation;
+        mWaterLimitation = calculateWaterLimitation();
+        // negative effect of a thick soil organic layer on regeneration [1: no effect]
+        double SOL_limitation = calculateSOLDepthLimitation();
+
+        // combine effects of drought, frost, and soil organic layer depth multiplicatively
+        mPAbiotic = frost_effect * mWaterLimitation * SOL_limitation;
     } else {
         mPAbiotic = 0.; // if any of the requirements is not met
     }
@@ -224,13 +276,13 @@ void Establishment::calculateAbioticEnvironment()
 
 void Establishment::writeDebugOutputs()
 {
-    if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dEstablishment)) {
+    if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dEstablishment) && mRUS->ru()->shouldCreateDebugOutput()) {
         DebugList &out = GlobalSettings::instance()->debugList(mRUS->ru()->index(), GlobalSettings::dEstablishment);
         // establishment details
         out << mRUS->species()->id() << mRUS->ru()->index() << mRUS->ru()->id();
         out << avgSeedDensity();
         out << TACAminTemp() << TACAchill() << TACAfrostFree() << TACgdd();
-        out << TACAfrostDaysAfterBudBirst() << waterLimitation() << abioticEnvironment();
+        out << TACAfrostDaysAfterBudBirst() << waterLimitation() << growingDegreeDays()  << abioticEnvironment();
         out << mRUS->prod3PG().fEnvYear() << mRUS->constSaplingStat().newSaplings();
 
         //out << mSaplingStat.livingSaplings() << mSaplingStat.averageHeight() << mSaplingStat.averageAge() << mSaplingStat.averageDeltaHPot() << mSaplingStat.averageDeltaHRealized();

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -22,6 +22,8 @@
 #include "resourceunit.h"
 #include "snag.h"
 #include "soil.h"
+#include "watercycle.h"
+#include "permafrost.h"
 
 CarbonOut::CarbonOut()
 {
@@ -30,7 +32,7 @@ CarbonOut::CarbonOut()
                    "On resource unit level, the outputs contain aggregated above ground pools (kg/ha) " \
                    "and below ground pools (kg/ha). \n " \
                    "For landscape level outputs, all variables are scaled to kg/ha stockable area. "\
-                   "The area column contains the stockable area (per resource unit / landscape) and can be used to scale to values to the actual value. \n " \
+                   "The area column contains the stockable area (per resource unit / landscape) and can be used to scale to values to the actual value on the ground. \n " \
                    "You can use the 'condition' to control if the output should be created for the current year(see also dynamic stand output).\n" \
                    "The 'conditionRU' can be used to suppress resource-unit-level details; eg. specifying 'in(year,100,200,300)' limits output on reosurce unit level to the years 100,200,300 " \
                    "(leaving 'conditionRU' blank enables details per default).");
@@ -52,12 +54,17 @@ CarbonOut::CarbonOut()
               << OutputColumn("snags_n", "standing dead wood nitrogen kg/ha", OutDouble)
               << OutputColumn("snagsOther_c", "branches and coarse roots of standing dead trees, carbon kg/ha", OutDouble)
               << OutputColumn("snagsOther_n", "branches and coarse roots of standing dead trees, nitrogen kg/ha", OutDouble)
-              << OutputColumn("downedWood_c", "downed woody debris (yR), carbon kg/ha", OutDouble)
-              << OutputColumn("downedWood_n", "downed woody debris (yR), nitrogen kg/ga", OutDouble)
-              << OutputColumn("litter_c", "soil litter (yl), carbon kg/ha", OutDouble)
+              << OutputColumn("snagsOther_c_ag", "branches of standing dead trees (also included in snagsOther_c), carbon kg/ha", OutDouble)
+              << OutputColumn("downedWood_c", "downed woody debris (yR, branches, stems, coarse roots), carbon kg/ha", OutDouble)
+              << OutputColumn("downedWood_n", "downed woody debris (yR), nitrogen kg/ha", OutDouble)
+              << OutputColumn("downedWood_c_ag", "downed woody debris aboveground (yR, stems, branches, also included in downedWood_c), kg/ha", OutDouble)
+              << OutputColumn("litter_c", "soil litter (yl, foliage and fine roots) carbon kg/ha", OutDouble)
               << OutputColumn("litter_n", "soil litter (yl), nitrogen kg/ha", OutDouble)
+              << OutputColumn("litter_c_ag", "soil litter aboveground (yl, foliage, part of litter_c) carbon kg/ha", OutDouble)
               << OutputColumn("soil_c", "soil organic matter (som), carbon kg/ha", OutDouble)
-              << OutputColumn("soil_n", "soil organic matter (som), nitrogen kg/ha", OutDouble);
+              << OutputColumn("soil_n", "soil organic matter (som), nitrogen kg/ha", OutDouble)
+              << OutputColumn("understorey_c", "living understorey vegetation (e.g. moss) kg C/ha", OutDouble);
+
 
 
 }
@@ -88,7 +95,7 @@ void CarbonOut::exec()
         ru_level = false;
 
 
-    QVector<double> v(23, 0.); // 8 data values
+    QVector<double> v(26, 0.); // 8 data values
     QVector<double>::iterator vit;
 
     foreach(ResourceUnit *ru, m->ruList()) {
@@ -111,14 +118,29 @@ void CarbonOut::exec()
             // biomass from regeneration
             *this << s.cRegeneration() << s.nRegeneration();
 
-            // biomass from standing dead wood
-            *this << ru->snag()->totalSWD().C / area_factor << ru->snag()->totalSWD().N / area_factor   // snags
-                                              << ru->snag()->totalOtherWood().C/area_factor << ru->snag()->totalOtherWood().N / area_factor;   // snags, other (branch + coarse root)
+            // biomass from standing dead wood: this is not scaled to ha-values!
+            *this << ru->snag()->totalSWD().C / area_factor
+                    << ru->snag()->totalSWD().N / area_factor   // snags
+                    << ru->snag()->totalOtherWood().C/area_factor
+                    << ru->snag()->totalOtherWood().N / area_factor
+                    << ru->snag()->totalOtherWood().C/ area_factor * ru->snag()->otherWoodAbovegroundFraction();   // snags, other (branch + coarse root)
 
             // biomass from soil (convert from t/ha -> kg/ha)
-            *this << ru->soil()->youngRefractory().C*1000. << ru->soil()->youngRefractory().N*1000.   // wood
-                                                           << ru->soil()->youngLabile().C*1000. << ru->soil()->youngLabile().N*1000.   // litter
-                                                           << ru->soil()->oldOrganicMatter().C*1000. << ru->soil()->oldOrganicMatter().N*1000.;   // soil
+            *this << ru->soil()->youngRefractory().C*1000.
+                    << ru->soil()->youngRefractory().N*1000.   // wood
+                    << ru->soil()->youngRefractory().C*1000. * ru->soil()->youngRefractoryAbovegroundFraction() // aboveground fraction
+                    << ru->soil()->youngLabile().C*1000.
+                    << ru->soil()->youngLabile().N*1000.   // litter
+                    << ru->soil()->youngLabile().C*1000. * ru->soil()->youngLabileAbovegroundFraction() // aboveground fraction
+                    << ru->soil()->oldOrganicMatter().C*1000.
+                    << ru->soil()->oldOrganicMatter().N*1000.;   // soil
+
+            // biomass for understorey (currently only moss)
+            double understorey_c = 0.;
+            if (ru->waterCycle()->permafrost())
+                understorey_c = ru->waterCycle()->permafrost()->mossBiomass() * biomassCFraction * 10000.; // convert from kg/m2 -> kg C / ha
+
+            *this << understorey_c;
 
             writeRow();
         }
@@ -137,11 +159,11 @@ void CarbonOut::exec()
         *vit++ += s.cRegeneration(); *vit++ += s.nRegeneration();
         // standing dead wood
         *vit++ += ru->snag()->totalSWD().C ; *vit++ += ru->snag()->totalSWD().N ;
-        *vit++ += ru->snag()->totalOtherWood().C ; *vit++ += ru->snag()->totalOtherWood().N ;
+        *vit++ += ru->snag()->totalOtherWood().C ; *vit++ += ru->snag()->totalOtherWood().N ; *vit++ += ru->snag()->totalOtherWood().C * ru->snag()->otherWoodAbovegroundFraction();
         // biomass from soil (converstion to kg/ha), and scale with fraction of stockable area
-        *vit++ += ru->soil()->youngRefractory().C*area_factor * 1000.; *vit++ += ru->soil()->youngRefractory().N*area_factor  * 1000.;
-        *vit++ += ru->soil()->youngLabile().C*area_factor * 1000.; *vit++ += ru->soil()->youngLabile().N*area_factor  * 1000.;
-        *vit++ += ru->soil()->oldOrganicMatter().C*area_factor  * 1000.; *vit++ += ru->soil()->oldOrganicMatter().N*area_factor  * 1000.;
+        *vit++ += ru->soil()->youngRefractory().C*area_factor * 1000.; *vit++ += ru->soil()->youngRefractory().N*area_factor * 1000.; *vit++ += ru->soil()->youngRefractory().C*area_factor * 1000. * ru->soil()->youngRefractoryAbovegroundFraction();
+        *vit++ += ru->soil()->youngLabile().C*area_factor * 1000.; *vit++ += ru->soil()->youngLabile().N*area_factor * 1000.; *vit++ += ru->soil()->youngLabile().C*area_factor * 1000. * ru->soil()->youngLabileAbovegroundFraction();
+        *vit++ += ru->soil()->oldOrganicMatter().C*area_factor * 1000.; *vit++ += ru->soil()->oldOrganicMatter().N*area_factor * 1000.;
 
     }
     // write landscape sums

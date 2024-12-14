@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -40,6 +40,7 @@ public:
     bool TACAminTemp() const { return mTACA_min_temp;} ///< TACA flag for minimum temperature
     bool TACAchill() const { return mTACA_chill;} ///< TACA flag chilling requirement
     bool TACgdd() const { return mTACA_gdd;} ///< TACA flag for growing degree days
+    int growingDegreeDays() const { return mGDD; } ///< the groing degree days (species specific)
     bool TACAfrostFree() const { return mTACA_frostfree;} ///< TACA flag for number of frost free days
     int TACAfrostDaysAfterBudBirst() const { return mTACA_frostAfterBuds; } ///< number of frost days after bud birst
     double avgLIFValue() const { return mLIFcount>0?mSumLIFvalue/double(mLIFcount):0.; } ///< average LIF value of LIF pixels where establishment is tested
@@ -47,7 +48,11 @@ public:
 
 private:
     double mPAbiotic; ///< abiotic probability for establishment (climate)
-    double calculateWaterLimitation(const int veg_period_start, const int veg_period_end); ///< calculate effect of water limitation on establishment, returns scalar [0..1]
+    /// calculate effect of water limitation on establishment, returns scalar [0..1]
+    double calculateWaterLimitation();
+    /// limitation if the depth of the soil organic layer is high (e.g. boreal forests)
+    double calculateSOLDepthLimitation();
+
     const Climate *mClimate; ///< link to the current climate
     const ResourceUnitSpecies *mRUS; ///< link to the resource unit species (links to production data and species respones)
     // some statistics
@@ -57,6 +62,7 @@ private:
     bool mTACA_min_temp; // minimum temperature threshold
     bool mTACA_chill;  // (total) chilling requirement
     bool mTACA_gdd;   // gdd-thresholds
+    int mGDD; // growing degree days
     bool mTACA_frostfree; // frost free days in vegetation period
     int mTACA_frostAfterBuds; // frost days after bud birst
     double mSumLIFvalue;

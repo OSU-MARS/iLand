@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -21,23 +21,27 @@
 /** @class Climate
   Climate handles climate input data and performs some basic related calculations on that data.
   @ingroup core
-  @sa http://iland.boku.ac.at/ClimateData
+  @sa https://iland-model.org/ClimateData
 */
 #include "global.h"
 #include "climate.h"
 #include "model.h"
 #include "timeevents.h"
+#include "csvfile.h"
+
+QVector<int> Climate::sampled_years; // list of sampled years to use
 
 double ClimateDay::co2 = 350.; // base value of ambient CO2-concentration (ppm)
-QVector<int> sampled_years; // list of sampled years to use
-
+int Climate::co2Startyear = 1980;
+QString Climate::co2Pathway;
+QMap<QString, QVector<double> > Climate::fixedCO2concentrations;
 
 
 void Sun::setup(double latitude_rad)
 {
     mLatitude = latitude_rad;
     if (mLatitude>0)
-        mDayWithMaxLength = 182-10; // 21.juni
+        mDayWithMaxLength = 182-10; // 21st of June
     else
         mDayWithMaxLength = 365-10; //southern hemisphere
     // calculate length of day using  the approximation formulae of: http://herbert.gandraxa.com/length_of_day.aspx
@@ -116,7 +120,7 @@ void Climate::toDate(const int yearday, int *rDay, int *rMonth, int *rYear) cons
     if (rYear) *rYear = d->year;
 }
 
-void Climate::setup()
+void Climate::setup(bool do_log)
 {
     GlobalSettings *g=GlobalSettings::instance();
     XmlHelper xml(g->settings().node("model.climate"));
@@ -131,24 +135,25 @@ void Climate::setup()
     QString list = xml.value("randomSamplingList");
     if (mDoRandomSampling) {
         if (!list.isEmpty()) {
-            QStringList strlist = list.split(QRegExp("\\W+"), QString::SkipEmptyParts);
+            QStringList strlist = list.split(QRegularExpression("\\W+"), Qt::SkipEmptyParts);
             foreach(const QString &s,strlist)
                 mRandomYearList.push_back(s.toInt());
             // check for validity
             foreach(int year, mRandomYearList)
                 if (year < 0 || year>=mLoadYears)
-                    throw IException("Invalid randomSamplingList! Year numbers are 0-based and must to between 0 and batchYears-1 (check value of batchYears)!!!");
+                    throw IException(QString("Invalid randomSamplingList! Year numbers are 0-based and must to between 0 and batchYears-1 (check value of batchYears)!!! Tried to access: '%1', batchYears: '%2'").arg(year).arg(mLoadYears) );
         }
-
-        if (mRandomYearList.count()>0)
-            qDebug() << "Climate: Random sampling enabled with fixed list" << mRandomYearList.count() << "of years. climate:" << name();
-        else
-            qDebug() << "Climate: Random sampling enabled (without a fixed list). climate:" << name();
+        if (do_log) {
+            if (mRandomYearList.count()>0)
+                qDebug() << "Climate: Random sampling enabled with fixed list" << mRandomYearList.count() << "of years.";
+            else
+                qDebug() << "Climate: Random sampling enabled (without a fixed list)." ;
+            }
     }
     mTemperatureShift = xml.valueDouble("temperatureShift", 0.);
     mPrecipitationShift = xml.valueDouble("precipitationShift", 1.);
     if (mTemperatureShift!=0. || mPrecipitationShift!=1.)
-        qDebug() << "Climate modifaction: add temperature:" << mTemperatureShift << ". Multiply precipitation: " << mPrecipitationShift;
+        if (do_log) qDebug() << "Climate modifaction: add temperature:" << mTemperatureShift << ". Multiply precipitation: " << mPrecipitationShift;
 
     mStore.resize(mLoadYears * 366 + 1); // reserve enough space (1 more than used at max)
     mCurrentYear=0;
@@ -158,21 +163,22 @@ void Climate::setup()
     // add a where-clause
     if (!filter.isEmpty()) {
         filter = QString("where %1").arg(filter);
-        qDebug() << "adding climate table where-clause:" << filter;
+        if (do_log) qDebug() << "adding climate table where-clause:" << filter;
     }
 
-    QString query=QString("select year,month,day,min_temp,max_temp,prec,rad,vpd from %1 %2 order by year, month, day").arg(tableName).arg(filter);
+    QString query=QString("select year,month,day,min_temp,max_temp,prec,rad,vpd from '%1' %2 order by year, month, day").arg(tableName).arg(filter);
     // here add more options...
     mClimateQuery = QSqlQuery(g->dbclimate());
     mClimateQuery.exec(query);
     mTMaxAvailable = true;
     if (mClimateQuery.lastError().isValid()){
         // fallback: if there is no max_temp try the older format:
-        query=QString("select year,month,day,temp,min_temp,prec,rad,vpd from %1 order by year, month, day").arg(tableName);
-        mClimateQuery.exec(query);
+        QString errmsg = mClimateQuery.lastError().text();
+        QString query_fb=QString("select year,month,day,temp,min_temp,prec,rad,vpd from '%1' order by year, month, day").arg(tableName);
+        mClimateQuery.exec(query_fb);
         mTMaxAvailable = false;
         if (mClimateQuery.lastError().isValid()){
-            throw IException(QString("Error setting up climate: %1 \n %2").arg(query, mClimateQuery.lastError().text()) );
+            throw IException(QString("Error setting up climate: %1 \n %2 (\n\ntried also fallback '%4' and got: '%3')").arg(query, errmsg, mClimateQuery.lastError().text(), query_fb) );
         }
     }
     // setup query
@@ -183,6 +189,11 @@ void Climate::setup()
     mSun.setup(Model::settings().latitude);
     mCurrentYear--; // go to "-1" -> the first call to next year will go to year 0.
     sampled_years.clear();
+
+    co2Pathway = xml.value("co2pathway", "No");
+    co2Startyear = xml.valueInt("co2startYear", 1980);
+    if (co2Pathway == "No")
+        co2Pathway = QString();
     mIsSetup = true;
 }
 
@@ -223,11 +234,15 @@ void Climate::load()
         //qDebug() << "loading year" << lastyear+1;
         while(1==1) {
             if(!mClimateQuery.next()) {
-                // rewind to start
+                if (mDoRandomSampling)
+                    throw IException(QString("Climate: not enough years in climate database - tried to load %1 years (random sampling of climate is enabled)").arg(mLoadYears) );
+
+                // rewind to the start of the time series
                 qDebug() << "restart of climate table";
                 lastyear=-1;
                 if (!mClimateQuery.first())
                     throw IException("Error rewinding climate file!");
+
             }
             yeardays++;
             if (yeardays>366)
@@ -313,7 +328,7 @@ void Climate::nextYear()
         if (mRandomYearList.isEmpty()) {
             // random without list
             // make sure that the sequence of years is the same for the full landscape
-            if (sampled_years.size()<GlobalSettings::instance()->currentYear()) {
+            if (sampled_years.size()-1<GlobalSettings::instance()->currentYear()) {
                 while (sampled_years.size()-1 < GlobalSettings::instance()->currentYear())
                     sampled_years.append(irandom(0,mLoadYears));
             }
@@ -333,9 +348,9 @@ void Climate::nextYear()
             qDebug() << "Climate: current year (randomized):" << mCurrentYear;
     }
 
-    ClimateDay::co2 = GlobalSettings::instance()->settings().valueDouble("model.climate.co2concentration", 380.);
-    if (logLevelDebug())
-        qDebug() << "CO2 concentration" << ClimateDay::co2 << "ppm.";
+    // update ambient CO2 level
+    updateCO2concentration();
+
     mBegin = mStore.begin() + mDayIndices[mCurrentYear*12];
     mEnd = mStore.begin() + mDayIndices[(mCurrentYear+1)*12];; // point to the 1.1. of the next year
 
@@ -382,6 +397,52 @@ void Climate::climateCalculations(const ClimateDay &lastDay)
 
 }
 
+QMutex _loadco2;
+void Climate::updateCO2concentration()
+{
+
+    if (!co2Pathway.isEmpty()) {
+
+        QMutexLocker lock(&_loadco2);
+        if (fixedCO2concentrations.isEmpty()) {
+
+            // load from data file
+            CSVFile input_file(":/rcp_co2_1980_2100.txt");
+
+            for (int i=0;i<input_file.rowCount(); ++i) {
+                fixedCO2concentrations["RCP2.6"].append(input_file.value(i, "RCP_26").toDouble());
+                fixedCO2concentrations["RCP4.5"].append(input_file.value(i, "RCP_45").toDouble());
+                fixedCO2concentrations["RCP6.0"].append(input_file.value(i, "RCP_60").toDouble());
+                fixedCO2concentrations["RCP8.5"].append(input_file.value(i, "RCP_85").toDouble());
+            }
+            if (fixedCO2concentrations["RCP2.6"].isEmpty())
+                throw IException("Error in loading file with CO2 concentrations!");
+        }
+
+
+
+        int year = Globals->currentYear();
+        // derive actual year: first year of sim should get the value from co2Startyear (first year in the file is 1980)
+
+        int yearindex =  std::max( (year + co2Startyear - 1) -  1980, 0);
+        yearindex = std::min(yearindex, static_cast<int>(fixedCO2concentrations[co2Pathway].size()-1));
+        if (yearindex < 0)
+            throw IException("climate: set co2 concentration: invalid value for co2. Valid values for 'co2pathway' are: 'No', 'RCP2.6', 'RCP4.5', 'RCP6.0', 'RCP8.5'");
+
+        double new_co2_value = fixedCO2concentrations[co2Pathway][yearindex];
+        ClimateDay::co2 = new_co2_value;
+
+    } else {
+        ClimateDay::co2 = GlobalSettings::instance()->settings().valueDouble("model.climate.co2concentration", 380.);
+
+    }
+
+    if (logLevelDebug())
+        qDebug() << "CO2 concentration" << ClimateDay::co2 << "ppm.";
+
+
+}
+
 
 void Climate::setupPhenology()
 {
@@ -396,7 +457,7 @@ void Climate::setupPhenology()
         i++;
         int id;
         id = n.attribute("id", "-1").toInt();
-        if (id<0) throw IException(QString("Error setting up phenology: id invalid\ndump: %1").arg(xml.dump("")));
+        if (id<0) throw IException(QString("Error setting up phenology: id invalid\ndump: %1").arg(xml.dump("").join(" - ")));
         xml.setCurrentNode(n);
         Phenology item( id,
                         this,

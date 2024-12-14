@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -69,6 +69,8 @@
 
 #include "helper.h"
 
+#include "scriptglobal.h" // for throwing errors in JS
+
 #define opEqual 1
 #define opGreaterThen 2
 #define opLowerThen 3
@@ -92,12 +94,15 @@ void Expression::addConstant(const QString const_name, const double const_value)
 }
 
 bool Expression::mLinearizationAllowed = false;
+bool Expression::mThrowExceptionsInJS = true;
+
 Expression::Expression()
 {
     mModelObject = 0;
     m_externVarSpace=0;
     m_expr = 0;
     m_execList = 0;
+    m_empty = true;
 }
 
 
@@ -272,10 +277,13 @@ void  Expression::parse(ExpressionWrapper *wrapper)
 
     } catch (const IException& e) {
         m_errorMsg =QString("Expression::parse: Error in: %1 : %2").arg(m_expression, e.message());
-        if (m_catchExceptions)
-            Helper::msg(m_errorMsg);
-        else
+        if (mThrowExceptionsInJS){
+             ScriptGlobal::throwError(m_errorMsg);
+        } else if (m_catchExceptions) {
+             Helper::msg(m_errorMsg);
+        } else {
             throw IException(m_errorMsg);
+        }
     }
 }
 
@@ -490,7 +498,7 @@ double Expression::calculate(const double Val1, const double Val2, const bool fo
             return linearizedValue(Val1);
         return linearizedValue2d(Val1, Val2); // matrix case
     }
-    double var_space[10];
+    double var_space[EXPRNLOCALVARS];
     var_space[0]=Val1;
     var_space[1]=Val2;
     m_strict=false;
@@ -499,7 +507,7 @@ double Expression::calculate(const double Val1, const double Val2, const bool fo
 
 double Expression::calculate(ExpressionWrapper &object, const double variable_value1, const double variable_value2) const
 {
-    double var_space[10];
+    double var_space[EXPRNLOCALVARS];
     var_space[0] = variable_value1;
     var_space[1]=variable_value2;
     m_strict=false;
@@ -669,6 +677,8 @@ double * Expression::addVar(const QString& VarName)
         m_varList+=VarName;
         idx=m_varList.size()-1;
     }
+    if (m_varList.size() >= EXPRNLOCALVARS)
+        throw IException("The expression uses too many (local) variables!");
     return &m_varSpace[getVarIndex(VarName)];
 }
 
@@ -728,7 +738,7 @@ inline double Expression::getModelVar(const int varIdx, ExpressionWrapper *objec
     if (model_object)
         return model_object->value(idx);
     // hier evtl. verschiedene objekte unterscheiden (Zahlenraum???)
-    throw IException("Expression::getModelVar: invalid modell variable!");
+    throw IException("Expression::getModelVar: invalid model variable!");
 }
 
 void Expression::setExternalVarSpace(const QStringList& ExternSpaceNames, double* ExternSpace)
@@ -762,10 +772,10 @@ double  Expression::udfPolygon(double Value, double* Stack, int ArgCount) const
     // Achtung: *Stack zeigt auf das letzte Argument! (ist das letzte y).
     // Stack bereinigen tut der Aufrufer.
     if (ArgCount%2!=1)
-        throw IException("Expression::polygon: falsche zahl parameter. polygon(<val>; x0; y0; x1; y1; ....)");
+        throw IException(QString("Expression::polygon: wrong number of parameters (got '%1'). polygon(<val>; x0; y0; x1; y1; ....). In: %2").arg(ArgCount).arg(m_expression));
     int PointCnt = (ArgCount-1) / 2;
     if (PointCnt<2)
-        throw IException("Expression::polygon: falsche zahl parameter. polygon(<val>; x0; y0; x1; y1; ....)");
+        throw IException(QString("Expression::polygon: wrong number of parameters (params: %1, coord.pairs: %2). polygon(<val>; x0; y0; x1; y1; ....). In: %3").arg(ArgCount).arg(PointCnt).arg(m_expression));
     double x,y, xold, yold;
     y=*Stack--;   // 1. Argument: ganz rechts.
     x=*Stack--;
@@ -914,11 +924,13 @@ double Expression::linearizedValue(const double x) const
     if (x<mLinearLow || x>mLinearHigh)
         return calculate(x,0.,true); // standard calculation without linear optimization- but force calculation to avoid infinite loop
     int lower = int((x-mLinearLow) / mLinearStep); // the lower point
-    if (lower+1>=mLinearized.count())
-      Q_ASSERT(lower+1<mLinearized.count());
+    Q_ASSERT(lower+1<mLinearized.count());
+
     const QVector<double> &data = mLinearized;
+    const double *entry = &data[lower];
     // linear interpolation
-    double result = data[lower] + (data[lower+1]-data[lower])/mLinearStep*(x-(mLinearLow+lower*mLinearStep));
+    double result = *entry + (- *entry + *(entry+1))/mLinearStep*(x-(mLinearLow+lower*mLinearStep));
+    //double result = data[lower] + (data[lower+1]-data[lower])/mLinearStep*(x-(mLinearLow+lower*mLinearStep));
     return result;
 }
 
@@ -934,8 +946,13 @@ double Expression::linearizedValue2d(const double x, const double y) const
     const QVector<double> &data = mLinearized;
     // linear interpolation
     // mean slope in x - direction
-    double slope_x = ( (data[idx+mLinearStepCountY]-data[idx])/mLinearStepY + (data[idx+mLinearStepCountY+1]-data[idx+1])/mLinearStepY ) / 2.;
-    double slope_y = ( (data[idx+1]-data[idx])/mLinearStep + (data[idx+mLinearStepCountY+1]-data[idx+mLinearStepCountY])/mLinearStep ) / 2.;
-    double result = data[idx] + (x-(mLinearLow+lowerx*mLinearStep))*slope_x + (y-(mLinearLowY+lowery*mLinearStepY))*slope_y;
+    const double *dval = &data[idx];
+    const double *dvaly = &data[idx+mLinearStepCountY];
+    double slope_x = ( (*(dvaly) - *dval)/mLinearStepY + (*(dvaly+1) - *(dval+1))/mLinearStepY ) / 2.;
+    double slope_y = ( (*(dval+1) - *dval)/mLinearStep + (*(dvaly+1) - *(dvaly))/mLinearStep ) / 2.;
+    double result = *dval + (x-(mLinearLow+lowerx*mLinearStep))*slope_x + (y-(mLinearLowY+lowery*mLinearStepY))*slope_y;
+//    double slope_x = ( (data[idx+mLinearStepCountY]-data[idx])/mLinearStepY + (data[idx+mLinearStepCountY+1]-data[idx+1])/mLinearStepY ) / 2.;
+//    double slope_y = ( (data[idx+1]-data[idx])/mLinearStep + (data[idx+mLinearStepCountY+1]-data[idx+mLinearStepCountY])/mLinearStep ) / 2.;
+//    double result = data[idx] + (x-(mLinearLow+lowerx*mLinearStep))*slope_x + (y-(mLinearLowY+lowery*mLinearStepY))*slope_y;
     return result;
 }

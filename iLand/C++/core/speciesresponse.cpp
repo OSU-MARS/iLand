@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -90,7 +90,7 @@ void SpeciesResponse::calculate()
     int veg_end = pheno.vegetationPeriodEnd();
 
     // yearly response
-    const double nitrogen = mRu->resouceUnitVariables().nitrogenAvailable;
+    const double nitrogen = mRu->resouceUnitVariables().nitrogenAvailable + mRu->resouceUnitVariables().nitrogenAvailableDelta;
     // Nitrogen response: a yearly value based on available nitrogen
     mNitrogenResponse = mSpecies->nitrogenResponse( nitrogen );
     const double ambient_co2 = mRu->climate()->begin()->co2; // CO2 level of first day of year (co2 is static)
@@ -115,7 +115,7 @@ void SpeciesResponse::calculate()
             // environmental responses for the day
             // combine responses
             min_resp = qMin(qMin(vpd_resp, temp_resp), water_resp);
-            // calculate utilizable radiation, Eq. 4, http://iland.boku.ac.at/primary+production
+            // calculate utilizable radiation, Eq. 4, https://iland-model.org/primary+production
             utilizeable_radiation = day->radiation * min_resp;
 
         } else {
@@ -125,7 +125,7 @@ void SpeciesResponse::calculate()
         mUtilizableRadiation[month]+= utilizeable_radiation;
         doy++;
         //DBGMODE(
-            if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dDailyResponses)) {
+            if (GlobalSettings::instance()->isDebugEnabled(GlobalSettings::dDailyResponses) && mRu->shouldCreateDebugOutput()) {
                 DebugList &out = GlobalSettings::instance()->debugList(day->id(), GlobalSettings::dDailyResponses);
                 // climatic variables
                 out << mSpecies->id() << day->id() << mRu->index() << mRu->id(); // date << day->temperature << day->vpd << day->preciptitation << day->radiation;

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -38,7 +38,12 @@
 #include "saplingout.h"
 #include "carbonout.h"
 #include "carbonflowout.h"
+#include "soilinputout.h"
 #include "waterout.h"
+#include "svdout.h"
+#include "devstageout.h"
+#include "ecovizout.h"
+#include "customaggout.h"
 
 
 // on creation of the output manager
@@ -54,6 +59,7 @@ OutputManager::OutputManager()
     mOutputs.append(new LandscapeOut);
     mOutputs.append(new LandscapeRemovedOut);
     mOutputs.append(new DynamicStandOut);
+    mOutputs.append(new CustomAggOut);
     mOutputs.append(new ProductionOut);
     mOutputs.append(new StandDeadOut);
     mOutputs.append(new ManagementOut);
@@ -61,7 +67,14 @@ OutputManager::OutputManager()
     mOutputs.append(new SaplingDetailsOut);
     mOutputs.append(new CarbonOut);
     mOutputs.append(new CarbonFlowOut);
+    mOutputs.append(new SoilInputOut);
     mOutputs.append(new WaterOut);
+    mOutputs.append(new SVDGPPOut);
+    mOutputs.append(new SVDStateOut);
+    mOutputs.append(new SVDIndicatorOut);
+    mOutputs.append(new SVDUniqueStateOut);
+    mOutputs.append(new DevStageOut);
+    mOutputs.append(new EcoVizOut);
 }
 
 void OutputManager::addOutput(Output *output)
@@ -87,18 +100,27 @@ OutputManager::~OutputManager()
 void OutputManager::setup()
 {
     //close();
+    qDebug() << "Setting up outputs...";
+    QStringList output_names;
     XmlHelper &xml = const_cast<XmlHelper&>(GlobalSettings::instance()->settings());
     QString nodepath;
     foreach(Output *o, mOutputs) {
         nodepath = QString("output.%1").arg(o->tableName());
         xml.setCurrentNode(nodepath);
-        qDebug() << "setup of output" << o->name();
+        output_names.push_back(o->tableName());
         o->setup();
         bool enabled = xml.valueBool(".enabled", false);
+        bool file_mode = false;
+        if (xml.hasNode(".mode"))
+            file_mode = xml.value(".mode") == "file";
+        if (file_mode)
+            o->setMode(OutFile);
         o->setEnabled(enabled);
         if (enabled)
             o->open();
     }
+    qDebug() << "processed" << output_names.size() << "outputs: " << output_names;
+    qDebug() << "Setup of outputs completed.";
     endTransaction(); // just to be sure
 }
 
@@ -107,7 +129,7 @@ Output *OutputManager::find(const QString& tableName)
     foreach(Output* p,mOutputs)
         if (p->tableName()==tableName)
             return p;
-    return NULL;
+    return nullptr;
 }
 
 void OutputManager::save()
@@ -126,6 +148,7 @@ void OutputManager::close()
     do nothing if transaction is already open. */
 void OutputManager::startTransaction()
 {
+    //return; // test without transactions
     if (!mTransactionOpen && GlobalSettings::instance()->dbout().isValid()) {
         if (GlobalSettings::instance()->dbout().transaction()) {
             qDebug() << "opening transaction";
@@ -135,6 +158,7 @@ void OutputManager::startTransaction()
 }
 void OutputManager::endTransaction()
 {
+    //return; // test without transactions
     if (mTransactionOpen && GlobalSettings::instance()->dbout().isValid()) {
         if (GlobalSettings::instance()->dbout().commit()) {
             mTransactionOpen = false;
@@ -166,6 +190,7 @@ bool OutputManager::execute(const QString& tableName)
     qDebug() << "output" << tableName << "not found!";
     return false; // no output found
 }
+
 
 QString OutputManager::wikiFormat()
 {

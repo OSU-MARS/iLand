@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -24,7 +24,6 @@
 #include <QtCore/QRect>
 #include <QtCore/QString>
 #include <limits>
-#include <limits>
 #define QUIETDEBUG(x) if (!Helper::quiet()) { qDebug() << x; }
 
 /** Helper contains a bunch of (static) helper functions.
@@ -36,7 +35,10 @@ class Helper
 {
 public:
     Helper();
+    /// Load a text file into a single string
     static QString loadTextFile(const QString& fileName);
+    /// Load a text file into a string list (line-by-line).
+    static QStringList loadTextFileLines(const QString& fileName);
     static void saveToTextFile(const QString& fileName, const QString& text);
     static QByteArray loadFile(const QString &fileName);
     static void saveToFile(const QString &fileName, const QByteArray &data);
@@ -45,7 +47,7 @@ public:
     static QString userValue(const QString &message, const QString defaultValue, QWidget *parent=0); ///< ask the user for a input value
     /// open a File Dialog and let the user choose a file.
     /// @return the filename selected by the user, an empty string if user cancels.
-    static QString fileDialog(const QString &title, const QString &start_directory="", const QString &filter="", QWidget *parent=0);
+    static QString fileDialog(const QString &title, const QString &start_directory="", const QString &filter="", const QString &type = "file", QWidget *parent=0);
     static bool quiet() { return m_NoDebug || m_quiet; }
     static bool debugEnabled() { return !m_NoDebug; }
     static void setQuiet(bool quiet) { m_quiet = quiet; }
@@ -55,7 +57,6 @@ public:
 
 
 
-    static QString currentRevision(); ///< svn revision number
 
 private:
     static bool m_quiet;

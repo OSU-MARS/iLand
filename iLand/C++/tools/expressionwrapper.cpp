@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -38,6 +38,8 @@
 #include "standstatistics.h"
 #include "soil.h"
 #include "climate.h"
+#include "saplings.h"
+#include "patches.h"
 
 #include <QtCore>
 
@@ -45,7 +47,7 @@ ExpressionWrapper::ExpressionWrapper()
 {
 }
 // must be overloaded!
-QStringList baseVarList=QStringList() << "year";
+static QStringList baseVarList=QStringList() << "year";
 const int baseVarListCount = baseVarList.count();
 
 const QStringList ExpressionWrapper::getVariablesList()
@@ -57,7 +59,7 @@ double ExpressionWrapper::value(const int variableIndex)
 {
     switch (variableIndex) {
         case 0: // year
-            return (double) GlobalSettings::instance()->currentYear();
+            return static_cast<double> ( GlobalSettings::instance()->currentYear() );
     }
     throw IException(QString("expression wrapper reached base with invalid index index %1").arg(variableIndex));
 }
@@ -76,13 +78,15 @@ double ExpressionWrapper::valueByName(const QString &variableName)
 
 
 
-QStringList treeVarList=QStringList() << baseVarList << "id" << "dbh" << "height" << "ruindex" // 0..3
+static QStringList treeVarList=QStringList() << baseVarList << "id" << "dbh" << "height" << "ruindex" // 0..3
                         << "x" << "y" << "volume" << "lri" <<  "leafarea" << "lightresponse" // 4-9
-                        << "woodymass" << "rootmass" << "foliagemass" << "age" << "opacity" // 10-14
+                        << "stemmass" << "rootmass" << "foliagemass" << "age" << "opacity" // 10-14
                         << "dead" << "stress" << "deltad" //15-17
                         << "afoliagemass" << "species" // 18, 19
                         << "basalarea" << "crownarea" // 20, 21
-                        << "markharvest" << "markcut" << "markcrop" << "markcompetitor"; // 22-25
+                        << "markharvest" << "markcut" << "markcrop" << "markcompetitor"
+                        << "branchmass" << "is_conifer" // 22-27
+                        << "patch"; // 28
 
 const QStringList TreeWrapper::getVariablesList()
 {
@@ -92,35 +96,40 @@ const QStringList TreeWrapper::getVariablesList()
 
 double TreeWrapper::value(const int variableIndex)
 {
-    Q_ASSERT(mTree!=0);
+    Q_ASSERT(mTree!=nullptr);
+    if (!mTree)
+        return 0.;
 
     switch (variableIndex - baseVarListCount) {
     case 0: return double(mTree->id()); // id
-    case 1: return mTree->dbh(); // dbh
-    case 2: return mTree->height(); // height
-    case 3: return (double) mTree->ru()->index(); // ruindex
+    case 1: return static_cast<double>( mTree->dbh() ); // dbh
+    case 2: return static_cast<double>(mTree->height() ); // height
+    case 3: return static_cast<double>( mTree->ru()->index() ); // ruindex
     case 4: return mTree->position().x(); // x
     case 5: return mTree->position().y(); // y
     case 6: return mTree->volume(); // volume
-    case 7: return mTree->lightResourceIndex(); // lri
-    case 8: return mTree->mLeafArea;
-    case 9: return mTree->mLightResponse;
-    case 10: return mTree->mWoodyMass;
-    case 11: return mTree->mCoarseRootMass + mTree->mFineRootMass; // sum of coarse and fine roots
-    case 12: return mTree->mFoliageMass;
+    case 7: return static_cast<double>(mTree->lightResourceIndex() ); // lri
+    case 8: return static_cast<double>(mTree->mLeafArea);
+    case 9: return static_cast<double>(mTree->mLightResponse);
+    case 10: return static_cast<double>(mTree->biomassStem());
+    case 11: return static_cast<double>(mTree->mCoarseRootMass + mTree->mFineRootMass); // sum of coarse and fine roots
+    case 12: return static_cast<double>(mTree->mFoliageMass);
     case 13: return mTree->age();
-    case 14: return mTree->mOpacity;
+    case 14: return static_cast<double>(mTree->mOpacity);
     case 15: return mTree->isDead()?1.:0.;
-    case 16: return mTree->mStressIndex;
-    case 17: return mTree->mDbhDelta; // increment of last year
-    case 18: return mTree->species()->biomassFoliage(mTree->dbh()); // allometric foliage
+    case 16: return static_cast<double>(mTree->mStressIndex);
+    case 17: return static_cast<double>(mTree->mDbhDelta); // increment of last year
+    case 18: return static_cast<double>( mTree->species()->biomassFoliage(static_cast<double>(mTree->dbh())) ); // allometric foliage
     case 19: return mTree->species()->index();
     case 20: return mTree->basalArea();
-    case 21: return mTree->crownRadius()*mTree->crownRadius()*M_PI; // area (m2) of the crown
+    case 21: return static_cast<double>(mTree->crownRadius()*mTree->crownRadius())*M_PI; // area (m2) of the crown
     case 22: return mTree->isMarkedForHarvest()?1:0; // markharvest
     case 23: return mTree->isMarkedForCut()?1:0; // markcut
     case 24: return mTree->isMarkedAsCropTree()?1:0; // markcrop
     case 25: return mTree->isMarkedAsCropCompetitor()?1:0; // markcompetitor
+    case 26: return static_cast<double>(mTree->mBranchMass);
+    case 27: return mTree->species()->isConiferous();
+    case 28: return ABE::Patches::getPatch(mTree->positionIndex()); // patch
     }
     return ExpressionWrapper::value(variableIndex);
 }
@@ -130,13 +139,14 @@ double TreeWrapper::value(const int variableIndex)
 //// ResourceUnit Wrapper
 ////////////////////////////////////////////////
 
-QStringList ruVarList=QStringList() << baseVarList << "id" << "totalEffectiveArea"
+static QStringList ruVarList=QStringList() << baseVarList << "id" << "totalEffectiveArea"
                       << "nitrogenAvailable" << "soilDepth" << "stockedArea" << "stockableArea"
-                      << "count" << "volume" << "avgDbh" << "avgHeight" << "basalArea"
+                      << "count" << "volume" << "avgDbh" << "avgHeight" << "basalArea" << "totalCarbon"
                       << "leafAreaIndex" << "aging" << "cohortCount" << "saplingCount" << "saplingAge"
                       << "canopyConductance"
                       << "soilC" << "soilN"
-                      << "snagC" << "index" << "meanTemp" << "annualPrecip" << "annualRad";
+                      << "snagC" << "index" << "meanTemp" << "annualPrecip" << "annualRad"
+                      << "LAISaplings" << "estPsiMin" << "waterHoldingCapacity";
 
 const QStringList RUWrapper::getVariablesList()
 {
@@ -146,7 +156,9 @@ const QStringList RUWrapper::getVariablesList()
 
 double RUWrapper::value(const int variableIndex)
 {
-    Q_ASSERT(mRU!=0);
+    Q_ASSERT(mRU!=nullptr);
+    if (!mRU)
+        return 0.;
 
     switch (variableIndex - baseVarListCount) {
     case 0: return mRU->id(); // id from grid
@@ -160,25 +172,75 @@ double RUWrapper::value(const int variableIndex)
     case 8: return mRU->mStatistics.dbh_avg();
     case 9: return mRU->mStatistics.height_avg();
     case 10: return mRU->mStatistics.basalArea();
-    case 11: return mRU->mStatistics.leafAreaIndex();
-    case 12: return mRU->mAverageAging;
-    case 13: return mRU->statistics().cohortCount();
-    case 14: return mRU->statistics().saplingCount();
-    case 15: return mRU->statistics().saplingAge();
-    case 16: return mRU->waterCycle()->canopyConductance();
+    case 11: return mRU->mStatistics.totalCarbon();
+    case 12: return mRU->mStatistics.leafAreaIndex();
+    case 13: return mRU->mAverageAging;
+    case 14: return mRU->statistics().cohortCount();
+    case 15: return mRU->statistics().saplingCount();
+    case 16: return mRU->statistics().saplingAge();
+    case 17: return mRU->waterCycle()->canopyConductance();
         // soil C + soil N
-    case 17: if (mRU->soil()) return mRU->soil()->youngLabile().C + mRU->soil()->youngRefractory().C + mRU->soil()->oldOrganicMatter().C; else return 0.;
-    case 18: if (mRU->soil()) return mRU->soil()->youngLabile().N + mRU->soil()->youngRefractory().N + mRU->soil()->oldOrganicMatter().N; else return 0.;
+    case 18: if (mRU->soil()) return mRU->soil()->youngLabile().C + mRU->soil()->youngRefractory().C + mRU->soil()->oldOrganicMatter().C; else return 0.;
+    case 19: if (mRU->soil()) return mRU->soil()->youngLabile().N + mRU->soil()->youngRefractory().N + mRU->soil()->oldOrganicMatter().N; else return 0.;
         // snags
-    case 19: if (mRU->snag()) return mRU->snag()->totalCarbon(); else return 0.;
-    case 20: return mRU->index(); // numeric index
-    case 21: return mRU->climate()->meanAnnualTemperature(); // mean temperature
-    case 22: { double psum=0;
+    case 20: if (mRU->snag()) return mRU->snag()->totalCarbon(); else return 0.;
+    case 21: return mRU->index(); // numeric index
+    case 22: return mRU->climate()->meanAnnualTemperature(); // mean temperature
+    case 23: { double psum=0;
         for (int i=0;i<12;++i)
             psum+=mRU->climate()->precipitationMonth()[i];
         return psum; }
-    case 23: return mRU->climate()->totalRadiation();
+    case 24: return mRU->climate()->totalRadiation();
+    case 25: return mRU->statistics().leafAreaIndexSaplings();
+    case 26: return -mRU->waterCycle()->estPsiMin(0); // establishment psi min for conifers, change sign! (positive=limitation)
+    case 27: return mRU->waterCycle()->waterHoldingCapacity(); // water holding capacity from (default) -15kpa to -4000 kpa (permanent wilting point)
 
     }
+    return ExpressionWrapper::value(variableIndex);
+}
+
+
+////////////////////////////////////////////////
+//// SaplingTree Wrapper
+////////////////////////////////////////////////
+
+const static QStringList saplingVarList=QStringList() << baseVarList << "species" << "height" << "age" // 0-2
+                                                        << "nrep" << "dbh" << "foliagemass" // 3,4,5
+                                                        << "x" << "y" << "patch"; // 6,7,8
+
+const QStringList SaplingWrapper::getVariablesList()
+{
+    return saplingVarList;
+}
+
+double SaplingWrapper::value(const int variableIndex)
+{
+    Q_ASSERT(mSapling!=nullptr);
+    if (!mSapling)
+        return 0.;
+    switch (variableIndex - baseVarListCount) {
+    case 0: return mSapling->species_index; // Note: this is the numeric value that is also used for the constant species names in expressions!
+    case 1: return static_cast<double>(mSapling->height);
+    case 2: return mSapling->age;
+    case 3: return mSapling->resourceUnitSpecies(mRU)->species()->saplingGrowthParameters().representedStemNumberH(mSapling->height);
+    case 4: return mSapling->height /  mSapling->resourceUnitSpecies(mRU)->species()->saplingGrowthParameters().hdSapling * 100.;
+    case 5: { const Species *sp = mSapling->resourceUnitSpecies(mRU)->species();
+              double dbh = mSapling->height / sp->saplingGrowthParameters().hdSapling * 100.;
+              return sp->biomassFoliage(dbh); }
+    case 6:  { size_t diff = (int*)(mSapling) - (int*)( mRU->saplingCellArray() ); // difference in int* ptr (64bit, usually)
+              size_t index = diff * sizeof(int) / sizeof(SaplingCell); // convert to difference in "SaplingCell" (with size (currently) 72 bytes)
+              QPointF p = Saplings::coordOfCell(mRU, index);
+              return p.x();    }
+    case 7:  { size_t diff = (int*)(mSapling) - (int*)( mRU->saplingCellArray() ); // difference in int* ptr (64bit, usually)
+              size_t index = diff * sizeof(int) / sizeof(SaplingCell); // convert to difference in "SaplingCell" (with size (currently) 72 bytes)
+              QPointF p = Saplings::coordOfCell(mRU, index);
+              return p.y();    }
+    case 8:  { size_t diff = (int*)(mSapling) - (int*)( mRU->saplingCellArray() ); // difference in int* ptr (64bit, usually)
+              size_t index = diff * sizeof(int) / sizeof(SaplingCell); // convert to difference in "SaplingCell" (with size (currently) 72 bytes)
+              QPoint p = Saplings::coordOfCellLIF(mRU, index);
+              return ABE::Patches::getPatch(p);    }
+
+    }
+
     return ExpressionWrapper::value(variableIndex);
 }

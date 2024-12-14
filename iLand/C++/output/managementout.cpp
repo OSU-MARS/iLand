@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -27,9 +27,9 @@
 ManagementOut::ManagementOut()
 {
     setName("Removed trees by species/RU", "management");
-    setDescription("Aggregates for trees that are removed in current year on the level of RU x species. All values are scaled to one hectare."\
+    setDescription("Aggregates for trees that are removed (harvested or cut down) in current year on the level of RU x species. All values are scaled to one hectare."\
                    "The output is created after the growth of the year, " \
-                   "i.e. the growth of the year in which trees are dying, is included!  " \
+                   "i.e. the growth of the year in which trees are removed, is included!  " \
                    " ");
     columns() << OutputColumn::year() << OutputColumn::ru() << OutputColumn::id() << OutputColumn::species()
               << OutputColumn("count_ha", "tree count (living)", OutInteger)

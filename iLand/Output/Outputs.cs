@@ -1,5 +1,5 @@
-﻿using iLand.Extensions;
-using iLand.Input.ProjectFile;
+﻿// C++/outputs/{ outputmanager.h, outputmanager.cpp }
+using iLand.Extensions;
 using iLand.Output.Memory;
 using iLand.Output.Sql;
 using iLand.Simulation;
@@ -11,7 +11,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Xml;
-using Model = iLand.Simulation.Model;
+using Project = iLand.Input.ProjectFile.Project;
+using ProjectDirectory = iLand.Input.ProjectFile.ProjectDirectory;
+using ResourceUnitOutputs = iLand.Input.ProjectFile.ResourceUnitOutputs;
+using SqlOutputs = iLand.Input.ProjectFile.SqlOutputs;
 
 namespace iLand.Output
 {
@@ -132,7 +135,7 @@ namespace iLand.Output
             }
             if (sqlOutputSettings.DynamicStand.Enabled)
             {
-                this.sqlOutputs.Add(new Sql.DynamicStandAnnualOutput());
+                this.sqlOutputs.Add(new DynamicStandAnnualOutput());
             }
             if (sqlOutputSettings.Landscape.Enabled)
             {

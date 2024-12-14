@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -70,9 +70,10 @@ bool DEM::loadFromFile(const QString &fileName)
 
     setup(h_grid->metricRect(),h_grid->cellsize());
 
-    const QRectF &world = GlobalSettings::instance()->model()->extent();
+    //const QRectF &world = GlobalSettings::instance()->model()->extent(); // without buffer
+    const QRectF &world = h_grid->metricRect(); // including buffer
 
-    if (fmod(gis_grid.cellSize(), cellsize()) != 0) {
+    if (gis_grid.cellSize() <= cellsize()) {
         QPointF p;
         // simple copy of the data
         for (int i=0;i<count();i++) {
@@ -84,6 +85,9 @@ bool DEM::loadFromFile(const QString &fileName)
         }
     } else {
         // bilinear approximation approach
+        if (fmod(gis_grid.cellSize(), cellsize()) != 0.f )
+            throw IException("DEM: bilinear approximation: this requires a DEM with a resolution of a multiple of 10.");
+
         qDebug() << "DEM: built-in bilinear interpolation from cell size" << gis_grid.cellSize();
         int f = gis_grid.cellSize() / cellsize(); // size-factor
         initialize(-1.f);
@@ -109,7 +113,7 @@ bool DEM::loadFromFile(const QString &fileName)
                         valueAtIndex(x+mx, y+my) = bilinear<float>(mx/float(f), my/float(f), c00, c10, c01, c11);
             }
     }
-
+    qDebug() << "Loaded DEM from " << fileName;
     return true;
 }
 
@@ -154,6 +158,26 @@ float DEM::orientation(const QPointF &point, float &rslope_angle, float &rslope_
         rslope_aspect = 0.;
         return 0.;
     }
+}
+
+float DEM::topographicPositionIndex(const QPointF &point, float radius) const
+{
+    int rpix = radius / cHeightSize;
+    QPoint o = indexAt(point);
+    double point_elevation = (*this)(o.x(), o.y());
+    int n = 0;
+    double avg_elevation=0.;
+    for (int iy = std::max(0, o.y() - rpix); iy < std::min(sizeY(), o.y() + rpix); ++iy)
+        for (int ix = std::max(0, o.x() - rpix); ix < std::min(sizeX(), o.x() + rpix); ++ix) {
+            int dist = (ix - o.x())*(ix - o.x()) + (iy - o.y())*(iy - o.y());
+            if (dist <= rpix*rpix) {
+                avg_elevation += (*this)(ix, iy);
+                ++n;
+            }
+        }
+    if (n>0)
+        return point_elevation - (avg_elevation / static_cast<double>(n));
+    return 0.f;
 }
 
 void DEM::createSlopeGrid() const

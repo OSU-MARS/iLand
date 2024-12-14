@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -60,7 +60,7 @@ double FloatingAverage::add(double add_value)
     if (countto)
         mCurrentAverage = sum/countto;
     else
-        mCurrentAverage = mInitValue; // kann sein, wenn als erster wert 0 übergeben wird.
+        mCurrentAverage = mInitValue; // kann sein, wenn als erster wert 0 uebergeben wird.
     return mCurrentAverage;
 }
 

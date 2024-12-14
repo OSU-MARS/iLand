@@ -11,7 +11,7 @@ namespace iLand.Input.Weather
         // total solar radiation (daily or month), MJ/m²
         public float[] SolarRadiationTotal { get; private set; }
 
-        // average (daily or monthly mean daily)temperature during daylight hours, °C
+        // average (daily or monthly mean daily) temperature during daylight hours, °C
         public float[] TemperatureDaytimeMean { get; private set; }
         // maximum (daily or monthly mean daily) temperature
         public float[] TemperatureMax { get; private set; }
@@ -32,7 +32,14 @@ namespace iLand.Input.Weather
             this.VpdMeanInKPa = [];
         }
 
-        public int GetTimestepsPerYear()
+        public float EstimateMeanTemperature(int index)
+        {
+            return 0.5F * (this.TemperatureMin[index] + this.TemperatureMax[index]);
+        }
+
+        public abstract int GetDaysInTimestep(int timestepIndex);
+
+        public int GetMaximumTimestepsPerYear()
         {
             return this.Timestep switch
             {
@@ -41,6 +48,9 @@ namespace iLand.Input.Weather
                 _ => throw new NotSupportedException("Unhandled weather timestep " + this.Timestep + ".")
             };
         }
+
+        public abstract float GetMonthlyMeanDailyMaximumTemperature(int monthIndex);
+        public abstract float GetMonthlyMeanDailyMinimumTemperature(int monthIndex);
 
         public bool IsCurrentlyLeapYear()
         {

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -25,6 +25,7 @@
 #include "grid.h"
 #include "resourceunit.h"
 #include "expressionwrapper.h"
+#include "debugtimer.h"
 /** MapGrid encapsulates maps that classify the area in 10m resolution (e.g. for stand-types, management-plans, ...)
   @ingroup tools
   The grid is (currently) loaded from disk in a ESRI style text file format. See also the "location" keys and GisTransformation classes for
@@ -47,7 +48,6 @@ private:
     QMutex mLock;
     QWaitCondition mWC;
 };
-static MapGridRULock mapGridLock;
 
 void MapGridRULock::lock(const int id, QList<ResourceUnit *> &elements)
 {
@@ -172,32 +172,61 @@ void MapGrid::createIndex()
     mRectIndex.clear();
     mRUIndex.clear();
     // create new
+    DebugTimer t1("MapGrid::createIndex: rectangles");
     for (int *p = mGrid.begin(); p!=mGrid.end(); ++p) {
         if (*p==-1)
             continue;
         QPair<QRectF,double> &data = mRectIndex[*p];
         data.first = data.first.united(mGrid.cellRect(mGrid.indexOf(p)));
         data.second += cPxSize*cPxPerHeight*cPxSize*cPxPerHeight; // 100m2
-
-        ResourceUnit *ru = GlobalSettings::instance()->model()->ru(mGrid.cellCenterPoint(mGrid.indexOf(p)));
-        if (!ru)
-            continue;
-        // find all entries for the current grid id
-        QMultiHash<int, QPair<ResourceUnit*, double> >::iterator pos = mRUIndex.find(*p);
-
-        // look for the resource unit 'ru'
-        bool found = false;
-        while (pos!=mRUIndex.end() && pos.key() == *p) {
-            if (pos.value().first == ru) {
-                pos.value().second+= 0.01; // 1 pixel = 1% of the area
-                found=true;
-                break;
-            }
-            ++pos;
-        }
-        if (!found)
-            mRUIndex.insertMulti(*p, QPair<ResourceUnit*, double>(ru, 0.01));
     }
+//    DebugTimer t2("MapGrid::createIndex: RU areas");
+//    for (int *p = mGrid.begin(); p!=mGrid.end(); ++p) {
+//        if (*p==-1)
+//            continue;
+
+//        ResourceUnit *ru = GlobalSettings::instance()->model()->ru(mGrid.cellCenterPoint(mGrid.indexOf(p)));
+//        if (!ru)
+//            continue;
+//        // find all entries for the current grid id
+//        QMultiHash<int, QPair<ResourceUnit*, double> >::iterator pos = mRUIndex.find(*p);
+
+//        // look for the resource unit 'ru'
+//        bool found = false;
+//        while (pos!=mRUIndex.end() && pos.key() == *p) {
+//            if (pos.value().first == ru) {
+//                pos.value().second+= 0.01; // 1 pixel = 1% of the area
+//                found=true;
+//                break;
+//            }
+//            ++pos;
+//        }
+//        if (!found)
+//            mRUIndex.insertMulti(*p, QPair<ResourceUnit*, double>(ru, 0.01));
+//    }
+
+    DebugTimer t3("MapGrid::createIndex: RU areas (alternative)");
+    // alternative approach
+    QHash<int, double> px_per_ru;
+    foreach (ResourceUnit *ru, GlobalSettings::instance()->model()->ruList()) {
+        px_per_ru.clear();
+        // loop over each resource unit and count the stand Ids
+        GridRunner<int> runner(mGrid, ru->boundingBox());
+        while (runner.next()) {
+            // the [] default constructs a value (0.) if not already in the hash
+            if (*runner.current()>=0)
+                px_per_ru[*runner.current()] += 0.01;
+        }
+        // save to the index
+        QHash<int, double>::const_iterator i = px_per_ru.constBegin();
+          while (i != px_per_ru.constEnd()) {
+              // each resource-unit / standId combination is unique;
+              // in mRUIndex a standId is the key for multiple entries
+              mRUIndex.insert(i.key(), QPair<ResourceUnit*, double>(ru, i.value()));
+              ++i;
+          }
+    }
+
 
 }
 
@@ -225,14 +254,27 @@ QList<ResourceUnit *> MapGrid::resourceUnits(const int id) const
 /// return a list of all living trees on the area denoted by 'id'
 QList<Tree *> MapGrid::trees(const int id) const
 {
+    // QList<Tree*> tree_list;
+    // QList<ResourceUnit*> resource_units = resourceUnits(id);
+    // foreach(ResourceUnit *ru, resource_units) {
+    //     foreach(const Tree &tree, ru->constTrees())
+    //         if (standIDFromLIFCoord(tree.positionIndex()) == id && !tree.isDead()) {
+    //             tree_list.append( & const_cast<Tree&>(tree) );
+    //         }
+    // }
+
+
     QList<Tree*> tree_list;
-    QList<ResourceUnit*> resource_units = resourceUnits(id);
-    foreach(ResourceUnit *ru, resource_units) {
-        foreach(const Tree &tree, ru->constTrees())
+    auto i = mRUIndex.constFind(id);
+    while (i != mRUIndex.cend() && i.key() == id) {
+        for (const auto &tree : i.value().first->constTrees()) {
             if (standIDFromLIFCoord(tree.positionIndex()) == id && !tree.isDead()) {
                 tree_list.append( & const_cast<Tree&>(tree) );
             }
+        }
+        ++i;
     }
+
 //    qDebug() << "MapGrid::trees: found" << c << "/" << tree_list.size();
     return tree_list;
 
@@ -249,12 +291,13 @@ int MapGrid::loadTrees(const int id, QVector<QPair<Tree *, double> > &rList, con
         expression = new Expression(filter, &tw);
         expression ->enableIncSum();
     }
-    QList<ResourceUnit*> resource_units = resourceUnits(id);
+    //QList<ResourceUnit*> resource_units = resourceUnits(id);
     // lock the resource units: removed again, WR20140821
     // mapGridLock.lock(id, resource_units);
-
-    foreach(ResourceUnit *ru, resource_units) {
-        foreach(const Tree &tree, ru->constTrees())
+    QList<Tree*> tree_list;
+    auto i = mRUIndex.constFind(id);
+    while (i != mRUIndex.cend() && i.key() == id) {
+        for (const auto &tree : i.value().first->constTrees()) {
             if (standIDFromLIFCoord(tree.positionIndex()) == id && !tree.isDead()) {
                 Tree *t =  & const_cast<Tree&>(tree);
                 tw.setTree(t);
@@ -271,18 +314,17 @@ int MapGrid::loadTrees(const int id, QVector<QPair<Tree *, double> > &rList, con
                 }
                 rList.push_back(QPair<Tree*, double>(t,0.));
             }
+        }
+        ++i;
     }
+
+
     if (expression)
         delete expression;
     return rList.size();
 
 }
 
-void MapGrid::freeLocksForStand(const int id)
-{
-    if (id>-1)
-        mapGridLock.unlock(id);
-}
 
 /// return a list of grid-indices of a given stand-id (a grid-index
 /// is the index of 10m x 10m pixels within the internal storage)
@@ -334,7 +376,7 @@ void MapGrid::updateNeighborList()
     mNeighborList.clear();
     GridRunner<int> gr(mGrid, mGrid.rectangle()); //  the full grid
     int *n4[4];
-    QHash<int,int>::iterator it_hash;
+    QMultiHash<int,int>::iterator it_hash;
     while (gr.next()) {
         gr.neighbors4(n4); // get the four-neighborhood (0-pointers possible)
         for (int i=0;i<4;++i)
@@ -343,8 +385,8 @@ void MapGrid::updateNeighborList()
                 it_hash = mNeighborList.find(*gr.current(), *n4[i]);
                 if (it_hash == mNeighborList.end()) {
                     // add the "edge" two times in the hash
-                    mNeighborList.insertMulti(*gr.current(), *n4[i]);
-                    mNeighborList.insertMulti(*n4[i], *gr.current());
+                    mNeighborList.insert(*gr.current(), *n4[i]);
+                    mNeighborList.insert(*n4[i], *gr.current());
                 }
             }
     }

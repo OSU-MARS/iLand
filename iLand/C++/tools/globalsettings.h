@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -58,6 +58,7 @@ public:
     void setModel(Model *model) {mModel = model; }
     void setModelController(ModelController *mc) {mModelController = mc; }
 
+    /// the current simulation year (starting with 1)
     int currentYear() const { return mRunYear; }
     void setCurrentYear(const int year) { mRunYear = year; }
 
@@ -87,20 +88,15 @@ public:
     const QList<const DebugList*> debugLists(const int ID, const DebugOutputs dbg); ///< return a list of debug outputs
     QStringList debugListCaptions(const DebugOutputs dbg); ///< returns stringlist of captions for a specific output type
     QList<QPair<QString, QVariant> > debugValues(const int ID); ///< all debug values for object with given ID
-    void clearDebugLists(); ///< clear all debug data
-    QStringList debugDataTable(GlobalSettings::DebugOutputs type, const QString separator, const QString fileName=QString()); ///< output for all available items (trees, ...) in table form
+    /// clear all debug data
+    void clearDebugLists();
+    /// output for all available items (trees, ...) in table form or write to a file
+    QStringList debugDataTable(GlobalSettings::DebugOutputs type, const QString separator, const QString fileName=QString(), const bool do_append=false);
 
     // database access functions
     QSqlDatabase dbin() { return QSqlDatabase::database("in"); }
     QSqlDatabase dbout() { return QSqlDatabase::database("out"); }
     QSqlDatabase dbclimate() { return QSqlDatabase::database("climate"); }
-
-    // setting-meta-data
-    /// access an individual SettingMetaData named @p name.
-    const SettingMetaData *settingMetaData(const QString &name); // unused??
-    /// retrieve the default value of the setting @p name.
-    QVariant settingDefaultValue(const QString &name); // unused?
-    QList<QString> settingNames() { return mSettingMetaData.keys(); } ///< retrieve list of all names of settings.
 
     // path and directory
     QString path(const QString &fileName, const QString &type="home");
@@ -113,10 +109,6 @@ public:
 
     // xml project settings
     void loadProjectFile(const QString &fileName);
-
-    // meta data of settings
-    void loadSettingsMetaDataFromFile(const QString &fileName);
-    void loadSettingsMetaDataFromXml(const QDomElement &topNode);
 
     // Database connections
     bool setupDatabaseConnection(const QString& dbname, const QString &fileName, bool fileMustExist);
@@ -143,7 +135,6 @@ private:
     QMultiHash<int, DebugList> mDebugLists;
     int mDebugOutputs; // "bitmap" of enabled debugoutputs.
 
-    SettingMetaDataList mSettingMetaData; ///< storage container (QHash) for settings.
     QHash<QString, QString> mFilePath; ///< storage for file paths
 
     XmlHelper mXml; ///< xml-based hierarchical settings
@@ -163,6 +154,7 @@ const int cPxPerRU = 50; // 100/2
 const int cHeightPerRU = 10; // 100/10 height pixels per resource unit
 const int cPxPerHectare = 2500; // pixel/ha ( 10000 / (2*2) )
 const double cHeightPixelArea = 100.; // 100m2 area of a height pixel
+const float cSapHeight = 4.f; // height from which on trees are modeled as individual trees (instead of saplings)
 
 // other constants
 const double biomassCFraction = 0.5; // fraction of (dry) biomass which is carbon
@@ -172,7 +164,7 @@ const double cAutotrophicRespiration = 0.47;
 #define Globals (GlobalSettings::instance())
 
 // provide a hashing function for the QPoint type (needed from stand init functions, ABE, ...)
-inline uint qHash(const QPoint &key)
+inline size_t qHash(const QPoint &key)
 {
     return qHash(key.x()) ^ qHash(key.y());
 }

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -42,12 +42,7 @@ ResourceUnitSpecies::~ResourceUnitSpecies()
 {
 }
 
-double ResourceUnitSpecies::leafArea() const
-{
-    // Leaf area of the species:
-    // total leaf area on the RU * fraction of leafarea
-    return mLAIfactor * ru()->leafAreaIndex();
-}
+
 
 void ResourceUnitSpecies::setup(Species *species, ResourceUnit *ru)
 {
@@ -55,7 +50,8 @@ void ResourceUnitSpecies::setup(Species *species, ResourceUnit *ru)
     mRU = ru;
     mResponse.setup(this);
     m3PG.setResponse(&mResponse);
-    mEstablishment.setup(ru->climate(), this);
+    if (GlobalSettings::instance()->model()->settings().regenerationEnabled)
+        mEstablishment.setup(ru->climate(), this);
     mStatistics.setResourceUnitSpecies(this);
     mStatisticsDead.setResourceUnitSpecies(this);
     mStatisticsMgmt.setResourceUnitSpecies(this);
@@ -74,6 +70,7 @@ void ResourceUnitSpecies::calculate(const bool fromEstablishment)
 {
 
     // if *not* called from establishment, clear the species-level-stats
+    bool has_leaf_area = statistics().leafAreaIndex() > 0.;
     if (!fromEstablishment)
         statistics().clear();
 
@@ -81,7 +78,7 @@ void ResourceUnitSpecies::calculate(const bool fromEstablishment)
     if (mLastYear == GlobalSettings::instance()->currentYear())
         return;
 
-    if (mLAIfactor>0. || fromEstablishment==true) {
+    if (has_leaf_area || fromEstablishment==true) {
         // execute the water calculation...
         if (fromEstablishment)
             const_cast<WaterCycle*>(mRU->waterCycle())->run(); // run the water sub model (only if this has not be done already)
@@ -103,6 +100,10 @@ void ResourceUnitSpecies::updateGWL()
     // tree volume. the current "GWL" therefore is current volume (standing) + mRemovedGrowth.
     // important: statisticsDead() and statisticsMgmt() need to calculate() before -> volume() is already scaled to ha
     mRemovedGrowth+=statisticsDead().volume() + statisticsMgmt().volume();
+}
+
+double ResourceUnitSpecies::leafAreaIndexSaplings() const {
+    return mRU->stockableArea()>0.? constSaplingStat().leafArea() /mRU->stockableArea() : 0.;
 }
 
 

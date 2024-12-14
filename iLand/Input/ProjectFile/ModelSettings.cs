@@ -45,6 +45,9 @@ namespace iLand.Input.ProjectFile
         public float SoilPermanentWiltPotentialInKPA { get; private set; } // matric potential for residual soil water, kPa
 		public float SoilSaturationPotentialInKPa { get; private set; } // matric potential, kPa
 
+		public string SvdStructure { get; private set; } // TODO: make enum
+		public int SvdFunction { get; private set; } // TODO: make enum
+
 		// if true, the 'correct' version of the calculation of belowground allocation is used
 		public bool UseParFractionBelowGroundAllocation { get; private set; }
 
@@ -63,6 +66,8 @@ namespace iLand.Input.ProjectFile
 			this.SimdWidth = 256;
 			this.SoilPermanentWiltPotentialInKPA = -4000.0F;
 			this.SoilSaturationPotentialInKPa = Single.NaN; // C++ uses hard coded default of -15.0F kPa plus a switch
+			this.SvdFunction = 3;
+			this.SvdStructure = "4m";
 			this.UseParFractionBelowGroundAllocation = true;
 		}
 
@@ -124,7 +129,7 @@ namespace iLand.Input.ProjectFile
 						throw new XmlException("SIMD width must be either 32, 128, or 256 bits.");
 					}
                     break;
-				case "soilPermanentWiltPotential":
+                case "soilPermanentWiltPotential":
 					this.SoilPermanentWiltPotentialInKPA = reader.ReadElementContentAsFloat();
 					break;
 				case "soilSaturationPotential":
@@ -133,7 +138,21 @@ namespace iLand.Input.ProjectFile
 				case "usePARFractionBelowGroundAllocation":
 					this.UseParFractionBelowGroundAllocation = reader.ReadElementContentAsBoolean();
 					break;
-				default:
+                case "svdStructure":
+                    this.SvdStructure = reader.ReadElementContentAsString();
+                    if ((String.Equals(this.SvdStructure, "2m") == false) && (String.Equals(this.SvdStructure, "4m") == false))
+                    {
+                        throw new XmlException("svdStructure is '" + this.SvdStructure + "'. Valid values are '2m' and '4m'.");
+                    }
+                    break;
+                case "svdFunction":
+                    this.SvdFunction = reader.ReadElementContentAsInt();
+					if ((this.SvdFunction != 3) && (this.SvdFunction != 5))
+					{
+                        throw new XmlException("svdFunction is " + this.SvdFunction + ". Valid values are 3 or 5.");
+                    }
+                    break;
+                default:
 					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}

@@ -5,12 +5,14 @@ namespace iLand.Input.ProjectFile
 {
     public class LandscapeRemovedOutput : Enablable
     {
-		public bool IncludeHarvest { get; private set; }
+        public string DbhClasses { get; private set; }
+        public bool IncludeHarvest { get; private set; }
 		public bool IncludeNatural { get; private set; }
 
 		public LandscapeRemovedOutput()
             : base("landscapeRemoved")
         {
+            this.DbhClasses = String.Empty;
             this.IncludeHarvest = true;
             this.IncludeNatural = false;
         }
@@ -25,6 +27,9 @@ namespace iLand.Input.ProjectFile
             {
                 switch (reader.Name)
                 {
+                    case "dbhClasses":
+                        this.DbhClasses = reader.ReadElementContentAsString();
+                        break;
                     case "includeHarvest":
                         this.IncludeHarvest = reader.ReadElementContentAsBoolean();
                         break;

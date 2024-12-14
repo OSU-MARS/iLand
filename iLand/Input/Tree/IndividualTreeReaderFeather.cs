@@ -24,13 +24,13 @@ namespace iLand.Input.Tree
             {
                 IndividualTreeArrowBatch fields = new(batch);
                 ReadOnlySpan<float> dbhField = fields.DbhInCm.Values;
-                ReadOnlySpan<UInt16> fiaCodeField = Array.Empty<UInt16>();
+                ReadOnlySpan<UInt16> fiaCodeField = [];
                 if (fields.FiaCode != null)
                 {
                     fiaCodeField = fields.FiaCode.Values;
                 }
                 ReadOnlySpan<float> heightField = fields.HeightInM.Values;
-                ReadOnlySpan<UInt32> wfoIDfield = Array.Empty<UInt32>();
+                ReadOnlySpan<UInt32> wfoIDfield = [];
                 if (fields.WorldFloraID != null)
                 {
                     wfoIDfield = fields.WorldFloraID.Values;

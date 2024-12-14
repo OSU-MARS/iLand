@@ -5,7 +5,7 @@ using System.Globalization;
 namespace iLand.Input.Weather
 {
     // weather variables of a day
-    // http://iland-model.org/ClimateData
+    // https://iland-model.org/ClimateData
     public class WeatherTimeSeriesDaily : WeatherTimeSeries
     {
         public byte[] DayOfMonth { get; private set; } // day of the month (1..31)
@@ -16,6 +16,39 @@ namespace iLand.Input.Weather
         {
             this.DayOfMonth = [];
             this.TemperatureDaytimeMeanMA1 = [];
+        }
+
+        public override int GetDaysInTimestep(int timestepIndex)
+        {
+            return 1;
+        }
+
+        public override float GetMonthlyMeanDailyMaximumTemperature(int monthIndex)
+        {
+            (int firstDayOfMonthIndex, int firstDayOfNextMonthIndex) = DateTimeExtensions.ToDayIndices(monthIndex, this.IsCurrentlyLeapYear());
+
+            float meanDailyMaxTemperature = 0.0F;
+            for (int dayIndex = firstDayOfMonthIndex; dayIndex < firstDayOfNextMonthIndex; ++dayIndex)
+            {
+                meanDailyMaxTemperature += this.TemperatureMax[dayIndex];
+            }
+
+            meanDailyMaxTemperature /= (firstDayOfNextMonthIndex - firstDayOfMonthIndex);
+            return meanDailyMaxTemperature;
+        }
+
+        public override float GetMonthlyMeanDailyMinimumTemperature(int monthIndex)
+        {
+            (int firstDayOfMonthIndex, int firstDayOfNextMonthIndex) = DateTimeExtensions.ToDayIndices(monthIndex, this.IsCurrentlyLeapYear());
+
+            float meanDailyMinTemperature = 0.0F;
+            for (int dayIndex = firstDayOfMonthIndex; dayIndex < firstDayOfNextMonthIndex; ++dayIndex)
+            {
+                meanDailyMinTemperature += this.TemperatureMin[dayIndex];
+            }
+
+            meanDailyMinTemperature /= (firstDayOfNextMonthIndex - firstDayOfMonthIndex);
+            return meanDailyMinTemperature;
         }
 
         public override void Resize(int newSize)

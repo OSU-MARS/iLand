@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿// C++/core/{ climate.h, climate.cpp }
+using iLand.Input.ProjectFile;
 using iLand.Input.Weather;
 using iLand.Tree;
 using System;
@@ -12,7 +13,7 @@ namespace iLand.World
 {
     // A weather input time series and calculations on that weather data. May be 1:1 with resource units or may be 1 weather:many resource units
     // (leaf on-off phenology is therefore a Weather member rather than kept at the resource unit level).
-    // http://iland-model.org/ClimateData
+    // https://iland-model.org/ClimateData
     public abstract class Weather
     {
         protected int CurrentDataYear { get; set; } // current year in weather data cached in memory (relative); one less than GlobalSettings.CurrentYear
@@ -20,7 +21,6 @@ namespace iLand.World
         protected int RandomListIndex { get; set; } // current index of the randomYearList for random sampling
         protected List<int> RandomYearList { get; private init; } // for random sampling of years
         protected List<int> SampledYears { get; private init; } // list of sampled years to use
-        protected List<LeafPhenology> TreeSpeciesPhenology { get; private init; } // phenology calculations
         protected int YearsToLoad { get; private init; } // number of years to load from database
 
         public float[] DaytimeMeanTemperatureByMonth { get; private init; } // °C
@@ -28,15 +28,16 @@ namespace iLand.World
         public Sun Sun { get; private init; } // solar radiation class
         public float MeanAnnualTemperature { get; protected set; } // °C
         public float TotalAnnualRadiation { get; protected set; } // return radiation sum (MJ/m²) of the whole year
+        public List<LeafPhenology> TreeSpeciesPhenology { get; private init; } // phenology calculations
 
         protected Weather(Project projectFile)
         {
             this.CurrentDataYear = -1; // start with -1 as the first call to NextYear() will go to year 0
             this.DoRandomSampling = projectFile.World.Weather.RandomSamplingEnabled;
-            this.TreeSpeciesPhenology = [];
             this.RandomListIndex = -1;
             this.RandomYearList = [];
             this.SampledYears = [];
+            this.TreeSpeciesPhenology = [];
             this.YearsToLoad = projectFile.World.Weather.DailyWeatherChunkSizeInYears;
 
             this.DaytimeMeanTemperatureByMonth = new float[Constant.Time.MonthsInYear];

@@ -1,4 +1,5 @@
-﻿namespace iLand.Tree
+﻿// C++/core/{ tree.h }
+namespace iLand.Tree
 {
     public class TreeGrowthData
     {

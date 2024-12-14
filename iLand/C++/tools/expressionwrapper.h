@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -27,6 +27,7 @@ class ExpressionWrapper
 {
 public:
     ExpressionWrapper();
+    virtual ~ExpressionWrapper() {}
     virtual const QStringList getVariablesList();
     virtual double value(const int variableIndex);
     virtual double valueByName(const QString &variableName);
@@ -40,7 +41,7 @@ class Tree;
 class TreeWrapper: public ExpressionWrapper
 {
 public:
-    TreeWrapper() : mTree(0) {}
+    TreeWrapper() : mTree(nullptr) {}
     TreeWrapper(const Tree* tree) : mTree(tree) {}
     void setTree(const Tree* tree) { mTree = tree; }
     virtual const QStringList getVariablesList();
@@ -56,7 +57,7 @@ class ResourceUnit;
 class RUWrapper: public ExpressionWrapper
 {
 public:
-    RUWrapper() : mRU(0) {}
+    RUWrapper() : mRU(nullptr) {}
     RUWrapper(const ResourceUnit* resourceUnit) : mRU(resourceUnit) {}
     void setResourceUnit(const ResourceUnit* resourceUnit) { mRU = resourceUnit; }
     virtual const QStringList getVariablesList();
@@ -66,5 +67,21 @@ private:
     const ResourceUnit *mRU;
 };
 
+/** SaplingWrapper encapsualates a sapling cohort (on a 2x2m pixel)
+  */
+struct SaplingTree;
+class SaplingWrapper: public ExpressionWrapper
+{
+public:
+    SaplingWrapper() : mSapling(nullptr) {}
+    SaplingWrapper(const SaplingTree* saplingTree, const ResourceUnit *ru) : mSapling(saplingTree), mRU(ru) {}
+    void setSaplingTree(const SaplingTree* saplingTree, const ResourceUnit *ru) { mSapling = saplingTree; mRU=ru; }
+    virtual const QStringList getVariablesList();
+    virtual double value(const int variableIndex);
+
+private:
+    const SaplingTree *mSapling;
+    const ResourceUnit *mRU;
+};
 
 #endif // EXPRESSIONWRAPPER_H

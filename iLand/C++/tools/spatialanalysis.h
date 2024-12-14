@@ -3,7 +3,7 @@
 
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -39,7 +39,7 @@ class SpatialAnalysis: public QObject
     Q_PROPERTY(QList<int> patchsizes READ patchsizes)
 
 public:
-    SpatialAnalysis(QObject *parent=0): QObject(parent), mRumple(0) {}
+    Q_INVOKABLE SpatialAnalysis(QObject *parent=0): QObject(parent), mRumple(0) {}
     ~SpatialAnalysis();
     static void addToScriptEngine();
 
@@ -48,14 +48,20 @@ public:
     /// the number of pixels for each patch-id
     QList<int> extractPatches(Grid<double> &src, int min_size, QString fileName);
     QList<int> patchsizes() const { return mLastPatches; }
+
+    static void runCrownProjection2m(FloatGrid *agrid=nullptr); ///< internal function that prepares crown cover for the whole landscape
+
 public slots:
     // API for Javascript
     void saveRumpleGrid(QString fileName); ///< save a grid of rumple index values (resource unit level) to a ESRI grid file (ascii)
     void saveCrownCoverGrid(QString fileName); ///< save a grid if crown cover percentages (RU level) to a ESRI grid file (ascii)
+    void saveCrownCoverGrid(QString fileName, QJSValue grid); ///< save a grid of crown cover with the extent/resolution given by 'grid'
+
     QJSValue patches(QJSValue grid, int min_size);
 
+
 private:
-    void calculateCrownCover();
+    void calculateCrownCoverRU(); ///< calculate resource-unit level crown cover
     RumpleIndex *mRumple;
     SpatialLayeredGrid *mLayers;
     FloatGrid mCrownCoverGrid;

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -48,6 +48,9 @@ public:
     Grid(float cellsize, int sizex, int sizey) { mData=0; setup(cellsize, sizex, sizey); }
     /// create from a metric rect
     Grid(const QRectF rect_metric, const float cellsize) { mData=0; setup(rect_metric,cellsize); }
+    /// load a grid from an ASCII grid file
+    /// the coordinates and cell size remain as in the grid file.
+    bool loadGridFromFile(const QString &fileName);
     // copy ctor
     Grid(const Grid<T>& toCopy);
     ~Grid() { clear(); }
@@ -61,7 +64,7 @@ public:
     void wipe(const T value); ///< overwrite the whole area with "value" size of T must be the size of "int" ERRORNOUS!!!
     /// copies the content of the source grid to this grid.
     /// no operation, if the grids are not of the same size.
-    void copy(const Grid<T> source) { if (source.count()==count()) memcpy(mData, source.mData, count()*sizeof(T)); }
+    void copy(const Grid<T> &source) { if (source.count()==count()) memcpy(mData, source.mData, count()*sizeof(T)); }
     /// create a double grid (same size as this grid) and convert this grid to double values.
     /// NOTE: caller is responsible for freeing memory!
     Grid<double> *toDouble() const;
@@ -74,6 +77,8 @@ public:
     float metricSizeY() const { return mSizeY*mCellsize; }
     /// get the metric rectangle of the grid
     QRectF metricRect() const { return mRect; }
+    /// set the metric rectangle. Use with care! No further checks are executed!
+    void setMetricRect(QRectF rect) { mRect = rect; }
     /// get the rectangle of the grid in terms of indices
     QRect rectangle() const { return QRect(QPoint(0,0), QPoint(sizeX(), sizeY())); }
     /// get the length of one pixel of the grid
@@ -86,12 +91,16 @@ public:
     inline const T& operator()(const int ix, const int iy) const { return constValueAtIndex(ix, iy); }
     /// access (const) using metric variables. use float.
     inline const T& operator()(const float x, const float y) const { return constValueAt(x, y); }
+    /// access (const) value using a QPointF
+    inline const T& operator()(const QPointF &p) const {return constValueAt(p); }
     /// access value of grid with a QPoint
     inline const T& operator[](const QPoint &p) const { return constValueAtIndex(p); }
     /// use the square brackets to access by index
     inline T& operator[](const int idx) const { return mData[idx]; }
     /// use the square bracket to access by QPointF
     inline T& operator[] (const QPointF &p) { return valueAt(p); }
+    /// use the square bracket to access by QPoint
+    inline T& operator[] (const QPoint &p) { return valueAtIndex(p); }
 
     inline T& valueAtIndex(const QPoint& pos) {return valueAtIndex(pos.x(), pos.y());}  ///< value at position defined by a QPoint defining the two indices (x,y)
     T& valueAtIndex(const int ix, const int iy) { return mData[iy*mSizeX + ix];  } ///< const value at position defined by indices (x,y)
@@ -134,6 +143,8 @@ public:
     QPointF cellCenterPoint(const QPoint &pos) const { return QPointF( (pos.x()+0.5)*mCellsize+mRect.left(), (pos.y()+0.5)*mCellsize + mRect.top());} ///< get metric coordinates of the cells center
     /// get the metric cell center point of the cell given by index 'index'
     QPointF cellCenterPoint(const int &index) const { QPoint pos=indexOf(index); return QPointF( (pos.x()+0.5)*mCellsize+mRect.left(), (pos.y()+0.5)*mCellsize + mRect.top());}
+    /// get the metric cell center point of the cell given py the pointer
+    QPointF cellCenterPoint(T* ptr) { QPoint pos = indexOf(ptr); return cellCenterPoint(pos); }
     /// get the metric rectangle of the cell with index @pos
     QRectF cellRect(const QPoint &pos) const { QRectF r( QPointF(mRect.left() + mCellsize*pos.x(), mRect.top() + pos.y()*mCellsize),
                                                    QSizeF(mCellsize, mCellsize)); return r; } ///< return coordinates of rect given by @param pos.
@@ -143,6 +154,7 @@ public:
     inline QPoint indexOf(const T* element) const; ///< retrieve index (x/y) of the pointer element. returns -1/-1 if element is not valid.
     // special queries
     T max() const; ///< retrieve the maximum value of a grid
+    T min() const; ///< retrieve the minimum value of a grid
     T sum() const; ///< retrieve the sum of the grid
     T avg() const; ///< retrieve the average value of a grid
     // modifying operations
@@ -162,6 +174,10 @@ public:
     T* ptr(int x, int y) { return &(mData[y*mSizeX + x]); } ///< get a pointer to the element indexed by "x" and "y"
     inline double distance(const QPoint &p1, const QPoint &p2); ///< distance (metric) between p1 and p2
     const QPoint randomPosition() const; ///< returns a (valid) random position within the grid
+    /// applies a flood fill algorithm to the grid starting at 'start'
+    /// fills the contingent area with value 'old_color' with 'color' (or stops when 'max_fill' pixels have been filled)
+    /// returns the number of filled pixels
+    int floodFill(QPoint start, T old_color, T color, int max_fill=-1);
 private:
 
     T* mData;
@@ -177,7 +193,7 @@ private:
 typedef Grid<float> FloatGrid;
 
 enum GridViewType { GridViewRainbow=0, GridViewRainbowReverse=1, GridViewGray=2, GridViewGrayReverse=3, GridViewHeat=4,
-                    GridViewGreens=5, GridViewReds=6, GridViewBlues=7,
+                    GridViewGreens=5, GridViewReds=6, GridViewBlues=7, GridViewTurbo=8,
                     GridViewBrewerDiv=10, GridViewBrewerQual=11, GridViewTerrain=12, GridViewCustom=14  };
 
 /** @class GridRunner is a helper class to iterate over a rectangular fraction of a grid
@@ -284,7 +300,7 @@ template <class T>
 Grid<T> Grid<T>::averaged(const int factor, const int offsetx, const int offsety) const
 {
     Grid<T> target;
-    target.setup(cellsize()*factor, sizeX()/factor, sizeY()/factor);
+    target.setup(metricRect(), cellsize()*factor);
     int x,y;
     T sum=0;
     target.initialize(sum);
@@ -349,7 +365,7 @@ bool Grid<T>::setup(const float cellsize, const int sizex, const int sizey)
     }
     mCellsize=cellsize;
     mCount = mSizeX*mSizeY;
-    if (mCount==0)
+    if (mCount<=0)
         return false;
     if (mData==NULL)
         mData = new T[mCount];
@@ -397,6 +413,17 @@ T  Grid<T>::max() const
     T* pend = end();
     for (p=begin(); p!=pend;++p)
        maxv = std::max(maxv, *p);
+    return maxv;
+}
+
+template <class T>
+T  Grid<T>::min() const
+{
+    T maxv = std::numeric_limits<T>::max();
+    T* p;
+    T* pend = end();
+    for (p=begin(); p!=pend;++p)
+       maxv = std::min(maxv, *p);
     return maxv;
 }
 
@@ -488,6 +515,40 @@ template <class T>
 const QPoint Grid<T>::randomPosition() const
 {
     return QPoint(irandom(0,mSizeX), irandom(0, mSizeY));
+}
+
+
+// quick and dirty implementation of the flood fill algroithm.
+// based on: http://en.wikipedia.org/wiki/Flood_fill
+// returns the number of pixels colored
+template<class T>
+int Grid<T>::floodFill(QPoint start, T old_color, T color, int max_fill)
+{
+
+    QQueue<QPoint> pqueue;
+    pqueue.enqueue(start);
+    int found = 0;
+    while (!pqueue.isEmpty()) {
+        QPoint p = pqueue.dequeue();
+        if (!isIndexValid(p))
+            continue;
+        if (valueAtIndex(p)==old_color) {
+            valueAtIndex(p) = color;
+            pqueue.enqueue(p+QPoint(-1,0));
+            pqueue.enqueue(p+QPoint(1,0));
+            pqueue.enqueue(p+QPoint(0,-1));
+            pqueue.enqueue(p+QPoint(0,1));
+            pqueue.enqueue(p+QPoint(1,1));
+            pqueue.enqueue(p+QPoint(1,-1));
+            pqueue.enqueue(p+QPoint(-1,1));
+            pqueue.enqueue(p+QPoint(-1,-1));
+            ++found;
+            if (max_fill > 0 && found>=max_fill)
+                break;
+        }
+    }
+    return found;
+
 }
 
 ////////////////////////////////////////////////////////////
@@ -603,6 +664,7 @@ template <class T>
 {
     QString res;
     QTextStream ts(&res);
+    ts.setRealNumberPrecision(10);
 
     int newl_counter = newline_after;
     for (int y=grid.sizeY()-1;y>=0;--y){
@@ -628,6 +690,7 @@ template <class T>
         {
             QString res;
             QTextStream ts(&res);
+            ts.setRealNumberPrecision(10);
 
             int newl_counter = newline_after;
             for (int y=grid.sizeY()-1;y>=0;--y){
@@ -675,5 +738,117 @@ template <class T>
             QString line = gridToString(grid, QChar(' ')); // for normal grids (e.g. float)
             return result + line;
 }
+
+
+template <class T>
+        bool Grid<T>::loadGridFromFile(const QString &fileName)
+        {
+            double min_value = 1000000000;
+            double max_value = -1000000000;
+
+            // loads from a ESRI-Grid [RasterToFile] File.
+            QFile file(fileName);
+
+            if (!file.open(QIODevice::ReadOnly)) {
+                qDebug() << "Grid::loadGridFromFile: " << fileName << "does not exist!";
+                return false;
+            }
+            QTextStream s(&file);
+            //s.setCodec("UTF-8");
+            QByteArray file_content=s.readAll().toLatin1();
+
+            if (file_content.isEmpty()) {
+                qDebug() << "GISGrid: file" << fileName << "not present or empty.";
+                return false;
+            }
+            QList<QByteArray> lines = file_content.split('\n');
+
+            // processing of header-data
+            bool header=true;
+            int pos=0;
+            QString line;
+            QString key;
+            double value;
+            int ncol=0, nrow=0;
+            double cellsize=0;
+            double ox=0., oy=0.;
+            double no_data_val=0.;
+            do {
+                if (pos>lines.count())
+                    throw IException("Grid load from ASCII file: unexpected end of file. File: " + fileName);
+                line=lines[pos].simplified();
+                if (line.length()==0 || line.at(0)=='#') {
+                    pos++; // skip comments
+                    continue;
+                }
+                key=line.left(line.indexOf(' ')).toLower();
+                if (key.length()>0 && (key.at(0).isNumber() || key.at(0)=='-')) {
+                    header=false;
+                } else {
+                    value = line.mid(line.indexOf(' ')).toDouble();
+                    if (key=="ncols")
+                        ncol=(int)value;
+                    else if (key=="nrows")
+                        nrow=int(value);
+                    else if (key=="xllcorner")
+                        ox = value;
+                    else if (key=="yllcorner")
+                       oy = value;
+                    else if (key=="cellsize")
+                        cellsize = value;
+                    else if (key=="nodata_value")
+                        no_data_val=value;
+                    else
+                        throw IException( QString("GISGrid: invalid key %1.").arg(key));
+                    pos++;
+                }
+            } while (header);
+
+            // create the grid
+            QRectF rect(ox, oy, ncol*cellsize, nrow*cellsize);
+            setup( rect, cellsize );
+
+
+            // loop thru datalines
+            int i,j;
+            char *p=nullptr;
+            char *p2;
+            pos--;
+            for (i=nrow-1;i>=0;i--)
+                for (j=0;j<ncol;j++) {
+                // copy next value to buffer, change "," to "."
+                if (!p || *p==0) {
+                    pos++;
+                    if (pos>=lines.count())
+                        throw std::logic_error("GISGrid: Unexpected End of File!");
+                    p=lines[pos].data();
+                    // replace chars
+                    p2=p;
+                    while (*p2) {
+                        if (*p2==',')
+                            *p2='.';
+                        p2++;
+                    }
+                }
+                // skip spaces
+                while (*p && strchr(" \r\n\t", *p))
+                    p++;
+                if (*p) {
+                    value = atof(p);
+                    if (value!=no_data_val) {
+                        min_value=std::min(min_value, value);
+                        max_value=std::max(max_value, value);
+                    }
+                    valueAtIndex(j,i) = value;
+                    // skip text...
+                    while (*p && !strchr(" \r\n\t", *p))
+                        p++;
+                } else
+                    j--;
+            }
+
+            return true;
+        }
+
 
 #endif // GRID_H

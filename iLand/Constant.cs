@@ -12,6 +12,8 @@ namespace iLand
         public const float DryBiomassCarbonFraction = 0.5F; // fraction of dry biomass which is carbon
         public const int EvergreenLeafPhenologyID = 0;
 
+        public const int ExpressionLocalVariables = 10;
+        public const float Foresters = Single.Pi / (4.0F * 100.0F * 100.0F); // m²/cm²-ha
         public const float MinimumLightIntensity = 0.02F;
         public static readonly Vector128<float> MinimumLightIntensity128 = AvxExtensions.BroadcastScalarToVector128(Constant.MinimumLightIntensity);
         public static readonly Vector256<float> MinimumLightIntensity256 = AvxExtensions.BroadcastScalarToVector256(Constant.MinimumLightIntensity);
@@ -33,6 +35,7 @@ namespace iLand
             public const int MinimumResourceUnitsPerLoggingThread = 50;
             public const int MinimumStandsPerLoggingThread = 50;
             public const int MinimumTreesPerThread = 50 * 1000;
+            public const string SqliteNaN = "NaN"; // https://www.sqlite.org/floatingpoint.html
         }
 
         public static class File
@@ -101,9 +104,10 @@ namespace iLand
 
         public static class Sapling
         {
-            public const int HeightClasses = 41;
-            public const float HeightClassSize = 0.1F; // m
-            public const float MinimumHeight = 0.05F; // m, maximum height is Constant.RegenerationLayerHeight
+            public const float FullFecundityLai = 3.0F; // for converting tree density to seed production in seed maps
+            public const float HeightClassSizeInM = 0.01F; // decreased from 10 cm (iLand 1.0, 41 height classes) to 1 cm (iLand 2.0, 401 height classes)
+            public const float MinimumHeightInM = 0.05F; // must be greater than zero (maximum sapling height is Constant.RegenerationLayerHeight)
+            public const float MinimumDbhInCm = 0.025F; 
         }
 
         public static class Time

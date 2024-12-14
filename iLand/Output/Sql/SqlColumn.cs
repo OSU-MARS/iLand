@@ -17,17 +17,17 @@ namespace iLand.Output.Sql
 
         public static SqlColumn CreateResourceUnitID()
         {
-            return new SqlColumn("resourceUnit", "id of resource unit (-1: no ids set)", SqliteType.Integer);
+            return new SqlColumn("resourceUnit", "ID of resource unit (-1: no ids set).", SqliteType.Integer);
         }
 
         public static SqlColumn CreateTreeSpeciesID()
         {
-            return new SqlColumn("species", "tree species' World Flora Online identifier", SqliteType.Integer);
+            return new SqlColumn("species", "Tree species' World Flora Online identifier.", SqliteType.Integer);
         }
 
         public static SqlColumn CreateYear() 
         { 
-            return new SqlColumn("year", "simulation year", SqliteType.Integer); 
+            return new SqlColumn("year", "Calendar year.", SqliteType.Integer); 
         }
     }
 }

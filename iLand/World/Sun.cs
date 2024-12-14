@@ -1,4 +1,5 @@
-﻿using iLand.Tool;
+﻿// C++/core/climate.h
+using iLand.Tool;
 using System;
 
 namespace iLand.World
@@ -49,7 +50,7 @@ namespace iLand.World
             this.LastDayLongerThan10_5Hours = 0;
             for (int day = this.LongestDayIndex; day < this.dayLengthInHours.Length; day++)
             {
-                if (dayLengthInHours[day] < 10.5F)
+                if (this.dayLengthInHours[day] < 10.5F)
                 {
                     this.LastDayLongerThan10_5Hours = day;
                     break;

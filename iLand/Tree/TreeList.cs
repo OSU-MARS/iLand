@@ -1,4 +1,5 @@
-﻿using iLand.Extensions;
+﻿// C++/core/{ tree.h, tree.cpp }
+using iLand.Extensions;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
@@ -62,6 +63,14 @@ namespace iLand.Tree
                 this.StandID = new UInt32[capacity];
                 this.TreeID = new UInt32[capacity];
             }
+        }
+
+        /// return the basal area in m²
+        public float GetBasalArea(int treeIndex)
+        {
+            float dbhInCm = this.DbhInCm[treeIndex];
+            float basalArea = 0.25F * MathF.PI * 0.0001F * dbhInCm * dbhInCm;
+            return basalArea;
         }
 
         public virtual void Resize(int newSize)

@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using Weather = iLand.World.Weather;
 using Model = iLand.Simulation.Model;
 using System.Drawing;
-using static iLand.Constant;
 
 namespace iLand.Test
 {
@@ -74,10 +73,11 @@ namespace iLand.Test
                 // located tracked resource units
                 ObservedResourceUnitTrajectory observedTrajectory82597 = new(yearsToSimulate) // wholly contained within stand 78
                 {
-                    NonmonotonicGrowthTolerance = 0.02F,
-                    NppTolerance = 0.04F,
-                    StemVolumeTolerance = 0.02F,
-                    TreeNppTolerance = 0.05F
+                    GppTolerance = 0.005F,
+                    NonmonotonicGrowthTolerance = 0.005F,
+                    NppTolerance = 0.01F,
+                    StemVolumeTolerance = 0.005F,
+                    TreeNppTolerance = 0.02F
                 };
 
                 ResourceUnit? resourceUnit82597 = null;
@@ -227,7 +227,14 @@ namespace iLand.Test
             ModelTest.VerifyMalcolmKnappResourceUnit(plot14);
 
             const int yearsToSimulate = 29;
-            ObservedResourceUnitTrajectory observedTrajectory = new(yearsToSimulate);
+            ObservedResourceUnitTrajectory observedTrajectory = new(yearsToSimulate)
+            {
+                GppTolerance = 0.005F,
+                NonmonotonicGrowthTolerance = 0.02F,
+                NppTolerance = 0.005F,
+                StemVolumeTolerance = 0.005F,
+                TreeNppTolerance = 0.33F
+            };
 
             ResourceUnit resourceUnit = plot14.Landscape.ResourceUnits[0];
             observedTrajectory.AddYear(resourceUnit);
@@ -252,24 +259,38 @@ namespace iLand.Test
                 // ratio spacing
                 GppByYear = 
                 [
-                    0.0F,10.332F, 11.101F, 13.942F, 11.197F, 13.367F, 10.300F, 12.123F, 12.582F, 12.812F,
-                    10.991F, 11.269F, 9.763F, 10.914F, 9.690F, 12.477F, 11.038F, 11.317F, 10.039F, 8.122F,
-                    9.139F, 11.834F, 8.867F, 11.034F, 10.034F, 13.091F, 10.851F, 12.163F, 12.639F
-                ],
+                    // iLand 2.0 finds substantially higher GPP than 1.0, primarily due Campbell bug fixes increasing plant available
+                    // from ~23 mm to ~400 mm. NPP increases accordingly, resulting in stem volume overestimation.
+                    0.0F, 13.591F, 13.511F, 14.669F, 13.420F, 14.104F, 13.669F, 13.191F, 14.934F, 13.978F, 
+                    14.420F, 14.792F, 13.365F, 14.090F, 14.361F, 13.015F, 13.445F, 13.369F, 13.457F, 14.191F, 
+                    14.730F, 14.070F, 14.374F, 13.327F, 12.863F, 14.281F, 13.517F, 12.544F, 13.095F
+                    // iLand 1.0 reference
+                    // 0.0F, 10.332F, 11.101F, 13.942F, 11.197F, 13.367F, 10.300F, 12.123F, 12.582F, 12.812F,
+                    // 10.991F, 11.269F, 9.763F, 10.914F, 9.690F, 12.477F, 11.038F, 11.317F, 10.039F, 8.122F,
+                    // 9.139F, 11.834F, 8.867F, 11.034F, 10.034F, 13.091F, 10.851F, 12.163F, 12.639F
+                ], // kg biomass/m²
                 NppByYear = 
                 [
-                    0.0F, 15121.153F, 16567.48F, 21124.502F, 17659.486F, 21233.345F, 16907.064F, 19966.412F, 20802.783F, 22333.103F,
-                    19217.291F, 20211.252F, 17536.902F, 19613.64F, 17416.525F, 22425.482F, 19859.281F, 20366.093F, 18062.011F, 14609.35F,
-                    16428.11F, 21257.44F, 15932.751F, 19820.877F, 18021.93F, 23516.998F, 19478.73F, 21812.896F, 22652.115F
-                ],
+                    0.0F, 19890.015F, 20292.625F, 22388.201F, 21266.613F, 23100.087F, 22538.076F, 22406.107F, 26089.734F, 25101.201F, 
+                    25961.371F, 26681.865F, 24139.031F, 25463.085F, 25959.373F, 23525.13F, 24295.847F, 24144.3F, 24284.57F, 25587.064F, 
+                    27198.574F, 25943.966F, 27116.148F, 25103.222F, 24776.248F, 28111.09F, 26555.615F, 24602.371F, 25639.097F
+                    // iLand 1.0 reference
+                    // 0.0F, 15121.153F, 16567.48F, 21124.502F, 17659.486F, 21233.345F, 16907.064F, 19966.412F, 20802.783F, 22333.103F,
+                    // 19217.291F, 20211.252F, 17536.902F, 19613.64F, 17416.525F, 22425.482F, 19859.281F, 20366.093F, 18062.011F, 14609.35F,
+                    // 16428.11F, 21257.44F, 15932.751F, 19820.877F, 18021.93F, 23516.998F, 19478.73F, 21812.896F, 22652.115F
+                ], // kg biomass/ha
                 StemVolumeByYear =
                 [
-                    107.503F, 120.144F, 134.572F, 155.985F, 171.044F, 191.837F, 205.168F, 223.533F, 243.057F, 263.543F,
-                    278.798F, 295.564F, 307.320F, 321.637F, 331.338F, 347.055F, 362.951F, 377.981F, 385.101F, 389.623F,
-                    394.295F, 410.941F, 417.181F, 433.390F, 443.233F, 465.463F, 475.591F, 484.418F, 500.627F
-                ]
+                    107.503F, 128.478F, 149.075F, 172.653F, 193.905F, 217.774F, 240.729F, 263.120F, 290.548F, 316.648F, 
+                    344.240F, 372.945F, 397.498F, 424.581F, 452.747F, 476.587F, 501.272F, 524.100F, 548.707F, 574.915F, 
+                    602.709F, 626.283F, 652.575F, 673.880F, 697.226F, 726.472F, 748.222F, 770.158F, 796.665F
+                    // iLand 1.0 reference
+                    // 107.503F, 120.144F, 134.572F, 155.985F, 171.044F, 191.837F, 205.168F, 223.533F, 243.057F, 263.543F,
+                    // 278.798F, 295.564F, 307.320F, 321.637F, 331.338F, 347.055F, 362.951F, 377.981F, 385.101F, 389.623F,
+                    // 394.295F, 410.941F, 417.181F, 433.390F, 443.233F, 465.463F, 475.591F, 484.418F, 500.627F
+                ] // m³/ha
             };
-
+            
             observedTrajectory.Verify(plot14.Output.ResourceUnitTrajectories[0].AllTreeSpeciesTrajectory, 222.0F, expectedTrajectory);
         }
 
@@ -338,7 +359,7 @@ namespace iLand.Test
             Assert.IsTrue(douglasFir.SaplingGrowth.MaxStressYears == 2);
             Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.ReferenceRatio - 0.503F) < 0.001F);
             Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.ReinekeR - 164.0F) < 0.001F);
-            Assert.IsTrue(douglasFir.SaplingGrowth.RepresentedClasses.Count == 41);
+            Assert.IsTrue(douglasFir.SaplingGrowth.RepresentedClasses.Count == 401);
             Assert.IsTrue(Single.IsNaN(douglasFir.SaplingGrowth.SproutGrowth));
             Assert.IsTrue(MathF.Abs(douglasFir.SaplingGrowth.StressThreshold - 0.1F) < 0.001F);
             Assert.IsTrue(douglasFir.SeedDispersal == null);
@@ -478,9 +499,9 @@ namespace iLand.Test
                     float runoffInMM = runoffInMMByMonth[monthIndex];
 
                     int month = monthIndex + 1;
-                    Assert.IsTrue((evapotranspirationInMM > 1.0F) && (evapotranspirationInMM < 25.0F), "Soil: evapotranspiration is " + evapotranspirationInMM + " mm in month " + month + ".");
-                    Assert.IsTrue((infiltrationInMM >= 0.0F) && (infiltrationInMM < 800.0F), "Water cycle: infiltration is " + infiltrationInMM + " mm in month " + month + ".");
-                    Assert.IsTrue((runoffInMM >= 0.0F) && (runoffInMM < 800.0F), "Water cycle: runoff is " + runoffInMM + " mm in month " + month + ".");
+                    Assert.IsTrue((evapotranspirationInMM > 1.0F) && (evapotranspirationInMM < 25.0F), "Soil: resource unit " + resourceUnit.ID + "'s evapotranspiration is " + evapotranspirationInMM + " mm in month " + month + ".");
+                    Assert.IsTrue((infiltrationInMM >= 0.0F) && (infiltrationInMM < 800.0F), "Water cycle: resource unit " + resourceUnit.ID + "'s infiltration is " + infiltrationInMM + " mm in month " + month + ".");
+                    Assert.IsTrue((runoffInMM >= 0.0F) && (runoffInMM < 800.0F), "Water cycle: resource unit " + resourceUnit.ID + "'s runoff is " + runoffInMM + " mm in month " + month + ".");
                 }
             }
 
@@ -562,9 +583,6 @@ namespace iLand.Test
                 //ru.CornerPointOffset;
                 //ru.HasDeadTrees;
                 //ru.SaplingCells;
-                //ru.Snags;
-                //ru.Soil;
-                //ru.Species;
                 //ru.SpeciesSet;
                 //ru.Trees;
                 //ru.Variables;
@@ -605,8 +623,7 @@ namespace iLand.Test
                 //ru.Soil.FluxToDisturbance;
                 //ru.Soil.InputLabile;
                 //ru.Soil.InputRefractory;
-                AssertNullable.IsNotNull(resourceUnit.Soil);
-                Assert.IsTrue(resourceUnit.Soil.Parameters.UseDynamicAvailableNitrogen == true);
+                Assert.IsTrue((resourceUnit.Soil != null) && (resourceUnit.Soil.Parameters.UseDynamicAvailableNitrogen == true));
                 //Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.C - 161.086F) < 0.001F, "Soil: organic carbon");
                 //Assert.IsTrue(MathF.Abs(ru.Soil.OrganicMatter.N - 17.73954F) < 0.00001F, "Soil: organic nitrogen");
                 //Assert.IsTrue(MathF.Abs(ru.Soil.PlantAvailableNitrogen - 56.186F) < 0.001F, "Soil: plant available nitrogen");
@@ -629,6 +646,15 @@ namespace iLand.Test
                     Assert.IsTrue((resourceUnit.Trees.AverageLightRelativeIntensity > 0.0F) && (resourceUnit.Trees.AverageLightRelativeIntensity <= 1.0F), "Resource unit " + resourceUnit.ID + " has average relative light intensity is " + resourceUnit.Trees.AverageLightRelativeIntensity + ".");
                     Assert.IsTrue((resourceUnit.Trees.PhotosyntheticallyActiveArea > 0.0F) && (resourceUnit.Trees.PhotosyntheticallyActiveArea <= Constant.Grid.ResourceUnitAreaInM2), "Resource unit " + resourceUnit.ID + " has a photosynthetically active area of " + resourceUnit.Trees.PhotosyntheticallyActiveArea + " m².");
                     Assert.IsTrue((resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea > 0.0F) && (resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea <= 1.0F), "Resource unit " + resourceUnit.ID + " has a photosyntheticaly active area to leaf area ratio of " + resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea + ".");
+                    Assert.IsTrue((resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa > 0.0F) && (resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHaAboveground > 0.0F), "Resource unit " + resourceUnit.ID + " has an NPP of " + resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa + " kg/ha and an aboveground NPP of " + resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHaAboveground + " kg/ha.");
+                    Assert.IsTrue((resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageHeightInM > 0.0F) && (resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageDbhInCm > 0.0F), "Resource unit " + resourceUnit.ID + " has an average tree height of " + resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageHeightInM + " m and DBH of " + resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageDbhInCm + " cm.");
+                    
+                    for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
+                    {
+                        TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
+                        ResourceUnitTreeSpecies species = resourceUnit.Trees.SpeciesAvailableOnResourceUnit[speciesIndex];
+                        Assert.IsTrue((treesOfSpecies.Count == 0) || (species.TreeGrowth.AnnualGpp >= 0.0F), treesOfSpecies.Count + " " + treesOfSpecies.Species.Name + " is present on resource unit " + resourceUnit.ID + " but their GPP is " + species.TreeGrowth.AnnualGpp + ".");
+                    }
                 }
                 else
                 {
@@ -714,8 +740,8 @@ namespace iLand.Test
                         Assert.IsTrue(treesOfSpecies.IsDeadFire(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsDeadWind(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsHarvested(treeIndex) == false);
-                        Assert.IsTrue(treesOfSpecies.IsMarkedAsCropCompetitor(treeIndex) == false);
-                        Assert.IsTrue(treesOfSpecies.IsMarkedAsCropTree(treeIndex) == false);
+                        Assert.IsTrue(treesOfSpecies.IsCropCompetitor(treeIndex) == false);
+                        Assert.IsTrue(treesOfSpecies.IsCropTree(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsMarkedForCut(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsMarkedForHarvest(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.GetStemVolume(treeIndex) > 0.0F);
@@ -872,7 +898,7 @@ namespace iLand.Test
                 //ru.Variables.CumNep;
                 //ru.Variables.Nep;
                 Assert.IsTrue(resourceUnit.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
-                Assert.IsTrue(MathF.Abs(resourceUnit.WaterCycle.FieldCapacityInMM - 29.2064552F) < 0.001F, "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacityInMM + " mm.");
+                Assert.IsTrue(MathF.Abs(resourceUnit.WaterCycle.FieldCapacityInMM - 502.969F) < 0.001F, "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacityInMM + " mm.");
                 Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.Time.DaysInLeapYear, "Water cycle: water potential length");
                 // Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
                 // Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= Constant.Time.DaysInLeapYear), "Water cycle: snow days");
@@ -988,7 +1014,7 @@ namespace iLand.Test
         {
             float averageDbhInCm = trajectory.AverageDbhByYear[simulationYear];
             float averageHeightInM = trajectory.AverageHeightByYear[simulationYear];
-            float basalAreaInM2PerHa = trajectory.BasalAreaByYear[simulationYear];
+            float basalAreaInM2PerHa = trajectory.TreeBasalAreaByYear[simulationYear];
             float branchCarbonInKgPerHa = trajectory.BranchCarbonByYear[simulationYear];
             float branchNitrogenInKgPerHa = trajectory.BranchNitrogenByYear[simulationYear];
             float coarseRootCarbonInKgPerHa = trajectory.CoarseRootCarbonByYear[simulationYear];
@@ -998,7 +1024,7 @@ namespace iLand.Test
             float fineRootNitrogenInKgPerHa = trajectory.FineRootNitrogenByYear[simulationYear];
             float foliageCarbonInKgPerHa = trajectory.FoliageCarbonByYear[simulationYear];
             float foliageNitrogenInKgPerHa = trajectory.FoliageNitrogenByYear[simulationYear];
-            float leafAreaIndex = trajectory.LeafAreaIndexByYear[simulationYear];
+            float leafAreaIndex = trajectory.TreeLeafAreaIndexByYear[simulationYear];
             float liveStemVolumeInM3PerHa = trajectory.LiveStemVolumeByYear[simulationYear];
             float meanSaplingAgeInYears = trajectory.SaplingMeanAgeByYear[simulationYear];
             float regenerationCarbonInKgPerHa = trajectory.RegenerationCarbonByYear[simulationYear];

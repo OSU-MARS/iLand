@@ -1,11 +1,14 @@
-﻿using iLand.Extensions;
+﻿// C++/core/{ tree.h, tree.cpp }
+using iLand.Extensions;
 using iLand.Simulation;
 using iLand.World;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
@@ -174,7 +177,7 @@ namespace iLand.Tree
                                 dominantHeightInM = vegetationHeightGrid[heightIndex++];
                             }
 
-                            // http://iland-model.org/competition+for+light
+                            // https://iland-model.org/competition+for+light
                             float iXYJ = stampData[stampIndex]; // tree's light stamp value
                             if (iXYJ != 0.0F) // zero = no tree shading => LIF intensity = 1 => no change in light grid
                             {
@@ -288,7 +291,7 @@ namespace iLand.Tree
                                             throw new NotSupportedException(nameof(heightLoadModulus));
                                     };
 
-                                    // http://iland-model.org/competition+for+light
+                                    // https://iland-model.org/competition+for+light
                                     Vector128<float> iXYJ = Avx.LoadVector128(stampAddress); // tree's light stamp value
                                     Vector128<float> zStarXYJ = Avx.Subtract(treeHeightInM, treeLightStamp.GetDistanceToCenterInM(stampIndexX128, stampIndexY128)); // distance to center = height (45 degree line)
                                     zStarXYJ = Avx.Max(zStarXYJ, Vector128<float>.Zero);
@@ -427,7 +430,7 @@ namespace iLand.Tree
                                             throw new NotSupportedException(nameof(heightLoadModulus));
                                     };
 
-                                    // http://iland-model.org/competition+for+light
+                                    // https://iland-model.org/competition+for+light
                                     Vector256<float> iXYJ = Avx.LoadVector256(stampAddress); // tree's light stamp value
                                     Vector256<float> zStarXYJ = Avx.Subtract(treeHeightInM, treeLightStamp.GetDistanceToCenterInM(stampIndexX256, stampIndexY256)); // distance to center = height (45 degree line)
                                     zStarXYJ = Avx.Max(zStarXYJ, Vector256<float>.Zero);
@@ -488,7 +491,7 @@ namespace iLand.Tree
                                             throw new NotSupportedException(nameof(heightLoadModulus));
                                     };
 
-                                    // http://iland-model.org/competition+for+light
+                                    // https://iland-model.org/competition+for+light
                                     Vector128<float> iXYJ = Avx.LoadVector128(stampRowEndAddress256); // tree's light stamp value
                                     Vector128<int> stampIndexX128 = stampIndexX256.GetLower();
                                     Vector128<int> stampIndexY128 = stampIndexY256.GetLower();
@@ -603,7 +606,7 @@ namespace iLand.Tree
         /// is therefore taken when evaluating max(vegetation height grid, dominant height buffer) to avoid race conditions between
         /// threads concurrently finding the dominant height fields of spatially adjacent resource units.
         /// </remarks>
-        public void CalculateDominantHeightField(Landscape landscape, ConcurrentQueue<DominantHeightBuffer> dominantHeightBuffers)
+        public void CalculateDominantHeightField(Landscape landscape, ConcurrentQueue<DominantHeightBuffer> dominantHeightBuffers) // C++: Tree::heightGrid()
         {
             if (dominantHeightBuffers.TryDequeue(out DominantHeightBuffer? dominantHeightBuffer) == false)
             {
@@ -634,10 +637,15 @@ namespace iLand.Tree
                     {
                         dominantHeightBuffer[heightCellIndex] = treeHeightInM;
                     }
+                    //if (treeHeightInM > heightGridValue.stemHeight())
+                    //{
+                    //    heightGridValue.setStemHeight(treeHeightInM);
+                    //}
 
                     // if tree is both large enough and close enough to an edge of the height cell it's within, consider it as a
                     // dominant height in the neighboring height cell
-                    // For now this applies only to neighbors in the cardinal directions and doesn't consider diagonal neighbors.
+                    // As a result, the value of the height grid can be higher than the highest tree on the 10m cell. For now this applies
+                    // only to rook adjacent neighbors and doesn't consider diagonal (bishop adjacent) neighbors.
                     int readerRadiusInLightCells = readerStamp.CenterCellIndex; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
                     int lightSubcellIndexEastWest = treeLightCellIndexXY.X % Constant.Grid.LightCellsPerHeightCellWidth; // 0 = west edge of height cell, 4 = east edge of height cell
                     int lightSubcellIndexNorthSouth = treeLightCellIndexXY.Y % Constant.Grid.LightCellsPerHeightCellWidth; // 0 = southern edge of height cell, 4 = northern edge of height cell
@@ -700,7 +708,7 @@ namespace iLand.Tree
         /// therefore isn't necessary (lifting could be performed directly on the vegetation height grid) but is retained as
         /// profiling of the non-torus case suggests there is some locality advantage to using a buffer.
         /// </remarks>
-        public void CalculateDominantHeightFieldTorus(Landscape landscape, ConcurrentQueue<DominantHeightBuffer> dominantHeightBuffers)
+        public void CalculateDominantHeightFieldTorus(Landscape landscape, ConcurrentQueue<DominantHeightBuffer> dominantHeightBuffers) // C++: Tree::heightGrid_torus()
         {
             if (dominantHeightBuffers.TryDequeue(out DominantHeightBuffer? dominantHeightBuffer) == false)
             {
@@ -737,6 +745,10 @@ namespace iLand.Tree
                     {
                         dominantHeightBuffer[heightCellIndex] = treeHeightInM;
                     }
+                    //if (treeHeightInM > heightGridValue.stemHeight())
+                    //{
+                    //    heightGridValue.setStemHeight(treeHeightInM);
+                    //}
 
                     LightStamp reader = treesOfSpecies.LightStamp[treeIndex]!.ReaderStamp!;
                     int readerRadiusInLightCells = reader.CenterCellIndex; // distance between edge and the center pixel. e.g.: if r = 2 . stamp=5x5
@@ -905,7 +917,7 @@ namespace iLand.Tree
             The LIF field is scanned within the crown area of the focal tree, and the influence of
             the focal tree is "subtracted" from the LIF values.
             Finally, the "LRI correction" is applied.
-            see http://iland-model.org/competition+for+light for details.
+            see https://iland-model.org/competition+for+light for details.
           */
         public void ReadLightInfluenceField(Landscape landscape)
         {
@@ -989,7 +1001,7 @@ namespace iLand.Tree
         }
 
         /// Torus version of read stamp (glued edges)
-        public void ReadLightInfluenceFieldTorus(Landscape landscape)
+        public void ReadLightInfluenceFieldTorus(Landscape landscape) // C++: Tree::readLIF_torus()
         {
             Grid<float> lightGrid = landscape.LightGrid;
             Grid<float> vegetationHeightGrid = landscape.VegetationHeightGrid;
@@ -1029,7 +1041,7 @@ namespace iLand.Tree
                         int heightRowOrigin = vegetationHeightGrid.IndexXYToIndex(0, readerTorusY / Constant.Grid.LightCellsPerHeightCellWidth);
                         for (int lightStampIndex = (readerIndexY + readerToLightShift) * lightStampSize + readerToLightShift, readerIndex = readerStampDataSize * readerIndexY, readerIndexX = 0; readerIndexX < readerStampSize; ++lightStampIndex, ++readerIndex, ++readerIndexX)
                         {
-                            // see http://iland-model.org/competition+for+light 
+                            // see https://iland-model.org/competition+for+light 
                             int readerTorusX = ResourceUnitTrees.ToTorusLightIndex(readerStampOriginX + readerIndexX, resourceUnitLightGridOriginX, resourceUnitLightGridMaxX);
                             int heightIndex = heightRowOrigin + readerTorusX / Constant.Grid.LightCellsPerHeightCellWidth;
                             float vegetationHeightInM = vegetationHeightGrid[heightIndex];
@@ -1051,6 +1063,7 @@ namespace iLand.Tree
                             float lightValue = lightGrid[readerTorusX, readerTorusY];
                             Debug.Assert((lightValue >= 0.0F) && (lightValue <= 1.0F));
                             float cellLightResourceIndex = lightValue / cellLightIntensity; // remove impact of focal tree
+                            Debug.Assert((0.0F <= cellLightResourceIndex) && (cellLightResourceIndex <= 1.0F));
 
                             lightResourceIndex += cellLightResourceIndex * readerStampData[readerIndex];
                         }

@@ -3,25 +3,27 @@ using iLand.Tree;
 
 namespace iLand.Output.Memory
 {
-    public class StandOrResourceUnitTrajectory
+    public class StandOrResourceUnitTrajectory // C++: StandStatistics
     {
         public int LengthInYears { get; protected set; }
 
         public float[] AverageDbhByYear { get; private set; } // average dbh (cm)
         public float[] AverageHeightByYear { get; private set; } // average tree height (m)
-        public float[] BasalAreaByYear { get; private set; } // sum of basal area of all trees (m²/ha)
-        public float[] LeafAreaIndexByYear { get; private set; } // [m²/m²]/ha stocked area.
         public float[] LiveStemVolumeByYear { get; private set; } // sum of trees' stemp volume (m³/ha)
+        public float[] TreeBasalAreaByYear { get; private set; } // sum of basal area of all trees (m²/ha)
+        public float[] TreeLeafAreaIndexByYear { get; private set; } // [m²/m²]/ha stocked area of leaf area on trees > 4m, C++ leafAreaIndex()
         public float[] TreeNppAbovegroundByYear { get; private set; } // above ground NPP (kg biomass increment)/ha
-        public float[] TreeNppByYear { get; private set; } // sum of NPP (kg biomass increment, above+belowground, trees >4m)/ha
+        public float[] TreeNppByYear { get; private set; } // sum of NPP (kg biomass increment, above+belowground, trees > 4m)/ha
         public float[] TreesPerHectareByYear { get; private set; }
 
-        public float[] SaplingMeanAgeByYear { get; private set; } // average age of sapling (currenty not weighted with represented sapling numbers...)
-        public float[] SaplingCohortsPerHectareByYear { get; private set; } // number of cohorts of saplings/ha
-        public float[] SaplingNppByYear { get; private set; } // carbon gain of saplings (kg biomass increment)/ha
+        public float[] SaplingBasalAreaByYear { get; private set; } // sum of basal area of all saplings (m²/ha), C++ saplingBasalArea(), mBasalAreaSaplings
+        public float[] SaplingLeafAreaIndexByYear { get; private set; } // [m²/m²]/ha stocked area of leaf area on saplings, C++ leafAreaIndexSaplings(), mLAISaplings
+        public float[] SaplingMeanAgeByYear { get; private set; } // average age of sapling (currenty not weighted with represented sapling numbers...), C++ mSumSaplingAge
+        public float[] SaplingCohortsPerHectareByYear { get; private set; } // number of cohorts of saplings/ha, C++: saplingCount(), mSaplingCount
+        public float[] SaplingNppByYear { get; private set; } // carbon gain of saplings (kg biomass increment)/ha, C++: mNPPsaplings
         // number of saplings (Reineke)
-        public float[] SaplingsPerHectareByYear { get; private set; } // number individuals in regeneration layer (represented by "cohortCount" cohorts)/ha
-        
+        public float[] SaplingsPerHectareByYear { get; private set; } // number individuals in regeneration layer (represented by "cohortCount" cohorts)/ha, C++ cohortCount(), mSaplingCount
+
         // carbon/nitrogen cycle
         public float[] BranchCarbonByYear { get; private set; } // kg/ha
         public float[] BranchNitrogenByYear { get; private set; } // kg/ha
@@ -42,14 +44,16 @@ namespace iLand.Output.Memory
 
             this.AverageDbhByYear = new float[initialCapacityInYears];
             this.AverageHeightByYear = new float[initialCapacityInYears];
-            this.BasalAreaByYear = new float[initialCapacityInYears];
-            this.LeafAreaIndexByYear = new float[initialCapacityInYears];
             this.LiveStemVolumeByYear = new float[initialCapacityInYears];
+            this.TreeBasalAreaByYear = new float[initialCapacityInYears];
+            this.TreeLeafAreaIndexByYear = new float[initialCapacityInYears];
             this.TreeNppAbovegroundByYear = new float[initialCapacityInYears];
             this.TreeNppByYear = new float[initialCapacityInYears];
             this.TreesPerHectareByYear = new float[initialCapacityInYears];
 
+            this.SaplingBasalAreaByYear = new float[initialCapacityInYears];
             this.SaplingCohortsPerHectareByYear = new float[initialCapacityInYears];
+            this.SaplingLeafAreaIndexByYear = new float[initialCapacityInYears];
             this.SaplingMeanAgeByYear = new float[initialCapacityInYears];
             this.SaplingNppByYear = new float[initialCapacityInYears];
             this.SaplingsPerHectareByYear = new float[initialCapacityInYears];
@@ -73,6 +77,15 @@ namespace iLand.Output.Memory
             get { return this.AverageDbhByYear.Length; }
         }
 
+        public void AddBeforeDeathNppOfTree(TreeGrowthData growthData) ///< add only the NPP
+        {
+            int mostRecentYearIndex = this.LengthInYears - 1;
+
+            // add NPP of trees that died due to mortality
+            this.TreeNppByYear[mostRecentYearIndex] += growthData.NppTotal;
+            this.TreeNppAbovegroundByYear[mostRecentYearIndex] += growthData.NppAboveground;
+        }
+
         public void AddYear(LiveTreeAndSaplingStatistics endOfYearLiveTreeStatistics)
         {
             if (this.LengthInYears == this.CapacityInYears)
@@ -83,16 +96,18 @@ namespace iLand.Output.Memory
             int addIndex = this.LengthInYears;
             this.AverageDbhByYear[addIndex] = endOfYearLiveTreeStatistics.AverageDbhInCm;
             this.AverageHeightByYear[addIndex] = endOfYearLiveTreeStatistics.AverageHeightInM;
-            this.BasalAreaByYear[addIndex] = endOfYearLiveTreeStatistics.BasalAreaInM2PerHa;
-            this.LeafAreaIndexByYear[addIndex] = endOfYearLiveTreeStatistics.LeafAreaIndex;
             this.LiveStemVolumeByYear[addIndex] = endOfYearLiveTreeStatistics.StemVolumeInM3PerHa;
+            this.TreeBasalAreaByYear[addIndex] = endOfYearLiveTreeStatistics.BasalAreaInM2PerHa;
+            this.TreeLeafAreaIndexByYear[addIndex] = endOfYearLiveTreeStatistics.LeafAreaIndex;
             this.TreeNppAbovegroundByYear[addIndex] = endOfYearLiveTreeStatistics.TreeNppPerHaAboveground;
             this.TreeNppByYear[addIndex] = endOfYearLiveTreeStatistics.TreeNppPerHa;
             this.TreesPerHectareByYear[addIndex] = endOfYearLiveTreeStatistics.TreesPerHa;
 
             this.RegenerationCarbonByYear[addIndex] = endOfYearLiveTreeStatistics.RegenerationCarbonInKgPerHa;
             this.RegenerationNitrogenByYear[addIndex] = endOfYearLiveTreeStatistics.RegenerationNitrogenInKgPerHa;
+            this.SaplingBasalAreaByYear[addIndex] = endOfYearLiveTreeStatistics.SaplingBasalArea;
             this.SaplingCohortsPerHectareByYear[addIndex] = endOfYearLiveTreeStatistics.SaplingCohortsPerHa;
+            this.SaplingLeafAreaIndexByYear[addIndex] = endOfYearLiveTreeStatistics.SaplingLeafAreaIndex;
             this.SaplingMeanAgeByYear[addIndex] = endOfYearLiveTreeStatistics.SaplingMeanAgeInYears;
             this.SaplingNppByYear[addIndex] = endOfYearLiveTreeStatistics.SaplingNppPerHa;
             this.SaplingsPerHectareByYear[addIndex] = endOfYearLiveTreeStatistics.SaplingsPerHa;
@@ -105,8 +120,8 @@ namespace iLand.Output.Memory
             this.FineRootNitrogenByYear[addIndex] = endOfYearLiveTreeStatistics.FineRootNitrogenInKgPerHa;
             this.FoliageCarbonByYear[addIndex] = endOfYearLiveTreeStatistics.FoliageCarbonInKgPerHa;
             this.FoliageNitrogenByYear[addIndex] = endOfYearLiveTreeStatistics.FoliageNitrogenInKgPerHa;
-            this.StemCarbonByYear[addIndex] = endOfYearLiveTreeStatistics.StemCarbonInKgPerHa;
-            this.StemNitrogenByYear[addIndex] = endOfYearLiveTreeStatistics.StemNitrogenInKgPerHa;
+            this.StemCarbonByYear[addIndex] = endOfYearLiveTreeStatistics.StemAndReserveCarbonInKgPerHa;
+            this.StemNitrogenByYear[addIndex] = endOfYearLiveTreeStatistics.StemAndReserveNitrogenInKgPerHa;
 
             ++this.LengthInYears;
         }
@@ -117,14 +132,16 @@ namespace iLand.Output.Memory
 
             this.AverageDbhByYear = this.AverageDbhByYear.Resize(newCapacity);
             this.AverageHeightByYear = this.AverageHeightByYear.Resize(newCapacity);
-            this.BasalAreaByYear = this.BasalAreaByYear.Resize(newCapacity);
-            this.LeafAreaIndexByYear = this.LeafAreaIndexByYear.Resize(newCapacity);
             this.LiveStemVolumeByYear = this.LiveStemVolumeByYear.Resize(newCapacity);
+            this.TreeBasalAreaByYear = this.TreeBasalAreaByYear.Resize(newCapacity);
+            this.TreeLeafAreaIndexByYear = this.TreeLeafAreaIndexByYear.Resize(newCapacity);
             this.TreeNppAbovegroundByYear = this.TreeNppAbovegroundByYear.Resize(newCapacity);
             this.TreeNppByYear = this.TreeNppByYear.Resize(newCapacity);
             this.TreesPerHectareByYear = this.TreesPerHectareByYear.Resize(newCapacity);
 
+            this.SaplingBasalAreaByYear = this.SaplingBasalAreaByYear.Resize(newCapacity);
             this.SaplingCohortsPerHectareByYear = this.SaplingCohortsPerHectareByYear.Resize(newCapacity);
+            this.SaplingLeafAreaIndexByYear = this.SaplingLeafAreaIndexByYear.Resize(newCapacity);
             this.SaplingMeanAgeByYear = this.SaplingMeanAgeByYear.Resize(newCapacity);
             this.SaplingNppByYear = this.SaplingNppByYear.Resize(newCapacity);
             this.SaplingsPerHectareByYear = this.SaplingsPerHectareByYear.Resize(newCapacity);

@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -37,7 +37,7 @@ double ramp(const double &value, const double minValue, const double maxValue)
   The Phenology submodule calculates the length of the growing season according to the model of Jolly et al (2005). The calculation
   is performed for species-groups (i.e.: species are lumped together to groups) and a given climate (i.e. worst case: for each ResourceUnit).
 
-  See http://iland.boku.ac.at/phenology for details.
+  See https://iland-model.org/phenology for details.
   */
 
 /** calculates the phenology according to Jolly et al. 2005.
@@ -62,13 +62,15 @@ void Phenology::calculate()
     FloatingAverage floater(21); // a three-week floating average
     for (const ClimateDay *day = mClimate->begin(); day!=end; ++day, ++iday) {
 
-        if (day_wait_for>=0 && iday<day_wait_for)
-            continue;
         vpd = 1. - ramp(day->vpd, mMinVpd, mMaxVpd); // high value for low vpd
         temp = ramp(day->min_temperature, mMinTemp, mMaxTemp);
         daylength = ramp( mClimate->sun().daylength(iday), mMinDayLength, mMaxDayLength);
         gsi = vpd * temp * daylength;
         gsi = floater.add(gsi);
+
+        if (day_wait_for>=0 && iday<day_wait_for)
+            continue;
+
         if (!inside_period && gsi>0.5) {
             // switch from winter -> summer
             inside_period = true;
@@ -113,7 +115,7 @@ void Phenology::calculate()
             if (i==bMon)
                 mPhenoFraction[i] -=  (bDay+1) / double(mClimate->days(bMon));
             if (i==eMon)
-                mPhenoFraction[i] -=  (mClimate->days(eMon) - (bDay+1)) / double(mClimate->days(eMon));
+                mPhenoFraction[i] -=  (mClimate->days(eMon) - (eDay+1)) / double(mClimate->days(eMon));
         }
     }
 

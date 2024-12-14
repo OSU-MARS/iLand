@@ -11,7 +11,7 @@ namespace iLand.Input
     /// </summary>
     /// <remarks>
     /// Data is read from various sources and presented to the core model with a standardized interface.
-    //  See http://iland-model.org/simulation+extent.
+    //  See https://iland-model.org/simulation+extent.
     /// </remarks>
     public class ResourceUnitReaderFeather : ResourceUnitReader
     {

@@ -24,7 +24,7 @@ namespace iLand.World
             this.weatherReader.LoadGroupOfYears(this.YearsToLoad, this.TimeSeries, this.monthDayIndices);
         }
 
-        public override void OnStartYear(Model model)
+        public override void OnStartYear(Model model) // C++: Climate::nextYear()
         {
             if (this.DoRandomSampling == false)
             {

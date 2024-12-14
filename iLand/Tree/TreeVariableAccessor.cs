@@ -1,4 +1,5 @@
-﻿using iLand.Simulation;
+﻿// C++/tool/{ expressionwrapper.h, expressionwrapper.cpp }
+using iLand.Simulation;
 using iLand.Tool;
 using System;
 using System.Collections.Generic;
@@ -18,9 +19,15 @@ namespace iLand.Tree
         {
             TreeVariableAccessor.TreeVariableNames = new List<string>(ExpressionVariableAccessor.BaseVariableNames)
             {
-                "id", "dbh", "height", "resourceUnit", "x", "y", "volume", "lri", "leafarea", "lightresponse", // fields 0-9
-                "woodymass", "rootmass", "foliagemass", "age", "opacity" /* 10-14 */, "dead", "stress", "deltad", // 15-17
-                "afoliagemass", "species", "basalarea", "crownarea" /* 20, 21 */, "markharvest", "markcut", "markcrop", "markcompetitor" // 18-25
+                "id", "dbh", "height", "resourceUnit", // fields 0-3
+                "x", "y", "volume", "lri", "leafarea", "lightresponse", // 4-9
+                "stemmass", "rootmass", "foliagemass", "age", "opacity", // 10-14
+                "dead", "stress", "deltad", // 15-17
+                "afoliagemass", "species", // 18, 19
+                "basalarea", "crownarea", // 20, 21 
+                "markharvest", "markcut", "markcrop", "markcompetitor", // 18-25
+                "branchmass", "is_conifer", // 26, 27
+                "patch" // 28
             }.AsReadOnly();
         }
 
@@ -94,13 +101,20 @@ namespace iLand.Tree
                     float crownRadiusInM = this.Trees.GetCrownRadius(this.TreeIndex);
                     return MathF.PI * crownRadiusInM * crownRadiusInM; // area (m²) of the crown
                 case 22: 
-                    return this.Trees.IsMarkedForHarvest(this.TreeIndex) ? 1 : 0;
+                    return this.Trees.IsMarkedForHarvest(this.TreeIndex) ? 1.0F : 0.0F;
                 case 23: 
-                    return this.Trees.IsMarkedForCut(this.TreeIndex) ? 1 : 0;
+                    return this.Trees.IsMarkedForCut(this.TreeIndex) ? 1.0F : 0.0F;
                 case 24: 
-                    return this.Trees.IsMarkedAsCropTree(this.TreeIndex) ? 1 : 0;
+                    return this.Trees.IsCropTree(this.TreeIndex) ? 1.0F : 0.0F;
                 case 25: 
-                    return this.Trees.IsMarkedAsCropCompetitor(this.TreeIndex) ? 1 : 0;
+                    return this.Trees.IsCropCompetitor(this.TreeIndex) ? 1.0F : 0.0F;
+                case 26: 
+                    return this.Trees.GetBranchBiomass(this.TreeIndex);
+                case 27: 
+                    return this.Trees.Species.IsConiferous ? 1.0F : 0.0F;
+                case 28:
+                    // return ABE::Patches::getPatch(mTree->positionIndex()); // patch
+                    throw new NotSupportedException("Patch access requires the agent based engine, which has not been ported.");
                 default:
                     return base.GetValue(variableIndex);
             };

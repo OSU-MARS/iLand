@@ -28,6 +28,7 @@ namespace iLand.Simulation
         public ThreadLocal<RandomGenerator> RandomGenerator { get; private init; }
         public ScheduledEvents? ScheduledEvents { get; private init; }
         public SimulationState SimulationState { get; private init; }
+        public SvdStates? SvdStates { get; private init; }
 
         public Model(Project projectFile)
         {
@@ -82,6 +83,7 @@ namespace iLand.Simulation
                 TraceAutoFlushValueToRestore = initialAutoFlushSetting,
                 TraceListener = traceListener
             };
+            this.SvdStates = null;
 
             if (projectFile.World.Geometry.IsTorus && (this.Landscape.ResourceUnits.Count != 1))
             {
@@ -142,7 +144,7 @@ namespace iLand.Simulation
             {
                 ResourceUnit resourceUnit = this.Landscape.ResourceUnits[resourceUnitIndex];
                 resourceUnit.SetupTreesAndSaplings(this.Landscape);
-                resourceUnit.OnEndYear(); // call OnEndYear() to finalize initial resource unit and, if present, and stand statistics for logging
+                resourceUnit.OnEndYear(this); // call OnEndYear() to finalize initial resource unit and, if present, and stand statistics for logging
             });
 
             this.PerformanceCounters.ObjectSetup = this.stopwatch.Elapsed;
@@ -154,7 +156,7 @@ namespace iLand.Simulation
             this.PerformanceCounters.Logging += this.stopwatch.Elapsed;
         }
 
-        private void ApplyAndReadLightPattern()
+        private void ApplyAndReadLightPattern() // C++: Model::applyPattern()
         {
             this.stopwatch.Restart();
 
@@ -274,7 +276,7 @@ namespace iLand.Simulation
             }
         }
 
-        /** Main model runner.
+        /** Main model run routine.
           The sequence of actions is as follows:
           (1) Load the weather of the new year
           (2) Reset statistics for resource unit as well as for dead/managed trees
@@ -287,7 +289,7 @@ namespace iLand.Simulation
           (9) calculate statistics for the year
           (10) write database outputs
           */
-        public void RunYear() // run a single year
+        public void RunYear() // run a single year, C++: Model::runYear()
         {
             this.stopwatch.Restart();
             ++this.SimulationState.CurrentCalendarYear;
@@ -317,7 +319,7 @@ namespace iLand.Simulation
             // reset tree statistics
             foreach (ResourceUnit resourceUnit in this.Landscape.ResourceUnits)
             {
-                resourceUnit.OnStartYear();
+                resourceUnit.OnStartYear(this.Landscape);
             }
             foreach (TreeSpeciesSet speciesSet in this.Landscape.SpeciesSetsByTableName.Values)
             {
@@ -400,14 +402,23 @@ namespace iLand.Simulation
                     {
                         TreeSpecies species = speciesSet.ActiveSpecies[speciesIndex];
                         Debug.Assert(species.SeedDispersal != null, "Attempt to disperse seeds from a tree species not configured for seed dispersal.");
-                        species.SeedDispersal.DisperseSeeds(this);
+                        species.SeedDispersal.DisperseSeeds(this.Project, this.RandomGenerator.Value!);
                     });
                 }
+
+                foreach (TreeSpeciesSet speciesSet in this.Landscape.SpeciesSetsByTableName.Values)
+                {
+                    // the sapling seed maps are cleared before sapling growth (where sapling seed maps are filled)
+                    // the content of the seed maps is used in the *next* year
+                    speciesSet.ClearSaplingSeedMap();
+                }
+
                 Parallel.For(0, this.Landscape.ResourceUnits.Count, parallelComputeOptions, (int resourceUnitIndex) =>
                 {
                     ResourceUnit resourceUnit = this.Landscape.ResourceUnits[resourceUnitIndex];
                     resourceUnit.EstablishSaplings(this);
                     resourceUnit.GrowSaplings(this);
+                    resourceUnit.UpdateSaplingCellGrassCover(this);
                 });
             }
 
@@ -431,11 +442,11 @@ namespace iLand.Simulation
                 {
                     // (1) do calculations on snag dynamics for the resource unit
                     // (2) do the soil carbon and nitrogen dynamics calculations (ICBM/2N)
-                    resourceUnit.CalculateCarbonCycle();
+                    resourceUnit.CalculateCarbonCycle(this);
                 }
 
                 // calculate statistics
-                resourceUnit.OnEndYear();
+                resourceUnit.OnEndYear(this);
             });
 
             this.PerformanceCounters.TreeGrowthAndMortality += this.stopwatch.Elapsed;

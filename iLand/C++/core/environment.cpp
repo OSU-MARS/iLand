@@ -1,6 +1,6 @@
 /********************************************************************************************
 **    iLand - an individual based forest landscape and disturbance model
-**    http://iland.boku.ac.at
+**    https://iland-model.org
 **    Copyright (C) 2009-  Werner Rammer, Rupert Seidl
 **
 **    This program is free software: you can redistribute it and/or modify
@@ -31,7 +31,7 @@
 /** Represents the input of various variables with regard to climate, soil properties and more.
   @ingroup tools
     Data is read from various sources and presented to the core model with a standardized interface.
-    see http://iland.boku.ac.at/simulation+extent
+    see https://iland-model.org/simulation+extent
 */
 Environment::Environment()
 {
@@ -53,7 +53,7 @@ Environment::~Environment()
 
 bool Environment::loadFromFile(const QString &fileName)
 {
-    QString source = Helper::loadTextFile(GlobalSettings::instance()->path(fileName));
+    QStringList source = Helper::loadTextFileLines(GlobalSettings::instance()->path(fileName));
     if (source.isEmpty())
         throw IException(QString("Environment: input file does not exist or is empty (%1)").arg(fileName));
     return loadFromString(source);
@@ -63,14 +63,14 @@ bool Environment::loadFromFile(const QString &fileName)
 const QString speciesKey = "model.species.source";
 const QString climateKey = "model.climate.tableName";
 
-bool Environment::loadFromString(const QString &source)
+bool Environment::loadFromString(const QStringList &source)
 {
     try {
         if (mInfile)
             delete mInfile;
         mInfile = new CSVFile();
 
-        mInfile->loadFromString(source);
+        mInfile->loadFromStringList(source);
         mKeys = mInfile->captions();
 
         XmlHelper xml(GlobalSettings::instance()->settings());
@@ -138,7 +138,7 @@ bool Environment::loadFromString(const QString &source)
             climateNames.removeDuplicates();
             if (logLevelDebug())
                 qDebug() << "creating climatae: " << climateNames;
-            qDebug() << "Environment: climate: # of climates in environment file:" << climateNames.count();
+            qDebug() << "Environment: climate: # of climate tables in environment file:" << climateNames.count();
             foreach (QString name, climateNames) {
                 // create an entry in the list of created objects, but
                 // really create the climate only if required (see setPosition() )
@@ -211,18 +211,23 @@ void Environment::setPosition(const QPointF position)
                 continue;
             value = mInfile->value(row,col).toString();
             if (logLevelInfo()) qDebug() << "set" << mKeys[col] << "to" << value;
-            xml.setNodeValue(mKeys[col], value);
+            if (!xml.hasNode(mKeys[col])) {
+                throw IException("Setup of the environment: tried to set the value of the xml-key '" + mKeys[col] + "', but the node does not exist.");
+            }
+            if (!xml.setNodeValue(mKeys[col], value)) {
+                throw IException("Setup of the environment: tried to set the value of the xml-key '" + mKeys[col] + "', but the node is empty (Note that nodes must not be empty in the XML file, even if they are to be overwritten).");
+            }
             // special handling for constructed objects:
             if (mKeys[col]==speciesKey)
                 mCurrentSpeciesSet = (SpeciesSet*)mCreatedObjects[value];
             if (mKeys[col]==climateKey) {
                 mCurrentClimate = (Climate*)mCreatedObjects[value];
-                if (mCurrentClimate==0) {
+                if (mCurrentClimate==nullptr) {
                     // create only those climate sets that are really used in the current landscape
                     Climate *climate = new Climate();
                     mClimate.push_back(climate);
                     mCreatedObjects[value]=(void*)climate;
-                    climate->setup();
+                    climate->setup(mClimate.size()<2); // debug log only for the first climate
                     mCurrentClimate = climate;
 
                 }
