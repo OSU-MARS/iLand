@@ -5,4 +5,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: SuppressMessage("Style", "IDE0290:Use primary constructor", Justification = "<Pending>", Scope = "member", Target = "~M:iLand.Test.ObservedResourceUnitTrajectory.#ctor(System.Int32)")]
+[assembly: SuppressMessage("Style", "IDE0290:Use primary constructor", Justification = "readability, debugability", Scope = "member", Target = "~M:iLand.Test.ObservedResourceUnitTrajectory.#ctor(System.Int32)")]
+[assembly: SuppressMessage("Usage", "MSTEST0037:Use proper 'Assert' methods", Justification = "readability", Scope = "type", Target = "~T:iLand.Test.ExpressionTest")]
+[assembly: SuppressMessage("Usage", "MSTEST0037:Use proper 'Assert' methods", Justification = "readability", Scope = "type", Target = "~T:iLand.Test.GridTest")]
+[assembly: SuppressMessage("Usage", "MSTEST0037:Use proper 'Assert' methods", Justification = "readability", Scope = "type", Target = "~T:iLand.Test.ModelTest")]
+[assembly: SuppressMessage("Usage", "MSTEST0037:Use proper 'Assert' methods", Justification = "readability", Scope = "type", Target = "~T:iLand.Test.ObservedResourceUnitTrajectory")]

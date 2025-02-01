@@ -555,7 +555,7 @@ namespace iLand.Simulation
             {
                 throw new ArgumentException("removeSoilCarbon called with one or more invalid parameters.");
             }
-            IList<(ResourceUnit, float)> ruAreas = standGrid.GetResourceUnitAreaFractions(resourceUnitID);
+            List<(ResourceUnit, float)> ruAreas = standGrid.GetResourceUnitAreaFractions(resourceUnitID);
             //float totalArea = 0.0F;
             for (int areaIndex = 0; areaIndex < ruAreas.Count; ++areaIndex)
             {

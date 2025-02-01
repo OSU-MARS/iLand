@@ -76,12 +76,12 @@ namespace iLand.Cmdlets
             }
         }
 
-        private static ResourceUnitIndividualTreeArrowMemory CreateArrowMemoryForIndividualTrees(IList<ResourceUnitTrajectory> resourceUnitTrajectories, int calendarYearBeforeFirstSimulationTimestep)
+        private static ResourceUnitIndividualTreeArrowMemory CreateArrowMemoryForIndividualTrees(ResourceUnitTrajectory[] resourceUnitTrajectories, int calendarYearBeforeFirstSimulationTimestep)
         {
             // find batch length and tree species codes
             int batchLength = 0;
             List<WorldFloraID> treeSpeciesPresent = [];
-            for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
+            for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Length; ++trajectoryIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
                 if (resourceUnitTrajectory.HasIndividualTreeTrajectories)
@@ -111,7 +111,7 @@ namespace iLand.Cmdlets
 
             // copy data from resource units
             ResourceUnitIndividualTreeArrowMemory arrowMemory = new(treeSpeciesFieldType, batchLength);
-            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitTrajectories.Count; ++resourceUnitIndex)
+            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitTrajectories.Length; ++resourceUnitIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[resourceUnitIndex];
                 if (resourceUnitTrajectory.HasIndividualTreeTrajectories)
@@ -128,13 +128,13 @@ namespace iLand.Cmdlets
             return arrowMemory;
         }
 
-        private static StandOrResourceUnitArrowMemory CreateArrowMemoryForResourceUnitStatistics(IList<ResourceUnitTrajectory> resourceUnitTrajectories, int calendarYearBeforeFirstSimulationTimestep)
+        private static StandOrResourceUnitArrowMemory CreateArrowMemoryForResourceUnitStatistics(ResourceUnitTrajectory[] resourceUnitTrajectories, int calendarYearBeforeFirstSimulationTimestep)
         {
             // find batch length and tree species present
             int batchLength = 0;
             int maxTrajectoryLengthInYears = Int32.MinValue;
             List<WorldFloraID> treeSpeciesPresent = [];
-            for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
+            for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Length; ++trajectoryIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
 
@@ -179,7 +179,7 @@ namespace iLand.Cmdlets
             Span<Int16> yearSource = stackalloc Int16[maxTrajectoryLengthInYears];
             yearSource.FillIncrementing(calendarYearBeforeFirstSimulationTimestep);
 
-            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitTrajectories.Count; ++resourceUnitIndex)
+            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitTrajectories.Length; ++resourceUnitIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[resourceUnitIndex];
                 if (resourceUnitTrajectory.HasAllTreeSpeciesStatistics)
@@ -233,12 +233,12 @@ namespace iLand.Cmdlets
             return arrowMemory;
         }
 
-        private static ResourceUnitThreePGArrowMemory CreateArrowMemoryForThreePGTimeSeries(IList<ResourceUnitTrajectory> resourceUnitTrajectories, int calendarYearBeforeFirstSimulationTimestep)
+        private static ResourceUnitThreePGArrowMemory CreateArrowMemoryForThreePGTimeSeries(ResourceUnitTrajectory[] resourceUnitTrajectories, int calendarYearBeforeFirstSimulationTimestep)
         {
             // find batch length and tree species codes
             int batchLength = 0;
             List<WorldFloraID> treeSpeciesPresent = [];
-            for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Count; ++trajectoryIndex)
+            for (int trajectoryIndex = 0; trajectoryIndex < resourceUnitTrajectories.Length; ++trajectoryIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[trajectoryIndex];
                 if (resourceUnitTrajectory.HasThreePGTimeSeries)
@@ -263,7 +263,7 @@ namespace iLand.Cmdlets
 
             // copy data from resource units
             ResourceUnitThreePGArrowMemory arrowMemory = new(treeSpeciesFieldType, batchLength);
-            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitTrajectories.Count; ++resourceUnitIndex)
+            for (int resourceUnitIndex = 0; resourceUnitIndex < resourceUnitTrajectories.Length; ++resourceUnitIndex)
             {
                 ResourceUnitTrajectory resourceUnitTrajectory = resourceUnitTrajectories[resourceUnitIndex];
                 if (resourceUnitTrajectory.HasThreePGTimeSeries)
@@ -281,7 +281,7 @@ namespace iLand.Cmdlets
             return arrowMemory;
         }
 
-        private static UInt32 GetTreeSpeciesCode(ResourceUnitTreeSpecies treeSpecies, List<WorldFloraID> treeSpeciesPresent, IList<UInt32> treeSpeciesCodesAsUInt32)
+        private static UInt32 GetTreeSpeciesCode(ResourceUnitTreeSpecies treeSpecies, List<WorldFloraID> treeSpeciesPresent, List<UInt32> treeSpeciesCodesAsUInt32)
         {
             WorldFloraID treeSpeciesID = treeSpecies.Species.WorldFloraID;
             int treeSpeciesCodeIndex = treeSpeciesPresent.IndexOf(treeSpeciesID);
@@ -370,8 +370,8 @@ namespace iLand.Cmdlets
             Task<long>? writeThreePG = null;
             if (logIndividualTrees || logResourceUnitStatistics || logThreePG)
             {
-                IList<ResourceUnitTrajectory> trajectories = this.Trajectory.Output.ResourceUnitTrajectories;
-                if (trajectories.Count < 1)
+                ResourceUnitTrajectory[] trajectories = this.Trajectory.Output.ResourceUnitTrajectories;
+                if (trajectories.Length < 1)
                 {
                     throw new ParameterOutOfRangeException(nameof(this.IndividualTreeFile) + ", " + nameof(this.ResourceUnitFile) + ", "+ nameof(this.ThreePGFile), "An individual tree, resource unit tree statistics, or 3-PG file was specified but no resource unit trajectories were logged.");
                 }

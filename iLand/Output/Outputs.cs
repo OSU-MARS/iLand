@@ -57,7 +57,7 @@ namespace iLand.Output
             bool logStandTrajectories = projectFile.Output.Memory.StandTrajectories.Enabled;
             if (logAnyTypeOfResourceUnitTrajectory || logStandTrajectories)
             {
-                IList<ResourceUnit> resourceUnits = landscape.ResourceUnits;
+                List<ResourceUnit> resourceUnits = landscape.ResourceUnits;
                 int resourceUnitCount = landscape.ResourceUnits.Count;
                 if (logAnyTypeOfResourceUnitTrajectory)
                 {

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <RootNamespace>iLand</RootNamespace>
     <Version>1.0.0</Version>
     <Company>Oregon State University</Company>
@@ -48,13 +48,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Apache.Arrow" Version="18.1.0" />
-    <PackageReference Include="Apache.Arrow.Compression" Version="18.1.0" />
-    <PackageReference Include="MaxRev.Gdal.Core" Version="3.10.0.306" />
-    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal" Version="3.10.0.306" />
+    <PackageReference Include="Apache.Arrow" Version="19.0.0" />
+    <PackageReference Include="Apache.Arrow.Compression" Version="19.0.0" />
+    <PackageReference Include="MaxRev.Gdal.Core" Version="3.10.1.319" />
+    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal" Version="3.10.1.319" />
     <PackageReference Include="MersenneTwister" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
-    <PackageReference Include="System.Management.Automation" Version="7.4.6" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.1" />
+    <PackageReference Include="System.Management.Automation" Version="7.5.0" />
   </ItemGroup>
   
 </Project>

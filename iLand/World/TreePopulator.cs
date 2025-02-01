@@ -667,7 +667,7 @@ namespace iLand.World
                         // for now, assume tree files are seldom repeated and there's little to no benefit in caching loaded files
                         // C++ code doesn't mask tree generation using the stand raster, so resource units which lie in multiple stands will get
                         // multiple tree fills, if specified, which don't follow the stand boundaries and result in overstocking.
-                        IList<(ResourceUnit ResourceUnit, float OccupiedAreaInRU)> resourceUnitsInStand = landscape.StandRaster.GetResourceUnitAreaFractions(standID);
+                        List<(ResourceUnit ResourceUnit, float OccupiedAreaInRU)> resourceUnitsInStand = landscape.StandRaster.GetResourceUnitAreaFractions(standID);
                         string standTreeFilePath = projectFile.GetFilePath(ProjectDirectory.Init, standTreeFileName);
                         TreeReader standTreeFile = TreeReader.Create(standTreeFilePath);
                         RandomGenerator random = randomGenerator.Value!;
