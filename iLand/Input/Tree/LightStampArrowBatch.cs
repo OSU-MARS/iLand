@@ -16,7 +16,7 @@ namespace iLand.Input.Tree
 
         public LightStampArrowBatch(RecordBatch arrowBatch)
         {
-            IArrowArray[] fields = arrowBatch.Arrays.ToArray();
+            IArrowArray[] fields = [.. arrowBatch.Arrays];
             Schema schema = arrowBatch.Schema;
 
             this.CenterIndex = ArrowBatch.GetArray<UInt8Array>("centerIndex", schema, fields);

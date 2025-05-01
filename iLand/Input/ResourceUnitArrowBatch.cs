@@ -53,7 +53,7 @@ namespace iLand.Input
 
         public ResourceUnitArrowBatch(RecordBatch arrowBatch)
         {
-            IArrowArray[] fields = arrowBatch.Arrays.ToArray();
+            IArrowArray[] fields = [.. arrowBatch.Arrays];
             Schema schema = arrowBatch.Schema;
 
             this.AnnualNitrogenDeposition = ArrowBatch.MaybeGetArray<FloatArray>("soilAnnualNitrogenDeposition", schema, fields);

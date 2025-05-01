@@ -94,7 +94,7 @@ namespace iLand.Input.Weather
 
         public WeatherArrowBatchMonthly(RecordBatch arrowBatch)
         {
-            IArrowArray[] fields = arrowBatch.Arrays.ToArray();
+            IArrowArray[] fields = [.. arrowBatch.Arrays];
             Schema schema = arrowBatch.Schema;
 
             this.ID = ArrowBatch.GetArray<StringArray>("ID2", schema, fields);

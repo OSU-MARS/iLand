@@ -18,7 +18,7 @@ namespace iLand.Input.Tree
 
         public IndividualTreeArrowBatch(RecordBatch arrowBatch)
         {
-            IArrowArray[] fields = arrowBatch.Arrays.ToArray();
+            IArrowArray[] fields = [.. arrowBatch.Arrays];
             Schema schema = arrowBatch.Schema;
             
             this.AgeInYears = ArrowBatch.MaybeGetArray<UInt16Array>("age", schema, fields);

@@ -11,7 +11,7 @@ namespace iLand.Input.Weather
 
         public CO2ArrowBatchMonthly(RecordBatch arrowBatch)
         {
-            IArrowArray[] fields = arrowBatch.Arrays.ToArray();
+            IArrowArray[] fields = [.. arrowBatch.Arrays];
             Schema schema = arrowBatch.Schema;
 
             this.Year = ArrowBatch.GetArray<Int16Array>("year", schema, fields);

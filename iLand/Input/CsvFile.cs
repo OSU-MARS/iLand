@@ -66,7 +66,7 @@ namespace iLand.Input
             }
 
             // parse header
-            this.Columns = new(header.Split(separator, StringSplitOptions.None)); // C++ iLand removes \ characters here for an undocumented reason
+            this.Columns = [.. header.Split(separator, StringSplitOptions.None)]; // C++ iLand removes \ characters here for an undocumented reason
             this.splitString = new(separator, this.Columns.Count, stream.Length);
         }
 
