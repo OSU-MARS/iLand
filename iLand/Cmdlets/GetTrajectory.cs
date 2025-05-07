@@ -32,7 +32,7 @@ namespace iLand.Cmdlets
             TimeSpan setupTime = stopwatch.Elapsed;
 
             DateTime mostRecentProgressUpdate = DateTime.UtcNow;
-            ProgressRecord progressRecord = new(0, "Simulating trajectory", "year 0/" + this.Years + "...");
+            ProgressRecord progressRecord = new(0, "Simulating trajectory", "year 0 of " + this.Years + "...");
             for (int simulationYear = 0; simulationYear < this.Years; ++simulationYear)
             {
                 model.RunYear();
@@ -41,7 +41,7 @@ namespace iLand.Cmdlets
                 if (utcNow - mostRecentProgressUpdate > TimeSpan.FromSeconds(5))
                 {
                     progressRecord.PercentComplete = (int)(100.0F * (float)simulationYear / (float)this.Years);
-                    progressRecord.StatusDescription = "year " + (simulationYear + 1) + "/" + this.Years + "...";
+                    progressRecord.StatusDescription = "year " + (simulationYear + 1) + " of " + this.Years + "...";
                     this.WriteProgress(progressRecord);
                     mostRecentProgressUpdate = utcNow;
                 }

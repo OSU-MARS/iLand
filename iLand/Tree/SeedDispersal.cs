@@ -915,7 +915,7 @@ namespace iLand.Tree
                         this.externalSeedDirection |= 0x8;
                     }
 
-                    List<string> seedBufferTokens = SeedDispersal.GetTokensRegex().Matches(seedDispersal.ExternalSeedBuffer).Select(match => match.Value).ToList();
+                    List<string> seedBufferTokens = [.. SeedDispersal.GetTokensRegex().Matches(seedDispersal.ExternalSeedBuffer).Select(match => match.Value)];
                     string speciesAbbreviation = this.Species.WorldFloraID.ToSpeciesAbbreviation();
                     int index = seedBufferTokens.IndexOf(speciesAbbreviation);
                     if (index >= 0)
@@ -925,7 +925,7 @@ namespace iLand.Tree
                     }
 
                     // background seed rain (i.e. for the full landscape), use regexp
-                    List<string> backgroundInputList = SeedDispersal.GetTokensRegex().Matches(seedDispersal.ExternalSeedBackgroundInput).Select(match => match.Value).ToList();
+                    List<string> backgroundInputList = [.. SeedDispersal.GetTokensRegex().Matches(seedDispersal.ExternalSeedBackgroundInput).Select(match => match.Value)];
                     index = backgroundInputList.IndexOf(speciesAbbreviation);
                     if (index >= 0)
                     {
@@ -1090,7 +1090,7 @@ namespace iLand.Tree
 
                 // Debug.WriteLine("processing species list at x = " + x + ", y = " + y + ", " + species.IDs);
                 // we assume pairs of name and fraction
-                List<string> speciesIDs = new(species.SpeciesIDs.Split(" "));
+                List<string> speciesIDs = [.. species.SpeciesIDs.Split(" ")];
                 for (int speciesIndex = 0; speciesIndex < speciesIDs.Count; ++speciesIndex)
                 {
                     WorldFloraID speciesTsn = WorldFloraIDExtensions.Parse(speciesIDs[speciesIndex]);

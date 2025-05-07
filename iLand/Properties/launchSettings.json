@@ -1,9 +1,15 @@
 {
   "profiles": {
-    "iLand": {
+    "perf profiling": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
-      "commandLineArgs": "\"$(SolutionDir)\\UnitTests\\performanceProfile.ps1\""
+      "commandLineArgs": "\"$(SolutionDir)\\UnitTests\\performanceProfile.ps1\"",
+      "workingDirectory": "$(SolutionDir)\\UnitTests"
+    },
+    "debug": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "workingDirectory": "$(SolutionDir)\\UnitTests"
     }
   }
 }

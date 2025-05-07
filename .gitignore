@@ -8,3 +8,4 @@ TestResults/
 .Rhistory
 .Rproj.user/
 .vs/
+**/*.csproj.user

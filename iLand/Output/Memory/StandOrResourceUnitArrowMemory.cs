@@ -62,7 +62,6 @@ namespace iLand.Output.Memory
                 new("treeAbovegroundNpp", FloatType.Default, false),
                 new("treesPerHectare", FloatType.Default, false),
                 new("saplingLai", FloatType.Default, false),
-                new("saplingNpp", FloatType.Default, false),
                 new("saplingCohorts", FloatType.Default, false),
                 new("saplingMeanAge", FloatType.Default, false),
                 new("saplingNpp", FloatType.Default, false),
