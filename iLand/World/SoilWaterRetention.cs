@@ -30,7 +30,7 @@ namespace iLand.World
                 return new SoilWaterRetentionCampbell(environment, soilSaturationPotentialInKPa);
             }
 
-            throw new NotSupportedException("Unable to create soil water retention curve for resource unit " + environment.ResourceUnitID + ".");
+            throw new NotSupportedException($"Unable to create soil water retention curve for resource unit {environment.ResourceUnitID}.");
         }
 
         /// <summary>

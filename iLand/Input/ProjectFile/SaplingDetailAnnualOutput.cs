@@ -1,14 +1,17 @@
-﻿using System.Xml;
+﻿using System;
+using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
     public class SaplingDetailAnnualOutput : ConditionAnnualOutput
     {
+        public string Filter { get; private set; }
         public float MinDbh { get; private set; }
 
         public SaplingDetailAnnualOutput()
             : base("saplingDetail")
         {
+            this.Filter = String.Empty;
             this.MinDbh = 0.0F;
         }
 
@@ -25,6 +28,9 @@ namespace iLand.Input.ProjectFile
                     case "condition":
                         this.Condition = reader.ReadElementContentAsString().Trim();
                         break;
+                    case "filter":
+                        this.Filter = reader.ReadElementContentAsString().Trim();
+                        break;
                     case "minDbh":
                         this.MinDbh = reader.ReadElementContentAsFloat();
                         if (this.MinDbh < 0.0F)
@@ -33,7 +39,7 @@ namespace iLand.Input.ProjectFile
                         }
                         break;
                     default:
-                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                        throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
                 }
             }
         }

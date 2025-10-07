@@ -23,7 +23,7 @@ namespace iLand.Output.Sql
             this.TableName = "carbonFlow";
             this.Description = "Carbon fluxes per resource unit and year and/or aggregated for the full landscape. All values are reported on a per hectare basis (use the area provided in carbon or stand outputs to scale to realized values on the respective resource unit)." +
                                "For results limited to the project area, the data values need to be scaled to the stockable area." + Environment.NewLine +
-                               "For landsacpe level outputs, data is always given per ha of (stockable) project area (i.e. scaling with stockable area is already included)." + Environment.NewLine +
+                               "For landscape level outputs, data is always given per ha of (stockable) project area (i.e. scaling with stockable area is already included)." + Environment.NewLine +
                                "Furthermore, the following sign convention is used in iLand: fluxes " + Environment.NewLine +
                                "from the atmosphere to the ecosystem are positive, while C leaving the ecosystem is reported as negative C flux." + Environment.NewLine +
                                "You can specify a 'condition' to limit output execution to specific years (variable 'year'). " +

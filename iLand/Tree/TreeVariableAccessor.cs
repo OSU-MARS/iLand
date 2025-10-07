@@ -32,7 +32,7 @@ namespace iLand.Tree
         }
 
         public TreeVariableAccessor(SimulationState? simulationState)
-            : base(simulationState, null)
+            : base(simulationState)
         {
             this.Trees = null;
             this.TreeIndex = -1;
@@ -103,7 +103,7 @@ namespace iLand.Tree
                 case 22: 
                     return this.Trees.IsMarkedForHarvest(this.TreeIndex) ? 1.0F : 0.0F;
                 case 23: 
-                    return this.Trees.IsMarkedForCut(this.TreeIndex) ? 1.0F : 0.0F;
+                    return this.Trees.IsMarkedForCutAndDrop(this.TreeIndex) ? 1.0F : 0.0F;
                 case 24: 
                     return this.Trees.IsCropTree(this.TreeIndex) ? 1.0F : 0.0F;
                 case 25: 

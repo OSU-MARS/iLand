@@ -34,7 +34,7 @@ namespace iLand.World
             if (gis_grid.Transform.CellHeight >= 0.0)
             {
                 // constraint can be removed by linking index offsets to sign of cell height
-                throw new NotSupportedException("Non-negative cell heights are not supported. Raster transform for digital elevation model'" + demFilePath + "' has cell height " + gis_grid.Transform.CellHeight + ".");
+                throw new NotSupportedException($"Non-negative cell heights are not supported. Raster transform for digital elevation model '{demFilePath}' has cell height {gis_grid.Transform.CellHeight}.");
             }
 
             this.Setup(vegetationHeightGrid.ProjectExtent, vegetationHeightGrid.CellSizeInM);
@@ -119,7 +119,7 @@ namespace iLand.World
 
                 if (gis_grid.IsNoData(gisZnw) || gis_grid.IsNoData(gisZne) || gis_grid.IsNoData(gisZsw) || gis_grid.IsNoData(gisZse))
                 {
-                    throw new NotSupportedException("Digital elevation model '" + demFilePath + " contains one or more no data values in cells adjacent to (" + heightCellCentroidX + ", " + heightCellCentroidY + ").");
+                    throw new NotSupportedException($"Digital elevation model '{demFilePath} contains one or more no data values in cells adjacent to ({heightCellCentroidX}, {heightCellCentroidY}).");
                 }
                  
                 float deltaXeast = gisXeast - heightCellCentroidX;

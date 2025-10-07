@@ -20,7 +20,7 @@ namespace iLand.World
             this.TimeSeries.NextYearStartIndex += Constant.Time.MonthsInYear;
             if (this.TimeSeries.NextYearStartIndex >= this.TimeSeries.Count)
             {
-                throw new NotSupportedException("Weather for simulation year " + this.CurrentDataYear + " is not present in weather data file '" + model.Project.World.Weather.WeatherFile + "' for at least some weather IDs."); // can't report problematic weather ID here as it's not accessible
+                throw new NotSupportedException($"Weather for simulation year {this.CurrentDataYear} is not present in weather data file '{model.Project.World.Weather.WeatherFile}' for at least some weather IDs."); // can't report problematic weather ID here as it's not accessible
             }
 
             // some aggregates

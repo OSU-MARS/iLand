@@ -87,6 +87,45 @@ namespace iLand.Tree
             this.Species = species;
         }
 
+        private void AddExternalBackgroundSeeds() // C++ SeedDispersal::addExternalBackgroundSeeds()
+        {
+            // for high values of background prob we add the value everywhere
+            //if (this.externalSeedBackgroundInput > 0.01F)
+            //{
+                // TODO: why is > 0.01F high?
+                for (int seedCellIndex = 0; seedCellIndex < this.SeedMap.CellCount; ++seedCellIndex)
+                {
+                    // TODO: why is this limited to [0, 1]?
+                    float cellValue = Maths.Limit(this.SeedMap[seedCellIndex] + this.externalSeedBackgroundInput, 0.0F, 1.0F);
+                    this.SeedMap[seedCellIndex] = cellValue;
+                }
+            //    return;
+            //}
+
+            // for lower values we make some performance optimizations, essentially by reducing the number of cells that need to be processed during establishment
+            // TODO: bench to see if this fork actually increases performance rather than just increasing clumpiness of seeding
+            //const float frac_RU = 0.1F; // fraction of resource units to process
+            //const float frac_cells = 0.2F; // fraction of seed cells (20m) 0.2 ~ 5 from 25 cells per RU
+
+            //float effective_prob = this.externalSeedBackgroundInput * 1.0F / (frac_RU * frac_cells);
+            //int ncells = 0;
+            //for (auto ru : GlobalSettings::instance()->model()->RUgrid())
+            //{
+            //    if (ru != nullptr && drandom() < frac_RU)
+            //    {
+            //        GridRunner<float> runner(this.SeedMap, ru->boundingBox());
+            //        while (runner.next())
+            //        {
+            //            if (drandom() < frac_cells)
+            //            {
+            //                *(runner.current()) += effective_prob;
+            //                ++ncells;
+            //            }
+            //        }
+            //    }
+            //}
+        }
+
         ///< initial values at the beginning of the year for the grid
         public void Clear(Model model) // SeedDispersal::newYear()
         {
@@ -226,7 +265,7 @@ namespace iLand.Tree
 
             //if (GlobalSettings.Instance.LogInfo())
             //{
-            //    Debug.WriteLine("kernel setup. Species: " + Species.ID + " kernel-size: " + kernel.CellsX + " x " + kernel.CellsY + " pixels, sum (after scaling): " + kernel.Sum());
+            //    Debug.WriteLine($"kernel setup. Species: {Species.ID} kernel-size: {kernel.CellsX} x {kernel.CellsY} pixels, sum (after scaling): {kernel.Sum());
             //}
         }
 
@@ -279,12 +318,7 @@ namespace iLand.Tree
             if (this.externalSeedBackgroundInput > 0.0F)
             {
                 // add a constant number of seeds on the map
-                for (int seedCellIndex = 0; seedCellIndex < this.SeedMap.CellCount; ++seedCellIndex)
-                {
-                    // TODO: why is this limited to [0, 1]?
-                    float cellValue = Maths.Limit(this.SeedMap[seedCellIndex] + this.externalSeedBackgroundInput, 0.0F, 1.0F);
-                    this.SeedMap[seedCellIndex] = cellValue;
-                }
+                this.AddExternalBackgroundSeeds();
             }
         }
 
@@ -513,7 +547,7 @@ namespace iLand.Tree
         //    }
         //    // if (this.mDumpSeedMaps)
         //    // {
-        //    //     Debug.WriteLine("species: " + Species.ID + " # of gaps filled: " + n_gaps_filled + " # of edge-pixels: " + edgeCount);
+        //    //     Debug.WriteLine($"species: {Species.ID} # of gaps filled: {n_gaps_filled} # of edge-pixels: {edgeCount);
         //    // }
         //    // TODO: what if edgeFound == true but edgeCount == 0?
         //    return edgeFound;
@@ -850,7 +884,7 @@ namespace iLand.Tree
 
                 // set up the special seed kernel for post fire seed rain
                 this.CreateKernel(this.kernelSerotiny, 1.0F);
-                // Debug.WriteLine("created extra seed map and serotiny seed kernel for species " + Species.Name + " with fecundity factor " + Species.FecunditySerotiny);
+                // Debug.WriteLine($"created extra seed map and serotiny seed kernel for species {Species.Name} with fecundity factor {Species.FecunditySerotiny);
             }
             this.hasPendingSerotiny = false;
 
@@ -921,7 +955,7 @@ namespace iLand.Tree
                     if (index >= 0)
                     {
                         this.externalSeedBufferWidth = Int32.Parse(seedBufferTokens[index + 1], CultureInfo.InvariantCulture);
-                        // Debug.WriteLine("enabled special buffer for species " + Species.ID + ": distance of " + mExternalSeedBuffer + " pixels = " + mExternalSeedBuffer * 20.0 + " m");
+                        // Debug.WriteLine($"enabled special buffer for species {this.Species.ID}: distance of {mExternalSeedBuffer} pixels = {mExternalSeedBuffer * 20.0} m");
                     }
 
                     // background seed rain (i.e. for the full landscape), use regexp
@@ -930,12 +964,12 @@ namespace iLand.Tree
                     if (index >= 0)
                     {
                         this.externalSeedBackgroundInput = Single.Parse(backgroundInputList[index + 1], CultureInfo.InvariantCulture);
-                        // Debug.WriteLine("enabled background seed input (for full area) for species " + Species.ID + ": p=" + mExternalSeedBackgroundInput);
+                        // Debug.WriteLine($"enabled background seed input (for full area) for species {Species.ID}: p={mExternalSeedBackgroundInput);
                     }
 
                     // if (this.mHasExternalSeedInput)
                     // {
-                    //     Debug.WriteLine("External seed input enabled for " + Species.ID);
+                    //     Debug.WriteLine($"External seed input enabled for {this.Species.ID}.");
                     // }
                 }
             }
@@ -955,7 +989,7 @@ namespace iLand.Tree
             if (4 * this.externalSeedBaseMap.CellCount != model.Landscape.VegetationHeightGrid.CellCount)
             {
                 // not quite the same as checking 2 * Constant.HeightCellSizeInM != Constant.SeedmapCellSizeInM
-                throw new NotSupportedException("Width and height of the project area need to be a multiple of " + Constant.Grid.SeedmapCellSizeInM + " m when external seeds are enabled.");
+                throw new NotSupportedException($"Width and height of the project area need to be a multiple of {Constant.Grid.SeedmapCellSizeInM} m when external seeds are enabled.");
             }
             for (int resourceUnitIndex = 0; resourceUnitIndex < model.Landscape.ResourceUnits.Count; ++resourceUnitIndex)
             {
@@ -1069,9 +1103,9 @@ namespace iLand.Tree
             this.externalSeedData.Clear();
             int sectorsX = model.Project.Model.SeedDispersal.ExternalSeedBelt.SectorsX;
             int sectorsY = model.Project.Model.SeedDispersal.ExternalSeedBelt.SectorsY;
-            if (sectorsX < 1 || sectorsY < 1)
+            if ((sectorsX < 1) || (sectorsY < 1))
             {
-                throw new NotSupportedException(String.Format("Invalid number of sectors x={0} y={1}.", sectorsX, sectorsY));
+                throw new NotSupportedException($"Invalid number of sectors x={sectorsX} y={sectorsY}.");
             }
 
             foreach (ExternalSeedBeltSector species in model.Project.Model.SeedDispersal.ExternalSeedBelt.Sectors)
@@ -1080,7 +1114,7 @@ namespace iLand.Tree
                 int y = species.Y;
                 if ((x < 0) || (x >= sectorsX) || (y < 0) || (y >= sectorsY))
                 {
-                    throw new NotSupportedException("Invalid sector for specifying external seed input: x = " + x + ", y = " + y + ".");
+                    throw new NotSupportedException($"Invalid sector for specifying external seed input: x = {x}, y = {y}.");
                 }
                 //int index = y * sectors_x + x;
                 if (String.IsNullOrWhiteSpace(species.SpeciesIDs))
@@ -1088,7 +1122,7 @@ namespace iLand.Tree
                     throw new NotSupportedException("List of seed belt species is empty.");
                 }
 
-                // Debug.WriteLine("processing species list at x = " + x + ", y = " + y + ", " + species.IDs);
+                // Debug.WriteLine($"processing species list at x = {x}, y = {y}, {species.IDs);
                 // we assume pairs of name and fraction
                 List<string> speciesIDs = [.. species.SpeciesIDs.Split(" ")];
                 for (int speciesIndex = 0; speciesIndex < speciesIDs.Count; ++speciesIndex)
@@ -1115,7 +1149,7 @@ namespace iLand.Tree
                 return; // nothing to do
             }
 
-            // Debug.WriteLine("setting up external seed map for " + species.ID);
+            // Debug.WriteLine($"setting up external seed map for {species.ID);
             int cellsX = this.externalSeedMap.CellsX / this.externalSeedSectorX; // number of cells per sector
             int cellsY = this.externalSeedMap.CellsY / this.externalSeedSectorY; // number of cells per sector
             this.externalSeedMap.Setup(this.SeedMap);
@@ -1188,7 +1222,7 @@ namespace iLand.Tree
             }
             //if (GlobalSettings.Instance.LogInfo())
             //{
-            //    Debug.WriteLine("Setup LDD for " + Species.Name + ", using probability: " + this.longDistanceDispersalSeedlingsPerCell + ": Distances: " + this.longDispersalDistance + ", seed pixels: " + this.longDistanceDispersalSeedsByRing + "covered prob: " + ldd_sum);
+            //    Debug.WriteLine($"Setup LDD for {Species.Name}, using probability: {this.longDistanceDispersalSeedlingsPerCell}: Distances: {this.longDispersalDistance}, seed pixels: {this.longDistanceDispersalSeedsByRing}covered prob: {ldd_sum);
             //}
 
             return sumOfLongDistanceDispersalRingFractions;

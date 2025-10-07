@@ -25,7 +25,7 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+				throw new XmlException($"Encountered unexpected attributes on element {reader.Name}.");
 			}
 
 			switch (reader.Name)
@@ -35,7 +35,7 @@ namespace iLand.Input.ProjectFile
 					int maxLightStampSizeInM = Constant.Grid.MaxLightStampSizeInLightCells / 2 * Constant.Grid.LightCellSizeInM;
                     if ((bufferWidthInM < maxLightStampSizeInM) || (bufferWidthInM % Constant.Grid.LightCellSizeInM != 0) || (bufferWidthInM % Constant.Grid.HeightCellSizeInM != 0))
 					{
-						throw new XmlException("Buffer width of " + bufferWidthInM + " m is not a positive, integer multiple of the light and height cell sizes (" + Constant.Grid.LightCellSizeInM + " and " + Constant.Grid.HeightCellSizeInM + " m, respectively) which is greater than the " + maxLightStampSizeInM + " m radius of the largest tree stamp available. If regeneration is enabled an integer multiple of the seedmap cell size (" + Constant.Grid.SeedmapCellSizeInM + " m) is also required. The default buffer width of 80 m meets all of these criteria and, typically, there is little reason to change it.");
+						throw new XmlException($"Buffer width of {bufferWidthInM} m is not a positive, integer multiple of the light and height cell sizes ({Constant.Grid.LightCellSizeInM} and {Constant.Grid.HeightCellSizeInM} m, respectively) which is greater than the {maxLightStampSizeInM} m radius of the largest tree stamp available. If regeneration is enabled an integer multiple of the seedmap cell size ({Constant.Grid.SeedmapCellSizeInM} m) is also required. The default buffer width of 80 m meets all of these criteria and, typically, there is little reason to change it.");
 					}
 					this.BufferWidthInM = bufferWidthInM;
 					break;
@@ -54,7 +54,7 @@ namespace iLand.Input.ProjectFile
 					}
 					break;
 				default:
-					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+					throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 

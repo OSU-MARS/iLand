@@ -157,11 +157,11 @@ namespace iLand.Tree
                 LightStamp? readerStamp = readerStamps.lightStampsByDbhAndHeightDiameterRatio[crownRadiusClass, heightDiameterClass];
                 if (readerStamp == null)
                 {
-                    throw new InvalidOperationException("Reader stamp not found for crown radius class " + crownRadiusClass + " (crown radius " + crownRadiusInMeters + " m) and height class " + heightDiameterClass + " (height diameter ratio " + heightDiameterClass + ").");
+                    throw new InvalidOperationException($"Reader stamp not found for crown radius class {crownRadiusClass} (crown radius {crownRadiusInMeters} m) and height class {heightDiameterClass} (height diameter ratio {heightDiameterClass}).");
                 }
                 if (readerStamp.DataSize > speciesStamp.DataSize)
                 {
-                    throw new InvalidOperationException("Species stamp size " + speciesStamp.DataSize + " does not match reader stamp size " + readerStamp.DataSize + ". Are the correct reader and species stamp files in use?");
+                    throw new InvalidOperationException($"Species stamp size {speciesStamp.DataSize} does not match reader stamp size {readerStamp.DataSize}. Are the correct reader and species stamp files in use?");
                 }
 
                 speciesStamp.SetReaderStamp(readerStamp);
@@ -222,7 +222,7 @@ namespace iLand.Tree
             LightStamp? stamp = this.lightStampsByDbhAndHeightDiameterRatio[closestDiameterClass, closestHDclass];
             if (stamp == null)
             {
-                throw new ArgumentOutOfRangeException("Stamp for DBH " + dbhInCm + " and height:diameter ratio " + heightDiameterRatio + " (height " + heightInM + " m) not found.");
+                throw new ArgumentOutOfRangeException($"Stamp for DBH {dbhInCm} and height:diameter ratio {heightDiameterRatio} (height {heightInM} m) not found.");
             }
             //Debug.Assert(((MathF.Abs(dbhInCm - stamp!.DbhInCm) < 2.0F) || (diameterClass >= this.dbhClasses)) && 
             //             ((MathF.Abs(heightDiameterRatio - stamp.HeightDiameterRatio) < 0.5F * Constant.LightStamp.HeightDiameterClassSize) || (hdClass >= this.heightDiameterClasses)));
@@ -240,7 +240,7 @@ namespace iLand.Tree
             for (int stampIndex = 0; stampIndex < this.lightStampsWithTreeSizes.Count; ++stampIndex)
             {
                 LightStamp stamp = this.lightStampsWithTreeSizes[stampIndex];
-                string prefix = stamp.DbhInCm + "," + stamp.HeightDiameterRatio + "," + stamp.CrownRadiusInM;
+                string prefix = $"{stamp.DbhInCm},{stamp.HeightDiameterRatio},{stamp.CrownRadiusInM}";
                 stamp.Write(prefix, writer);
             }
         }

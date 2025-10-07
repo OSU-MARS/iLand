@@ -93,7 +93,7 @@ namespace iLand.Output.Sql
         public void Open(SqliteTransaction transaction)
         {
             // ensure an empty table exists for this output to log to
-            StringBuilder createTableCommand = new("create table " + this.TableName + "(");
+            StringBuilder createTableCommand = new($"create table {this.TableName}(");
             List<string> columnNames = new(this.Columns.Count);
             foreach (SqlColumn column in this.Columns)
             {
@@ -115,12 +115,12 @@ namespace iLand.Output.Sql
             }
             createTableCommand[^1] = ')'; // replace last "," with )
 
-            SqliteCommand dropTable = new(String.Format("drop table if exists {0}", this.TableName), transaction.Connection, transaction);
+            SqliteCommand dropTable = new($"drop table if exists {this.TableName}", transaction.Connection, transaction);
             dropTable.ExecuteNonQuery(); // drop table (if exists)
             SqliteCommand createTable = new(createTableCommand.ToString(), transaction.Connection, transaction);
             createTable.ExecuteNonQuery(); // (re-)create table
 
-            this.insertRowSqlText = "insert into " + this.TableName + " (" + String.Join(", ", columnNames) + ") values (@" + String.Join(", @", columnNames) + ")";
+            this.insertRowSqlText = $"insert into {this.TableName} ({String.Join(", ", columnNames)}) values (@{String.Join(", @", columnNames)})";
         }
 
         public virtual void Setup(Project projectFile, SimulationState simulationState)

@@ -305,10 +305,10 @@
       </landscape>
       <wind enabled="true" />
       <fire enabled="true" />
-      <landscapeRemoved enabled="true">
-        <includeHarvest>true</includeHarvest>
-        <includeNatural>true</includeNatural>
-      </landscapeRemoved>
+      <landscapeMortality enabled="true">
+		    <includeFelled>true</includeFelled>
+				<includeNatural>true</includeNatural>
+      </landscapeMortality>
       <management enabled="true" />
       <sapling enabled="true" />
       <saplingDetail enabled="true">

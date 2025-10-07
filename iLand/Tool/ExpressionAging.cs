@@ -37,7 +37,7 @@ namespace iLand.Tool
 
         private static ArgumentOutOfRangeException ParseError(string expression)
         {
-            return new ArgumentOutOfRangeException(nameof(expression), "Expression '" + expression + "' doesn't match the format expected for an aging expression.");
+            return new ArgumentOutOfRangeException(nameof(expression), $"Expression '{expression}' doesn't match the format expected for an aging expression.");
         }
     }
 }

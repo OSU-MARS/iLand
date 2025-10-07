@@ -224,7 +224,7 @@ namespace iLand.Cmdlets
                 StandTrajectory trajectory = standTrajectories[resourceUnitIndex];
                 if (trajectory.LengthInYears != trajectoryLengthInYears)
                 {
-                    throw new NotSupportedException("Trajectory for stand " + trajectory.StandID + " is " + trajectory.LengthInYears + " years long, which departs from the expected trajectory length of " + trajectoryLengthInYears + " years.");
+                    throw new NotSupportedException($"Trajectory for stand {trajectory.StandID} is {trajectory.LengthInYears} years long, which departs from the expected trajectory length of {trajectoryLengthInYears} years.");
                 }
 
                 arrowMemory.Add(trajectory, trajectory.StandID, Constant.AllTreeSpeciesCode, yearSource);
@@ -373,7 +373,7 @@ namespace iLand.Cmdlets
                 ResourceUnitTrajectory[] trajectories = this.Trajectory.Output.ResourceUnitTrajectories;
                 if (trajectories.Length < 1)
                 {
-                    throw new ParameterOutOfRangeException(nameof(this.IndividualTreeFile) + ", " + nameof(this.ResourceUnitFile) + ", "+ nameof(this.ThreePGFile), "An individual tree, resource unit tree statistics, or 3-PG file was specified but no resource unit trajectories were logged.");
+                    throw new ParameterOutOfRangeException($"{nameof(this.IndividualTreeFile)}, {nameof(this.ResourceUnitFile)}, {nameof(this.ThreePGFile)}", "An individual tree, resource unit tree statistics, or 3-PG file was specified but no resource unit trajectories were logged.");
                 }
                 if (logIndividualTrees)
                 {
@@ -441,7 +441,7 @@ namespace iLand.Cmdlets
 
             stopwatch.Stop();
             double totalSeconds = stopwatch.Elapsed.TotalSeconds;
-            this.WriteVerbose("Trajectories written in " + totalSeconds.ToString("0.0") + " s (" + (bytesWritten / (1000 * 1000 * totalSeconds)).ToString("0") + " MB/s from " + tasks + " concurrent tasks).");
+            this.WriteVerbose($"Trajectories written in {totalSeconds:0.0} s ({(bytesWritten / (1000 * 1000 * totalSeconds)):0} MB/s from {tasks} concurrent tasks).");
         }
 
         private static long WriteTrajectories(string trajectoryFilePath, IList<RecordBatch> recordBatches)

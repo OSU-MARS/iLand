@@ -38,7 +38,7 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+                throw new XmlException($"Encountered unexpected attributes on element {reader.Name}.");
             }
 
             switch (reader.Name)
@@ -79,7 +79,7 @@ namespace iLand.Input.ProjectFile
                     this.Output = reader.ReadElementContentAsString().Trim();
                     break;
                 default:
-                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                    throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

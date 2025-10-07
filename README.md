@@ -1,19 +1,18 @@
 ﻿### Overview
-This repo contains a port of core iLand 2.0 components from C++ to C# with code quality investments and feature changes. iLand's user interface and 
+This repo contains a port of core iLand 2.1 components from C++ to C# with code quality investments and feature changes. iLand's user interface and 
 plugins are not included.
 
 * These source directories are included: core, output, tests, 3rdparty (replaced with Mersenne twister nuget), tools
-* These directories were not ported: apidoc, fonstudio, iland, ilandc, inits, plugins/{barkbeetle, fire, wind}
-* The abe and abe/output directories were ported but are currently retained only in the feature/scripting branch.
+* These directories were not ported: abe, abe-lib, apidoc, bite, fonstudio, iland, ilandc, inits, plugins/{barkbeetle, fire, wind}
 
 This port of iLand is a .NET 9.0 assembly whose PowerShell cmdlets require [Powershell 7.5](https://github.com/PowerShell/PowerShell) or newer. 
 GDAL can be used for logging light and height grids to GeoTIFF, which will fail if compatiible GDAL binaries aren't in `$env:PATH` when iLand 
 PowerShell cmdlets are invoked. Feather files and SQLite databases are both input and output formats, resulting in use of Apache Arrow and 
 Microsoft.Data.Sqlite (which, as of .NET 6.0, had fewer dependencies than System.Data.Sqlite). 
 
-### Relationship to iLand 2.0 (2024) and 1.0 (2016)
+### Relationship to iLand 2.1 (2025), 2.0 (2024), and 1.0 (2016)
 Code in this repo derives from the [iLand 1.0](https://iland-model.org/) spatial growth and yield model and is synchronized periodically with
-[iLand 2.0](https://github.com/edfm-tum/iland-model) after updates commit to iLand 2.0 main. This independent branch exists to simplify making
+[iLand 2](https://github.com/edfm-tum/iland-model) after major updates commit to iLand main. This independent branch exists to simplify making
 the large changes needed for some forms of iLand-based research. Some of the major feature and architectural differences from main include
 
 * The landscape is separated from the model which acts upon it. Corresponding rationalizations are made to project file to group settings 
@@ -28,7 +27,7 @@ the large changes needed for some forms of iLand-based research. Some of the maj
   processor core availability). Overlapped IO threads are sometimes also used to reduce file read and write times.
 * Fixed light reduction is not performed around model edges. This edge correction was inaccurate for open edges, such as bodies of water, as well 
   as for typical closed canopy forest. Larger trees would both stamp and and read beyond the correction width.
-* Static state os removed so multiple iLand models can be instantiated in the same app domain. As a corollary, species names are no longer 
+* Static state is removed so multiple iLand models can be instantiated in the same app domain. As a corollary, species names are no longer 
   replaced with their species set indices within expressions as [management filtering](https://iland-model.org/Expression#Constants) relied on 
   static lookups from deep within the parse stack.
 * Single precision is standard rather than retaining the mixed and variable use of single and double precision of the C++ build. This essentially 
@@ -53,7 +52,7 @@ and parameterizations.
 Like many .NET class libraries and PowerShell modules, this iLand port is operating system and processor agnostic. GDAL does, however, contain
 OS and processor specific binaries. Development and use occurs on Windows but binaries compiled on Windows have occasionally been xcopyed to Linux
 and non-GDAL workloads run without issues. Unless disabled in the project file, SIMD instructions are used on processors supporting AVX2 
-(Intel 4<sup>th</sup> generation and newer, from 2013, and AMD Excavator, from 2015). Performance optimizations currently target AMD Zen 3 and 5.
+(Intel 4<sup>th</sup> generation and newer, from 2013, and AMD Excavator, from 2015). Performance optimizations currently target AMD Zen 5.
 
 Apache C# bindings did not support compressed feather files until Arrow 12 (May 2023) and replacement dictionaries were broken when last tested. 
 iLand works around resource dictionary limitations as best it can but supporting use of `factor()` may be helpful in R. While iLand reads 
@@ -76,6 +75,9 @@ may be worthwhile.
   information are used. Internally, while iLand follows projected coordinate systems' convention of y values increasing northwards, project 
   grids' y indices also increase going northwards. This is opposite the GDAL convention of using negative raster cell heights so that y indices 
   increase southwards. (In both systems x indices increase eastwards.)
+* Blowdown trees are assumed to be windthrown, rather than windsnapped, and therefore do not produce individually tracked snags. However, the
+  the windthrow distance is assumed to be zero. Conversely, fire killed trees are converted to snags with no potential to directly become down wood,
+  neglecting burn severity.
 * Leaf phenology is hard coded for northern hemisphere temperate and boreal sites, preventing support for deciduous species in the southern
   hemisphere and likely inhibiting modeling on tropical sites. Chilling day calculations for establishment of evergreen species are also likely 
   to be incorrect for tropical and southern hemisphere sites.
@@ -89,8 +91,14 @@ may be worthwhile.
 * Sun angles are aren't adjusted for leap years. Angles and solstice dates therefore accumulate up to one day of error over the four year leap 
   year cycle. Small biases are also introduced by the use of fixed values for the Earth's axial tilt and neglect of latitudinal variation across 
   the simulation area, though these effects are likely small compared to those of atmospheric refraction, terrain occultation, and slope.
+* The supported simulation duration and maximum tree age is unclear. Currently it's assumed simulations are set up such that they do not result
+  in trees more than 65,535 years old or which take more than 65,535 years to decay after death. Actual simulation length is probably
+  bounded by calendar year counting, which hits 32 bit signed integer overflow at 2,147,483,647 CE.
+* Some other undocumented limits occur in C++'s `LandscapeRemovedOut` (`LandscapeRemovedAnnualOutput` in C#), which relies internally on generation 
+  of 32 bit hash keys by combining diameter class indicies, tree mortality codes, and species indicies. In C# these are rationalized to 255
+  diameter classes, space for up to a 16 bit code, and 255 species.
 
-### iLand 2.0 C++ issues fixed
+### iLand 2.1 and 2.0 C++ issues fixed
 * Stem biomass is consistently defined as stem biomass, rather than including or not including NPP reserve depending on the API used. Reserve
   is combined with stem biomass in carbon pools and outputs but is not (mis)reported as stem biomass.
 * Exceptions continue to be thrown rather than silently revising inputs leading to out of range parameters or internal variables.
@@ -118,13 +126,26 @@ may be worthwhile.
   whether a species is coniferous rather than evergreen to determine if it is deciduous, 3) not writing clauses or loops to short circuit
   once their value is known, 4) calculating microclimate cell position offset with inconsistent signs in y, 5) trees dying if their stem
   mass reduces to zero but not if numerical errors result in a negative stem mass, 6) writing undefined values rather than `NaN` for 
-  landscape level permafrost moss and soil organic layer depths, and 7) writing landscape level moss biomass. In the interests of code integrity, 
-  multiple functions added to the 2.0 codebase which appear to have never worked are not ported.
+  landscape level permafrost moss and soil organic layer depths, 7) writing landscape level moss biomass, 8) incorrect comments, and 9)
+  misspelled variable names. In the interests of code integrity, multiple functions added to the 2.0 codebase which appear to have never worked 
+  are not ported.
 * Static variables continue to be avoided so that multiple `Project` and `Model` instances can exist within the same app domain. Implementation
   moves accordingly with, for example, microclimate, permafrost, and taiga (or tundra) moss settings deserialized within a `Project` instance 
-  rather than to a global static variable.
+  rather than to a global static variable. An obscure corollary of this is random values in expressions aren't currently supported as the C++ code
+  relied on reaching into static state to obtain the random values. It's unclear there's much of a use case for random expressions and the C++
+  implementation wasn't thread safe.
 * Replaced hard coded -1.0 m no data value and checks for elevations less than zero with no data value specified (if any) in the digital 
   elevation model's raster, removing conflicts on sites with elevations below sea level.
+* In iLand's C++ version most `Expressions` do not use wrappers to access model variables (mainly the current simulation year) or properties of
+  the expression is being applied to (such a sapling diameter). In C#, most expressions are therefore represented by a base class without a variable 
+  accessor field. As a consequence, reparsing an expression no longer clears its wrapper and `Expression`'s interface is simplified accordingly.
+* Dead trees are stored as SoA (structure of arrays) rather than AoS (array of structures), same as live trees, and more compact datatypes are
+  used than in C++ where practical for the usual computational and memory efficiency reasons. Unlike C++, individually tracked snags which fall 
+  continue as individually tracked down wood rather than being removed from the model. Also unlike C++, `MortalityCause` is used to track trees'
+  cause of death rather than using untyped integer codes and rationalized with `TreeFlags`. Several other bugs are fixed, notably snags'
+  above ground nitrogen content remaining constant no matter how much they've decay, immediate tracking cessation on windthrown and cut and drop
+  trees, and multiple violations of conservation of mass. Several issues with the model remain, however, see commments in `DeadTreeListSpatial`
+  for specifics.
 
 ### iLand 1.0 C++ issues fixed
 * ~50% crash probability per run reduced to negligible risk, dramatically improving useability.

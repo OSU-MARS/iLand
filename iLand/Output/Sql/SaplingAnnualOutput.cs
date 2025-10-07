@@ -12,7 +12,7 @@ namespace iLand.Output.Sql
 {
     public class SaplingAnnualOutput : AnnualOutput
     {
-        private readonly Expression resourceUnitFilter;
+        private readonly Expression<ResourceUnitVariableAccessor> resourceUnitFilter;
 
         public SaplingAnnualOutput()
         {
@@ -48,7 +48,7 @@ namespace iLand.Output.Sql
                 if (this.resourceUnitFilter.IsEmpty == false)
                 {
                     Debug.Assert(this.resourceUnitFilter.Wrapper != null);
-                    ((ResourceUnitVariableAccessor)this.resourceUnitFilter.Wrapper).ResourceUnit = resourceUnit;
+                    this.resourceUnitFilter.Wrapper.ResourceUnit = resourceUnit;
                     if (this.resourceUnitFilter.Execute() == 0.0F)
                     {
                         continue;

@@ -13,12 +13,14 @@ using System.Threading.Tasks;
 
 namespace iLand.World
 {
-    /** loads (initializes) trees for a "stand" from various sources.
-        StandLoader initializes trees on the landscape. It reads (usually) from text files, creates the
-        trees and distributes the trees on the landscape (on the ResourceUnit or on a stand defined by a grid).
-
-        See https://iland-model.org/initialize+trees
-        */
+    /// <summary>
+    /// Loads (initializes) trees for a "stand" from various sources.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="TreePopulator"/> initializes trees on the landscape. It reads (usually) from text files, creates the
+    /// trees and distributes the trees on the landscape (on the ResourceUnit or on a stand defined by a grid).
+    /// See https://iland-model.org/initialize+trees.
+    /// </remarks>
     internal class TreePopulator // C++: StandLoader
     {
         // evenlist: tentative order of pixel-indices (within a 5x5 grid) used as tree positions.
@@ -28,14 +30,13 @@ namespace iLand.World
 
         // set a constraining height grid (10m resolution)
         private Expression? heightGridResponse; // response function to calculate fitting of pixels with pre-determined height
-        private GridRaster10m initialHeightGrid; // grid with tree heights
-
+        private GridRaster10m? initialHeightGrid; // grid with tree heights
         private RandomCustomPdf? treeSizeDistribution;
 
         public TreePopulator()
         {
             this.heightGridResponse = null;
-            this.initialHeightGrid = new();
+            this.initialHeightGrid = null;
             this.treeSizeDistribution = null;
         }
 
@@ -52,7 +53,7 @@ namespace iLand.World
             }
             else
             {
-                throw new NotSupportedException("Unhandled tree file format in '" + treeReader.FilePath + "'. Expected either a list of individual trees or a tree size distribution. Does a tree file list used with a stand raster unexpectedly point to another tree file list?");
+                throw new NotSupportedException($"Unhandled tree file format in '{treeReader.FilePath}'. Expected either a list of individual trees or a tree size distribution. Does a tree file list used with a stand raster unexpectedly point to another tree file list?");
             }
         }
 
@@ -103,7 +104,7 @@ namespace iLand.World
         //    }
         //    // if (projectFile.Output.Logging.LogLevel >= EventLevel.Informational)
         //    // {
-        //    //     Trace.TraceInformation(Tree.TreesCreated + " trees loaded / copied.");
+        //    //     Trace.TraceInformation($"{Tree.TreesCreated} trees loaded / copied.");
         //    // }
         //}
 
@@ -125,7 +126,7 @@ namespace iLand.World
             }
 
             TreeVariableAccessor treeWrapper = new(null);
-            Expression debugTreeExpression = new(debugTreeExpressionString, treeWrapper); // load expression dbg_str and enable external model variables
+            Expression<TreeVariableAccessor> debugTreeExpression = new(debugTreeExpressionString, treeWrapper); // load expression dbg_str and enable external model variables
             AllTreesEnumerator allTreeEnumerator = new(landscape);
             while (allTreeEnumerator.MoveNext())
             {
@@ -231,7 +232,7 @@ namespace iLand.World
                     if ((treeProjectX < resourceUnitMinimumX) || (treeProjectY < resourceUnitMinimumY) ||
                         (treeProjectX > resourceUnitMaximumX) || (treeProjectY > resourceUnitMaximumY))
                     {
-                        throw new ArgumentOutOfRangeException(nameof(individualTreeReader), "Tree " + treeID + " at GIS coordinates x = " + treeGisX + ", y = " + treeGisY + " m is positioned beyond the extent of the resource unit grid (xmin = " + (resourceUnitMinimumX + projectOriginGisCoordinatesX) + ", ymin = " + (resourceUnitMinimumY + projectOriginGisCoordinatesY) + ", xmax = " + (resourceUnitMaximumX + projectOriginGisCoordinatesX) + ", ymax = " + (resourceUnitMaximumY + projectOriginGisCoordinatesY) + " m) and, therefore, cannot be simulated. Verify trees and resource units are being specified in the same coordinate system and adjust the set of trees and resource units so all trees are within resource units.");
+                        throw new ArgumentOutOfRangeException(nameof(individualTreeReader), $"Tree {treeID} at GIS coordinates x = {treeGisX}, y = {treeGisY} m is positioned beyond the extent of the resource unit grid (xmin = {(resourceUnitMinimumX + projectOriginGisCoordinatesX)}, ymin = {(resourceUnitMinimumY + projectOriginGisCoordinatesY)}, xmax = {(resourceUnitMaximumX + projectOriginGisCoordinatesX)}, ymax = {(resourceUnitMaximumY + projectOriginGisCoordinatesY)} m) and, therefore, cannot be simulated. Verify trees and resource units are being specified in the same coordinate system and adjust the set of trees and resource units so all trees are within resource units.");
                     }
 
                     // find resource unit tree is on
@@ -283,7 +284,7 @@ namespace iLand.World
                     }
                     if (resourceUnit == null)
                     {
-                        throw new ArgumentOutOfRangeException(nameof(individualTreeReader), "Tree " + treeID + " at GIS coordinates x = " + treeGisX + ", y = " + treeGisY + " m falls within the extents of the resource unit grid but is not positioned on a resource unit and, therefore, cannot be simulated. Verify trees and resource units are being specified in the same coordinate system and adjust the set of trees and resource units so all trees are within resource units.");
+                        throw new ArgumentOutOfRangeException(nameof(individualTreeReader), $"Tree {treeID} at GIS coordinates x = {treeGisX}, y = {treeGisY} m falls within the extents of the resource unit grid but is not positioned on a resource unit and, therefore, cannot be simulated. Verify trees and resource units are being specified in the same coordinate system and adjust the set of trees and resource units so all trees are within resource units.");
                     }
 
                     Point lightCellIndexXY = landscape.LightGrid.GetCellXYIndex(treeProjectX, treeProjectY);
@@ -384,7 +385,7 @@ namespace iLand.World
                 float treeProjectY = individualTreeReader.GisY[treeIndexInFile] - landscape.ProjectOriginInGisCoordinates.Y + translationToPlaceTreeOnResourceUnitY;
                 //if (landscape.VegetationHeightFlags[treeProjectX, treeProjectY].IsInResourceUnit() == false)
                 //{
-                //    throw new NotSupportedException("Individual tree " + individualTreeReader.TreeID[treeIndexInFile] + " (line " + (treeIndexInFile + 1) + ") is not located in project simulation area after being displaced to resource unit " + resourceUnit.ID + ". Tree coordinates are (" + treeProjectX + ", " + treeProjectY + ")");
+                //    throw new NotSupportedException($"Individual tree {individualTreeReader.TreeID[treeIndexInFile]} (line {(treeIndexInFile + 1)}) is not located in project simulation area after being displaced to resource unit {resourceUnit.ID}. Tree coordinates are ({treeProjectX}, {treeProjectY})");
                 //}
                 Point lightCellIndexXY = landscape.LightGrid.GetCellXYIndex(treeProjectX, treeProjectY);
                 Debug.Assert(resourceUnit.ProjectExtent.Contains(landscape.LightGrid.GetCellProjectCentroid(lightCellIndexXY)));
@@ -414,7 +415,7 @@ namespace iLand.World
             {
                 if (projectFile.Output.Logging.LogLevel >= EventLevel.Informational)
                 {
-                    Trace.TraceInformation("Stand " + standID + " not in project area. No initialization performed.");
+                    Trace.TraceInformation($"Stand {standID} not in project area. No initialization performed.");
                 }
                 return;
             }
@@ -427,21 +428,20 @@ namespace iLand.World
                 {
                     HeightGridIndex = heightCellsInstantiated // index in the 10m grid
                 };
-                if (initialHeightGrid.IsSetup())
+                if ((this.initialHeightGrid != null) && this.initialHeightGrid.IsSetup())
                 {
-                    heightCell.MaxHeight = initialHeightGrid.Grid[heightCell.HeightGridIndex];
+                    heightCell.MaxHeight = this.initialHeightGrid.Grid[heightCell.HeightGridIndex];
                 }
                 heightCellsInStand.Add(heightCell);
             }
             float standAreaInResourceUnits = standRaster.GetAreaInSquareMeters(standID) / Constant.Grid.ResourceUnitAreaInM2;
 
-            if (initialHeightGrid.IsSetup() && (heightGridResponse == null))
+            if ((this.initialHeightGrid != null) && this.initialHeightGrid.IsSetup() && (this.heightGridResponse == null))
             {
-                throw new NotSupportedException("Attempt to initialize from height grid but without response function.");
+                throw new NotSupportedException("Attempt to initialize from height grid without response function.");
             }
 
-            Debug.Assert(this.treeSizeDistribution != null);
-            Debug.Assert(heightGridResponse != null);
+            Debug.Assert((this.heightGridResponse != null) && (this.treeSizeDistribution != null));
             int heightCellIndex = 0;
             float lightStampBeerLambertK = projectFile.Model.Ecosystem.TreeLightStampExtinctionCoefficient;
             int maxHeightFittingAttempts = projectFile.World.Initialization.HeightGrid.MaxTries;
@@ -516,7 +516,7 @@ namespace iLand.World
                         // key: rank of target pixel
                         heightCellIndex = Maths.Limit((int)(heightCellsInStand.Count * randomValue), 0, heightCellsInStand.Count - 1); // get from random number generator
 
-                        if (initialHeightGrid.IsSetup())
+                        if ((this.initialHeightGrid != null) && initialHeightGrid.IsSetup())
                         {
                             // calculate how well the selected pixel fits w.r.t. the predefined height
                             if (heightCellsInStand[heightCellIndex].MaxHeight > 0.0F)
@@ -658,7 +658,7 @@ namespace iLand.World
                     // The tree file can be either individual trees or a size distribution.
                     if ((landscape.StandRaster == null) || (landscape.StandRaster.IsSetup() == false))
                     {
-                        throw new NotSupportedException("/project/model/world/initialization/treeFile '" + treeFilePath + "' lists other tree files by stand ID but no stand raster file (/project/model/world/initialization/standRasterFile) is indicated.");
+                        throw new NotSupportedException($"/project/model/world/initialization/treeFile '{treeFilePath}' lists other tree files by stand ID but no stand raster file (/project/model/world/initialization/standRasterFile) is indicated.");
                     }
 
                     Parallel.For(0, treeFileByStandIDReader.TreeFileNameByStandID.Count, parallelComputeOptions, (int standIndex) =>
@@ -680,7 +680,7 @@ namespace iLand.World
                 }
                 else
                 {
-                    throw new NotImplementedException("/project/model/world/initialization/treeFile '" + treeFilePath + "' is not in a recognized format.");
+                    throw new NotImplementedException($"/project/model/world/initialization/treeFile '{treeFilePath}' is not in a recognized format.");
                 }
             }
 

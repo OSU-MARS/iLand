@@ -20,8 +20,8 @@ namespace iLand.Output.Sql
 
         private readonly List<DynamicOutputField> fieldList;
         private readonly Expression resourceUnitCondition;
-        private readonly Expression resourceUnitFilter;
-        private readonly Expression treeFilter;
+        private readonly Expression<ResourceUnitVariableAccessor> resourceUnitFilter;
+        private readonly Expression<TreeVariableAccessor> treeFilter;
         private readonly Expression yearFilter;
 
         private struct DynamicOutputField
@@ -63,7 +63,8 @@ namespace iLand.Output.Sql
                                "Each field is defined as: ''field.aggregation'' (separated by a dot). A ''field'' is a valid [Expression]. ''Aggregation'' is one of the following:  " +
                                "mean, sum, min, max, p25, p50, p75, p5, 10, p90, p95 (pXX=XXth percentile), sd (std.dev.)." + Environment.NewLine +
                                "Complex expressions are allowed, e.g: if(dbh>50,1,0).sum (-> counts trees with dbh>50)" +
-                               "Column names in the output table may be slightly different as dots and other special characters not allowed in column names are replaced.";
+                               "Column names in the output table may be slightly different as dots and other special characters not allowed in column names are replaced." + Environment.NewLine +
+                               "Note also, that `customagg` is another highly customizable output (https://iland-model.org/dynamic+outputs).";
             this.Columns.Add(SqlColumn.CreateYear());
             this.Columns.Add(SqlColumn.CreateResourceUnitID());
             this.Columns.Add(SqlColumn.CreateTreeSpeciesID());
@@ -116,12 +117,11 @@ namespace iLand.Output.Sql
                 fieldForColumn.AggregationIndex = DynamicStandAnnualOutput.WellKnownAggregations.IndexOf(columnVariableAggregation);
                 if (fieldForColumn.AggregationIndex == -1)
                 {
-                    throw new NotSupportedException(String.Format("Invalid aggregate expression for dynamic output: {0}{2}allowed:{1}",
-                                                                  columnVariableAggregation, String.Join(" ", DynamicStandAnnualOutput.WellKnownAggregations), System.Environment.NewLine));
+                    throw new NotSupportedException($"Invalid aggregate expression for dynamic output: {columnVariableAggregation}\nallowed:{String.Join(" ", DynamicStandAnnualOutput.WellKnownAggregations)}");
                 }
                 this.fieldList.Add(fieldForColumn);
 
-                string sqlColumnName = String.Format("{0}_{1}", columnVariable, columnVariableAggregation);
+                string sqlColumnName = $"{columnVariable}_{columnVariableAggregation}";
                 sqlColumnName = DynamicStandAnnualOutput.GetSqlColumnNameRegex().Replace(sqlColumnName, "_");
                 sqlColumnName = sqlColumnName.Replace("__", "_");
                 this.Columns.Add(new(sqlColumnName, columnVariable, SqliteType.Real));
@@ -164,7 +164,7 @@ namespace iLand.Output.Sql
             }
             List<float> fieldData = []; // statistics data
             TreeVariableAccessor treeWrapper = new(model.SimulationState);
-            Expression customExpression = new();
+            Expression<TreeVariableAccessor> customExpression = new();
 
             TreeSpeciesSet treeSpeciesSet = model.Landscape.SpeciesSetsByTableName.First().Value;
             List<TreeListSpatial> liveTreesOfSpecies = [];
@@ -280,11 +280,11 @@ namespace iLand.Output.Sql
 
             List<float> fieldData = []; //statistics data
             SummaryStatistics fieldStatistics = new(); // statistcs helper class
-            TreeVariableAccessor treeWrapper = new(model.SimulationState);
             ResourceUnitVariableAccessor ruWrapper = new(model.SimulationState);
             this.resourceUnitFilter.Wrapper = ruWrapper;
 
-            Expression fieldExpression = new();
+            TreeVariableAccessor treeWrapper = new(model.SimulationState);
+            Expression<TreeVariableAccessor> fieldExpression = new();
             foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
                 // test filter

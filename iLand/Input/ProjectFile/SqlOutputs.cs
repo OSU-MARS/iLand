@@ -11,13 +11,13 @@ namespace iLand.Input.ProjectFile
 		public DynamicStandAnnualOutput DynamicStand { get; private init; }
 		public FilterAnnualOutput IndividualTree { get; private init; }
 		public ConditionAnnualOutput Landscape { get; private init; }
-		public LandscapeRemovedOutput LandscapeRemoved { get; private init; }
+		public LandscapeMortalityAnnualOutput LandscapeMortality { get; private init; }
 		public Enablable Management { get; private init; }
 		public ConditionAnnualOutput Sapling { get; private init; }
 		public SaplingDetailAnnualOutput SaplingDetail { get; private init; }
 		public ConditionAnnualOutput Stand { get; private init; }
 		public Enablable StandDead { get; private init; }
-		public Enablable ThreePG { get; private init; }
+		public ConditionAnnualOutput ThreePG { get; private init; }
 		public FilterAnnualOutput TreeRemoved { get; private init; }
 		public ResourceUnitConditionOutput Water { get; private init; }
 
@@ -34,7 +34,7 @@ namespace iLand.Input.ProjectFile
 			this.DynamicStand = new();
 			this.IndividualTree = new("individualTree");
 			this.Landscape = new("landscape");
-			this.LandscapeRemoved = new();
+			this.LandscapeMortality = new();
 			this.Management = new("management");
 			this.Sapling = new("sapling");
 			this.SaplingDetail = new();
@@ -76,8 +76,8 @@ namespace iLand.Input.ProjectFile
 					case "landscape":
 						this.Landscape.ReadXml(reader);
 						break;
-					case "landscapeRemoved":
-						this.LandscapeRemoved.ReadXml(reader);
+					case "landscapeMortality":
+						this.LandscapeMortality.ReadXml(reader);
 						break;
 					case "management":
 						this.Management.ReadXml(reader);
@@ -107,7 +107,7 @@ namespace iLand.Input.ProjectFile
 						this.Wind.ReadXml(reader);
 						break;
 					default:
-						throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+						throw new XmlException($"Encountered unexpected attributes on element {reader.Name}.");
 				}
 			}
 			else
@@ -121,7 +121,7 @@ namespace iLand.Input.ProjectFile
 						reader.Read();
 						break;
 					default:
-						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+						throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
 				}
 			}
 		}

@@ -22,20 +22,20 @@ namespace iLand.Input.ProjectFile
             {
                 if (reader.AttributeCount != 1)
                 {
-                    throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+                    throw new XmlException($"Encountered unexpected attributes on element {reader.Name}.");
                 }
 
                 string? enabledAsString = reader.GetAttribute("enabled");
                 if (String.IsNullOrWhiteSpace(enabledAsString))
                 {
-                    throw new XmlException("enabled attribute of " + reader.Name + " is empty.");
+                    throw new XmlException($"enabled attribute of {reader.Name} is empty.");
                 }
                 this.Enabled = Boolean.Parse(enabledAsString);
                 reader.ReadStartElement();
             }
             else
             {
-                throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+                throw new XmlException($"Encountered unexpected attributes on element {reader.Name}.");
             }
         }
 
@@ -47,7 +47,7 @@ namespace iLand.Input.ProjectFile
             }
             else
             {
-                throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

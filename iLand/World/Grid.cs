@@ -320,7 +320,7 @@ namespace iLand.World
         //        for (int yIndex = 0; yIndex < this.SizeY; ++yIndex)
         //        {
         //            PointF cellCenter = this.GetCellCentroid(new Point(xIndex, yIndex));
-        //            csvBuilder.AppendLine(cellCenter.X + "," + cellCenter.Y + "," + this[xIndex, yIndex]!.ToString());
+        //            csvBuilder.AppendLine($"{cellCenter.X},{cellCenter.Y},{this[xIndex, yIndex]!.ToString());
         //        }
         //    }
         //    return csvBuilder.ToString();

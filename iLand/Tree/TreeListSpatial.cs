@@ -11,25 +11,17 @@ using Model = iLand.Simulation.Model;
 
 namespace iLand.Tree
 {
-    /** A tree is the basic simulation entity of iLand and represents a single tree.
-        Trees in iLand are designed to be lightweight, thus the list of stored properties is limited. Basic properties
-        are dimensions (dbh, height), biomass pools (stem, leaves, roots), the reserve NPP pool. Additionally, the location and species are stored.
-        A Tree has a height of at least 4m; trees below this threshold are covered by the regeneration layer (see Sapling).
-        Trees are stored in lists managed at the resource unit level.
-      */
     public class TreeListSpatial : TreeListBiometric
     {
         public float[] DbhDeltaInCm { get; private set; } // diameter growth [cm]
         public TreeFlags[] Flags { get; private set; } // mortality, harvest, and disturbance indicators
-        public Point[] LightCellIndexXY { get; private set; } // index of the trees position on the basic LIF grid
+        public Point[] LightCellIndexXY { get; private set; } // index of the tree's position on the light grid
         public LightStamp[] LightStamp { get; private set; }
         public ResourceUnit ResourceUnit { get; private set; } // pointer to the ressource unit the tree belongs to.
 
         public TreeListSpatial(ResourceUnit resourceUnit, TreeSpecies species, int capacity)
             : base(species, capacity)
         {
-            this.Flags = new TreeFlags[capacity];
-
             this.Allocate(capacity);
             this.ResourceUnit = resourceUnit;
         }
@@ -38,7 +30,7 @@ namespace iLand.Tree
         {
             if (ageInYears < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(ageInYears), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid age of " + ageInYears + ". Specify a positive number of years or use zero to indicate the tree's age should be estimated from its height.");
+                throw new ArgumentOutOfRangeException(nameof(ageInYears), $"Attempt to add tree of species {this.Species.WorldFloraID} with invalid age of {ageInYears}. Specify a positive number of years or use zero to indicate the tree's age should be estimated from its height.");
             }
             else if (ageInYears == 0)
             {
@@ -47,11 +39,11 @@ namespace iLand.Tree
             }
             if ((dbhInCm <= 0.0F) || (dbhInCm > 500.0F))
             {
-                throw new ArgumentOutOfRangeException(nameof(dbhInCm), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid diameter of " + dbhInCm + " cm to resource unit " + this.ResourceUnit.ID + ".");
+                throw new ArgumentOutOfRangeException(nameof(dbhInCm), $"Attempt to add tree of species {this.Species.WorldFloraID} with invalid diameter of {dbhInCm} cm to resource unit {this.ResourceUnit.ID}.");
             }
             if ((heightInM <= 0.0F) || (heightInM > 150.0F))
             {
-                throw new ArgumentOutOfRangeException(nameof(heightInM), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid height of " + heightInM + " m to resource unit " + this.ResourceUnit.ID + ".");
+                throw new ArgumentOutOfRangeException(nameof(heightInM), $"Attempt to add tree of species {this.Species.WorldFloraID} with invalid height of {heightInM} m to resource unit {this.ResourceUnit.ID}.");
             }
             // no checking of light cell as it's assumed the caller verified this tree is on the resource unit
 
@@ -123,14 +115,14 @@ namespace iLand.Tree
                 float dbhInCm = treesToAdd.DbhInCm[sourceIndex];
                 if ((dbhInCm <= 0.0F) || (dbhInCm > 500.0F))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(treesToAdd), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid diameter of " + dbhInCm + " cm to resource unit " + this.ResourceUnit.ID + ".");
+                    throw new ArgumentOutOfRangeException(nameof(treesToAdd), $"Attempt to add tree of species {this.Species.WorldFloraID} with invalid diameter of {dbhInCm} cm to resource unit {this.ResourceUnit.ID}.");
                 }
                 this.DbhInCm[treeListDestination] = dbhInCm;
 
                 float heightInM = treesToAdd.HeightInM[sourceIndex];
                 if ((heightInM <= 0.0F) || (heightInM > 150.0F))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(treesToAdd), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid height of " + heightInM + " m to resource unit " + this.ResourceUnit.ID + ".");
+                    throw new ArgumentOutOfRangeException(nameof(treesToAdd), $"Attempt to add tree of species {this.Species.WorldFloraID} with invalid height of {heightInM} m to resource unit {this.ResourceUnit.ID}.");
                 }
                 this.HeightInM[treeListDestination] = heightInM;
 
@@ -140,7 +132,7 @@ namespace iLand.Tree
                 UInt16 ageInYears = treesToAdd.AgeInYears[sourceIndex];
                 if (ageInYears < 0)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(treesToAdd), "Attempt to add tree of species " + this.Species.WorldFloraID + " with invalid age of " + ageInYears + ". Specify a positive number of years or use zero to indicate the tree's age should be estimated from its height.");
+                    throw new ArgumentOutOfRangeException(nameof(treesToAdd), $"Attempt to add tree of species {this.Species.WorldFloraID} with invalid age of {ageInYears}. Specify a positive number of years or use zero to indicate the tree's age should be estimated from its height.");
                 }
                 else if (ageInYears == 0)
                 {
@@ -210,21 +202,25 @@ namespace iLand.Tree
             ++this.Count;
         }
 
-        [MemberNotNull(nameof(TreeListSpatial.DbhDeltaInCm), nameof(TreeListSpatial.LightCellIndexXY), nameof(TreeListSpatial.LightStamp))]
-        private void Allocate(int capacity)
+        [MemberNotNull(nameof(TreeListSpatial.DbhDeltaInCm), nameof(TreeListSpatial.Flags), nameof(TreeListSpatial.LightCellIndexXY), nameof(TreeListSpatial.LightStamp))]
+        protected void Allocate(int capacity)
         {
             if (capacity == 0)
             {
                 this.DbhDeltaInCm = [];
+                this.Flags = [];
                 this.LightCellIndexXY = [];
                 this.LightStamp = [];
             }
             else
             {
                 this.DbhDeltaInCm = new float[capacity];
+                this.Flags = new TreeFlags[capacity];
                 this.LightCellIndexXY = new Point[capacity];
                 this.LightStamp = new LightStamp[capacity];
             }
+
+            // does not need to call base.Allocate(capacity) as that's done in base..ctor()
         }
 
         /** Main function of yearly tree growth.
@@ -385,8 +381,8 @@ namespace iLand.Tree
         private float GetRelativeHeightGrowth(int treeIndex) // C++: Tree::relative_height_growth()
         {
             (float hdRatioLow, float hdRatioHigh) = this.Species.GetHeightDiameterRatioLimits(this.DbhInCm[treeIndex]);
-            Debug.Assert(hdRatioLow < hdRatioHigh, this.Species.Name + " height-diameter ratio lower limit of " + hdRatioLow + " is less than the high limit of " + hdRatioHigh + " for DBH of " + this.DbhInCm[treeIndex] + " cm.");
-            Debug.Assert((hdRatioLow > 15.0F - 0.02F * this.DbhInCm[treeIndex]) && (hdRatioHigh <= 250.0F), this.Species.Name + " bounds on height-diameter ratio are unexpectedly low or high for DBH of " + this.DbhInCm[treeIndex] + " cm. Lower bound: " + hdRatioLow + ", high limit: " + hdRatioHigh);
+            Debug.Assert(hdRatioLow < hdRatioHigh, $"{this.Species.Name} height-diameter ratio lower limit of {hdRatioLow} is less than the high limit of {hdRatioHigh} for DBH of {this.DbhInCm[treeIndex]} cm.");
+            Debug.Assert((hdRatioLow > 15.0F - 0.02F * this.DbhInCm[treeIndex]) && (hdRatioHigh <= 250.0F), $"{this.Species.Name} bounds on height-diameter ratio are unexpectedly low or high for DBH of {this.DbhInCm[treeIndex]} cm. Lower bound: {hdRatioLow}, high limit: {hdRatioHigh}.");
 
             // scale according to LRI: if receiving much light (LRI=1), the result is hd_low (for open grown trees)
             // use the corrected LRI (see tracker#11)
@@ -465,31 +461,11 @@ namespace iLand.Tree
                 }
             }
 
-            //DBGMODE(
-            // do not calculate res_final twice if already done
-            // Debug.WriteLineIf((res_final == 0.0 ? MathF.Abs(mass_factor * (d_m + d_increment) * (d_m + d_increment) * (this.height[treeIndex] + d_increment * hd_growth) - ((stem_mass + net_stem_npp))) : res_final) > 1, Dump(),
-            //     "grow_diameter: final residual stem estimate > 1kg");
-            // Debug.WriteLineIf(d_increment > 10.0 || d_increment * hd_growth > 10.0, String.Format("d-increment {0} h-increment {1} ", d_increment, d_increment * hd_growth / 100.0) + Dump(),
-            //     "grow_diameter growth out of bound");
-
-            //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.TreeGrowth) && IsDebugging())
-            //{
-            //    List<object> outList = GlobalSettings.Instance.DebugList(ID, DebugOutputs.TreeGrowth);
-            //    DumpList(outList); // add tree headers
-            //    outList.AddRange(new object[] { net_stem_npp, stem_mass, hd_growth, factor_diameter, delta_d_estimate * 100, d_increment * 100 });
-            //}
-
             dbhIncrementInM = MathF.Max(dbhIncrementInM, 0.0F);
             // TODO: A 90 cm annual DBH increment is physically extremely unlikely but, as of August 2023, such increments are generated. This
             // assertion should therefore fire but that impedes debugging other issues. The previous limit was 10 cm, which is also quite unlikely.
-            Debug.Assert(dbhIncrementInM <= 0.90, String.Format("{0} diameter increment out of range: HD {1}, factor_diameter {2}, stem_residual {3}, delta_d_estimate {4}, d_increment {5}, final residual {6} kg.",
-                                                                this.Species.Name,
-                                                                hdRatioNewGrowth,
-                                                                factorDiameter,
-                                                                stemResidual,
-                                                                deltaDbhEstimate,
-                                                                dbhIncrementInM,
-                                                                massFactor * (this.DbhInCm[treeIndex] + dbhIncrementInM) * (this.DbhInCm[treeIndex] + dbhIncrementInM) * (this.HeightInM[treeIndex] + dbhIncrementInM * hdRatioNewGrowth) - stemMass + nppStem));
+            Debug.Assert(dbhIncrementInM <= 0.90, $"{this.Species.Name} diameter increment out of range: HD ratio {hdRatioNewGrowth}, factor_diameter {factorDiameter}, stem_residual {stemResidual}, ΔDBH estimate {deltaDbhEstimate}, DBH increment {dbhIncrementInM} m, final residual " +
+                                                  (massFactor * (this.DbhInCm[treeIndex] + dbhIncrementInM) * (this.DbhInCm[treeIndex] + dbhIncrementInM) * (this.HeightInM[treeIndex] + dbhIncrementInM * hdRatioNewGrowth) - stemMass + nppStem).ToString() + " kg.");
 
             // update state variables
             this.DbhInCm[treeIndex] += 100.0F * dbhIncrementInM; // convert from [m] to [cm]
@@ -519,9 +495,9 @@ namespace iLand.Tree
         }
 
         // death reasons
-        public bool IsCutDown(int treeIndex)
+        public bool IsCutAndDrop(int treeIndex)
         {
-            return (this.Flags[treeIndex] & TreeFlags.DeadCutAndDrop) == TreeFlags.DeadCutAndDrop;
+            return (this.Flags[treeIndex] & TreeFlags.DeadFromCutAndDrop) == TreeFlags.DeadFromCutAndDrop;
         }
 
         public bool IsDead(int treeIndex)
@@ -548,14 +524,13 @@ namespace iLand.Tree
 
         public bool IsHarvested(int treeIndex)
         {
-            return (this.Flags[treeIndex] & TreeFlags.Harvested) == TreeFlags.Harvested;
+            return (this.Flags[treeIndex] & TreeFlags.DeadFromHarvest) == TreeFlags.DeadFromHarvest;
         }
 
         // management flags (used by ABE management system)
-
-        public bool IsMarkedForCut(int treeIndex)
+        public bool IsMarkedForCutAndDrop(int treeIndex)
         {
-            return (this.Flags[treeIndex] & TreeFlags.MarkedForCut) == TreeFlags.MarkedForCut;
+            return (this.Flags[treeIndex] & TreeFlags.MarkedForCutAndDrop) == TreeFlags.MarkedForCutAndDrop;
         }
 
         public bool IsMarkedForHarvest(int treeIndex)
@@ -705,41 +680,19 @@ namespace iLand.Tree
                 //  (3) growth of diameter and height baseed on net stem increment
                 this.GrowHeightAndDiameter(model, treeIndex, growthData);
             }
-
-            //if (GlobalSettings.Instance.IsDebugEnabled(DebugOutputs.TreePartition) && IsDebugging())
-            //{
-            //    List<object> outList = GlobalSettings.Instance.DebugList(ID, DebugOutputs.TreePartition);
-            //    DumpList(outList); // add tree headers
-            //    outList.AddRange(new object[] { npp, apct_foliage, apct_wood, apct_root, delta_foliage, net_woody, delta_root, mNPPReserve, net_stem, d.StressIndex });
-            //}
-
-            //#if DEBUG
-            //if (StemMass < 0.0 || StemMass > 50000 || FoliageMass < 0.0 || FoliageMass > 2000.0 || CoarseRootMass < 0.0 || CoarseRootMass > 30000 || mNPPReserve > 4000.0)
-            //{
-            //    Debug.WriteLine("Tree:partitioning: invalid or unlikely pools.");
-            //    Debug.WriteLine(GlobalSettings.Instance.DebugListCaptions((DebugOutputs)0));
-            //    List<object> dbg = new List<object>();
-            //    DumpList(dbg);
-            //    Debug.WriteLine(dbg);
-            //}
-            //#endif
-            /*Debug.WriteLineIf(mId == 1 , "partitioning", "dump", dump()
-                     + String.Format("npp {0} npp_reserve %9 sen_fol {1} sen_stem {2} sen_root {3} net_fol {4} net_stem {5} net_root %7 to_reserve %8")
-                       .arg(npp, senescence_foliage, senescence_stem, senescence_root)
-                       .arg(net_foliage, net_stem, net_root, to_reserve, mNPPReserve) );*/
         }
 
         /** called if a tree dies
             @sa ResourceUnit::cleanTreeList(), remove() */
         public void MarkTreeAsDead(Model model, int treeIndex)
         {
-            this.SetOrClearFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
+            this.SetFlags(treeIndex, TreeFlags.Dead); // set flag that tree is dead
             this.ResourceUnit.Trees.OnTreeDied();
 
             ResourceUnitTreeSpecies ruSpecies = this.ResourceUnit.Trees.GetResourceUnitSpecies(this.Species);
             ruSpecies.StatisticsSnag.Add(this, treeIndex);
 
-            this.OnTreeRemoved(model, treeIndex, MortalityCause.Stress);
+            this.OnTreeDeath(model, treeIndex, MortalityCause.Stress);
 
             if (this.ResourceUnit.Snags != null)
             {
@@ -747,7 +700,7 @@ namespace iLand.Tree
             }
         }
 
-        private void OnTreeRemoved(Model model, int treeIndex, MortalityCause reason) // C++: Tree::notifyTreeRemoved()
+        private void OnTreeDeath(Model model, int treeIndex, MortalityCause mortalityCause) // C++: Tree::notifyTreeRemoved()
         {
             Debug.Assert(treeIndex < this.Count);
 
@@ -765,38 +718,37 @@ namespace iLand.Tree
             //}
 
             // tell disturbance modules that a tree died
-            model.Modules.OnTreeDeath(this, reason);
+            model.Modules.OnTreeDeath(this, mortalityCause);
 
             // update reason, if ABE handled the tree
-            if (reason == MortalityCause.Disturbance && this.IsHarvested(treeIndex))
+            if (mortalityCause == MortalityCause.Disturbance && this.IsHarvested(treeIndex))
             {
-                reason = MortalityCause.Salavaged;
+                mortalityCause = MortalityCause.Salavaged;
             }
-            if (this.IsCutDown(treeIndex))
+            if (this.IsCutAndDrop(treeIndex))
             {
-                reason = MortalityCause.CutDown;
+                mortalityCause = MortalityCause.CutAndDrop;
             }
             // create output for tree removals
             if (model.Output.TreeRemovedSql != null)
             {
-                model.Output.TreeRemovedSql.TryAddTree(model, this, treeIndex, reason);
+                model.Output.TreeRemovedSql.TryAddTree(model, this, treeIndex, mortalityCause);
             }
 
-            if (model.Output.LandscapeRemovedSql != null)
+            if (model.Output.LandscapeMortalitySql != null)
             {
-                model.Output.LandscapeRemovedSql.AddRemovedTree(this, treeIndex, reason);
+                model.Output.LandscapeMortalitySql.AddRemovedTree(this, treeIndex, mortalityCause);
             }
         }
 
         /// remove a tree (most likely due to harvest) from the system.
         public void Remove(Model model, int treeIndex, float removeFoliage = 0.0F, float removeBranch = 0.0F, float removeStem = 0.0F)
         {
-            this.SetOrClearFlag(treeIndex, TreeFlags.Dead, true); // set flag that tree is dead
-            this.SetFlags(treeIndex, TreeFlags.Harvested);
+            this.SetFlags(treeIndex, TreeFlags.Dead | TreeFlags.DeadFromHarvest); // set flag that tree is dead
             this.ResourceUnit.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.ResourceUnit.Trees.GetResourceUnitSpecies(this.Species);
             ruSpecies.StatisticsManagement.Add(this, treeIndex);
-            this.OnTreeRemoved(model, treeIndex, this.IsCutDown(treeIndex) ? MortalityCause.CutDown : MortalityCause.Harvest);
+            this.OnTreeDeath(model, treeIndex, this.IsCutAndDrop(treeIndex) ? MortalityCause.CutAndDrop : MortalityCause.Harvest);
 
             this.ResourceUnit.AddSprout(model, this, treeIndex, treeIsRemoved: false);
             if (this.ResourceUnit.Snags != null)
@@ -850,13 +802,13 @@ namespace iLand.Tree
         /// remove the tree due to an special event (disturbance)
         /// this is +- the same as die().
         // TODO: when would branch to snag fraction be greater than zero?
-        public void RemoveDisturbance(Model model, int treeIndex, float stemToSoilFraction, float stemToSnagFraction, float branchToSoilFraction, float branchToSnagFraction, float foliageToSoilFraction)
+        public void RemoveDisturbance(Model model, int treeIndex, TreeFlags deathReason, float stemToSoilFraction, float stemToSnagFraction, float branchToSoilFraction, float branchToSnagFraction, float foliageToSoilFraction)
         {
-            this.SetFlags(treeIndex, TreeFlags.Dead);
+            this.SetFlags(treeIndex, TreeFlags.Dead | deathReason);
             this.ResourceUnit.Trees.OnTreeDied();
             ResourceUnitTreeSpecies ruSpecies = this.ResourceUnit.Trees.GetResourceUnitSpecies(this.Species);
             ruSpecies.StatisticsSnag.Add(this, treeIndex);
-            this.OnTreeRemoved(model, treeIndex, MortalityCause.Disturbance);
+            this.OnTreeDeath(model, treeIndex, MortalityCause.Disturbance);
 
             this.ResourceUnit.AddSprout(model, this, treeIndex, treeIsRemoved: false);
             if (this.ResourceUnit.Snags != null)
@@ -891,42 +843,9 @@ namespace iLand.Tree
             this.SetFlags(treeIndex, TreeFlags.Debugging);
         }
 
-        public void SetOrClearCropCompetitor(int treeIndex, bool isCompetitor)
+        public void SetFlags(int treeIndex, TreeFlags flags) // C++ Tree::setFlag()
         {
-            this.SetOrClearFlag(treeIndex, TreeFlags.CropCompetitor, isCompetitor);
-        }
-
-        public void SetOrClearCropTree(int treeIndex, bool isCropTree)
-        {
-            this.SetOrClearFlag(treeIndex, TreeFlags.CropTree, isCropTree);
-        }
-
-        public void SetOrClearForCut(int treeIndex, bool isForCut)
-        {
-            this.SetOrClearFlag(treeIndex, TreeFlags.MarkedForCut, isForCut);
-        }
-
-        public void SetOrClearForHarvest(int treeIndex, bool isForHarvest)
-        {
-            this.SetOrClearFlag(treeIndex, TreeFlags.MarkedForHarvest, isForHarvest);
-        }
-
-        public void SetFlags(int treeIndex, TreeFlags flag)
-        {
-            this.Flags[treeIndex] |= flag;
-        }
-
-        /// set a Flag 'flag' to the value 'value'.
-        private void SetOrClearFlag(int treeIndex, TreeFlags flag, bool value)
-        {
-            if (value)
-            {
-                this.Flags[treeIndex] |= flag;
-            }
-            else
-            {
-                this.Flags[treeIndex] &= (TreeFlags)((int)flag ^ 0xffffff);
-            }
+            this.Flags[treeIndex] |= flags;
         }
 
         //#ifdef ALT_TREE_MORTALITY
@@ -969,7 +888,7 @@ namespace iLand.Tree
         //    _stress_threshold = dbh_inc_threshold;
         //    _stress_years = stress_years;
         //    _stress_death_prob = stress_mort_prob;
-        //    Debug.WriteLine("Alternative Mortality enabled: threshold" + dbh_inc_threshold + ", years:" + _stress_years + ", level:" + _stress_death_prob;
+        //    Debug.WriteLine($"Alternative Mortality enabled: threshold{dbh_inc_threshold}, years:{_stress_years}, level:{_stress_death_prob;
         //}
         //#endif
     }

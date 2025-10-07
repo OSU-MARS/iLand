@@ -31,7 +31,7 @@ namespace iLand.Input.Tree
                 this.Age = Int32.Parse(row[saplingHeader.Age], NumberStyles.Integer);
                 if (this.Age <= 0)
                 {
-                    throw new NotSupportedException("Sapling age (column 'age') for stand '" + StandID + "' is zero or negative. The minimum age is one year.");
+                    throw new NotSupportedException($"Sapling age (column 'age') for stand '{this.StandID}' is zero or negative. The minimum age is one year.");
                 }
             }
 
@@ -43,7 +43,7 @@ namespace iLand.Input.Tree
                 this.GrassCoverPercentage = Int32.Parse(row[saplingHeader.GrassCover], NumberStyles.Integer);
                 if ((this.GrassCoverPercentage < 0) || (this.GrassCoverPercentage > 100))
                 {
-                    throw new NotSupportedException("The grass cover percentage (column 'grass_cover') for stand '" + this.StandID + "' is '" + this.GrassCoverPercentage + "' is invalid.");
+                    throw new NotSupportedException($"The grass cover percentage (column 'grass_cover') for stand '{this.StandID}' is '{this.GrassCoverPercentage}' is invalid.");
                 }
             }
 

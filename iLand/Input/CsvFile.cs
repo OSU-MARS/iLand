@@ -27,14 +27,14 @@ namespace iLand.Input
             string? header = reader.ReadLine();
             if (String.IsNullOrWhiteSpace(header))
             {
-                throw new FileLoadException("File '" + filePath + "' is empty.");
+                throw new FileLoadException($"File '{filePath}' is empty.");
             }
             if (String.Equals(header, "<trees>", StringComparison.Ordinal))
             {
                 header = reader.ReadLine();
                 if (header == null)
                 {
-                    throw new NotSupportedException("Picus tree file '" + filePath + "' is empty.");
+                    throw new NotSupportedException($"Picus tree file '{filePath}' is empty.");
                 }
             }
 
@@ -62,7 +62,7 @@ namespace iLand.Input
             }
             else
             {
-                throw new NotSupportedException("Field separator for file '" + filePath + "' is not a comma, tab, semicolon, or space. Header line: " + header);
+                throw new NotSupportedException($"Field separator for file '{filePath}' is not a comma, tab, semicolon, or space. Header line: {header}");
             }
 
             // parse header

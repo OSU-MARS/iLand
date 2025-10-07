@@ -48,8 +48,9 @@ namespace iLand.Test
             this.ObservedTreesPerHectareByYear.Add(resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreesPerHa);
 
             float stemVolume = 0.0F;
-            foreach (TreeListSpatial treesOfSpecies in resourceUnit.Trees.TreesBySpeciesID.Values)
+            for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
             {
+                TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                 for (int treeIndex = 0; treeIndex < treesOfSpecies.Count; ++treeIndex)
                 {
                     Assert.IsTrue(treesOfSpecies.IsDead(treeIndex) == false);
@@ -97,9 +98,9 @@ namespace iLand.Test
                 float recordedVolume = actualTrajectory.LiveStemVolumeByYear[simulationYear];
                 float relativeVolumeError = MathF.Abs(1.0F - observedStemVolume / expectedStemVolume);
 
-                Assert.IsTrue(relativeGppError < this.GppTolerance, "Expected GPP of {0:0.000} kg/m² in simulation year {1} but the GPP recorded was {2:0.000} kg/m², a {3:0.0%} difference.", expectedGpp, simulationYear, observedGpp, relativeGppError);
-                Assert.IsTrue(relativeNppError < this.NppTolerance, "Expected NPP of {0:0.000} kg/ha in simulation year {1} but the NPP recorded was {2:0.000} kg/ha, a {3:0.0%} difference.", expectedNpp, simulationYear, observedNpp, relativeNppError);
-                Assert.IsTrue(relativeVolumeError < this.StemVolumeTolerance, "Expected stem volume of {0:0.000} m³ in simulation year {1} but the stem volume recorded was {2:0.000} m³, a {3:0.0%} difference.", expectedStemVolume, simulationYear, observedStemVolume, relativeVolumeError);
+                Assert.IsTrue(relativeGppError < this.GppTolerance, $"Expected GPP of {expectedGpp:0.000} kg/m² in simulation year {simulationYear} but the GPP recorded was {observedGpp:0.000} kg/m², a {relativeGppError:0.0%} difference.");
+                Assert.IsTrue(relativeNppError < this.NppTolerance, $"Expected NPP of {expectedNpp:0.000} kg/ha in simulation year {simulationYear} but the NPP recorded was {observedNpp:0.000} kg/ha, a {relativeNppError:0.0%} difference.");
+                Assert.IsTrue(relativeVolumeError < this.StemVolumeTolerance, $"Expected stem volume of {expectedStemVolume:0.000} m³ in simulation year {simulationYear} but the stem volume recorded was {observedStemVolume:0.000} m³, a {relativeVolumeError:0.0%} difference.");
                 Assert.IsTrue(observedNpp == recordedNpp);
                 Assert.IsTrue(MathF.Abs(observedStemVolume - recordedVolume) < 0.001F);
 

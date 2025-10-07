@@ -144,7 +144,7 @@ namespace iLand.Input.ProjectFile
                         this.OnAfterWind = reader.ReadElementContentAsString().Trim();
                         break;
                     default:
-                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                        throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
                 }
             }
         }

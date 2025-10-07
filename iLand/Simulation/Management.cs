@@ -68,7 +68,7 @@ namespace iLand.Simulation
                 livingTrees.Add(new(allTreeEnumerator.CurrentTrees, allTreeEnumerator.CurrentTreeIndex));
             }
             int treesToKill = livingTrees.Count - treesToRetain;
-            // Debug.WriteLine(livingTrees + " standing, targetsize " + treesToRetain + ", hence " + treesToKill + " trees to remove");
+            // Debug.WriteLine($"{livingTrees} standing, targetsize {treesToRetain}, hence {treesToKill} trees to remove");
             RandomGenerator random = model.RandomGenerator.Value!;
             for (int treesKilled = 0; treesKilled < treesToKill; treesKilled++)
             {
@@ -114,8 +114,7 @@ namespace iLand.Simulation
                 TreeListSpatial trees = liveTreesOfSpecies.Trees;
                 foreach (int treeIndex in liveTreesOfSpecies.LiveTreeIndices)
                 {
-                    trees.RemoveDisturbance(model, treeIndex, stemToSnagFraction, stemToSoilFraction, branchToSoilFraction, branchToSnagFraction, foliageToSoilFraction: 1.0F);
-                    trees.SetFlags(treeIndex, deathReason);
+                    trees.RemoveDisturbance(model, treeIndex, deathReason, stemToSnagFraction, stemToSoilFraction, branchToSoilFraction, branchToSnagFraction, foliageToSoilFraction: 1.0F);
                     if (isFire && (trees.Species.SeedDispersal != null))
                     {
                         if (trees.Species.IsTreeSerotinousRandom(model.RandomGenerator.Value!, trees.AgeInYears[treeIndex]))
@@ -131,15 +130,16 @@ namespace iLand.Simulation
             return treeCount;
         }
 
-        public int Kill(Model model, string filter, float fraction)
-        {
-            return this.RemoveTrees(model, filter, fraction, false);
-        }
+        // currently out of codebase as C++ APIs mangle tree status flags and mortality coding
+        //public int Kill(Model model, string filter, float fraction)
+        //{
+        //    return this.RemoveTrees(model, filter, fraction, false);
+        //}
 
-        public int Manage(Model model, string filter, float fraction)
-        {
-            return this.RemoveTrees(model, filter, fraction, true);
-        }
+        //public int Manage(Model model, string filter, float fraction)
+        //{
+        //    return this.RemoveTrees(model, filter, fraction, true);
+        //}
 
         public void CutAndDropAllTreesInStand(Model model)
         {
@@ -148,7 +148,7 @@ namespace iLand.Simulation
                 TreeListSpatial trees = liveTreesOfSpecies.Trees;
                 foreach (int liveTreeIndex in liveTreesOfSpecies.LiveTreeIndices)
                 {
-                    trees.SetFlags(liveTreeIndex, TreeFlags.DeadCutAndDrop); // set flag that tree is cut down
+                    trees.SetFlags(liveTreeIndex, TreeFlags.DeadFromCutAndDrop); // set flag that tree is cut down
                     trees.MarkTreeAsDead(model, liveTreeIndex);
                 }
             }
@@ -171,7 +171,7 @@ namespace iLand.Simulation
         //        return 0;
         //    }
 
-        //    Debug.WriteLine("attempting to remove " + maxTreesToKill + " trees between indices " + allTreeIndexFrom + " and " + allTreeIndexTo);
+        //    Debug.WriteLine($"attempting to remove {maxTreesToKill} trees between indices {allTreeIndexFrom} and {allTreeIndexTo}.");
         //    int treesKilled = 0;
         //    if (allTreeIndexTo - allTreeIndexFrom <= maxTreesToKill)
         //    {
@@ -256,48 +256,49 @@ namespace iLand.Simulation
         //    return treesKilled;
         //}
 
+        // currently out of codebase as C++ APIs mangle tree status flags and mortality coding
         /** remove trees from a list and reduce the list.
           */
-        private int RemoveTrees(Model model, string treeSelectionExpressionString, float removalProbabilityIfSelected, bool management)
-        {
-            TreeVariableAccessor treeWrapper = new(model.SimulationState);
-            Expression selectionExpression = new(treeSelectionExpressionString, treeWrapper);
-            selectionExpression.EnableIncrementalSum();
+        //private int RemoveTrees(Model model, string treeSelectionExpressionString, float removalProbabilityIfSelected, bool management)
+        //{
+        //    TreeVariableAccessor treeWrapper = new(model.SimulationState);
+        //    Expression<TreeVariableAccessor> selectionExpression = new(treeSelectionExpressionString, treeWrapper);
+        //    selectionExpression.EnableIncrementalSum();
 
-            RandomGenerator random = model.RandomGenerator.Value!;
-            int treesRemoved = 0;
-            for (int speciesIndex = 0; speciesIndex < treesInMostRecentlyLoadedStand.Count; ++speciesIndex)
-            {
-                TreeListSpatial treesOfSpecies = treesInMostRecentlyLoadedStand[speciesIndex].Trees;
-                treeWrapper.Trees = treesOfSpecies;
-                // if expression evaluates to true and if random number below threshold...
-                List<int> treeIndices = treesInMostRecentlyLoadedStand[speciesIndex].LiveTreeIndices;
-                for (int removalIndex = 0; removalIndex < treeIndices.Count; ++removalIndex)
-                {
-                    int treeIndex = treeIndices[removalIndex];
-                    treeWrapper.TreeIndex = treeIndex;
-                    if (selectionExpression.Evaluate(treeWrapper) != 0.0 && random.GetRandomProbability() <= removalProbabilityIfSelected)
-                    {
-                        if (management)
-                        {
-                            treesOfSpecies.Remove(model, treeIndex, removalFractionFoliage, removalFractionBranch, removalFractionStem);
-                        }
-                        else
-                        {
-                            treesOfSpecies.Remove(model, treeIndex);
-                        }
+        //    RandomGenerator random = model.RandomGenerator.Value!;
+        //    int treesRemoved = 0;
+        //    for (int speciesIndex = 0; speciesIndex < treesInMostRecentlyLoadedStand.Count; ++speciesIndex)
+        //    {
+        //        TreeListSpatial treesOfSpecies = treesInMostRecentlyLoadedStand[speciesIndex].Trees;
+        //        treeWrapper.Trees = treesOfSpecies;
+        //        // if expression evaluates to true and if random number below threshold...
+        //        List<int> treeIndices = treesInMostRecentlyLoadedStand[speciesIndex].LiveTreeIndices;
+        //        for (int removalIndex = 0; removalIndex < treeIndices.Count; ++removalIndex)
+        //        {
+        //            int treeIndex = treeIndices[removalIndex];
+        //            treeWrapper.TreeIndex = treeIndex;
+        //            if (selectionExpression.Evaluate() != 0.0 && random.GetRandomProbability() <= removalProbabilityIfSelected)
+        //            {
+        //                if (management)
+        //                {
+        //                    treesOfSpecies.Remove(model, treeIndex, removalFractionFoliage, removalFractionBranch, removalFractionStem);
+        //                }
+        //                else
+        //                {
+        //                    treesOfSpecies.Remove(model, treeIndex);
+        //                }
 
-                        // remove from tree list
-                        treeIndices.RemoveAt(removalIndex);
-                        --removalIndex;
-                        ++treesRemoved;
-                    }
-                }
-            }
+        //                // remove from tree list
+        //                treeIndices.RemoveAt(removalIndex);
+        //                --removalIndex;
+        //                ++treesRemoved;
+        //            }
+        //        }
+        //    }
 
-            // TODO: why doesn't this compact dead trees as other removal methods do?
-            return treesRemoved;
-        }
+        //    // TODO: why doesn't this compact dead trees as other removal methods do, particularly when the method comments say it does?
+        //    return treesRemoved;
+        //}
 
         // calculate aggregates for all trees in the internal list
         //private float AggregateFunction(GlobalSettings globalSettings, string expression, string filter, string type)
@@ -385,7 +386,7 @@ namespace iLand.Simulation
         public int Filter(Model model, string filter)
         {
             TreeVariableAccessor treeWrapper = new(model.SimulationState);
-            Expression filterExpression = new(filter, treeWrapper);
+            Expression<TreeVariableAccessor> filterExpression = new(filter, treeWrapper);
             filterExpression.EnableIncrementalSum();
 
             RandomGenerator random = model.RandomGenerator.Value!;
@@ -396,7 +397,7 @@ namespace iLand.Simulation
                 for (int standTreeIndex = 0; standTreeIndex < standTreeIndices.Count; ++standTreeIndex)
                 {
                     treeWrapper.TreeIndex = standTreeIndices[standTreeIndex];
-                    float value = filterExpression.Evaluate(treeWrapper);
+                    float value = filterExpression.Evaluate();
                     // keep if expression returns true (1)
                     bool keep = value == 1.0F;
                     // if value is >0 (i.e. not "false"), then draw a random number
@@ -423,7 +424,7 @@ namespace iLand.Simulation
             }
 
             // int totalTreesInStand = mTreesInMostRecentlyLoadedStand.Count;
-            // Debug.WriteLine("filtering with " + filter + " N=" + totalTreesInStand + "/" + mTreesInMostRecentlyLoadedStand.Count + " trees (before/after filtering).");
+            // Debug.WriteLine($"filtering with {filter} N={totalTreesInStand + "/{mTreesInMostRecentlyLoadedStand.Count + " trees (before/after filtering).");
             return this.treesInMostRecentlyLoadedStand.Count;
         }
 
@@ -465,7 +466,7 @@ namespace iLand.Simulation
         //    {
         //        Expression expr = new(filter, tw);
         //        expr.EnableIncrementalSum();
-        //        Debug.WriteLine("filtering with " + filter);
+        //        Debug.WriteLine("filtering with {filter);
         //        for (Tree t = at.MoveNextLiving(); t != null; t = at.MoveNextLiving())
         //        {
         //            tw.Tree = t;
@@ -483,7 +484,7 @@ namespace iLand.Simulation
             RectangleF boundingBox = standGrid.GetBoundingBox(standID);
             GridWindowEnumerator<float> lightGridRunner = new(model.Landscape.LightGrid, boundingBox);
 
-            Expression? filter = null;
+            Expression<SaplingVariableAccessor>? filter = null;
             SaplingVariableAccessor? saplingVariableAccessor = null;
             if (String.IsNullOrWhiteSpace(filterExpression) == false)
             {
@@ -532,7 +533,7 @@ namespace iLand.Simulation
             ResourceUnit ru = model.Landscape.ResourceUnits[ruIndex];
             if (ru.SaplingCells == null)
             {
-                throw new InvalidOperationException("Resource unit " + ru.ID + " does not have saplings.");
+                throw new InvalidOperationException($"Resource unit {ru.ID} does not have saplings.");
             }
 
             for (int saplingCellIndex = 0; saplingCellIndex < ru.SaplingCells.Length; ++saplingCellIndex)
@@ -575,7 +576,7 @@ namespace iLand.Simulation
                 resourceUnit.Soil?.RemoveBiomassFractions(downWoodFraction * areaFactor, litterFraction * areaFactor, soilFraction * areaFactor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
-            //Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));
+            //Debug.WriteLine($"total area {totalArea} of {standGrid.GetArea(key));
         }
 
         /** slash snags (SWD and otherWood-Pools) of polygon \p key on the map \p wrap.
@@ -604,7 +605,7 @@ namespace iLand.Simulation
                 resourceUnit.Snags.TransferStandingWoodToSoil(slashFraction * areaFactor);
                 // Debug.WriteLine(ru.index() + area_factor;
             }
-            // Debug.WriteLine("total area " + totalArea + " of " + standGrid.GetArea(key));
+            // Debug.WriteLine($"total area {totalArea} of {standGrid.GetArea(key));
         }
 
         /** loadFromMap selects trees located on pixels with value 'key' within the grid 'map_grid'.

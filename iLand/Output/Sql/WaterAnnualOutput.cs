@@ -13,7 +13,7 @@ namespace iLand.Output.Sql
 {
     public class WaterAnnualOutput : AnnualOutput
     {
-        private readonly Expression resourceUnitFilter; // condition for resource-unit-level output
+        private readonly Expression<ResourceUnitVariableAccessor> resourceUnitFilter; // condition for resource-unit-level output
         private readonly Expression yearFilter; // condition for landscape-level output
 
         public WaterAnnualOutput()

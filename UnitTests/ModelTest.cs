@@ -149,7 +149,7 @@ namespace iLand.Test
 
                 string resourceUnitFeatherPath = elliott.Project.GetFilePath(ProjectDirectory.Gis, "resource units unbuffered 4 km weather.feather");
                 ResourceUnitReaderFeather resourceUnitFeatherReader = new(resourceUnitFeatherPath, defaultEnvironment);
-                Assert.IsTrue(resourceUnitFeatherReader.Count == availableResourceUnits, "Expected " + availableResourceUnits + " resource units but read " + resourceUnitFeatherReader.Count + ".");
+                Assert.IsTrue(resourceUnitFeatherReader.Count == availableResourceUnits, $"Expected {availableResourceUnits} resource units but read {resourceUnitFeatherReader.Count}.");
 
                 // check monthly CO₂ .csv read
                 string co2csvFilePath = elliott.Project.GetFilePath(ProjectDirectory.Database, "co2 ssp370.csv");
@@ -477,7 +477,7 @@ namespace iLand.Test
                 //ru.Variables.CumNep;
                 //ru.Variables.Nep;
                 Assert.IsTrue((resourceUnit.WaterCycle.CanopyConductance > 0.001F) && (resourceUnit.WaterCycle.CanopyConductance < 0.1F), "Water cycle: canopy conductance"); // initially zero
-                Assert.IsTrue((resourceUnit.WaterCycle.FieldCapacityInMM > 300.0F) && (resourceUnit.WaterCycle.FieldCapacityInMM < 1000.0F), "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacityInMM + " mm.");
+                Assert.IsTrue((resourceUnit.WaterCycle.FieldCapacityInMM > 300.0F) && (resourceUnit.WaterCycle.FieldCapacityInMM < 1000.0F), $"Soil: field capacity is {resourceUnit.WaterCycle.FieldCapacityInMM} mm.");
                 Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.Time.MonthsInYear, "Water cycle: water potential length");
                 // Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
                 // Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= 10.0F), "Water cycle: snow days");
@@ -486,7 +486,7 @@ namespace iLand.Test
                 for (int weatherTimestepIndex = 0; weatherTimestepIndex < waterPotentialByTimestep.Length; ++weatherTimestepIndex)
                 {
                     float psi = waterPotentialByTimestep[weatherTimestepIndex];
-                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential of " + psi + " kPa at timestep " + weatherTimestepIndex + ".");
+                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), $"Water cycle: water potential of {psi} kPa at timestep {weatherTimestepIndex}.");
                 }
 
                 float[] evapotranspirationInMMByMonth = resourceUnit.WaterCycle.EvapotranspirationInMMByMonth;
@@ -499,9 +499,9 @@ namespace iLand.Test
                     float runoffInMM = runoffInMMByMonth[monthIndex];
 
                     int month = monthIndex + 1;
-                    Assert.IsTrue((evapotranspirationInMM > 1.0F) && (evapotranspirationInMM < 25.0F), "Soil: resource unit " + resourceUnit.ID + "'s evapotranspiration is " + evapotranspirationInMM + " mm in month " + month + ".");
-                    Assert.IsTrue((infiltrationInMM >= 0.0F) && (infiltrationInMM < 800.0F), "Water cycle: resource unit " + resourceUnit.ID + "'s infiltration is " + infiltrationInMM + " mm in month " + month + ".");
-                    Assert.IsTrue((runoffInMM >= 0.0F) && (runoffInMM < 800.0F), "Water cycle: resource unit " + resourceUnit.ID + "'s runoff is " + runoffInMM + " mm in month " + month + ".");
+                    Assert.IsTrue((evapotranspirationInMM > 1.0F) && (evapotranspirationInMM < 25.0F), $"Soil: resource unit {resourceUnit.ID}'s evapotranspiration is {evapotranspirationInMM} mm in month {month}.");
+                    Assert.IsTrue((infiltrationInMM >= 0.0F) && (infiltrationInMM < 800.0F), $"Water cycle: resource unit {resourceUnit.ID}'s infiltration is {infiltrationInMM} mm in month {month}.");
+                    Assert.IsTrue((runoffInMM >= 0.0F) && (runoffInMM < 800.0F), $"Water cycle: resource unit {resourceUnit.ID}'s runoff is {runoffInMM} mm in month {month}.");
                 }
             }
 
@@ -536,7 +536,7 @@ namespace iLand.Test
                 Assert.IsTrue((weather.Sun.LastDayLongerThan10_5Hours > 0) && (weather.Sun.LastDayLongerThan10_5Hours < 365));
                 Assert.IsTrue((weather.Sun.LastDayLongerThan14_5Hours > 0) && (weather.Sun.LastDayLongerThan14_5Hours < 365));
                 Assert.IsTrue(weather.Sun.LongestDayIndex == 172);
-                Assert.IsTrue(weather.Sun.IsNorthernHemisphere, "Sun.IsNorthernHemisphere = " + weather.Sun.IsNorthernHemisphere + ".");
+                Assert.IsTrue(weather.Sun.IsNorthernHemisphere, $"Sun.IsNorthernHemisphere = {weather.Sun.IsNorthernHemisphere}.");
                 // climate.TemperatureMonth;
                 Assert.IsTrue((weather.TotalAnnualRadiation > 3000.0) && (weather.TotalAnnualRadiation < 9000.0));
             }
@@ -595,7 +595,7 @@ namespace iLand.Test
                 Assert.IsTrue(resourceUnit.AreaInLandscapeInM2 == Constant.Grid.ResourceUnitAreaInM2);
                 if (afterTimestep)
                 {
-                    Assert.IsTrue((resourceUnit.AreaWithTreesInM2 > 0.0F) && (resourceUnit.AreaWithTreesInM2 <= Constant.Grid.ResourceUnitAreaInM2), "Expected resource unit " + resourceUnit.ID + " to have 100-10,000 m² of tree cover rather than " + resourceUnit.AreaWithTreesInM2 + " m².");
+                    Assert.IsTrue((resourceUnit.AreaWithTreesInM2 > 0.0F) && (resourceUnit.AreaWithTreesInM2 <= Constant.Grid.ResourceUnitAreaInM2), $"Expected resource unit {resourceUnit.ID} to have 100-10,000 m² of tree cover rather than {resourceUnit.AreaWithTreesInM2} m².");
                 }
                 else
                 {
@@ -643,17 +643,17 @@ namespace iLand.Test
                 Assert.IsTrue((resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor > 0.0F) && (resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor < 1.0F));
                 if (afterTimestep)
                 {
-                    Assert.IsTrue((resourceUnit.Trees.AverageLightRelativeIntensity > 0.0F) && (resourceUnit.Trees.AverageLightRelativeIntensity <= 1.0F), "Resource unit " + resourceUnit.ID + " has average relative light intensity is " + resourceUnit.Trees.AverageLightRelativeIntensity + ".");
-                    Assert.IsTrue((resourceUnit.Trees.PhotosyntheticallyActiveArea > 0.0F) && (resourceUnit.Trees.PhotosyntheticallyActiveArea <= Constant.Grid.ResourceUnitAreaInM2), "Resource unit " + resourceUnit.ID + " has a photosynthetically active area of " + resourceUnit.Trees.PhotosyntheticallyActiveArea + " m².");
-                    Assert.IsTrue((resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea > 0.0F) && (resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea <= 1.0F), "Resource unit " + resourceUnit.ID + " has a photosyntheticaly active area to leaf area ratio of " + resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea + ".");
-                    Assert.IsTrue((resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa > 0.0F) && (resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHaAboveground > 0.0F), "Resource unit " + resourceUnit.ID + " has an NPP of " + resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa + " kg/ha and an aboveground NPP of " + resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHaAboveground + " kg/ha.");
-                    Assert.IsTrue((resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageHeightInM > 0.0F) && (resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageDbhInCm > 0.0F), "Resource unit " + resourceUnit.ID + " has an average tree height of " + resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageHeightInM + " m and DBH of " + resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageDbhInCm + " cm.");
+                    Assert.IsTrue((resourceUnit.Trees.AverageLightRelativeIntensity > 0.0F) && (resourceUnit.Trees.AverageLightRelativeIntensity <= 1.0F), $"Resource unit {resourceUnit.ID} has average relative light intensity is {resourceUnit.Trees.AverageLightRelativeIntensity}.");
+                    Assert.IsTrue((resourceUnit.Trees.PhotosyntheticallyActiveArea > 0.0F) && (resourceUnit.Trees.PhotosyntheticallyActiveArea <= Constant.Grid.ResourceUnitAreaInM2), $"Resource unit {resourceUnit.ID} has a photosynthetically active area of {resourceUnit.Trees.PhotosyntheticallyActiveArea} m².");
+                    Assert.IsTrue((resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea > 0.0F) && (resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea <= 1.0F), $"Resource unit {resourceUnit.ID} has a photosyntheticaly active area to leaf area ratio of {resourceUnit.Trees.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea}.");
+                    Assert.IsTrue((resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa > 0.0F) && (resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHaAboveground > 0.0F), $"Resource unit {resourceUnit.ID} has an NPP of {resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHa} kg/ha and an aboveground NPP of {resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.TreeNppPerHaAboveground} kg/ha.");
+                    Assert.IsTrue((resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageHeightInM > 0.0F) && (resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageDbhInCm > 0.0F), $"Resource unit {resourceUnit.ID} has an average tree height of {resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageHeightInM} m and DBH of {resourceUnit.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.AverageDbhInCm} cm.");
                     
                     for (int speciesIndex = 0; speciesIndex < resourceUnit.Trees.TreesBySpeciesID.Count; ++speciesIndex)
                     {
                         TreeListSpatial treesOfSpecies = resourceUnit.Trees.TreesBySpeciesID.Values[speciesIndex];
                         ResourceUnitTreeSpecies species = resourceUnit.Trees.SpeciesAvailableOnResourceUnit[speciesIndex];
-                        Assert.IsTrue((treesOfSpecies.Count == 0) || (species.TreeGrowth.AnnualGpp >= 0.0F), treesOfSpecies.Count + " " + treesOfSpecies.Species.Name + " is present on resource unit " + resourceUnit.ID + " but their GPP is " + species.TreeGrowth.AnnualGpp + ".");
+                        Assert.IsTrue((treesOfSpecies.Count == 0) || (species.TreeGrowth.AnnualGpp >= 0.0F), $"{treesOfSpecies.Count} {treesOfSpecies.Species.Name} is present on resource unit {resourceUnit.ID} but their GPP is {species.TreeGrowth.AnnualGpp}.");
                     }
                 }
                 else
@@ -665,7 +665,7 @@ namespace iLand.Test
                 Assert.IsTrue((resourceUnit.Trees.TotalLeafArea > 0.0F) && (resourceUnit.Trees.TotalLeafArea < 20.0F * Constant.Grid.ResourceUnitAreaInM2));
 
                 //Assert.IsTrue(ru.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
-                //Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity), "Water cycle: current water content of " + ru.WaterCycle.CurrentSoilWaterContent + " mm is negative or greater than the field capacity of " + ru.WaterCycle.FieldCapacity + " mm.");
+                //Assert.IsTrue((ru.WaterCycle.CurrentSoilWaterContent >= 0.0) && (ru.WaterCycle.CurrentSoilWaterContent <= ru.WaterCycle.FieldCapacity), $"Water cycle: current water content of {ru.WaterCycle.CurrentSoilWaterContent} mm is negative or greater than the field capacity of {ru.WaterCycle.FieldCapacity} mm.");
                 //Assert.IsTrue(MathF.Abs(ru.WaterCycle.FieldCapacity - 29.2064552F) < 0.001F, "Soil: field capacity");
                 //Assert.IsTrue(ru.WaterCycle.SoilWaterPotentialByDay.Length == Constant.Time.DaysInLeapYear, "Water cycle: water potential length");
                 //foreach (float psi in ru.WaterCycle.SoilWaterPotentialByDay)
@@ -703,8 +703,8 @@ namespace iLand.Test
             averageDiameterGrowth /= treesObserved;
             averageHeightGrowth /= treesObserved;
 
-            Assert.IsTrue(averageDiameterGrowth > MathF.Max(0.2F - 0.01F * simulationYear, 0.0F), "Average diameter growth is " + averageDiameterGrowth + " cm.");
-            Assert.IsTrue(averageHeightGrowth > MathF.Max(0.2F - 0.01F * simulationYear, 0.0F), "Average height growth is " + averageHeightGrowth + " m.");
+            Assert.IsTrue(averageDiameterGrowth > MathF.Max(0.2F - 0.01F * simulationYear, 0.0F), $"Average diameter growth is {averageDiameterGrowth} cm.");
+            Assert.IsTrue(averageHeightGrowth > MathF.Max(0.2F - 0.01F * simulationYear, 0.0F), $"Average height growth is {averageHeightGrowth} m.");
 
             // trees on resource units
             int minimumTreeCount = 30 - 6 - 2 * simulationYear; // TODO: wide tolerance required due to stochastic mortality
@@ -712,7 +712,7 @@ namespace iLand.Test
             {
                 ResourceUnit resourceUnit = resourceUnits[resourceUnitIndex];
                 int resourceUnitTreeSpeciesCount = resourceUnit.Trees.TreesBySpeciesID.Count;
-                Assert.IsTrue(resourceUnitTreeSpeciesCount >= minimumTreeCount, "Expected " + minimumTreeCount + " trees but got " + resourceUnitTreeSpeciesCount + ".");
+                Assert.IsTrue(resourceUnitTreeSpeciesCount >= minimumTreeCount, $"Expected {minimumTreeCount} trees but got {resourceUnitTreeSpeciesCount}.");
                 Assert.IsTrue(resourceUnit.Trees.TreesBySpeciesID.Count >= minimumTreeCount);
                 Assert.IsTrue(startOfYearTrees.DiameterInCmByTreeID.Count >= minimumTreeCount);
                 Assert.IsTrue(startOfYearTrees.HeightInMByTreeID.Count >= minimumTreeCount);
@@ -734,7 +734,7 @@ namespace iLand.Test
                         Assert.IsTrue((treesOfSpecies.FoliageMassInKg[treeIndex] > 0.0F) && (treesOfSpecies.FoliageMassInKg[treeIndex] < 1000.0F));
                         Assert.IsTrue(treesOfSpecies.GetBranchBiomass(treeIndex) > 0.0F);
                         Assert.IsTrue(treesOfSpecies.GetCrownRadius(treeIndex) > 0.0F);
-                        Assert.IsTrue(treesOfSpecies.IsCutDown(treeIndex) == false);
+                        Assert.IsTrue(treesOfSpecies.IsCutAndDrop(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsDead(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsDeadBarkBeetle(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsDeadFire(treeIndex) == false);
@@ -742,7 +742,7 @@ namespace iLand.Test
                         Assert.IsTrue(treesOfSpecies.IsHarvested(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsCropCompetitor(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsCropTree(treeIndex) == false);
-                        Assert.IsTrue(treesOfSpecies.IsMarkedForCut(treeIndex) == false);
+                        Assert.IsTrue(treesOfSpecies.IsMarkedForCutAndDrop(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.IsMarkedForHarvest(treeIndex) == false);
                         Assert.IsTrue(treesOfSpecies.GetStemVolume(treeIndex) > 0.0F);
                         Assert.IsTrue((treesOfSpecies.HeightInM[treeIndex] > 0.0F) && (treesOfSpecies.HeightInM[treeIndex] < 100.0F));
@@ -760,8 +760,8 @@ namespace iLand.Test
                         Assert.IsTrue((treesOfSpecies.StressIndex[treeIndex] >= 0.0) && (treesOfSpecies.CoarseRootMassInKg[treeIndex] < 1E6));
                     }
 
-                    Assert.IsTrue(treesOfSpecies.Capacity == 4, "Expected tree capacity for species " + treesOfSpecies.Species.WorldFloraID + " is four trees but " + treesOfSpecies.Capacity + " trees' capacity was allocated.");
-                    Assert.IsTrue(treesOfSpecies.Count == (treesOfSpecies.Species.WorldFloraID == WorldFloraID.PseudotsugaMenziesii ? 2 : 1), "Expected one or two living trees of species '" + treesOfSpecies.Species.WorldFloraID + "'.");
+                    Assert.IsTrue(treesOfSpecies.Capacity == 4, $"Expected tree capacity for species {treesOfSpecies.Species.WorldFloraID} is four trees but {treesOfSpecies.Capacity} trees' capacity was allocated.");
+                    Assert.IsTrue(treesOfSpecies.Count == (treesOfSpecies.Species.WorldFloraID == WorldFloraID.PseudotsugaMenziesii ? 2 : 1), $"Expected one or two living trees of species '{treesOfSpecies.Species.WorldFloraID}'.");
                 }
             }
         }
@@ -797,10 +797,10 @@ namespace iLand.Test
             Point minLightIndexXY = lightGrid.GetCellXYIndex(minLightIndex);
             Point maxLightIndexXY = lightGrid.GetCellXYIndex(maxLightIndex);
 
-            Assert.IsTrue(lightGrid.CellCount == lightGrid.CellsX * lightGrid.CellsY, "Light grid dimensions " + lightGrid.CellsX + " x " + lightGrid.CellsY + " do not match cell count of " + lightGrid.CellCount + ".");
-            Assert.IsTrue((minLight >= 0.0F) && (minLight < 1.0F), "Minimum value of light grid is " + minLight + " at grid index " + minLightIndex + " (x = " + minLightIndexXY.X + ", y = " + minLightIndexXY.Y + ").");
-            Assert.IsTrue((meanLight > minLight) && (meanLight < maxLight), "Mean value of light grid is " + meanLight + ", which does not fall between the minimum and maximum values of " + minLight + " and " + maxLight + ".");
-            Assert.IsTrue(maxLight == 1.0F, "Maximum value of light grid is " + maxLight + " at light grid index " + maxLightIndex + " (x = " + maxLightIndexXY.X + ", y = " + maxLightIndexXY.Y + ").");
+            Assert.IsTrue(lightGrid.CellCount == lightGrid.CellsX * lightGrid.CellsY, $"Light grid dimensions {lightGrid.CellsX} x {lightGrid.CellsY} do not match cell count of {lightGrid.CellCount}.");
+            Assert.IsTrue((minLight >= 0.0F) && (minLight < 1.0F), $"Minimum value of light grid is {minLight} at grid index {minLightIndex} (x = {minLightIndexXY.X}, y = {minLightIndexXY.Y}).");
+            Assert.IsTrue((meanLight > minLight) && (meanLight < maxLight), $"Mean value of light grid is {meanLight}, which does not fall between the minimum and maximum values of {minLight} and {maxLight}.");
+            Assert.IsTrue(maxLight == 1.0F, $"Maximum value of light grid is {maxLight} at light grid index {maxLightIndex} (x = {maxLightIndexXY.X}, y = {maxLightIndexXY.Y}).");
 
             // height grid
             Grid<float> heightGrid = landscape.VegetationHeightGrid;
@@ -831,10 +831,10 @@ namespace iLand.Test
             Point minHeightIndexXY = heightGrid.GetCellXYIndex(minHeightIndex);
             Point maxHeightIndexXY = heightGrid.GetCellXYIndex(maxHeightIndex);
 
-            Assert.IsTrue(heightGrid.CellCount == heightGrid.CellsX * heightGrid.CellsY, "Height grid dimensions " + heightGrid.CellsX + " x " + heightGrid.CellsY + " do not match cell count of " + heightGrid.CellCount + ".");
-            Assert.IsTrue(minHeight >= Constant.RegenerationLayerHeight, "Minimum value of height grid is " + minHeight + " at grid index " + minHeightIndex + " (x = " + minHeightIndexXY.X + ", y = " + minHeightIndexXY.Y + ").");
-            Assert.IsTrue((meanHeight > minHeight) && (meanHeight < maxHeight), "Mean value of height grid is " + meanHeight + ", which does not fall between the minimum and maximum values of " + minHeight + " and " + maxHeight + ".");
-            Assert.IsTrue(maxHeight < maxExpectedHeight, "Maximum value of height grid is " + maxHeight + " at height grid index " + maxHeightIndex + " (x = " + maxHeightIndexXY.X + ", y = " + maxHeightIndexXY.Y + ").");
+            Assert.IsTrue(heightGrid.CellCount == heightGrid.CellsX * heightGrid.CellsY, $"Height grid dimensions {heightGrid.CellsX} x {heightGrid.CellsY} do not match cell count of {heightGrid.CellCount}.");
+            Assert.IsTrue(minHeight >= Constant.RegenerationLayerHeight, $"Minimum value of height grid is {minHeight} at grid index {minHeightIndex} (x = {minHeightIndexXY.X}, y = {minHeightIndexXY.Y}).");
+            Assert.IsTrue((meanHeight > minHeight) && (meanHeight < maxHeight), $"Mean value of height grid is {meanHeight}, which does not fall between the minimum and maximum values of {minHeight} and {maxHeight}.");
+            Assert.IsTrue(maxHeight < maxExpectedHeight, $"Maximum value of height grid is {maxHeight} at height grid index {maxHeightIndex} (x = {maxHeightIndexXY.X}, y = {maxHeightIndexXY.Y}).");
         }
 
         private static void VerifyMalcolmKnappModel(Model model)
@@ -898,7 +898,7 @@ namespace iLand.Test
                 //ru.Variables.CumNep;
                 //ru.Variables.Nep;
                 Assert.IsTrue(resourceUnit.WaterCycle.CanopyConductance == 0.0F, "Water cycle: canopy conductance"); // initially zero
-                Assert.IsTrue(MathF.Abs(resourceUnit.WaterCycle.FieldCapacityInMM - 502.969F) < 0.001F, "Soil: field capacity is " + resourceUnit.WaterCycle.FieldCapacityInMM + " mm.");
+                Assert.IsTrue(MathF.Abs(resourceUnit.WaterCycle.FieldCapacityInMM - 502.969F) < 0.001F, $"Soil: field capacity is {resourceUnit.WaterCycle.FieldCapacityInMM} mm.");
                 Assert.IsTrue(resourceUnit.WaterCycle.SoilWaterPotentialByWeatherTimestepInYear.Length == Constant.Time.DaysInLeapYear, "Water cycle: water potential length");
                 // Assert.IsTrue((resourceUnit.WaterCycle.SnowDayRadiation >= 0.0F) && (resourceUnit.WaterCycle.SnowDayRadiation < 5000.0F), "Water cycle: snow radiation"); // TODO: link to snow days?
                 // Assert.IsTrue((resourceUnit.WaterCycle.SnowDays >= 0.0F) && (resourceUnit.WaterCycle.SnowDays <= Constant.Time.DaysInLeapYear), "Water cycle: snow days");
@@ -907,7 +907,7 @@ namespace iLand.Test
                 for (int weatherTimestepIndex = 0; weatherTimestepIndex < waterPotentialByTimestep.Length; ++weatherTimestepIndex)
                 {
                     float psi = waterPotentialByTimestep[weatherTimestepIndex];
-                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), "Water cycle: water potential of " + psi + " kPa at timestep " + weatherTimestepIndex + ".");
+                    Assert.IsTrue((psi <= 0.0F) && (psi > -6000.0F), $"Water cycle: water potential of {psi} kPa at timestep {weatherTimestepIndex}.");
                 }
 
                 float[] evapotranspirationInMMByMonth = resourceUnit.WaterCycle.EvapotranspirationInMMByMonth;
@@ -920,9 +920,9 @@ namespace iLand.Test
                     float runoffInMM = runoffInMMByMonth[monthIndex];
 
                     int month = monthIndex + 1;
-                    Assert.IsTrue(evapotranspirationInMM == 0.0F, "Soil: initial evapotranspiration is " + evapotranspirationInMM + " mm in month " + month + ".");
-                    Assert.IsTrue(infiltrationInMM == 0.0F, "Water cycle: initial infiltration is " + infiltrationInMM + " mm in month " + month + ".");
-                    Assert.IsTrue(runoffInMM == 0.0F, "Water cycle: initial runoff is " + runoffInMM  + " mm in month " + month + "."); // zero at initialization
+                    Assert.IsTrue(evapotranspirationInMM == 0.0F, $"Soil: initial evapotranspiration is {evapotranspirationInMM} mm in month {month}.");
+                    Assert.IsTrue(infiltrationInMM == 0.0F, $"Water cycle: initial infiltration is {infiltrationInMM} mm in month {month}.");
+                    Assert.IsTrue(runoffInMM == 0.0F, $"Water cycle: initial runoff is {runoffInMM } mm in month {month}."); // zero at initialization
                 }
             }
 
@@ -957,7 +957,7 @@ namespace iLand.Test
                 Assert.IsTrue((weather.Sun.LastDayLongerThan10_5Hours > 0) && (weather.Sun.LastDayLongerThan10_5Hours < 365));
                 Assert.IsTrue((weather.Sun.LastDayLongerThan14_5Hours > 0) && (weather.Sun.LastDayLongerThan14_5Hours < 365));
                 Assert.IsTrue(weather.Sun.LongestDayIndex == 172);
-                Assert.IsTrue(weather.Sun.IsNorthernHemisphere, "Sun.IsNorthernHemisphere = " + weather.Sun.IsNorthernHemisphere + ".");
+                Assert.IsTrue(weather.Sun.IsNorthernHemisphere, $"Sun.IsNorthernHemisphere = {weather.Sun.IsNorthernHemisphere}.");
                 // climate.TemperatureMonth;
                 Assert.IsTrue((weather.TotalAnnualRadiation > 4000.0) && (weather.TotalAnnualRadiation < 5000.0));
             }

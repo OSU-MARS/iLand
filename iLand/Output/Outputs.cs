@@ -30,7 +30,7 @@ namespace iLand.Output
         private readonly ResourceUnitToStandStatisticsConverter[] standStatisticsByPartition;
         private readonly SortedList<UInt32, StandLiveTreeAndSaplingStatistics> standStatisticsForCurrentYear;
 
-        public LandscapeRemovedAnnualOutput? LandscapeRemovedSql { get; private init; }
+        public LandscapeMortalityAnnualOutput? LandscapeMortalitySql { get; private init; }
         public ResourceUnitTrajectory[] ResourceUnitTrajectories { get; private init; } // in same order as Landscape.ResourceUnits, array for simplicity of multithreaded population
         public SortedList<UInt32, StandTrajectory> StandTrajectoriesByID { get; private init; }
         public TreeRemovedAnnualOutput? TreeRemovedSql { get; private init; }
@@ -46,7 +46,7 @@ namespace iLand.Output
             this.standStatisticsByPartition = [];
             this.standStatisticsForCurrentYear = [];
 
-            this.LandscapeRemovedSql = null;
+            this.LandscapeMortalitySql = null;
             this.ResourceUnitTrajectories = [];
             this.StandTrajectoriesByID = [];
             this.TreeRemovedSql = null;
@@ -141,10 +141,10 @@ namespace iLand.Output
             {
                 this.sqlOutputs.Add(new LandscapeTreeSpeciesAnnualOutput());
             }
-            if (sqlOutputSettings.LandscapeRemoved.Enabled)
+            if (sqlOutputSettings.LandscapeMortality.Enabled)
             {
-                this.LandscapeRemovedSql = new LandscapeRemovedAnnualOutput();
-                this.sqlOutputs.Add(this.LandscapeRemovedSql);
+                this.LandscapeMortalitySql = new LandscapeMortalityAnnualOutput();
+                this.sqlOutputs.Add(this.LandscapeMortalitySql);
             }
             if (sqlOutputSettings.ThreePG.Enabled)
             {
@@ -243,14 +243,14 @@ namespace iLand.Output
             {
                 string? coordinateSystem = model.Project.Model.Settings.CoordinateSystem;
                 Debug.Assert(coordinateSystem != null); // should be guaranteed by project deserialization
-                string heightGridFilePath = model.Project.GetFilePath(ProjectDirectory.Output, "height grid " + model.SimulationState.CurrentCalendarYear + ".tif");
+                string heightGridFilePath = model.Project.GetFilePath(ProjectDirectory.Output, $"height grid {model.SimulationState.CurrentCalendarYear}.tif");
                 model.Landscape.VegetationHeightGrid.ExportToGeoTiff(heightGridFilePath, coordinateSystem, model.Landscape.ProjectOriginInGisCoordinates);
             }
             if (model.Project.Output.Logging.LightGrid.Enabled)
             {
                 string? coordinateSystem = model.Project.Model.Settings.CoordinateSystem;
                 Debug.Assert(coordinateSystem != null); // should be guaranteed by project deserialization
-                string lightGridFilePath = model.Project.GetFilePath(ProjectDirectory.Output, "light grid " + model.SimulationState.CurrentCalendarYear + ".tif");
+                string lightGridFilePath = model.Project.GetFilePath(ProjectDirectory.Output, $"light grid {model.SimulationState.CurrentCalendarYear}.tif");
                 model.Landscape.LightGrid.ExportToGeoTiff(lightGridFilePath, coordinateSystem, model.Landscape.ProjectOriginInGisCoordinates);
             }
 

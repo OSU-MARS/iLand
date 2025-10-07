@@ -242,7 +242,7 @@ namespace iLand.Input
 
         public string GetCentroidKey()
         {
-            return (int)this.GisCenterX + "_" + (int)this.GisCenterY;
+            return $"{(int)this.GisCenterX}_{(int)this.GisCenterY}";
         }
     }
 }

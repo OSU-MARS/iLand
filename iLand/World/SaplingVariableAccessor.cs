@@ -27,7 +27,7 @@ namespace iLand.World
         }
 
         public SaplingVariableAccessor(SimulationState simulationState)
-            : base(simulationState, null)
+            : base(simulationState)
         {
             this.resourceUnit = null;
             this.sapling = null;
@@ -66,9 +66,9 @@ namespace iLand.World
             }
         }
 
-        public void SetSapling(Sapling sapling, ResourceUnit ru) // C++: SaplingWrapper::setSaplingTree()
+        public void SetSapling(Sapling sapling, ResourceUnit resourceUnit) // C++: SaplingWrapper::setSaplingTree()
         {
-            this.resourceUnit = ru;
+            this.resourceUnit = resourceUnit;
             this.sapling = sapling;
         }
     }

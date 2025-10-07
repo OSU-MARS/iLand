@@ -53,7 +53,7 @@ namespace iLand.Input.Weather
                 if ((totalSnowInMM < 0.0F) || (totalSnowInMM > totalPrecipitationInMM))
                 {
                     DateTime date = new(this.Year[monthIndex], this.Month[monthIndex], 1);
-                    throw new NotSupportedException("Total monthly snowfall of " + totalSnowInMM + " mm in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is NaN, negative, or exceeds the total monthly precipitation of " + totalPrecipitationInMM + " mm (time series chunk index " + monthIndex + ").");
+                    throw new NotSupportedException($"Total monthly snowfall of {totalSnowInMM} mm in {date.ToString("MMM yyyy", CultureInfo.CurrentUICulture)} is NaN, negative, or exceeds the total monthly precipitation of {totalPrecipitationInMM} mm (time series chunk index {monthIndex}).");
                 }
             }
         }

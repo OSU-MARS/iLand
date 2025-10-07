@@ -1,4 +1,5 @@
-﻿using iLand.Input;
+﻿// C++/core/model.cpp
+using iLand.Input;
 using iLand.Input.ProjectFile;
 using iLand.Input.Tree;
 using iLand.Input.Weather;
@@ -40,11 +41,11 @@ namespace iLand.World
             float worldBufferWidth = project.World.Geometry.BufferWidthInM;
             if ((worldBufferWidth < Constant.Grid.HeightCellSizeInM) || (worldBufferWidth % Constant.Grid.HeightCellSizeInM != 0))
             {
-                throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + project.World.Geometry.BufferWidthInM + " m is not a positive, integer multiple of the height grid's cell size (" + Constant.Grid.HeightCellSizeInM + " m).");
+                throw new NotSupportedException($"World buffer width (/project/model/world/geometry/bufferWidth) of {project.World.Geometry.BufferWidthInM} m is not a positive, integer multiple of the height grid's cell size ({Constant.Grid.HeightCellSizeInM} m).");
             }
             if (project.Model.Settings.RegenerationEnabled && (worldBufferWidth % Constant.Grid.SeedmapCellSizeInM != 0))
             {
-                throw new NotSupportedException("World buffer width (/project/model/world/geometry/bufferWidth) of " + project.World.Geometry.BufferWidthInM + " m is not a positive, integer multiple of the seed grid's cell size (" + Constant.Grid.SeedmapCellSizeInM + " m). Either change the buffer width to an exact multiple or disable regeneration.");
+                throw new NotSupportedException($"World buffer width (/project/model/world/geometry/bufferWidth) of {project.World.Geometry.BufferWidthInM} m is not a positive, integer multiple of the seed grid's cell size ({Constant.Grid.SeedmapCellSizeInM} m). Either change the buffer width to an exact multiple or disable regeneration.");
             }
 
             // if available, read monthly weather data in parallel with resource unit setup
@@ -56,7 +57,7 @@ namespace iLand.World
                 Constant.File.CsvExtension => () => new WeatherReaderMonthlyCsv(weatherFilePath, project.World.Weather.StartYear),
                 Constant.File.FeatherExtension => () => new WeatherReaderMonthlyFeather(weatherFilePath, project.World.Weather.StartYear),
                 Constant.File.SqliteExtension => null,
-                _ => throw new NotSupportedException("Unhandled weather file extension '" + weatherFileExtension + "'.")
+                _ => throw new NotSupportedException($"Unhandled weather file extension '{weatherFileExtension}'.")
             };
 
             Task<WeatherReaderMonthly>? readMonthlyWeather = readMonthlyWeatherFromFile != null ? Task.Run(readMonthlyWeatherFromFile) : null;
@@ -68,7 +69,7 @@ namespace iLand.World
             {
                 Constant.File.CsvExtension => new CO2ReaderMonthlyCsv(co2filePath, Constant.Data.DefaultMonthlyAllocationIncrement),
                 Constant.File.FeatherExtension => new CO2ReaderMonthlyFeather(co2filePath, Constant.Data.DefaultMonthlyAllocationIncrement),
-                _ => throw new NotSupportedException("Unhandled CO₂ file extension '" + co2fileExtension + "'.")
+                _ => throw new NotSupportedException($"Unhandled CO₂ file extension '{co2fileExtension}'.")
             };
 
             this.CO2ByMonth = monthlyCO2reader.TimeSeries;
@@ -122,7 +123,7 @@ namespace iLand.World
                 // for now, assume .csv and .feather weather is monthly and all weather tables in SQLite databases are daily
                 Constant.File.CsvExtension => new ResourceUnitReaderCsv(resourceUnitFilePath, defaultEnvironment),
                 Constant.File.FeatherExtension => new ResourceUnitReaderFeather(resourceUnitFilePath, defaultEnvironment),
-                _ => throw new NotSupportedException("Unhandled resource unit environment file extension '" + resourceUnitExtension + "'.")
+                _ => throw new NotSupportedException($"Unhandled resource unit environment file extension '{resourceUnitExtension}'.")
             };
             RectangleF resourceUnitGisExtent = resourceUnitReader.GetBoundingBox();
             this.ProjectOriginInGisCoordinates = new(resourceUnitGisExtent.X - worldBufferWidth, resourceUnitGisExtent.Y - worldBufferWidth);
@@ -167,7 +168,7 @@ namespace iLand.World
                     }
                     else if (this.WeatherFirstCalendarYear != firstCalendarYearInWeatherTimeSeries)
                     {
-                        throw new NotSupportedException("Weather time series '" + weatherID + "' begins in calendar year " + firstCalendarYearInWeatherTimeSeries + ", which does not match other weather time series beginning in " + this.WeatherFirstCalendarYear + ".");
+                        throw new NotSupportedException($"Weather time series '{weatherID}' begins in calendar year {firstCalendarYearInWeatherTimeSeries}, which does not match other weather time series beginning in {this.WeatherFirstCalendarYear}.");
                     }
                 }
                 if (this.SpeciesSetsByTableName.TryGetValue(environment.SpeciesTableName, out TreeSpeciesSet? treeSpeciesSet) == false)
@@ -287,7 +288,7 @@ namespace iLand.World
                 if (sqlException.SqliteErrorCode == (int)SqliteErrorCode.NotFound)
                 {
                     // SqliteException lacks an inner exception constructor
-                    throw new ArgumentOutOfRangeException("'" + databaseFilePath + "' is not a valid database file path. Do both the path to the database and the database file exist?", sqlException);
+                    throw new ArgumentOutOfRangeException($"'{databaseFilePath}' is not a valid database file path. Do both the path to the database and the database file exist?", sqlException);
                 }
                 else
                 {
@@ -323,7 +324,7 @@ namespace iLand.World
             ResourceUnit? resourceUnit = this.ResourceUnitGrid[resourceUnitIndexXY.X, resourceUnitIndexXY.Y];
             if (resourceUnit == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(projectCoordinate), "No resource unit is present at project coordinate x = " + projectCoordinate.X + ", y = " + projectCoordinate.Y + " m.");
+                throw new ArgumentOutOfRangeException(nameof(projectCoordinate), $"No resource unit is present at project coordinate x = {projectCoordinate.X}, y = {projectCoordinate.Y} m.");
             }
             return resourceUnit;
         }
@@ -382,7 +383,7 @@ namespace iLand.World
             {
                 // if (projectFile.Output.Logging.LogLevel >= EventLevel.Informational)
                 // {
-                //     Trace.TraceInformation("Stand " + standID + " not in project area. No initialization performed.");
+                //     Trace.TraceInformation($"Stand {standID} not in project area. No initialization performed.");
                 // }
                 return;
             }
@@ -482,7 +483,7 @@ namespace iLand.World
                 {
                     if ((grassCoverPercentage != -1) && (grassCoverPercentage != grassCoverPercentageInStand))
                     {
-                        throw new NotSupportedException("The grass cover percentage (" + grassCoverPercentageInStand + "%) for stand '" + standID + "' differs from the cover percentage in the sapling file's earlier rows for the stand.");
+                        throw new NotSupportedException($"The grass cover percentage ({grassCoverPercentageInStand}%) for stand '{standID}' differs from the cover percentage in the sapling file's earlier rows for the stand.");
                     }
                     else
                     {

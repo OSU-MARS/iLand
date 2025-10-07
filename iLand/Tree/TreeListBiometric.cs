@@ -5,6 +5,16 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace iLand.Tree
 {
+    /// <summary>
+    /// A tree is the basic simulation entity of iLand and represents a single tree.
+    /// </summary>
+    /// <remarks>
+    /// Trees in iLand are designed to be light weight, thus the list of stored properties is limited. Basic properties are dimensions
+    /// (dbh, height), biomass pools (stem, leaves, roots), the reserve NPP pool. Additionally, the location and species are stored.
+    /// A tree has a height of at least <see cref="Constant.RegenerationLayerHeight"/> m; unless specifically initialized as trees below 
+    /// this threshold, saplings are tracked in the regeneration layer (see <see cref="Sapling"/>). Trees are stored in vectors at the 
+    /// resource unit level.
+    /// </remarks>
     public class TreeListBiometric : TreeList
     {
         public float[] LeafAreaInM2 { get; private set; } // leaf area (m²) of the tree
@@ -77,6 +87,8 @@ namespace iLand.Tree
                 this.StemMassInKg = new float[capacity];
                 this.StressIndex = new float[capacity];
             }
+
+            // does not need to call base.Allocate(capacity) as that's done in base..ctor()
         }
 
         // TODO: remove
@@ -85,7 +97,7 @@ namespace iLand.Tree
             return this.Species.GetBiomassBranch(this.DbhInCm[treeIndex]);
         }
 
-        /// volume (m3) of stem volume based on geometry and density calculated on the fly.
+        /// volume (m³) of stem volume based on geometry and density calculated on the fly.
         /// The volume is parameterized as standing tree volume including bark (but not branches). E.g. Pollanschuetz-volume.
         public float GetStemVolume(int treeIndex) // C++: volume()
         {

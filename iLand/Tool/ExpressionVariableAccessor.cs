@@ -6,16 +6,16 @@ using System.Collections.ObjectModel;
 
 namespace iLand.Tool
 {
-    /** base class for objects whose numerical properties can be accessed within Expressions
-      Derived from ExpressionWrapper are wrappers for e.g. Trees or ResourceUnits.
-      They must provide a getVariablesList() and a value() function.
-      */
-    // base class for exposing C# elements to the built-in Expression engine. See TreeWrapper for an example.
-    public abstract class ExpressionVariableAccessor
+    /// <summary>
+    /// Base class for objects whose numerical properties can be accessed within Expressions.
+    /// </summary>
+    /// <remarks>
+    /// Derived from <see cref="ExpressionVariableAccessor"/> are wrappers for e.g. Trees or ResourceUnits. They must provide a getVariablesList() and a value() function.
+    /// </remarks>
+    public abstract class ExpressionVariableAccessor // C++ ExpressionWrapper
     {
         protected static readonly ReadOnlyCollection<string> BaseVariableNames;
 
-        public RandomGenerator? RandomGenerator { get; private init; }
         public SimulationState? SimulationState { get; private init; }
 
         static ExpressionVariableAccessor()
@@ -23,9 +23,8 @@ namespace iLand.Tool
             ExpressionVariableAccessor.BaseVariableNames = new List<string>() { "year" }.AsReadOnly();
         }
 
-        protected ExpressionVariableAccessor(SimulationState? simulationState, RandomGenerator? randomGenerator)
+        protected ExpressionVariableAccessor(SimulationState? simulationState)
         {
-            this.RandomGenerator = randomGenerator;
             this.SimulationState = simulationState;
         }
 
@@ -42,7 +41,7 @@ namespace iLand.Tool
                 return this.SimulationState.CurrentCalendarYear;
             }
 
-            throw new NotSupportedException("Unhandled variable index " + variableIndex + ".");
+            throw new NotSupportedException($"Unhandled variable index {variableIndex}.");
         }
 
         public int GetVariableIndex(string variableName)

@@ -2,13 +2,11 @@
 using iLand.Extensions;
 using iLand.Simulation;
 using iLand.World;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
@@ -113,11 +111,11 @@ namespace iLand.Tree
             this.AverageLeafAreaWeightedAgingFactor = this.TotalLeafArea > 0.0F ? this.AverageLeafAreaWeightedAgingFactor / this.TotalLeafArea : 0.0F; // calculate aging value (calls to addAverageAging() by individual trees)
             // if (this.AverageLeafAreaWeightedAgingFactor < 0.00001F)
             // {
-            //     Debug.WriteLine("RU-index " + this.ru.ResourceUnitGridIndex + " average aging < 0.00001. Suspiciously low.");
+            //     Debug.WriteLine($"RU-index {this.ru.ResourceUnitGridIndex} average aging < 0.00001. Suspiciously low.");
             // }
             if ((this.AverageLeafAreaWeightedAgingFactor < 0.0F) || (this.AverageLeafAreaWeightedAgingFactor > 1.0F))
             {
-                throw new ArithmeticException("Average aging invalid: RU-index " + this.resourceUnit.ResourceUnitGridIndex + ", LAI " + this.LiveTreeAndSaplingStatisticsForAllSpecies.LeafAreaIndex);
+                throw new ArithmeticException($"Average aging invalid: RU-index {this.resourceUnit.ResourceUnitGridIndex}, LAI {this.LiveTreeAndSaplingStatisticsForAllSpecies.LeafAreaIndex}.");
             }
         }
 
@@ -837,7 +835,7 @@ namespace iLand.Tree
             this.PhotosyntheticallyActiveAreaPerLightWeightedLeafArea = this.PhotosyntheticallyActiveArea / this.AggregatedLightWeightedLeafArea;
             //if (GlobalSettings.Instance.LogDebug())
             //{
-            //    Debug.WriteLine("RU: aggregated lightresponse: " + mAggregatedLR + " eff.area./wla: " + mEffectiveArea_perWLA);
+            //    Debug.WriteLine($"RU: aggregated lightresponse: {mAggregatedLR} eff.area./wla: {mEffectiveArea_perWLA);
             //}
         }
 
@@ -987,7 +985,7 @@ namespace iLand.Tree
                         lightResourceIndex = treesOfSpecies.Species.SpeciesSet.GetLriCorrection(lightResourceIndex, relativeHeight);
                     }
 
-                    Debug.Assert((lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F), "Light resource index for tree " + treesOfSpecies.TreeID[treeIndex] + " is " + lightResourceIndex + "."); // sanity upper bound
+                    Debug.Assert((lightResourceIndex >= 0.0F) && (lightResourceIndex < 50.0F), $"Light resource index for tree {treesOfSpecies.TreeID[treeIndex]} is {lightResourceIndex}."); // sanity upper bound
                     if (lightResourceIndex > 1.0F)
                     {
                         lightResourceIndex = 1.0F;
@@ -1081,7 +1079,7 @@ namespace iLand.Tree
                     {
                         lightResourceIndex = 1.0F; // TODO: why clamp?
                     }
-                    // Debug.WriteLine("Tree #"<< id() + "value" + sum + "Impact" + mImpact;
+                    // Debug.WriteLine($"Tree #"<< id()}value{sum}Impact{mImpact;
                     treesOfSpecies.LightResourceIndex[treeIndex] = lightResourceIndex;
 
                     // Finally, add LRI of this Tree to the ResourceUnit!
@@ -1189,11 +1187,11 @@ namespace iLand.Tree
                         if ((treesOfSpecies.Capacity > 100) && (((float)treesOfSpecies.Count / (float)treesOfSpecies.Capacity) < 0.2F))
                         {
                             // int target_size = 2*mTrees.Count;
-                            // Debug.WriteLine("reduce size from " + mTrees.Capacity + " to " + target_size);
+                            // Debug.WriteLine($"reduce size from {mTrees.Capacity} to {target_size);
                             // mTrees.reserve(qMax(target_size, 100));
                             // if (GlobalSettings.Instance.LogDebug())
                             // {
-                            //     Debug.WriteLine("reduce tree storage of RU " + Index + " from " + Trees.Capacity + " to " + Trees.Count);
+                            //     Debug.WriteLine($"reduce tree storage of RU {Index + " from {Trees.Capacity + " to {Trees.Count);
                             // }
 
                             int simdCompatibleTreeCapacity = Simd128.RoundUpToWidth32(treesOfSpecies.Count);

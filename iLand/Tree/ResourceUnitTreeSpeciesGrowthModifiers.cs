@@ -84,7 +84,7 @@ namespace iLand.Tree
             }
             else
             {
-                throw new NotSupportedException("Unhandled weather series timestep " + weatherTimeSeries.Timestep + ".");
+                throw new NotSupportedException($"Unhandled weather series timestep {weatherTimeSeries.Timestep}.");
             }
 
             // checks
@@ -131,7 +131,7 @@ namespace iLand.Tree
                     // calculate utilizable radiation, Eq. 4, https://iland-model.org/primary+production
                     float utilizableRadiation = dailyWeatherSeries.SolarRadiationTotal[weatherDayIndex] * minimumResponse;
 
-                    Debug.Assert((minimumResponse >= 0.0F) && (minimumResponse < 1.000001F), "Minimum of VPD (" + vpdResponse + "), temperature (" + temperatureResponse + "), and soil water (" + soilWaterResponse + ") responses is not in [0, 1].");
+                    Debug.Assert((minimumResponse >= 0.0F) && (minimumResponse < 1.000001F), $"Minimum of VPD ({vpdResponse}), temperature ({temperatureResponse}), and soil water ({soilWaterResponse}) responses is not in [0, 1].");
                     Debug.Assert((utilizableRadiation >= 0.0F) && (utilizableRadiation < 100.0F)); // sanity upper bound
                     this.UtilizableRadiationByMonth[monthOfYearIndex] += utilizableRadiation;
                 }
@@ -178,7 +178,7 @@ namespace iLand.Tree
                 float leafOnFraction = leafPhenology.LeafOnFractionByMonth[monthOfYearIndex];
                 float utilizableRadiation = monthlyTimeSeries.SolarRadiationTotal[weatherMonthIndex] * leafOnFraction * minimumResponse;
 
-                Debug.Assert((minimumResponse >= 0.0F) && (minimumResponse < 1.000001F), "Minimum of VPD (" + vpdResponse + "), temperature (" + temperatureModifier + "), and soil water (" + soilWaterModifier + ") responses is not in [0, 1].");
+                Debug.Assert((minimumResponse >= 0.0F) && (minimumResponse < 1.000001F), $"Minimum of VPD ({vpdResponse}), temperature ({temperatureModifier}), and soil water ({soilWaterModifier}) responses is not in [0, 1].");
                 Debug.Assert((utilizableRadiation >= 0.0F) && (utilizableRadiation < 500.0F)); // sanity upper bound
                 this.UtilizableRadiationByMonth[monthOfYearIndex] += utilizableRadiation;
 

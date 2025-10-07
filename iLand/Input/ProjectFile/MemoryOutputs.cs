@@ -26,7 +26,7 @@ namespace iLand.Input.ProjectFile
 						this.StandTrajectories.ReadXml(reader);
 						break;
 					default:
-						throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+						throw new XmlException($"Encountered unexpected attributes on element '{reader.Name}'.");
 				}
 			}
 			else
@@ -43,7 +43,7 @@ namespace iLand.Input.ProjectFile
 						this.ResourceUnits.ReadXml(reader);
 						break;
 					default:
-						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+						throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
 				}
 			}
 		}

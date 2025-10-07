@@ -1,11 +1,19 @@
-﻿namespace iLand.Tree
+﻿using System;
+
+namespace iLand.Tree
 {
-    public enum MortalityCause 
+    // duplicate with TreeFlags but retained for now as allows packing from UInt16 to UInt8
+    [Flags]
+    public enum MortalityCause : byte
     { 
-        Stress = 0, 
-        Harvest = 1, 
-        Disturbance = 2, 
-        Salavaged = 3, 
-        CutDown = 5 
+        None = 0x00,
+        Stress = 0x01, 
+        Harvest = 0x02,
+        Disturbance = 0x04, // unspecified disturbance: could be fire, beetles, wind, other biotic disturbance, or something else
+        BarkBeetles = 0x08,
+        Fire = 0x10,
+        Wind = 0x20,
+        Salavaged = 0x40, // trees harvested after disturbance
+        CutAndDrop = 0x80
     }
 }

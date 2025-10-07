@@ -112,7 +112,7 @@ namespace iLand.World
             this.CurrentSoilWaterInMM = this.FieldCapacityInMM;
             //if (model.Files.LogDebug())
             //{
-            //    Debug.WriteLine("setup of water: Psi_sat (kPa) " + mPsi_sat + " Theta_sat " + mTheta_sat + " coeff. b " + mPsi_koeff_b);
+            //    Debug.WriteLine($"setup of water: Psi_sat (kPa) {mPsi_sat} Theta_sat {mTheta_sat} coeff. b {mPsi_koeff_b);
             //}
 
             this.Canopy.BroadleafStorageInMM = project.Model.Ecosystem.InterceptionStorageBroadleafInMM;
@@ -244,7 +244,7 @@ namespace iLand.World
 
             if (this.resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor > 1.0F || this.resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor < 0.0F || soilAtmosphereModifier < 0.0F || soilAtmosphereModifier > 1.0F)
             {
-                throw new NotSupportedException("Average aging or soil atmosphere modifier invalid. Aging: " + resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor + ", soil-atmosphere response " + soilAtmosphereModifier + ", total LAI factor: " + totalLaiFactor + ".");
+                throw new NotSupportedException($"Average aging or soil atmosphere modifier invalid. Aging: {resourceUnit.Trees.AverageLeafAreaWeightedAgingFactor}, soil-atmosphere response {soilAtmosphereModifier}, total LAI factor: {totalLaiFactor}.");
             }
             return soilAtmosphereModifier;
         }
@@ -270,7 +270,7 @@ namespace iLand.World
         {
             if (this.SoilWaterRetention == null)
             {
-                throw new NotSupportedException(nameof(this.Setup) + "() must be called before calling " + nameof(this.RunYear) + "().");
+                throw new NotSupportedException($"{nameof(this.Setup)}() must be called before calling {nameof(this.RunYear)}().");
             }
 
             // preparations (once a year)

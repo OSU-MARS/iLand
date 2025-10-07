@@ -37,7 +37,7 @@ namespace iLand.Input.Weather
             string? weatherTableQueryFilter = null;
             if (this.startYear != Constant.NoDataInt32)
             {
-                weatherTableQueryFilter = "where year >= " + this.startYear;
+                weatherTableQueryFilter = $"where year >= {this.startYear}";
             }
             if (this.nextYearToLoad > 0)
             {
@@ -49,7 +49,7 @@ namespace iLand.Input.Weather
                 // this.mCurrentDataYear = this.mNextYearToLoad;
                 throw new NotImplementedException("Tracking of years loaded is not currently implemented. Consider specifying a larger weather load size as a workaround.");
             }
-            string queryString = "select year,month,day,min_temp,max_temp,prec,rad,vpd from '" + this.weatherTableName + "' " + weatherTableQueryFilter + " order by year, month, day";
+            string queryString = $"select year,month,day,min_temp,max_temp,prec,rad,vpd from '{this.weatherTableName}' {weatherTableQueryFilter} order by year, month, day";
 
             // capture previous moving average, if available
             float previousMeanDaytimeTemperatureMA1 = Single.NaN;
@@ -87,23 +87,22 @@ namespace iLand.Input.Weather
                 //        precipitationMultiplier = Single.Parse(precipitationMultiplierAsString, CultureInfo.InvariantCulture);
                 //    }
 
-                //    if (temperatureAddition != 0.0 || precipitationMultiplier != 1.0)
+                //    if ((temperatureAddition != 0.0F) || (precipitationMultiplier != 1.0F))
                 //    {
-                //        Debug.WriteLine("Weather modification: temperature change " + temperatureAddition + "C. Precipitation multiplier: " + precipitationMultiplier);
+                //        Debug.WriteLine($"Weather modification: temperature change {temperatureAddition} C. Precipitation multiplier: {precipitationMultiplier}.");
                 //        if (mDoRandomSampling)
                 //        {
                 //            Trace.TraceWarning("Weather: using a randomSamplingList and a temperature shift or precipitation multiplier at the same time. The same offset is applied for *every instance* of a year!!");
-                //            //throw new NotSupportedException("Weather: cannot use a randomSamplingList and temperatureShift/precipitationShift at the same time. Sorry.");
                 //        }
                 //    }
                 //}
-
+                
                 for (int daysLoaded = 0; queryHasDaysAvailable = weatherReader.Read(); ++dayIndex) // mStore.begin();
                 {
                     ++daysLoaded;
                     if (daysLoaded > Constant.Time.DaysInLeapYear)
                     {
-                        throw new NotSupportedException("Error in reading daily weather file: attempt to read more than " + Constant.Time.DaysInLeapYear + " days in year.");
+                        throw new NotSupportedException("Error in reading daily weather file: attempt to read more than {Constant.Time.DaysInLeapYear} days in year.");
                     }
 
                     if (dailyWeather.Count == dailyWeather.Capacity)
@@ -147,7 +146,7 @@ namespace iLand.Input.Weather
                         // check on first day of the year
                         if (previousYear != -1 && year != previousYear + 1)
                         {
-                            throw new NotSupportedException(String.Format("Error in reading daily weather file: invalid year break at year-month-dday: {0}-{1}-{2}!", year, month, dayOfMonth));
+                            throw new NotSupportedException($"Error in reading daily weather file: invalid year break at year-month-dday: {year}-{month}-{dayOfMonth}!");
                         }
                     }
 

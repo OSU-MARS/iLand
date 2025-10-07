@@ -60,7 +60,7 @@ namespace iLand.Input.ProjectFile
 				ProjectDirectory.Output => this.System.Paths.Output,
 				ProjectDirectory.Script => this.System.Paths.Script,
 				ProjectDirectory.Temp => this.System.Paths.Temp,
-				_ => throw new NotSupportedException("Unhandled project directory " + directory + ".")
+				_ => throw new NotSupportedException($"Unhandled project directory {directory} .")
 			};
 			return Path.Combine(this.System.Paths.Home, directoryName, fileName);
 		}
@@ -69,7 +69,7 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+				throw new XmlException($"Encountered unexpected attributes on element {reader.Name}.");
 			}
 
 			switch (reader.Name)
@@ -96,7 +96,7 @@ namespace iLand.Input.ProjectFile
 					this.World.ReadXml(reader);
 					break;
 				default:
-					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+					throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

@@ -13,7 +13,7 @@ namespace iLand.Output.Sql
 {
     public class IndividualTreeAnnualOutput : AnnualOutput
     {
-        private readonly Expression treeFilter;
+        private readonly Expression<TreeVariableAccessor> treeFilter;
 
         public IndividualTreeAnnualOutput()
         {

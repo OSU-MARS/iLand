@@ -126,7 +126,7 @@ namespace iLand.World
                         f = 0.25f; 
                         break;
                     default:
-                        throw new NotSupportedException("Unhandled species index " + n_s + ".");
+                        throw new NotSupportedException($"Unhandled species index {n_s}.");
                 }
 
                 // apply cases

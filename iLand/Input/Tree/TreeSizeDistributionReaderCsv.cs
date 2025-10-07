@@ -36,13 +36,13 @@ namespace iLand.Input.Tree
                 };
                 ++lineNumber;
 
-                if (sizeRange.HeightDiameterRatio == 0.0 || sizeRange.DbhFrom / 100.0 * sizeRange.HeightDiameterRatio < Constant.RegenerationLayerHeight)
+                if ((sizeRange.HeightDiameterRatio <= 0.0) || (sizeRange.DbhFrom / 100.0 * sizeRange.HeightDiameterRatio < Constant.RegenerationLayerHeight))
                 {
-                    throw new NotSupportedException("File '" + treeFilePath + "' tries to init trees below 4 m height at line " + lineNumber + ". Height-diameter ratio = " + sizeRange.HeightDiameterRatio + ", DBH = " + sizeRange.DbhFrom + ".");
+                    throw new NotSupportedException($"File '{treeFilePath}' tries to init trees below {Constant.RegenerationLayerHeight} m height at line {lineNumber}. Height-diameter ratio = {sizeRange.HeightDiameterRatio}, DBH = {sizeRange.DbhFrom}.");
                 }
 
                 // TODO: DbhFrom < DbhTo?
-                //throw new NotSupportedException(String.Format("load init file: file '{0}' tries to init trees below 4m height. hd={1}, dbh={2}.", fileName, item.hd, item.dbh_from) );
+                //throw new NotSupportedException($"load init file: file '{fileName}' tries to init trees below 4m height. hd={item.hd}, dbh={item.dbh_from}.");
                 bool setAgeToZero = true;
                 if (treeSizeHeader.Age >= 0)
                 {
@@ -67,7 +67,7 @@ namespace iLand.Input.Tree
                 }
                 if (sizeRange.Density < -1)
                 {
-                    throw new NotSupportedException("Invalid density " + sizeRange.Density + " in file '" + treeFilePath + "', line " + lineNumber + ". Allowed range is -1..1.");
+                    throw new NotSupportedException($"Invalid density {sizeRange.Density} in file '{treeFilePath}', line {lineNumber}. Allowed range is -1..1.");
                 }
 
                 this.TreeSizeDistribution.Add(sizeRange);

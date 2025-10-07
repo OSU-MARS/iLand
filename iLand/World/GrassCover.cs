@@ -135,7 +135,7 @@ namespace iLand.World
             }
             else
             {
-                throw new NotSupportedException("Unhandled algorithm " + this.algorithm + ".");
+                throw new NotSupportedException($"Unhandled algorithm {this.algorithm}.");
             }
 
             // create the grid
@@ -187,7 +187,7 @@ namespace iLand.World
             }
             else
             {
-                throw new NotSupportedException("Unhandled algorithm " + this.algorithm + ".");
+                throw new NotSupportedException($"Unhandled algorithm {this.algorithm}.");
             }
         }
 
@@ -244,7 +244,7 @@ namespace iLand.World
             }
             else
             {
-                throw new NotSupportedException("Unhandled algorithm " + this.algorithm + ".");
+                throw new NotSupportedException($"Unhandled algorithm {this.algorithm}.");
             }
         }
     }

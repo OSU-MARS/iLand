@@ -18,7 +18,7 @@ namespace iLand.Simulation
             int yearIndex = eventFile.GetColumnIndex("year");
             if (yearIndex == -1)
             {
-                throw new NotSupportedException(String.Format("TimeEvents: input file '{0}' has no 'year' column.", eventFilePath));
+                throw new NotSupportedException($"TimeEvents: input file '{eventFilePath}' has no 'year' column.");
             }
 
             eventFile.Parse((SplitString row) =>
@@ -60,21 +60,21 @@ namespace iLand.Simulation
                     if (String.IsNullOrEmpty(eventInYear.Value.ToString()) == false)
                     {
                         throw new NotImplementedException();
-                        // Debug.WriteLine("Executing JavaScript time event: " + eventInYear.Item2.ToString());
+                        // Debug.WriteLine($"Executing JavaScript time event: {eventInYear.Item2}");
                     }
                 }
                 else
                 {
                     throw new NotImplementedException();
                     //globalSettings.Settings.SetParameter(key, eventInYear.Item2.ToString());
-                    // Debug.WriteLine("TimeEvents: set " + key + "to" + eventInYear.Item2.ToString());
+                    // Debug.WriteLine($"TimeEvents: set {key} to {eventInYear.Item2}.");
                 }
                 ++valuesSet;
             }
 
             //if (valuesSet != 0)
             //{
-            //    Debug.WriteLine("TimeEvents: year " + currentYear + ": " + valuesSet + " values set.");
+            //    Debug.WriteLine($"TimeEvents: year {currentYear}: {valuesSet} values set.");
             //}
         }
 

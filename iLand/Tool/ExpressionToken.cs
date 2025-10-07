@@ -16,7 +16,7 @@
                 ExpressionTokenType.Stop => "<stop>",
                 ExpressionTokenType.Unknown => "<unknown>",
                 // Compare, Delimiter, Logical, Variable
-                _ => this.Type.ToString().ToLowerInvariant() + "(" + this.Index + ")"
+                _ => $"{this.Type.ToString().ToLowerInvariant()}({this.Index})"
             };
         }
     }

@@ -21,7 +21,7 @@ namespace iLand.Tool
         }
 
         // returns a random number in [0, 1]
-        public float GetRandomProbability() 
+        public float GetRandomProbability() // C++ drandom()
         {
             float value = ((float)this.GetRandomInteger() - Int32.MinValue) / (2.0F * Int32.MaxValue + 1.0F);
             Debug.Assert((value >= 0.0) && (value <= 1.0));

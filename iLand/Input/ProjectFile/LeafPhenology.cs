@@ -36,7 +36,7 @@ namespace iLand.Input.ProjectFile
                     case "type":
                         if (reader.AttributeCount != 1)
                         {
-                            throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+                            throw new XmlException($"Encountered unexpected attributes on element '{reader.Name}'.");
                         }
 
                         string? idAsString = reader.GetAttribute("id");
@@ -48,7 +48,7 @@ namespace iLand.Input.ProjectFile
                         reader.ReadStartElement();
                         break;
                     default:
-                        throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+                        throw new XmlException($"Encountered unexpected attributes on element '{reader.Name}'.");
                 }
             }
             else
@@ -98,7 +98,7 @@ namespace iLand.Input.ProjectFile
                         }
                         break;
                     default:
-                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                        throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
                 }
             }
         }

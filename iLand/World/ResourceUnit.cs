@@ -78,7 +78,7 @@ namespace iLand.World
             if (treeIsRemoved)
             {
                 // if the host tree is removed (disturbance, harvest), resprout on its center sapling cell
-                Debug.Assert(trees.DbhInCm[treeIndex] < Constant.Grid.LightCellSizeInM, "Resprout on tree with " + trees.DbhInCm[treeIndex] + " cm DBH, which exceeds the size of a sapling cell.");
+                Debug.Assert(trees.DbhInCm[treeIndex] < Constant.Grid.LightCellSizeInM, $"Resprout on tree with {trees.DbhInCm[treeIndex]} cm DBH, which exceeds the size of a sapling cell.");
                 trees.ResourceUnit.ClearSaplings(saplingCell, removeBiomass: false, resprout: false); // but tree could be removed without removing surrounding saplings?
                 Sapling? sapling = saplingCell.AddSaplingIfSlotFree(Constant.Sapling.MinimumHeightInM, 0, trees.Species.Index);
                 if (sapling != null)
@@ -180,7 +180,7 @@ namespace iLand.World
                 // start from a random species (and cycle through the available species)
                 int speciesIndex = this.Trees.TreeSpeciesSet.RandomSpeciesOrder[sampleIndex];
                 ResourceUnitTreeSpecies ruSpecies = this.Trees.SpeciesAvailableOnResourceUnit[speciesIndex];
-                Debug.Assert(ruSpecies.Species.SeedDispersal != null, nameof(EstablishSaplings) + "() called on tree species not configured for seed dispersal.");
+                Debug.Assert(ruSpecies.Species.SeedDispersal != null, $"{nameof(EstablishSaplings)}() called on tree species not configured for seed dispersal.");
                 Grid<float> seedMap = ruSpecies.Species.SeedDispersal.SeedMap;
 
                 // check if there are seeds of the given species on the resource unit
@@ -281,7 +281,7 @@ namespace iLand.World
         // C++/core/saplings.cpp: Saplings::saplingGrowth()
         public void GrowSaplings(Model model)
         {
-            Debug.Assert(this.SaplingCells != null, nameof(this.GrowSaplings) + "() called on resource unit where regeneration isn't enabled.");
+            Debug.Assert(this.SaplingCells != null, $"{nameof(this.GrowSaplings)}() called on resource unit where regeneration isn't enabled.");
 
             Landscape landscape = model.Landscape;
             Grid<float> lightGrid = landscape.LightGrid;
@@ -366,7 +366,7 @@ namespace iLand.World
             // (2) reduce height growth potential with species growth response f_env_yr and with light state (i.e. LIF-value) of home-pixel.
             if (dominantHeight <= 0.0F)
             {
-                throw new NotSupportedException(String.Format("Dominant height grid has value 0 at light cell index {0}.", lightCellIndex));
+                throw new NotSupportedException($"Dominant height grid has value 0 at light cell index {lightCellIndex}.");
             }
 
             float relativeHeight = sapling.HeightInM / dominantHeight;
@@ -577,7 +577,7 @@ namespace iLand.World
         {
             if (this.SaplingCells == null)
             {
-                throw new InvalidOperationException(nameof(this.GetSaplingCellPosition) + "() called on resource unit " + this.ID + ", which does not have saplings enabled.");
+                throw new InvalidOperationException($"{nameof(this.GetSaplingCellPosition)}() called on resource unit {this.ID}, which does not have saplings enabled.");
             }
 
             for (int cellIndex = 0; cellIndex < this.SaplingCells.Length; ++cellIndex)
@@ -696,7 +696,7 @@ namespace iLand.World
                     }
                     //if (GlobalSettings.Instance.LogDebug())
                     //{
-                    //    Debug.WriteLine("crown area: lai " + LeafAreaIndex() + " stocked area (pixels) " + StockedArea + " area (crown) " + totalCrownArea);
+                    //    Debug.WriteLine($"crown area: lai {LeafAreaIndex()} stocked area (pixels) {StockedArea} area (crown) {totalCrownArea);
                     //}
                     if (laiBasedOnRUAreaWithinLandscape < 1.0)
                     {
@@ -723,7 +723,7 @@ namespace iLand.World
 
                 // calculate the total weighted leaf area on this RU:
                 this.Trees.AverageLightRelativeIntensity = this.Trees.PhotosyntheticallyActiveArea / this.Trees.TotalLightWeightedLeafArea; // p_WLA
-                Debug.Assert((this.Trees.AverageLightRelativeIntensity >= 0.0F) && (this.Trees.AverageLightRelativeIntensity < 8.0F), "Average light relative intensity of " + this.Trees.AverageLightRelativeIntensity + " is negative or greater than the expected upper bound for LRIs."); // sanity upper bound, denser stands produce higher intensities
+                Debug.Assert((this.Trees.AverageLightRelativeIntensity >= 0.0F) && (this.Trees.AverageLightRelativeIntensity < 8.0F), $"Average light relative intensity of {this.Trees.AverageLightRelativeIntensity} is negative or greater than the expected upper bound for LRIs."); // sanity upper bound, denser stands produce higher intensities
             }
 
             // soil water model - this determines soil water contents needed for response calculations
@@ -910,7 +910,7 @@ namespace iLand.World
             Point imap = this.MinimumLightIndexXY;
             if (this.SaplingCells == null)
             {
-                throw new InvalidOperationException(nameof(this.UpdateSaplingCellGrassCover) + "() called on resource unit " + this.ID + " which does not have saplings enabled.");
+                throw new InvalidOperationException($"{nameof(this.UpdateSaplingCellGrassCover)}() called on resource unit {this.ID} which does not have saplings enabled.");
             }
 
             for (int lightCellIndexY = 0, saplingCellIndex = 0; lightCellIndexY < Constant.Grid.LightCellsPerRUWidth; ++lightCellIndexY)
@@ -932,7 +932,7 @@ namespace iLand.World
         {
             if (this.SaplingCells == null)
             {
-                throw new InvalidOperationException(nameof(this.UpdateSaplingCellGrassCover) + "() called on resource unit " + this.ID + " which does not have saplings enabled.");
+                throw new InvalidOperationException($"{nameof(this.UpdateSaplingCellGrassCover)}() called on resource unit {this.ID} which does not have saplings enabled.");
             }
 
             //int n_cells = ru->stockableArea() / (cPxSize*cPxSize);
@@ -1066,7 +1066,7 @@ namespace iLand.World
             // events are stored with newest events first. Oldest event is removed
             // when maximum number of events reached
             this.SvdState.DisturbanceEvents.Insert(0, new ResourceUnitSvdState.SvdDisturbanceEvent(model.SimulationState.CurrentCalendarYear, source, info));
-            if (this.SvdState.DisturbanceEvents.Count > 2)
+            if (this.SvdState.DisturbanceEvents.Count > 3)
             {
                 this.SvdState.DisturbanceEvents.RemoveAt(this.SvdState.DisturbanceEvents.Count - 1);
             }

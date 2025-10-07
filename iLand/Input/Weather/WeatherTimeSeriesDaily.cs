@@ -72,7 +72,7 @@ namespace iLand.Input.Weather
                     // can't reliably check against the day's min and max since strong weather systems might put the moving average outside
                     // of a day's range
                     DateTime date = new(this.Year[dayIndex], this.Month[dayIndex], 1);
-                    throw new NotSupportedException("Moving average of daily temperature " + meanDaytimeTemperatureMA1 + " °C in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is NaN, unexpectedly low, or unexpectedly high (time series chunk index " + dayIndex + ").");
+                    throw new NotSupportedException($"Moving average of daily temperature {meanDaytimeTemperatureMA1} °C in {date.ToString("MMM yyyy", CultureInfo.CurrentUICulture)} is NaN, unexpectedly low, or unexpectedly high (time series chunk index {dayIndex}).");
                 }
             }
         }

@@ -55,7 +55,7 @@ namespace iLand.World
                         int simulationYear = Int32.Parse(simulationYearList[index], CultureInfo.InvariantCulture);
                         if ((simulationYear < 0) || (simulationYear >= this.YearsToLoad))
                         {
-                            throw new NotSupportedException("Invalid randomSamplingList. Year numbers must between 0 and batchYears - 1 (check value of batchYears).");
+                            throw new NotSupportedException($"Invalid randomSamplingList. Year numbers are zero based and must be between 0 and batchYears - 1. Tried to access {simulationYear} of {this.YearsToLoad} years in batch.");
                         }
                         this.RandomYearList.Add(simulationYear);
                     }
@@ -86,7 +86,7 @@ namespace iLand.World
         {
             if (phenologyID >= this.TreeSpeciesPhenology.Count)
             {
-                throw new ArgumentOutOfRangeException(nameof(phenologyID), "Phenology group " + phenologyID + " not present. Is /project/model/species/phenology missing elements?");
+                throw new ArgumentOutOfRangeException(nameof(phenologyID), $"Phenology group {phenologyID} not present. Is /project/model/species/phenology missing elements?");
             }
 
             Tree.LeafPhenology phenology = this.TreeSpeciesPhenology[phenologyID];
@@ -104,7 +104,7 @@ namespace iLand.World
                     return phenology;
                 }
             }
-            throw new ArgumentOutOfRangeException(nameof(phenologyID), String.Format("Error at SpeciesSet::phenology(): invalid group: {0}", phenologyID));
+            throw new ArgumentOutOfRangeException(nameof(phenologyID), "Invalid phenology group {phenologyID}.");
         }
     }
 
@@ -123,7 +123,7 @@ namespace iLand.World
             {
                 if (phenology.ID < 1)
                 {
-                    throw new XmlException("Invalid phenology ID " + phenology.ID + " (ID 0 is reserved for evergreen leaves retained year round).");
+                    throw new XmlException($"Invalid phenology ID {phenology.ID} (ID 0 is reserved for evergreen leaves retained year round).");
                 }
                 LeafPhenology<TWeatherTimeSeries> phenologyForSpecies = new(this, phenology);
                 this.TreeSpeciesPhenology.Add(phenologyForSpecies);

@@ -5,7 +5,6 @@ using iLand.Input.Weather;
 using iLand.Tool;
 using iLand.World;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using Model = iLand.Simulation.Model;
 
@@ -89,7 +88,7 @@ namespace iLand.Tree
                 }
                 else
                 {
-                    throw new NotSupportedException("Unhandled weather timestep " + weatherTimeSeries.Timestep + ".");
+                    throw new NotSupportedException($"Unhandled weather timestep {weatherTimeSeries.Timestep}.");
                 }
             }
             float chillingDays = this.chillingDaysCarriedOverFromPreviousCalendarYear;
@@ -100,7 +99,7 @@ namespace iLand.Tree
             Microclimate? microclimate = ruSpecies.ResourceUnit.Microclimate;
             if (use_micro_clim && (microclimate == null))
             {
-                throw new InvalidOperationException("Project enables microclimate establishment effects but resource unit " + ruSpecies.ResourceUnit.ID + "'s microclimate is not instantiated.");
+                throw new InvalidOperationException($"Project enables microclimate establishment effects but resource unit {ruSpecies.ResourceUnit.ID}'s microclimate is not instantiated.");
             }
 
             bool budsHaveBurst = false;
@@ -273,7 +272,7 @@ namespace iLand.Tree
             }
             else
             {
-                throw new NotSupportedException("Unhandled weather timestep " + weatherTimeSeries.Timestep + ".");
+                throw new NotSupportedException($"Unhandled weather timestep {weatherTimeSeries.Timestep}.");
             }
 
             float frostAndWaterModifier = 0.0F; // if any of TACA's sapling establishment requirements is not met

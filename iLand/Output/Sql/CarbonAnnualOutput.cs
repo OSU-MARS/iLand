@@ -6,7 +6,6 @@ using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
 using System;
-using System.Data.SqlTypes;
 using System.Diagnostics;
 using Model = iLand.Simulation.Model;
 
@@ -118,7 +117,7 @@ namespace iLand.Output.Sql
                     insertRow.Parameters[13].Value = liveTreeAndSaplingStatistics.RegenerationCarbonInKgPerHa; // regeneration_c
                     insertRow.Parameters[14].Value = liveTreeAndSaplingStatistics.RegenerationNitrogenInKgPerHa; // regeneration_n
 
-                    // biomass from standing dead woods
+                    // biomass from standing dead wood
                     if (resourceUnit.Snags.TotalStanding == null) // expected in year 0
                     {
                         insertRow.Parameters[15].Value = Constant.Data.SqliteNaN;
@@ -142,7 +141,7 @@ namespace iLand.Output.Sql
                         insertRow.Parameters[19].Value = resourceUnit.Snags.OtherWoodAbovegroundFraction * resourceUnit.Snags.TotalBranchesAndRoots.C / areaFactor; // snagsOther_branch_c
                     }
 
-                    // biomass from soil (convert from t/ha . kg/ha)
+                    // biomass from soil (soil pools are always per ha; convert from t/ha -> kg/ha)
                     insertRow.Parameters[20].Value = 1000.0F * resourceUnit.Soil.YoungRefractory.C; // downedWood_c, 16.8.0 nullable analysis misses RU consistency check above
                     insertRow.Parameters[21].Value = 1000.0F * resourceUnit.Soil.YoungRefractory.N; // downedWood_n
                     insertRow.Parameters[22].Value = 1000.0F * resourceUnit.Soil.YoungRefractoryAbovegroundFraction * resourceUnit.Soil!.YoungRefractory.C; // downedWood_c_ag
@@ -180,7 +179,7 @@ namespace iLand.Output.Sql
                 // regen
                 accumulatedValues[11] += liveTreeAndSaplingStatistics.RegenerationCarbonInKgPerHa;
                 accumulatedValues[12] += liveTreeAndSaplingStatistics.RegenerationNitrogenInKgPerHa;
-                // standing dead wood
+                // standing dead wood: sum pools and individual snags
                 if (resourceUnit.Snags.TotalStanding != null)
                 {
                     accumulatedValues[13] += resourceUnit.Snags.TotalStanding.C;

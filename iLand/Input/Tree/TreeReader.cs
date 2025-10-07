@@ -27,7 +27,7 @@ namespace iLand.Input.Tree
                     int eligibleFileTypes = (individualTreeHeader.CanBeIndividualTreeFile ? 1 : 0) + (treeSizeHeader.CanBeSizeDistributionFile ? 1 : 0) + (treeFileIndexHeader.CanBeIndexFile ? 1 : 0);
                     if (eligibleFileTypes != 1)
                     {
-                        throw new NotSupportedException("Unable to autodetect format of tree file '" + treeFilePath + "'. Known formats are 1) individual trees (required columns are x, y, bhdfrom or dbh, species, and treeheight or height), 2) tree size distribution (columns are count, species, dbhFrom, dbhTo, hdRatio, and age), and 3) a list of other tree files by stand ID (columns are 'standID' and 'fileName').");
+                        throw new NotSupportedException($"Unable to autodetect format of tree file '{treeFilePath}'. Known formats are 1) individual trees (required columns are x, y, bhdfrom or dbh, species, and treeheight or height), 2) tree size distribution (columns are count, species, dbhFrom, dbhTo, hdRatio, and age), and 3) a list of other tree files by stand ID (columns are 'standID' and 'fileName').");
                     }
 
                     if (individualTreeHeader.CanBeIndividualTreeFile)
@@ -44,13 +44,13 @@ namespace iLand.Input.Tree
                     }
                     else
                     {
-                        throw new NotSupportedException("Unhandled format for tree file '" + treeFilePath + "'.");
+                        throw new NotSupportedException($"Unhandled format for tree file '{treeFilePath}'.");
                     }
                 case Constant.File.FeatherExtension:
                     // for now, assume .feather files are always individual tree files
                     return new IndividualTreeReaderFeather(treeFilePath);
                 default:
-                    throw new NotSupportedException("Unhandled extension '" + treeFileExtension + "' for tree file '" + treeFilePath + ".");
+                    throw new NotSupportedException($"Unhandled extension '{treeFileExtension}' for tree file '{treeFilePath}.");
             }
         }
     }

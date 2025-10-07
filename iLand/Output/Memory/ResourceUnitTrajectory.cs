@@ -134,7 +134,7 @@ namespace iLand.Output.Memory
                 if (treesOnResourceUnit.Count > this.ResourceUnitTreeSpecies.Length)
                 {
                     // TODO: support species ingrowth
-                    throw new NotSupportedException("Expected " + this.ResourceUnitTreeSpecies.Length + " tree species on resource unit " + this.ResourceUnit.ID + " but " + treesOnResourceUnit.Count + " species are present. Did a species grow into the resource unit?");
+                    throw new NotSupportedException($"Expected {this.ResourceUnitTreeSpecies.Length} tree species on resource unit {this.ResourceUnit.ID} but {treesOnResourceUnit.Count} species are present. Did a species grow into the resource unit?");
                 }
 
                 int treeSpeciesSourceIndex = 0;
@@ -199,7 +199,7 @@ namespace iLand.Output.Memory
                 }
                 if (treeSpeciesSourceIndex != treesOnResourceUnit.Count)
                 {
-                    throw new NotSupportedException("Expected to capture statistics for " + treesOnResourceUnit.Count + " tree species on resource unit " + this.ResourceUnit.ID + " but did so for only " + (treeSpeciesSourceIndex - 1) + " species. Did a species grow into the resource unit or did a combination of ingrowth and local extirpation occur?");
+                    throw new NotSupportedException($"Expected to capture statistics for {treesOnResourceUnit.Count} tree species on resource unit {this.ResourceUnit.ID} but did so for only {(treeSpeciesSourceIndex - 1)} species. Did a species grow into the resource unit or did a combination of ingrowth and local extirpation occur?");
                 }
             }
         }

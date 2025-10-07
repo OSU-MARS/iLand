@@ -64,7 +64,7 @@ namespace iLand.Input
 
             if (this.Count < 1)
             {
-                throw new NotSupportedException("Resource unit environment file '" + resourceUnitFilePath + "' is empty or has only headers.");
+                throw new NotSupportedException($"Resource unit environment file '{resourceUnitFilePath}' is empty or has only headers.");
             }
         }
     }

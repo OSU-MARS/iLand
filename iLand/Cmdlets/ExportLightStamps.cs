@@ -36,7 +36,7 @@ namespace iLand.Cmdlets
                 string? baseName = Path.GetFileNameWithoutExtension(speciesLightStampFiles[speciesIndex]);
                 if (String.IsNullOrWhiteSpace(baseName))
                 {
-                    throw new NotSupportedException("Species light stamp file '" + speciesLightStampFiles[speciesIndex] + "' lacks a file name.");
+                    throw new NotSupportedException($"Species light stamp file '{speciesLightStampFiles[speciesIndex]}' lacks a file name.");
                 }
 
                 TreeSpeciesStamps stamps = new(Path.Combine(this.ProjectLip, baseName + ".bin"));

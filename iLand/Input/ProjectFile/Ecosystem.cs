@@ -68,7 +68,7 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+				throw new XmlException($"Encountered unexpected attributes on element {reader.Name}.");
 			}
 
 			switch (reader.Name)
@@ -80,35 +80,35 @@ namespace iLand.Input.ProjectFile
 					this.AutotrophicRespirationMultiplier = reader.ReadElementContentAsFloat();
 					if ((this.AutotrophicRespirationMultiplier < 0.0F) || (this.AutotrophicRespirationMultiplier > 1.0F))
 					{
-						throw new XmlException("Autotrophic respiration multiplier " + this.AutotrophicRespirationMultiplier + " is negative or greater than 1.0.");
+						throw new XmlException($"Autotrophic respiration multiplier {this.AutotrophicRespirationMultiplier} is negative or greater than 1.0.");
 					}
 					break;
 				case "lightUseEpsilon":
 					this.LightUseEpsilon = reader.ReadElementContentAsFloat();
 					if (this.LightUseEpsilon < 0.0F)
 					{
-						throw new XmlException("Light use epsilon " + this.LightUseEpsilon + "is negative.");
+						throw new XmlException($"Light use epsilon {this.LightUseEpsilon} is negative.");
 					}
 					break;
 				case "lightExtinctionCoefficient":
 					this.ResourceUnitLightExtinctionCoefficient = reader.ReadElementContentAsFloat();
 					if (this.ResourceUnitLightExtinctionCoefficient < 0.0F)
 					{
-						throw new XmlException("Light extinction coefficient " + this.ResourceUnitLightExtinctionCoefficient + " is negative.");
+						throw new XmlException($"Light extinction coefficient {this.ResourceUnitLightExtinctionCoefficient} is negative.");
 					}
 					break;
 				case "lightExtinctionCoefficientOpacity":
 					this.TreeLightStampExtinctionCoefficient = reader.ReadElementContentAsFloat();
 					if (this.TreeLightStampExtinctionCoefficient < 0.0F)
 					{
-						throw new XmlException("Light extinction opacity " + this.TreeLightStampExtinctionCoefficient + "is negative.");
+						throw new XmlException($"Light extinction opacity {this.TreeLightStampExtinctionCoefficient}is negative.");
 					}
 					break;
 				case "temperatureMA1tau":
 					this.TemperatureMA1tau = reader.ReadElementContentAsFloat();
 					if (this.TemperatureMA1tau < 0.0F)
 					{
-						throw new XmlException("Number of days' temperature to average (τ) is negative.");
+						throw new XmlException($"Number of days' temperature to average (τ) is negative.");
 					}
 					break;
 				case "airDensity":
@@ -136,60 +136,60 @@ namespace iLand.Input.ProjectFile
                     this.GroundVegetationLeafAreaIndex = reader.ReadElementContentAsFloat();
                     if ((this.GroundVegetationLeafAreaIndex < 0.0F) || (this.GroundVegetationLeafAreaIndex > 25.0F)) // sanity upper bound
                     {
-                        throw new XmlException("Ground vegetation leaf area index " + this.GroundVegetationLeafAreaIndex + " is negative or unexpectedly large.");
+                        throw new XmlException($"Ground vegetation leaf area index {this.GroundVegetationLeafAreaIndex} is negative or unexpectedly large.");
                     }
                     break;
                 case "groundVegetationPsiMin":
                     this.GroundVegetationPsiMin = reader.ReadElementContentAsFloat();
                     if (this.GroundVegetationPsiMin > 0.0F)
                     {
-                        throw new XmlException("Ground vegetation leaf area index " + this.GroundVegetationLeafAreaIndex + " is positive.");
+                        throw new XmlException($"Ground vegetation leaf area index {this.GroundVegetationLeafAreaIndex} is positive.");
                     }
                     break;
                 case "interceptionStorageNeedle":
 					this.InterceptionStorageNeedleInMM = reader.ReadElementContentAsFloat();
 					if (this.InterceptionStorageNeedleInMM < 0.0F)
 					{
-						throw new XmlException("Needle interception storage of " + this.InterceptionStorageNeedleInMM + " mm is negative.");
+						throw new XmlException($"Needle interception storage of {this.InterceptionStorageNeedleInMM} mm is negative.");
 					}
 					break;
 				case "interceptionStorageBroadleaf":
 					this.InterceptionStorageBroadleafInMM = reader.ReadElementContentAsFloat();
 					if (this.InterceptionStorageBroadleafInMM < 0.0F)
 					{
-						throw new XmlException("Broadleaf inteception storage of " + this.InterceptionStorageBroadleafInMM + " mm is negative.");
+						throw new XmlException($"Broadleaf inteception storage of {this.InterceptionStorageBroadleafInMM} mm is negative.");
 					}
 					break;
                 case "snowDensity":
                     this.SnowDensity = reader.ReadElementContentAsFloat();
                     if ((this.SnowDensity < 0.0F) || (this.SnowDensity > 1000.3F)) // sanity upper bound of water at 4 °C
                     {
-                        throw new XmlException("Snow density of " + this.SnowDensity + " kg/m³ is negative or unexpectedly high.");
+                        throw new XmlException($"Snow density of {this.SnowDensity} kg/m³ is negative or unexpectedly high.");
                     }
                     break;
                 case "snowInitialDepth":
                     this.SnowInitialDepth = reader.ReadElementContentAsFloat();
                     if ((this.SnowInitialDepth < 0.0F) || (this.SnowInitialDepth > 1000.0F)) // sanity upper bound assuming project areas don't include large ice sheets
                     {
-                        throw new XmlException("Initial snow depth of " + this.SnowInitialDepth + " m is negative or unexpectedly high.");
+                        throw new XmlException($"Initial snow depth of {this.SnowInitialDepth} m is negative or unexpectedly high.");
                     }
                     break;
                 //case "snowTemperature":
                 //    this.SnowTemperature = reader.ReadElementContentAsFloat();
                 //    if ((this.SnowTemperature < -60.0F) || (this.SnowTemperature > 20.0F)) // arbitrary sanity range
                 //    {
-                //        throw new XmlException("Initial snow temperature of " + this.SnowTemperature + " °C is unexpectedly low or high.");
+                //        throw new XmlException($"Initial snow temperature of {this.SnowTemperature} °C is unexpectedly low or high.");
                 //    }
                 //    break;
                 case "snowMeltTemperature":
                     this.SnowmeltTemperature = reader.ReadElementContentAsFloat();
                     if ((this.SnowmeltTemperature < -20.0F) || (this.SnowmeltTemperature > 20.0F)) // arbitrary sanity range
                     {
-                        throw new XmlException("Snowmelt temperature of " + this.SnowmeltTemperature + " °C is unexpectedly low or high.");
+                        throw new XmlException($"Snowmelt temperature of {this.SnowmeltTemperature} °C is unexpectedly low or high.");
                     }
                     break;
 				default:
-					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+					throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

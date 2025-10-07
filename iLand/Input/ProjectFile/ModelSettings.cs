@@ -75,7 +75,7 @@ namespace iLand.Input.ProjectFile
 		{
 			if (reader.AttributeCount != 0)
 			{
-				throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+				throw new XmlException($"Encountered unexpected attributes on element {reader.Name}.");
 			}
 
 			switch (reader.Name)
@@ -142,18 +142,18 @@ namespace iLand.Input.ProjectFile
                     this.SvdStructure = reader.ReadElementContentAsString();
                     if ((String.Equals(this.SvdStructure, "2m") == false) && (String.Equals(this.SvdStructure, "4m") == false))
                     {
-                        throw new XmlException("svdStructure is '" + this.SvdStructure + "'. Valid values are '2m' and '4m'.");
+                        throw new XmlException($"svdStructure is '{this.SvdStructure}'. Valid values are '2m' and '4m'.");
                     }
                     break;
                 case "svdFunction":
                     this.SvdFunction = reader.ReadElementContentAsInt();
 					if ((this.SvdFunction != 3) && (this.SvdFunction != 5))
 					{
-                        throw new XmlException("svdFunction is " + this.SvdFunction + ". Valid values are 3 or 5.");
+                        throw new XmlException($"svdFunction is {this.SvdFunction}. Valid values are 3 or 5.");
                     }
                     break;
                 default:
-					throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+					throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
 			}
 		}
 	}

@@ -1,16 +1,24 @@
 ﻿// C++/output/{ productionout.h, productionout.cpp }
+using iLand.Input.ProjectFile;
 using iLand.Simulation;
+using iLand.Tool;
 using iLand.Tree;
 using iLand.World;
 using Microsoft.Data.Sqlite;
+using LeafPhenology = iLand.Tree.LeafPhenology;
+using Model = iLand.Simulation.Model;
 
 namespace iLand.Output.Sql
 {
     // 3-PG monthly timesteps by resource unit tree species, triggered at simulation year end to write all 12 months in the calendar year
     public class ThreePGMonthlyOutput : AnnualOutput
     {
+        private readonly Expression yearFilter;
+
         public ThreePGMonthlyOutput()
         {
+            this.yearFilter = new();
+
             this.Name = "3-PG monthly timesteps by resource unit tree species";
             this.TableName = "monthly3PG";
             this.Description = "Details about the 3-PG production submodule on monthly basis and for each tree species on each resource unit.";
@@ -32,6 +40,11 @@ namespace iLand.Output.Sql
 
         protected override void LogYear(Model model, SqliteCommand insertRow)
         {
+            if ((this.yearFilter.IsEmpty == false) && (yearFilter.Evaluate(model.SimulationState.CurrentCalendarYear) == 0.0F))
+            {
+                return;
+            }
+
             foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
                 foreach (ResourceUnitTreeSpecies ruSpecies in resourceUnit.Trees.SpeciesAvailableOnResourceUnit)
@@ -62,6 +75,12 @@ namespace iLand.Output.Sql
                     }
                 }
             }
+        }
+
+        public override void Setup(Project projectFile, SimulationState simulationState)
+        {
+            // use a condition to control logging by simulation year
+            this.yearFilter.SetExpression(projectFile.Output.Sql.ThreePG.Condition);
         }
     }
 }

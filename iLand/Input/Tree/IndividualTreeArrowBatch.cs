@@ -34,7 +34,7 @@ namespace iLand.Input.Tree
             int wellKnownFields = 4 + (this.AgeInYears != null ? 1 : 0) + (this.FiaCode != null ? 1 : 0) + (this.WorldFloraID != null ? 1 : 0) + (this.StandID != null ? 1 : 0) + (this.TreeID != null ? 1 : 0);
             if (wellKnownFields != fields.Length)
             {
-                throw new NotSupportedException("Individual tree record batch contains unexpected fields. Found " + wellKnownFields + " well known fields (standID, treeID, fiaCode, wfoID, dbh, height, x, y, age) in " + fields.Length + " total.");
+                throw new NotSupportedException($"Individual tree record batch contains unexpected fields. Found {wellKnownFields} well known fields (standID, treeID, fiaCode, wfoID, dbh, height, x, y, age) in {fields.Length} total.");
             }
 
             // for now, allow both FIA code and World Flora Online identifiers to be specified and assume the caller indicates them consistently

@@ -54,6 +54,9 @@ namespace iLand.Tool
         private static readonly int[] MathFunctionArgumentCount = [ 1, 1, 1, 1, 1, 1, -1, -1, 3, 1, -1, 2, 4, 2, 2, -1, 1 ];
         private static readonly char[] TokenDelimiters = [ ' ', '\t', '\n', '\r' ];
 
+        private const int ExternalVariableOffset = 1000;
+        protected const int ModelVariableOffset = 100;
+
         // inc-sum
         private float incrementalSum;
 
@@ -81,7 +84,6 @@ namespace iLand.Tool
 
         public string? ExpressionString { get; set; }
         public List<string> VariableNames { get; private init; }
-        public ExpressionVariableAccessor? Wrapper { get; set; } // TODO: fully typed accessors with Expression<T>
 
         public bool IsConstant { get; private set; } // returns true if current expression is a constant.
         public bool IsEmpty { get; private set; } // returns true if expression is empty
@@ -103,19 +105,12 @@ namespace iLand.Tool
 
             this.ExpressionString = null;
             this.IsEmpty = true;
-            this.Wrapper = null;
         }
 
         public Expression(string expression)
             : this()
         {
             this.SetExpression(expression);
-        }
-
-        public Expression(string expression, ExpressionVariableAccessor wrapper)
-            : this(expression)
-        {
-            this.Wrapper = wrapper;
         }
 
         public void AddVariable(string variableName)
@@ -126,7 +121,7 @@ namespace iLand.Tool
             {
                 if (this.VariableNames.Count == this.variableValues.Length)
                 {
-                    throw new NotSupportedException(variableName + " can't be added to expression as its variable value capacity of " + this.variableValues.Length + " has been reached.");
+                    throw new NotSupportedException($"{variableName} can't be added to expression as its variable value capacity of {this.variableValues.Length} has been reached.");
                 }
                 this.VariableNames.Add(variableName);
             }
@@ -180,23 +175,14 @@ namespace iLand.Tool
             return this.Execute(variableList); // execute with local variables on stack
         }
 
-        public float Evaluate(ExpressionVariableAccessor wrapper, float variable1 = 0.0F, float variable2 = 0.0F)
-        {
-            float[] variableList = new float[Constant.ExpressionLocalVariables];
-            variableList[0] = variable1;
-            variableList[1] = variable2;
-            this.RequireExternalVariableBinding = false;
-            return this.Execute(variableList, wrapper); // execute with local variables on stack
-        }
-
-        public float Execute(float[]? variableList = null, ExpressionVariableAccessor? wrapper = null)
+        public float Execute(float[]? variableList = null)
         {
             if (this.isParsed == false)
             {
-                this.Parse(wrapper);
+                this.Parse();
                 if (this.isParsed == false)
                 {
-                    throw new ApplicationException("Expression '" + this.ExpressionString + "' failed to parse.");
+                    throw new ApplicationException($"Expression '{this.ExpressionString}' failed to parse.");
                 }
             }
             if (this.IsEmpty)
@@ -230,13 +216,13 @@ namespace iLand.Tool
                         break;
                     case ExpressionTokenType.Variable:
                         float value;
-                        if (exec.Index < 100)
+                        if (exec.Index < Expression.ModelVariableOffset)
                         {
                             value = varSpace[exec.Index];
                         }
-                        else if (exec.Index < 1000)
+                        else if (exec.Index < Expression.ExternalVariableOffset)
                         {
-                            value = this.GetModelVariable(exec.Index, wrapper);
+                            value = this.GetModelVariable(exec.Index);
                         }
                         else
                         {
@@ -401,14 +387,14 @@ namespace iLand.Tool
                     case ExpressionTokenType.Unknown:
                     case ExpressionTokenType.Delimiter:
                     default:
-                        throw new NotSupportedException(String.Format("invalid token during execution: {0}", ExpressionString));
+                        throw new NotSupportedException($"Invalid token during execution: '{this.ExpressionString}'.");
                 } // switch()
             }
 
             // TODO: also check logic stack?
             if (stackDepth != 1)
             {
-                throw new NotSupportedException(String.Format("execute: stack unbalanced: {0}", ExpressionString));
+                throw new NotSupportedException($"Unbalanced expression stack: '{this.ExpressionString}'.");
             }
             //m_logicResult=*(lp-1);
             return stack[stackDepth - 1];
@@ -424,7 +410,7 @@ namespace iLand.Tool
             int pointCount = (argumentCount - 1) / 2;
             if ((argumentCount % 2 != 1) || (pointCount < 2))
             {
-                throw new NotSupportedException("wrong number of parameters (got " + argumentCount + ") polygon(<val>; x0; y0; x1; y1; ....) in '" + this.ExpressionString + "'.");
+                throw new NotSupportedException($"Wrong number of parameters (got {argumentCount}) polygon(<val>; x0; y0; x1; y1; ....) in '{this.ExpressionString}'.");
             }
             float x, y, xold, yold;
             y = stack[position--];   // 1. Argument: ganz rechts.
@@ -489,19 +475,20 @@ namespace iLand.Tool
 
         private float ExecuteUserDefinedRandom(float fromInclusive, float toInclusive, bool isNormallyDistributed)
         {
-            if ((this.Wrapper == null) || (this.Wrapper.RandomGenerator == null))
-            {
-                throw new NotSupportedException("Unable to access random number generator. Ensure that a wrapper is specified with a non-null model.");
-            }
+            throw new NotSupportedException("Random number generator not connected."); // TODO: 
+            //if (this.RandomGenerator == null)
+            //{
+            //    throw new NotSupportedException("Unable to access random number generator..");
+            //}
 
-            if (isNormallyDistributed)
-            {
-                return this.Wrapper.RandomGenerator.GetRandomNormal(fromInclusive, toInclusive);
-            }
-            else
-            {
-                return this.Wrapper.RandomGenerator.GetRandomFloat(fromInclusive, toInclusive); // uniform distribution
-            }
+            //if (isNormallyDistributed)
+            //{
+            //    return this.RandomGenerator.GetRandomNormal(fromInclusive, toInclusive);
+            //}
+            //else
+            //{
+            //    return this.RandomGenerator.GetRandomFloat(fromInclusive, toInclusive); // uniform distribution
+            //}
         }
 
         /// calculate the linear approximation of the result value
@@ -545,38 +532,21 @@ namespace iLand.Tool
             return result;
         }
 
-        private float GetModelVariable(int valueIndex, ExpressionVariableAccessor? wrapper = null)
+        protected virtual float GetModelVariable(int valueIndex)
         {
-            // der weg nach draussen....
-            ExpressionVariableAccessor? modelWrapper = wrapper ?? this.Wrapper;
-            int index = valueIndex - 100; // intern als 100+x gespeichert...
-            if (modelWrapper != null)
-            {
-                return modelWrapper.GetValue(index);
-            }
             // hier evtl. verschiedene objekte unterscheiden (Zahlenraum???)
-            throw new ArgumentOutOfRangeException(nameof(valueIndex), "Model variable not found.");
+            throw new NotImplementedException($"Call reached {nameof(Expression)}.{nameof(GetModelVariable)}() rather than an implementation of {nameof(Expression)}<TAccessor>.{nameof(GetModelVariable)}()");
         }
 
-        private int GetVariableIndex(string variableName)
+        protected virtual int GetVariableIndex(string variableName)
         {
-            int index;
-            if (this.Wrapper != null)
-            {
-                index = this.Wrapper.GetVariableIndex(variableName);
-                if (index > -1)
-                {
-                    return 100 + index;
-                }
-            }
-
             /*if (Script)
                 {
                    int dummy;
                    EDatatype aType;
                    idx=Script.GetName(VarName, aType, dummy);
                    if (idx>-1)
-                      return 1000+idx;
+                      return Expression.ExternalVariableOffset+idx;
                 }*/
 
             // external variablen
@@ -585,10 +555,10 @@ namespace iLand.Tool
             //    idx = mExternalVariableNames.IndexOf(variableName);
             //    if (idx > -1)
             //    {
-            //        return 1000 + idx;
+            //        return Expression.ExternalVariableOffset + idx;
             //    }
             //}
-            index = this.VariableNames.IndexOf(variableName);
+            int index = this.VariableNames.IndexOf(variableName);
             if (index > -1)
             {
                 return index;
@@ -596,9 +566,9 @@ namespace iLand.Tool
             // if in strict mode, all variables must be already available at this stage.
             if (this.RequireExternalVariableBinding)
             {
-                throw new NotSupportedException(String.Format("Variable '{0}' in (strict) expression '{1}' not available!", variableName, this.ExpressionString));
+                throw new NotSupportedException($"Variable '{variableName}' in (strict) expression '{this.ExpressionString}' not available!");
             }
-            throw new ArgumentOutOfRangeException(nameof(variableName), "Variable '" + variableName + "' not found in expression.");
+            throw new ArgumentOutOfRangeException(nameof(variableName), $"Variable '{variableName}' not found in expression.");
         }
 
         /** Linarize an expression, i.e. approximate the function by linear interpolation.
@@ -760,7 +730,7 @@ namespace iLand.Tool
             return ExpressionTokenType.Unknown; // in case no match was found
         }
 
-        private void Parse(ExpressionVariableAccessor? wrapper = null)
+        private void Parse()
         {
             if (this.isParsed)
             {
@@ -771,10 +741,7 @@ namespace iLand.Tool
             {
                 throw new NotSupportedException("Expression string is null.");
             }
-            if (wrapper != null)
-            {
-                this.Wrapper = wrapper;
-            }
+
             this.state = ExpressionTokenType.Unknown;
             this.lastState = ExpressionTokenType.Unknown;
             this.IsConstant = true;
@@ -787,11 +754,11 @@ namespace iLand.Tool
                 this.ParseLevelL0();  // start with logical level 0
                 if (preParseTokenCount == tokenCount)
                 {
-                    throw new NotSupportedException("parse(): Unbalanced Braces.");
+                    throw new NotSupportedException("Unbalanced braces.");
                 }
                 if (this.state == ExpressionTokenType.Unknown)
                 {
-                    throw new NotSupportedException("parse(): Syntax error, token: " + token);
+                    throw new NotSupportedException($"Syntax error, token: {token}.");
                 }
             }
             this.IsEmpty = this.executeIndex == 0;
@@ -949,7 +916,7 @@ namespace iLand.Tool
                     int functionIndex = Expression.MathFunctions.IndexOf(functionName); // check full names
                     if (functionIndex < 0)
                     {
-                        throw new NotSupportedException("Function " + functionName + " not defined!");
+                        throw new NotSupportedException($"Function {functionName} not defined!");
                     }
 
                     this.NextToken();
@@ -967,9 +934,9 @@ namespace iLand.Tool
                     int maxArgumentCount = Expression.MathFunctionArgumentCount[functionIndex];
                     if ((maxArgumentCount > 0) && (maxArgumentCount != argumentCount))
                     {
-                        throw new NotSupportedException("Function " + functionName + " requires " + maxArgumentCount + " arguments.");
+                        throw new NotSupportedException($"Function {functionName} requires {maxArgumentCount} arguments.");
                     }
-                    //throw std::logic_error("Funktion " + func + " erwartet " + std::string(MaxArgCount[idx]) + " Parameter!");
+                    //throw std::logic_error($"Function {func} erwartet {std::string(MaxArgCount[idx])} Parameter!");
                     tokens[executeIndex].Type = ExpressionTokenType.Function;
                     tokens[executeIndex].Value = argumentCount;
                     tokens[executeIndex++].Index = functionIndex;
@@ -977,7 +944,7 @@ namespace iLand.Tool
                 }
                 if (token != "}" && token != ")") // Fehler
                 {
-                    throw new NotSupportedException(String.Format("unbalanced number of parentheses in [{0}].", ExpressionString));
+                    throw new NotSupportedException($"Unbalanced parentheses in '{this.ExpressionString}'.");
                 }
                 this.NextToken();
             }
@@ -997,7 +964,7 @@ namespace iLand.Tool
                 {
                     "and" => ExpressionOperation.And,
                     "or" => ExpressionOperation.Or,
-                    _ => throw new NotSupportedException("Unhandled logical operator '" + op + "'.")
+                    _ => throw new NotSupportedException($"Unhandled logical operator '{op}'.")
                 };
 
                 tokens[executeIndex].Type = ExpressionTokenType.Logical;
@@ -1025,7 +992,7 @@ namespace iLand.Tool
                     "<=" => ExpressionOperation.LessThanOrEqual,
                     ">=" => ExpressionOperation.GreaterThanOrEqual,
                     "=" => ExpressionOperation.Equal,
-                    _ => throw new NotSupportedException("Unhandled logical operator " + op + ".")
+                    _ => throw new NotSupportedException($"Unhandled logical operator {op}.")
                 };
 
                 this.tokens[executeIndex].Type = ExpressionTokenType.Compare;
@@ -1039,7 +1006,7 @@ namespace iLand.Tool
         // do some preprocessing (e.g. handle the different use of ",", ".", ";")
         public void SetExpression(string? expressionString)
         {
-            this.ExpressionString = expressionString == null ? String.Empty : String.Join(' ', expressionString.Trim().Split(Expression.TokenDelimiters, StringSplitOptions.RemoveEmptyEntries));
+            this.ExpressionString = String.IsNullOrEmpty(expressionString) ? String.Empty : String.Join(' ', expressionString.Trim().Split(Expression.TokenDelimiters, StringSplitOptions.RemoveEmptyEntries));
             this.parsePosition = 0;  // set starting point...
 
             for (int index = 0; index < this.variableValues.Length; ++index)
@@ -1047,7 +1014,8 @@ namespace iLand.Tool
                 this.variableValues[index] = 0.0F;
             }
             this.isParsed = false;
-            this.Wrapper = null;
+            // in C++ changing an expression clears its wrapper as a side effect, which seems to be a bug
+            // this.Wrapper = null;
 
             this.RequireExternalVariableBinding = true; // default....
             // m_incSumEnabled = false;
@@ -1069,7 +1037,7 @@ namespace iLand.Tool
             }
             else
             {
-                throw new NotSupportedException("Invalid variable " + name);
+                throw new NotSupportedException($"Invalid variable {name}.");
             }
         }
 
@@ -1094,7 +1062,7 @@ namespace iLand.Tool
                     ExpressionTokenType.Stop => "<stop>",
                     ExpressionTokenType.Unknown => "<unknown>",
                     ExpressionTokenType.Variable => this.VariableNames[token.Index].ToString(),
-                    _ => throw new NotSupportedException("Unhandled token type " + token.Type + ".")
+                    _ => throw new NotSupportedException($"Unhandled token type {token.Type}.")
                 } + " ");
                 if (token.Type == ExpressionTokenType.Stop)
                 {
@@ -1120,9 +1088,9 @@ namespace iLand.Tool
         //public float GetExternVariable(int index)
         //{
         //    //if (Script)
-        //    //   return Script->GetNumVar(Index-1000);
+        //    //   return Script->GetNumVar(Index-Expression.ExternalVariableOffset);
         //    //else   // berhaupt noch notwendig???
-        //    return mExternalVariableValues[index - 1000];
+        //    return mExternalVariableValues[index - Expression.ExternalVariableOffset];
         //}
 
         //public void SetExternalVariableSpace(List<string> externalNames, float[] externalSpace)
@@ -1131,5 +1099,47 @@ namespace iLand.Tool
         //    mExternalVariableValues = externalSpace;
         //    mExternalVariableNames = externalNames;
         //}
+    }
+
+    public class Expression<TAccessor> : Expression where TAccessor : ExpressionVariableAccessor
+    {
+        public TAccessor? Wrapper { get; set; }
+
+        public Expression()
+            : base()
+        {
+            this.Wrapper = null;
+        }
+
+        public Expression(string expression, TAccessor wrapper)
+            : base(expression)
+        {
+            this.Wrapper = wrapper;
+        }
+
+        protected override float GetModelVariable(int valueIndex)
+        {
+            // der weg nach draussen....
+            int index = valueIndex - Expression.ModelVariableOffset; // intern als 100+x gespeichert...
+            if (this.Wrapper != null)
+            {
+                return this.Wrapper.GetValue(index);
+            }
+            // hier evtl. verschiedene objekte unterscheiden (Zahlenraum???)
+            throw new ArgumentOutOfRangeException(nameof(valueIndex), "Model variable not found.");
+        }
+
+        protected override int GetVariableIndex(string variableName)
+        {
+            if (this.Wrapper != null)
+            {
+                int index = this.Wrapper.GetVariableIndex(variableName);
+                if (index > -1)
+                {
+                    return Expression.ModelVariableOffset + index;
+                }
+            }
+            return base.GetVariableIndex(variableName);
+        }
     }
 }

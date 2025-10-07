@@ -32,7 +32,7 @@ namespace iLand.Input.ProjectFile
         {
             if (reader.AttributeCount != 0)
             {
-                throw new XmlException("Encountered unexpected attributes on element " + reader.Name + ".");
+                throw new XmlException($"Encountered unexpected attributes on element '{reader.Name}'.");
             }
 
             switch (reader.Name)
@@ -51,7 +51,7 @@ namespace iLand.Input.ProjectFile
                     this.OtherWoodAbovegroundFraction = reader.ReadElementContentAsFloat();
                     if ((this.OtherWoodAbovegroundFraction < 0.0F) || (this.OtherWoodAbovegroundFraction > 1.0F))
                     {
-                        throw new XmlException("Other wood aboveground fraction " + this.OtherWoodAbovegroundFraction + " is not in the range [ 00, 1.0 ].");
+                        throw new XmlException($"Other wood aboveground fraction {this.OtherWoodAbovegroundFraction} is not in the range [ 0.0, 1.0 ].");
                     }
                     break;
                 case "stemCN":
@@ -104,7 +104,7 @@ namespace iLand.Input.ProjectFile
                     }
                     break;
                 default:
-                    throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                    throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
             }
         }
     }

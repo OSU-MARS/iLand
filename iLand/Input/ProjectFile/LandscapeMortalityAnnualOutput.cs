@@ -3,17 +3,17 @@ using System.Xml;
 
 namespace iLand.Input.ProjectFile
 {
-    public class LandscapeRemovedOutput : Enablable
+    public class LandscapeMortalityAnnualOutput : Enablable
     {
         public string DbhClasses { get; private set; }
-        public bool IncludeHarvest { get; private set; }
-		public bool IncludeNatural { get; private set; }
+        public bool IncludeFelled { get; private set; } // live trees harvested or cut and dropped, dead trees salvage harvested
+		public bool IncludeNatural { get; private set; } // trees dead of stress or killed by an abiotic or biotic agent
 
-		public LandscapeRemovedOutput()
-            : base("landscapeRemoved")
+		public LandscapeMortalityAnnualOutput()
+            : base("landscapeMortality")
         {
             this.DbhClasses = String.Empty;
-            this.IncludeHarvest = true;
+            this.IncludeFelled = true;
             this.IncludeNatural = false;
         }
 
@@ -30,14 +30,14 @@ namespace iLand.Input.ProjectFile
                     case "dbhClasses":
                         this.DbhClasses = reader.ReadElementContentAsString();
                         break;
-                    case "includeHarvest":
-                        this.IncludeHarvest = reader.ReadElementContentAsBoolean();
+                    case "includeFelled":
+                        this.IncludeFelled = reader.ReadElementContentAsBoolean();
                         break;
                     case "includeNatural":
                         this.IncludeNatural = reader.ReadElementContentAsBoolean();
                         break;
                     default:
-                        throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+                        throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
                 }
             }
         }

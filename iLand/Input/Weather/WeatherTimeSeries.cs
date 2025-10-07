@@ -45,7 +45,7 @@ namespace iLand.Input.Weather
             {
                 Timestep.Daily => Constant.Time.DaysInLeapYear,
                 Timestep.Monthly => Constant.Time.MonthsInYear,
-                _ => throw new NotSupportedException("Unhandled weather timestep " + this.Timestep + ".")
+                _ => throw new NotSupportedException($"Unhandled weather timestep {this.Timestep}.")
             };
         }
 
@@ -84,38 +84,38 @@ namespace iLand.Input.Weather
                 if ((minTemperature < Constant.Limit.TemperatureMin) || (minTemperature > daytimeMeanTemperature))
                 {
                     DateTime date = new(this.Year[index], this.Month[index], 1);
-                    throw new NotSupportedException("Minimum temperature of " + minTemperature + " °C in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is NaN, unexpectedly low, or greater than the mean daytime temperature of " + daytimeMeanTemperature + " °C (time series chunk index " + index + ").");
+                    throw new NotSupportedException($"Minimum temperature of {minTemperature} °C in {date.ToString("MMM yyyy", CultureInfo.CurrentUICulture)} is NaN, unexpectedly low, or greater than the mean daytime temperature of {daytimeMeanTemperature} °C (time series chunk index {index}).");
                 }
                 if (Single.IsNaN(daytimeMeanTemperature) || (daytimeMeanTemperature > maxTemperature))
                 {
                     DateTime date = new(this.Year[index], this.Month[index], 1);
-                    throw new NotSupportedException("Daytime mean temperature of " + daytimeMeanTemperature + " °C in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is NaN or greater than the maximum temperature of " + maxTemperature + " °C (time series chunk index " + index + ").");
+                    throw new NotSupportedException($"Daytime mean temperature of {daytimeMeanTemperature} °C in {date.ToString("MMM yyyy", CultureInfo.CurrentUICulture)} is NaN or greater than the maximum temperature of {maxTemperature} °C (time series chunk index {index}).");
                 }
                 if (Single.IsNaN(maxTemperature) || (maxTemperature > Constant.Limit.TemperatureMax))
                 {
                     DateTime date = new(this.Year[index], this.Month[index], 1);
-                    throw new NotSupportedException("Maximum temperature of " + maxTemperature + " °C in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is unexpectedly high (time series chunk index " + index + ").");
+                    throw new NotSupportedException($"Maximum temperature of {maxTemperature} °C in {date.ToString("MMM yyyy", CultureInfo.CurrentUICulture)} is unexpectedly high (time series chunk index {index}).");
                 }
 
                 float totalPrecipitationInMM = this.PrecipitationTotalInMM[index];
                 if ((totalPrecipitationInMM < 0.0F) || (totalPrecipitationInMM > Constant.Limit.MonthlyPrecipitationInMM))
                 {
                     DateTime date = new(this.Year[index], this.Month[index], 1);
-                    throw new NotSupportedException("Total precipitation of " + totalPrecipitationInMM + " mm in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is NaN, negative, or unexpectedly high (time series chunk index " + index + ").");
+                    throw new NotSupportedException($"Total precipitation of {totalPrecipitationInMM} mm in {date.ToString("MMM yyyy", CultureInfo.CurrentUICulture)} is NaN, negative, or unexpectedly high (time series chunk index {index}).");
                 }
 
                 float totalSolarRadiation = this.SolarRadiationTotal[index];
                 if ((totalSolarRadiation < Constant.Limit.DailyTotalSolarRadiationMinimum) || (totalSolarRadiation > Constant.Limit.MonthlyTotalSolarRadiationMaximum))
                 {
                     DateTime date = new(this.Year[index], this.Month[index], 1);
-                    throw new NotSupportedException("Total solar radiation of " + totalSolarRadiation + " MJ/m² in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is NaN, unexpectedly low, or unexpectedly high (time series chunk index " + index + ").");
+                    throw new NotSupportedException($"Total solar radiation of {totalSolarRadiation} MJ/m² in {date.ToString("MMM yyyy", CultureInfo.CurrentUICulture)} is NaN, unexpectedly low, or unexpectedly high (time series chunk index {index}).");
                 }
 
                 float vpdInKPa = this.VpdMeanInKPa[index];
                 if ((vpdInKPa < 0.0F) || (vpdInKPa > Constant.Limit.VaporPressureDeficitInKPa))
                 {
                     DateTime date = new(this.Year[index], this.Month[index], 1);
-                    throw new NotSupportedException("Total precipitation of " + vpdInKPa + " kPa in " + date.ToString("MMM yyyy", CultureInfo.CurrentUICulture) + " is NaN, negative, or unexpectedly high (time series chunk index " + index + ").");
+                    throw new NotSupportedException($"Total precipitation of {vpdInKPa} kPa in {date.ToString("MMM yyyy", CultureInfo.CurrentUICulture)} is NaN, negative, or unexpectedly high (time series chunk index {index}).");
                 }
             }
         }

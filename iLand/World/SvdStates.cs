@@ -56,7 +56,7 @@ namespace iLand.World
             }
             else
             {
-                throw new ArgumentOutOfRangeException(nameof(model), "Setup of SVD States: invalid value for 'structure': '" + svdStructure + "', allowed values are '2m', '4m'.");
+                throw new ArgumentOutOfRangeException(nameof(model), $"Setup of SVD States: invalid value for 'structure': '{svdStructure}', allowed values are '2m', '4m'.");
             }
 
             int svdFunction = model.Project.Model.Settings.SvdFunction;
@@ -70,7 +70,7 @@ namespace iLand.World
             }
             else
             {
-                throw new ArgumentOutOfRangeException(nameof(model), "Setup of SVD States: invalid value for 'functioning': " + svdFunction + "', allowed values are '3', '5'.");
+                throw new ArgumentOutOfRangeException(nameof(model), $"Setup of SVD States: invalid value for 'functioning': {svdFunction}', allowed values are '3', '5'.");
             }
 
             // qDebug() << "setup of SvdStates completed.";
@@ -136,7 +136,7 @@ namespace iLand.World
                     }
                     break;
                 default:
-                    throw new NotSupportedException("Unhandled structure classification " + this.mStructureClassification + ".");
+                    throw new NotSupportedException($"Unhandled structure classification {this.mStructureClassification}.");
             }
 
             double lai = ru.Trees.LiveTreeAndSaplingStatisticsForAllSpecies.LeafAreaIndex;
@@ -159,7 +159,7 @@ namespace iLand.World
                     s.Function = Maths.Limit((int)lai, 0, 4);
                     break;
                 default:
-                    throw new NotSupportedException("Unhandled functional classification " + this.mFunctioningClassification + ".");
+                    throw new NotSupportedException($"Unhandled functional classification {this.mFunctioningClassification}.");
             }
 
             // species
@@ -257,13 +257,13 @@ namespace iLand.World
             StringBuilder label = new();
             if (s.DominantSpeciesIndex >= 0)
             {
-                label.Append(ru.Trees.TreeSpeciesSet[s.DominantSpeciesIndex].Name + " ");
+                label.Append($"{ru.Trees.TreeSpeciesSet[s.DominantSpeciesIndex].Name} ");
             }
             for (int i = 0; i < s.AdmixedSpeciesIndices.Length; ++i)
             {
                 if (s.AdmixedSpeciesIndices[i] >= 0)
                 {
-                    label.Append(ru.Trees.TreeSpeciesSet[s.AdmixedSpeciesIndices[i]].Name.ToLowerInvariant() + " ");
+                    label.Append($"{ru.Trees.TreeSpeciesSet[s.AdmixedSpeciesIndices[i]].Name.ToLowerInvariant()} ");
                 }
             }
 
@@ -273,25 +273,25 @@ namespace iLand.World
                 case StructureGranularity.FourM:
                     if (s.Structure < 21)
                     {
-                        hlabel = (s.Structure * 4) + "-" + (s.Structure * 4 + 4);
+                        hlabel = $"{s.Structure * 4}-{s.Structure * 4 + 4}";
                     }
                     else
                     {
-                        hlabel = "Irr: " + ((s.Structure - 21) * 12) + "-" + ((s.Structure - 21 + 1) * 12);
+                        hlabel = $"Irr: {(s.Structure - 21) * 12}-{(s.Structure - 21 + 1) * 12}";
                     }
                     break;
                 case StructureGranularity.TwoM:
                     if (s.Structure < 31)
                     {
-                        hlabel = (s.Structure * 2) + "-" + (s.Structure * 2 + 2);
+                        hlabel = $"{s.Structure * 2}-{s.Structure * 2 + 2}";
                     }
                     else
                     {
-                        hlabel = "Irr: " + ((s.Structure - 31) * 8) + "-" + ((s.Structure - 31 + 1) * 8);
+                        hlabel = $"Irr: {(s.Structure - 31) * 8}-{(s.Structure - 31 + 1) * 8}";
                     }
                     break;
                 default:
-                    throw new NotSupportedException("Unhandled structure classification " + this.mStructureClassification + ".");
+                    throw new NotSupportedException($"Unhandled structure classification {this.mStructureClassification}.");
             }
             string flabel;
             switch (this.mFunctioningClassification)
@@ -310,14 +310,14 @@ namespace iLand.World
                     }
                     else
                     {
-                        flabel = s.Function + "-" + (s.Function + 1);
+                        flabel = $"{s.Function}-{s.Function + 1}";
                     }
                     break;
                 default:
-                    throw new NotSupportedException("Unhandled functional classification " + this.mFunctioningClassification + ".");
+                    throw new NotSupportedException($"Unhandled functional classification {this.mFunctioningClassification}.");
             }
 
-            label.Append(hlabel + " (LAI " + flabel + ")");
+            label.Append($"{hlabel} (LAI {flabel})");
             return label.ToString();
         }
 
@@ -357,13 +357,13 @@ namespace iLand.World
             StringBuilder label = new();
             if (s.DominantSpeciesIndex >= 0)
             {
-                label.Append(ru.Trees.TreeSpeciesSet[s.DominantSpeciesIndex].Name.ToUpperInvariant() + " ");
+                label.Append($"{ru.Trees.TreeSpeciesSet[s.DominantSpeciesIndex].Name.ToUpperInvariant()} ");
             }
             for (int i = 0; i < 5; ++i)
             {
                 if (s.AdmixedSpeciesIndices[i] >= 0)
                 {
-                    label.Append(ru.Trees.TreeSpeciesSet[s.AdmixedSpeciesIndices[i]].Name.ToLowerInvariant() + " ");
+                    label.Append($"{ru.Trees.TreeSpeciesSet[s.AdmixedSpeciesIndices[i]].Name.ToLowerInvariant()} ");
                 }
             }
             if (label.Length < 1)

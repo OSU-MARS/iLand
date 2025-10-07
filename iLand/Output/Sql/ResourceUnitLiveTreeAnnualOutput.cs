@@ -12,7 +12,7 @@ namespace iLand.Output.Sql
     // resource unit level statistics per tree species
     public class ResourceUnitLiveTreeAnnualOutput : AnnualOutput
     {
-        private readonly Expression resourceUnitFilter;
+        private readonly Expression<ResourceUnitVariableAccessor> resourceUnitFilter;
         private readonly Expression yearFilter;
 
         public ResourceUnitLiveTreeAnnualOutput()
@@ -67,12 +67,13 @@ namespace iLand.Output.Sql
             }
 
             ResourceUnitVariableAccessor ruWrapper = new(model.SimulationState);
+            this.resourceUnitFilter.Wrapper = ruWrapper;
             foreach (ResourceUnit resourceUnit in model.Landscape.ResourceUnits)
             {
                 if (this.resourceUnitFilter.IsEmpty == false)
                 {
                     ruWrapper.ResourceUnit = resourceUnit;
-                    if (this.resourceUnitFilter.Evaluate(ruWrapper) == 0.0F)
+                    if (this.resourceUnitFilter.Evaluate() == 0.0F)
                     {
                         continue;
                     }

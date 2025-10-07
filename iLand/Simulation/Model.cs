@@ -1,4 +1,5 @@
-﻿using iLand.Input.ProjectFile;
+﻿// C++/core/{ model.h, model.cpp }
+using iLand.Input.ProjectFile;
 using iLand.Input.Weather;
 using iLand.Tool;
 using iLand.Tree;
@@ -49,7 +50,7 @@ namespace iLand.Simulation
 
             if ((projectFile.Model.Settings.SimdWidth > 32) && (Avx2.IsSupported == false))
             {
-                throw new ArgumentOutOfRangeException(nameof(projectFile), "simdWidth in project file is " + projectFile.Model.Settings.SimdWidth + " bits but AVX2 instructions are not supported. Either set the SIMD width to 32 bits or run on a processor with the AVX2 instruction set.");
+                throw new ArgumentOutOfRangeException(nameof(projectFile), $"simdWidth in project file is {projectFile.Model.Settings.SimdWidth} bits but AVX2 instructions are not supported. Either set the SIMD width to 32 bits or run on a processor with the AVX2 instruction set.");
             }
 
             this.stopwatch = new();
@@ -239,7 +240,7 @@ namespace iLand.Simulation
                         });
                         break;
                     default:
-                        throw new NotSupportedException("Unhandled SIMD width of " + this.Project.Model.Settings.SimdWidth + " bits.");
+                        throw new NotSupportedException($"Unhandled SIMD width of {this.Project.Model.Settings.SimdWidth} bits.");
                 }
 
                 // read pattern: LIP value calculation
@@ -309,7 +310,7 @@ namespace iLand.Simulation
             co2byMonth.NextYearStartIndex += Constant.Time.MonthsInYear;
             if (co2byMonth.NextYearStartIndex >= co2byMonth.Count)
             {
-                throw new NotSupportedException("CO₂ for calendar year " + this.SimulationState.CurrentCalendarYear + " is not present in the CO₂ time series '" + this.Project.World.Weather.CO2File + ".");
+                throw new NotSupportedException($"CO₂ for calendar year {this.SimulationState.CurrentCalendarYear} is not present in the CO₂ time series '{this.Project.World.Weather.CO2File}.");
             }
             foreach (World.Weather weather in this.Landscape.WeatherByID.Values)
             {

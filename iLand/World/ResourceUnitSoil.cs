@@ -54,7 +54,7 @@ namespace iLand.World
             };
             if ((this.Parameters.Kyl <= 0.0) || (this.Parameters.Kyr <= 0.0))
             {
-                throw new NotSupportedException(String.Format("Kyl or kyr less than zero: kyl: {0} (young labile decomposition rate), kyr: {1} (young refractory decomposition rate)", this.Parameters.Kyl, this.Parameters.Kyr));
+                throw new NotSupportedException($"Kyl or kyr less than zero: kyl: {this.Parameters.Kyl} (young labile decomposition rate), kyr: {this.Parameters.Kyr} (young refractory decomposition rate)");
             }
 
             this.ClimateDecompositionFactor = 0.0F;
@@ -79,15 +79,15 @@ namespace iLand.World
 
             if (!this.OrganicMatter.HasCarbonAndNitrogen())
             {
-                throw new NotSupportedException(String.Format("Organic matter invalid: c: {0} n: {1}", OrganicMatter.C, OrganicMatter.N));
+                throw new NotSupportedException($"Organic matter invalid: C: {this.OrganicMatter.C}, N: {OrganicMatter.N}");
             }
             if (!this.YoungLabile.HasCarbonAndNitrogen())
             {
-                throw new NotSupportedException(String.Format("Young labile invalid: c: {0} n: {1}", YoungLabile.C, YoungLabile.N));
+                throw new NotSupportedException($"Young labile invalid: C: {this.YoungLabile.C} n: {this.YoungLabile.N}");
             }
             if (!this.YoungRefractory.HasCarbonAndNitrogen())
             {
-                throw new NotSupportedException(String.Format("Young refractory invalid: c: {0} n: {1}", YoungRefractory.C, YoungRefractory.N));
+                throw new NotSupportedException($"Young refractory invalid: C: {this.YoungRefractory.C} n: {this.YoungRefractory.N}");
             }
         }
 
@@ -130,7 +130,7 @@ namespace iLand.World
             }
             if ((this.Parameters.Kyr < 0.0F) || (this.Parameters.Kyl < 0.0F))
             {
-                throw new ArgumentException("One or both of Kyr (" + this.Parameters.Kyr + ") or Kyl (" + this.Parameters.Kyl + ") is zero or negative");
+                throw new ArgumentException($"One or both of Kyr ({this.Parameters.Kyr}) or Kyl ({this.Parameters.Kyl}) is zero or negative");
             }
 
             // update the aboveground fraction
@@ -140,11 +140,11 @@ namespace iLand.World
 
             if ((this.YoungLabileAbovegroundFraction < 0.0F) || (this.YoungLabileAbovegroundFraction > 1.0F) || (this.YoungLabile.C < 0.0F) || (this.InputLabile.C < 0.0F))
             {
-                throw new ArgumentException("Resource unit " + this.ResourceUnit.ID + " InputLabC:" + this.InputLabile.C + "YLC:" + this.YoungLabile.C + "YLabovegroundFrac:" + YoungLabileAbovegroundFraction + ".");
+                throw new ArgumentException($"Resource unit {this.ResourceUnit.ID} InputLabC:{this.InputLabile.C}YLC:{this.YoungLabile.C}YLabovegroundFrac:{YoungLabileAbovegroundFraction}.");
             }
             if ((this.YoungRefractoryAbovegroundFraction < 0.0F) || (this.YoungRefractoryAbovegroundFraction > 1.0F) || (this.YoungRefractory.C < 0.0F) || (this.InputRefractory.C < 0.0F))
             {
-                throw new ArgumentException("Resource unit " + this.ResourceUnit.ID + " InputRefC:" + this.InputRefractory.C + "YRC:" + this.YoungRefractory.C + "YRabovegroundFrac:" + YoungRefractoryAbovegroundFraction + ".");
+                throw new ArgumentException($"Resource unit {this.ResourceUnit.ID} InputRefC:{this.InputRefractory.C}YRC:{this.YoungRefractory.C}YRabovegroundFrac:{YoungRefractoryAbovegroundFraction}.");
             }
         }
 
@@ -155,7 +155,7 @@ namespace iLand.World
             // checks
             if (this.ClimateDecompositionFactor == 0.0F)
             {
-                throw new NotSupportedException("Climate decomposition factor is zero for resource unit " + ResourceUnit.ResourceUnitGridIndex + ".");
+                throw new NotSupportedException($"Climate decomposition factor is zero for resource unit {ResourceUnit.ResourceUnitGridIndex}.");
             }
 
             CarbonNitrogenTuple totalBefore = this.YoungLabile + this.YoungRefractory + this.OrganicMatter;
@@ -191,7 +191,7 @@ namespace iLand.World
                 ynrss = this.InputRefractory.C / (kyr * this.ClimateDecompositionFactor * (1.0F - hc)) * ((1.0F - er) / this.InputRefractory.GetCNRatio() + etar); // Yr steady state N
                 if (ynrss < 0.0F)
                 {
-                    // Debug.Assert(ynrss >= 0.0F, "ynrss of " + ynrss + " is negative."); // TODO: investigate why C++ clamps to zero rather than require well bounded calculation
+                    // Debug.Assert(ynrss >= 0.0F, $"ynrss of {ynrss} is negative."); // TODO: investigate why C++ clamps to zero rather than require well bounded calculation
                     ynrss = 0.0F;
                 }
             }

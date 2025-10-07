@@ -144,7 +144,7 @@ namespace iLand.Tree
                 for (int indexY = 0; indexY < this.DataSize; ++indexY)
                 {
                     int index = this.IndexXYToIndex(indexX, indexY);
-                    writer.WriteLine(linePrefix + "," + indexX + "," + indexY + "," + this.Data[index].ToString());
+                    writer.WriteLine($"{linePrefix},{indexX},{indexY},{this.Data[index]}");
                 }
             }
         }

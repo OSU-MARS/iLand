@@ -40,7 +40,7 @@ namespace iLand.Input.ProjectFile
 							"continuous" => GrassAlgorithm.ContinuousLight,
                             "pixel" => GrassAlgorithm.Pixel,
                             "simplified" => GrassAlgorithm.Simplified,
-							_ => throw new XmlException("Unknown grass algorithm type '" + grassAlgorithmAsString + "'.")
+							_ => throw new XmlException($"Unknown grass algorithm type '{grassAlgorithmAsString}'.")
 						};
 						break;
 					case "grassDuration":
@@ -67,7 +67,7 @@ namespace iLand.Input.ProjectFile
 						this.ContinuousRegenerationEffect = reader.ReadElementContentAsString().Trim();
 						break;
 					default:
-						throw new XmlException("Element '" + reader.Name + "' is unknown, has unexpected attributes, or is missing expected attributes.");
+						throw new XmlException($"Element '{reader.Name}' is unknown, has unexpected attributes, or is missing expected attributes.");
 				}
 			}
         }

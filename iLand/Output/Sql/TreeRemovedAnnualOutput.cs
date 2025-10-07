@@ -13,7 +13,7 @@ namespace iLand.Output.Sql
 {
     public class TreeRemovedAnnualOutput : AnnualOutput
     {
-        private readonly Expression treeFilter;
+        private readonly Expression<TreeVariableAccessor> treeFilter;
         private readonly Dictionary<ResourceUnit, (TreeListSpatial Trees, List<MortalityCause> Removals)> removedTreesByResourceUnit;
 
         public TreeRemovedAnnualOutput()
@@ -53,13 +53,12 @@ namespace iLand.Output.Sql
         {
             if (this.treeFilter.IsEmpty == false)
             {
-                // skip trees if filter is present
-                TreeVariableAccessor treeWrapper = new(model.SimulationState)
+                // skip trees if filter indicates
+                this.treeFilter.Wrapper ??= new(model.SimulationState)
                 {
                     Trees = trees,
                     TreeIndex = treeIndex
                 };
-                this.treeFilter.Wrapper = treeWrapper;
                 if (this.treeFilter.Execute() == 0.0F)
                 {
                     return false;

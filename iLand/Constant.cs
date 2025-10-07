@@ -9,7 +9,7 @@ namespace iLand
         public const int AllTreeSpeciesCode = 0;
 
         public const UInt32 DefaultStandID = 0; // lowest valid stand ID, any negative IDs in stand raster are treated as no data or no stand
-        public const float DryBiomassCarbonFraction = 0.5F; // fraction of dry biomass which is carbon
+        public const float DryBiomassCarbonFraction = 0.5F; // fraction of dry biomass which is carbon, C++ biomassCFraction
         public const int EvergreenLeafPhenologyID = 0;
 
         public const int ExpressionLocalVariables = 10;

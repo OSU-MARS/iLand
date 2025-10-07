@@ -68,24 +68,24 @@ namespace iLand.World
                     this.CurrentDataYear = this.RandomYearList[this.RandomListIndex];
                     if (this.CurrentDataYear >= this.YearsToLoad)
                     {
-                        throw new NotSupportedException(String.Format("Load year with random sampling: the actual year {0} is invalid. Only {1} years are loaded from the weather database.", CurrentDataYear, YearsToLoad));
+                        throw new NotSupportedException($"Load year with random sampling: the actual year {this.CurrentDataYear} is invalid. Only {this.YearsToLoad} years are loaded from the weather database.");
                     }
                 }
                 if (model.Project.Output.Logging.LogLevel >= EventLevel.Informational)
                 {
-                    Trace.TraceInformation("Current year (randomized): " + this.CurrentDataYear);
+                    Trace.TraceInformation($"Current year (randomized): {this.CurrentDataYear}");
                 }
             }
 
             //if (model.Project.Output.Logging.LogLevel >= EventLevel.Informational)
             //{
-            //    Trace.TraceInformation(this.currentDataYear + " CO₂ concentration: " + this.CarbonDioxidePpm + " ppm.");
+            //    Trace.TraceInformation($"{this.currentDataYear} CO₂ concentration: {this.CarbonDioxidePpm} ppm.");
             //}
             int currentJanuary1dayIndex = Constant.Time.MonthsInYear * this.CurrentDataYear;
             int nextJanuary1dayIndex = currentJanuary1dayIndex + Constant.Time.MonthsInYear;
             if ((currentJanuary1dayIndex > this.monthDayIndices.Count) || (nextJanuary1dayIndex > this.monthDayIndices.Count))
             {
-                throw new NotSupportedException("Weather data is not available for simulation year " + this.CurrentDataYear + ".");
+                throw new NotSupportedException($"Weather data is not available for simulation year {this.CurrentDataYear}.");
             }
             int currentJanuaryIndex = this.CurrentDataYear * Constant.Time.MonthsInYear;
             int nextJanuaryIndex = currentJanuaryIndex + Constant.Time.MonthsInYear;

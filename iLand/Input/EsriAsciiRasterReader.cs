@@ -77,7 +77,7 @@ namespace iLand.Input
                             this.NoDataValue = Int32.Parse(valueAsString, CultureInfo.InvariantCulture);
                             break;
                         default:
-                            throw new NotSupportedException("Unknown header field '" + key + "'.");
+                            throw new NotSupportedException($"Unknown header field '{key}'.");
                     }
                     ++rowIndex;
                 }

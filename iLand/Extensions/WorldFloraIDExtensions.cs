@@ -50,7 +50,7 @@ namespace iLand.Extensions
                 FiaCode.TsugaHeterophylla => WorldFloraID.TsugaHeterophylla,
                 FiaCode.TsugaMertensiana => WorldFloraID.TsugaMertensiana,
                 // WorldFloraID.UlmusGlabra, no FIA code
-                _ => throw new ArgumentOutOfRangeException(nameof(fiaCode), "A World Flora Online identifier for FIA code " + fiaCode + " is not known.")
+                _ => throw new ArgumentOutOfRangeException(nameof(fiaCode), $"A World Flora Online identifier for FIA code {fiaCode} is not known.")
             };
         }
 
@@ -58,7 +58,7 @@ namespace iLand.Extensions
         {
             if (WorldFloraIDExtensions.TryParse(iLandFourLetterSpeciesCode, out WorldFloraID speciesID) == false)
             {
-                throw new ArgumentOutOfRangeException(nameof(iLandFourLetterSpeciesCode), "A World Flora Online identifier for species abbreviation '" + iLandFourLetterSpeciesCode + "' is not known.");
+                throw new ArgumentOutOfRangeException(nameof(iLandFourLetterSpeciesCode), $"A World Flora Online identifier for species abbreviation '{iLandFourLetterSpeciesCode}' is not known.");
             }
 
             return speciesID;
@@ -111,7 +111,7 @@ namespace iLand.Extensions
                 WorldFloraID.UlmusGlabra => "ulgl",
                 WorldFloraID.Default or
                 WorldFloraID.Unknown or
-                _ => throw new ArgumentOutOfRangeException(nameof(speciesID), "An iLand species abbreviation for World Flora Online identifier " + speciesID + " is not known.")
+                _ => throw new ArgumentOutOfRangeException(nameof(speciesID), $"An iLand species abbreviation for World Flora Online identifier {speciesID} is not known.")
             };
         }
 

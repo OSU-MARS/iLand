@@ -19,11 +19,11 @@ namespace iLand.Tree
         {
             if ((capacity < 0) || (capacity % Simd128.Width32 != 0))
             {
-                throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity of " + capacity + " is not a positive integer multiple of SIMD width.");
+                throw new ArgumentOutOfRangeException(nameof(capacity), $"Capacity of {capacity} is not a positive integer multiple of SIMD width.");
             }
 
-            this.Count = 0;
             this.Allocate(capacity);
+            this.Count = 0;
         }
 
         public TreeList(TreeList other)
@@ -36,7 +36,6 @@ namespace iLand.Tree
             Array.Copy(other.HeightInM, this.HeightInM, this.Count);
             Array.Copy(other.StandID, this.StandID, this.Count);
             Array.Copy(other.TreeID, this.TreeID, this.Count);
-
         }
 
         public int Capacity
@@ -77,7 +76,7 @@ namespace iLand.Tree
         {
             if ((newSize < this.Count) || (newSize % Simd128.Width32 != 0)) // enforces positive size (unless a bug allows Count to become negative)
             {
-                throw new ArgumentOutOfRangeException(nameof(newSize), "New size of " + newSize + " is smaller than the current number of live trees (" + this.Count + ") or is not an integer multiple of SIMD width.");
+                throw new ArgumentOutOfRangeException(nameof(newSize), $"New size of {newSize} is smaller than the current number of live trees ({this.Count}) or is not an integer multiple of SIMD width.");
             }
 
             this.AgeInYears = this.AgeInYears.Resize(newSize);

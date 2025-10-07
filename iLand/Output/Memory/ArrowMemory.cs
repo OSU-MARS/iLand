@@ -20,11 +20,11 @@ namespace iLand.Output.Memory
         {
             if (capacityInRecords < 1)
             {
-                throw new ArgumentOutOfRangeException(nameof(capacityInRecords), "Capacity of " + capacityInRecords + " is zero or negative.");
+                throw new ArgumentOutOfRangeException(nameof(capacityInRecords), $"Capacity of {capacityInRecords} is zero or negative.");
             }
             if ((batchLength < 10 * 1000) || (batchLength > 100 * 1000 * 1000))
             {
-                throw new ArgumentOutOfRangeException(nameof(batchLength), "Record batch size of " + batchLength + " is unexpectedly large or small.");
+                throw new ArgumentOutOfRangeException(nameof(batchLength), $"Record batch size of {batchLength} is unexpectedly large or small.");
             }
 
             this.BatchLength = batchLength;

@@ -19,7 +19,7 @@ namespace iLand.World
             float percentClay = environment.SoilClay;
             if (MathF.Abs(100.0F - (percentSand + percentSilt + percentClay)) > 0.01F)
             {
-                throw new NotSupportedException("Soil texture percentages do not sum to 100% within 0.01% for resource unit " + environment.ResourceUnitID + ". Sand: " + percentSand + "%, silt: " + percentSilt + "%, clay: " + percentClay + "%.");
+                throw new NotSupportedException($"Soil texture percentages do not sum to 100% within 0.01% for resource unit {environment.ResourceUnitID}. Sand: {percentSand}%, silt: {percentSilt}%, clay: {percentClay}%.");
             }
 
             // calculate soil characteristics based on empirical functions from sparse United States data: 35 points in 23 states
@@ -88,7 +88,7 @@ namespace iLand.World
 
         public override float GetSoilWaterFromPotential(float psiInKilopascals)
         {
-            Debug.Assert(psiInKilopascals <= 0.0F, "Matric potential " + psiInKilopascals + " kPa is positive.");
+            Debug.Assert(psiInKilopascals <= 0.0F, $"Matric potential {psiInKilopascals} kPa is positive.");
 
             // rho_x = rho_ref * (psi_x / psi_ref)^(1/b)
             float mmH20 = this.SoilPlantAccessibleDepthInMM * this.saturatedSoilWaterContent * MathF.Pow(psiInKilopascals / this.SaturationPotentialInKPa, 1.0F / this.saturationRatioPowerB);

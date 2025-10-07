@@ -45,19 +45,19 @@ namespace iLand.Tool
             using Dataset rasterDataset = Gdal.Open(rasterPath, Access.GA_ReadOnly);
             if (rasterDataset.RasterCount != 1)
             {
-                throw new NotSupportedException("Raster '" + rasterPath + "' has " + rasterDataset.RasterCount + " layers.");
+                throw new NotSupportedException($"Raster '{rasterPath}' has {rasterDataset.RasterCount} layers.");
             }
             SpatialReference crs = rasterDataset.GetSpatialRef();
             double linearUnits = crs.GetLinearUnits();
             if (linearUnits != 1.0)
             {
-                throw new NotSupportedException("Raster '" + rasterPath + "''s coordinate system is " + crs.GetName() + ", which is not a projected coordinate system with metric units.");
+                throw new NotSupportedException($"Raster '{rasterPath}''s coordinate system is {crs.GetName()}, which is not a projected coordinate system with metric units.");
             }
 
             this.Transform.Copy(rasterDataset);
             if (this.Transform.CellHeight != this.Transform.CellWidth)
             {
-                throw new NotSupportedException("Raster '" + rasterPath + "' has cells which are not square. Its cell width is " + this.Transform.CellWidth + " and its cell height is " + this.Transform.CellHeight + ".");
+                throw new NotSupportedException($"Raster '{rasterPath}' has cells which are not square. Its cell width is {this.Transform.CellWidth} and its cell height is {this.Transform.CellHeight}.");
             }
 
             this.SizeX = rasterDataset.RasterXSize;
@@ -117,7 +117,7 @@ namespace iLand.Tool
             {
                 yMax += signedHeight;
             }
-            return this.Transform.OriginX + ", " + (this.Transform.OriginX + this.SizeX * this.Transform.CellWidth) + ", " + yMin + ", " + yMax;
+            return $"{this.Transform.OriginX}, {(this.Transform.OriginX + this.SizeX * this.Transform.CellWidth)}, {yMin}, {yMax}";
         }
 
         private static DataType GetGdalDataType()
@@ -135,7 +135,7 @@ namespace iLand.Tool
                 TypeCode.UInt32 => DataType.GDT_UInt32,
                 TypeCode.UInt64 => DataType.GDT_UInt64,
                 // complex numbers (GDT_CInt16, 32, CFloat32, 64) and GDT_TypeCount not currently supported
-                _ => throw new NotSupportedException("Unhandled data type " + Type.GetTypeCode(typeof(T)) + ".")
+                _ => throw new NotSupportedException($"Unhandled data type {Type.GetTypeCode(typeof(T))}.")
             };
         }
 
@@ -219,7 +219,7 @@ namespace iLand.Tool
             {
                 if (xIndexFractional < -cellFractionTolerance)
                 {
-                    throw new NotSupportedException("Point at (x = " + x + ", y = " + y + " has an x value less than the grid's minimum x extent (" + this.GetExtentString() + " by a distance larger than can be attributed to numerical error.");
+                    throw new NotSupportedException($"Point at (x = {x}, y = {y} has an x value less than the grid's minimum x extent ({this.GetExtentString()} by a distance larger than can be attributed to numerical error.");
                 }
 
                 Debug.Assert(xIndex == 0); // cast to integer rounds toward zero
@@ -228,7 +228,7 @@ namespace iLand.Tool
             {
                 if ((xIndex > this.SizeX) || (x > this.Transform.OriginX + this.Transform.CellWidth * (this.SizeX + cellFractionTolerance)))
                 {
-                    throw new NotSupportedException("Point at (x = " + x + ", y = " + y + " has an x value greater than the grid's maximum x extent (" + this.GetExtentString() + " by a distance larger than can be attributed to numerical error.");
+                    throw new NotSupportedException($"Point at (x = {x}, y = {y} has an x value greater than the grid's maximum x extent ({this.GetExtentString()} by a distance larger than can be attributed to numerical error.");
                 }
 
                 xIndex -= 1; // if x lies exactly on or very close to grid edge, consider point part of the grid
@@ -239,7 +239,7 @@ namespace iLand.Tool
             {
                 if (yIndexFractional < -cellFractionTolerance)
                 {
-                    throw new NotSupportedException("Point at (x = " + x + ", y = " + y + " lies outside the grid's y extent (" + this.GetExtentString() + " by a distance larger than can be attributed to numerical error.");
+                    throw new NotSupportedException($"Point at (x = {x}, y = {y} lies outside the grid's y extent ({this.GetExtentString()} by a distance larger than can be attributed to numerical error.");
                 }
 
                 Debug.Assert(yIndex == 0); // cast to integer rounds toward zero
@@ -252,7 +252,7 @@ namespace iLand.Tool
                     // y origin is grid's max y value
                     if ((yIndex > this.SizeY) || (y < this.Transform.OriginY + this.Transform.CellHeight * (this.SizeY + cellFractionTolerance)))
                     {
-                        throw new NotSupportedException("Point at (x = " + x + ", y = " + y + " lies outside the grid's y extent (" + this.GetExtentString() + " by a distance larger than can be attributed to numerical error.");
+                        throw new NotSupportedException($"Point at (x = {x}, y = {y} lies outside the grid's y extent ({this.GetExtentString()} by a distance larger than can be attributed to numerical error.");
                     }
                 }
                 else
@@ -260,7 +260,7 @@ namespace iLand.Tool
                     // y origin is grid's minimum y value
                     if ((yIndex > this.SizeY) || (y >= this.Transform.OriginY - cellFractionTolerance * this.Transform.CellHeight))
                     {
-                        throw new NotSupportedException("Point at (x = " + x + ", y = " + y + " lies outside the grid's y extent (" + this.GetExtentString() + " by a distance larger than can be attributed to numerical error.");
+                        throw new NotSupportedException($"Point at (x = {x}, y = {y} lies outside the grid's y extent ({this.GetExtentString()} by a distance larger than can be attributed to numerical error.");
                     }
                 }
 

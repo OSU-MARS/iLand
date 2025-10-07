@@ -30,7 +30,7 @@ namespace iLand.World
         }
 
         public ResourceUnitVariableAccessor(SimulationState simulationState)
-            : base(simulationState, null)
+            : base(simulationState)
         {
             this.ResourceUnit = null;
         }

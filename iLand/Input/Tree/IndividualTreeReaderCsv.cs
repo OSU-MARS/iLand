@@ -47,7 +47,7 @@ namespace iLand.Input.Tree
                     int speciesIndex = PicusSpeciesIDs.IndexOf(picusID);
                     if (speciesIndex == -1)
                     {
-                        throw new NotSupportedException("Unknown Picus species id " + picusID + ".");
+                        throw new NotSupportedException($"Unknown Picus species id {picusID}.");
                     }
                     speciesID = iLandSpeciesIDs[speciesIndex];
                 }
@@ -69,7 +69,7 @@ namespace iLand.Input.Tree
                     ReadOnlySpan<char> treeIDAsString = row[individualTreeHeader.TreeID];
                     if (treeIDAsString.Length < 1)
                     {
-                        throw new NotSupportedException("Tree ID at line " + (this.Count + 1) + " is empty."); // +1 for header row
+                        throw new NotSupportedException($"Tree ID at line {this.Count + 1} is empty."); // +1 for header row
                     }
                     if ((treeIDAsString[0] == '"') && (treeIDAsString.Length > 1) && (treeIDAsString[^1] == '"'))
                     {

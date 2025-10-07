@@ -84,7 +84,7 @@ namespace iLand.Output.Memory
             {
                 { idFieldName, idFieldDescription },
                 { "year", "Calendar year." },
-                { "species", "Integer code for tree species, typically " + Constant.AllTreeSpeciesCode + " to indicate all tree species present, a USFS FIA code (US Forest Service Forest Inventory and Analysis, 16 bit), or WFO ID (World Flora Online identifier, 32 bit)." },
+                { "species", $"Integer code for tree species, typically {Constant.AllTreeSpeciesCode} to indicate all tree species present, a USFS FIA code (US Forest Service Forest Inventory and Analysis, 16 bit), or WFO ID (World Flora Online identifier, 32 bit)." },
                 { "averageDbh", "Arithmetic mean diameter of trees, cm." },
                 { "averageHeight", "Arithmetic mean height of trees, m." },
                 { "liveStemVolume", "Live stem volume of trees, , m³/ha" },

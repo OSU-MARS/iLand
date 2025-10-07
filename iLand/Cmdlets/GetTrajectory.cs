@@ -32,7 +32,7 @@ namespace iLand.Cmdlets
             TimeSpan setupTime = stopwatch.Elapsed;
 
             DateTime mostRecentProgressUpdate = DateTime.UtcNow;
-            ProgressRecord progressRecord = new(0, "Simulating trajectory", "year 0 of " + this.Years + "...");
+            ProgressRecord progressRecord = new(0, "Simulating trajectory", $"year 0 of {this.Years}...");
             for (int simulationYear = 0; simulationYear < this.Years; ++simulationYear)
             {
                 model.RunYear();
@@ -41,7 +41,7 @@ namespace iLand.Cmdlets
                 if (utcNow - mostRecentProgressUpdate > TimeSpan.FromSeconds(5))
                 {
                     progressRecord.PercentComplete = (int)(100.0F * (float)simulationYear / (float)this.Years);
-                    progressRecord.StatusDescription = "year " + (simulationYear + 1) + " of " + this.Years + "...";
+                    progressRecord.StatusDescription = $"year {(simulationYear + 1)} of {this.Years}...";
                     this.WriteProgress(progressRecord);
                     mostRecentProgressUpdate = utcNow;
                 }
@@ -53,7 +53,7 @@ namespace iLand.Cmdlets
             double setupSeconds = setupTime.TotalSeconds;
             double simulationSeconds = totalSeconds - setupSeconds;
             double meanSecondsPerYear = this.Years > 0 ? simulationSeconds / this.Years : 0.0;
-            this.WriteVerbose("Trajectory obtained in " + totalSeconds.ToString("0") + " s (" + setupSeconds.ToString("0.00") + " s project load, " + simulationSeconds.ToString("0") +" s simulation; " + meanSecondsPerYear.ToString("0.00") + " s/year).");
+            this.WriteVerbose($"Trajectory obtained in {totalSeconds:0} s ({setupSeconds:0.00} s project load, {simulationSeconds:0} s simulation; {meanSecondsPerYear:0.00} s/year).");
         }
     }
 }

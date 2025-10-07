@@ -154,8 +154,8 @@ namespace iLand.Tree
                 leafOnEndDayIndex -= 10;
                 if ((leafOnStartDayIndex < -1) || (leafOnEndDayIndex < -1))
                 {
-                    // throw IException(QString("Phenology::calculation(): was not able to determine the length of the vegetation period for group {0}. weather table: '{1}'.", id(), weather.name()));
-                    // Debug.WriteLine("Phenology::calculation(): vegetation period is 0 for group " + LeafType + ", weather table: " + weather.Name);
+                    // throw IException($"Unable to determine the length of the vegetation period for group {id()}. weather table: '{weather.name()}'."));
+                    // Debug.WriteLine($"Vegetation period is 0 for group {this.LeafType}, weather table {weather.Name}".);
                     leafOnStartDayIndex = DateTimeExtensions.GetDaysInYear(isLeapYear) - 1; // last day of the year, never reached
                     leafOnEndDayIndex = leafOnStartDayIndex; // never reached
                 }
@@ -204,7 +204,7 @@ namespace iLand.Tree
             }
             else
             {
-                throw new NotSupportedException("Unhandled weather timestep " + weatherTimeSeries.Timestep + ".");
+                throw new NotSupportedException($"Unhandled weather timestep {weatherTimeSeries.Timestep}.");
             }
 
             this.LeafOnStartDayOfYearIndex = leafOnStartDayIndex;

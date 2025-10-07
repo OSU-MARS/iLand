@@ -57,8 +57,8 @@ namespace iLand.Tree
 
             string speciesDatabaseFilePath = projectFile.GetFilePath(ProjectDirectory.Database, projectFile.World.Species.DatabaseFile);
             using SqliteConnection speciesDatabase = Landscape.GetDatabaseConnection(speciesDatabaseFilePath, openReadOnly: true);
-            using SqliteCommand speciesSelect = new(String.Format("select * from {0}", this.SqlTableName), speciesDatabase);
-            // Debug.WriteLine("Loading species set from SQL table " + tableName + ".");
+            using SqliteCommand speciesSelect = new($"select * from {this.SqlTableName}", speciesDatabase);
+            // Debug.WriteLine($"Loading species set from SQL table {tableName}.");
             using TreeSpeciesReader speciesReader = new(speciesSelect.ExecuteReader());
             while (speciesReader.Read())
             {
@@ -71,7 +71,7 @@ namespace iLand.Tree
                 Debug.Assert(species.Active);
                 if (this.treeSpeciesByID.ContainsKey(species.WorldFloraID))
                 {
-                    throw new SqliteException("Error loading species: " + species.Name + " with World Flora ID " + species.WorldFloraID + " appears multiple times!", (int)SqliteErrorCode.Error);
+                    throw new SqliteException($"Error loading species: {species.Name} with World Flora ID {species.WorldFloraID} appears multiple times!", (int)SqliteErrorCode.Error);
                 }
 
                 this.ActiveSpecies.Add(species);
