@@ -12,8 +12,8 @@
       <init>init</init>
       <!-- location of species' light stamps, default is lip -->
       <lip>lip</lip>
-      <!-- location of output log files and SQLite database, default is output -->
-      <output>..\..\TestResults</output>
+      <!-- location of output log files and SQLite database, default is output, keep in sync with ModelTest.EnsureOutputDirectoryExists(). -->
+      <output>..\testResults</output>
       <!-- location of agent and event scripts, default is script -->
       <script>script</script>
       <!-- location of temporary files, default is temp, not currently used -->

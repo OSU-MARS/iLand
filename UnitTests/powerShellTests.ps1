@@ -1,7 +1,7 @@
 $unitTestPath = $PSScriptRoot
 #$unitTestPath = ([System.IO.Path]::Combine($env:USERPROFILE, "PhD\\iLand\\UnitTests"))
-$buildDirectory = ([System.IO.Path]::Combine($unitTestPath, "bin\\x64\\Debug\\net9.0"))
-#$buildDirectory = ([System.IO.Path]::Combine($unitTestPath, "bin\\x64\\Release\\net9.0"))
+$buildDirectory = ([System.IO.Path]::Combine($unitTestPath, "bin\\x64\\Debug\\net10.0"))
+#$buildDirectory = ([System.IO.Path]::Combine($unitTestPath, "bin\\x64\\Release\\net10.0"))
 Import-Module -Name ([System.IO.Path]::Combine($buildDirectory, "iLand.dll"));
 $env:PATH = $env:PATH + (';' + $buildDirectory + '\runtimes\win-x64\native') # for GDAL .dll loading if GeoTIFF logging is enabled
 

@@ -8,9 +8,10 @@ using iLand.World;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using Weather = iLand.World.Weather;
 using Model = iLand.Simulation.Model;
-using System.Drawing;
 
 namespace iLand.Test
 {
@@ -173,15 +174,32 @@ namespace iLand.Test
             }
         }
 
+        // as of Visual Studio 2026, mstest no longer automatically creates a TestResults directory but iLand SQL outputs need someplace to write
+        private static void EnsureOutputDirectoryExists(string projectFilePath)
+        {
+            string? projectDirectory = Path.GetDirectoryName(projectFilePath);
+            if (projectDirectory == null)
+            {
+                throw new InvalidOperationException($"Project file path {projectFilePath} has no directory.");
+            }
+            string outputDirectory = Path.Combine(projectDirectory, "..", "testResults"); // keep in sync with at least Kalkalpen.xml
+            if (!Directory.Exists(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+        }
+
         /// <summary>
         /// Kalkalpen National Park, Austria
         /// </summary>
         [TestMethod]
         public void Kalkalpen()
         {
+            string kalkalpenProjectPath = LandTest.GetKalkalpenProjectPath(this.TestContext!);
+            ModelTest.EnsureOutputDirectoryExists(kalkalpenProjectPath);
             for (int reliabilityIteration = 0; reliabilityIteration < 1 /* 100 */; ++reliabilityIteration)
             {
-                using Model kalkalpen = LandTest.LoadProject(LandTest.GetKalkalpenProjectPath(this.TestContext!));
+                using Model kalkalpen = LandTest.LoadProject(kalkalpenProjectPath);
                 ModelTest.VerifyKalkalpenResourceUnits(kalkalpen, afterTimestep: false);
                 ModelTest.VerifyKalkalpenModel(kalkalpen);
                 ModelTest.VerifyNorwaySpruce(kalkalpen);

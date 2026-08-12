@@ -5,6 +5,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 
+[assembly: SuppressMessage("Style", "IDE0270:Use coalesce expression", Justification = "readability", Scope = "member", Target = "~M:iLand.Test.ModelTest.EnsureOutputDirectoryExists(System.String)")]
 [assembly: SuppressMessage("Style", "IDE0290:Use primary constructor", Justification = "readability, debugability", Scope = "member", Target = "~M:iLand.Test.ObservedResourceUnitTrajectory.#ctor(System.Int32)")]
 [assembly: SuppressMessage("Usage", "MSTEST0037:Use proper 'Assert' methods", Justification = "readability", Scope = "type", Target = "~T:iLand.Test.ExpressionTest")]
 [assembly: SuppressMessage("Usage", "MSTEST0037:Use proper 'Assert' methods", Justification = "readability", Scope = "type", Target = "~T:iLand.Test.GridTest")]

@@ -26,7 +26,7 @@ namespace iLand.Test
         protected static string GetUnitTestDirectoryPath(TestContext testContext)
         {
             Debug.Assert(string.IsNullOrWhiteSpace(testContext.TestRunDirectory) == false);
-            return Path.Combine(testContext.TestRunDirectory, "..", "..", "UnitTests");
+            return Path.Combine(testContext.TestRunDirectory, "..", "..", "..", "..");
         }
 
         protected static Model LoadProject(string projectFilePath)

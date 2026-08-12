@@ -2,7 +2,7 @@
 bin/
 obj/
 PerformanceResults/
-TestResults/
+UnitTests/testResults/
 
 # RStudio and Visual Studio user data
 .Rhistory
